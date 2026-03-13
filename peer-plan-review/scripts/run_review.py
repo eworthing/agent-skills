@@ -26,21 +26,12 @@ EFFORT_MAP = {
     "copilot": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
 }
 
-# Gemini thinking budget thresholds for reverse-mapping token counts to levels.
-# If actual thoughts ≤ threshold, classify as that level.
-_GEMINI_EFFORT_THRESHOLDS = [
-    (2048, "low"),
-    (8192, "medium"),
-    (16384, "high"),
-    (float("inf"), "xhigh"),
-]
-
 # Provider defaults when effort is not specified and not discoverable.
 _EFFORT_DEFAULTS = {
     "codex": "xhigh",      # Codex default (confirmed from turn_context)
     "gemini": "medium",     # Gemini default thinkingBudget is 8192
     "claude": "high",       # Claude Code default
-    "copilot": "high",      # Copilot default (undocumented, assumed)
+    "copilot": "medium",    # Copilot default per GitHub docs
 }
 
 BINARIES = {
@@ -229,16 +220,14 @@ def extract_metadata(output_file, events_file, reviewer,
                     if isinstance(models, dict) and models:
                         model_name = next(iter(models))
                         meta["model"] = model_name
-                        # Extract thinking tokens to infer effort level.
+                        # Record thinking tokens as telemetry (not used
+                        # for effort — actual usage doesn't reflect the
+                        # configured budget reliably).
                         model_stats = models[model_name]
                         thoughts = (model_stats.get("tokens", {})
                                     .get("thoughts", 0))
                         if thoughts and isinstance(thoughts, (int, float)):
                             meta["thinking_tokens"] = int(thoughts)
-                            for threshold, level in _GEMINI_EFFORT_THRESHOLDS:
-                                if thoughts <= threshold:
-                                    meta["effort"] = level
-                                    break
                 if not meta.get("model") and data.get("model"):
                     meta["model"] = data["model"]
         except (json.JSONDecodeError, OSError):
@@ -255,7 +244,6 @@ def extract_metadata(output_file, events_file, reviewer,
                         continue
                     try:
                         event = json.loads(line)
-                        etype = event.get("type", "")
                         data = event.get("data", {})
                         if isinstance(data, dict) and data.get("model"):
                             meta["model"] = data["model"]
@@ -635,10 +623,30 @@ def run_review(args):
         if reviewer == "codex":
             after = _codex_session_files()
             new_files = after - (codex_sessions_before or set())
-            if new_files:
-                newest = max(new_files, key=os.path.getmtime)
-                codex_session_path = newest
-                new_session_id = _parse_codex_session_id(newest)
+            # Scan all new files for ones whose cwd matches ours.
+            # If multiple match, same-cwd concurrency is ambiguous —
+            # skip metadata extraction rather than risk cross-contamination.
+            cwd_matches = []
+            for candidate in sorted(new_files, key=os.path.getmtime,
+                                    reverse=True):
+                parsed_id = _parse_codex_session_id(candidate)
+                if parsed_id:
+                    cwd_matches.append((candidate, parsed_id))
+            if len(cwd_matches) == 1:
+                codex_session_path, new_session_id = cwd_matches[0]
+            elif len(cwd_matches) > 1:
+                # Ambiguous: multiple same-cwd sessions created during
+                # this run. Skip both session_id and metadata extraction
+                # to avoid cross-contamination and resume poisoning.
+                print("Warning: multiple concurrent Codex sessions "
+                      "detected in same cwd; skipping session and "
+                      "metadata extraction", file=sys.stderr)
+            # On resume, no new file is created — find the existing one
+            if not codex_session_path and args.resume and session_id:
+                for sf in (codex_sessions_before or set()):
+                    if _parse_codex_session_id(sf) == session_id:
+                        codex_session_path = sf
+                        break
         elif reviewer == "copilot":
             new_session_id = extract_session_id_copilot(args.output_file)
         elif reviewer in ("gemini", "claude"):
@@ -656,7 +664,9 @@ def run_review(args):
         actual_model = meta.get("model") or args.model or "default"
 
         # Save session metadata
-        # Effort: prefer detected > user-specified > provider default
+        # Effort: detected (from reviewer output) is the canonical value
+        # because it reflects what was actually used. Fall back to
+        # user-requested, then provider default.
         actual_effort = (meta.get("effort")
                          or args.effort
                          or _EFFORT_DEFAULTS.get(reviewer, "default"))
@@ -667,6 +677,7 @@ def run_review(args):
             "model": actual_model,
             "model_requested": args.model or "default",
             "effort": actual_effort,
+            "effort_requested": args.effort or "default",
             "effort_source": ("detected" if meta.get("effort")
                               else "requested" if args.effort
                               else "provider_default"),
