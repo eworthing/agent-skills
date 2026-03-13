@@ -26,6 +26,23 @@ EFFORT_MAP = {
     "copilot": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
 }
 
+# Gemini thinking budget thresholds for reverse-mapping token counts to levels.
+# If actual thoughts ≤ threshold, classify as that level.
+_GEMINI_EFFORT_THRESHOLDS = [
+    (2048, "low"),
+    (8192, "medium"),
+    (16384, "high"),
+    (float("inf"), "xhigh"),
+]
+
+# Provider defaults when effort is not specified and not discoverable.
+_EFFORT_DEFAULTS = {
+    "codex": "xhigh",      # Codex default (confirmed from turn_context)
+    "gemini": "medium",     # Gemini default thinkingBudget is 8192
+    "claude": "high",       # Claude Code default
+    "copilot": "high",      # Copilot default (undocumented, assumed)
+}
+
 BINARIES = {
     "codex": "codex",
     "gemini": "gemini",
@@ -210,7 +227,18 @@ def extract_metadata(output_file, events_file, reviewer,
                 if isinstance(stats, dict):
                     models = stats.get("models", {})
                     if isinstance(models, dict) and models:
-                        meta["model"] = next(iter(models))
+                        model_name = next(iter(models))
+                        meta["model"] = model_name
+                        # Extract thinking tokens to infer effort level.
+                        model_stats = models[model_name]
+                        thoughts = (model_stats.get("tokens", {})
+                                    .get("thoughts", 0))
+                        if thoughts and isinstance(thoughts, (int, float)):
+                            meta["thinking_tokens"] = int(thoughts)
+                            for threshold, level in _GEMINI_EFFORT_THRESHOLDS:
+                                if thoughts <= threshold:
+                                    meta["effort"] = level
+                                    break
                 if not meta.get("model") and data.get("model"):
                     meta["model"] = data["model"]
         except (json.JSONDecodeError, OSError):
@@ -628,17 +656,24 @@ def run_review(args):
         actual_model = meta.get("model") or args.model or "default"
 
         # Save session metadata
-        actual_effort = meta.get("effort") or args.effort or None
+        # Effort: prefer detected > user-specified > provider default
+        actual_effort = (meta.get("effort")
+                         or args.effort
+                         or _EFFORT_DEFAULTS.get(reviewer, "default"))
         round_num = session.get("round", 0) + 1
         session_data = {
             "session_id": new_session_id or session_id,
             "reviewer": reviewer,
             "model": actual_model,
             "model_requested": args.model or "default",
+            "effort": actual_effort,
+            "effort_source": ("detected" if meta.get("effort")
+                              else "requested" if args.effort
+                              else "provider_default"),
             "round": round_num,
         }
-        if actual_effort:
-            session_data["effort"] = actual_effort
+        if meta.get("thinking_tokens") is not None:
+            session_data["thinking_tokens"] = meta["thinking_tokens"]
         save_session(args.session_file, session_data)
 
         if returncode != 0:
