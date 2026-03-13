@@ -1,0 +1,82 @@
+# Copilot CLI Reference — peer-plan-review
+
+Source: GitHub docs, GA Feb 2026, verified March 2026.
+
+## Install
+
+```bash
+npm i -g @github/copilot
+# or: brew install copilot-cli, curl -fsSL https://gh.io/copilot-install | bash
+```
+
+## Binary
+
+`copilot`
+
+## Headless exec
+
+```bash
+copilot -p "PROMPT" -s \
+  --no-ask-user \
+  --autopilot \
+  --max-autopilot-continues=20 \
+  --allow-tool=read \
+  --deny-tool=write,shell,url,memory \
+  --no-custom-instructions \
+  --no-auto-update \
+  --output-format json
+```
+
+- `--output-format json`: JSONL event stream to stdout — required for session ID extraction and structured text capture
+
+- `-p "prompt"` / `--prompt="prompt"`: run once and exit
+- `-s` / `--silent`: suppress stats/decoration, agent response only
+- `--no-ask-user`: disables `ask_user` tool (prevents interactive pauses)
+- `--autopilot`: multi-step autonomous continuation (critical for review)
+- `--max-autopilot-continues=COUNT`: safety cap on autonomous steps
+- `--no-custom-instructions`: skip repo `AGENTS.md`
+- `--no-auto-update`: prevent update prompts
+
+## Tool permissions
+
+- `--allow-tool=TOOL,...` and `--deny-tool=TOOL,...` (deny takes precedence)
+- Tool kinds: `shell`, `write`, `read`, `url`, `memory`, plus MCP server names
+- For review: `--allow-tool=read --deny-tool=write,shell,url,memory`
+- **URL blocking**: `--deny-tool=url` for blanket deny. **NOT `--deny-url`** which requires domain args.
+
+## Model
+
+`--model MODEL` or `COPILOT_MODEL` env var
+
+## Reasoning effort
+
+`--reasoning-effort low|medium|high|xhigh` (confirmed v1.0.5, direct 1:1 mapping)
+
+## Resume
+
+`--continue`: most recent session. `--resume=SESSION-ID`: specific session.
+`--resume` without ID shows interactive picker.
+
+## Output
+
+`--output-format text|json` (JSONL when json; no `stream-json`)
+
+JSONL event types used by the adapter:
+- `{"type": "result", "sessionId": "..."}` — session ID for resume
+- `{"type": "assistant.message", "data": {"content": "..."}}` — response text
+
+## Auth
+
+Keychain preferred. Env precedence: `COPILOT_GITHUB_TOKEN` > `GH_TOKEN` > `GITHUB_TOKEN` > keychain > `gh auth token`.
+`--secret-env-vars=VAR,...`: redact specific env var values from output.
+
+## Additional flags
+
+- `--no-color`: machine-friendly output
+- `--available-tools=TOOL,...`: whitelist-only
+- `--excluded-tools=TOOL,...`: blacklist
+- `--config-dir=PATH`: CI isolation
+- `--share=PATH`: export transcript
+- `--add-dir=PATH`: additional directories
+- `--log-level=LEVEL`: logging verbosity
+- `--yolo`: alias for `--allow-all`

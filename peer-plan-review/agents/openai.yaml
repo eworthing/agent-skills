@@ -1,0 +1,3 @@
+interface:
+  display_name: "Peer Plan Review"
+  short_description: "Iterative cross-tool plan review with Codex, Gemini, Claude Code, or Copilot"

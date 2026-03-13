@@ -1,0 +1,217 @@
+---
+name: peer-plan-review
+description: >
+  Send the current implementation plan to another AI agent (Codex, Gemini CLI,
+  Claude Code, or Copilot CLI) for iterative review. The host agent revises the
+  plan based on reviewer feedback and re-submits until the reviewer approves.
+  Use this skill whenever the user wants a second opinion on an implementation
+  plan, asks for cross-agent review, mentions 'codex review', 'gemini review',
+  'claude review', 'copilot review', wants to validate a plan before executing,
+  or says things like 'have another model check this', 'get a review', or
+  'peer review'.
+---
+
+# Peer Plan Review
+
+## Why this exists
+
+Different models catch different blind spots. An iterative review-revise
+loop converges on better plans than a single-shot review because the
+reviewer can verify that its feedback was actually addressed.
+
+## How it works
+
+Host agent (the one reading this skill) runs the review loop.
+Reviewer CLI (Codex, Gemini, Claude Code, or Copilot) produces external reviews.
+Host revises. Reviewer re-checks. Max 5 rounds.
+
+Key roles:
+- **HOST**: the agent reading this skill — revises the plan between rounds
+- **REVIEWER**: the external CLI — produces feedback, never modifies files
+
+## Invocation
+
+Users invoke as: `/peer-plan-review <codex|gemini|claude|copilot> [model] [effort]`
+
+If no argument, ask which reviewer to use.
+Second argument optionally selects the model.
+Third argument optionally sets reasoning effort: `low`, `medium`, `high`, `xhigh`.
+
+Examples:
+- `/peer-plan-review codex`
+- `/peer-plan-review claude opus high`
+- `/peer-plan-review gemini flash medium`
+- `/peer-plan-review copilot gpt-5.4 xhigh`
+
+## The review contract
+
+Provider-neutral rules all reviewers must follow:
+
+- The VERDICT must be the **LAST non-empty line** of the review output
+- Must be exactly: `VERDICT: APPROVED` or `VERDICT: REVISE`
+- Parse verdict from the bottom of the output file upward (the plan text
+  or prior feedback could contain "VERDICT" as a substring — do not match
+  first occurrence)
+- Both initial and re-review use full-output capture (never tail-scraping)
+- Resume is optional; stateless rerun with prior context is the default
+  fallback
+- Reviewers operate in read-only / review-only mode — no write, shell,
+  or network capabilities
+- Provider references: read `references/<provider>.md` for exact CLI syntax
+
+## The re-review prompt structure
+
+For rounds 2+, the prompt file MUST contain (in this order):
+
+1. The review contract (verdict rules)
+2. The previous reviewer feedback
+3. A bullet list: "Changes since last round"
+4. The updated plan (full text)
+
+This makes stateless reruns viable when resume fails, because the
+reviewer has full context even without session history.
+
+## Agent Instructions
+
+### Step 0: Pre-check & select reviewer
+
+Parse `$ARGUMENTS`. If no reviewer specified, ask the user which to use.
+
+Check binary is installed: `command -v <binary>`
+
+Read `references/<provider>.md` for the selected backend (resolve relative
+to the directory containing this SKILL.md).
+
+Optionally run the self-check:
+```bash
+python3 <skill-dir>/scripts/run_review.py --self-check --reviewer <provider>
+```
+
+### Step 1: Generate session ID & temp paths
+
+```bash
+REVIEW_ID=$(uuidgen | tr '[:upper:]' '[:lower:]' | head -c 8)
+```
+
+Use the platform temp directory for all temp files. Resolve it via
+`python3 -c "import tempfile; print(tempfile.gettempdir())"` or your
+platform's equivalent (`$TMPDIR` on POSIX, `%TEMP%` on Windows).
+
+Temp files (explicit list — `<TMPDIR>` is the resolved temp directory):
+- `<TMPDIR>/ppr-${REVIEW_ID}-plan.md`
+- `<TMPDIR>/ppr-${REVIEW_ID}-prompt.md`
+- `<TMPDIR>/ppr-${REVIEW_ID}-review.md`
+- `<TMPDIR>/ppr-${REVIEW_ID}-session.json`
+- `<TMPDIR>/ppr-${REVIEW_ID}-events.jsonl`
+
+### Step 2: Capture the plan
+
+Write the current plan content to `<TMPDIR>/ppr-${REVIEW_ID}-plan.md`.
+This snapshot is the immutable input for this round — do not modify mid-review.
+
+### Step 3: Submit for review (Round 1)
+
+Write the review prompt to `<TMPDIR>/ppr-${REVIEW_ID}-prompt.md`. Include:
+- The review contract (from above)
+- The full plan text
+
+Call `run_review.py` (resolve relative to this SKILL.md's directory):
+```bash
+python3 <skill-dir>/scripts/run_review.py \
+  --reviewer <codex|gemini|claude|copilot> \
+  --plan-file <TMPDIR>/ppr-${REVIEW_ID}-plan.md \
+  --prompt-file <TMPDIR>/ppr-${REVIEW_ID}-prompt.md \
+  --output-file <TMPDIR>/ppr-${REVIEW_ID}-review.md \
+  --session-file <TMPDIR>/ppr-${REVIEW_ID}-session.json \
+  --events-file <TMPDIR>/ppr-${REVIEW_ID}-events.jsonl \
+  [--model MODEL] \
+  [--effort LEVEL] \
+  [--timeout SECONDS]
+```
+
+Default timeout is 600s (10 min). For large plans or reviewers that use
+tool calls extensively, increase with `--timeout 900` or higher.
+
+### Step 4: Read review & check verdict
+
+Read the session file to get the actual model used. The adapter extracts
+the model identifier from the reviewer's structured output and writes it
+to the `model` field (e.g., `"claude-opus-4-6"`, `"o4-mini"`). If
+extraction fails, the field falls back to the user-specified model or
+`"default"`.
+
+Read the output file. Present the review with header:
+
+```
+## Peer Review — Round N (reviewer: ${BACKEND}, model: ${ACTUAL_MODEL})
+```
+
+Parse VERDICT from the **last non-empty line** of the output file.
+Check for `VERDICT: APPROVED` or `VERDICT: REVISE`.
+
+If `VERDICT: APPROVED` — proceed to Step 7.
+If `VERDICT: REVISE` — proceed to Step 5.
+If no valid verdict found — treat as REVISE and note the parse failure.
+
+### Step 5: Revise the plan
+
+Address reviewer feedback point by point. Rewrite the plan file (new
+immutable snapshot). Summarize changes as a bullet list.
+
+### Step 6: Re-submit (Rounds 2-5)
+
+Write updated prompt using the re-review structure:
+1. Review contract
+2. Previous reviewer feedback
+3. Bullet list of changes since last round
+4. Updated plan (full text)
+
+Call `run_review.py` with `--resume`:
+```bash
+python3 <skill-dir>/scripts/run_review.py \
+  --reviewer <codex|gemini|claude|copilot> \
+  --plan-file <TMPDIR>/ppr-${REVIEW_ID}-plan.md \
+  --prompt-file <TMPDIR>/ppr-${REVIEW_ID}-prompt.md \
+  --output-file <TMPDIR>/ppr-${REVIEW_ID}-review.md \
+  --session-file <TMPDIR>/ppr-${REVIEW_ID}-session.json \
+  --events-file <TMPDIR>/ppr-${REVIEW_ID}-events.jsonl \
+  --resume \
+  [--model MODEL] \
+  [--effort LEVEL] \
+  [--timeout SECONDS]
+```
+
+Repeat Steps 4-6 until APPROVED or max 5 rounds reached.
+
+### Step 7: Present final result
+
+If approved: display the final plan with a success header.
+If max rounds reached without approval: display the latest plan and
+remaining feedback, note that the reviewer did not approve within 5 rounds.
+
+### Step 8: Cleanup
+
+Remove these explicit temp files (no glob). Use `rm -f` on POSIX or
+`Remove-Item -ErrorAction SilentlyContinue` on Windows — whichever
+matches the host agent's shell:
+- `<TMPDIR>/ppr-${REVIEW_ID}-plan.md`
+- `<TMPDIR>/ppr-${REVIEW_ID}-prompt.md`
+- `<TMPDIR>/ppr-${REVIEW_ID}-review.md`
+- `<TMPDIR>/ppr-${REVIEW_ID}-session.json`
+- `<TMPDIR>/ppr-${REVIEW_ID}-events.jsonl`
+
+## Rules
+
+- Display the actual model from the session file `model` field in output
+  headers — never hardcode model names
+- Never use transcript-sharing flags (`--share`, `--share-gist`) in
+  automated runs
+- Treat session/event logs as sensitive artifacts (they contain plan text)
+- If the reviewer CLI is not installed, fail fast with a clear message
+  and installation instructions from the provider reference
+- If resume fails (non-zero exit), fall back to fresh exec with full
+  context in the prompt file
+- The host agent must NOT delegate file modifications to the reviewer —
+  the reviewer is read-only
+- Bundled resource paths (scripts/, references/) resolve relative to
+  the directory containing this SKILL.md
