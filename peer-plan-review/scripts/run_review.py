@@ -185,7 +185,8 @@ def extract_session_id_copilot(output_file):
     return None
 
 
-def extract_metadata(output_file, events_file, reviewer):
+def extract_metadata(output_file, events_file, reviewer,
+                     codex_session_file=None):
     """Extract model/effort metadata from structured output before text rewrite.
 
     Returns dict with 'model' and optionally 'effort' if discoverable.
@@ -235,10 +236,13 @@ def extract_metadata(output_file, events_file, reviewer):
         except OSError:
             pass
 
-    # Codex: JSONL events or session file may contain model
+    # Codex: model/effort live in the on-disk session file (turn_context
+    # event), NOT in the stdout JSONL stream.  Fall back to the stdout
+    # events file if no on-disk session file was provided.
     if reviewer == "codex":
-        source = events_file
-        if source and os.path.exists(source):
+        sources = [s for s in (codex_session_file, events_file)
+                   if s and os.path.exists(s)]
+        for source in sources:
             try:
                 with open(source, "r", encoding="utf-8") as f:
                     for line in f:
@@ -247,19 +251,25 @@ def extract_metadata(output_file, events_file, reviewer):
                             continue
                         try:
                             event = json.loads(line)
+                            # turn_context has model + effort (on-disk only)
+                            if event.get("type") == "turn_context":
+                                payload = event.get("payload", {})
+                                if payload.get("model"):
+                                    meta["model"] = payload["model"]
+                                if payload.get("effort"):
+                                    meta["effort"] = payload["effort"]
+                                break
                             # session_meta may have model in payload
                             if event.get("type") == "session_meta":
                                 model = event.get("payload", {}).get("model")
                                 if model:
                                     meta["model"] = model
-                            # task.created or similar events
-                            if event.get("model"):
-                                meta["model"] = event["model"]
-                                break
                         except json.JSONDecodeError:
                             continue
             except OSError:
                 pass
+            if meta.get("model"):
+                break
 
     return meta
 
@@ -592,11 +602,13 @@ def run_review(args):
 
         # Extract session ID
         new_session_id = None
+        codex_session_path = None
         if reviewer == "codex":
             after = _codex_session_files()
             new_files = after - (codex_sessions_before or set())
             if new_files:
                 newest = max(new_files, key=os.path.getmtime)
+                codex_session_path = newest
                 new_session_id = _parse_codex_session_id(newest)
         elif reviewer == "copilot":
             new_session_id = extract_session_id_copilot(args.output_file)
@@ -604,7 +616,8 @@ def run_review(args):
             new_session_id = extract_session_id_json(args.output_file)
 
         # Extract model metadata from structured output (before text rewrite)
-        meta = extract_metadata(args.output_file, args.events_file, reviewer)
+        meta = extract_metadata(args.output_file, args.events_file, reviewer,
+                                codex_session_file=codex_session_path)
 
         # Extract plain text from structured output
         if reviewer in ("claude", "gemini", "copilot"):
@@ -614,14 +627,18 @@ def run_review(args):
         actual_model = meta.get("model") or args.model or "default"
 
         # Save session metadata
+        actual_effort = meta.get("effort") or args.effort or None
         round_num = session.get("round", 0) + 1
-        save_session(args.session_file, {
+        session_data = {
             "session_id": new_session_id or session_id,
             "reviewer": reviewer,
             "model": actual_model,
             "model_requested": args.model or "default",
             "round": round_num,
-        })
+        }
+        if actual_effort:
+            session_data["effort"] = actual_effort
+        save_session(args.session_file, session_data)
 
         if returncode != 0:
             print(f"Reviewer exited with code {returncode}",
