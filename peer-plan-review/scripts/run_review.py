@@ -28,7 +28,7 @@ EFFORT_MAP = {
 
 # Provider defaults when effort is not specified and not discoverable.
 _EFFORT_DEFAULTS = {
-    "codex": "xhigh",      # Codex default (confirmed from turn_context)
+    "codex": "medium",      # Codex default per reasoning level selector
     "gemini": "medium",     # Gemini default thinkingBudget is 8192
     "claude": "high",       # Claude Code default
     "copilot": "medium",    # Copilot default per GitHub docs
