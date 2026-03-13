@@ -134,16 +134,23 @@ tool calls extensively, increase with `--timeout 900` or higher.
 
 ### Step 4: Read review & check verdict
 
-Read the session file to get the actual model used. The adapter extracts
-the model identifier from the reviewer's structured output and writes it
-to the `model` field (e.g., `"claude-opus-4-6"`, `"o4-mini"`). If
-extraction fails, the field falls back to the user-specified model or
-`"default"`.
+Read the session file to get the actual model and effort used. The adapter
+extracts metadata from the reviewer's structured output:
+
+- `model` — actual model used (e.g., `"gpt-5.4"`, `"gemini-3-pro-preview"`)
+- `effort` — actual effort level, with fallback chain:
+  detected (from reviewer output) > requested (`--effort` arg) > provider default
+- `effort_source` — one of `"detected"`, `"requested"`, `"provider_default"`
+- `effort_requested` — what the user passed via `--effort` (or `"default"`)
+- `thinking_tokens` — (Gemini only) actual thinking token count
+
+If model extraction fails, the field falls back to the user-specified
+model or `"default"`.
 
 Read the output file. Present the review with header:
 
 ```
-## Peer Review — Round N (reviewer: ${BACKEND}, model: ${ACTUAL_MODEL})
+## Peer Review — Round N (reviewer: ${BACKEND}, model: ${ACTUAL_MODEL}, effort: ${EFFORT})
 ```
 
 Parse VERDICT from the **last non-empty line** of the output file.
@@ -202,8 +209,8 @@ matches the host agent's shell:
 
 ## Rules
 
-- Display the actual model from the session file `model` field in output
-  headers — never hardcode model names
+- Display the actual model and effort from the session file in output
+  headers — never hardcode model names or effort levels
 - Never use transcript-sharing flags (`--share`, `--share-gist`) in
   automated runs
 - Treat session/event logs as sensitive artifacts (they contain plan text)

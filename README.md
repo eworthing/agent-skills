@@ -13,7 +13,7 @@ Send an implementation plan to another AI agent for iterative review. The host a
 - Provider-specific adapters: Codex (stdin + JSONL), Gemini (JSON), Claude Code (JSON), Copilot (JSONL)
 - Session resume for multi-round context continuity
 - Process tree kill on timeout/cancellation
-- Automatic model detection from reviewer output
+- Automatic model and effort detection from reviewer output
 
 **Usage:** `/peer-plan-review <codex|gemini|claude|copilot> [model] [effort]`
 
