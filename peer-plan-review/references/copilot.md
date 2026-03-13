@@ -18,8 +18,6 @@ npm i -g @github/copilot
 ```bash
 copilot -p "PROMPT" -s \
   --no-ask-user \
-  --autopilot \
-  --max-autopilot-continues=20 \
   --allow-tool=read \
   --deny-tool=write,shell,url,memory \
   --no-custom-instructions \
@@ -28,20 +26,25 @@ copilot -p "PROMPT" -s \
 ```
 
 - `--output-format json`: JSONL event stream to stdout — required for session ID extraction and structured text capture
-
 - `-p "prompt"` / `--prompt="prompt"`: run once and exit
 - `-s` / `--silent`: suppress stats/decoration, agent response only
 - `--no-ask-user`: disables `ask_user` tool (prevents interactive pauses)
-- `--autopilot`: multi-step autonomous continuation (critical for review)
-- `--max-autopilot-continues=COUNT`: safety cap on autonomous steps
 - `--no-custom-instructions`: skip repo `AGENTS.md`
 - `--no-auto-update`: prevent update prompts
+
+**Do NOT use `--autopilot`:** It enables built-in tools (`report_intent`,
+`task_complete`, `skill`, `sql`) that cause Copilot to encrypt response
+content (`encryptedContent` populated, `content` empty in JSONL) and skip
+producing visible review text. Without `--autopilot`, Copilot outputs
+the review directly with populated `content` fields.
 
 ## Tool permissions
 
 - `--allow-tool=TOOL,...` and `--deny-tool=TOOL,...` (deny takes precedence)
 - Tool kinds: `shell`, `write`, `read`, `url`, `memory`, plus MCP server names
+- Built-in tools (not in categories): `skill`, `sql`, `report_intent`, `task_complete`
 - For review: `--allow-tool=read --deny-tool=write,shell,url,memory`
+  (without `--autopilot`, built-in tools are not available)
 - **URL blocking**: `--deny-tool=url` for blanket deny. **NOT `--deny-url`** which requires domain args.
 
 ## Model
@@ -56,6 +59,9 @@ copilot -p "PROMPT" -s \
 
 `--continue`: most recent session. `--resume=SESSION-ID`: specific session.
 `--resume` without ID shows interactive picker.
+
+Resume works correctly without `--autopilot`. The adapter uses `--resume`
+for rounds 2+ to preserve conversation context.
 
 ## Output
 
@@ -73,7 +79,9 @@ Keychain preferred. Env precedence: `COPILOT_GITHUB_TOKEN` > `GH_TOKEN` > `GITHU
 ## Additional flags
 
 - `--no-color`: machine-friendly output
-- `--available-tools=TOOL,...`: whitelist-only
+- `--autopilot`: multi-step autonomous continuation (**avoid** — see above)
+- `--max-autopilot-continues=COUNT`: safety cap on autonomous steps
+- `--available-tools=TOOL,...`: whitelist-only (too restrictive — blocks core infrastructure)
 - `--excluded-tools=TOOL,...`: blacklist
 - `--config-dir=PATH`: CI isolation
 - `--share=PATH`: export transcript

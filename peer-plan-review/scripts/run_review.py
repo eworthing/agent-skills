@@ -30,7 +30,7 @@ EFFORT_MAP = {
 _EFFORT_DEFAULTS = {
     "codex": "medium",      # Codex default per reasoning level selector
     "gemini": "medium",     # Gemini default thinkingBudget is 8192
-    "claude": "high",       # Claude Code default
+    "claude": "medium",     # Claude Code default
     "copilot": "medium",    # Copilot default per GitHub docs
 }
 
@@ -433,8 +433,11 @@ def build_copilot_cmd(args, session_id=None):
         cmd.extend([f"--resume={session_id}"])
 
     cmd.append("--no-ask-user")
-    cmd.append("--autopilot")
-    cmd.append("--max-autopilot-continues=20")
+    # Do NOT use --autopilot.  It enables built-in tools (report_intent,
+    # task_complete, skill, sql) that cause Copilot to encrypt response
+    # content (encryptedContent only, content empty) and skip producing
+    # visible review text.  Without --autopilot, Copilot outputs the
+    # review as regular text with populated content fields.
     cmd.append("--allow-tool=read")
     cmd.append("--deny-tool=write,shell,url,memory")
     cmd.append("--no-custom-instructions")
@@ -660,8 +663,11 @@ def run_review(args):
         if reviewer in ("claude", "gemini", "copilot"):
             extract_text_from_output(args.output_file, reviewer)
 
-        # Resolve actual model: prefer detected > user-specified > "default"
-        actual_model = meta.get("model") or args.model or "default"
+        # Resolve actual model: prefer detected > session (prior round)
+        # > user-specified > "default"
+        actual_model = (meta.get("model")
+                        or session.get("model")
+                        or args.model or "default")
 
         # Save session metadata
         # Effort: detected (from reviewer output) is the canonical value
