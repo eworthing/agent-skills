@@ -204,16 +204,20 @@ def extract_metadata(output_file, events_file, reviewer,
                 if data.get("model"):
                     meta["model"] = data["model"]
             elif reviewer == "gemini":
-                # Gemini JSON: {"stats": {"model": "..."}, ...} or top-level
+                # Gemini JSON: {"stats": {"models": {"gemini-3-pro-preview": {...}}}}
+                # The model name is the first key in stats.models.
                 stats = data.get("stats", {})
-                if isinstance(stats, dict) and stats.get("model"):
-                    meta["model"] = stats["model"]
-                elif data.get("model"):
+                if isinstance(stats, dict):
+                    models = stats.get("models", {})
+                    if isinstance(models, dict) and models:
+                        meta["model"] = next(iter(models))
+                if not meta.get("model") and data.get("model"):
                     meta["model"] = data["model"]
         except (json.JSONDecodeError, OSError):
             pass
 
-    # Copilot: JSONL — look for model in result or init events
+    # Copilot: JSONL — model is in session.tools_updated or
+    # tool.execution_complete events under data.model
     if reviewer == "copilot" and output_file and os.path.exists(output_file):
         try:
             with open(output_file, "r", encoding="utf-8") as f:
@@ -224,13 +228,10 @@ def extract_metadata(output_file, events_file, reviewer,
                     try:
                         event = json.loads(line)
                         etype = event.get("type", "")
-                        # Check result event
-                        if etype == "result" and event.get("model"):
-                            meta["model"] = event["model"]
+                        data = event.get("data", {})
+                        if isinstance(data, dict) and data.get("model"):
+                            meta["model"] = data["model"]
                             break
-                        # Check init/config events
-                        if etype in ("init", "config") and event.get("model"):
-                            meta["model"] = event["model"]
                     except json.JSONDecodeError:
                         continue
         except OSError:
