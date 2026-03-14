@@ -1,0 +1,5 @@
+{
+  "result": "## Review\n\nThe plan looks solid overall.\n\n### Suggestions\n- Consider adding error handling for edge cases\n- The API design could benefit from pagination\n\nVERDICT: REVISE",
+  "model": "test-claude-model",
+  "session_id": "abc123"
+}

@@ -103,10 +103,23 @@ def self_check(reviewer):
         if result.returncode == 0:
             print(f"OK: {binary} --help succeeded")
             return True
+        if (reviewer == "copilot"
+                and "SecItemCopyMatching failed -50" in (result.stderr or "")):
+            print("WARN: copilot is installed but --help failed with a "
+                  "macOS Keychain error in this automation context. "
+                  "Treating install check as inconclusive success.",
+                  file=sys.stderr)
+            return True
         print(f"FAIL: {binary} --help exited {result.returncode}",
               file=sys.stderr)
         return False
     except subprocess.TimeoutExpired:
+        if reviewer == "gemini":
+            print("WARN: gemini is installed but --help timed out in this "
+                  "non-interactive automation context. Treating install "
+                  "check as inconclusive success.",
+                  file=sys.stderr)
+            return True
         print(f"FAIL: {binary} --help timed out", file=sys.stderr)
         return False
     except Exception as e:
@@ -340,8 +353,10 @@ def extract_text_from_output(output_file, reviewer):
 
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(text if isinstance(text, str) else json.dumps(text))
-    except (json.JSONDecodeError, OSError):
-        pass  # Leave file as-is
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"Warning: could not extract review text from {output_file} "
+              f"for {reviewer}: {e}. File left as raw output.",
+              file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -605,6 +620,11 @@ def run_review(args):
     try:
         print(f"Running: {reviewer} review...", file=sys.stderr)
 
+        # Truncate output file so stale data from a prior round doesn't
+        # make has_output think the current round produced output.
+        if args.output_file and os.path.exists(args.output_file):
+            open(args.output_file, "w").close()
+
         if stdin_data is not None:
             proc = subprocess.Popen(
                 cmd, stdin=subprocess.PIPE,
@@ -724,8 +744,15 @@ def run_review(args):
             if stderr:
                 print(stderr, file=sys.stderr)
 
-            # If resume failed, retry without resume
-            if args.resume and session_id:
+            # Only retry as fresh exec when resume was requested AND
+            # no output was produced (i.e. the session itself failed to
+            # resume, not a crash/warning during review).  If output
+            # exists, the provider ran — retrying would duplicate the
+            # review and waste tokens.
+            has_output = (args.output_file
+                          and os.path.exists(args.output_file)
+                          and os.path.getsize(args.output_file) > 0)
+            if args.resume and session_id and not has_output:
                 print("Resume failed, falling back to fresh exec...",
                       file=sys.stderr)
                 args.resume = False
@@ -816,6 +843,36 @@ def main():
     if not args.prompt_file:
         print("--prompt-file is required", file=sys.stderr)
         sys.exit(1)
+
+    # Validate input files exist
+    for arg_name, path in [("--plan-file", args.plan_file),
+                            ("--prompt-file", args.prompt_file)]:
+        if path and not os.path.exists(path):
+            print(f"Error: {arg_name} not found: {path}", file=sys.stderr)
+            sys.exit(1)
+
+    # Validate output paths: directory must exist, and either the file
+    # already exists and is writable, or the directory is writable (so
+    # the file can be created).  On POSIX, writing to an existing file
+    # depends on file permissions, not directory permissions.
+    for arg_name, path in [("--output-file", args.output_file),
+                            ("--session-file", args.session_file),
+                            ("--events-file", args.events_file)]:
+        if path:
+            parent = os.path.dirname(path) or "."
+            if not os.path.isdir(parent):
+                print(f"Error: directory for {arg_name} does not exist: {parent}",
+                      file=sys.stderr)
+                sys.exit(1)
+            if os.path.exists(path):
+                if not os.access(path, os.W_OK):
+                    print(f"Error: {arg_name} exists but is not writable: {path}",
+                          file=sys.stderr)
+                    sys.exit(1)
+            elif not os.access(parent, os.W_OK):
+                print(f"Error: directory for {arg_name} is not writable: {parent}",
+                      file=sys.stderr)
+                sys.exit(1)
 
     # Verify binary is installed
     binary = BINARIES[args.reviewer]

@@ -1,0 +1,15 @@
+{
+  "response": "## Review\n\nPlan is well-structured.\n\nVERDICT: APPROVED",
+  "model": "test-gemini-model",
+  "stats": {
+    "models": {
+      "test-gemini-model": {
+        "tokens": {
+          "input": 1500,
+          "output": 800,
+          "thoughts": 4096
+        }
+      }
+    }
+  }
+}

@@ -92,6 +92,18 @@ reviewer has full context even without session history.
 
 Parse `$ARGUMENTS`. If no reviewer specified, ask the user which to use.
 
+Before proceeding, verify a plan exists to review. Accepted sources:
+- An active plan file in the current session (plan mode)
+- A plan the user pasted or dictated in the conversation
+- A file path the user referenced
+
+If none of these exist, ask the user: "What would you like reviewed?
+Paste your plan, point me to a file, or enter plan mode first."
+
+When the user omits the model argument, use the provider default.
+Mention once: "Using <provider>'s default model. Run with a model
+name to override (e.g., opus, flash). See Available Models above."
+
 Check binary is installed: `command -v <binary>`
 
 Parsing rule: if the second token matches low|medium|high|xhigh exactly,
@@ -183,6 +195,25 @@ Check for `VERDICT: APPROVED` or `VERDICT: REVISE`.
 
 If `VERDICT: APPROVED` — proceed to Step 7.
 If `VERDICT: REVISE` — proceed to Step 5.
+
+If run_review.py exits non-zero:
+
+1. **Resume failure** (already handled): fall back to fresh exec with
+   full context in the prompt file. This is the existing behavior.
+
+2. **Stateless failure** (timeout, binary crash, no output file):
+   - Report the error and stderr to the user
+   - Do NOT auto-retry — the provider may have consumed input or
+     created partial state
+   - Ask the user: "Review failed: <error>. Retry with fresh session,
+     try a different provider, or skip?"
+
+3. **Partial output** (non-zero exit but output file exists):
+   - Attempt to extract text and verdict as normal
+   - If extraction succeeds, proceed (some providers exit non-zero
+     on warnings)
+   - If extraction fails, show raw output and ask user how to proceed
+
 If no valid verdict found — treat as REVISE and note the parse failure.
 
 ### Step 5: Revise the plan
@@ -241,8 +272,10 @@ matches the host agent's shell:
 - Treat session/event logs as sensitive artifacts (they contain plan text)
 - If the reviewer CLI is not installed, fail fast with a clear message
   and installation instructions from the provider reference
-- If resume fails (non-zero exit), fall back to fresh exec with full
-  context in the prompt file
+- If resume fails with no output (session-level failure), the adapter
+  falls back to fresh exec automatically. If resume fails but output
+  exists (partial output or provider warning), the adapter returns
+  non-zero for the host to triage per Step 4's error categories
 - The host agent must NOT delegate file modifications to the reviewer —
   the reviewer is read-only
 - Bundled resource paths (scripts/, references/) resolve relative to

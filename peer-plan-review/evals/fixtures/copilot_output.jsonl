@@ -1,0 +1,3 @@
+{"type":"session.tools_updated","data":{"model":"test-copilot-model","tools":["read","grep"]}}
+{"type":"assistant.message","data":{"content":"## Review\n\nLooks good with minor issues.\n\nVERDICT: REVISE"}}
+{"type":"result","sessionId":"copilot-sess-456"}
