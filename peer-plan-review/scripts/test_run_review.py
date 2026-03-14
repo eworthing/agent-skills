@@ -8,6 +8,7 @@ Tier 2: Optional self-checks for installed provider CLIs.
 Run:  python3 scripts/test_run_review.py
 """
 
+import os
 import shutil
 import stat
 import subprocess
@@ -24,6 +25,7 @@ FIXTURES_DIR = str(Path(SCRIPT_DIR).parent / "evals" / "fixtures")
 
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
+import run_review  # noqa: E402
 from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
 
 
@@ -78,7 +80,7 @@ class TestModelValidation(unittest.TestCase):
         # at binary check. Use a nonexistent prompt to trigger early exit after validation.
         rc, _stdout, stderr = run_script(
             "--reviewer", "claude", "--model", "OPUS",
-            "--prompt-file", "/dev/null", "--list-models",
+            "--prompt-file", os.devnull, "--list-models",
         )
         # --list-models exits 0; model validation runs before it.
         # No warning should be emitted since OPUS normalizes to opus.
@@ -113,7 +115,7 @@ class TestFileValidation(unittest.TestCase):
         rc, _stdout, stderr = run_script(
             "--reviewer", "claude",
             "--plan-file", "/nonexistent/plan.md",
-            "--prompt-file", "/dev/null",
+            "--prompt-file", os.devnull,
         )
         self.assertNotEqual(rc, 0)
         self.assertIn("--plan-file", stderr)
@@ -135,12 +137,13 @@ class TestFileValidation(unittest.TestCase):
         # but will fail later at binary check — that's fine, we're testing validation.
         _rc, _stdout, stderr = run_script(
             "--reviewer", "claude",
-            "--prompt-file", "/dev/null",
+            "--prompt-file", os.devnull,
             "--output-file", "review.json",
         )
         # Should NOT fail with "directory does not exist" error
         self.assertNotIn("directory for --output-file does not exist", stderr)
 
+    @unittest.skipIf(sys.platform == "win32", "POSIX directory permissions not supported on Windows")
     def test_nonwritable_output_dir(self):
         """Test 11: Non-writable output directory exits non-zero."""
         tmpdir = tempfile.mkdtemp(prefix="ppr-test-")
@@ -150,7 +153,7 @@ class TestFileValidation(unittest.TestCase):
         try:
             rc, _stdout, stderr = run_script(
                 "--reviewer", "claude",
-                "--prompt-file", "/dev/null",
+                "--prompt-file", os.devnull,
                 "--output-file", str(readonly_dir / "out.json"),
             )
             self.assertNotEqual(rc, 0)
@@ -321,6 +324,51 @@ class TestSelfCheck(unittest.TestCase):
     def test_self_check_copilot(self):
         rc, _stdout, stderr = run_script("--self-check", "--reviewer", "copilot")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
+
+
+_CREATE_NEW_PROCESS_GROUP = 0x00000200  # Windows constant sentinel for testing
+
+
+class TestPlatformHelpers(unittest.TestCase):
+    """Tests for cross-platform process helpers."""
+
+    @mock.patch("run_review.sys")
+    def test_popen_session_kwargs_posix(self, mock_sys):
+        mock_sys.platform = "linux"
+        result = run_review._popen_session_kwargs()
+        self.assertEqual(result, {"start_new_session": True})
+
+    @mock.patch("run_review.subprocess.CREATE_NEW_PROCESS_GROUP",
+                _CREATE_NEW_PROCESS_GROUP, create=True)
+    @mock.patch("run_review.sys")
+    def test_popen_session_kwargs_windows(self, mock_sys):
+        mock_sys.platform = "win32"
+        result = run_review._popen_session_kwargs()
+        self.assertIn("creationflags", result)
+        self.assertEqual(result["creationflags"], _CREATE_NEW_PROCESS_GROUP)
+
+    @mock.patch("run_review.sys")
+    def test_kill_tree_windows_uses_taskkill(self, mock_sys):
+        mock_sys.platform = "win32"
+        mock_proc = mock.MagicMock()
+        mock_proc.pid = 12345
+        with mock.patch("run_review.subprocess.run") as mock_run:
+            run_review._kill_tree(mock_proc)
+            mock_run.assert_called_once_with(
+                ["taskkill", "/T", "/F", "/PID", "12345"],
+                capture_output=True,
+            )
+            mock_proc.wait.assert_called_once()
+
+    @mock.patch("run_review.sys")
+    def test_kill_tree_posix_uses_killpg(self, mock_sys):
+        mock_sys.platform = "linux"
+        mock_proc = mock.MagicMock()
+        mock_proc.pid = 12345
+        with mock.patch("run_review.os.getpgid", return_value=12345), \
+             mock.patch("run_review.os.killpg"):
+            run_review._kill_tree(mock_proc)
+            mock_proc.wait.assert_called()
 
 
 if __name__ == "__main__":

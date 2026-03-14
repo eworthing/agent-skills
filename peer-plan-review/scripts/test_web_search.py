@@ -17,6 +17,7 @@ import os
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -34,13 +35,27 @@ PROMPT = (
 
 def _kill_tree(proc):
     """Kill process and all descendants."""
-    try:
-        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-        proc.wait(timeout=5)
-    except (subprocess.TimeoutExpired, ProcessLookupError):
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-    proc.wait()
+    if sys.platform == "win32":
+        subprocess.run(
+            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
+            capture_output=True,
+        )
+        proc.wait()
+    else:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+            proc.wait(timeout=5)
+        except (subprocess.TimeoutExpired, ProcessLookupError):
+            with contextlib.suppress(ProcessLookupError):
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        proc.wait()
+
+
+def _popen_session_kwargs():
+    """Return Popen kwargs for process-group isolation, per platform."""
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
 
 
 def test_claude_web(output_file):
@@ -135,7 +150,7 @@ def extract_response(output_file, test_name, stdout):
     # Copilot: JSONL
     if provider == "copilot":
         messages = []
-        for line in stdout.split("\n"):
+        for line in stdout.splitlines():
             if not line.strip():
                 continue
             try:
@@ -188,14 +203,14 @@ def run_test(test_name, test_fn):
                 cmd, stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 encoding="utf-8", errors="replace",
-                env=env, start_new_session=True,
+                env=env, **_popen_session_kwargs(),
             )
         else:
             proc = subprocess.Popen(
                 cmd, stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 encoding="utf-8", errors="replace",
-                env=env, start_new_session=True,
+                env=env, **_popen_session_kwargs(),
             )
 
         try:

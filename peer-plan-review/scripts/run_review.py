@@ -331,7 +331,7 @@ def extract_text_from_output(output_file, reviewer):
         if reviewer == "copilot":
             # JSONL: one JSON object per line
             messages = []
-            for line in content.split("\n"):
+            for line in content.splitlines():
                 if not line.strip():
                     continue
                 try:
@@ -529,6 +529,13 @@ def _kill_tree(proc):
         proc.wait()
 
 
+def _popen_session_kwargs():
+    """Return Popen kwargs for process-group isolation, per platform."""
+    if sys.platform == "win32":
+        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+    return {"start_new_session": True}
+
+
 # Module-level for signal handler access
 _active_proc = None
 
@@ -630,14 +637,14 @@ def run_review(args):
                 cmd, stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 encoding="utf-8", errors="replace",
-                env=env, start_new_session=True,
+                env=env, **_popen_session_kwargs(),
             )
         else:
             proc = subprocess.Popen(
                 cmd, stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 encoding="utf-8", errors="replace",
-                env=env, start_new_session=True,
+                env=env, **_popen_session_kwargs(),
             )
         _active_proc = proc
 
