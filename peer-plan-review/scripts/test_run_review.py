@@ -8,29 +8,28 @@ Tier 2: Optional self-checks for installed provider CLIs.
 Run:  python3 scripts/test_run_review.py
 """
 
-import json
-import os
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 # Resolve paths relative to this test file
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPT = os.path.join(SCRIPT_DIR, "run_review.py")
-FIXTURES_DIR = os.path.join(SCRIPT_DIR, "..", "evals", "fixtures")
+SCRIPT_DIR = str(Path(__file__).resolve().parent)
+SCRIPT = str(Path(SCRIPT_DIR) / "run_review.py")
+FIXTURES_DIR = str(Path(SCRIPT_DIR).parent / "evals" / "fixtures")
 
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
-from run_review import extract_text_from_output, extract_metadata, self_check
+from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
 
 
 def run_script(*extra_args):
     """Run run_review.py as subprocess, return (returncode, stdout, stderr)."""
-    cmd = [sys.executable, SCRIPT] + list(extra_args)
+    cmd = [sys.executable, SCRIPT, *list(extra_args)]
     result = subprocess.run(
         cmd, capture_output=True, encoding="utf-8", errors="replace",
         timeout=30,
@@ -77,7 +76,7 @@ class TestModelValidation(unittest.TestCase):
         # --list-models exits before binary check, but model validation runs first
         # We need to trigger model validation with a real invocation that will fail
         # at binary check. Use a nonexistent prompt to trigger early exit after validation.
-        rc, stdout, stderr = run_script(
+        rc, _stdout, stderr = run_script(
             "--reviewer", "claude", "--model", "OPUS",
             "--prompt-file", "/dev/null", "--list-models",
         )
@@ -88,7 +87,7 @@ class TestModelValidation(unittest.TestCase):
 
     def test_model_prefix_suggestion(self):
         """Test 4: --model fla --reviewer gemini suggests flash/flash-lite."""
-        rc, stdout, stderr = run_script(
+        rc, _stdout, stderr = run_script(
             "--reviewer", "gemini", "--model", "fla", "--list-models",
         )
         self.assertEqual(rc, 0)
@@ -97,7 +96,7 @@ class TestModelValidation(unittest.TestCase):
 
     def test_unknown_model_warning(self):
         """Test 5: --model flahs --reviewer gemini warns on stderr."""
-        rc, stdout, stderr = run_script(
+        rc, _stdout, stderr = run_script(
             "--reviewer", "gemini", "--model", "flahs", "--list-models",
         )
         self.assertEqual(rc, 0)
@@ -111,7 +110,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_missing_plan_file(self):
         """Test 6: --plan-file /nonexistent exits non-zero with clear error."""
-        rc, stdout, stderr = run_script(
+        rc, _stdout, stderr = run_script(
             "--reviewer", "claude",
             "--plan-file", "/nonexistent/plan.md",
             "--prompt-file", "/dev/null",
@@ -122,7 +121,7 @@ class TestFileValidation(unittest.TestCase):
 
     def test_missing_prompt_file(self):
         """Test 7: --prompt-file /nonexistent exits non-zero with clear error."""
-        rc, stdout, stderr = run_script(
+        rc, _stdout, stderr = run_script(
             "--reviewer", "claude",
             "--prompt-file", "/nonexistent/prompt.md",
         )
@@ -134,7 +133,7 @@ class TestFileValidation(unittest.TestCase):
         """Test 10: --output-file review.json (bare filename) validates cwd."""
         # This should pass the directory validation (cwd exists and is writable)
         # but will fail later at binary check — that's fine, we're testing validation.
-        rc, stdout, stderr = run_script(
+        _rc, _stdout, stderr = run_script(
             "--reviewer", "claude",
             "--prompt-file", "/dev/null",
             "--output-file", "review.json",
@@ -145,19 +144,19 @@ class TestFileValidation(unittest.TestCase):
     def test_nonwritable_output_dir(self):
         """Test 11: Non-writable output directory exits non-zero."""
         tmpdir = tempfile.mkdtemp(prefix="ppr-test-")
-        readonly_dir = os.path.join(tmpdir, "readonly")
-        os.makedirs(readonly_dir)
-        os.chmod(readonly_dir, stat.S_IRUSR | stat.S_IXUSR)  # r-x
+        readonly_dir = Path(tmpdir) / "readonly"
+        readonly_dir.mkdir(parents=True)
+        readonly_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)  # r-x
         try:
-            rc, stdout, stderr = run_script(
+            rc, _stdout, stderr = run_script(
                 "--reviewer", "claude",
                 "--prompt-file", "/dev/null",
-                "--output-file", os.path.join(readonly_dir, "out.json"),
+                "--output-file", str(readonly_dir / "out.json"),
             )
             self.assertNotEqual(rc, 0)
             self.assertIn("not writable", stderr)
         finally:
-            os.chmod(readonly_dir, stat.S_IRWXU)
+            readonly_dir.chmod(stat.S_IRWXU)
             shutil.rmtree(tmpdir)
 
 
@@ -167,10 +166,10 @@ class TestOutputParsing(unittest.TestCase):
     def test_extract_text_claude(self):
         """Test 8a: Claude JSON fixture extracts review text correctly."""
         # Copy fixture to temp file (extraction rewrites the file)
-        fixture = os.path.join(FIXTURES_DIR, "claude_output.json")
+        fixture = Path(FIXTURES_DIR) / "claude_output.json"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
                                           delete=False) as tmp:
-            with open(fixture) as f:
+            with fixture.open() as f:
                 tmp.write(f.read())
             tmp_path = tmp.name
         try:
@@ -180,21 +179,21 @@ class TestOutputParsing(unittest.TestCase):
 
             # Extract text (rewrites file)
             extract_text_from_output(tmp_path, "claude")
-            with open(tmp_path) as f:
+            with Path(tmp_path).open() as f:
                 text = f.read()
             self.assertIn("VERDICT: REVISE", text)
             self.assertIn("error handling", text)
             # Should be plain text, not JSON
             self.assertNotIn('"result"', text)
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_extract_text_gemini(self):
         """Test 8b: Gemini JSON fixture extracts review text and metadata."""
-        fixture = os.path.join(FIXTURES_DIR, "gemini_output.json")
+        fixture = Path(FIXTURES_DIR) / "gemini_output.json"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
                                           delete=False) as tmp:
-            with open(fixture) as f:
+            with fixture.open() as f:
                 tmp.write(f.read())
             tmp_path = tmp.name
         try:
@@ -203,18 +202,18 @@ class TestOutputParsing(unittest.TestCase):
             self.assertEqual(meta.get("thinking_tokens"), 4096)
 
             extract_text_from_output(tmp_path, "gemini")
-            with open(tmp_path) as f:
+            with Path(tmp_path).open() as f:
                 text = f.read()
             self.assertIn("VERDICT: APPROVED", text)
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_extract_text_copilot(self):
         """Test 8c: Copilot JSONL fixture extracts review text and metadata."""
-        fixture = os.path.join(FIXTURES_DIR, "copilot_output.jsonl")
+        fixture = Path(FIXTURES_DIR) / "copilot_output.jsonl"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl",
                                           delete=False) as tmp:
-            with open(fixture) as f:
+            with fixture.open() as f:
                 tmp.write(f.read())
             tmp_path = tmp.name
         try:
@@ -222,25 +221,25 @@ class TestOutputParsing(unittest.TestCase):
             self.assertEqual(meta.get("model"), "test-copilot-model")
 
             extract_text_from_output(tmp_path, "copilot")
-            with open(tmp_path) as f:
+            with Path(tmp_path).open() as f:
                 text = f.read()
             self.assertIn("VERDICT: REVISE", text)
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
     def test_extract_metadata_codex(self):
         """Test 8d: Codex JSONL events fixture extracts model and effort."""
-        fixture = os.path.join(FIXTURES_DIR, "codex_events.jsonl")
+        fixture = str(Path(FIXTURES_DIR) / "codex_events.jsonl")
         meta = extract_metadata(None, fixture, "codex")
         self.assertEqual(meta.get("model"), "test-codex-model")
         self.assertEqual(meta.get("effort"), "high")
 
     def test_malformed_output_warning(self):
         """Test 9: Malformed JSON emits warning, file left as-is."""
-        fixture = os.path.join(FIXTURES_DIR, "malformed.json")
+        fixture = Path(FIXTURES_DIR) / "malformed.json"
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
                                           delete=False) as tmp:
-            with open(fixture) as f:
+            with fixture.open() as f:
                 original = f.read()
                 tmp.write(original)
             tmp_path = tmp.name
@@ -256,11 +255,11 @@ class TestOutputParsing(unittest.TestCase):
             self.assertIn("could not extract", warning)
 
             # File should be unchanged
-            with open(tmp_path) as f:
+            with Path(tmp_path).open() as f:
                 content = f.read()
             self.assertEqual(content, original)
         finally:
-            os.unlink(tmp_path)
+            Path(tmp_path).unlink()
 
 
 class TestSelfCheckUnit(unittest.TestCase):
@@ -305,22 +304,22 @@ class TestSelfCheck(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("claude"), "claude CLI not installed")
     def test_self_check_claude(self):
-        rc, stdout, stderr = run_script("--self-check", "--reviewer", "claude")
+        rc, _stdout, stderr = run_script("--self-check", "--reviewer", "claude")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
 
     @unittest.skipUnless(shutil.which("gemini"), "gemini CLI not installed")
     def test_self_check_gemini(self):
-        rc, stdout, stderr = run_script("--self-check", "--reviewer", "gemini")
+        rc, _stdout, stderr = run_script("--self-check", "--reviewer", "gemini")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
 
     @unittest.skipUnless(shutil.which("codex"), "codex CLI not installed")
     def test_self_check_codex(self):
-        rc, stdout, stderr = run_script("--self-check", "--reviewer", "codex")
+        rc, _stdout, stderr = run_script("--self-check", "--reviewer", "codex")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
 
     @unittest.skipUnless(shutil.which("copilot"), "copilot CLI not installed")
     def test_self_check_copilot(self):
-        rc, stdout, stderr = run_script("--self-check", "--reviewer", "copilot")
+        rc, _stdout, stderr = run_script("--self-check", "--reviewer", "copilot")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
 
 

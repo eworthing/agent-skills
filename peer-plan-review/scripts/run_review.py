@@ -8,13 +8,15 @@ Supports exec, resume, session tracking, and self-check.
 """
 
 import argparse
+import contextlib
 import json
 import os
-import signal
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Effort mapping: portable level → provider-native value
@@ -133,10 +135,10 @@ def self_check(reviewer):
 
 def load_session(session_file):
     """Load session metadata from JSON file."""
-    if not session_file or not os.path.exists(session_file):
+    if not session_file or not Path(session_file).exists():
         return {}
     try:
-        with open(session_file, "r", encoding="utf-8") as f:
+        with Path(session_file).open(encoding="utf-8") as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
         return {}
@@ -147,7 +149,7 @@ def save_session(session_file, data):
     if not session_file:
         return
     try:
-        with open(session_file, "w", encoding="utf-8") as f:
+        with Path(session_file).open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     except OSError as e:
         print(f"Warning: could not save session: {e}", file=sys.stderr)
@@ -155,28 +157,28 @@ def save_session(session_file, data):
 
 def _codex_session_files():
     """Return set of all Codex session file paths."""
-    codex_home = os.environ.get("CODEX_HOME", os.path.expanduser("~/.codex"))
-    sessions_dir = os.path.join(codex_home, "sessions")
-    if not os.path.isdir(sessions_dir):
+    codex_home = os.environ.get("CODEX_HOME", str(Path("~/.codex").expanduser()))
+    sessions_dir = Path(codex_home) / "sessions"
+    if not sessions_dir.is_dir():
         return set()
     result = set()
     for root, _, files in os.walk(sessions_dir):
         for f in files:
             if f.endswith(".jsonl"):
-                result.add(os.path.join(root, f))
+                result.add(str(Path(root) / f))
     return result
 
 
 def _parse_codex_session_id(session_file):
     """Extract session UUID from first line of a Codex session file."""
     try:
-        with open(session_file, "r", encoding="utf-8") as fh:
+        with Path(session_file).open(encoding="utf-8") as fh:
             first = json.loads(fh.readline())
             if first.get("type") == "session_meta":
                 sid = first.get("payload", {}).get("id")
                 # Validate cwd matches to avoid binding to a concurrent session
                 cwd = first.get("payload", {}).get("cwd", "")
-                if cwd and os.path.realpath(cwd) != os.path.realpath(os.getcwd()):
+                if cwd and Path(cwd).resolve() != Path.cwd().resolve():
                     return None
                 return sid
     except (json.JSONDecodeError, KeyError, OSError):
@@ -186,10 +188,10 @@ def _parse_codex_session_id(session_file):
 
 def extract_session_id_json(output_file, field="session_id"):
     """Extract session_id from JSON output."""
-    if not output_file or not os.path.exists(output_file):
+    if not output_file or not Path(output_file).exists():
         return None
     try:
-        with open(output_file, "r", encoding="utf-8") as f:
+        with Path(output_file).open(encoding="utf-8") as f:
             data = json.load(f)
             return data.get(field)
     except (json.JSONDecodeError, OSError):
@@ -199,10 +201,10 @@ def extract_session_id_json(output_file, field="session_id"):
 
 def extract_session_id_copilot(output_file):
     """Parse sessionId from Copilot JSONL result event."""
-    if not output_file or not os.path.exists(output_file):
+    if not output_file or not Path(output_file).exists():
         return None
     try:
-        with open(output_file, "r", encoding="utf-8") as f:
+        with Path(output_file).open(encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -228,9 +230,9 @@ def extract_metadata(output_file, events_file, reviewer,
     meta = {}
 
     # Claude / Gemini: single JSON object
-    if reviewer in ("claude", "gemini") and output_file and os.path.exists(output_file):
+    if reviewer in ("claude", "gemini") and output_file and Path(output_file).exists():
         try:
-            with open(output_file, "r", encoding="utf-8") as f:
+            with Path(output_file).open(encoding="utf-8") as f:
                 data = json.load(f)
             if reviewer == "claude":
                 # Claude JSON: {"result": "...", "model": "claude-opus-4-6", ...}
@@ -260,9 +262,9 @@ def extract_metadata(output_file, events_file, reviewer,
 
     # Copilot: JSONL — model is in session.tools_updated or
     # tool.execution_complete events under data.model
-    if reviewer == "copilot" and output_file and os.path.exists(output_file):
+    if reviewer == "copilot" and output_file and Path(output_file).exists():
         try:
-            with open(output_file, "r", encoding="utf-8") as f:
+            with Path(output_file).open(encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -283,10 +285,10 @@ def extract_metadata(output_file, events_file, reviewer,
     # events file if no on-disk session file was provided.
     if reviewer == "codex":
         sources = [s for s in (codex_session_file, events_file)
-                   if s and os.path.exists(s)]
+                   if s and Path(s).exists()]
         for source in sources:
             try:
-                with open(source, "r", encoding="utf-8") as f:
+                with Path(source).open(encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line:
@@ -318,10 +320,10 @@ def extract_metadata(output_file, events_file, reviewer,
 
 def extract_text_from_output(output_file, reviewer):
     """Extract review text from structured output and rewrite as plain text."""
-    if not output_file or not os.path.exists(output_file):
+    if not output_file or not Path(output_file).exists():
         return
     try:
-        with open(output_file, "r", encoding="utf-8") as f:
+        with Path(output_file).open(encoding="utf-8") as f:
             content = f.read().strip()
         if not content:
             return
@@ -351,7 +353,7 @@ def extract_text_from_output(output_file, reviewer):
             else:
                 text = content
 
-        with open(output_file, "w", encoding="utf-8") as f:
+        with Path(output_file).open("w", encoding="utf-8") as f:
             f.write(text if isinstance(text, str) else json.dumps(text))
     except (json.JSONDecodeError, OSError) as e:
         print(f"Warning: could not extract review text from {output_file} "
@@ -496,10 +498,10 @@ def build_copilot_cmd(args, session_id=None):
 
 def read_prompt(prompt_file):
     """Read prompt text from file."""
-    if not prompt_file or not os.path.exists(prompt_file):
+    if not prompt_file or not Path(prompt_file).exists():
         return None
     try:
-        with open(prompt_file, "r", encoding="utf-8") as f:
+        with Path(prompt_file).open(encoding="utf-8") as f:
             return f.read()
     except OSError:
         return None
@@ -522,10 +524,8 @@ def _kill_tree(proc):
             os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
             proc.wait(timeout=5)
         except (subprocess.TimeoutExpired, ProcessLookupError):
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-            except ProcessLookupError:
-                pass
         proc.wait()
 
 
@@ -577,24 +577,24 @@ def run_review(args):
             gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
             source_dir = os.environ.get(
                 "GEMINI_CONFIG_DIR",
-                os.path.expanduser("~/.gemini"),
+                str(Path("~/.gemini").expanduser()),
             )
             # Copy existing config if present (auth, extensions, etc.)
-            if os.path.isdir(source_dir):
+            if Path(source_dir).is_dir():
                 shutil.copytree(source_dir, gemini_config_dir,
                                 dirs_exist_ok=True)
             # Overlay effort settings (merges into existing settings.json)
-            settings_path = os.path.join(gemini_config_dir, "settings.json")
+            settings_path = Path(gemini_config_dir) / "settings.json"
             try:
                 existing = {}
-                if os.path.exists(settings_path):
-                    with open(settings_path, "r", encoding="utf-8") as f:
+                if settings_path.exists():
+                    with settings_path.open(encoding="utf-8") as f:
                         try:
                             existing = json.load(f)
                         except json.JSONDecodeError:
                             existing = {}
                 existing["thinkingConfig"] = {"thinkingBudget": budget}
-                with open(settings_path, "w", encoding="utf-8") as f:
+                with settings_path.open("w", encoding="utf-8") as f:
                     json.dump(existing, f)
                 env["GEMINI_CONFIG_DIR"] = gemini_config_dir
             except OSError as e:
@@ -622,8 +622,8 @@ def run_review(args):
 
         # Truncate output file so stale data from a prior round doesn't
         # make has_output think the current round produced output.
-        if args.output_file and os.path.exists(args.output_file):
-            open(args.output_file, "w").close()
+        if args.output_file and Path(args.output_file).exists():
+            Path(args.output_file).write_text("")
 
         if stdin_data is not None:
             proc = subprocess.Popen(
@@ -657,12 +657,12 @@ def run_review(args):
         # Write stdout to output file for non-Codex providers
         # (Codex uses --output-last-message)
         if reviewer != "codex" and stdout and args.output_file:
-            with open(args.output_file, "w", encoding="utf-8") as f:
+            with Path(args.output_file).open("w", encoding="utf-8") as f:
                 f.write(stdout)
 
         # Write Codex JSONL events to events file
         if reviewer == "codex" and stdout and args.events_file:
-            with open(args.events_file, "w", encoding="utf-8") as f:
+            with Path(args.events_file).open("w", encoding="utf-8") as f:
                 f.write(stdout)
 
         # Extract session ID
@@ -675,7 +675,8 @@ def run_review(args):
             # If multiple match, same-cwd concurrency is ambiguous —
             # skip metadata extraction rather than risk cross-contamination.
             cwd_matches = []
-            for candidate in sorted(new_files, key=os.path.getmtime,
+            for candidate in sorted(new_files,
+                                    key=lambda p: Path(p).stat().st_mtime,
                                     reverse=True):
                 parsed_id = _parse_codex_session_id(candidate)
                 if parsed_id:
@@ -749,9 +750,10 @@ def run_review(args):
             # resume, not a crash/warning during review).  If output
             # exists, the provider ran — retrying would duplicate the
             # review and waste tokens.
-            has_output = (args.output_file
-                          and os.path.exists(args.output_file)
-                          and os.path.getsize(args.output_file) > 0)
+            output_path = Path(args.output_file) if args.output_file else None
+            has_output = (output_path
+                          and output_path.exists()
+                          and output_path.stat().st_size > 0)
             if args.resume and session_id and not has_output:
                 print("Resume failed, falling back to fresh exec...",
                       file=sys.stderr)
@@ -845,28 +847,28 @@ def main():
         sys.exit(1)
 
     # Validate input files exist
-    for arg_name, path in [("--plan-file", args.plan_file),
-                            ("--prompt-file", args.prompt_file)]:
-        if path and not os.path.exists(path):
-            print(f"Error: {arg_name} not found: {path}", file=sys.stderr)
+    for arg_name, fpath in [("--plan-file", args.plan_file),
+                             ("--prompt-file", args.prompt_file)]:
+        if fpath and not Path(fpath).exists():
+            print(f"Error: {arg_name} not found: {fpath}", file=sys.stderr)
             sys.exit(1)
 
     # Validate output paths: directory must exist, and either the file
     # already exists and is writable, or the directory is writable (so
     # the file can be created).  On POSIX, writing to an existing file
     # depends on file permissions, not directory permissions.
-    for arg_name, path in [("--output-file", args.output_file),
-                            ("--session-file", args.session_file),
-                            ("--events-file", args.events_file)]:
-        if path:
-            parent = os.path.dirname(path) or "."
-            if not os.path.isdir(parent):
+    for arg_name, fpath in [("--output-file", args.output_file),
+                             ("--session-file", args.session_file),
+                             ("--events-file", args.events_file)]:
+        if fpath:
+            parent = Path(fpath).parent
+            if not parent.is_dir():
                 print(f"Error: directory for {arg_name} does not exist: {parent}",
                       file=sys.stderr)
                 sys.exit(1)
-            if os.path.exists(path):
-                if not os.access(path, os.W_OK):
-                    print(f"Error: {arg_name} exists but is not writable: {path}",
+            if Path(fpath).exists():
+                if not os.access(fpath, os.W_OK):
+                    print(f"Error: {arg_name} exists but is not writable: {fpath}",
                           file=sys.stderr)
                     sys.exit(1)
             elif not os.access(parent, os.W_OK):

@@ -11,14 +11,15 @@ Usage:
 """
 
 import argparse
+import contextlib
 import json
 import os
-import signal
 import shutil
+import signal
 import subprocess
-import sys
 import tempfile
 import time
+from pathlib import Path
 
 TIMEOUT = 180  # seconds — URL fetch can be slow (Gemini/Copilot take 50-70s)
 
@@ -37,10 +38,8 @@ def _kill_tree(proc):
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         proc.wait(timeout=5)
     except (subprocess.TimeoutExpired, ProcessLookupError):
-        try:
+        with contextlib.suppress(ProcessLookupError):
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        except ProcessLookupError:
-            pass
     proc.wait()
 
 
@@ -114,8 +113,8 @@ def extract_response(output_file, test_name, stdout):
 
     # For Codex, response is in the output file
     if provider == "codex":
-        if os.path.exists(output_file):
-            with open(output_file, "r") as f:
+        if Path(output_file).exists():
+            with Path(output_file).open() as f:
                 return f.read().strip()
         return stdout.strip() if stdout else "(no output)"
 
@@ -155,7 +154,7 @@ def extract_response(output_file, test_name, stdout):
 def run_test(test_name, test_fn):
     """Run a single test case and return results."""
     tmpdir = tempfile.gettempdir()
-    output_file = os.path.join(tmpdir, f"web-test-{test_name.replace(':', '-')}.txt")
+    output_file = str(Path(tmpdir) / f"web-test-{test_name.replace(':', '-')}.txt")
 
     provider = test_name.split(":")[0]
     binary = provider if provider != "claude" else "claude"
@@ -242,7 +241,7 @@ def run_test(test_name, test_fn):
         return {
             "test": test_name,
             "status": "SKIP",
-            "reason": f"Binary not found",
+            "reason": "Binary not found",
             "duration": 0,
         }
     except Exception as e:
@@ -253,8 +252,9 @@ def run_test(test_name, test_fn):
             "duration": time.time() - start,
         }
     finally:
-        if os.path.exists(output_file):
-            os.unlink(output_file)
+        output_path = Path(output_file)
+        if output_path.exists():
+            output_path.unlink()
 
 
 def main():
@@ -279,9 +279,9 @@ def main():
         icon = {"PASS": "+", "FAIL": "X", "HUNG": "!", "SKIP": "-", "ERROR": "?"}
         print(f"\n[{icon.get(status, '?')}] {name}: {status} ({duration}s)")
         if result.get("web_search_worked"):
-            print(f"    Web search: YES")
+            print("    Web search: YES")
         elif status == "PASS":
-            print(f"    Web search: NO (ran but didn't search web)")
+            print("    Web search: NO (ran but didn't search web)")
         if result.get("response_preview"):
             # Print first 200 chars of response
             preview = result["response_preview"][:200].replace("\n", " ")
