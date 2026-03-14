@@ -19,7 +19,8 @@ curl -fsSL https://claude.ai/install.sh | bash
 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
 claude -p "PROMPT" \
   --permission-mode plan \
-  --tools "Read,Grep,Glob" \
+  --tools "Read,Grep,Glob,WebSearch,WebFetch" \
+  --allowedTools "WebSearch,WebFetch" \
   --output-format json \
   --max-turns 10 \
   --no-session-persistence \
@@ -28,7 +29,8 @@ claude -p "PROMPT" \
 
 - `-p "prompt"` / `--print "prompt"`: runs once and exits (no interactive TUI)
 - `--permission-mode plan`: read-only mode — no file modifications or command execution
-- `--tools "Read,Grep,Glob"`: restrict available tools (belt-and-suspenders with plan mode)
+- `--tools "Read,Grep,Glob,WebSearch,WebFetch"`: available tools (belt-and-suspenders with plan mode)
+- `--allowedTools "WebSearch,WebFetch"`: auto-approve web tools without prompting (prevents headless hangs)
 - `--output-format`: `text`, `json`, `stream-json`
 - `--max-turns N`: limits agentic turns
 - `--no-session-persistence`: ephemeral session

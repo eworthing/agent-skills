@@ -55,8 +55,8 @@ Provider-neutral rules all reviewers must follow:
 - Both initial and re-review use full-output capture (never tail-scraping)
 - Resume is optional; stateless rerun with prior context is the default
   fallback
-- Reviewers operate in read-only / review-only mode — no write, shell,
-  or network capabilities
+- Reviewers operate in read-only / review-only mode — no write or shell
+  capabilities; web search and URL fetching are always available
 - Provider references: read `references/<provider>.md` for exact CLI syntax
 
 ## The re-review prompt structure

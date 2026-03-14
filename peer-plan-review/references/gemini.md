@@ -17,7 +17,7 @@ npm i -g @google/gemini-cli    # or: brew install gemini-cli, npx @google/gemini
 ```bash
 gemini \
   --sandbox \
-  --approval-mode plan \
+  --approval-mode yolo \
   --output-format json \
   -p "PROMPT"
 ```
@@ -26,7 +26,7 @@ gemini \
 - Cannot combine positional prompt and `-p`
 - `--sandbox` / `-s`: filesystem sandbox
 - `--approval-mode`: `default`, `auto_edit`, `yolo`, `plan` (4 values)
-- **Use `plan` for review-only** — `default` allows tool use with prompting; `plan` is read-only mode
+- **Use `yolo` for review** — `plan` and `auto_edit` hang on URL fetch permission prompts in headless mode; `yolo` auto-approves tools while `--sandbox` still prevents filesystem writes
 - `--output-format`: `text`, `json`, `stream-json` (alias `-o`)
 - Redirect stdout to capture output
 

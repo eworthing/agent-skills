@@ -337,7 +337,10 @@ def extract_text_from_output(output_file, reviewer):
 # ---------------------------------------------------------------------------
 
 def build_codex_cmd(args, session_id=None):
-    """Build Codex exec command. Prompt fed via stdin."""
+    """Build Codex exec command. Prompt fed via stdin.
+
+    Web search/fetch works without flag changes — read-only sandbox +
+    approval_mode=never already permits web access."""
     binary = BINARIES["codex"]
     cmd = [binary, "exec"]
 
@@ -375,7 +378,9 @@ def build_gemini_cmd(args, session_id=None):
         cmd.extend(["--resume", str(session_id)])
 
     cmd.append("--sandbox")
-    cmd.extend(["--approval-mode", "plan"])
+    # yolo auto-approves URL fetch tools; --sandbox still prevents filesystem
+    # writes.  plan mode hangs on URL fetch permission prompts in headless.
+    cmd.extend(["--approval-mode", "yolo"])
     cmd.extend(["--output-format", "json"])
 
     if args.model:
@@ -403,7 +408,8 @@ def build_claude_cmd(args, session_id=None):
         cmd.append("--no-session-persistence")
 
     cmd.extend(["--permission-mode", "plan"])
-    cmd.extend(["--tools", "Read,Grep,Glob"])
+    cmd.extend(["--tools", "Read,Grep,Glob,WebSearch,WebFetch"])
+    cmd.extend(["--allowedTools", "WebSearch,WebFetch"])
     cmd.extend(["--output-format", "json"])
     cmd.extend(["--max-turns", "10"])
     cmd.extend([
@@ -438,8 +444,15 @@ def build_copilot_cmd(args, session_id=None):
     # content (encryptedContent only, content empty) and skip producing
     # visible review text.  Without --autopilot, Copilot outputs the
     # review as regular text with populated content fields.
-    cmd.append("--allow-tool=read")
-    cmd.append("--deny-tool=write,shell,url,memory")
+    #
+    # --allow-tool=url alone hangs on URL fetch permission prompts in
+    # headless mode.  --yolo auto-approves all tools (including URL fetch)
+    # while --deny-tool still blocks write/shell/memory.  Intermediate
+    # messages may have encrypted content, but the final assistant.message
+    # has populated content fields — text extraction works because it
+    # filters empty-content messages.
+    cmd.append("--yolo")
+    cmd.append("--deny-tool=write,shell,memory")
     cmd.append("--no-custom-instructions")
     cmd.append("--no-auto-update")
     cmd.extend(["--output-format", "json"])

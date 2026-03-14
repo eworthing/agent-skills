@@ -18,8 +18,8 @@ npm i -g @github/copilot
 ```bash
 copilot -p "PROMPT" -s \
   --no-ask-user \
-  --allow-tool=read \
-  --deny-tool=write,shell,url,memory \
+  --yolo \
+  --deny-tool=write,shell,memory \
   --no-custom-instructions \
   --no-auto-update \
   --output-format json
@@ -43,8 +43,11 @@ the review directly with populated `content` fields.
 - `--allow-tool=TOOL,...` and `--deny-tool=TOOL,...` (deny takes precedence)
 - Tool kinds: `shell`, `write`, `read`, `url`, `memory`, plus MCP server names
 - Built-in tools (not in categories): `skill`, `sql`, `report_intent`, `task_complete`
-- For review: `--allow-tool=read --deny-tool=write,shell,url,memory`
-  (without `--autopilot`, built-in tools are not available)
+- For review: `--yolo --deny-tool=write,shell,memory`
+  (`--allow-tool=url` alone hangs on URL fetch permission prompts in headless;
+  `--yolo` auto-approves all tools while `--deny-tool` still blocks write/shell/memory;
+  intermediate messages may have encrypted content, but the final `assistant.message`
+  has populated `content` — text extraction works by filtering empty-content messages)
 - **URL blocking**: `--deny-tool=url` for blanket deny. **NOT `--deny-url`** which requires domain args.
 
 ## Model
