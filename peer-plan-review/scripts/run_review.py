@@ -34,6 +34,16 @@ _EFFORT_DEFAULTS = {
     "copilot": "medium",    # Copilot default per GitHub docs
 }
 
+# ---------------------------------------------------------------------------
+# Model aliases: shorthand → canonical name (per provider)
+# ---------------------------------------------------------------------------
+MODEL_ALIASES = {
+    "claude": {"sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
+    "gemini": {"auto": "auto", "pro": "pro", "flash": "flash", "flash-lite": "flash-lite"},
+    "codex": {},
+    "copilot": {},
+}
+
 BINARIES = {
     "codex": "codex",
     "gemini": "gemini",
@@ -61,6 +71,8 @@ def parse_args():
                    help="Timeout in seconds (default: 600)")
     p.add_argument("--self-check", action="store_true",
                    help="Verify CLI binary and flags, exit 0/1")
+    p.add_argument("--list-models", action="store_true",
+                   help="Print known model aliases for --reviewer and exit")
     return p.parse_args()
 
 
@@ -742,8 +754,38 @@ def run_review(args):
 # Main
 # ---------------------------------------------------------------------------
 
+def _validate_model(args):
+    """Normalize model alias or warn if unrecognized."""
+    if not args.model or not args.reviewer:
+        return
+    aliases = MODEL_ALIASES.get(args.reviewer, {})
+    if not aliases:
+        # Providers with no aliases (codex, copilot): pass through silently
+        return
+    # Case-insensitive alias lookup only — raw IDs pass through unchanged
+    model_lower = args.model.lower()
+    matched = {k: v for k, v in aliases.items() if k.lower() == model_lower}
+    if matched:
+        args.model = next(iter(matched.values()))
+    else:
+        known = sorted(aliases.keys())
+        prefix_matches = [k for k in known if k.startswith(model_lower)]
+        if len(prefix_matches) == 1:
+            suggestion = f" Did you mean '{prefix_matches[0]}'?"
+        elif prefix_matches:
+            suggestion = f" Did you mean one of: {', '.join(prefix_matches)}?"
+        else:
+            suggestion = ""
+        print(f"Warning: '{args.model}' is not a recognized shorthand for "
+              f"{args.reviewer} (known: {', '.join(known)}).{suggestion} "
+              f"Passing through as raw model ID.",
+              file=sys.stderr)
+
+
 def main():
     args = parse_args()
+
+    _validate_model(args)
 
     if args.self_check:
         if not args.reviewer:
@@ -755,6 +797,16 @@ def main():
             sys.exit(0 if all_ok else 1)
         else:
             sys.exit(0 if self_check(args.reviewer) else 1)
+
+    if args.list_models:
+        providers = [args.reviewer] if args.reviewer else list(MODEL_ALIASES.keys())
+        for provider in providers:
+            aliases = MODEL_ALIASES.get(provider, {})
+            if aliases:
+                print(f"{provider}: {', '.join(sorted(aliases.keys()))}")
+            else:
+                print(f"{provider}: (raw model IDs only — no aliases)")
+        sys.exit(0)
 
     if not args.reviewer:
         print("--reviewer is required (codex, gemini, claude, copilot)",

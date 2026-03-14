@@ -43,6 +43,21 @@ Examples:
 - `/peer-plan-review gemini flash medium`
 - `/peer-plan-review copilot gpt-5.4 xhigh`
 
+## Available models
+
+| Provider | Aliases (shorthand)          | Raw ID examples          | Default    |
+|----------|------------------------------|--------------------------|------------|
+| claude   | sonnet, opus, haiku          | claude-opus-4-6          | (provider) |
+| gemini   | auto, pro, flash, flash-lite | gemini-3-pro-preview     | auto       |
+| codex    | (none — use raw IDs)         | o3, o4-mini              | (provider) |
+| copilot  | (none — use raw IDs)         | gpt-5.4                  | (provider) |
+
+If the user provides a model not in this table, warn that it may be invalid
+and ask for confirmation. Unknown names are still passed through — they may
+be newly released models.
+
+Canonical model list: see `MODEL_ALIASES` in `scripts/run_review.py`.
+
 ## The review contract
 
 Provider-neutral rules all reviewers must follow:
@@ -78,6 +93,16 @@ reviewer has full context even without session history.
 Parse `$ARGUMENTS`. If no reviewer specified, ask the user which to use.
 
 Check binary is installed: `command -v <binary>`
+
+Parsing rule: if the second token matches low|medium|high|xhigh exactly,
+treat it as effort (model is omitted). Otherwise treat it as model.
+This resolves `/peer-plan-review claude high` → effort=high, model=default.
+
+Validate the model argument against the Available Models table. If not
+recognized and the provider has known aliases, warn: "Model '<name>' isn't
+in the known list for <provider>. Known: <aliases>. Proceed anyway?"
+Do not warn for providers with no aliases (codex, copilot) — they expect
+raw model IDs.
 
 Read `references/<provider>.md` for the selected backend (resolve relative
 to the directory containing this SKILL.md).
