@@ -61,12 +61,19 @@ def _popen_session_kwargs():
 def test_claude_web(output_file):
     """Claude: plan mode + WebSearch,WebFetch whitelisted + allowedTools."""
     cmd = [
-        "claude", "-p", PROMPT,
-        "--permission-mode", "plan",
-        "--tools", "Read,Grep,Glob,WebSearch,WebFetch",
-        "--allowedTools", "WebSearch,WebFetch",
-        "--output-format", "json",
-        "--max-turns", "5",
+        "claude",
+        "-p",
+        PROMPT,
+        "--permission-mode",
+        "plan",
+        "--tools",
+        "Read,Grep,Glob,WebSearch,WebFetch",
+        "--allowedTools",
+        "WebSearch,WebFetch",
+        "--output-format",
+        "json",
+        "--max-turns",
+        "5",
         "--no-session-persistence",
     ]
     env = os.environ.copy()
@@ -77,11 +84,15 @@ def test_claude_web(output_file):
 def test_codex_web(output_file):
     """Codex: read-only sandbox + approval_mode=never (web works by default)."""
     cmd = [
-        "codex", "exec",
-        "--sandbox", "read-only",
-        "-c", "approval_mode=never",
+        "codex",
+        "exec",
+        "--sandbox",
+        "read-only",
+        "-c",
+        "approval_mode=never",
         "--json",
-        "--output-last-message", output_file,
+        "--output-last-message",
+        output_file,
         "-",
     ]
     return cmd, os.environ.copy(), PROMPT
@@ -92,9 +103,12 @@ def test_gemini_web(output_file):
     cmd = [
         "gemini",
         "--sandbox",
-        "--approval-mode", "yolo",
-        "--output-format", "json",
-        "-p", PROMPT,
+        "--approval-mode",
+        "yolo",
+        "--output-format",
+        "json",
+        "-p",
+        PROMPT,
     ]
     return cmd, os.environ.copy(), None
 
@@ -102,13 +116,17 @@ def test_gemini_web(output_file):
 def test_copilot_web(output_file):
     """Copilot: --yolo + deny write/shell/memory (--allow-tool=url hangs)."""
     cmd = [
-        "copilot", "-p", PROMPT, "-s",
+        "copilot",
+        "-p",
+        PROMPT,
+        "-s",
         "--no-ask-user",
         "--yolo",
         "--deny-tool=write,shell,memory",
         "--no-custom-instructions",
         "--no-auto-update",
-        "--output-format", "json",
+        "--output-format",
+        "json",
     ]
     return cmd, os.environ.copy(), None
 
@@ -191,32 +209,38 @@ def run_test(test_name, test_fn):
             "duration": 0,
         }
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"TEST: {test_name}")
     print(f"CMD:  {' '.join(cmd)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     start = time.time()
     try:
         if stdin_data:
             proc = subprocess.Popen(
-                cmd, stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                encoding="utf-8", errors="replace",
-                env=env, **_popen_session_kwargs(),
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+                **_popen_session_kwargs(),
             )
         else:
             proc = subprocess.Popen(
-                cmd, stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                encoding="utf-8", errors="replace",
-                env=env, **_popen_session_kwargs(),
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+                **_popen_session_kwargs(),
             )
 
         try:
-            stdout, stderr = proc.communicate(
-                input=stdin_data, timeout=TIMEOUT
-            )
+            stdout, stderr = proc.communicate(input=stdin_data, timeout=TIMEOUT)
             duration = time.time() - start
             returncode = proc.returncode
         except subprocess.TimeoutExpired:
@@ -233,10 +257,18 @@ def run_test(test_name, test_fn):
         response = extract_response(output_file, test_name, stdout)
 
         # Check if response mentions page content (indicates actual URL fetch)
-        web_search_worked = any(kw in response.lower() for kw in [
-            "new in python", "what's new", "pep", "heading", "h1",
-            "3.13", "whatsnew",
-        ])
+        web_search_worked = any(
+            kw in response.lower()
+            for kw in [
+                "new in python",
+                "what's new",
+                "pep",
+                "heading",
+                "h1",
+                "3.13",
+                "whatsnew",
+            ]
+        )
 
         result = {
             "test": test_name,
@@ -274,14 +306,16 @@ def run_test(test_name, test_fn):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--provider", choices=["claude", "codex", "gemini", "copilot"],
-                        help="Test only this provider")
+    parser.add_argument(
+        "--provider",
+        choices=["claude", "codex", "gemini", "copilot"],
+        help="Test only this provider",
+    )
     args = parser.parse_args()
 
     cases = TEST_CASES
     if args.provider:
-        cases = [(name, fn) for name, fn in TEST_CASES
-                 if name.startswith(args.provider)]
+        cases = [(name, fn) for name, fn in TEST_CASES if name.startswith(args.provider)]
 
     results = []
     for name, fn in cases:
@@ -308,9 +342,9 @@ def main():
             print(f"    Stderr: {preview}")
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for r in results:
         status = r["status"]
         web = " (web: YES)" if r.get("web_search_worked") else ""
@@ -318,9 +352,9 @@ def main():
         print(f"  {status:6s} {r['test']}{web}{dur}")
 
     # Recommendations
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("RECOMMENDATIONS")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for r in results:
         if r["status"] == "HUNG":
             print(f"  AVOID {r['test']}: hangs on permission prompts")

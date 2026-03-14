@@ -33,7 +33,10 @@ def run_script(*extra_args):
     """Run run_review.py as subprocess, return (returncode, stdout, stderr)."""
     cmd = [sys.executable, SCRIPT, *list(extra_args)]
     result = subprocess.run(
-        cmd, capture_output=True, encoding="utf-8", errors="replace",
+        cmd,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=30,
     )
     return result.returncode, result.stdout, result.stderr
@@ -47,8 +50,9 @@ class TestListModels(unittest.TestCase):
         rc, stdout, stderr = run_script("--list-models")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
         for provider in ("claude", "gemini", "codex", "copilot"):
-            self.assertIn(provider, stdout,
-                          f"Provider {provider} missing from --list-models output")
+            self.assertIn(
+                provider, stdout, f"Provider {provider} missing from --list-models output"
+            )
         # Claude should have sonnet, opus, haiku
         self.assertIn("sonnet", stdout)
         self.assertIn("opus", stdout)
@@ -79,8 +83,13 @@ class TestModelValidation(unittest.TestCase):
         # We need to trigger model validation with a real invocation that will fail
         # at binary check. Use a nonexistent prompt to trigger early exit after validation.
         rc, _stdout, stderr = run_script(
-            "--reviewer", "claude", "--model", "OPUS",
-            "--prompt-file", os.devnull, "--list-models",
+            "--reviewer",
+            "claude",
+            "--model",
+            "OPUS",
+            "--prompt-file",
+            os.devnull,
+            "--list-models",
         )
         # --list-models exits 0; model validation runs before it.
         # No warning should be emitted since OPUS normalizes to opus.
@@ -90,7 +99,11 @@ class TestModelValidation(unittest.TestCase):
     def test_model_prefix_suggestion(self):
         """Test 4: --model fla --reviewer gemini suggests flash/flash-lite."""
         rc, _stdout, stderr = run_script(
-            "--reviewer", "gemini", "--model", "fla", "--list-models",
+            "--reviewer",
+            "gemini",
+            "--model",
+            "fla",
+            "--list-models",
         )
         self.assertEqual(rc, 0)
         self.assertIn("Warning", stderr)
@@ -99,7 +112,11 @@ class TestModelValidation(unittest.TestCase):
     def test_unknown_model_warning(self):
         """Test 5: --model flahs --reviewer gemini warns on stderr."""
         rc, _stdout, stderr = run_script(
-            "--reviewer", "gemini", "--model", "flahs", "--list-models",
+            "--reviewer",
+            "gemini",
+            "--model",
+            "flahs",
+            "--list-models",
         )
         self.assertEqual(rc, 0)
         self.assertIn("Warning", stderr)
@@ -113,9 +130,12 @@ class TestFileValidation(unittest.TestCase):
     def test_missing_plan_file(self):
         """Test 6: --plan-file /nonexistent exits non-zero with clear error."""
         rc, _stdout, stderr = run_script(
-            "--reviewer", "claude",
-            "--plan-file", "/nonexistent/plan.md",
-            "--prompt-file", os.devnull,
+            "--reviewer",
+            "claude",
+            "--plan-file",
+            "/nonexistent/plan.md",
+            "--prompt-file",
+            os.devnull,
         )
         self.assertNotEqual(rc, 0)
         self.assertIn("--plan-file", stderr)
@@ -124,8 +144,10 @@ class TestFileValidation(unittest.TestCase):
     def test_missing_prompt_file(self):
         """Test 7: --prompt-file /nonexistent exits non-zero with clear error."""
         rc, _stdout, stderr = run_script(
-            "--reviewer", "claude",
-            "--prompt-file", "/nonexistent/prompt.md",
+            "--reviewer",
+            "claude",
+            "--prompt-file",
+            "/nonexistent/prompt.md",
         )
         self.assertNotEqual(rc, 0)
         self.assertIn("--prompt-file", stderr)
@@ -136,14 +158,19 @@ class TestFileValidation(unittest.TestCase):
         # This should pass the directory validation (cwd exists and is writable)
         # but will fail later at binary check — that's fine, we're testing validation.
         _rc, _stdout, stderr = run_script(
-            "--reviewer", "claude",
-            "--prompt-file", os.devnull,
-            "--output-file", "review.json",
+            "--reviewer",
+            "claude",
+            "--prompt-file",
+            os.devnull,
+            "--output-file",
+            "review.json",
         )
         # Should NOT fail with "directory does not exist" error
         self.assertNotIn("directory for --output-file does not exist", stderr)
 
-    @unittest.skipIf(sys.platform == "win32", "POSIX directory permissions not supported on Windows")
+    @unittest.skipIf(
+        sys.platform == "win32", "POSIX directory permissions not supported on Windows"
+    )
     def test_nonwritable_output_dir(self):
         """Test 11: Non-writable output directory exits non-zero."""
         tmpdir = tempfile.mkdtemp(prefix="ppr-test-")
@@ -152,9 +179,12 @@ class TestFileValidation(unittest.TestCase):
         readonly_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)  # r-x
         try:
             rc, _stdout, stderr = run_script(
-                "--reviewer", "claude",
-                "--prompt-file", os.devnull,
-                "--output-file", str(readonly_dir / "out.json"),
+                "--reviewer",
+                "claude",
+                "--prompt-file",
+                os.devnull,
+                "--output-file",
+                str(readonly_dir / "out.json"),
             )
             self.assertNotEqual(rc, 0)
             self.assertIn("not writable", stderr)
@@ -170,8 +200,7 @@ class TestOutputParsing(unittest.TestCase):
         """Test 8a: Claude JSON fixture extracts review text correctly."""
         # Copy fixture to temp file (extraction rewrites the file)
         fixture = Path(FIXTURES_DIR) / "claude_output.json"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
-                                          delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             with fixture.open() as f:
                 tmp.write(f.read())
             tmp_path = tmp.name
@@ -194,8 +223,7 @@ class TestOutputParsing(unittest.TestCase):
     def test_extract_text_gemini(self):
         """Test 8b: Gemini JSON fixture extracts review text and metadata."""
         fixture = Path(FIXTURES_DIR) / "gemini_output.json"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
-                                          delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             with fixture.open() as f:
                 tmp.write(f.read())
             tmp_path = tmp.name
@@ -214,8 +242,7 @@ class TestOutputParsing(unittest.TestCase):
     def test_extract_text_copilot(self):
         """Test 8c: Copilot JSONL fixture extracts review text and metadata."""
         fixture = Path(FIXTURES_DIR) / "copilot_output.jsonl"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl",
-                                          delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tmp:
             with fixture.open() as f:
                 tmp.write(f.read())
             tmp_path = tmp.name
@@ -240,8 +267,7 @@ class TestOutputParsing(unittest.TestCase):
     def test_malformed_output_warning(self):
         """Test 9: Malformed JSON emits warning, file left as-is."""
         fixture = Path(FIXTURES_DIR) / "malformed.json"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
-                                          delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             with fixture.open() as f:
                 original = f.read()
                 tmp.write(original)
@@ -250,6 +276,7 @@ class TestOutputParsing(unittest.TestCase):
             # Capture stderr
             import io
             from contextlib import redirect_stderr
+
             stderr_buf = io.StringIO()
             with redirect_stderr(stderr_buf):
                 extract_text_from_output(tmp_path, "claude")
@@ -270,9 +297,7 @@ class TestSelfCheckUnit(unittest.TestCase):
 
     @mock.patch("run_review.shutil.which", return_value="/fake/gemini")
     @mock.patch("run_review.subprocess.run")
-    def test_self_check_gemini_timeout_is_inconclusive_success(
-        self, mock_run, _mock_which
-    ):
+    def test_self_check_gemini_timeout_is_inconclusive_success(self, mock_run, _mock_which):
         """Gemini help timeout under automation should not fail install check."""
         mock_run.side_effect = subprocess.TimeoutExpired(["gemini", "--help"], 15)
 
@@ -280,9 +305,7 @@ class TestSelfCheckUnit(unittest.TestCase):
 
     @mock.patch("run_review.shutil.which", return_value="/fake/copilot")
     @mock.patch("run_review.subprocess.run")
-    def test_self_check_copilot_keychain_error_is_inconclusive_success(
-        self, mock_run, _mock_which
-    ):
+    def test_self_check_copilot_keychain_error_is_inconclusive_success(self, mock_run, _mock_which):
         """Copilot keychain startup errors under automation should not fail install check."""
         mock_run.return_value = subprocess.CompletedProcess(
             ["copilot", "--help"],
@@ -338,8 +361,9 @@ class TestPlatformHelpers(unittest.TestCase):
         result = run_review._popen_session_kwargs()
         self.assertEqual(result, {"start_new_session": True})
 
-    @mock.patch("run_review.subprocess.CREATE_NEW_PROCESS_GROUP",
-                _CREATE_NEW_PROCESS_GROUP, create=True)
+    @mock.patch(
+        "run_review.subprocess.CREATE_NEW_PROCESS_GROUP", _CREATE_NEW_PROCESS_GROUP, create=True
+    )
     @mock.patch("run_review.sys")
     def test_popen_session_kwargs_windows(self, mock_sys):
         mock_sys.platform = "win32"
@@ -365,8 +389,10 @@ class TestPlatformHelpers(unittest.TestCase):
         mock_sys.platform = "linux"
         mock_proc = mock.MagicMock()
         mock_proc.pid = 12345
-        with mock.patch("run_review.os.getpgid", return_value=12345), \
-             mock.patch("run_review.os.killpg"):
+        with (
+            mock.patch("run_review.os.getpgid", return_value=12345),
+            mock.patch("run_review.os.killpg"),
+        ):
             run_review._kill_tree(mock_proc)
             mock_proc.wait.assert_called()
 

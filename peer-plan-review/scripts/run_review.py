@@ -30,10 +30,10 @@ EFFORT_MAP = {
 
 # Provider defaults when effort is not specified and not discoverable.
 _EFFORT_DEFAULTS = {
-    "codex": "medium",      # Codex default per reasoning level selector
-    "gemini": "medium",     # Gemini default thinkingBudget is 8192
-    "claude": "medium",     # Claude Code default
-    "copilot": "medium",    # Copilot default per GitHub docs
+    "codex": "medium",  # Codex default per reasoning level selector
+    "gemini": "medium",  # Gemini default thinkingBudget is 8192
+    "claude": "medium",  # Claude Code default
+    "copilot": "medium",  # Copilot default per GitHub docs
 }
 
 # ---------------------------------------------------------------------------
@@ -56,31 +56,36 @@ BINARIES = {
 
 def parse_args():
     p = argparse.ArgumentParser(description="Peer plan review CLI adapter")
-    p.add_argument("--reviewer", required=False, choices=BINARIES.keys(),
-                   help="Reviewer backend")
+    p.add_argument("--reviewer", required=False, choices=BINARIES.keys(), help="Reviewer backend")
     p.add_argument("--plan-file", help="Path to plan markdown file")
     p.add_argument("--prompt-file", help="Path to review prompt file")
     p.add_argument("--output-file", help="Path to write reviewer response")
     p.add_argument("--session-file", help="Path to session metadata JSON")
     p.add_argument("--events-file", help="Path to event stream log")
     p.add_argument("--model", default=None, help="Model override")
-    p.add_argument("--effort", default=None,
-                   choices=["low", "medium", "high", "xhigh"],
-                   help="Reasoning effort level")
-    p.add_argument("--resume", action="store_true",
-                   help="Resume previous session")
-    p.add_argument("--timeout", type=int, default=600,
-                   help="Timeout in seconds (default: 600)")
-    p.add_argument("--self-check", action="store_true",
-                   help="Verify CLI binary and flags, exit 0/1")
-    p.add_argument("--list-models", action="store_true",
-                   help="Print known model aliases for --reviewer and exit")
+    p.add_argument(
+        "--effort",
+        default=None,
+        choices=["low", "medium", "high", "xhigh"],
+        help="Reasoning effort level",
+    )
+    p.add_argument("--resume", action="store_true", help="Resume previous session")
+    p.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (default: 600)")
+    p.add_argument(
+        "--self-check", action="store_true", help="Verify CLI binary and flags, exit 0/1"
+    )
+    p.add_argument(
+        "--list-models",
+        action="store_true",
+        help="Print known model aliases for --reviewer and exit",
+    )
     return p.parse_args()
 
 
 # ---------------------------------------------------------------------------
 # Self-check
 # ---------------------------------------------------------------------------
+
 
 def self_check(reviewer):
     """Verify the reviewer CLI is installed and responsive."""
@@ -99,28 +104,32 @@ def self_check(reviewer):
     try:
         result = subprocess.run(
             [binary, "--help"],
-            capture_output=True, encoding="utf-8", errors="replace",
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=15,
         )
         if result.returncode == 0:
             print(f"OK: {binary} --help succeeded")
             return True
-        if (reviewer == "copilot"
-                and "SecItemCopyMatching failed -50" in (result.stderr or "")):
-            print("WARN: copilot is installed but --help failed with a "
-                  "macOS Keychain error in this automation context. "
-                  "Treating install check as inconclusive success.",
-                  file=sys.stderr)
+        if reviewer == "copilot" and "SecItemCopyMatching failed -50" in (result.stderr or ""):
+            print(
+                "WARN: copilot is installed but --help failed with a "
+                "macOS Keychain error in this automation context. "
+                "Treating install check as inconclusive success.",
+                file=sys.stderr,
+            )
             return True
-        print(f"FAIL: {binary} --help exited {result.returncode}",
-              file=sys.stderr)
+        print(f"FAIL: {binary} --help exited {result.returncode}", file=sys.stderr)
         return False
     except subprocess.TimeoutExpired:
         if reviewer == "gemini":
-            print("WARN: gemini is installed but --help timed out in this "
-                  "non-interactive automation context. Treating install "
-                  "check as inconclusive success.",
-                  file=sys.stderr)
+            print(
+                "WARN: gemini is installed but --help timed out in this "
+                "non-interactive automation context. Treating install "
+                "check as inconclusive success.",
+                file=sys.stderr,
+            )
             return True
         print(f"FAIL: {binary} --help timed out", file=sys.stderr)
         return False
@@ -132,6 +141,7 @@ def self_check(reviewer):
 # ---------------------------------------------------------------------------
 # Session helpers
 # ---------------------------------------------------------------------------
+
 
 def load_session(session_file):
     """Load session metadata from JSON file."""
@@ -220,8 +230,7 @@ def extract_session_id_copilot(output_file):
     return None
 
 
-def extract_metadata(output_file, events_file, reviewer,
-                     codex_session_file=None):
+def extract_metadata(output_file, events_file, reviewer, codex_session_file=None):
     """Extract model/effort metadata from structured output before text rewrite.
 
     Returns dict with 'model' and optionally 'effort' if discoverable.
@@ -251,8 +260,7 @@ def extract_metadata(output_file, events_file, reviewer,
                         # for effort — actual usage doesn't reflect the
                         # configured budget reliably).
                         model_stats = models[model_name]
-                        thoughts = (model_stats.get("tokens", {})
-                                    .get("thoughts", 0))
+                        thoughts = model_stats.get("tokens", {}).get("thoughts", 0)
                         if thoughts and isinstance(thoughts, (int, float)):
                             meta["thinking_tokens"] = int(thoughts)
                 if not meta.get("model") and data.get("model"):
@@ -284,8 +292,7 @@ def extract_metadata(output_file, events_file, reviewer,
     # event), NOT in the stdout JSONL stream.  Fall back to the stdout
     # events file if no on-disk session file was provided.
     if reviewer == "codex":
-        sources = [s for s in (codex_session_file, events_file)
-                   if s and Path(s).exists()]
+        sources = [s for s in (codex_session_file, events_file) if s and Path(s).exists()]
         for source in sources:
             try:
                 with Path(source).open(encoding="utf-8") as f:
@@ -356,14 +363,17 @@ def extract_text_from_output(output_file, reviewer):
         with Path(output_file).open("w", encoding="utf-8") as f:
             f.write(text if isinstance(text, str) else json.dumps(text))
     except (json.JSONDecodeError, OSError) as e:
-        print(f"Warning: could not extract review text from {output_file} "
-              f"for {reviewer}: {e}. File left as raw output.",
-              file=sys.stderr)
+        print(
+            f"Warning: could not extract review text from {output_file} "
+            f"for {reviewer}: {e}. File left as raw output.",
+            file=sys.stderr,
+        )
 
 
 # ---------------------------------------------------------------------------
 # Provider command builders
 # ---------------------------------------------------------------------------
+
 
 def build_codex_cmd(args, session_id=None):
     """Build Codex exec command. Prompt fed via stdin.
@@ -441,11 +451,13 @@ def build_claude_cmd(args, session_id=None):
     cmd.extend(["--allowedTools", "WebSearch,WebFetch"])
     cmd.extend(["--output-format", "json"])
     cmd.extend(["--max-turns", "10"])
-    cmd.extend([
-        "--append-system-prompt",
-        "You are a code reviewer. Analyze the plan and provide feedback. "
-        "End with VERDICT: APPROVED or VERDICT: REVISE on the last line."
-    ])
+    cmd.extend(
+        [
+            "--append-system-prompt",
+            "You are a code reviewer. Analyze the plan and provide feedback. "
+            "End with VERDICT: APPROVED or VERDICT: REVISE on the last line.",
+        ]
+    )
 
     if args.model:
         cmd.extend(["--model", args.model])
@@ -511,6 +523,7 @@ def read_prompt(prompt_file):
 # Process tree management
 # ---------------------------------------------------------------------------
 
+
 def _kill_tree(proc):
     """Kill process and all descendants."""
     if sys.platform == "win32":
@@ -550,6 +563,7 @@ def _signal_handler(signum, _frame):
 # Execution
 # ---------------------------------------------------------------------------
 
+
 def run_review(args):
     """Execute the review command for the selected provider."""
     global _active_proc
@@ -588,8 +602,7 @@ def run_review(args):
             )
             # Copy existing config if present (auth, extensions, etc.)
             if Path(source_dir).is_dir():
-                shutil.copytree(source_dir, gemini_config_dir,
-                                dirs_exist_ok=True)
+                shutil.copytree(source_dir, gemini_config_dir, dirs_exist_ok=True)
             # Overlay effort settings (merges into existing settings.json)
             settings_path = Path(gemini_config_dir) / "settings.json"
             try:
@@ -605,8 +618,7 @@ def run_review(args):
                     json.dump(existing, f)
                 env["GEMINI_CONFIG_DIR"] = gemini_config_dir
             except OSError as e:
-                print(f"Warning: could not write Gemini settings: {e}",
-                      file=sys.stderr)
+                print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
 
     # Prepare stdin for Codex (prompt via stdin)
     stdin_data = None
@@ -634,31 +646,36 @@ def run_review(args):
 
         if stdin_data is not None:
             proc = subprocess.Popen(
-                cmd, stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                encoding="utf-8", errors="replace",
-                env=env, **_popen_session_kwargs(),
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+                **_popen_session_kwargs(),
             )
         else:
             proc = subprocess.Popen(
-                cmd, stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                encoding="utf-8", errors="replace",
-                env=env, **_popen_session_kwargs(),
+                cmd,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding="utf-8",
+                errors="replace",
+                env=env,
+                **_popen_session_kwargs(),
             )
         _active_proc = proc
 
         try:
-            stdout, stderr = proc.communicate(
-                input=stdin_data, timeout=args.timeout
-            )
+            stdout, stderr = proc.communicate(input=stdin_data, timeout=args.timeout)
             returncode = proc.returncode
         except subprocess.TimeoutExpired:
             _kill_tree(proc)
             # Drain pipes to avoid FD leak (process is already dead)
             proc.communicate()
-            print(f"Reviewer timed out after {args.timeout}s",
-                  file=sys.stderr)
+            print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
             return 1
 
         # Write stdout to output file for non-Codex providers
@@ -682,9 +699,7 @@ def run_review(args):
             # If multiple match, same-cwd concurrency is ambiguous —
             # skip metadata extraction rather than risk cross-contamination.
             cwd_matches = []
-            for candidate in sorted(new_files,
-                                    key=lambda p: Path(p).stat().st_mtime,
-                                    reverse=True):
+            for candidate in sorted(new_files, key=lambda p: Path(p).stat().st_mtime, reverse=True):
                 parsed_id = _parse_codex_session_id(candidate)
                 if parsed_id:
                     cwd_matches.append((candidate, parsed_id))
@@ -694,12 +709,15 @@ def run_review(args):
                 # Ambiguous: multiple same-cwd sessions created during
                 # this run. Skip both session_id and metadata extraction
                 # to avoid cross-contamination and resume poisoning.
-                print("Warning: multiple concurrent Codex sessions "
-                      "detected in same cwd; skipping session and "
-                      "metadata extraction", file=sys.stderr)
+                print(
+                    "Warning: multiple concurrent Codex sessions "
+                    "detected in same cwd; skipping session and "
+                    "metadata extraction",
+                    file=sys.stderr,
+                )
             # On resume, no new file is created — find the existing one
             if not codex_session_path and args.resume and session_id:
-                for sf in (codex_sessions_before or set()):
+                for sf in codex_sessions_before or set():
                     if _parse_codex_session_id(sf) == session_id:
                         codex_session_path = sf
                         break
@@ -709,8 +727,9 @@ def run_review(args):
             new_session_id = extract_session_id_json(args.output_file)
 
         # Extract model metadata from structured output (before text rewrite)
-        meta = extract_metadata(args.output_file, args.events_file, reviewer,
-                                codex_session_file=codex_session_path)
+        meta = extract_metadata(
+            args.output_file, args.events_file, reviewer, codex_session_file=codex_session_path
+        )
 
         # Extract plain text from structured output
         if reviewer in ("claude", "gemini", "copilot"):
@@ -718,17 +737,15 @@ def run_review(args):
 
         # Resolve actual model: prefer detected > session (prior round)
         # > user-specified > "default"
-        actual_model = (meta.get("model")
-                        or session.get("model")
-                        or args.model or "default")
+        actual_model = meta.get("model") or session.get("model") or args.model or "default"
 
         # Save session metadata
         # Effort: detected (from reviewer output) is the canonical value
         # because it reflects what was actually used. Fall back to
         # user-requested, then provider default.
-        actual_effort = (meta.get("effort")
-                         or args.effort
-                         or _EFFORT_DEFAULTS.get(reviewer, "default"))
+        actual_effort = (
+            meta.get("effort") or args.effort or _EFFORT_DEFAULTS.get(reviewer, "default")
+        )
         round_num = session.get("round", 0) + 1
         session_data = {
             "session_id": new_session_id or session_id,
@@ -737,9 +754,13 @@ def run_review(args):
             "model_requested": args.model or "default",
             "effort": actual_effort,
             "effort_requested": args.effort or "default",
-            "effort_source": ("detected" if meta.get("effort")
-                              else "requested" if args.effort
-                              else "provider_default"),
+            "effort_source": (
+                "detected"
+                if meta.get("effort")
+                else "requested"
+                if args.effort
+                else "provider_default"
+            ),
             "round": round_num,
         }
         if meta.get("thinking_tokens") is not None:
@@ -747,8 +768,7 @@ def run_review(args):
         save_session(args.session_file, session_data)
 
         if returncode != 0:
-            print(f"Reviewer exited with code {returncode}",
-                  file=sys.stderr)
+            print(f"Reviewer exited with code {returncode}", file=sys.stderr)
             if stderr:
                 print(stderr, file=sys.stderr)
 
@@ -758,12 +778,9 @@ def run_review(args):
             # exists, the provider ran — retrying would duplicate the
             # review and waste tokens.
             output_path = Path(args.output_file) if args.output_file else None
-            has_output = (output_path
-                          and output_path.exists()
-                          and output_path.stat().st_size > 0)
+            has_output = output_path and output_path.exists() and output_path.stat().st_size > 0
             if args.resume and session_id and not has_output:
-                print("Resume failed, falling back to fresh exec...",
-                      file=sys.stderr)
+                print("Resume failed, falling back to fresh exec...", file=sys.stderr)
                 args.resume = False
                 return run_review(args)
 
@@ -790,6 +807,7 @@ def run_review(args):
 # Main
 # ---------------------------------------------------------------------------
 
+
 def _validate_model(args):
     """Normalize model alias or warn if unrecognized."""
     if not args.model or not args.reviewer:
@@ -812,10 +830,12 @@ def _validate_model(args):
             suggestion = f" Did you mean one of: {', '.join(prefix_matches)}?"
         else:
             suggestion = ""
-        print(f"Warning: '{args.model}' is not a recognized shorthand for "
-              f"{args.reviewer} (known: {', '.join(known)}).{suggestion} "
-              f"Passing through as raw model ID.",
-              file=sys.stderr)
+        print(
+            f"Warning: '{args.model}' is not a recognized shorthand for "
+            f"{args.reviewer} (known: {', '.join(known)}).{suggestion} "
+            f"Passing through as raw model ID.",
+            file=sys.stderr,
+        )
 
 
 def main():
@@ -845,8 +865,7 @@ def main():
         sys.exit(0)
 
     if not args.reviewer:
-        print("--reviewer is required (codex, gemini, claude, copilot)",
-              file=sys.stderr)
+        print("--reviewer is required (codex, gemini, claude, copilot)", file=sys.stderr)
         sys.exit(1)
 
     if not args.prompt_file:
@@ -854,8 +873,7 @@ def main():
         sys.exit(1)
 
     # Validate input files exist
-    for arg_name, fpath in [("--plan-file", args.plan_file),
-                             ("--prompt-file", args.prompt_file)]:
+    for arg_name, fpath in [("--plan-file", args.plan_file), ("--prompt-file", args.prompt_file)]:
         if fpath and not Path(fpath).exists():
             print(f"Error: {arg_name} not found: {fpath}", file=sys.stderr)
             sys.exit(1)
@@ -864,30 +882,28 @@ def main():
     # already exists and is writable, or the directory is writable (so
     # the file can be created).  On POSIX, writing to an existing file
     # depends on file permissions, not directory permissions.
-    for arg_name, fpath in [("--output-file", args.output_file),
-                             ("--session-file", args.session_file),
-                             ("--events-file", args.events_file)]:
+    for arg_name, fpath in [
+        ("--output-file", args.output_file),
+        ("--session-file", args.session_file),
+        ("--events-file", args.events_file),
+    ]:
         if fpath:
             parent = Path(fpath).parent
             if not parent.is_dir():
-                print(f"Error: directory for {arg_name} does not exist: {parent}",
-                      file=sys.stderr)
+                print(f"Error: directory for {arg_name} does not exist: {parent}", file=sys.stderr)
                 sys.exit(1)
             if Path(fpath).exists():
                 if not os.access(fpath, os.W_OK):
-                    print(f"Error: {arg_name} exists but is not writable: {fpath}",
-                          file=sys.stderr)
+                    print(f"Error: {arg_name} exists but is not writable: {fpath}", file=sys.stderr)
                     sys.exit(1)
             elif not os.access(parent, os.W_OK):
-                print(f"Error: directory for {arg_name} is not writable: {parent}",
-                      file=sys.stderr)
+                print(f"Error: directory for {arg_name} is not writable: {parent}", file=sys.stderr)
                 sys.exit(1)
 
     # Verify binary is installed
     binary = BINARIES[args.reviewer]
     if not shutil.which(binary):
-        print(f"Error: {binary} not found in PATH. Install it first.",
-              file=sys.stderr)
+        print(f"Error: {binary} not found in PATH. Install it first.", file=sys.stderr)
         sys.exit(1)
 
     rc = run_review(args)
