@@ -24,6 +24,10 @@ sys.path.insert(0, SCRIPT_DIR)
 import run_quorum  # noqa: E402
 from run_quorum import (  # noqa: E402
     CROSS_CRITIQUE_INSTRUCTIONS,
+    EXIT_APPROVED,
+    EXIT_INDETERMINATE,
+    EXIT_REVISE,
+    MAX_ROUNDS_LIMIT,
     MIN_QUORUM_SIZE,
     REVIEW_CONTRACT_V2,
     build_issue_ledger,
@@ -32,12 +36,15 @@ from run_quorum import (  # noqa: E402
     derive_verdict,
     format_issue_consensus,
     format_ledger_summary,
+    generate_verification_prompts,
     load_ledger,
+    load_review_md,
     parse_args,
     parse_cross_critique,
     parse_reviewer_spec,
     parse_structured_review,
     parse_verdict,
+    parse_verification_response,
     save_ledger,
     tally_verdicts,
     validate_panel,
@@ -634,8 +641,10 @@ class TestIssueLedger(unittest.TestCase):
                         "status": "open",
                         "resolved_round": None,
                         "merged_from": [],
-                        "agreed_by": [1],
-                        "disagreed_by": [],
+                        "proposed_by": 1,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
                         "support_count": 1,
                         "dispute_count": 0,
                         "owner_summary": "No auth on admin",
@@ -650,8 +659,10 @@ class TestIssueLedger(unittest.TestCase):
                         "status": "open",
                         "resolved_round": None,
                         "merged_from": [],
-                        "agreed_by": [2],
-                        "disagreed_by": [],
+                        "proposed_by": 2,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
                         "support_count": 1,
                         "dispute_count": 0,
                         "owner_summary": "SQL injection risk",
@@ -684,14 +695,14 @@ class TestIssueLedger(unittest.TestCase):
             blk001 = next(i for i in updated["issues"] if i["id"] == "BLK-001")
             blk002 = next(i for i in updated["issues"] if i["id"] == "BLK-002")
 
-            # BLK-001: original reviewer 1 + reviewer 2 agreed
+            # BLK-001: proposed by 1, reviewer 2 endorsed
             self.assertEqual(blk001["support_count"], 2)
-            self.assertIn(2, blk001["agreed_by"])
+            self.assertIn(2, blk001["endorsed_by"])
 
-            # BLK-002: original reviewer 2 + reviewer 1 agreed, reviewer 3 disagreed
+            # BLK-002: proposed by 2, reviewer 1 endorsed, reviewer 3 disputed
             self.assertEqual(blk002["support_count"], 2)
             self.assertEqual(blk002["dispute_count"], 1)
-            self.assertIn(3, blk002["disagreed_by"])
+            self.assertIn(3, blk002["disputed_by"])
 
     def test_ledger_new_issues_from_critique(self):
         """[B-NEW] and [N-NEW] tags create new issues with canonical IDs."""
@@ -707,7 +718,8 @@ class TestIssueLedger(unittest.TestCase):
                     "round_introduced": 1, "severity": "blocking",
                     "text": "Existing issue", "status": "open",
                     "resolved_round": None, "merged_from": [],
-                    "agreed_by": [1], "disagreed_by": [],
+                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
+                    "disputed_by": [],
                     "support_count": 1, "dispute_count": 0,
                     "owner_summary": "Existing issue",
                 }],
@@ -1028,8 +1040,8 @@ class TestFailurePolicy(unittest.TestCase):
         args = parse_args()
         self.assertEqual(args.on_failure, "fail-closed")
 
-    def test_fail_open_policy(self):
-        """fail-open is the default."""
+    def test_shrink_quorum_is_default(self):
+        """shrink-quorum is the default failure policy."""
         sys.argv = [
             "run_quorum.py",
             "--reviewers", "claude:sonnet,gemini:pro,codex",
@@ -1038,7 +1050,7 @@ class TestFailurePolicy(unittest.TestCase):
             "--round", "1",
         ]
         args = parse_args()
-        self.assertEqual(args.on_failure, "fail-open")
+        self.assertEqual(args.on_failure, "shrink-quorum")
 
     def test_shrink_quorum_policy(self):
         """shrink-quorum is accepted."""
@@ -1123,6 +1135,478 @@ class TestCrossCritiquePrompt(unittest.TestCase):
             self.assertIn("reviewer 1 of 3", content)
             self.assertIn("anonymous", content.lower())
             os.unlink(f.name)
+
+
+# ===========================================================================
+# v2.1 tests: Split support fields
+# ===========================================================================
+
+
+class TestSplitSupportFields(unittest.TestCase):
+    """Tests for proposed_by/endorsed_by/refined_by/disputed_by fields."""
+
+    def test_proposed_by_always_counts_as_support(self):
+        """proposed_by reviewer always contributes 1 to support_count."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "split01"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "### Blocking Issues\n- [B1] Auth missing\n\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            ledger = build_issue_ledger(panel, quorum_id, tmpdir, 1)
+            blk001 = ledger["issues"][0]
+            self.assertEqual(blk001["proposed_by"], 1)
+            self.assertEqual(blk001["support_count"], 1)
+            self.assertEqual(blk001["endorsed_by"], [])
+            self.assertEqual(blk001["refined_by"], [])
+
+    def test_endorsed_by_from_agree(self):
+        """AGREE adds reviewer to endorsed_by and increments support_count."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "split02"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+
+            ledger = {
+                "next_blk_id": 2, "next_nb_id": 1,
+                "issues": [{
+                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
+                    "round_introduced": 1, "severity": "blocking",
+                    "text": "Auth missing", "status": "open",
+                    "resolved_round": None, "merged_from": [],
+                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
+                    "disputed_by": [],
+                    "support_count": 1, "dispute_count": 0,
+                    "owner_summary": "Auth missing",
+                }],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
+                                 "nb_open": 0, "approved_count": 0}},
+            }
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+            blk001 = updated["issues"][0]
+            self.assertEqual(blk001["support_count"], 3)
+            self.assertIn(2, blk001["endorsed_by"])
+            self.assertIn(3, blk001["endorsed_by"])
+
+    def test_refined_by_from_refine(self):
+        """REFINE adds reviewer to refined_by and increments support_count."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "split03"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+
+            ledger = {
+                "next_blk_id": 2, "next_nb_id": 1,
+                "issues": [{
+                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
+                    "round_introduced": 1, "severity": "blocking",
+                    "text": "Auth missing", "status": "open",
+                    "resolved_round": None, "merged_from": [],
+                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
+                    "disputed_by": [],
+                    "support_count": 1, "dispute_count": 0,
+                    "owner_summary": "Auth missing",
+                }],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
+                                 "nb_open": 0, "approved_count": 0}},
+            }
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[REFINE BLK-001] Should use OAuth2 specifically\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+            blk001 = updated["issues"][0]
+            self.assertEqual(blk001["support_count"], 2)
+            self.assertIn(2, blk001["refined_by"])
+
+    def test_disputed_by_from_disagree(self):
+        """DISAGREE adds reviewer to disputed_by and increments dispute_count."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "split04"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+
+            ledger = {
+                "next_blk_id": 2, "next_nb_id": 1,
+                "issues": [{
+                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
+                    "round_introduced": 1, "severity": "blocking",
+                    "text": "Auth missing", "status": "open",
+                    "resolved_round": None, "merged_from": [],
+                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
+                    "disputed_by": [],
+                    "support_count": 1, "dispute_count": 0,
+                    "owner_summary": "Auth missing",
+                }],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
+                                 "nb_open": 0, "approved_count": 0}},
+            }
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[DISAGREE BLK-001] Already handled by middleware\nVERDICT: APPROVED\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "[DISAGREE BLK-001] Not relevant\nVERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+            blk001 = updated["issues"][0]
+            self.assertEqual(blk001["dispute_count"], 2)
+            self.assertIn(2, blk001["disputed_by"])
+            self.assertIn(3, blk001["disputed_by"])
+            # support_count unchanged — proposer only
+            self.assertEqual(blk001["support_count"], 1)
+
+
+# ===========================================================================
+# v2.1 tests: Default changes
+# ===========================================================================
+
+
+class TestDefaultChanges(unittest.TestCase):
+    """Tests for shrink-quorum default and 3-round default."""
+
+    def test_default_shrink_quorum(self):
+        """Default on-failure is shrink-quorum."""
+        sys.argv = [
+            "run_quorum.py",
+            "--reviewers", "claude:sonnet,gemini:pro,codex",
+            "--plan-file", "/tmp/test.md",
+            "--quorum-id", "test",
+            "--round", "1",
+        ]
+        args = parse_args()
+        self.assertEqual(args.on_failure, "shrink-quorum")
+
+    def test_default_3_rounds(self):
+        """Default max-rounds is 3."""
+        sys.argv = [
+            "run_quorum.py",
+            "--reviewers", "claude:sonnet,gemini:pro,codex",
+            "--plan-file", "/tmp/test.md",
+            "--quorum-id", "test",
+            "--round", "1",
+        ]
+        args = parse_args()
+        self.assertEqual(args.max_rounds, 3)
+
+    def test_max_rounds_cap_at_5(self):
+        """--max-rounds > 5 is rejected."""
+        sys.argv = [
+            "run_quorum.py",
+            "--reviewers", "claude:sonnet,gemini:pro,codex",
+            "--plan-file", "/tmp/test.md",
+            "--quorum-id", "test",
+            "--round", "1",
+            "--max-rounds", "6",
+        ]
+        with self.assertRaises(SystemExit):
+            parse_args()
+
+    def test_max_rounds_5_accepted(self):
+        """--max-rounds 5 is accepted."""
+        sys.argv = [
+            "run_quorum.py",
+            "--reviewers", "claude:sonnet,gemini:pro,codex",
+            "--plan-file", "/tmp/test.md",
+            "--quorum-id", "test",
+            "--round", "1",
+            "--max-rounds", "5",
+        ]
+        args = parse_args()
+        self.assertEqual(args.max_rounds, 5)
+
+
+# ===========================================================================
+# v2.1 tests: REVIEW.md support
+# ===========================================================================
+
+
+class TestReviewMdSupport(unittest.TestCase):
+    """Tests for REVIEW.md rubric file loading."""
+
+    def test_review_md_loaded(self):
+        """REVIEW.md content is loaded when present."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            review_path = Path(tmpdir) / "REVIEW.md"
+            review_path.write_text("## Custom Rules\n- Always check security\n")
+            content = load_review_md(tmpdir)
+            self.assertIn("Custom Rules", content)
+            self.assertIn("security", content)
+
+    def test_review_md_missing_ok(self):
+        """Missing REVIEW.md returns empty string (not an error)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            content = load_review_md(tmpdir)
+            self.assertEqual(content, "")
+
+    def test_review_md_in_prompt(self):
+        """REVIEW.md content appears in initial prompt when provided."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            write_initial_prompt(
+                f.name, 1, 3, REVIEW_CONTRACT_V2, "# My Plan\nDo stuff.",
+                rubric_text="## Custom Rules\n- Always check security",
+            )
+            content = Path(f.name).read_text()
+            self.assertIn("Project Review Guidelines", content)
+            self.assertIn("Custom Rules", content)
+            self.assertIn("security", content)
+            os.unlink(f.name)
+
+    def test_review_md_absent_no_section(self):
+        """No rubric section when rubric_text is empty."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            write_initial_prompt(
+                f.name, 1, 3, REVIEW_CONTRACT_V2, "# My Plan\nDo stuff.",
+                rubric_text="",
+            )
+            content = Path(f.name).read_text()
+            self.assertNotIn("Project Review Guidelines", content)
+            os.unlink(f.name)
+
+
+# ===========================================================================
+# v2.1 tests: INDETERMINATE exit code
+# ===========================================================================
+
+
+class TestIndeterminateExitCode(unittest.TestCase):
+    """Tests for EXIT_INDETERMINATE when all reviews are unstructured."""
+
+    def test_exit_code_constants(self):
+        """Exit code constants are correct."""
+        self.assertEqual(EXIT_APPROVED, 0)
+        self.assertEqual(EXIT_REVISE, 2)
+        self.assertEqual(EXIT_INDETERMINATE, 3)
+
+    def test_parse_status_unstructured_detection(self):
+        """Unstructured reviews are detected by parse_structured_review."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("Just a plain text review.\n\nVERDICT: APPROVED\n")
+            f.flush()
+            result = parse_structured_review(f.name)
+            self.assertFalse(result["structured"])
+            os.unlink(f.name)
+
+    def test_structured_review_detected(self):
+        """Structured reviews are detected."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(
+                "### Blocking Issues\n- [B1] Issue\n\n"
+                "### Confidence\nHIGH\n\nVERDICT: REVISE\n"
+            )
+            f.flush()
+            result = parse_structured_review(f.name)
+            self.assertTrue(result["structured"])
+            os.unlink(f.name)
+
+
+# ===========================================================================
+# v2.1 tests: Per-issue confidence
+# ===========================================================================
+
+
+class TestPerIssueConfidence(unittest.TestCase):
+    """Tests for per-issue confidence parsing."""
+
+    def _write_review(self, text):
+        f = tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False)
+        f.write(text)
+        f.flush()
+        f.close()
+        return f.name
+
+    def test_parse_per_issue_confidence(self):
+        """[B1] (HIGH) format is parsed correctly."""
+        path = self._write_review(
+            "### Blocking Issues\n"
+            "- [B1] (HIGH) No auth on admin endpoint\n"
+            "- [B2] (MEDIUM) Missing input validation\n\n"
+            "### Confidence\nHIGH\n\n"
+            "VERDICT: REVISE\n"
+        )
+        result = parse_structured_review(path)
+        self.assertEqual(len(result["blocking"]), 2)
+        self.assertEqual(result["blocking"][0]["confidence"], "HIGH")
+        self.assertEqual(result["blocking"][1]["confidence"], "MEDIUM")
+        os.unlink(path)
+
+    def test_per_issue_confidence_fallback(self):
+        """Issues without per-issue confidence get None (caller uses review-level)."""
+        path = self._write_review(
+            "### Blocking Issues\n"
+            "- [B1] No auth on admin endpoint\n\n"
+            "### Confidence\nHIGH\n\n"
+            "VERDICT: REVISE\n"
+        )
+        result = parse_structured_review(path)
+        self.assertEqual(len(result["blocking"]), 1)
+        self.assertIsNone(result["blocking"][0]["confidence"])
+        os.unlink(path)
+
+    def test_per_issue_confidence_case_insensitive(self):
+        """Per-issue confidence is case-insensitive."""
+        path = self._write_review(
+            "### Blocking Issues\n"
+            "- [B1] (low) Minor concern\n\n"
+            "VERDICT: REVISE\n"
+        )
+        result = parse_structured_review(path)
+        self.assertEqual(result["blocking"][0]["confidence"], "LOW")
+        os.unlink(path)
+
+    def test_per_issue_confidence_in_ledger(self):
+        """Per-issue confidence is stored in the issue ledger."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "conf01"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "### Blocking Issues\n"
+                "- [B1] (HIGH) Auth missing\n\n"
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            ledger = build_issue_ledger(panel, quorum_id, tmpdir, 1)
+            blk001 = ledger["issues"][0]
+            self.assertEqual(blk001["confidence"], "HIGH")
+
+
+# ===========================================================================
+# v2.1 tests: Verification stage
+# ===========================================================================
+
+
+class TestVerificationStage(unittest.TestCase):
+    """Tests for verification prompt generation and response parsing."""
+
+    def test_verification_prompt_generation(self):
+        """Targeted verification prompts for surviving blockers."""
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 2, "owner_summary": "Auth missing"},
+                {"id": "BLK-002", "severity": "blocking", "status": "open",
+                 "support_count": 1, "owner_summary": "Minor"},
+            ],
+            "next_blk_id": 3, "next_nb_id": 1, "merges": [], "rounds": {},
+        }
+        prompts = generate_verification_prompts(ledger, "# Plan text", "super", 3)
+        # Only BLK-001 survives supermajority (2/3), BLK-002 doesn't (1/3)
+        self.assertEqual(len(prompts), 1)
+        self.assertEqual(prompts[0]["issue_id"], "BLK-001")
+        self.assertIn("BLK-001", prompts[0]["prompt"])
+        self.assertIn("Auth missing", prompts[0]["prompt"])
+        self.assertIn("VERIFIED", prompts[0]["prompt"])
+        self.assertIn("INVALIDATED", prompts[0]["prompt"])
+        self.assertIn("Plan text", prompts[0]["prompt"])
+
+    def test_verification_response_parsing_verified(self):
+        """Parse VERIFIED responses."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(
+                "After reviewing the plan, this is still a concern.\n\n"
+                "VERIFIED BLK-001\n\n"
+                "The admin routes still lack authentication.\n"
+            )
+            f.flush()
+            results = parse_verification_response(f.name)
+            self.assertEqual(results["BLK-001"], "VERIFIED")
+            os.unlink(f.name)
+
+    def test_verification_response_parsing_invalidated(self):
+        """Parse INVALIDATED responses."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(
+                "The revised plan now includes auth middleware.\n\n"
+                "INVALIDATED BLK-001\n\n"
+                "This has been addressed in the latest revision.\n"
+            )
+            f.flush()
+            results = parse_verification_response(f.name)
+            self.assertEqual(results["BLK-001"], "INVALIDATED")
+            os.unlink(f.name)
+
+    def test_verification_response_multiple(self):
+        """Parse multiple VERIFIED/INVALIDATED in one response."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(
+                "VERIFIED BLK-001\nAuth still missing.\n\n"
+                "INVALIDATED BLK-002\nFixed in revision.\n"
+            )
+            f.flush()
+            results = parse_verification_response(f.name)
+            self.assertEqual(results["BLK-001"], "VERIFIED")
+            self.assertEqual(results["BLK-002"], "INVALIDATED")
+            os.unlink(f.name)
+
+    def test_skip_verification_flag(self):
+        """--skip-verification is accepted."""
+        sys.argv = [
+            "run_quorum.py",
+            "--reviewers", "claude:sonnet,gemini:pro,codex",
+            "--plan-file", "/tmp/test.md",
+            "--quorum-id", "test",
+            "--round", "1",
+            "--skip-verification",
+        ]
+        args = parse_args()
+        self.assertTrue(args.skip_verification)
+
+
+# ===========================================================================
+# v2.1 tests: Threshold language
+# ===========================================================================
+
+
+class TestThresholdLanguage(unittest.TestCase):
+    """Tests for blocker-survival threshold semantics."""
+
+    def test_tally_summary_uses_advisory(self):
+        """Tally summary marks itself as advisory."""
+        verdicts = [
+            ("Reviewer A", "APPROVED", "sonnet", "high"),
+            ("Reviewer B", "REVISE", "pro", "medium"),
+            ("Reviewer C", "APPROVED", "o3", "medium"),
+        ]
+        tally = tally_verdicts(verdicts, "super")
+        self.assertIn("advisory", tally["summary"].lower())
+        self.assertIn("derived verdict", tally["summary"].lower())
 
 
 if __name__ == "__main__":

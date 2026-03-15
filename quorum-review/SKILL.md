@@ -45,7 +45,7 @@ feedback across rounds — anonymously, to prevent prestige bias.
 
 Users invoke as:
 ```
-/quorum-review <reviewer1> [reviewer2] [reviewer3] [...] [--threshold <mode>] [--effort <level>] [--on-failure <policy>]
+/quorum-review <reviewer1> [reviewer2] [reviewer3] [...] [--threshold <mode>] [--effort <level>] [--on-failure <policy>] [--max-rounds <N>]
 ```
 
 Each reviewer is specified as `provider[:model]`, e.g.:
@@ -60,17 +60,17 @@ Each reviewer is specified as `provider[:model]`, e.g.:
 
 | Mode             | Flag                    | Rule                                      |
 |------------------|-------------------------|-------------------------------------------|
-| Supermajority    | `--threshold super`      | All-but-one must approve (N-1 of N) (default) |
-| Unanimous        | `--threshold unanimous`  | All reviewers must approve                 |
-| Majority         | `--threshold majority`   | More than half must approve (⌊N/2⌋+1)     |
+| Supermajority    | `--threshold super`      | A blocker survives if endorsed by N-1 of N active reviewers (default) |
+| Unanimous        | `--threshold unanimous`  | A blocker survives only if endorsed by all active reviewers |
+| Majority         | `--threshold majority`   | A blocker survives if endorsed by more than half of active reviewers |
 
 ### Failure policy
 
 | Mode             | Flag                         | Behavior                                        |
 |------------------|------------------------------|-------------------------------------------------|
-| Fail-open        | `--on-failure fail-open`      | Continue with remaining; threshold uses original N (default) |
+| Shrink-quorum    | `--on-failure shrink-quorum`  | Continue with remaining; threshold uses surviving N (minimum 3) (default) |
+| Fail-open        | `--on-failure fail-open`      | Continue with remaining; threshold uses original N |
 | Fail-closed      | `--on-failure fail-closed`    | Abort if any reviewer fails                      |
-| Shrink-quorum    | `--on-failure shrink-quorum`  | Continue with remaining; threshold uses surviving N (minimum 3) |
 
 ### Examples
 
@@ -98,8 +98,8 @@ Each reviewer is prompted to produce a structured review:
 
 ```
 ### Blocking Issues
-- [B1] Description of blocking issue...
-- [B2] Description of blocking issue...
+- [B1] (HIGH) Description of blocking issue...
+- [B2] (MEDIUM) Description of blocking issue...
 (Write "None" if no blocking issues.)
 
 ### Non-Blocking Issues
@@ -114,6 +114,9 @@ architecture, security, testing, API design, performance
 
 VERDICT: APPROVED or VERDICT: REVISE
 ```
+
+Per-issue confidence (`HIGH`, `MEDIUM`, `LOW`) is optional. If omitted, the
+review-level confidence is used as the default for each issue.
 
 **Verdict protocol** (unchanged from v1):
 - The VERDICT must be the **LAST non-empty line** of each review output
@@ -132,8 +135,12 @@ Issues get **canonical, immutable IDs** assigned by the orchestrator:
 
 IDs are monotonically increasing and never reused. The ledger tracks:
 - `status`: open, resolved, merged
-- `support_count` / `dispute_count`: from cross-critique responses
-- `agreed_by` / `disagreed_by`: reviewer indices
+- `proposed_by`: reviewer who first raised the issue (always counts as support)
+- `endorsed_by`: reviewers who used [AGREE] (adds to support_count)
+- `refined_by`: reviewers who used [REFINE] (adds to support_count)
+- `disputed_by`: reviewers who used [DISAGREE] (adds to dispute_count)
+- `support_count`: 1 (proposer) + len(endorsed_by) + len(refined_by)
+- `dispute_count`: len(disputed_by)
 - `merged_from`: for host-agent merge operations
 
 The ledger is stored at `<TMPDIR>/qr-${QUORUM_ID}-ledger.json`.
@@ -181,7 +188,7 @@ Reviewers may raise new issues:
 - `[B-NEW] description` — new blocking issue
 - `[N-NEW] description` — new non-blocking issue
 
-### Rounds 3-5 — Anonymous Convergence (compressed context)
+### Rounds 3+ — Anonymous Convergence (compressed context)
 
 Same cross-critique format, but with **compressed context** instead of full prose:
 1. Issue ledger table (open issues with support/dispute counts)
@@ -191,10 +198,21 @@ Same cross-critique format, but with **compressed context** instead of full pros
 
 Identities remain anonymous. Focus narrows to surviving blocking issues.
 
+Default maximum is **3 rounds** (configurable up to 5 with `--max-rounds 5`).
+
+### Verification stage
+
+After cross-critique rounds complete with surviving blockers, the orchestrator
+generates targeted verification prompts for each surviving blocker. A single
+reviewer (or the host agent) responds `VERIFIED` or `INVALIDATED` with rationale.
+Only VERIFIED blockers survive to the derived verdict.
+
+Use `--skip-verification` to bypass for speed.
+
 ### Consensus gate
 
 After each round: if derived verdict is APPROVED (no blockers survive threshold), stop.
-If round == 5, stop with incomplete consensus noted.
+If round == max_rounds, stop with incomplete consensus noted.
 
 ## Agent Instructions
 
@@ -232,13 +250,16 @@ Display panel summary:
 - Reviewer 1: claude:sonnet
 - Reviewer 2: gemini:pro
 - Reviewer 3: codex (default model)
-- Threshold: supermajority (2/3 must approve)
-- Failure policy: fail-open
-- Max rounds: 5
+- Threshold: supermajority (blocker survives with 2/3 endorsements)
+- Failure policy: shrink-quorum
+- Max rounds: 3 (configurable up to 5)
 ```
 
 Read `references/<provider>.md` for each unique provider in the panel
 (resolve relative to peer-plan-review's directory, since we share references).
+
+If a `REVIEW.md` file exists in the current working directory, its contents
+are included in the review contract prompt as project-specific review guidelines.
 
 ### Step 1: Generate session ID & temp paths
 
@@ -328,6 +349,7 @@ Present ALL reviews with **anonymous** headers:
 **Consensus check:** Derived verdict from `run_quorum.py` exit code:
 - Exit 0: APPROVED (no blockers survive)
 - Exit 2: REVISE (blockers survive)
+- Exit 3: INDETERMINATE (all reviews unstructured / parse failures)
 
 If APPROVED → Step 7.
 If REVISE and round < 5 → Step 5.
@@ -439,7 +461,7 @@ Remove all temp files (explicit list, no glob):
   infrastructure)
 - The orchestrator script `run_quorum.py` lives in this skill's `scripts/`
   directory
-- Maximum 5 rounds — this is a hard limit to prevent infinite loops
+- Default 3 rounds, maximum 5 — hard limit to prevent infinite loops
 - When a reviewer flips from REVISE to APPROVED (or vice versa), highlight
   the change in the round tally
 - The host agent is responsible for merging duplicate issues in Step 5 — the
