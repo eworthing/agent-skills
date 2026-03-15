@@ -56,6 +56,11 @@ Each reviewer is specified as `provider[:model]`, e.g.:
 
 **Minimum 3 reviewers** required for a meaningful quorum.
 
+**Panel composition tip:** Mixing different model families (e.g., `claude:sonnet
+gemini:pro codex`) can improve coverage on some tasks, since different providers
+have different blind spots and reasoning styles. Research suggests model diversity
+may matter more than persona diversity for catching a broader range of issues.
+
 ### Threshold modes
 
 | Mode             | Flag                    | Rule                                      |
@@ -92,156 +97,38 @@ Same as `peer-plan-review` — see the provider reference files.
 | codex    | (none — use raw IDs)         | o3, o4-mini              | (provider) |
 | copilot  | (none — use raw IDs)         | gpt-5.4                  | (provider) |
 
-## The review contract (v2.2)
+## Review format & protocol
 
-Each reviewer is prompted to produce a structured review:
+Each reviewer produces a structured review with sections: `### Reasoning`,
+`### Blocking Issues` ([B1]/[B2] with optional confidence), `### Non-Blocking
+Issues` ([N1]/[N2]), `### Confidence`, `### Scope`, and a `VERDICT:` line as
+the last non-empty line. In rounds 2+, reviewers also respond to each open
+issue with `[AGREE]`/`[DISAGREE]`/`[REFINE]` tags before their review sections.
 
-```
-### Reasoning
-Write your complete analysis of the plan here. Consider architecture,
-security, testing, performance, and any other relevant areas. This
-section MUST come before your issue lists.
+For the full review contract, cross-critique protocol, and issue ledger schema,
+see `references/protocol.md`.
 
-### Blocking Issues
-- [B1] (HIGH) Description of blocking issue...
-- [B2] (MEDIUM) Description of blocking issue...
-(Write "None" if no blocking issues.)
+## Key concepts
 
-### Non-Blocking Issues
-- [N1] Description...
-(Write "None" if no non-blocking issues.)
+**Issue ledger**: Issues get canonical IDs (`BLK-001`, `NB-001`) tracked across
+rounds with `support_count` and `dispute_count` from AGREE/DISAGREE/REFINE
+responses. Stored at `<TMPDIR>/qr-${QUORUM_ID}-ledger.json`.
 
-### Confidence
-HIGH, MEDIUM, or LOW
+**Derived verdict**: APPROVED when no blocker has `support_count >= threshold`;
+REVISE when any blocker survives. Individual reviewer verdicts are advisory only.
 
-### Scope
-architecture, security, testing, API design, performance
+**Round flow**: Round 1 is independent parallel review. Rounds 2+ add anonymous
+cross-critique (AGREE/DISAGREE/REFINE per issue). Rounds 3+ use compressed
+context with blind mode (support counts hidden to prevent anchoring). Default
+max is 3 rounds (configurable up to 5).
 
-VERDICT: APPROVED or VERDICT: REVISE
-```
+**Verification**: After cross-critique, surviving blockers are verified by the
+first active reviewer (`VERIFIED`/`INVALIDATED`). Unanimous blockers skip
+verification. Use `--skip-verification` to bypass.
 
-Per-issue confidence (`HIGH`, `MEDIUM`, `LOW`) is optional. If omitted, the
-review-level confidence is used as the default for each issue.
-
-**Verdict protocol** (unchanged from v1):
-- The VERDICT must be the **LAST non-empty line** of each review output
-- Must be exactly: `VERDICT: APPROVED` or `VERDICT: REVISE`
-- Parse verdict from the bottom of the output file upward
-- Reviewers operate in read-only / review-only mode
-
-**Fallback**: If a reviewer produces unstructured text, the orchestrator
-extracts only the verdict (v1 behavior). All other fields default to empty.
-
-## The issue ledger
-
-Issues get **canonical, immutable IDs** assigned by the orchestrator:
-- Blocking: `BLK-001`, `BLK-002`, etc.
-- Non-blocking: `NB-001`, `NB-002`, etc.
-
-IDs are monotonically increasing and never reused. The ledger tracks:
-- `status`: open, resolved, merged
-- `proposed_by`: reviewer who first raised the issue (always counts as support)
-- `endorsed_by`: reviewers who used [AGREE] (adds to support_count)
-- `refined_by`: reviewers who used [REFINE] (adds to support_count)
-- `disputed_by`: reviewers who used [DISAGREE] (adds to dispute_count)
-- `support_count`: 1 (proposer) + len(endorsed_by) + len(refined_by)
-- `dispute_count`: len(disputed_by)
-- `merged_from`: for host-agent merge operations
-
-The ledger is stored at `<TMPDIR>/qr-${QUORUM_ID}-ledger.json`.
-
-## Derived verdict
-
-The artifact verdict is a **consequence** of issue-level consensus:
-
-```
-APPROVED = no blocking issue has support_count >= threshold
-REVISE   = one or more blocking issues have support_count >= threshold
-```
-
-Individual reviewers' `VERDICT: APPROVED/REVISE` lines are collected as
-**advisory signals** for auditability, but they do NOT determine the outcome.
-
-## Round protocol
-
-### Round 1 — Independent Parallel Review
-
-Each reviewer receives:
-1. The structured review contract (blocking/non-blocking/confidence/scope)
-2. Panel context: "You are reviewer N of M. Provide your independent assessment."
-3. The full plan text
-
-No prior reviews visible. No identities. Execution: parallel by default.
-
-### Round 2 — Anonymous Cross-Critique
-
-Each reviewer receives:
-1. The structured review contract
-2. Cross-critique instructions (AGREE/DISAGREE/REFINE per canonical issue ID)
-3. Panel context (round N, anonymous)
-4. **All reviews from round 1** — labeled Reviewer A/B/C (NO provider/model info)
-5. The current issue ledger summary
-6. Changes since last round (by host)
-7. The updated plan (full text)
-
-Reviewers must respond to each open issue:
-- `[AGREE BLK-001]` — confirms the issue is valid
-- `[DISAGREE BLK-001] reason` — disputes with explanation
-- `[REFINE BLK-001] revised text` — agrees but refines scope (counts as support)
-
-Reviewers may raise new issues:
-- `[B-NEW] description` — new blocking issue
-- `[N-NEW] description` — new non-blocking issue
-
-### Rounds 3+ — Anonymous Convergence (compressed context)
-
-Same cross-critique format, but with **compressed context** instead of full prose:
-1. Issue ledger table (open issues with support/dispute counts)
-2. Condensed per-reviewer issue lists (not full review text)
-3. Changes since last round
-4. Updated plan
-
-Identities remain anonymous. Focus narrows to surviving blocking issues.
-
-Default maximum is **3 rounds** (configurable up to 5 with `--max-rounds 5`).
-
-### Verification stage
-
-After cross-critique rounds complete with surviving blockers, the orchestrator
-generates targeted verification prompts for each surviving blocker. The first
-active panel reviewer serves as verifier, responding `VERIFIED` or `INVALIDATED`
-with rationale. Only VERIFIED blockers survive to the derived verdict.
-
-**Unanimous optimization**: Blockers with unanimous support (`support_count >=
-total_reviewers`) skip verification — these are high-probability true positives
-that don't need additional validation.
-
-Use `--skip-verification` to bypass for speed.
-
-### Blind mode (rounds 3+)
-
-In rounds 3 and beyond, support/dispute counts are stripped from the compressed
-context and ledger summary shown to reviewers. This prevents conformity anchoring
-— reviewers evaluate issues on their merits rather than following the majority.
-The full ledger (with counts) is still maintained internally and used for verdict
-derivation.
-
-### Early exit signals
-
-After each round, the orchestrator checks whether further rounds would be
-mathematically futile:
-
-- **No open blockers**: verdict is APPROVED, stop
-- **No blockers meet threshold**: verdict would be APPROVED, stop
-- **All surviving at max support**: more rounds can't change outcome, stop
-
-The early exit signal is reported in the tally output and JSON for the host agent
-to act on.
-
-### Consensus gate
-
-After each round: if derived verdict is APPROVED (no blockers survive threshold), stop.
-If round == max_rounds, stop with incomplete consensus noted.
+**Early exit**: The orchestrator signals via `early_exit` in the tally JSON
+when further rounds are mathematically futile (no open blockers, none meet
+threshold, or all at max support).
 
 ## Agent Instructions
 
@@ -380,9 +267,28 @@ Present ALL reviews with **anonymous** headers:
 - Exit 2: REVISE (blockers survive)
 - Exit 3: INDETERMINATE (all reviews unstructured / parse failures)
 
-If APPROVED → Step 7.
-If REVISE and round < 5 → Step 5.
-If round == 5 → Step 7 (with incomplete consensus noted).
+**Early exit handling:** Read the tally JSON (`<TMPDIR>/qr-${QUORUM_ID}-tally.json`)
+for the `early_exit` and `early_exit_reason` fields. If `early_exit` is `true` AND
+`derived_verdict` is `REVISE`, further rounds are mathematically futile (all surviving
+blockers are at maximum support — no new endorsements are possible). In this case,
+skip to Step 7 and present the result with incomplete consensus noted.
+
+**Decision tree** (check in this order):
+
+1. INDETERMINATE (exit 3) → **Step 7** (note all reviews unstructured)
+2. REVISE (exit 2) + `early_exit` is true → **Step 7** (incomplete consensus, futile to continue)
+3. REVISE (exit 2) + round == max_rounds → **Step 7** (incomplete consensus, max rounds reached)
+4. REVISE (exit 2) + round < max_rounds → **Step 5** (revise and re-submit)
+5. APPROVED (exit 0) + round 1 + reviewers raised blockers → **Step 5** (merge
+   equivalent issues, then re-derive verdict — see note below)
+6. APPROVED (exit 0) otherwise → **Step 7** (consensus reached)
+
+**Round 1 merge note:** After round 1, each blocker has `support_count=1` (only
+its proposer), so the derived verdict is almost always APPROVED regardless of
+threshold. But if multiple reviewers raised similar blockers, merge them in
+Step 5 — this combines their support counts. After merging, re-derive the
+verdict: if any merged blocker now meets the threshold, proceed to Step 6 for
+cross-critique. If no blockers survive after merging, proceed to Step 7.
 
 ### Step 5: Revise the plan & manage issue ledger
 
@@ -390,13 +296,11 @@ As HOST, synthesize feedback from ALL reviewers:
 
 1. **Review the issue ledger.** If multiple reviewers raised semantically
    equivalent issues (e.g., BLK-001 "no auth on admin" and BLK-003 "admin
-   routes lack authentication"), merge them:
-   - Pick the survivor (clearest description)
-   - Add absorbed issue IDs to survivor's `merged_from` list
-   - Set absorbed issues' status to `"merged"`
-   - Add a merge record to the `merges` array with reason
-   - Combine `agreed_by`/`disagreed_by` lists
-   - Update `support_count` and `dispute_count`
+   routes lack authentication"), merge them. See `references/protocol.md`
+   "Merge protocol" for the full procedure. Key steps:
+   - Pick the survivor (clearest description), set absorbed issues' status to `"merged"`
+   - Combine `endorsed_by`/`refined_by`/`disputed_by` lists (deduplicate)
+   - Recalculate: `support_count` = 1 + len(endorsed_by) + len(refined_by)
 
 2. **Prioritize**: Surviving blocking issues (multi-reviewer support) first,
    then single-reviewer blockers, then non-blocking suggestions.
@@ -413,7 +317,7 @@ As HOST, synthesize feedback from ALL reviewers:
 
 5. **Update the ledger JSON** with resolved/merged status before next round.
 
-### Step 6: Re-submit with cross-critique context (Rounds 2-5)
+### Step 6: Re-submit with cross-critique context (Rounds 2+)
 
 Call `run_quorum.py` with the next round number and updated files:
 
@@ -432,7 +336,9 @@ python3 <skill-dir>/scripts/run_quorum.py \
   [--effort LEVEL] [--timeout SECONDS]
 ```
 
-Then repeat Step 4.
+**Go back to Step 4** — read the new reviews, check the verdict, and follow the
+decision tree. This Step 4 → 5 → 6 → 4 loop continues until the decision tree
+sends you to Step 7.
 
 ### Step 7: Present final result
 

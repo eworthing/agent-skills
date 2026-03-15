@@ -256,6 +256,28 @@ _RE_SCOPE = re.compile(
 )
 
 
+def _extract_section(text, header):
+    """Extract text under a ### header, up to the next ### header or end of text.
+
+    Returns the section body text, or the full text if the header is not found
+    (backward compatibility with unstructured reviews).
+    """
+    pattern = re.compile(
+        r"(?:^|\n)###\s+" + re.escape(header) + r"\s*\n",
+        re.IGNORECASE,
+    )
+    match = pattern.search(text)
+    if not match:
+        return text  # fallback: search entire text
+
+    start = match.end()
+    # Find the next ### header (but not #### sub-headers)
+    next_header = re.search(r"\n###\s+(?!#)", text[start:])
+    if next_header:
+        return text[start : start + next_header.start()]
+    return text[start:]
+
+
 def parse_structured_review(review_file):
     """Parse structured review output into issue records.
 
@@ -271,13 +293,17 @@ def parse_structured_review(review_file):
     text = read_review(review_file)
     verdict = parse_verdict(review_file)
 
+    # Extract section text to avoid matching issues from Reasoning section
+    blocking_section = _extract_section(text, "Blocking Issues")
+    nb_section = _extract_section(text, "Non-Blocking Issues")
+
     # Parse blocking issues — try per-issue confidence first
     conf_matches = {
         m.group(1): (m.group(2).upper(), m.group(3).strip())
-        for m in _RE_BLOCKING_WITH_CONF.finditer(text)
+        for m in _RE_BLOCKING_WITH_CONF.finditer(blocking_section)
     }
     blocking = []
-    for m in _RE_BLOCKING.finditer(text):
+    for m in _RE_BLOCKING.finditer(blocking_section):
         bid = m.group(1)
         if bid in conf_matches:
             issue_conf, issue_text = conf_matches[bid]
@@ -287,7 +313,7 @@ def parse_structured_review(review_file):
 
     non_blocking = [
         {"id": f"N{m.group(1)}", "text": m.group(2).strip()}
-        for m in _RE_NON_BLOCKING.finditer(text)
+        for m in _RE_NON_BLOCKING.finditer(nb_section)
     ]
 
     conf_match = _RE_CONFIDENCE.search(text)
@@ -926,17 +952,42 @@ REVIEW_CONTRACT_V2 = (
 
 CROSS_CRITIQUE_INSTRUCTIONS = (
     "## Cross-Critique Instructions\n\n"
-    "Below are anonymous reviews from the prior round and the current issue ledger.\n"
-    "For EACH open issue in the ledger, you must respond with one of:\n"
-    "- [AGREE BLK-001] — you agree this is a valid issue\n"
-    "- [DISAGREE BLK-001] reason — you disagree, with explanation\n"
-    "- [REFINE BLK-001] revised description — you agree but want to refine the scope\n\n"
-    "You may also raise NEW issues:\n"
-    "- [B-NEW] description — new blocking issue\n"
-    "- [N-NEW] description — new non-blocking issue\n\n"
-    "After your per-issue responses, provide your updated structured review\n"
-    "with the standard sections (Blocking Issues, Non-Blocking Issues,\n"
-    "Confidence, Scope) and verdict."
+    "Below are anonymous reviews from the prior round and the current issue ledger.\n\n"
+    "### Part 1: Respond to every open issue\n\n"
+    "For EACH open issue in the Current Issue Ledger section below, write exactly\n"
+    "one response. Every issue needs your position — if you skip an issue, the\n"
+    "orchestrator records no data from you on it, which weakens the consensus.\n\n"
+    "- `[AGREE BLK-001]` — you confirm this issue is valid\n"
+    "- `[DISAGREE BLK-001] reason` — you dispute this issue (include your reasoning)\n"
+    "- `[REFINE BLK-001] revised description` — the concern is valid but you want to\n"
+    "  adjust its scope or description (counts as support, like AGREE)\n\n"
+    "You may also raise entirely new issues discovered in this round:\n"
+    "- `[B-NEW] description` — new blocking issue\n"
+    "- `[N-NEW] description` — new non-blocking issue\n\n"
+    "Put all cross-critique responses together BEFORE your review sections.\n\n"
+    "### Part 2: Updated structured review\n\n"
+    "After your cross-critique responses, provide your full updated review using\n"
+    "the standard sections (### Reasoning, ### Blocking Issues, ### Non-Blocking\n"
+    "Issues, ### Confidence, ### Scope) and end with your VERDICT line.\n\n"
+    "### Example round 2+ response\n\n"
+    "```\n"
+    "[AGREE BLK-001]\n"
+    "[DISAGREE BLK-002] The plan already handles this via the retry middleware\n"
+    "[REFINE NB-001] Should also cover WebSocket connections, not just HTTP\n"
+    "[B-NEW] No rate limiting on the public API endpoints\n\n"
+    "### Reasoning\n"
+    "After reviewing the other panelists' feedback...\n\n"
+    "### Blocking Issues\n"
+    "- [B1] (HIGH) BLK-001 remains unaddressed — auth is still missing\n"
+    "- [B2] (MEDIUM) New: No rate limiting on public API\n\n"
+    "### Non-Blocking Issues\n"
+    "None\n\n"
+    "### Confidence\n"
+    "HIGH\n\n"
+    "### Scope\n"
+    "security, API design\n\n"
+    "VERDICT: REVISE\n"
+    "```"
 )
 
 
@@ -1420,7 +1471,7 @@ def main():
         )
         if _v_surviving:
             verification_prompts = generate_verification_prompts(
-                ledger, args.threshold, active_panel_size
+                ledger, plan_text, args.threshold, active_panel_size
             )
             # Filter out unanimously-endorsed blockers (high-probability true positives)
             verification_prompts = [

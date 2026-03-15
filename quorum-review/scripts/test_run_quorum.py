@@ -30,6 +30,7 @@ from run_quorum import (  # noqa: E402
     MAX_ROUNDS_LIMIT,
     MIN_QUORUM_SIZE,
     REVIEW_CONTRACT_V2,
+    _extract_section,
     _is_unanimous,
     build_issue_ledger,
     compile_compressed_context,
@@ -1851,6 +1852,462 @@ class TestReasoningSection(unittest.TestCase):
             self.assertEqual(parsed["blocking"][0]["text"], "Missing rate limiting on API")
             self.assertTrue(parsed["structured"])
             os.unlink(f.name)
+
+    def test_b_tags_in_reasoning_section_ignored(self):
+        """[B1]-style tags in Reasoning section must NOT be parsed as issues."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(
+                "### Reasoning\n"
+                "I want to flag a few things:\n"
+                "- [B1] consider the auth approach carefully\n"
+                "- [B2] the database schema needs work\n"
+                "- [N1] pagination could be improved\n\n"
+                "### Blocking Issues\n"
+                "- [B1] (HIGH) SQL injection in user input handler\n\n"
+                "### Non-Blocking Issues\n"
+                "- [N1] Add request logging\n\n"
+                "### Confidence\n"
+                "HIGH\n\n"
+                "### Scope\n"
+                "security\n\n"
+                "VERDICT: REVISE\n"
+            )
+            f.flush()
+            parsed = parse_structured_review(f.name)
+            # Only 1 blocking issue (from ### Blocking Issues section)
+            # The 2 in Reasoning must be ignored
+            self.assertEqual(len(parsed["blocking"]), 1)
+            self.assertEqual(parsed["blocking"][0]["text"], "SQL injection in user input handler")
+            # Only 1 non-blocking (from ### Non-Blocking Issues section)
+            self.assertEqual(len(parsed["non_blocking"]), 1)
+            self.assertEqual(parsed["non_blocking"][0]["text"], "Add request logging")
+            os.unlink(f.name)
+
+    def test_extract_section_helper(self):
+        """_extract_section returns only the text under the specified header."""
+        text = (
+            "### Reasoning\nSome analysis.\n\n"
+            "### Blocking Issues\n- [B1] Real issue\n\n"
+            "### Non-Blocking Issues\nNone\n"
+        )
+        blocking = _extract_section(text, "Blocking Issues")
+        self.assertIn("[B1] Real issue", blocking)
+        self.assertNotIn("Some analysis", blocking)
+        self.assertNotIn("Non-Blocking", blocking)
+
+    def test_extract_section_fallback_when_missing(self):
+        """_extract_section returns full text when header is not found."""
+        text = "No headers here, just text with - [B1] something"
+        result = _extract_section(text, "Blocking Issues")
+        self.assertEqual(result, text)
+
+
+# ===========================================================================
+# Cross-critique instructions quality
+# ===========================================================================
+
+
+class TestCrossCritiqueInstructions(unittest.TestCase):
+    """Tests that cross-critique instructions contain critical elements
+    and that the embedded example is parseable by our regex parsers."""
+
+    def test_instructions_require_every_issue_response(self):
+        """Instructions must tell reviewers to respond to EVERY open issue."""
+        text = CROSS_CRITIQUE_INSTRUCTIONS.lower()
+        self.assertIn("every", text)
+        # Must warn about consequences of skipping
+        self.assertIn("skip", text)
+
+    def test_instructions_clarify_refine_counts_as_support(self):
+        """REFINE must be documented as counting toward support."""
+        self.assertIn("counts as support", CROSS_CRITIQUE_INSTRUCTIONS)
+
+    def test_instructions_specify_structure_order(self):
+        """Instructions must tell reviewers to put cross-critique BEFORE review sections."""
+        text = CROSS_CRITIQUE_INSTRUCTIONS
+        # "before" must appear in context of ordering
+        self.assertIn("BEFORE", text)
+
+    def test_instructions_contain_example(self):
+        """Instructions must include a concrete example of expected output."""
+        self.assertIn("[AGREE BLK-", CROSS_CRITIQUE_INSTRUCTIONS)
+        self.assertIn("[DISAGREE BLK-", CROSS_CRITIQUE_INSTRUCTIONS)
+        self.assertIn("[REFINE", CROSS_CRITIQUE_INSTRUCTIONS)
+        self.assertIn("VERDICT:", CROSS_CRITIQUE_INSTRUCTIONS)
+
+    def test_embedded_example_is_parseable(self):
+        """The example in the instructions must be parseable by our regex parsers."""
+        # Extract the example text from between ``` markers
+        text = CROSS_CRITIQUE_INSTRUCTIONS
+        start = text.index("```\n") + 4
+        end = text.index("\n```", start)
+        example = text[start:end]
+
+        # Write to temp file for parser functions
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(example)
+            f.flush()
+
+            # Cross-critique parser should find AGREE, DISAGREE, REFINE, B-NEW
+            critique = parse_cross_critique(f.name)
+            self.assertGreater(len(critique["agrees"]), 0, "Example must have AGREE tags")
+            self.assertGreater(len(critique["disagrees"]), 0, "Example must have DISAGREE tags")
+            self.assertGreater(len(critique["refines"]), 0, "Example must have REFINE tags")
+            self.assertGreater(len(critique["new_blocking"]), 0, "Example must have B-NEW tags")
+
+            # Structured review parser should find blocking issues and verdict
+            parsed = parse_structured_review(f.name)
+            self.assertGreater(len(parsed["blocking"]), 0, "Example must have blocking issues")
+            self.assertEqual(parsed["verdict"], "REVISE")
+            self.assertTrue(parsed["structured"])
+
+            os.unlink(f.name)
+
+    def test_cross_critique_prompt_contains_all_sections(self):
+        """Round 2+ prompt must contain review contract, cross-critique, and all context."""
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 1, "dispute_count": 0,
+                 "owner_summary": "Missing auth"},
+            ],
+        }
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            write_cross_critique_prompt(
+                f.name, 1, 3, 2,
+                REVIEW_CONTRACT_V2,
+                CROSS_CRITIQUE_INSTRUCTIONS,
+                "--- Reviewer A ---\nSome review...",
+                format_ledger_summary(ledger),
+                "Fixed bug X.",
+                "# The Plan\nDo the thing.",
+            )
+            content = Path(f.name).read_text(encoding="utf-8")
+
+            # Must contain all major section headings in order
+            headings = [
+                "## Review Contract",
+                "## Cross-Critique Instructions",
+                "## Panel Context",
+                "## Reviews from Previous Round",
+                "## Current Issue Ledger",
+                "## Changes Since Last Round",
+                "## Updated Plan",
+            ]
+            positions = []
+            for heading in headings:
+                pos = content.index(heading)
+                positions.append(pos)
+            # Verify headings appear in order
+            self.assertEqual(positions, sorted(positions),
+                             f"Section headings must appear in order: {headings}")
+
+            # Must contain the actual issue from the ledger
+            self.assertIn("BLK-001", content)
+            self.assertIn("Missing auth", content)
+
+            os.unlink(f.name)
+
+
+# ===========================================================================
+# Regression tests: verification call-site signature
+# ===========================================================================
+
+
+class TestVerificationCallSiteSignature(unittest.TestCase):
+    """Regression tests ensuring generate_verification_prompts is called
+    with the correct 4-argument signature (ledger, plan_text, threshold, total).
+
+    These catch the bug where plan_text was omitted at the call site, causing
+    args.threshold to be passed as plan_text and active_panel_size as threshold.
+    """
+
+    def test_generate_verification_prompts_requires_plan_text(self):
+        """Unit test: plan_text content appears in generated prompts."""
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 2, "owner_summary": "Security flaw"},
+            ],
+            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+        }
+        plan_text = "## My Specific Plan\nDeploy auth middleware to /admin."
+        prompts = generate_verification_prompts(ledger, plan_text, "super", 3)
+        self.assertEqual(len(prompts), 1)
+        self.assertIn("BLK-001", prompts[0]["issue_id"])
+        # Plan text must be embedded in the prompt
+        self.assertIn("My Specific Plan", prompts[0]["prompt"])
+        self.assertIn("auth middleware", prompts[0]["prompt"])
+
+    def test_generate_verification_prompts_wrong_arity_raises(self):
+        """Calling with 3 args (the old bug) must raise TypeError."""
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 2, "owner_summary": "Issue"},
+            ],
+            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+        }
+        with self.assertRaises(TypeError):
+            generate_verification_prompts(ledger, "super", 3)
+
+    def test_main_verification_path_no_type_error(self):
+        """Integration test: main() verification branch doesn't raise TypeError.
+
+        Seeds round-1 output with a surviving blocker, monkeypatches
+        run_single_reviewer to write a canned verification response, and
+        confirms no TypeError at the call site.
+        """
+        import inspect
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create plan file
+            plan_file = os.path.join(tmpdir, "plan.md")
+            Path(plan_file).write_text(
+                "# Test Plan\nImplement feature X.", encoding="utf-8"
+            )
+
+            # Create a ledger with a surviving blocker (support=2, super threshold, total=3)
+            ledger = {
+                "next_blk_id": 2,
+                "next_nb_id": 1,
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "severity": "blocking",
+                        "status": "open",
+                        "support_count": 2,
+                        "dispute_count": 0,
+                        "owner_summary": "Missing input validation",
+                        "confidence": "HIGH",
+                        "scope": "security",
+                        "proposed_by": 1,
+                        "endorsed_by": [2],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "agreed_by": [1, 2],
+                        "disagreed_by": [],
+                        "merged_from": [],
+                    },
+                ],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 3, "active_reviewers": [1, 2, 3]}},
+            }
+            ledger_file = os.path.join(tmpdir, "qr-test-ledger.json")
+            save_ledger(ledger_file, ledger)
+
+            # Create fake round-1 review files (so file reads don't fail)
+            for idx in range(1, 4):
+                review_file = os.path.join(tmpdir, f"qr-test-r{idx}-review.md")
+                Path(review_file).write_text(
+                    "### Reasoning\nLooks risky.\n\n"
+                    "### Blocking Issues\n"
+                    "- [B1] (HIGH) Missing input validation\n\n"
+                    "### Non-Blocking Issues\nNone\n\n"
+                    "### Confidence\nHIGH\n\n"
+                    "### Scope\nsecurity\n\n"
+                    "VERDICT: REVISE\n",
+                    encoding="utf-8",
+                )
+
+            # Track whether run_single_reviewer was called for verification
+            verification_calls = []
+
+            def mock_run_single_reviewer(
+                run_review_py, provider, model, plan_file_arg,
+                prompt_file, output_file, session_file, events_file,
+                effort="high", resume=False, timeout=300,
+            ):
+                # Write a canned VERIFIED response
+                Path(output_file).write_text(
+                    f"VERIFIED BLK-001\nStill a valid concern.\n",
+                    encoding="utf-8",
+                )
+                verification_calls.append(output_file)
+                return 0
+
+            # Patch sys.argv for parse_args and run_single_reviewer
+            test_argv = [
+                "run_quorum.py",
+                "--reviewers", "claude:sonnet,gemini:pro,codex",
+                "--plan-file", plan_file,
+                "--quorum-id", "test",
+                "--round", "2",
+                "--threshold", "super",
+                "--tmpdir", tmpdir,
+                "--ledger-file", ledger_file,
+                "--sequential",
+            ]
+
+            # Create deliberation and changes files expected by round 2
+            delib_file = os.path.join(tmpdir, "qr-test-deliberation.md")
+            Path(delib_file).write_text("Prior deliberation.", encoding="utf-8")
+            test_argv.extend(["--deliberation-file", delib_file])
+
+            changes_file = os.path.join(tmpdir, "qr-test-changes.md")
+            Path(changes_file).write_text("- Fixed auth.", encoding="utf-8")
+            test_argv.extend(["--changes-summary", changes_file])
+
+            with patch.object(sys, "argv", test_argv), \
+                 patch.object(run_quorum, "run_single_reviewer", side_effect=mock_run_single_reviewer):
+                try:
+                    run_quorum.main()
+                except SystemExit:
+                    pass  # main() calls sys.exit(); that's expected
+
+            # Verify that the verification path was actually reached
+            # (at least one call should be for a verify file)
+            verify_calls = [c for c in verification_calls if "verify" in c]
+            self.assertGreater(
+                len(verify_calls), 0,
+                "Verification path was not exercised — test is not covering the bug",
+            )
+
+
+# ===========================================================================
+# Integration tests: main() orchestration paths
+# ===========================================================================
+
+
+class TestMainOrchestration(unittest.TestCase):
+    """Integration tests exercising main() through full orchestration paths."""
+
+    def _mock_reviewer(self, review_text):
+        """Return a mock run_single_reviewer that writes canned review text."""
+        def mock_fn(
+            run_review_py, provider, model, plan_file_arg,
+            prompt_file, output_file, session_file, events_file,
+            effort="high", resume=False, timeout=300,
+        ):
+            Path(output_file).write_text(review_text, encoding="utf-8")
+            Path(session_file).write_text(
+                json.dumps({"model": model or "default", "effort": effort}),
+                encoding="utf-8",
+            )
+            return 0
+        return mock_fn
+
+    def test_round1_all_approved_exits_0(self):
+        """Round 1 with all APPROVED reviews → exit code 0 (APPROVED)."""
+        from unittest.mock import patch
+
+        review_text = (
+            "### Reasoning\nPlan looks solid.\n\n"
+            "### Blocking Issues\nNone\n\n"
+            "### Non-Blocking Issues\n- [N1] Add logging\n\n"
+            "### Confidence\nHIGH\n\n"
+            "### Scope\narchitecture\n\n"
+            "VERDICT: APPROVED\n"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = os.path.join(tmpdir, "plan.md")
+            Path(plan_file).write_text("# Plan\nDo something.", encoding="utf-8")
+
+            test_argv = [
+                "run_quorum.py",
+                "--reviewers", "claude:sonnet,gemini:pro,codex",
+                "--plan-file", plan_file,
+                "--quorum-id", "integ",
+                "--round", "1",
+                "--tmpdir", tmpdir,
+                "--sequential",
+            ]
+
+            with patch.object(sys, "argv", test_argv), \
+                 patch.object(run_quorum, "run_single_reviewer",
+                              side_effect=self._mock_reviewer(review_text)):
+                with self.assertRaises(SystemExit) as cm:
+                    run_quorum.main()
+                self.assertEqual(cm.exception.code, EXIT_APPROVED)
+
+            # Verify tally was written
+            tally_file = os.path.join(tmpdir, "qr-integ-tally.json")
+            self.assertTrue(Path(tally_file).exists())
+            tally = json.loads(Path(tally_file).read_text(encoding="utf-8"))
+            self.assertEqual(tally["derived_verdict"], "APPROVED")
+
+    def test_round1_with_blockers_still_approved(self):
+        """Round 1 with blockers → APPROVED (each blocker has support_count=1).
+
+        In round 1, each reviewer proposes issues independently, so every
+        blocker starts with support_count=1. No threshold (majority, super,
+        unanimous) is met for panels of 3+. The derived verdict is APPROVED.
+        The host agent must merge equivalent issues in Step 5 and re-submit
+        for cross-critique before blockers can build sufficient support.
+        """
+        from unittest.mock import patch
+
+        review_text = (
+            "### Reasoning\nAuth is missing.\n\n"
+            "### Blocking Issues\n"
+            "- [B1] (HIGH) No authentication on admin routes\n\n"
+            "### Non-Blocking Issues\nNone\n\n"
+            "### Confidence\nHIGH\n\n"
+            "### Scope\nsecurity\n\n"
+            "VERDICT: REVISE\n"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = os.path.join(tmpdir, "plan.md")
+            Path(plan_file).write_text("# Plan\nBuild API.", encoding="utf-8")
+
+            test_argv = [
+                "run_quorum.py",
+                "--reviewers", "claude:sonnet,gemini:pro,codex",
+                "--plan-file", plan_file,
+                "--quorum-id", "integ2",
+                "--round", "1",
+                "--threshold", "majority",
+                "--tmpdir", tmpdir,
+                "--sequential",
+                "--skip-verification",
+            ]
+
+            with patch.object(sys, "argv", test_argv), \
+                 patch.object(run_quorum, "run_single_reviewer",
+                              side_effect=self._mock_reviewer(review_text)):
+                with self.assertRaises(SystemExit) as cm:
+                    run_quorum.main()
+                # Round 1 blockers have support_count=1 < majority(2), so APPROVED
+                self.assertEqual(cm.exception.code, EXIT_APPROVED)
+
+            # Ledger should still have the blocking issues recorded
+            ledger_file = os.path.join(tmpdir, "qr-integ2-ledger.json")
+            ledger = json.loads(Path(ledger_file).read_text(encoding="utf-8"))
+            blocking = [i for i in ledger["issues"] if i["severity"] == "blocking"]
+            self.assertEqual(len(blocking), 3)  # one per reviewer
+            # All have support_count=1 (only proposer)
+            for issue in blocking:
+                self.assertEqual(issue["support_count"], 1)
+
+    def test_round1_unstructured_exits_3(self):
+        """Round 1 with all unstructured reviews → exit code 3 (INDETERMINATE)."""
+        from unittest.mock import patch
+
+        review_text = "The plan looks fine to me. No major concerns.\n"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plan_file = os.path.join(tmpdir, "plan.md")
+            Path(plan_file).write_text("# Plan\nDo thing.", encoding="utf-8")
+
+            test_argv = [
+                "run_quorum.py",
+                "--reviewers", "claude:sonnet,gemini:pro,codex",
+                "--plan-file", plan_file,
+                "--quorum-id", "integ3",
+                "--round", "1",
+                "--tmpdir", tmpdir,
+                "--sequential",
+            ]
+
+            with patch.object(sys, "argv", test_argv), \
+                 patch.object(run_quorum, "run_single_reviewer",
+                              side_effect=self._mock_reviewer(review_text)):
+                with self.assertRaises(SystemExit) as cm:
+                    run_quorum.main()
+                self.assertEqual(cm.exception.code, EXIT_INDETERMINATE)
 
 
 if __name__ == "__main__":
