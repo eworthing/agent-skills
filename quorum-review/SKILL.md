@@ -143,7 +143,7 @@ Parse `$ARGUMENTS` to extract the reviewer list and options.
 - `--effort` followed by `low|medium|high|xhigh` sets effort for ALL
   reviewers (individual effort overrides not supported in v1)
 - `--on-failure` followed by `fail-closed|fail-open|shrink-quorum` sets
-  the failure policy (default: `fail-open`)
+  the failure policy (default: `shrink-quorum`)
 - Valid providers: `claude`, `gemini`, `codex`, `copilot`
 
 **Validation:**
@@ -210,7 +210,7 @@ python3 <skill-dir>/scripts/run_quorum.py \
   --quorum-id ${QUORUM_ID} \
   --round 1 \
   --threshold super \
-  --on-failure fail-open \
+  --on-failure shrink-quorum \
   --tmpdir <TMPDIR> \
   --ledger-file <TMPDIR>/qr-${QUORUM_ID}-ledger.json \
   [--effort LEVEL] [--timeout SECONDS] [--sequential]
@@ -328,7 +328,7 @@ python3 <skill-dir>/scripts/run_quorum.py \
   --quorum-id ${QUORUM_ID} \
   --round N \
   --threshold super \
-  --on-failure fail-open \
+  --on-failure shrink-quorum \
   --tmpdir <TMPDIR> \
   --ledger-file <TMPDIR>/qr-${QUORUM_ID}-ledger.json \
   --deliberation-file <TMPDIR>/qr-${QUORUM_ID}-deliberation.md \

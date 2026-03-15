@@ -384,7 +384,7 @@ def build_codex_cmd(args, session_id=None):
     cmd = [binary, "exec"]
 
     if args.resume and session_id:
-        cmd.extend(["resume", session_id])
+        cmd.extend(["--resume", str(session_id)])
         # --sandbox is NOT available on resume; original session policy applies
         cmd.extend(["-c", "approval_mode=never"])
     else:
