@@ -1,7 +1,7 @@
 ---
 name: quorum-review
 description: >
-  Multi-provider consensus review system (v2). Assembles a panel of 3+ AI
+  Multi-provider consensus review system (v2.2). Assembles a panel of 3+ AI
   reviewers (Codex, Gemini CLI, Claude Code, Copilot CLI — or the same
   provider with different models) that deliberate on a plan through structured,
   anonymous cross-critique. Reviewers identify blocking and non-blocking issues
@@ -13,7 +13,7 @@ description: >
   'panel discussion', or wants diverse AI perspectives to converge.
 ---
 
-# Quorum Review — Multi-Provider Consensus (v2)
+# Quorum Review — Multi-Provider Consensus (v2.2)
 
 ## Why this exists
 
@@ -92,11 +92,16 @@ Same as `peer-plan-review` — see the provider reference files.
 | codex    | (none — use raw IDs)         | o3, o4-mini              | (provider) |
 | copilot  | (none — use raw IDs)         | gpt-5.4                  | (provider) |
 
-## The review contract (v2)
+## The review contract (v2.2)
 
 Each reviewer is prompted to produce a structured review:
 
 ```
+### Reasoning
+Write your complete analysis of the plan here. Consider architecture,
+security, testing, performance, and any other relevant areas. This
+section MUST come before your issue lists.
+
 ### Blocking Issues
 - [B1] (HIGH) Description of blocking issue...
 - [B2] (MEDIUM) Description of blocking issue...
@@ -203,11 +208,35 @@ Default maximum is **3 rounds** (configurable up to 5 with `--max-rounds 5`).
 ### Verification stage
 
 After cross-critique rounds complete with surviving blockers, the orchestrator
-generates targeted verification prompts for each surviving blocker. A single
-reviewer (or the host agent) responds `VERIFIED` or `INVALIDATED` with rationale.
-Only VERIFIED blockers survive to the derived verdict.
+generates targeted verification prompts for each surviving blocker. The first
+active panel reviewer serves as verifier, responding `VERIFIED` or `INVALIDATED`
+with rationale. Only VERIFIED blockers survive to the derived verdict.
+
+**Unanimous optimization**: Blockers with unanimous support (`support_count >=
+total_reviewers`) skip verification — these are high-probability true positives
+that don't need additional validation.
 
 Use `--skip-verification` to bypass for speed.
+
+### Blind mode (rounds 3+)
+
+In rounds 3 and beyond, support/dispute counts are stripped from the compressed
+context and ledger summary shown to reviewers. This prevents conformity anchoring
+— reviewers evaluate issues on their merits rather than following the majority.
+The full ledger (with counts) is still maintained internally and used for verdict
+derivation.
+
+### Early exit signals
+
+After each round, the orchestrator checks whether further rounds would be
+mathematically futile:
+
+- **No open blockers**: verdict is APPROVED, stop
+- **No blockers meet threshold**: verdict would be APPROVED, stop
+- **All surviving at max support**: more rounds can't change outcome, stop
+
+The early exit signal is reported in the tally output and JSON for the host agent
+to act on.
 
 ### Consensus gate
 

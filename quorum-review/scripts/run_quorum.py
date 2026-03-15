@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """
-run_quorum.py — Orchestrator for multi-provider quorum review (v2.1).
+run_quorum.py — Orchestrator for multi-provider quorum review (v2.2).
 
 Launches multiple reviewer instances (via peer-plan-review's run_review.py),
 collects their verdicts, compiles the deliberation context for subsequent
 rounds, and reports consensus status.
+
+v2.2 changes:
+  - Verification execution wired into main() (was functions-only in v2.1)
+  - Unanimous blocker optimization: skip verification for unanimously-endorsed blockers
+  - should_exit_early() for confidence-based early termination signals
+  - Blind mode for rounds 3+: strips support/dispute counts to prevent conformity anchoring
+  - All-Agents Drafting: ### Reasoning section added before structured issues
 
 v2.1 changes:
   - Split support fields: proposed_by, endorsed_by, refined_by, disputed_by
@@ -723,6 +730,49 @@ def format_issue_consensus(ledger, threshold_name, total_reviewers):
     return "\n".join(lines)
 
 
+def _is_unanimous(ledger, issue_id, total):
+    """Check if a blocker has unanimous support (support_count >= total).
+
+    Used to skip verification for unanimously-endorsed blockers — these are
+    high-probability true positives that don't need additional validation.
+    """
+    issue = next((i for i in ledger["issues"] if i["id"] == issue_id), None)
+    return issue is not None and issue["support_count"] >= total
+
+
+def should_exit_early(ledger, threshold_name, total_reviewers):
+    """Check whether further deliberation rounds would be mathematically futile.
+
+    Returns (should_exit, reason) where:
+      - should_exit: True if no further rounds can change the outcome
+      - reason: human-readable explanation (empty string if should_exit is False)
+
+    Checks:
+    1. No open blockers remain → verdict is APPROVED, stop
+    2. No blockers meet threshold → verdict would be APPROVED, stop
+    3. All surviving blockers at max support → more rounds won't change, stop
+    """
+    open_blockers = [
+        i for i in ledger["issues"]
+        if i["severity"] == "blocking" and i["status"] == "open"
+    ]
+
+    if not open_blockers:
+        return True, "no open blockers remain"
+
+    threshold_fn = THRESHOLDS.get(threshold_name, THRESHOLDS["super"])
+    surviving = [i for i in open_blockers if threshold_fn(i["support_count"], total_reviewers)]
+
+    if not surviving:
+        return True, "no blockers meet threshold — verdict would be APPROVED"
+
+    all_at_max = all(i["support_count"] >= total_reviewers for i in surviving)
+    if all_at_max:
+        return True, "all surviving blockers at maximum support — further rounds cannot change outcome"
+
+    return False, ""
+
+
 # ---------------------------------------------------------------------------
 # Deliberation context compilation (v2 — always anonymous)
 # ---------------------------------------------------------------------------
@@ -781,12 +831,16 @@ def compile_deliberation(panel, quorum_id, tmpdir, round_num):
 # ---------------------------------------------------------------------------
 
 
-def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num):
+def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num,
+                               blind_mode=False):
     """Build compressed context for rounds 3+.
 
     Instead of full prose, carries forward:
     1. Issue ledger table (open issues only, with agreement counts)
     2. Per-reviewer: only their issue lists + verdict (not full prose)
+
+    When blind_mode=True, omits Support and Disputes columns to prevent
+    conformity anchoring in later rounds.
 
     Returns markdown string.
     """
@@ -794,14 +848,23 @@ def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num):
 
     open_issues = [i for i in ledger["issues"] if i["status"] == "open"]
     if open_issues:
-        lines.append("| ID | Severity | Description | Support | Disputes |")
-        lines.append("|-----|----------|-------------|---------|----------|")
-        for issue in open_issues:
-            lines.append(
-                f"| {issue['id']} | {issue['severity']} | "
-                f"{issue['owner_summary'][:60]} | "
-                f"{issue['support_count']} | {issue['dispute_count']} |"
-            )
+        if blind_mode:
+            lines.append("| ID | Severity | Description |")
+            lines.append("|-----|----------|-------------|")
+            for issue in open_issues:
+                lines.append(
+                    f"| {issue['id']} | {issue['severity']} | "
+                    f"{issue['owner_summary'][:60]} |"
+                )
+        else:
+            lines.append("| ID | Severity | Description | Support | Disputes |")
+            lines.append("|-----|----------|-------------|---------|----------|")
+            for issue in open_issues:
+                lines.append(
+                    f"| {issue['id']} | {issue['severity']} | "
+                    f"{issue['owner_summary'][:60]} | "
+                    f"{issue['support_count']} | {issue['dispute_count']} |"
+                )
     else:
         lines.append("No open issues remaining.")
 
@@ -836,6 +899,10 @@ REVIEW_CONTRACT_V2 = (
     "## Review Contract\n\n"
     "You are reviewing a plan as part of a multi-reviewer quorum panel.\n\n"
     "Structure your review using EXACTLY these sections:\n\n"
+    "### Reasoning\n"
+    "Write your complete analysis of the plan here. Consider architecture,\n"
+    "security, testing, performance, and any other relevant areas. This\n"
+    "section MUST come before your issue lists.\n\n"
     "### Blocking Issues\n"
     "Issues that MUST be resolved before execution. Use [B1], [B2], etc.\n"
     "Optionally include per-issue confidence: (HIGH), (MEDIUM), or (LOW).\n"
@@ -978,18 +1045,27 @@ def write_cross_critique_prompt(
     Path(prompt_file).write_text(content, encoding="utf-8")
 
 
-def format_ledger_summary(ledger):
-    """Format the issue ledger as a markdown summary for reviewer prompts."""
+def format_ledger_summary(ledger, blind_mode=False):
+    """Format the issue ledger as a markdown summary for reviewer prompts.
+
+    When blind_mode=True, omits support/dispute counts to prevent conformity
+    anchoring in later rounds.
+    """
     open_issues = [i for i in ledger["issues"] if i["status"] == "open"]
     if not open_issues:
         return "No open issues."
 
     lines = []
     for issue in open_issues:
-        lines.append(
-            f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']} "
-            f"[support: {issue['support_count']}, disputes: {issue['dispute_count']}]"
-        )
+        if blind_mode:
+            lines.append(
+                f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']}"
+            )
+        else:
+            lines.append(
+                f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']} "
+                f"[support: {issue['support_count']}, disputes: {issue['dispute_count']}]"
+            )
     return "\n".join(lines)
 
 
@@ -1073,7 +1149,7 @@ def tally_verdicts(verdicts, threshold_name, original_panel_size=None,
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Quorum review orchestrator (v2.1)")
+    p = argparse.ArgumentParser(description="Quorum review orchestrator (v2.2)")
     p.add_argument(
         "--reviewers",
         required=True,
@@ -1211,8 +1287,11 @@ def main():
             )
         else:
             # Rounds 3+: compressed context + cross-critique instructions
+            # blind_mode=True strips support/dispute counts to prevent
+            # conformity anchoring in later rounds
             compressed = compile_compressed_context(
-                ledger, panel, quorum_id, tmpdir, round_num
+                ledger, panel, quorum_id, tmpdir, round_num,
+                blind_mode=True,
             )
             write_cross_critique_prompt(
                 str(prompt_file),
@@ -1222,7 +1301,7 @@ def main():
                 REVIEW_CONTRACT_V2,
                 CROSS_CRITIQUE_INSTRUCTIONS,
                 compressed,
-                format_ledger_summary(ledger),
+                format_ledger_summary(ledger, blind_mode=True),
                 changes_summary,
                 plan_text,
             )
@@ -1333,6 +1412,74 @@ def main():
     ledger = build_issue_ledger(panel, quorum_id, tmpdir, round_num, ledger)
     save_ledger(ledger_file, ledger)
 
+    # Verification stage: validate surviving blockers with a single reviewer
+    if not args.skip_verification:
+        # Derive current verdict to find surviving blockers
+        _v_verdict, _v_surviving, _v_dropped = derive_verdict(
+            ledger, args.threshold, active_panel_size
+        )
+        if _v_surviving:
+            verification_prompts = generate_verification_prompts(
+                ledger, args.threshold, active_panel_size
+            )
+            # Filter out unanimously-endorsed blockers (high-probability true positives)
+            verification_prompts = [
+                p for p in verification_prompts
+                if not _is_unanimous(ledger, p["issue_id"], active_panel_size)
+            ]
+            if verification_prompts:
+                # Use the first active panel reviewer as verifier
+                v_provider, v_model = active_panel[0]
+                for vp in verification_prompts:
+                    v_prompt_file = str(
+                        Path(tmpdir) / f"qr-{quorum_id}-verify-{vp['issue_id']}-prompt.md"
+                    )
+                    v_output_file = str(
+                        Path(tmpdir) / f"qr-{quorum_id}-verify-{vp['issue_id']}-review.md"
+                    )
+                    v_session_file = str(
+                        Path(tmpdir) / f"qr-{quorum_id}-verify-{vp['issue_id']}-session.json"
+                    )
+                    v_events_file = str(
+                        Path(tmpdir) / f"qr-{quorum_id}-verify-{vp['issue_id']}-events.jsonl"
+                    )
+                    # Write verification prompt
+                    Path(v_prompt_file).write_text(vp["prompt"], encoding="utf-8")
+                    # Run verifier
+                    v_rc = run_single_reviewer(
+                        run_review_py,
+                        v_provider,
+                        v_model,
+                        plan_file,
+                        v_prompt_file,
+                        v_output_file,
+                        v_session_file,
+                        v_events_file,
+                        effort=args.effort,
+                        resume=False,
+                        timeout=args.timeout,
+                    )
+                    if v_rc == 0:
+                        v_results = parse_verification_response(v_output_file)
+                        for issue_id, status in v_results.items():
+                            if status == "INVALIDATED":
+                                for issue in ledger["issues"]:
+                                    if issue["id"] == issue_id:
+                                        issue["status"] = "invalidated_by_verifier"
+                                        break
+                    else:
+                        print(
+                            f"[Verification] {vp['issue_id']}: verifier failed (exit {v_rc})",
+                            file=sys.stderr,
+                        )
+                # Re-save ledger after verification updates
+                save_ledger(ledger_file, ledger)
+
+    # Early exit signal for host agent
+    early_exit, early_exit_reason = should_exit_early(
+        ledger, args.threshold, active_panel_size
+    )
+
     # Check parse status — detect all-unstructured reviews
     parse_statuses = []
     for idx, (_provider, _model) in enumerate(panel, 1):
@@ -1386,6 +1533,8 @@ def main():
             label: info for label, info in reviewer_map.items()
         },
         "exit_codes": results,
+        "early_exit": early_exit,
+        "early_exit_reason": early_exit_reason,
     }
     tally_file = args.tally_file or str(Path(tmpdir) / f"qr-{quorum_id}-tally.json")
     Path(tally_file).write_text(json.dumps(tally_data, indent=2), encoding="utf-8")
@@ -1399,6 +1548,8 @@ def main():
             "unstructured output (parse_status: unstructured)"
         )
     print(f"\n{issue_consensus}")
+    if early_exit:
+        print(f"\nEARLY EXIT SIGNAL: {early_exit_reason}")
     print(f"\nDeliberation context written to: {delib_out}")
     print(f"Tally written to: {tally_file}")
     print(f"Issue ledger written to: {ledger_file}")

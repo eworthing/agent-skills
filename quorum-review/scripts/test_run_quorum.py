@@ -30,6 +30,7 @@ from run_quorum import (  # noqa: E402
     MAX_ROUNDS_LIMIT,
     MIN_QUORUM_SIZE,
     REVIEW_CONTRACT_V2,
+    _is_unanimous,
     build_issue_ledger,
     compile_compressed_context,
     compile_deliberation,
@@ -46,6 +47,7 @@ from run_quorum import (  # noqa: E402
     parse_verdict,
     parse_verification_response,
     save_ledger,
+    should_exit_early,
     tally_verdicts,
     validate_panel,
     write_cross_critique_prompt,
@@ -1607,6 +1609,248 @@ class TestThresholdLanguage(unittest.TestCase):
         tally = tally_verdicts(verdicts, "super")
         self.assertIn("advisory", tally["summary"].lower())
         self.assertIn("derived verdict", tally["summary"].lower())
+
+
+# ===========================================================================
+# v2.2 tests: Derive verdict skips invalidated issues
+# ===========================================================================
+
+
+class TestDeriveVerdictSkipsInvalidated(unittest.TestCase):
+    """derive_verdict must ignore issues with status='invalidated_by_verifier'."""
+
+    def test_derive_verdict_skips_invalidated(self):
+        ledger = {
+            "next_blk_id": 3,
+            "next_nb_id": 1,
+            "issues": [
+                {
+                    "id": "BLK-001",
+                    "severity": "blocking",
+                    "status": "invalidated_by_verifier",
+                    "support_count": 3,
+                    "dispute_count": 0,
+                    "owner_summary": "Was invalidated",
+                },
+                {
+                    "id": "BLK-002",
+                    "severity": "blocking",
+                    "status": "open",
+                    "support_count": 1,
+                    "dispute_count": 2,
+                    "owner_summary": "Low support",
+                },
+            ],
+            "merges": [],
+            "rounds": {},
+        }
+        verdict, surviving, dropped = derive_verdict(ledger, "super", 3)
+        # BLK-001 is invalidated so ignored; BLK-002 has support 1 < super(2/3)
+        self.assertEqual(verdict, "APPROVED")
+        self.assertEqual(len(surviving), 0)
+        # Only BLK-002 is in dropped (open but below threshold)
+        self.assertEqual(len(dropped), 1)
+        self.assertEqual(dropped[0]["id"], "BLK-002")
+
+
+# ===========================================================================
+# v2.2 tests: _is_unanimous helper
+# ===========================================================================
+
+
+class TestIsUnanimous(unittest.TestCase):
+    """Tests for _is_unanimous() helper."""
+
+    def test_is_unanimous_true(self):
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "support_count": 3},
+            ],
+        }
+        self.assertTrue(_is_unanimous(ledger, "BLK-001", 3))
+
+    def test_is_unanimous_false(self):
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "support_count": 2},
+            ],
+        }
+        self.assertFalse(_is_unanimous(ledger, "BLK-001", 3))
+
+    def test_is_unanimous_missing_issue(self):
+        ledger = {"issues": []}
+        self.assertFalse(_is_unanimous(ledger, "BLK-999", 3))
+
+
+# ===========================================================================
+# v2.2 tests: should_exit_early
+# ===========================================================================
+
+
+class TestShouldExitEarly(unittest.TestCase):
+    """Tests for should_exit_early() function."""
+
+    def test_should_exit_early_no_blockers(self):
+        ledger = {
+            "issues": [
+                {"id": "NB-001", "severity": "non_blocking", "status": "open",
+                 "support_count": 2, "dispute_count": 0},
+            ],
+        }
+        should_exit, reason = should_exit_early(ledger, "super", 3)
+        self.assertTrue(should_exit)
+        self.assertIn("no open blockers", reason)
+
+    def test_should_exit_early_no_surviving(self):
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 1, "dispute_count": 2},
+            ],
+        }
+        should_exit, reason = should_exit_early(ledger, "super", 3)
+        self.assertTrue(should_exit)
+        self.assertIn("no blockers meet threshold", reason)
+
+    def test_should_exit_early_max_support(self):
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 3, "dispute_count": 0},
+            ],
+        }
+        should_exit, reason = should_exit_early(ledger, "super", 3)
+        self.assertTrue(should_exit)
+        self.assertIn("maximum support", reason)
+
+    def test_should_exit_early_not_yet(self):
+        ledger = {
+            "issues": [
+                {"id": "BLK-001", "severity": "blocking", "status": "open",
+                 "support_count": 2, "dispute_count": 0},
+            ],
+        }
+        should_exit, reason = should_exit_early(ledger, "super", 3)
+        self.assertFalse(should_exit)
+        self.assertEqual(reason, "")
+
+
+# ===========================================================================
+# v2.2 tests: Blind mode
+# ===========================================================================
+
+
+class TestBlindMode(unittest.TestCase):
+    """Tests for blind mode in compressed context and ledger summary."""
+
+    def _make_ledger(self):
+        return {
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "issues": [
+                {
+                    "id": "BLK-001",
+                    "severity": "blocking",
+                    "status": "open",
+                    "support_count": 2,
+                    "dispute_count": 1,
+                    "owner_summary": "Missing auth check",
+                    "proposed_by": 1,
+                    "endorsed_by": [2],
+                    "refined_by": [],
+                    "disputed_by": [3],
+                },
+            ],
+            "merges": [],
+            "rounds": {},
+        }
+
+    def test_blind_mode_compressed_context(self):
+        """Compressed context omits Support/Disputes columns in blind mode."""
+        ledger = self._make_ledger()
+        panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create minimal review files so parse_structured_review doesn't fail
+            for idx in range(1, 4):
+                review_file = Path(tmpdir) / f"qr-test-r{idx}-review.md"
+                review_file.write_text("VERDICT: REVISE\n", encoding="utf-8")
+
+            result = compile_compressed_context(
+                ledger, panel, "test", tmpdir, 3, blind_mode=True
+            )
+            self.assertNotIn("Support", result)
+            self.assertNotIn("Disputes", result)
+            self.assertIn("BLK-001", result)
+            self.assertIn("Missing auth check", result)
+
+    def test_blind_mode_ledger_summary(self):
+        """Ledger summary omits support/dispute counts in blind mode."""
+        ledger = self._make_ledger()
+        result = format_ledger_summary(ledger, blind_mode=True)
+        self.assertNotIn("support:", result)
+        self.assertNotIn("disputes:", result)
+        self.assertIn("BLK-001", result)
+        self.assertIn("Missing auth check", result)
+
+    def test_normal_mode_shows_counts(self):
+        """Default mode still shows support/dispute counts."""
+        ledger = self._make_ledger()
+        result = format_ledger_summary(ledger, blind_mode=False)
+        self.assertIn("support: 2", result)
+        self.assertIn("disputes: 1", result)
+
+        # Compressed context too
+        panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for idx in range(1, 4):
+                review_file = Path(tmpdir) / f"qr-test-r{idx}-review.md"
+                review_file.write_text("VERDICT: REVISE\n", encoding="utf-8")
+            result = compile_compressed_context(
+                ledger, panel, "test", tmpdir, 3, blind_mode=False
+            )
+            self.assertIn("Support", result)
+            self.assertIn("Disputes", result)
+
+
+# ===========================================================================
+# v2.2 tests: AAD Reasoning section
+# ===========================================================================
+
+
+class TestReasoningSection(unittest.TestCase):
+    """Tests for All-Agents Drafting (AAD) reasoning section."""
+
+    def test_review_contract_has_reasoning(self):
+        """REVIEW_CONTRACT_V2 includes ### Reasoning before ### Blocking Issues."""
+        reasoning_pos = REVIEW_CONTRACT_V2.index("### Reasoning")
+        blocking_pos = REVIEW_CONTRACT_V2.index("### Blocking Issues")
+        self.assertLess(reasoning_pos, blocking_pos)
+
+    def test_reasoning_not_parsed_as_issues(self):
+        """Reasoning prose doesn't create false [B1] matches."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write(
+                "### Reasoning\n"
+                "The architecture looks solid overall. The authentication layer\n"
+                "uses JWT tokens correctly. Performance considerations around\n"
+                "database indexing should be reviewed.\n\n"
+                "### Blocking Issues\n"
+                "- [B1] (HIGH) Missing rate limiting on API\n\n"
+                "### Non-Blocking Issues\n"
+                "None\n\n"
+                "### Confidence\n"
+                "HIGH\n\n"
+                "### Scope\n"
+                "architecture, security\n\n"
+                "VERDICT: REVISE\n"
+            )
+            f.flush()
+            parsed = parse_structured_review(f.name)
+            # Only 1 blocking issue from the actual section, none from reasoning
+            self.assertEqual(len(parsed["blocking"]), 1)
+            self.assertEqual(parsed["blocking"][0]["text"], "Missing rate limiting on API")
+            self.assertTrue(parsed["structured"])
+            os.unlink(f.name)
 
 
 if __name__ == "__main__":
