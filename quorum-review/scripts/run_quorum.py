@@ -1,23 +1,35 @@
 #!/usr/bin/env python3
 """
-run_quorum.py — Orchestrator for multi-provider quorum review.
+run_quorum.py — Orchestrator for multi-provider quorum review (v2).
 
 Launches multiple reviewer instances (via peer-plan-review's run_review.py),
 collects their verdicts, compiles the deliberation context for subsequent
 rounds, and reports consensus status.
+
+v2 changes:
+  - Structured review parsing (blocking/non-blocking issues, confidence, scope)
+  - Canonical issue IDs (BLK-001, NB-001) with explicit merge metadata
+  - Anonymous deliberation (all rounds) to reduce prestige bias
+  - Issue-level consensus: artifact verdict derived from surviving blockers
+  - Per-issue cross-critique (AGREE/DISAGREE/REFINE) in rounds 2+
+  - Context compression in rounds 3+ (issue ledger, not full prose)
+  - Explicit failure policy (fail-closed, fail-open, shrink-quorum)
+  - Default threshold changed from unanimous to supermajority
 
 This script does NOT revise the plan — the host agent does that between
 rounds. This script handles:
   1. Parsing the reviewer panel specification
   2. Launching reviewers (sequential or concurrent)
   3. Collecting and tallying verdicts
-  4. Compiling deliberation context (all reviews) for next-round prompts
-  5. Writing round summary with tally and consensus status
+  4. Parsing structured reviews into an issue ledger
+  5. Compiling deliberation context (anonymous) for next-round prompts
+  6. Deriving artifact verdict from surviving blocking issues
+  7. Writing round summary with tally and consensus status
 """
 
 import argparse
 import json
-import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -34,6 +46,8 @@ THRESHOLDS = {
     "super": lambda approved, total: approved >= total - 1,
     "majority": lambda approved, total: approved > total / 2,
 }
+
+MIN_QUORUM_SIZE = 3
 
 
 def parse_reviewer_spec(spec):
@@ -67,9 +81,10 @@ def validate_panel(reviewers):
             sys.exit(1)
         panel.append((provider, model))
 
-    if len(panel) < 3:
+    if len(panel) < MIN_QUORUM_SIZE:
         print(
-            f"Error: quorum requires at least 3 reviewers, got {len(panel)}. "
+            f"Error: quorum requires at least {MIN_QUORUM_SIZE} reviewers, "
+            f"got {len(panel)}. "
             "Use /peer-plan-review for single-reviewer mode.",
             file=sys.stderr,
         )
@@ -202,21 +217,431 @@ def read_session_meta(session_file):
 
 
 # ---------------------------------------------------------------------------
-# Deliberation context compilation
+# Structured review parsing (v2)
+# ---------------------------------------------------------------------------
+
+_RE_BLOCKING = re.compile(r"^\s*-\s*\[B(\d+)\]\s*(.+)", re.MULTILINE)
+_RE_NON_BLOCKING = re.compile(r"^\s*-\s*\[N(\d+)\]\s*(.+)", re.MULTILINE)
+_RE_CONFIDENCE = re.compile(
+    r"(?:^|\n)\s*(?:###?\s*)?Confidence\s*[:\-]?\s*\n?\s*(HIGH|MEDIUM|LOW)",
+    re.IGNORECASE,
+)
+_RE_SCOPE = re.compile(
+    r"(?:^|\n)\s*(?:###?\s*)?Scope\s*[:\-]?\s*\n?\s*(.+)",
+)
+
+
+def parse_structured_review(review_file):
+    """Parse structured review output into issue records.
+
+    Returns dict with:
+      - blocking: list of {"id": "B1", "text": "..."}
+      - non_blocking: list of {"id": "N1", "text": "..."}
+      - confidence: "HIGH"|"MEDIUM"|"LOW"|None
+      - scope: list of strings
+      - verdict: "APPROVED"|"REVISE"|None
+      - raw_text: full review text
+      - structured: bool (True if any structured sections found)
+    """
+    text = read_review(review_file)
+    verdict = parse_verdict(review_file)
+
+    blocking = [
+        {"id": f"B{m.group(1)}", "text": m.group(2).strip()}
+        for m in _RE_BLOCKING.finditer(text)
+    ]
+    non_blocking = [
+        {"id": f"N{m.group(1)}", "text": m.group(2).strip()}
+        for m in _RE_NON_BLOCKING.finditer(text)
+    ]
+
+    conf_match = _RE_CONFIDENCE.search(text)
+    confidence = conf_match.group(1).upper() if conf_match else None
+
+    scope_match = _RE_SCOPE.search(text)
+    scope = []
+    if scope_match:
+        scope = [s.strip().strip('"').strip("'") for s in scope_match.group(1).split(",")]
+        scope = [s for s in scope if s]
+
+    structured = bool(blocking or non_blocking or confidence or scope)
+
+    return {
+        "blocking": blocking,
+        "non_blocking": non_blocking,
+        "confidence": confidence,
+        "scope": scope,
+        "verdict": verdict,
+        "raw_text": text,
+        "structured": structured,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cross-critique parsing (v2)
+# ---------------------------------------------------------------------------
+
+_RE_AGREE = re.compile(r"^\s*\[AGREE\s+(BLK-\d+|NB-\d+)\]", re.MULTILINE)
+_RE_DISAGREE = re.compile(r"^\s*\[DISAGREE\s+(BLK-\d+|NB-\d+)\]\s*(.*)", re.MULTILINE)
+_RE_REFINE = re.compile(r"^\s*\[REFINE\s+(BLK-\d+|NB-\d+)\]\s*(.*)", re.MULTILINE)
+_RE_NEW_BLOCKING = re.compile(r"^\s*\[B-NEW\]\s*(.+)", re.MULTILINE)
+_RE_NEW_NON_BLOCKING = re.compile(r"^\s*\[N-NEW\]\s*(.+)", re.MULTILINE)
+
+
+def parse_cross_critique(review_file):
+    """Extract per-issue AGREE/DISAGREE/REFINE responses from round 2+ reviews.
+
+    Returns dict with:
+      - agrees: list of canonical issue IDs
+      - disagrees: list of {"id": canonical_id, "reason": "..."}
+      - refines: list of {"id": canonical_id, "text": "..."}
+      - new_blocking: list of text descriptions
+      - new_non_blocking: list of text descriptions
+    """
+    text = read_review(review_file)
+
+    agrees = [m.group(1) for m in _RE_AGREE.finditer(text)]
+    disagrees = [
+        {"id": m.group(1), "reason": m.group(2).strip()}
+        for m in _RE_DISAGREE.finditer(text)
+    ]
+    refines = [
+        {"id": m.group(1), "text": m.group(2).strip()}
+        for m in _RE_REFINE.finditer(text)
+    ]
+    new_blocking = [m.group(1).strip() for m in _RE_NEW_BLOCKING.finditer(text)]
+    new_non_blocking = [m.group(1).strip() for m in _RE_NEW_NON_BLOCKING.finditer(text)]
+
+    return {
+        "agrees": agrees,
+        "disagrees": disagrees,
+        "refines": refines,
+        "new_blocking": new_blocking,
+        "new_non_blocking": new_non_blocking,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Issue ledger (v2)
+# ---------------------------------------------------------------------------
+
+
+def _empty_ledger():
+    """Create an empty issue ledger."""
+    return {
+        "next_blk_id": 1,
+        "next_nb_id": 1,
+        "issues": [],
+        "merges": [],
+        "rounds": {},
+    }
+
+
+def load_ledger(ledger_file):
+    """Load issue ledger from JSON file."""
+    if not ledger_file or not Path(ledger_file).exists():
+        return _empty_ledger()
+    try:
+        with Path(ledger_file).open(encoding="utf-8") as f:
+            data = json.load(f)
+        # Ensure all required keys exist
+        for key in ("next_blk_id", "next_nb_id", "issues", "merges", "rounds"):
+            if key not in data:
+                data[key] = _empty_ledger()[key]
+        return data
+    except (json.JSONDecodeError, OSError):
+        return _empty_ledger()
+
+
+def save_ledger(ledger_file, ledger):
+    """Save issue ledger to JSON file."""
+    Path(ledger_file).write_text(json.dumps(ledger, indent=2), encoding="utf-8")
+
+
+def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
+    """Build/update issue ledger from structured reviews.
+
+    Round 1: Extract issues from each reviewer, assign canonical IDs.
+    Rounds 2+: Parse cross-critique responses, update agreement counts,
+               add new issues from [B-NEW]/[N-NEW] tags.
+
+    Returns updated ledger dict.
+    """
+    ledger = prev_ledger if prev_ledger else _empty_ledger()
+
+    if round_num == 1:
+        # Round 1: extract issues from structured reviews
+        blocking_count = 0
+        nb_count = 0
+        approved_count = 0
+
+        for idx, (_provider, _model) in enumerate(panel, 1):
+            review_file = str(Path(tmpdir) / f"qr-{quorum_id}-r{idx}-review.md")
+            parsed = parse_structured_review(review_file)
+
+            for issue in parsed["blocking"]:
+                canonical_id = f"BLK-{ledger['next_blk_id']:03d}"
+                ledger["next_blk_id"] += 1
+                ledger["issues"].append({
+                    "id": canonical_id,
+                    "source_reviewer": idx,
+                    "source_label": issue["id"],
+                    "round_introduced": round_num,
+                    "severity": "blocking",
+                    "text": issue["text"],
+                    "status": "open",
+                    "resolved_round": None,
+                    "merged_from": [],
+                    "agreed_by": [idx],
+                    "disagreed_by": [],
+                    "support_count": 1,
+                    "dispute_count": 0,
+                    "owner_summary": issue["text"],
+                })
+                blocking_count += 1
+
+            for issue in parsed["non_blocking"]:
+                canonical_id = f"NB-{ledger['next_nb_id']:03d}"
+                ledger["next_nb_id"] += 1
+                ledger["issues"].append({
+                    "id": canonical_id,
+                    "source_reviewer": idx,
+                    "source_label": issue["id"],
+                    "round_introduced": round_num,
+                    "severity": "non_blocking",
+                    "text": issue["text"],
+                    "status": "open",
+                    "resolved_round": None,
+                    "merged_from": [],
+                    "agreed_by": [idx],
+                    "disagreed_by": [],
+                    "support_count": 1,
+                    "dispute_count": 0,
+                    "owner_summary": issue["text"],
+                })
+                nb_count += 1
+
+            if parsed["verdict"] == "APPROVED":
+                approved_count += 1
+
+        ledger["rounds"][str(round_num)] = {
+            "reviewer_count": len(panel),
+            "blocking_open": blocking_count,
+            "nb_open": nb_count,
+            "approved_count": approved_count,
+        }
+
+    else:
+        # Rounds 2+: parse cross-critique responses
+        approved_count = 0
+        issue_map = {issue["id"]: issue for issue in ledger["issues"]}
+
+        for idx, (_provider, _model) in enumerate(panel, 1):
+            review_file = str(Path(tmpdir) / f"qr-{quorum_id}-r{idx}-review.md")
+            critique = parse_cross_critique(review_file)
+            parsed = parse_structured_review(review_file)
+
+            # Process agrees
+            for issue_id in critique["agrees"]:
+                if issue_id in issue_map:
+                    issue = issue_map[issue_id]
+                    if idx not in issue["agreed_by"]:
+                        issue["agreed_by"].append(idx)
+                        issue["support_count"] = len(issue["agreed_by"])
+
+            # Process disagrees
+            for entry in critique["disagrees"]:
+                issue_id = entry["id"]
+                if issue_id in issue_map:
+                    issue = issue_map[issue_id]
+                    if idx not in issue["disagreed_by"]:
+                        issue["disagreed_by"].append(idx)
+                        issue["dispute_count"] = len(issue["disagreed_by"])
+
+            # Process refines (counts as agreement with modified text)
+            for entry in critique["refines"]:
+                issue_id = entry["id"]
+                if issue_id in issue_map:
+                    issue = issue_map[issue_id]
+                    if idx not in issue["agreed_by"]:
+                        issue["agreed_by"].append(idx)
+                        issue["support_count"] = len(issue["agreed_by"])
+
+            # Add new blocking issues
+            for text in critique["new_blocking"]:
+                canonical_id = f"BLK-{ledger['next_blk_id']:03d}"
+                ledger["next_blk_id"] += 1
+                new_issue = {
+                    "id": canonical_id,
+                    "source_reviewer": idx,
+                    "source_label": "B-NEW",
+                    "round_introduced": round_num,
+                    "severity": "blocking",
+                    "text": text,
+                    "status": "open",
+                    "resolved_round": None,
+                    "merged_from": [],
+                    "agreed_by": [idx],
+                    "disagreed_by": [],
+                    "support_count": 1,
+                    "dispute_count": 0,
+                    "owner_summary": text,
+                }
+                ledger["issues"].append(new_issue)
+                issue_map[canonical_id] = new_issue
+
+            # Add new non-blocking issues
+            for text in critique["new_non_blocking"]:
+                canonical_id = f"NB-{ledger['next_nb_id']:03d}"
+                ledger["next_nb_id"] += 1
+                new_issue = {
+                    "id": canonical_id,
+                    "source_reviewer": idx,
+                    "source_label": "N-NEW",
+                    "round_introduced": round_num,
+                    "severity": "non_blocking",
+                    "text": text,
+                    "status": "open",
+                    "resolved_round": None,
+                    "merged_from": [],
+                    "agreed_by": [idx],
+                    "disagreed_by": [],
+                    "support_count": 1,
+                    "dispute_count": 0,
+                    "owner_summary": text,
+                }
+                ledger["issues"].append(new_issue)
+                issue_map[canonical_id] = new_issue
+
+            if parsed["verdict"] == "APPROVED":
+                approved_count += 1
+
+        # Update round stats
+        open_blocking = sum(
+            1 for i in ledger["issues"]
+            if i["severity"] == "blocking" and i["status"] == "open"
+        )
+        open_nb = sum(
+            1 for i in ledger["issues"]
+            if i["severity"] == "non_blocking" and i["status"] == "open"
+        )
+        ledger["rounds"][str(round_num)] = {
+            "reviewer_count": len(panel),
+            "blocking_open": open_blocking,
+            "nb_open": open_nb,
+            "approved_count": approved_count,
+        }
+
+    return ledger
+
+
+# ---------------------------------------------------------------------------
+# Derived verdict (v2)
+# ---------------------------------------------------------------------------
+
+
+def derive_verdict(ledger, threshold_name, total_reviewers):
+    """Derive artifact verdict from surviving blocking issues.
+
+    A blocking issue 'survives' if its support_count meets the configured
+    threshold relative to total_reviewers.
+
+    Returns (verdict, surviving_issues, dropped_issues) where:
+      - verdict: "APPROVED" or "REVISE"
+      - surviving_issues: list of issue dicts that survive
+      - dropped_issues: list of issue dicts that don't meet threshold
+    """
+    threshold_fn = THRESHOLDS.get(threshold_name, THRESHOLDS["super"])
+
+    open_blockers = [
+        i for i in ledger["issues"]
+        if i["severity"] == "blocking" and i["status"] == "open"
+    ]
+
+    surviving = []
+    dropped = []
+
+    for issue in open_blockers:
+        # An issue "survives" if its support count meets the threshold
+        # We invert the threshold: instead of "N approved out of total",
+        # we check "support_count supporters out of total"
+        if threshold_fn(issue["support_count"], total_reviewers):
+            surviving.append(issue)
+        else:
+            dropped.append(issue)
+
+    verdict = "REVISE" if surviving else "APPROVED"
+    return verdict, surviving, dropped
+
+
+def format_issue_consensus(ledger, threshold_name, total_reviewers):
+    """Format issue consensus for display.
+
+    Returns human-readable markdown showing which issues survive.
+    """
+    verdict, surviving, dropped = derive_verdict(ledger, threshold_name, total_reviewers)
+
+    lines = ["### Issue Consensus\n"]
+
+    if surviving:
+        for issue in surviving:
+            lines.append(
+                f"- {issue['id']} \"{issue['owner_summary']}\": "
+                f"support {issue['support_count']}/{total_reviewers} "
+                f"— SURVIVES"
+            )
+    if dropped:
+        for issue in dropped:
+            lines.append(
+                f"- {issue['id']} \"{issue['owner_summary']}\": "
+                f"support {issue['support_count']}/{total_reviewers} "
+                f"— DROPPED"
+            )
+
+    # Non-blocking issues (informational)
+    open_nb = [
+        i for i in ledger["issues"]
+        if i["severity"] == "non_blocking" and i["status"] == "open"
+    ]
+    for issue in open_nb:
+        lines.append(
+            f"- {issue['id']} \"{issue['owner_summary']}\": "
+            f"support {issue['support_count']}/{total_reviewers} "
+            f"— NON-BLOCKING"
+        )
+
+    surviving_count = len(surviving)
+    lines.append(
+        f"\n### Derived Verdict: {verdict} "
+        f"({surviving_count} blocking issue(s) survive {threshold_name} threshold)"
+    )
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Deliberation context compilation (v2 — always anonymous)
 # ---------------------------------------------------------------------------
 
 
 def compile_deliberation(panel, quorum_id, tmpdir, round_num):
     """Compile all reviews from a round into a deliberation document.
 
-    Returns the deliberation text and a list of
-    (reviewer_label, verdict, actual_model, actual_effort) tuples.
+    All deliberation context is ANONYMOUS — reviewers are labeled as
+    Reviewer A, B, C, etc. with no provider/model information. This
+    prevents prestige bias from anchoring convergence.
+
+    Returns (deliberation_text, verdicts, reviewer_map) where:
+      - deliberation_text: anonymous markdown for prompts
+      - verdicts: list of (anon_label, verdict, actual_model, actual_effort)
+      - reviewer_map: dict mapping anon labels to true identities
     """
     sections = []
     verdicts = []
+    reviewer_map = {}
 
     for idx, (provider, model) in enumerate(panel, 1):
-        label = f"Reviewer {idx} ({provider}:{model or 'default'})"
+        anon_label = f"Reviewer {chr(64 + idx)}"  # A, B, C, ...
         review_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-review.md"
         session_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-session.json"
 
@@ -228,15 +653,141 @@ def compile_deliberation(panel, quorum_id, tmpdir, round_num):
         actual_effort = meta.get("effort", "default")
 
         verdict_str = verdict or "NO VERDICT"
-        verdicts.append((label, verdict, actual_model, actual_effort))
+        verdicts.append((anon_label, verdict, actual_model, actual_effort))
 
+        reviewer_map[anon_label] = {
+            "provider": provider,
+            "model": model,
+            "actual_model": actual_model,
+            "actual_effort": actual_effort,
+            "idx": idx,
+        }
+
+        # Anonymous section header — no model/effort info
         sections.append(
-            f"--- {label} (model: {actual_model}, effort: {actual_effort}) "
-            f"— VERDICT: {verdict_str} ---\n\n{review_text}"
+            f"--- {anon_label} — VERDICT: {verdict_str} ---\n\n{review_text}"
         )
 
     deliberation_text = "\n\n".join(sections)
-    return deliberation_text, verdicts
+    return deliberation_text, verdicts, reviewer_map
+
+
+# ---------------------------------------------------------------------------
+# Context compression (v2)
+# ---------------------------------------------------------------------------
+
+
+def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num):
+    """Build compressed context for rounds 3+.
+
+    Instead of full prose, carries forward:
+    1. Issue ledger table (open issues only, with agreement counts)
+    2. Per-reviewer: only their issue lists + verdict (not full prose)
+
+    Returns markdown string.
+    """
+    lines = ["## Open Issue Ledger\n"]
+
+    open_issues = [i for i in ledger["issues"] if i["status"] == "open"]
+    if open_issues:
+        lines.append("| ID | Severity | Description | Support | Disputes |")
+        lines.append("|-----|----------|-------------|---------|----------|")
+        for issue in open_issues:
+            lines.append(
+                f"| {issue['id']} | {issue['severity']} | "
+                f"{issue['owner_summary'][:60]} | "
+                f"{issue['support_count']} | {issue['dispute_count']} |"
+            )
+    else:
+        lines.append("No open issues remaining.")
+
+    lines.append("\n## Prior Round Issue Lists (condensed)\n")
+
+    for idx, (_provider, _model) in enumerate(panel, 1):
+        anon_label = f"Reviewer {chr(64 + idx)}"
+        review_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-review.md"
+        parsed = parse_structured_review(str(review_file))
+
+        lines.append(f"### {anon_label} — VERDICT: {parsed['verdict'] or 'NO VERDICT'}")
+        if parsed["blocking"]:
+            lines.append("**Blocking:**")
+            for issue in parsed["blocking"]:
+                lines.append(f"- [{issue['id']}] {issue['text']}")
+        if parsed["non_blocking"]:
+            lines.append("**Non-blocking:**")
+            for issue in parsed["non_blocking"]:
+                lines.append(f"- [{issue['id']}] {issue['text']}")
+        if not parsed["blocking"] and not parsed["non_blocking"]:
+            lines.append("(No structured issues found)")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Prompt generation (v2)
+# ---------------------------------------------------------------------------
+
+REVIEW_CONTRACT_V2 = (
+    "## Review Contract\n\n"
+    "You are reviewing a plan as part of a multi-reviewer quorum panel.\n\n"
+    "Structure your review using EXACTLY these sections:\n\n"
+    "### Blocking Issues\n"
+    "Issues that MUST be resolved before execution. Use [B1], [B2], etc.\n"
+    "- [B1] Description of blocking issue...\n"
+    "- [B2] Description of blocking issue...\n"
+    "(Write \"None\" if no blocking issues.)\n\n"
+    "### Non-Blocking Issues\n"
+    "Suggestions and improvements. Use [N1], [N2], etc.\n"
+    "- [N1] Description...\n"
+    "(Write \"None\" if no non-blocking issues.)\n\n"
+    "### Confidence\n"
+    "State your confidence in this review: HIGH, MEDIUM, or LOW\n\n"
+    "### Scope\n"
+    "Which areas of the plan does your review cover? (e.g., \"architecture\",\n"
+    "\"security\", \"testing\", \"API design\", \"performance\")\n\n"
+    "Your review MUST end with a verdict on the LAST non-empty line:\n"
+    "- `VERDICT: APPROVED` if the plan is ready to execute as-is\n"
+    "- `VERDICT: REVISE` if changes are needed before execution\n\n"
+    "The verdict line must be EXACTLY one of these two strings, nothing else."
+)
+
+CROSS_CRITIQUE_INSTRUCTIONS = (
+    "## Cross-Critique Instructions\n\n"
+    "Below are anonymous reviews from the prior round and the current issue ledger.\n"
+    "For EACH open issue in the ledger, you must respond with one of:\n"
+    "- [AGREE BLK-001] — you agree this is a valid issue\n"
+    "- [DISAGREE BLK-001] reason — you disagree, with explanation\n"
+    "- [REFINE BLK-001] revised description — you agree but want to refine the scope\n\n"
+    "You may also raise NEW issues:\n"
+    "- [B-NEW] description — new blocking issue\n"
+    "- [N-NEW] description — new non-blocking issue\n\n"
+    "After your per-issue responses, provide your updated structured review\n"
+    "with the standard sections (Blocking Issues, Non-Blocking Issues,\n"
+    "Confidence, Scope) and verdict."
+)
+
+
+def write_initial_prompt(
+    prompt_file,
+    reviewer_index,
+    total_reviewers,
+    review_contract,
+    plan_text,
+):
+    """Write the initial review prompt for round 1."""
+    content = (
+        f"{review_contract}\n\n"
+        f"## Panel Context\n\n"
+        f"You are reviewer {reviewer_index} of {total_reviewers} in a quorum review panel.\n"
+        f"Other reviewers are also evaluating this plan independently. In subsequent\n"
+        f"rounds you will see their feedback and can respond to it. For now, provide\n"
+        f"your independent assessment.\n\n"
+        f"## Plan\n\n"
+        f"{plan_text}\n"
+    )
+
+    Path(prompt_file).write_text(content, encoding="utf-8")
 
 
 def write_deliberation_prompt(
@@ -269,42 +820,73 @@ def write_deliberation_prompt(
     Path(prompt_file).write_text(content, encoding="utf-8")
 
 
-def write_initial_prompt(
+def write_cross_critique_prompt(
     prompt_file,
     reviewer_index,
     total_reviewers,
+    round_num,
     review_contract,
+    cross_critique_instructions,
+    deliberation_or_compressed,
+    ledger_summary,
+    changes_summary,
     plan_text,
 ):
-    """Write the initial review prompt for round 1."""
+    """Write round 2+ prompt with cross-critique instructions and issue ledger."""
     content = (
         f"{review_contract}\n\n"
+        f"{cross_critique_instructions}\n\n"
         f"## Panel Context\n\n"
         f"You are reviewer {reviewer_index} of {total_reviewers} in a quorum review panel.\n"
-        f"Other reviewers are also evaluating this plan independently. In subsequent\n"
-        f"rounds you will see their feedback and can respond to it. For now, provide\n"
-        f"your independent assessment.\n\n"
-        f"## Plan\n\n"
+        f"This is round {round_num}. All reviewer identities are anonymous.\n\n"
+        f"## Reviews from Previous Round\n\n"
+        f"{deliberation_or_compressed}\n\n"
+        f"## Current Issue Ledger\n\n"
+        f"{ledger_summary}\n\n"
+        f"## Changes Since Last Round (by HOST)\n\n"
+        f"{changes_summary}\n\n"
+        f"## Updated Plan\n\n"
         f"{plan_text}\n"
     )
 
     Path(prompt_file).write_text(content, encoding="utf-8")
 
 
+def format_ledger_summary(ledger):
+    """Format the issue ledger as a markdown summary for reviewer prompts."""
+    open_issues = [i for i in ledger["issues"] if i["status"] == "open"]
+    if not open_issues:
+        return "No open issues."
+
+    lines = []
+    for issue in open_issues:
+        lines.append(
+            f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']} "
+            f"[support: {issue['support_count']}, disputes: {issue['dispute_count']}]"
+        )
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
-# Tally & consensus
+# Tally & consensus (v2 — advisory verdicts + derived verdict)
 # ---------------------------------------------------------------------------
 
 
-def tally_verdicts(verdicts, threshold_name):
-    """Compute consensus from a list of (label, verdict, model, effort) tuples.
+def tally_verdicts(verdicts, threshold_name, original_panel_size=None,
+                   active_panel_size=None):
+    """Compute advisory tally from a list of (label, verdict, model, effort) tuples.
+
+    In v2, this tally is ADVISORY — the authoritative verdict comes from
+    derive_verdict() based on surviving blocking issues.
 
     Returns dict with:
-      - approved: list of labels that approved
-      - revise: list of labels that voted revise
-      - failed: list of labels with no verdict
-      - total: total reviewers
-      - threshold_met: bool
+      - approved: list of verdict tuples that approved
+      - revise: list of verdict tuples that voted revise
+      - failed: list of verdict tuples with no verdict
+      - total: active reviewers
+      - original_panel_size: original panel before failures
+      - active_panel_size: surviving panel after failure policy
+      - threshold_met: bool (advisory)
       - summary: human-readable tally string
     """
     approved = [v for v in verdicts if v[1] == "APPROVED"]
@@ -313,8 +895,11 @@ def tally_verdicts(verdicts, threshold_name):
 
     total = len(verdicts)
     n_approved = len(approved)
-    threshold_fn = THRESHOLDS.get(threshold_name, THRESHOLDS["unanimous"])
+    threshold_fn = THRESHOLDS.get(threshold_name, THRESHOLDS["super"])
     threshold_met = threshold_fn(n_approved, total)
+
+    orig = original_panel_size if original_panel_size is not None else total
+    active = active_panel_size if active_panel_size is not None else total
 
     # Build threshold label
     if threshold_name == "unanimous":
@@ -336,13 +921,21 @@ def tally_verdicts(verdicts, threshold_name):
             f" ({', '.join(v[0] for v in failed)})"
         )
     lines.append(f"- Threshold: {threshold_label}")
-    lines.append(f"- Status: {'CONSENSUS REACHED' if threshold_met else 'NOT MET'}")
+    if orig != active:
+        lines.append(f"- Panel: {active} active of {orig} original")
+    lines.append(
+        f"- Advisory status: "
+        f"{'CONSENSUS REACHED' if threshold_met else 'NOT MET'}"
+        f" (advisory — derived verdict from issue ledger is authoritative)"
+    )
 
     return {
         "approved": approved,
         "revise": revise,
         "failed": failed,
         "total": total,
+        "original_panel_size": orig,
+        "active_panel_size": active,
         "threshold_met": threshold_met,
         "summary": "\n".join(lines),
     }
@@ -354,7 +947,7 @@ def tally_verdicts(verdicts, threshold_name):
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Quorum review orchestrator")
+    p = argparse.ArgumentParser(description="Quorum review orchestrator (v2)")
     p.add_argument(
         "--reviewers",
         required=True,
@@ -365,9 +958,9 @@ def parse_args():
     p.add_argument("--round", type=int, required=True, help="Current round number (1-indexed)")
     p.add_argument(
         "--threshold",
-        default="unanimous",
+        default="super",
         choices=list(THRESHOLDS.keys()),
-        help="Consensus threshold (default: unanimous)",
+        help="Consensus threshold (default: super)",
     )
     p.add_argument(
         "--effort",
@@ -397,6 +990,17 @@ def parse_args():
         default=None,
         help="Path to write JSON tally results",
     )
+    p.add_argument(
+        "--ledger-file",
+        default=None,
+        help="Path to read/write the issue ledger JSON",
+    )
+    p.add_argument(
+        "--on-failure",
+        default="fail-open",
+        choices=["fail-closed", "fail-open", "shrink-quorum"],
+        help="How to handle reviewer failures (default: fail-open)",
+    )
     return p.parse_args()
 
 
@@ -407,6 +1011,7 @@ def main():
     reviewer_specs = [s.strip() for s in args.reviewers.split(",") if s.strip()]
     panel = validate_panel(reviewer_specs)
     round_num = args.round
+    original_panel_size = len(panel)
 
     # Resolve paths
     run_review_py = _resolve_run_review()
@@ -422,16 +1027,11 @@ def main():
     # Read plan text for prompt generation
     plan_text = Path(plan_file).read_text(encoding="utf-8")
 
-    # Standard review contract
-    review_contract = (
-        "## Review Contract\n\n"
-        "You are reviewing a plan as part of a multi-reviewer quorum panel.\n"
-        "Provide thorough, constructive feedback on the plan.\n\n"
-        "Your review MUST end with a verdict on the LAST non-empty line:\n"
-        "- `VERDICT: APPROVED` if the plan is ready to execute as-is\n"
-        "- `VERDICT: REVISE` if changes are needed before execution\n\n"
-        "The verdict line must be EXACTLY one of these two strings, nothing else."
+    # Load issue ledger (for rounds 2+)
+    ledger_file = args.ledger_file or str(
+        Path(tmpdir) / f"qr-{quorum_id}-ledger.json"
     )
+    ledger = load_ledger(ledger_file) if round_num > 1 else _empty_ledger()
 
     # Read deliberation context from prior round (for rounds 2+)
     deliberation_text = ""
@@ -445,20 +1045,40 @@ def main():
 
     # Generate per-reviewer prompts
     resume = round_num > 1
-    for idx, (provider, model) in enumerate(panel, 1):
+    for idx, (_provider, _model) in enumerate(panel, 1):
         prompt_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-prompt.md"
         if round_num == 1:
             write_initial_prompt(
-                str(prompt_file), idx, len(panel), review_contract, plan_text
+                str(prompt_file), idx, len(panel), REVIEW_CONTRACT_V2, plan_text
             )
-        else:
-            write_deliberation_prompt(
+        elif round_num == 2:
+            # Round 2: full anonymous prose + cross-critique instructions
+            write_cross_critique_prompt(
                 str(prompt_file),
                 idx,
                 len(panel),
                 round_num,
-                review_contract,
+                REVIEW_CONTRACT_V2,
+                CROSS_CRITIQUE_INSTRUCTIONS,
                 deliberation_text,
+                format_ledger_summary(ledger),
+                changes_summary,
+                plan_text,
+            )
+        else:
+            # Rounds 3+: compressed context + cross-critique instructions
+            compressed = compile_compressed_context(
+                ledger, panel, quorum_id, tmpdir, round_num
+            )
+            write_cross_critique_prompt(
+                str(prompt_file),
+                idx,
+                len(panel),
+                round_num,
+                REVIEW_CONTRACT_V2,
+                CROSS_CRITIQUE_INSTRUCTIONS,
+                compressed,
+                format_ledger_summary(ledger),
                 changes_summary,
                 plan_text,
             )
@@ -512,9 +1132,70 @@ def main():
                     results[idx] = 1
                     print(f"[Round {round_num}] {label}: EXCEPTION: {e}", file=sys.stderr)
 
-    # Compile deliberation and tally
-    deliberation_text, verdicts = compile_deliberation(panel, quorum_id, tmpdir, round_num)
-    tally = tally_verdicts(verdicts, args.threshold)
+    # Apply failure policy
+    failed_reviewers = [idx for idx, rc in results.items() if rc != 0]
+    active_panel = panel
+    active_panel_size = len(panel)
+
+    if failed_reviewers:
+        if args.on_failure == "fail-closed":
+            print(
+                f"FAIL-CLOSED: {len(failed_reviewers)} reviewer(s) failed. Aborting.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        elif args.on_failure == "shrink-quorum":
+            surviving = len(panel) - len(failed_reviewers)
+            if surviving < MIN_QUORUM_SIZE:
+                print(
+                    f"FAIL-CLOSED: only {surviving} reviewer(s) survived, "
+                    f"minimum is {MIN_QUORUM_SIZE}. Aborting.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            # Build surviving panel (preserve order)
+            active_panel = [
+                (provider, model)
+                for idx, (provider, model) in enumerate(panel, 1)
+                if idx not in failed_reviewers
+            ]
+            active_panel_size = len(active_panel)
+            print(
+                f"SHRINK-QUORUM: panel reduced from {original_panel_size} "
+                f"to {active_panel_size}",
+                file=sys.stderr,
+            )
+        # fail-open: continue with original panel size as threshold denominator
+
+    # Compile deliberation (always anonymous) and tally
+    deliberation_text, verdicts, reviewer_map = compile_deliberation(
+        panel, quorum_id, tmpdir, round_num
+    )
+
+    # For shrink-quorum, filter verdicts to active panel only
+    if args.on_failure == "shrink-quorum" and failed_reviewers:
+        verdicts = [
+            v for v in verdicts
+            if reviewer_map[v[0]]["idx"] not in failed_reviewers
+        ]
+
+    tally = tally_verdicts(
+        verdicts, args.threshold,
+        original_panel_size=original_panel_size,
+        active_panel_size=active_panel_size,
+    )
+
+    # Build/update issue ledger
+    ledger = build_issue_ledger(panel, quorum_id, tmpdir, round_num, ledger)
+    save_ledger(ledger_file, ledger)
+
+    # Derive verdict from surviving blocking issues
+    derived_verdict, surviving_issues, dropped_issues = derive_verdict(
+        ledger, args.threshold, active_panel_size
+    )
+    issue_consensus = format_issue_consensus(
+        ledger, args.threshold, active_panel_size
+    )
 
     # Write deliberation file for next round
     delib_out = args.deliberation_file or str(
@@ -526,7 +1207,13 @@ def main():
     tally_data = {
         "round": round_num,
         "threshold": args.threshold,
-        "threshold_met": tally["threshold_met"],
+        "original_panel_size": original_panel_size,
+        "active_panel_size": active_panel_size,
+        "on_failure": args.on_failure,
+        "advisory_threshold_met": tally["threshold_met"],
+        "derived_verdict": derived_verdict,
+        "surviving_blockers": len(surviving_issues),
+        "dropped_blockers": len(dropped_issues),
         "approved_count": len(tally["approved"]),
         "revise_count": len(tally["revise"]),
         "failed_count": len(tally["failed"]),
@@ -540,6 +1227,9 @@ def main():
             }
             for v in verdicts
         ],
+        "reviewer_map": {
+            label: info for label, info in reviewer_map.items()
+        },
         "exit_codes": results,
     }
     tally_file = args.tally_file or str(Path(tmpdir) / f"qr-{quorum_id}-tally.json")
@@ -548,15 +1238,17 @@ def main():
     # Print summary to stdout for host agent consumption
     print(f"\n## Quorum Review — Round {round_num} Tally\n")
     print(tally["summary"])
+    print(f"\n{issue_consensus}")
     print(f"\nDeliberation context written to: {delib_out}")
     print(f"Tally written to: {tally_file}")
+    print(f"Issue ledger written to: {ledger_file}")
 
-    # Exit 0 if consensus, 2 if not met (distinct from error exit 1)
-    if tally["threshold_met"]:
-        print("\nCONSENSUS: REACHED")
+    # Exit 0 if derived verdict is APPROVED, 2 if REVISE
+    if derived_verdict == "APPROVED":
+        print("\nDERIVED CONSENSUS: APPROVED")
         sys.exit(0)
     else:
-        print("\nCONSENSUS: NOT MET")
+        print(f"\nDERIVED CONSENSUS: REVISE ({len(surviving_issues)} blocker(s) survive)")
         sys.exit(2)
 
 

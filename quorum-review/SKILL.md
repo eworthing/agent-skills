@@ -1,17 +1,19 @@
 ---
 name: quorum-review
 description: >
-  Multi-provider consensus review system. Assembles a panel of 3+ AI reviewers
-  (Codex, Gemini CLI, Claude Code, Copilot CLI — or the same provider with
-  different models) that deliberate on a plan or response. Each reviewer sees
-  all prior feedback from every other reviewer, enabling a back-and-forth
-  discussion that refines toward consensus. Use this skill when the user wants
+  Multi-provider consensus review system (v2). Assembles a panel of 3+ AI
+  reviewers (Codex, Gemini CLI, Claude Code, Copilot CLI — or the same
+  provider with different models) that deliberate on a plan through structured,
+  anonymous cross-critique. Reviewers identify blocking and non-blocking issues
+  with canonical IDs, then explicitly agree, disagree, or refine each other's
+  findings across rounds. The artifact verdict is DERIVED from surviving
+  blocking issues, not raw approval counts. Use this skill when the user wants
   a quorum review, multi-model consensus, panel review, asks for multiple
   agents to review a plan, says 'get a quorum', 'multi-provider review',
   'panel discussion', or wants diverse AI perspectives to converge.
 ---
 
-# Quorum Review — Multi-Provider Consensus
+# Quorum Review — Multi-Provider Consensus (v2)
 
 ## Why this exists
 
@@ -22,25 +24,28 @@ produces a deliberated consensus — not just parallel opinions.
 
 This skill extends the `peer-plan-review` pattern from 1 reviewer to N,
 adding a deliberation protocol where reviewers read and react to each other's
-feedback across rounds.
+feedback across rounds — anonymously, to prevent prestige bias.
 
 ## How it works
 
 - **HOST agent**: the one reading this skill — orchestrates rounds, revises
-  the plan, synthesizes feedback
+  the plan, merges duplicate issues, synthesizes feedback
 - **PANEL**: 3+ reviewer CLIs (same or different providers/models) that
-  produce reviews in deliberation mode — each sees all prior reviews
-- **DELIBERATION**: each reviewer receives the plan + ALL prior reviews from
-  ALL panel members, not just their own history — they can agree, disagree,
-  or refine each other's points
-- **CONSENSUS**: configurable quorum threshold — unanimous, supermajority,
-  or simple majority — with a max round limit
+  produce structured reviews with issue IDs, confidence, and scope
+- **ANONYMITY**: all deliberation uses anonymous labels (Reviewer A/B/C) —
+  true identities appear only in the final report
+- **ISSUE LEDGER**: canonical issue IDs (BLK-001, NB-001) tracked across
+  rounds with explicit agreement/disagreement counts
+- **DERIVED VERDICT**: the artifact is APPROVED when no blocking issue
+  survives the configured threshold; REVISE when any blocker survives
+- **CROSS-CRITIQUE**: in rounds 2+, reviewers explicitly respond to each
+  prior issue with AGREE/DISAGREE/REFINE
 
 ## Invocation
 
 Users invoke as:
 ```
-/quorum-review <reviewer1> [reviewer2] [reviewer3] [...] [--threshold <mode>] [--effort <level>]
+/quorum-review <reviewer1> [reviewer2] [reviewer3] [...] [--threshold <mode>] [--effort <level>] [--on-failure <policy>]
 ```
 
 Each reviewer is specified as `provider[:model]`, e.g.:
@@ -55,17 +60,25 @@ Each reviewer is specified as `provider[:model]`, e.g.:
 
 | Mode             | Flag                    | Rule                                      |
 |------------------|-------------------------|-------------------------------------------|
-| Unanimous        | `--threshold unanimous`  | All reviewers must approve (default)       |
-| Supermajority    | `--threshold super`      | All-but-one must approve (N-1 of N)        |
+| Supermajority    | `--threshold super`      | All-but-one must approve (N-1 of N) (default) |
+| Unanimous        | `--threshold unanimous`  | All reviewers must approve                 |
 | Majority         | `--threshold majority`   | More than half must approve (⌊N/2⌋+1)     |
+
+### Failure policy
+
+| Mode             | Flag                         | Behavior                                        |
+|------------------|------------------------------|-------------------------------------------------|
+| Fail-open        | `--on-failure fail-open`      | Continue with remaining; threshold uses original N (default) |
+| Fail-closed      | `--on-failure fail-closed`    | Abort if any reviewer fails                      |
+| Shrink-quorum    | `--on-failure shrink-quorum`  | Continue with remaining; threshold uses surviving N (minimum 3) |
 
 ### Examples
 
 ```
 /quorum-review claude:sonnet gemini:pro codex
-/quorum-review claude:sonnet claude:opus claude:haiku --threshold super
+/quorum-review claude:sonnet claude:opus claude:haiku --threshold unanimous
 /quorum-review gemini:flash codex copilot:gpt-5.4 --threshold majority --effort high
-/quorum-review claude:opus gemini:pro copilot codex --threshold unanimous
+/quorum-review claude:opus gemini:pro copilot codex --on-failure shrink-quorum
 ```
 
 ## Available models
@@ -79,46 +92,109 @@ Same as `peer-plan-review` — see the provider reference files.
 | codex    | (none — use raw IDs)         | o3, o4-mini              | (provider) |
 | copilot  | (none — use raw IDs)         | gpt-5.4                  | (provider) |
 
-## The review contract
+## The review contract (v2)
 
-Same verdict protocol as `peer-plan-review`, applied to each reviewer independently:
+Each reviewer is prompted to produce a structured review:
 
+```
+### Blocking Issues
+- [B1] Description of blocking issue...
+- [B2] Description of blocking issue...
+(Write "None" if no blocking issues.)
+
+### Non-Blocking Issues
+- [N1] Description...
+(Write "None" if no non-blocking issues.)
+
+### Confidence
+HIGH, MEDIUM, or LOW
+
+### Scope
+architecture, security, testing, API design, performance
+
+VERDICT: APPROVED or VERDICT: REVISE
+```
+
+**Verdict protocol** (unchanged from v1):
 - The VERDICT must be the **LAST non-empty line** of each review output
 - Must be exactly: `VERDICT: APPROVED` or `VERDICT: REVISE`
 - Parse verdict from the bottom of the output file upward
 - Reviewers operate in read-only / review-only mode
-- Web search and URL fetching are always available
 
-## The deliberation prompt structure
+**Fallback**: If a reviewer produces unstructured text, the orchestrator
+extracts only the verdict (v1 behavior). All other fields default to empty.
 
-### Round 1 (initial review)
+## The issue ledger
+
+Issues get **canonical, immutable IDs** assigned by the orchestrator:
+- Blocking: `BLK-001`, `BLK-002`, etc.
+- Non-blocking: `NB-001`, `NB-002`, etc.
+
+IDs are monotonically increasing and never reused. The ledger tracks:
+- `status`: open, resolved, merged
+- `support_count` / `dispute_count`: from cross-critique responses
+- `agreed_by` / `disagreed_by`: reviewer indices
+- `merged_from`: for host-agent merge operations
+
+The ledger is stored at `<TMPDIR>/qr-${QUORUM_ID}-ledger.json`.
+
+## Derived verdict
+
+The artifact verdict is a **consequence** of issue-level consensus:
+
+```
+APPROVED = no blocking issue has support_count >= threshold
+REVISE   = one or more blocking issues have support_count >= threshold
+```
+
+Individual reviewers' `VERDICT: APPROVED/REVISE` lines are collected as
+**advisory signals** for auditability, but they do NOT determine the outcome.
+
+## Round protocol
+
+### Round 1 — Independent Parallel Review
 
 Each reviewer receives:
-1. The review contract (verdict rules)
-2. Panel context: "You are reviewer N of M in a quorum panel. Other reviewers
-   are also evaluating this plan. In subsequent rounds you will see their
-   feedback. Provide your independent assessment now."
+1. The structured review contract (blocking/non-blocking/confidence/scope)
+2. Panel context: "You are reviewer N of M. Provide your independent assessment."
 3. The full plan text
 
-### Rounds 2+ (deliberation)
+No prior reviews visible. No identities. Execution: parallel by default.
+
+### Round 2 — Anonymous Cross-Critique
 
 Each reviewer receives:
-1. The review contract (verdict rules)
-2. Panel context: "You are reviewer N of M. Below are ALL reviews from the
-   previous round, including your own. Consider the other reviewers' points.
-   You may agree, disagree, or refine their feedback. The host has revised
-   the plan based on the combined feedback."
-3. **All reviews from the previous round** — labeled by reviewer identity
-   (e.g., "Reviewer 1 (claude:sonnet)", "Reviewer 2 (gemini:pro)"), each
-   separated by a horizontal rule
-4. A bullet list: "Changes since last round" (from the host)
-5. The updated plan (full text)
+1. The structured review contract
+2. Cross-critique instructions (AGREE/DISAGREE/REFINE per canonical issue ID)
+3. Panel context (round N, anonymous)
+4. **All reviews from round 1** — labeled Reviewer A/B/C (NO provider/model info)
+5. The current issue ledger summary
+6. Changes since last round (by host)
+7. The updated plan (full text)
 
-This deliberation structure means reviewers can:
-- Reference and build on each other's feedback
-- Explicitly agree or disagree with specific points
-- Converge toward shared conclusions
-- Raise new concerns sparked by another reviewer's observation
+Reviewers must respond to each open issue:
+- `[AGREE BLK-001]` — confirms the issue is valid
+- `[DISAGREE BLK-001] reason` — disputes with explanation
+- `[REFINE BLK-001] revised text` — agrees but refines scope (counts as support)
+
+Reviewers may raise new issues:
+- `[B-NEW] description` — new blocking issue
+- `[N-NEW] description` — new non-blocking issue
+
+### Rounds 3-5 — Anonymous Convergence (compressed context)
+
+Same cross-critique format, but with **compressed context** instead of full prose:
+1. Issue ledger table (open issues with support/dispute counts)
+2. Condensed per-reviewer issue lists (not full review text)
+3. Changes since last round
+4. Updated plan
+
+Identities remain anonymous. Focus narrows to surviving blocking issues.
+
+### Consensus gate
+
+After each round: if derived verdict is APPROVED (no blockers survive threshold), stop.
+If round == 5, stop with incomplete consensus noted.
 
 ## Agent Instructions
 
@@ -129,9 +205,11 @@ Parse `$ARGUMENTS` to extract the reviewer list and options.
 **Argument parsing rules:**
 - Tokens matching `provider` or `provider:model` are reviewers
 - `--threshold` followed by `unanimous|super|majority` sets the threshold
-  (default: `unanimous`)
+  (default: `super`)
 - `--effort` followed by `low|medium|high|xhigh` sets effort for ALL
   reviewers (individual effort overrides not supported in v1)
+- `--on-failure` followed by `fail-closed|fail-open|shrink-quorum` sets
+  the failure policy (default: `fail-open`)
 - Valid providers: `claude`, `gemini`, `codex`, `copilot`
 
 **Validation:**
@@ -154,7 +232,8 @@ Display panel summary:
 - Reviewer 1: claude:sonnet
 - Reviewer 2: gemini:pro
 - Reviewer 3: codex (default model)
-- Threshold: unanimous (3/3 must approve)
+- Threshold: supermajority (2/3 must approve)
+- Failure policy: fail-open
 - Max rounds: 5
 ```
 
@@ -175,6 +254,7 @@ Temp files per reviewer (where `R` is the 1-indexed reviewer number):
 - `<TMPDIR>/qr-${QUORUM_ID}-r${R}-session.json` — reviewer session metadata
 - `<TMPDIR>/qr-${QUORUM_ID}-r${R}-events.jsonl` — reviewer event stream
 - `<TMPDIR>/qr-${QUORUM_ID}-deliberation.md` — compiled deliberation log
+- `<TMPDIR>/qr-${QUORUM_ID}-ledger.json` — issue ledger
 
 ### Step 2: Capture the plan
 
@@ -183,27 +263,8 @@ This is the immutable input for round 1.
 
 ### Step 3: Submit to panel (Round 1)
 
-For **each reviewer** in the panel:
-
-1. Write the round-1 prompt to their prompt file (review contract + panel
-   context + full plan)
-2. Call `run_review.py` from the `peer-plan-review` skill:
-
-```bash
-python3 <peer-plan-review-dir>/scripts/run_review.py \
-  --reviewer <provider> \
-  --plan-file <TMPDIR>/qr-${QUORUM_ID}-plan.md \
-  --prompt-file <TMPDIR>/qr-${QUORUM_ID}-r${R}-prompt.md \
-  --output-file <TMPDIR>/qr-${QUORUM_ID}-r${R}-review.md \
-  --session-file <TMPDIR>/qr-${QUORUM_ID}-r${R}-session.json \
-  --events-file <TMPDIR>/qr-${QUORUM_ID}-r${R}-events.jsonl \
-  [--model MODEL] [--effort LEVEL] [--timeout SECONDS]
-```
-
-**Execution strategy:** Use `run_quorum.py` to launch all reviewers
-concurrently (default) or sequentially (`--sequential`). If a reviewer
-fails, report the error and continue with remaining panel members —
-the quorum can proceed with N-1 if threshold allows.
+Call `run_quorum.py` to launch all reviewers concurrently (default) or
+sequentially (`--sequential`):
 
 ```bash
 python3 <skill-dir>/scripts/run_quorum.py \
@@ -211,106 +272,131 @@ python3 <skill-dir>/scripts/run_quorum.py \
   --reviewers "claude:sonnet,gemini:pro,codex" \
   --quorum-id ${QUORUM_ID} \
   --round 1 \
-  --threshold unanimous \
+  --threshold super \
+  --on-failure fail-open \
   --tmpdir <TMPDIR> \
+  --ledger-file <TMPDIR>/qr-${QUORUM_ID}-ledger.json \
   [--effort LEVEL] [--timeout SECONDS] [--sequential]
 ```
 
-### Step 4: Read reviews & tally verdicts
+### Step 4: Read reviews, tally, & check derived verdict
 
 For each reviewer, read:
 1. Session file → extract actual model and effort used
-2. Output file → extract review text and verdict
+2. Output file → extract review text, structured issues, and verdict
 
-Present ALL reviews with labeled headers:
+Present ALL reviews with **anonymous** headers:
 
 ```
 ## Quorum Review — Round N
 
-### Reviewer 1: claude:sonnet (model: claude-sonnet-4-20250514, effort: high)
+### Reviewer A — VERDICT: REVISE
 [review text]
-VERDICT: REVISE
 
 ---
 
-### Reviewer 2: gemini:pro (model: gemini-3-pro-preview, effort: medium)
+### Reviewer B — VERDICT: APPROVED
 [review text]
-VERDICT: APPROVED
 
 ---
 
-### Reviewer 3: codex (model: o3, effort: medium)
+### Reviewer C — VERDICT: REVISE
 [review text]
-VERDICT: REVISE
 ```
 
-**Tally results:**
+**Issue consensus (derived from ledger):**
 
 ```
-### Round N Tally
-- APPROVED: 1/3 (gemini:pro)
-- REVISE: 2/3 (claude:sonnet, codex)
-- Threshold: unanimous (3/3 required)
-- Status: NOT MET — proceeding to revision
+### Issue Consensus
+- BLK-001 "No auth on admin": support 2/3 — SURVIVES
+- BLK-002 "Minor naming issue": support 1/3 — DROPPED
+- NB-001 "Add pagination": support 1/3 — NON-BLOCKING
+
+### Derived Verdict: REVISE (1 blocking issue survives supermajority threshold)
 ```
 
-**Consensus check:** Compare approvals against threshold:
-- `unanimous`: approvals == N
-- `super`: approvals >= N-1
-- `majority`: approvals > N/2
+**Advisory tally** (for reference, not authoritative):
 
-If consensus met → Step 7.
-If not met and round < 5 → Step 5.
+```
+### Round N Advisory Tally
+- APPROVED: 1/3 (Reviewer B)
+- REVISE: 2/3 (Reviewer A, Reviewer C)
+- Threshold: supermajority (2/3)
+- Advisory status: NOT MET (advisory — derived verdict is authoritative)
+```
+
+**Consensus check:** Derived verdict from `run_quorum.py` exit code:
+- Exit 0: APPROVED (no blockers survive)
+- Exit 2: REVISE (blockers survive)
+
+If APPROVED → Step 7.
+If REVISE and round < 5 → Step 5.
 If round == 5 → Step 7 (with incomplete consensus noted).
 
-**Compile deliberation log:** After each round, append all reviews to the
-deliberation file for the next round's prompts.
-
-### Step 5: Revise the plan
+### Step 5: Revise the plan & manage issue ledger
 
 As HOST, synthesize feedback from ALL reviewers:
 
-1. Identify **consensus points** — issues raised by multiple reviewers
-2. Identify **unique points** — issues raised by only one reviewer
-3. Identify **disagreements** — where reviewers contradict each other
-4. Prioritize: consensus points first, then unique valid points, then
-   resolve disagreements using your own judgment
+1. **Review the issue ledger.** If multiple reviewers raised semantically
+   equivalent issues (e.g., BLK-001 "no auth on admin" and BLK-003 "admin
+   routes lack authentication"), merge them:
+   - Pick the survivor (clearest description)
+   - Add absorbed issue IDs to survivor's `merged_from` list
+   - Set absorbed issues' status to `"merged"`
+   - Add a merge record to the `merges` array with reason
+   - Combine `agreed_by`/`disagreed_by` lists
+   - Update `support_count` and `dispute_count`
 
-Rewrite the plan. Summarize changes as a bullet list, noting which
-reviewer(s) prompted each change.
+2. **Prioritize**: Surviving blocking issues (multi-reviewer support) first,
+   then single-reviewer blockers, then non-blocking suggestions.
 
-### Step 6: Re-submit with deliberation context (Rounds 2-5)
+3. **Address issues**: For each blocking issue, either fix it in the plan
+   (mark resolved in ledger) or explain why it's not applicable.
 
-For each reviewer, write the deliberation prompt:
-
-1. Review contract
-2. Panel context (round N, you are reviewer R of M)
-3. **ALL reviews from the previous round** — each labeled with reviewer
-   identity and verdict:
+4. **Summarize changes** as a bullet list, referencing issue IDs:
    ```
-   --- Reviewer 1 (claude:sonnet) — VERDICT: REVISE ---
-   [their full review text]
-
-   --- Reviewer 2 (gemini:pro) — VERDICT: APPROVED ---
-   [their full review text]
-
-   --- Reviewer 3 (codex) — VERDICT: REVISE ---
-   [their full review text]
+   - Fixed BLK-001: Added authentication middleware to /admin routes
+   - Resolved BLK-002: Added input validation (was SQL injection risk)
+   - Noted NB-001: Pagination deferred to phase 2 (out of scope)
    ```
-4. Bullet list: "Changes since last round (by HOST)"
-5. Updated plan (full text)
 
-Call `run_review.py` with `--resume` for each reviewer, then repeat Step 4.
+5. **Update the ledger JSON** with resolved/merged status before next round.
+
+### Step 6: Re-submit with cross-critique context (Rounds 2-5)
+
+Call `run_quorum.py` with the next round number and updated files:
+
+```bash
+python3 <skill-dir>/scripts/run_quorum.py \
+  --plan-file <TMPDIR>/qr-${QUORUM_ID}-plan.md \
+  --reviewers "claude:sonnet,gemini:pro,codex" \
+  --quorum-id ${QUORUM_ID} \
+  --round N \
+  --threshold super \
+  --on-failure fail-open \
+  --tmpdir <TMPDIR> \
+  --ledger-file <TMPDIR>/qr-${QUORUM_ID}-ledger.json \
+  --deliberation-file <TMPDIR>/qr-${QUORUM_ID}-deliberation.md \
+  --changes-summary <TMPDIR>/qr-${QUORUM_ID}-changes.md \
+  [--effort LEVEL] [--timeout SECONDS]
+```
+
+Then repeat Step 4.
 
 ### Step 7: Present final result
 
-**If consensus reached:**
+**If derived verdict is APPROVED:**
 ```
 ## Quorum Review — CONSENSUS REACHED (Round N)
-- Panel: claude:sonnet, gemini:pro, codex
-- Threshold: unanimous (3/3)
-- Approved: 3/3
+- Panel: claude:sonnet (Reviewer A), gemini:pro (Reviewer B), codex (Reviewer C)
+- Threshold: supermajority (2/3)
+- Derived verdict: APPROVED (0 blocking issues survive)
 - Total rounds: N
+
+### Issue Summary
+- BLK-001 "No auth on admin": resolved in round 2
+- BLK-002 "SQL injection": resolved in round 2
+- NB-001 "Add pagination": informational (deferred)
 
 [Final plan text]
 ```
@@ -318,11 +404,11 @@ Call `run_review.py` with `--resume` for each reviewer, then repeat Step 4.
 **If max rounds without consensus:**
 ```
 ## Quorum Review — MAX ROUNDS REACHED (Round 5)
-- Panel: claude:sonnet, gemini:pro, codex
-- Threshold: unanimous (3/3)
-- Final tally: 2/3 approved (codex still revising)
-- Outstanding concerns:
-  [summary of unresolved feedback from dissenting reviewers]
+- Panel: claude:sonnet (Reviewer A), gemini:pro (Reviewer B), codex (Reviewer C)
+- Threshold: supermajority (2/3)
+- Derived verdict: REVISE (1 blocking issue survives)
+- Surviving blockers:
+  - BLK-003 "Missing error recovery" (support: 2/3)
 
 [Latest plan text with remaining concerns noted]
 ```
@@ -333,6 +419,7 @@ Remove all temp files (explicit list, no glob):
 - `<TMPDIR>/qr-${QUORUM_ID}-plan.md`
 - `<TMPDIR>/qr-${QUORUM_ID}-deliberation.md`
 - `<TMPDIR>/qr-${QUORUM_ID}-tally.json`
+- `<TMPDIR>/qr-${QUORUM_ID}-ledger.json`
 - `<TMPDIR>/qr-${QUORUM_ID}-changes.md` (if written for `--changes-summary`)
 - For each reviewer R: `-r${R}-prompt.md`, `-r${R}-review.md`,
   `-r${R}-session.json`, `-r${R}-events.jsonl`
@@ -346,14 +433,20 @@ Remove all temp files (explicit list, no glob):
   proceed if 3+ reviewers remain
 - The host agent must NOT delegate file modifications to reviewers
 - Minimum 3 reviewers enforced — no exceptions
-- Each reviewer's prompt includes ALL other reviewers' feedback (deliberation
-  mode), not just their own history
+- All deliberation context is ANONYMOUS (Reviewer A/B/C) — reveal true
+  identities only in the final Step 7 report
 - Bundled scripts resolve relative to `peer-plan-review/scripts/` (shared
   infrastructure)
 - The orchestrator script `run_quorum.py` lives in this skill's `scripts/`
   directory
 - Maximum 5 rounds — this is a hard limit to prevent infinite loops
-- If a reviewer crashes mid-panel, continue with remaining reviewers; adjust
-  quorum denominator only if the user confirms (default: keep original N)
 - When a reviewer flips from REVISE to APPROVED (or vice versa), highlight
   the change in the round tally
+- The host agent is responsible for merging duplicate issues in Step 5 — the
+  orchestrator does NOT auto-deduplicate
+- The derived verdict (from surviving blockers) is authoritative; individual
+  reviewer verdicts are advisory
+- Non-blocking issues inform improvement but NEVER gate approval
+- `shrink-quorum` never reduces below 3 active reviewers
+- The final report must state original panel size, active panel size, and
+  applied threshold
