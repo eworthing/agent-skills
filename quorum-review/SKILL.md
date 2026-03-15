@@ -200,13 +200,10 @@ python3 <peer-plan-review-dir>/scripts/run_review.py \
   [--model MODEL] [--effort LEVEL] [--timeout SECONDS]
 ```
 
-**Execution strategy:** Launch reviewers sequentially (not parallel) to avoid
-resource contention and allow the host to handle failures incrementally. If a
-reviewer fails, report the error and continue with remaining panel members —
+**Execution strategy:** Use `run_quorum.py` to launch all reviewers
+concurrently (default) or sequentially (`--sequential`). If a reviewer
+fails, report the error and continue with remaining panel members —
 the quorum can proceed with N-1 if threshold allows.
-
-**Alternative parallel execution:** Use `run_quorum.py` orchestrator which
-manages concurrent subprocess execution:
 
 ```bash
 python3 <skill-dir>/scripts/run_quorum.py \
@@ -215,7 +212,8 @@ python3 <skill-dir>/scripts/run_quorum.py \
   --quorum-id ${QUORUM_ID} \
   --round 1 \
   --threshold unanimous \
-  [--effort LEVEL] [--timeout SECONDS]
+  --tmpdir <TMPDIR> \
+  [--effort LEVEL] [--timeout SECONDS] [--sequential]
 ```
 
 ### Step 4: Read reviews & tally verdicts
@@ -334,6 +332,8 @@ Call `run_review.py` with `--resume` for each reviewer, then repeat Step 4.
 Remove all temp files (explicit list, no glob):
 - `<TMPDIR>/qr-${QUORUM_ID}-plan.md`
 - `<TMPDIR>/qr-${QUORUM_ID}-deliberation.md`
+- `<TMPDIR>/qr-${QUORUM_ID}-tally.json`
+- `<TMPDIR>/qr-${QUORUM_ID}-changes.md` (if written for `--changes-summary`)
 - For each reviewer R: `-r${R}-prompt.md`, `-r${R}-review.md`,
   `-r${R}-session.json`, `-r${R}-events.jsonl`
 

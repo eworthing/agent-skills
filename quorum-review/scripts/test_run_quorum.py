@@ -12,7 +12,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import textwrap
 import unittest
 from pathlib import Path
 
@@ -284,11 +283,104 @@ class TestCLIValidation(unittest.TestCase):
             os.unlink(plan.name)
 
 
+class TestSameProviderDifferentModels(unittest.TestCase):
+    """Tests 25-26: Same provider with different models."""
+
+    def test_same_provider_three_models(self):
+        """Test 25: Panel accepts same provider with different models."""
+        panel = validate_panel(["claude:sonnet", "claude:opus", "claude:haiku"])
+        self.assertEqual(len(panel), 3)
+        self.assertTrue(all(p[0] == "claude" for p in panel))
+        self.assertEqual([p[1] for p in panel], ["sonnet", "opus", "haiku"])
+
+    def test_mixed_same_and_different_providers(self):
+        """Test 26: Panel accepts mix of same and different providers."""
+        panel = validate_panel(["claude:sonnet", "claude:opus", "gemini:pro"])
+        self.assertEqual(len(panel), 3)
+
+
+class TestPlanFileValidation(unittest.TestCase):
+    """Tests 27-28: Plan file validation via CLI."""
+
+    def test_missing_plan_file_cli(self):
+        """Test 27: Script exits non-zero with missing plan file."""
+        rc, stdout, stderr = run_script(
+            "--reviewers", "claude:sonnet,gemini:pro,codex",
+            "--plan-file", "/nonexistent/plan.md",
+            "--quorum-id", "abc",
+            "--round", "1",
+        )
+        self.assertNotEqual(rc, 0)
+        self.assertIn("--plan-file", stderr)
+
+    def test_invalid_effort_cli(self):
+        """Test 28: Script exits non-zero with invalid effort level."""
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as plan:
+            plan.write(b"test plan")
+            plan.flush()
+            rc, stdout, stderr = run_script(
+                "--reviewers", "claude:sonnet,gemini:pro,codex",
+                "--plan-file", plan.name,
+                "--quorum-id", "abc",
+                "--round", "1",
+                "--effort", "extreme",
+            )
+            self.assertNotEqual(rc, 0)
+            self.assertIn("invalid choice", stderr)
+            os.unlink(plan.name)
+
+
+class TestPromptFormatting(unittest.TestCase):
+    """Tests 29-30: Prompt output has correct markdown formatting."""
+
+    def test_initial_prompt_no_indentation(self):
+        """Test 29: Round 1 prompt headers are not indented (no code blocks)."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            write_initial_prompt(
+                f.name, 1, 3, "## Review Contract\nTest.", "# My Plan\nStuff."
+            )
+            content = Path(f.name).read_text()
+            for line in content.splitlines():
+                if line.startswith("##"):
+                    # Headers must not be indented (would render as code)
+                    self.assertFalse(line.startswith("    "),
+                                     f"Header is indented: {line!r}")
+            os.unlink(f.name)
+
+    def test_deliberation_prompt_no_indentation(self):
+        """Test 30: Round 2+ prompt headers are not indented."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            write_deliberation_prompt(
+                f.name, 1, 3, 2,
+                "## Review Contract\nTest.",
+                "--- R1 ---\nFeedback.",
+                "- Fixed things",
+                "# Plan\nUpdated.",
+            )
+            content = Path(f.name).read_text()
+            for line in content.splitlines():
+                if line.startswith("##"):
+                    self.assertFalse(line.startswith("    "),
+                                     f"Header is indented: {line!r}")
+            os.unlink(f.name)
+
+
+class TestPathResolution(unittest.TestCase):
+    """Test 31: run_review.py path resolution."""
+
+    def test_resolve_finds_peer_plan_review(self):
+        """Test 31: _resolve_run_review locates peer-plan-review/scripts/run_review.py."""
+        from run_quorum import _resolve_run_review
+        path = _resolve_run_review()
+        self.assertTrue(Path(path).exists(), f"Resolved path does not exist: {path}")
+        self.assertTrue(path.endswith("run_review.py"))
+
+
 class TestTallySummaryFormat(unittest.TestCase):
-    """Test 24: Tally summary output format."""
+    """Test 32: Tally summary output format."""
 
     def test_summary_contains_key_fields(self):
-        """Test 24: Tally summary includes all expected sections."""
+        """Test 32: Tally summary includes all expected sections."""
         verdicts = [
             ("Reviewer 1 (claude:sonnet)", "APPROVED", "sonnet", "high"),
             ("Reviewer 2 (gemini:pro)", "REVISE", "pro", "medium"),

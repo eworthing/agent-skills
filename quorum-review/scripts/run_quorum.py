@@ -18,10 +18,9 @@ rounds. This script handles:
 import argparse
 import json
 import os
-import signal
 import subprocess
 import sys
-import textwrap
+import tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -210,7 +209,8 @@ def read_session_meta(session_file):
 def compile_deliberation(panel, quorum_id, tmpdir, round_num):
     """Compile all reviews from a round into a deliberation document.
 
-    Returns the deliberation text and a list of (reviewer_label, verdict) tuples.
+    Returns the deliberation text and a list of
+    (reviewer_label, verdict, actual_model, actual_effort) tuples.
     """
     sections = []
     verdicts = []
@@ -250,29 +250,21 @@ def write_deliberation_prompt(
     plan_text,
 ):
     """Write the deliberation prompt for a specific reviewer in rounds 2+."""
-    content = textwrap.dedent(f"""\
-        {review_contract}
-
-        ## Panel Context
-
-        You are reviewer {reviewer_index} of {total_reviewers} in a quorum review panel.
-        This is round {round_num}. Below are ALL reviews from the previous round,
-        including your own. Consider the other reviewers' points carefully.
-        You may agree, disagree, or refine their feedback. The host has revised
-        the plan based on the combined feedback.
-
-        ## Reviews from Previous Round
-
-        {deliberation_text}
-
-        ## Changes Since Last Round (by HOST)
-
-        {changes_summary}
-
-        ## Updated Plan
-
-        {plan_text}
-    """)
+    content = (
+        f"{review_contract}\n\n"
+        f"## Panel Context\n\n"
+        f"You are reviewer {reviewer_index} of {total_reviewers} in a quorum review panel.\n"
+        f"This is round {round_num}. Below are ALL reviews from the previous round,\n"
+        f"including your own. Consider the other reviewers' points carefully.\n"
+        f"You may agree, disagree, or refine their feedback. The host has revised\n"
+        f"the plan based on the combined feedback.\n\n"
+        f"## Reviews from Previous Round\n\n"
+        f"{deliberation_text}\n\n"
+        f"## Changes Since Last Round (by HOST)\n\n"
+        f"{changes_summary}\n\n"
+        f"## Updated Plan\n\n"
+        f"{plan_text}\n"
+    )
 
     Path(prompt_file).write_text(content, encoding="utf-8")
 
@@ -285,20 +277,16 @@ def write_initial_prompt(
     plan_text,
 ):
     """Write the initial review prompt for round 1."""
-    content = textwrap.dedent(f"""\
-        {review_contract}
-
-        ## Panel Context
-
-        You are reviewer {reviewer_index} of {total_reviewers} in a quorum review panel.
-        Other reviewers are also evaluating this plan independently. In subsequent
-        rounds you will see their feedback and can respond to it. For now, provide
-        your independent assessment.
-
-        ## Plan
-
-        {plan_text}
-    """)
+    content = (
+        f"{review_contract}\n\n"
+        f"## Panel Context\n\n"
+        f"You are reviewer {reviewer_index} of {total_reviewers} in a quorum review panel.\n"
+        f"Other reviewers are also evaluating this plan independently. In subsequent\n"
+        f"rounds you will see their feedback and can respond to it. For now, provide\n"
+        f"your independent assessment.\n\n"
+        f"## Plan\n\n"
+        f"{plan_text}\n"
+    )
 
     Path(prompt_file).write_text(content, encoding="utf-8")
 
@@ -381,7 +369,12 @@ def parse_args():
         choices=list(THRESHOLDS.keys()),
         help="Consensus threshold (default: unanimous)",
     )
-    p.add_argument("--effort", default=None, help="Effort level for all reviewers")
+    p.add_argument(
+        "--effort",
+        default=None,
+        choices=["low", "medium", "high", "xhigh"],
+        help="Effort level for all reviewers",
+    )
     p.add_argument("--timeout", type=int, default=600, help="Per-reviewer timeout in seconds")
     p.add_argument("--tmpdir", default=None, help="Temp directory (default: system temp)")
     p.add_argument(
@@ -417,26 +410,28 @@ def main():
 
     # Resolve paths
     run_review_py = _resolve_run_review()
-    tmpdir = args.tmpdir or os.environ.get("TMPDIR") or "/tmp"
+    tmpdir = args.tmpdir or tempfile.gettempdir()
     quorum_id = args.quorum_id
     plan_file = args.plan_file
+
+    # Validate plan file exists
+    if not Path(plan_file).exists():
+        print(f"Error: --plan-file not found: {plan_file}", file=sys.stderr)
+        sys.exit(1)
 
     # Read plan text for prompt generation
     plan_text = Path(plan_file).read_text(encoding="utf-8")
 
     # Standard review contract
-    review_contract = textwrap.dedent("""\
-        ## Review Contract
-
-        You are reviewing a plan as part of a multi-reviewer quorum panel.
-        Provide thorough, constructive feedback on the plan.
-
-        Your review MUST end with a verdict on the LAST non-empty line:
-        - `VERDICT: APPROVED` if the plan is ready to execute as-is
-        - `VERDICT: REVISE` if changes are needed before execution
-
-        The verdict line must be EXACTLY one of these two strings, nothing else.
-    """)
+    review_contract = (
+        "## Review Contract\n\n"
+        "You are reviewing a plan as part of a multi-reviewer quorum panel.\n"
+        "Provide thorough, constructive feedback on the plan.\n\n"
+        "Your review MUST end with a verdict on the LAST non-empty line:\n"
+        "- `VERDICT: APPROVED` if the plan is ready to execute as-is\n"
+        "- `VERDICT: REVISE` if changes are needed before execution\n\n"
+        "The verdict line must be EXACTLY one of these two strings, nothing else."
+    )
 
     # Read deliberation context from prior round (for rounds 2+)
     deliberation_text = ""
