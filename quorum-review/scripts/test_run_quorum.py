@@ -494,6 +494,45 @@ class TestStructuredReviewParsing(unittest.TestCase):
         self.assertIn("free-form", result["raw_text"])
         os.unlink(path)
 
+    def test_parse_bold_markdown_blocking_issues(self):
+        """Reviewers sometimes wrap issue tags in bold markdown: **[B1] (HIGH)**."""
+        path = self._write_review(
+            "### Reasoning\nAnalysis here.\n\n"
+            "### Blocking Issues\n"
+            "- **[B1] (HIGH)** No auth on admin endpoint\n"
+            "- **[B2] (MEDIUM)** SQL injection in search query\n\n"
+            "### Non-Blocking Issues\n"
+            "- **[N1]** Consider adding pagination\n\n"
+            "### Confidence\nHIGH\n\n"
+            "VERDICT: REVISE\n"
+        )
+        result = parse_structured_review(path)
+        self.assertEqual(len(result["blocking"]), 2)
+        self.assertEqual(result["blocking"][0]["id"], "B1")
+        self.assertEqual(result["blocking"][0]["confidence"], "HIGH")
+        self.assertEqual(result["blocking"][1]["id"], "B2")
+        self.assertEqual(result["blocking"][1]["confidence"], "MEDIUM")
+        self.assertEqual(len(result["non_blocking"]), 1)
+        self.assertEqual(result["non_blocking"][0]["id"], "N1")
+        self.assertTrue(result["structured"])
+        os.unlink(path)
+
+    def test_parse_partial_bold_markdown(self):
+        """Bold on the tag but not the description."""
+        path = self._write_review(
+            "### Blocking Issues\n"
+            "- **[B1]** No auth on admin endpoint\n"
+            "- [B2] (HIGH) SQL injection in search query\n\n"
+            "### Non-Blocking Issues\nNone\n\n"
+            "### Confidence\nHIGH\n\n"
+            "VERDICT: REVISE\n"
+        )
+        result = parse_structured_review(path)
+        self.assertEqual(len(result["blocking"]), 2)
+        self.assertEqual(result["blocking"][0]["id"], "B1")
+        self.assertEqual(result["blocking"][1]["id"], "B2")
+        os.unlink(path)
+
 
 # ===========================================================================
 # v2 tests: Cross-critique parsing

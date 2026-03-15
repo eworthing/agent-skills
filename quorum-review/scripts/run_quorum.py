@@ -242,11 +242,11 @@ def read_session_meta(session_file):
 # Structured review parsing (v2)
 # ---------------------------------------------------------------------------
 
-_RE_BLOCKING = re.compile(r"^\s*-\s*\[B(\d+)\]\s*(.+)", re.MULTILINE)
+_RE_BLOCKING = re.compile(r"^\s*-\s*\*{0,2}\[B(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
 _RE_BLOCKING_WITH_CONF = re.compile(
-    r"^\s*-\s*\[B(\d+)\]\s*\((HIGH|MEDIUM|LOW)\)\s*(.+)", re.MULTILINE | re.IGNORECASE
+    r"^\s*-\s*\*{0,2}\[B(\d+)\]\s*\((HIGH|MEDIUM|LOW)\)\*{0,2}\s*(.+)", re.MULTILINE | re.IGNORECASE
 )
-_RE_NON_BLOCKING = re.compile(r"^\s*-\s*\[N(\d+)\]\s*(.+)", re.MULTILINE)
+_RE_NON_BLOCKING = re.compile(r"^\s*-\s*\*{0,2}\[N(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
 _RE_CONFIDENCE = re.compile(
     r"(?:^|\n)\s*(?:###?\s*)?Confidence\s*[:\-]?\s*\n?\s*(HIGH|MEDIUM|LOW)",
     re.IGNORECASE,
@@ -342,11 +342,11 @@ def parse_structured_review(review_file):
 # Cross-critique parsing (v2)
 # ---------------------------------------------------------------------------
 
-_RE_AGREE = re.compile(r"^\s*\[AGREE\s+(BLK-\d+|NB-\d+)\]", re.MULTILINE)
-_RE_DISAGREE = re.compile(r"^\s*\[DISAGREE\s+(BLK-\d+|NB-\d+)\]\s*(.*)", re.MULTILINE)
-_RE_REFINE = re.compile(r"^\s*\[REFINE\s+(BLK-\d+|NB-\d+)\]\s*(.*)", re.MULTILINE)
-_RE_NEW_BLOCKING = re.compile(r"^\s*\[B-NEW\]\s*(.+)", re.MULTILINE)
-_RE_NEW_NON_BLOCKING = re.compile(r"^\s*\[N-NEW\]\s*(.+)", re.MULTILINE)
+_RE_AGREE = re.compile(r"^\s*\*{0,2}\[AGREE\s+(BLK-\d+|NB-\d+)\]\*{0,2}", re.MULTILINE)
+_RE_DISAGREE = re.compile(r"^\s*\*{0,2}\[DISAGREE\s+(BLK-\d+|NB-\d+)\]\*{0,2}\s*(.*)", re.MULTILINE)
+_RE_REFINE = re.compile(r"^\s*\*{0,2}\[REFINE\s+(BLK-\d+|NB-\d+)\]\*{0,2}\s*(.*)", re.MULTILINE)
+_RE_NEW_BLOCKING = re.compile(r"^\s*\*{0,2}\[B-NEW\]\*{0,2}\s*(.+)", re.MULTILINE)
+_RE_NEW_NON_BLOCKING = re.compile(r"^\s*\*{0,2}\[N-NEW\]\*{0,2}\s*(.+)", re.MULTILINE)
 
 
 def parse_cross_critique(review_file):
