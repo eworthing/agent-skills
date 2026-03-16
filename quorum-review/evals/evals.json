@@ -1,0 +1,47 @@
+{
+  "skill_name": "quorum-review",
+  "evals": [
+    {
+      "id": 0,
+      "name": "security-flawed-plan",
+      "prompt": "I need you to run a quorum review on this auth service implementation plan. Use claude:sonnet, gemini:flash, and codex as the panel.\n\nThe plan is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-1/security-flawed-plan/plan.md",
+      "expected_output": "Should catch multiple critical security issues (SQL injection, weak hashing, hardcoded secrets, no rate limiting, XSS via stack traces, password logging). Should produce REVISE verdict with clear blocking issues. Cross-critique should converge on the most critical blockers.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-1/security-flawed-plan/plan.md"],
+      "assertions": [
+        {"id": "sql-injection-detected", "description": "At least one blocking issue mentions SQL injection or string interpolation in queries", "type": "content_check"},
+        {"id": "weak-hashing-detected", "description": "At least one blocking issue mentions SHA-256 is insufficient (should be bcrypt/argon2/scrypt)", "type": "content_check"},
+        {"id": "hardcoded-secret-detected", "description": "At least one issue mentions the hardcoded JWT secret key", "type": "content_check"},
+        {"id": "verdict-is-revise", "description": "Final derived verdict is REVISE (not APPROVED)", "type": "verdict_check"},
+        {"id": "structured-output", "description": "Output contains canonical issue IDs (BLK-xxx or B1/B2) and a clearly formatted verdict section", "type": "format_check"},
+        {"id": "password-logging-detected", "description": "At least one issue mentions the risk of logging passwords", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "solid-api-design",
+      "prompt": "Review this document processing API plan with a quorum. Use claude:sonnet gemini:flash codex\n\nPlan: /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-1/solid-api-design/plan.md",
+      "expected_output": "Should approve or raise only minor non-blocking issues. The plan is well-designed with proper auth, error handling, observability, and testing. False-positive blocking issues would indicate a problem with the skill.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-1/solid-api-design/plan.md"],
+      "assertions": [
+        {"id": "no-false-positive-blockers", "description": "Zero or at most 1 surviving blocking issue (the plan is well-designed)", "type": "content_check"},
+        {"id": "verdict-is-approved", "description": "Final derived verdict is APPROVED", "type": "verdict_check"},
+        {"id": "acknowledges-strengths", "description": "Review acknowledges good practices in the plan (auth, error handling, observability, testing)", "type": "content_check"},
+        {"id": "structured-output", "description": "Output contains proper formatting with issue IDs and a clear verdict section", "type": "format_check"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "complex-migration",
+      "prompt": "get a quorum on this migration plan, panel should be claude:sonnet gemini:flash codex --max-rounds 2\n\nhere's the plan: /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-1/complex-migration/plan.md",
+      "expected_output": "Should identify subtle issues: Phase 3 dual-write consistency, Phase 4 no-rollback risk, synchronous HTTP coupling, lack of saga/compensation pattern. Should handle casual invocation style. Nuanced verdict — possibly REVISE with specific architectural concerns.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-1/complex-migration/plan.md"],
+      "assertions": [
+        {"id": "dual-write-concern", "description": "At least one issue mentions dual-write consistency or transactional outbox concerns", "type": "content_check"},
+        {"id": "no-rollback-phase4", "description": "At least one issue mentions Phase 4 being a point of no return / no rollback plan", "type": "content_check"},
+        {"id": "sync-coupling-concern", "description": "At least one issue mentions synchronous HTTP coupling risk in the checkout flow", "type": "content_check"},
+        {"id": "verdict-is-revise", "description": "Final verdict is REVISE (the plan has real architectural gaps)", "type": "verdict_check"},
+        {"id": "structured-output", "description": "Output contains canonical issue IDs and clear verdict section", "type": "format_check"}
+      ]
+    }
+  ]
+}
