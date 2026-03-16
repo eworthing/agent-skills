@@ -442,10 +442,11 @@ def build_claude_cmd(args, session_id=None):
     prompt_text = read_prompt(args.prompt_file)
     cmd = [binary, "-p", prompt_text or ""]
 
-    if args.resume and session_id:
-        cmd.extend(["--resume", session_id])
-    else:
-        cmd.append("--no-session-persistence")
+    # Claude's -p mode is stateless — each round gets a self-contained
+    # prompt with all prior context compiled in, so resuming a prior
+    # session adds no value and wastes a round-trip when the ephemeral
+    # session no longer exists.
+    cmd.append("--no-session-persistence")
 
     cmd.extend(["--permission-mode", "plan"])
     cmd.extend(["--tools", "Read,Grep,Glob,WebSearch,WebFetch"])
