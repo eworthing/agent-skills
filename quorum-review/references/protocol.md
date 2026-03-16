@@ -3,7 +3,7 @@
 Read this file when you need detailed understanding of the review format,
 cross-critique protocol, or issue ledger schema beyond what's in SKILL.md.
 
-## Review contract (v2.2)
+## Review contract (v2.4)
 
 Each reviewer is prompted to produce a structured review with these sections:
 
@@ -55,6 +55,12 @@ updated review. The response tags are:
 
 Cross-critique responses are placed BEFORE the standard review sections.
 Every open issue should receive a response — silence means no data.
+
+**Important:** In rounds 2+, reviewers should use `[B-NEW]`/`[N-NEW]` tags for
+ALL new issues discovered during cross-critique. The orchestrator also scans
+standard `### Blocking Issues` and `### Non-Blocking Issues` sections for
+untagged new issues, but explicit tags ensure reliable registration and prevent
+ambiguity with restated existing issues.
 
 ## Issue ledger schema
 

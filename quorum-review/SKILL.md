@@ -1,7 +1,7 @@
 ---
 name: quorum-review
 description: >
-  Multi-provider consensus review system (v2.2). Assembles a panel of 3+ AI
+  Multi-provider consensus review system (v2.4). Assembles a panel of 3+ AI
   reviewers (Codex, Gemini CLI, Claude Code, Copilot CLI — or the same
   provider with different models) that deliberate on a plan through structured,
   anonymous cross-critique. Reviewers identify blocking and non-blocking issues
@@ -13,7 +13,7 @@ description: >
   'panel discussion', or wants diverse AI perspectives to converge.
 ---
 
-# Quorum Review — Multi-Provider Consensus (v2.2)
+# Quorum Review — Multi-Provider Consensus (v2.4)
 
 ## Why this exists
 
@@ -22,7 +22,7 @@ strengths. A single reviewer catches issues a single perspective misses, but a
 **panel** of reviewers that can see and respond to each other's feedback
 produces a deliberated consensus — not just parallel opinions.
 
-This skill extends the `peer-plan-review` pattern from 1 reviewer to N,
+This skill extends the single-reviewer pattern to N reviewers,
 adding a deliberation protocol where reviewers read and react to each other's
 feedback across rounds — anonymously, to prevent prestige bias.
 
@@ -88,7 +88,7 @@ may matter more than persona diversity for catching a broader range of issues.
 
 ## Available models
 
-Same as `peer-plan-review` — see the provider reference files.
+See the provider reference files in `references/`.
 
 | Provider | Aliases                      | Raw ID examples          | Default    |
 |----------|------------------------------|--------------------------|------------|
@@ -148,13 +148,14 @@ Parse `$ARGUMENTS` to extract the reviewer list and options.
 
 **Validation:**
 - Minimum 3 reviewers required. If fewer, ask: "Quorum review requires at
-  least 3 reviewers. Add more reviewers or use /peer-plan-review for a
-  single reviewer."
+  least 3 reviewers."
+- Default failure policy is `shrink-quorum`. If using `fail-open`, note that
+  failed reviewers still count toward the original N, which may make thresholds
+  harder to meet — display a **degraded panel** warning to the user.
 - Check each reviewer binary: `command -v <binary>`
-- Validate model aliases against the Available Models table (same rules as
-  peer-plan-review)
+- Validate model aliases against the Available Models table
 
-**Plan detection** — same as peer-plan-review:
+**Plan detection:**
 - Active plan file in current session
 - Plan pasted/dictated in conversation
 - File path referenced by user
@@ -171,8 +172,7 @@ Display panel summary:
 - Max rounds: 3 (configurable up to 5)
 ```
 
-Read `references/<provider>.md` for each unique provider in the panel
-(resolve relative to peer-plan-review's directory, since we share references).
+Read `references/<provider>.md` for each unique provider in the panel.
 
 If a `REVIEW.md` file exists in the current working directory, its contents
 are included in the review contract prompt as project-specific review guidelines.
@@ -215,6 +215,11 @@ python3 <skill-dir>/scripts/run_quorum.py \
   --ledger-file <TMPDIR>/qr-${QUORUM_ID}-ledger.json \
   [--effort LEVEL] [--timeout SECONDS] [--sequential]
 ```
+
+**Max-turns note:** Claude Code's default `--max-turns 10` may be insufficient
+for quorum reviews that require multiple rounds of orchestration. If the host
+agent exhausts its turn budget before completing, retry with a higher limit
+(e.g., `--max-turns 25`).
 
 ### Step 4: Read reviews, tally, & check derived verdict
 
@@ -392,10 +397,10 @@ Remove all temp files (explicit list, no glob):
 - Minimum 3 reviewers enforced — no exceptions
 - All deliberation context is ANONYMOUS (Reviewer A/B/C) — reveal true
   identities only in the final Step 7 report
-- Bundled scripts resolve relative to `peer-plan-review/scripts/` (shared
-  infrastructure)
-- The orchestrator script `run_quorum.py` lives in this skill's `scripts/`
-  directory
+- All scripts (`run_quorum.py`, `run_review.py`) and provider references
+  live in this skill's own directories — no external dependencies
+- If a reviewer fails 2 consecutive rounds, suggest swapping it for another
+  provider to unblock the panel
 - Default 3 rounds, maximum 5 — hard limit to prevent infinite loops
 - When a reviewer flips from REVISE to APPROVED (or vice versa), highlight
   the change in the round tally

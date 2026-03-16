@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """
-run_quorum.py — Orchestrator for multi-provider quorum review (v2.2).
+run_quorum.py — Orchestrator for multi-provider quorum review (v2.4).
 
-Launches multiple reviewer instances (via peer-plan-review's run_review.py),
+Launches multiple reviewer instances (via run_review.py),
 collects their verdicts, compiles the deliberation context for subsequent
 rounds, and reports consensus status.
+
+v2.4 changes:
+  - Standalone: run_review.py and provider references bundled in quorum-review
+  - Section-scan: new issues in Round 2+ standard sections (without [B-NEW]/[N-NEW])
+    are now detected and registered in the ledger (fixes issue leakage bug)
 
 v2.2 changes:
   - Verification execution wired into main() (was functions-only in v2.1)
@@ -107,7 +112,7 @@ def validate_panel(reviewers):
         print(
             f"Error: quorum requires at least {MIN_QUORUM_SIZE} reviewers, "
             f"got {len(panel)}. "
-            "Use /peer-plan-review for single-reviewer mode.",
+            "Add more reviewers to meet the minimum panel size.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -121,16 +126,15 @@ def validate_panel(reviewers):
 
 
 def _resolve_run_review():
-    """Locate peer-plan-review's run_review.py relative to this script."""
+    """Locate run_review.py in this skill's scripts/ directory."""
     this_dir = Path(__file__).resolve().parent
-    # quorum-review/scripts/ -> peer-plan-review/scripts/
-    candidate = this_dir.parent.parent / "peer-plan-review" / "scripts" / "run_review.py"
+    candidate = this_dir / "run_review.py"
     if candidate.exists():
         return str(candidate)
-    # Fallback: check PATH
+    # Not found — exit with guidance
     print(
-        "Error: cannot locate peer-plan-review/scripts/run_review.py. "
-        "Ensure peer-plan-review skill is installed alongside quorum-review.",
+        "Error: cannot locate scripts/run_review.py. "
+        "Ensure run_review.py is present in the quorum-review scripts/ directory.",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -649,6 +653,70 @@ def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
                 }
                 ledger["issues"].append(new_issue)
                 issue_map[canonical_id] = new_issue
+
+            # Section-scan: catch new issues in standard review sections
+            # that were NOT tagged with [B-NEW]/[N-NEW].  Exact-string
+            # dedup prevents double-counting when a reviewer uses both
+            # a tag and a standard section for the same issue.
+            existing_texts = {
+                i["owner_summary"].strip().lower()
+                for i in ledger["issues"]
+                if i.get("owner_summary")
+            }
+
+            for section_issue in parsed["blocking"]:
+                text = section_issue["text"].strip()
+                if text.lower() not in existing_texts:
+                    canonical_id = f"BLK-{ledger['next_blk_id']:03d}"
+                    ledger["next_blk_id"] += 1
+                    new_issue = {
+                        "id": canonical_id,
+                        "source_reviewer": idx,
+                        "source_label": "section-scan",
+                        "round_introduced": round_num,
+                        "severity": "blocking",
+                        "text": text,
+                        "status": "open",
+                        "resolved_round": None,
+                        "merged_from": [],
+                        "proposed_by": idx,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 1,
+                        "dispute_count": 0,
+                        "owner_summary": text,
+                    }
+                    ledger["issues"].append(new_issue)
+                    issue_map[canonical_id] = new_issue
+                    existing_texts.add(text.lower())
+
+            for section_issue in parsed["non_blocking"]:
+                text = section_issue["text"].strip()
+                if text.lower() not in existing_texts:
+                    canonical_id = f"NB-{ledger['next_nb_id']:03d}"
+                    ledger["next_nb_id"] += 1
+                    new_issue = {
+                        "id": canonical_id,
+                        "source_reviewer": idx,
+                        "source_label": "section-scan",
+                        "round_introduced": round_num,
+                        "severity": "non_blocking",
+                        "text": text,
+                        "status": "open",
+                        "resolved_round": None,
+                        "merged_from": [],
+                        "proposed_by": idx,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 1,
+                        "dispute_count": 0,
+                        "owner_summary": text,
+                    }
+                    ledger["issues"].append(new_issue)
+                    issue_map[canonical_id] = new_issue
+                    existing_texts.add(text.lower())
 
             if parsed["verdict"] == "APPROVED":
                 approved_count += 1
@@ -1200,7 +1268,7 @@ def tally_verdicts(verdicts, threshold_name, original_panel_size=None,
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Quorum review orchestrator (v2.2)")
+    p = argparse.ArgumentParser(description="Quorum review orchestrator (v2.4)")
     p.add_argument(
         "--reviewers",
         required=True,

@@ -384,11 +384,13 @@ class TestPromptFormatting(unittest.TestCase):
 class TestPathResolution(unittest.TestCase):
     """Test 31: run_review.py path resolution."""
 
-    def test_resolve_finds_peer_plan_review(self):
+    def test_resolve_finds_local_run_review(self):
         from run_quorum import _resolve_run_review
         path = _resolve_run_review()
         self.assertTrue(Path(path).exists(), f"Resolved path does not exist: {path}")
         self.assertTrue(path.endswith("run_review.py"))
+        # Must resolve within quorum-review/scripts/, not peer-plan-review
+        self.assertIn("quorum-review", path)
 
 
 class TestTallySummaryFormat(unittest.TestCase):
@@ -2347,6 +2349,166 @@ class TestMainOrchestration(unittest.TestCase):
                 with self.assertRaises(SystemExit) as cm:
                     run_quorum.main()
                 self.assertEqual(cm.exception.code, EXIT_INDETERMINATE)
+
+
+# ===========================================================================
+# v2.4 tests: Round 2+ section-scan issue leakage fix
+# ===========================================================================
+
+
+class TestRound2SectionScan(unittest.TestCase):
+    """Tests for the section-scan block that catches new issues in standard
+    review sections (### Blocking Issues / ### Non-Blocking Issues) without
+    [B-NEW]/[N-NEW] tags in rounds 2+."""
+
+    def _base_ledger(self):
+        return {
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "issues": [{
+                "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
+                "round_introduced": 1, "severity": "blocking",
+                "text": "Existing auth issue", "status": "open",
+                "resolved_round": None, "merged_from": [],
+                "proposed_by": 1, "endorsed_by": [], "refined_by": [],
+                "disputed_by": [],
+                "support_count": 1, "dispute_count": 0,
+                "owner_summary": "Existing auth issue",
+            }],
+            "merges": [],
+            "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
+                             "nb_open": 0, "approved_count": 0}},
+        }
+
+    def test_round2_section_scan_catches_untagged_issues(self):
+        """New issues in ### Blocking Issues without [B-NEW] tags get registered."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "scan01"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+            ledger = self._base_ledger()
+
+            # Reviewer 1: agrees with BLK-001, AND raises a new blocking issue
+            # in the standard section WITHOUT using [B-NEW]
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "[AGREE BLK-001]\n\n"
+                "### Blocking Issues\n"
+                "- [B1] Missing rate limiting on public API\n\n"
+                "### Non-Blocking Issues\nNone\n\n"
+                "VERDICT: REVISE\n"
+            )
+            # Reviewer 2: just agrees
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            # Reviewer 3: approves
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+
+            # The new issue should have been caught by section-scan
+            new_issues = [
+                i for i in updated["issues"]
+                if i["source_label"] == "section-scan"
+            ]
+            self.assertEqual(len(new_issues), 1)
+            self.assertIn("rate limiting", new_issues[0]["text"])
+            self.assertEqual(new_issues[0]["severity"], "blocking")
+            self.assertEqual(new_issues[0]["round_introduced"], 2)
+
+    def test_round2_section_scan_dedup(self):
+        """Same text via [B-NEW] and standard section → only one entry."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "scan02"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+            ledger = self._base_ledger()
+
+            # Reviewer 1: uses BOTH [B-NEW] AND puts it in ### Blocking Issues
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "[AGREE BLK-001]\n"
+                "[B-NEW] Missing rate limiting on public API\n\n"
+                "### Blocking Issues\n"
+                "- [B1] Missing rate limiting on public API\n\n"
+                "### Non-Blocking Issues\nNone\n\n"
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+
+            # Count issues about rate limiting — should be exactly 1
+            rate_limit_issues = [
+                i for i in updated["issues"]
+                if "rate limiting" in i["text"].lower()
+            ]
+            self.assertEqual(len(rate_limit_issues), 1,
+                             f"Expected 1 rate-limiting issue, got {len(rate_limit_issues)}: "
+                             f"{[i['id'] + ':' + i['source_label'] for i in rate_limit_issues]}")
+
+    def test_round2_section_scan_ignores_existing(self):
+        """Standard section issue matching existing ledger entry → not re-added."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "scan03"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+            ledger = self._base_ledger()
+
+            # Reviewer 1: restates the existing issue in their blocking section
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "[AGREE BLK-001]\n\n"
+                "### Blocking Issues\n"
+                "- [B1] Existing auth issue\n\n"
+                "### Non-Blocking Issues\nNone\n\n"
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+
+            # Should still have exactly 1 issue (the original BLK-001)
+            self.assertEqual(len(updated["issues"]), 1)
+            self.assertEqual(updated["issues"][0]["id"], "BLK-001")
+
+    def test_round2_section_scan_catches_untagged_non_blocking(self):
+        """New non-blocking issues in ### Non-Blocking Issues without [N-NEW] get registered."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "scan04"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+            ledger = self._base_ledger()
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "[AGREE BLK-001]\n\n"
+                "### Blocking Issues\nNone\n\n"
+                "### Non-Blocking Issues\n"
+                "- [N1] Consider adding request logging\n\n"
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+
+            nb_scan = [
+                i for i in updated["issues"]
+                if i["source_label"] == "section-scan" and i["severity"] == "non_blocking"
+            ]
+            self.assertEqual(len(nb_scan), 1)
+            self.assertIn("request logging", nb_scan[0]["text"])
+            self.assertEqual(nb_scan[0]["round_introduced"], 2)
 
 
 if __name__ == "__main__":
