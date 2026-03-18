@@ -41,6 +41,7 @@ Examples:
 - `/peer-plan-review codex`
 - `/peer-plan-review claude opus high`
 - `/peer-plan-review gemini flash medium`
+- `/peer-plan-review codex gpt-5.4-mini high`
 - `/peer-plan-review copilot gpt-5.4 xhigh`
 
 ## Available models
@@ -49,8 +50,8 @@ Examples:
 |----------|------------------------------|--------------------------|------------|
 | claude   | sonnet, opus, haiku          | claude-opus-4-6          | (provider) |
 | gemini   | auto, pro, flash, flash-lite | gemini-3-pro-preview     | auto       |
-| codex    | (none — use raw IDs)         | o3, o4-mini              | (provider) |
-| copilot  | (none — use raw IDs)         | gpt-5.4                  | (provider) |
+| codex    | (none — use raw IDs)         | o3, o4-mini, gpt-5.4, gpt-5.4-mini | (provider) |
+| copilot  | (none — use raw IDs)         | gpt-5.4, gpt-5.4-mini              | (provider) |
 
 If the user provides a model not in this table, warn that it may be invalid
 and ask for confirmation. Unknown names are still passed through — they may
@@ -174,7 +175,7 @@ tool calls extensively, increase with `--timeout 900` or higher.
 Read the session file to get the actual model and effort used. The adapter
 extracts metadata from the reviewer's structured output:
 
-- `model` — actual model used (e.g., `"gpt-5.4"`, `"gemini-3-pro-preview"`)
+- `model` — actual model used (e.g., `"gpt-5.4-mini"`, `"gemini-3-pro-preview"`)
 - `effort` — actual effort level, with fallback chain:
   detected (from reviewer output) > requested (`--effort` arg) > provider default
 - `effort_source` — one of `"detected"`, `"requested"`, `"provider_default"`
