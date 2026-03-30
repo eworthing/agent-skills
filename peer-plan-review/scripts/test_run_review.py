@@ -2,13 +2,16 @@
 """
 test_run_review.py — Deterministic test suite for run_review.py.
 
-Tier 1: 11 local tests that exercise pure script logic (no external CLIs).
+Tier 1: Local tests that exercise pure script logic (no external CLIs).
 Tier 2: Optional self-checks for installed provider CLIs.
 
 Run:  python3 scripts/test_run_review.py
 """
 
+import argparse
+import json
 import os
+import signal
 import shutil
 import stat
 import subprocess
@@ -40,6 +43,26 @@ def run_script(*extra_args):
         timeout=30,
     )
     return result.returncode, result.stdout, result.stderr
+
+
+def make_args(**overrides):
+    """Create a Namespace matching run_review.py argument names."""
+    data = {
+        "reviewer": "claude",
+        "plan_file": None,
+        "prompt_file": None,
+        "output_file": None,
+        "session_file": None,
+        "events_file": None,
+        "model": None,
+        "effort": None,
+        "resume": False,
+        "timeout": 600,
+        "self_check": False,
+        "list_models": False,
+    }
+    data.update(overrides)
+    return argparse.Namespace(**data)
 
 
 class TestListModels(unittest.TestCase):
@@ -292,6 +315,115 @@ class TestOutputParsing(unittest.TestCase):
             Path(tmp_path).unlink()
 
 
+class TestCommandBuilders(unittest.TestCase):
+    """Direct unit coverage for provider-specific command construction."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-builder-")
+        self.prompt_file = Path(self.tmpdir.name) / "prompt.md"
+        self.prompt_file.write_text("Review this plan carefully.\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def test_build_codex_cmd_fresh_exec_maps_effort_and_sandbox(self):
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file="/tmp/review.md",
+            model="gpt-5.4",
+            effort="high",
+        )
+
+        cmd = run_review.build_codex_cmd(args)
+
+        self.assertEqual(cmd[:5], ["codex", "exec", "--sandbox", "read-only", "-c"])
+        self.assertIn("approval_mode=never", cmd)
+        self.assertIn("--json", cmd)
+        self.assertIn("--output-last-message", cmd)
+        self.assertIn("/tmp/review.md", cmd)
+        self.assertIn("-m", cmd)
+        self.assertIn("gpt-5.4", cmd)
+        self.assertIn("model_reasoning_effort=high", cmd)
+        self.assertEqual(cmd[-1], "-")
+        self.assertNotIn("--resume", cmd)
+
+    def test_build_gemini_cmd_resume_uses_prompt_flag(self):
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            model="flash",
+            resume=True,
+        )
+
+        cmd = run_review.build_gemini_cmd(args, session_id="sess-123")
+
+        self.assertEqual(cmd[:3], ["gemini", "--resume", "sess-123"])
+        self.assertIn("--sandbox", cmd)
+        self.assertIn("--approval-mode", cmd)
+        self.assertIn("yolo", cmd)
+        self.assertIn("--output-format", cmd)
+        self.assertIn("json", cmd)
+        self.assertIn("-m", cmd)
+        self.assertIn("flash", cmd)
+        self.assertIn("-p", cmd)
+        self.assertIn("Review this plan carefully.\n", cmd)
+
+    def test_build_claude_cmd_sets_reviewer_system_prompt_and_effort(self):
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            model="opus",
+            effort="xhigh",
+        )
+
+        cmd = run_review.build_claude_cmd(args)
+
+        self.assertEqual(cmd[:3], ["claude", "-p", "Review this plan carefully.\n"])
+        self.assertIn("--no-session-persistence", cmd)
+        self.assertIn("--permission-mode", cmd)
+        self.assertIn("plan", cmd)
+        self.assertIn("--tools", cmd)
+        self.assertIn("--allowedTools", cmd)
+        self.assertIn("--output-format", cmd)
+        self.assertIn("--max-turns", cmd)
+        self.assertIn("--append-system-prompt", cmd)
+        self.assertIn(
+            "You are a code reviewer. Analyze the plan and provide feedback. "
+            "End with VERDICT: APPROVED or VERDICT: REVISE on the last line.",
+            cmd,
+        )
+        self.assertIn("--model", cmd)
+        self.assertIn("opus", cmd)
+        self.assertIn("--effort", cmd)
+        self.assertIn("max", cmd)
+
+    def test_build_copilot_cmd_sets_headless_review_flags(self):
+        args = make_args(
+            reviewer="copilot",
+            prompt_file=str(self.prompt_file),
+            model="gpt-5.4",
+            effort="medium",
+            resume=True,
+        )
+
+        cmd = run_review.build_copilot_cmd(args, session_id="copilot-session")
+
+        self.assertEqual(cmd[:4], ["copilot", "-p", "Review this plan carefully.\n", "-s"])
+        self.assertIn("--resume=copilot-session", cmd)
+        self.assertIn("--no-ask-user", cmd)
+        self.assertIn("--yolo", cmd)
+        self.assertIn("--deny-tool=write,shell,memory", cmd)
+        self.assertIn("--no-custom-instructions", cmd)
+        self.assertIn("--no-auto-update", cmd)
+        self.assertIn("--output-format", cmd)
+        self.assertIn("json", cmd)
+        self.assertIn("--model", cmd)
+        self.assertIn("gpt-5.4", cmd)
+        self.assertIn("--reasoning-effort", cmd)
+        self.assertIn("medium", cmd)
+
+
 class TestSelfCheckUnit(unittest.TestCase):
     """Pure unit tests for self_check edge cases."""
 
@@ -395,6 +527,103 @@ class TestPlatformHelpers(unittest.TestCase):
         ):
             run_review._kill_tree(mock_proc)
             mock_proc.wait.assert_called()
+
+
+class TestRunReviewExecution(unittest.TestCase):
+    """Execution-path unit tests that stub subprocess behavior."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-run-review-")
+        self.prompt_file = Path(self.tmpdir.name) / "prompt.md"
+        self.prompt_file.write_text("Review this plan carefully.\n", encoding="utf-8")
+        self.output_file = Path(self.tmpdir.name) / "review.json"
+        self.session_file = Path(self.tmpdir.name) / "session.json"
+        self.events_file = Path(self.tmpdir.name) / "events.jsonl"
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    @staticmethod
+    def _proc(returncode, stdout="", stderr=""):
+        proc = mock.MagicMock()
+        proc.communicate.return_value = (stdout, stderr)
+        proc.returncode = returncode
+        proc.poll.return_value = returncode
+        return proc
+
+    def test_run_review_gemini_effort_overlay_preserves_existing_settings(self):
+        source_dir = Path(self.tmpdir.name) / "source-config"
+        source_dir.mkdir()
+        (source_dir / "settings.json").write_text(
+            json.dumps({"theme": "dark", "thinkingConfig": {"thinkingBudget": 1}}),
+            encoding="utf-8",
+        )
+        overlay_dir = Path(self.tmpdir.name) / "overlay-config"
+        overlay_dir.mkdir()
+
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            effort="high",
+        )
+
+        proc = self._proc(0, stdout='{"response":"ok"}')
+        with (
+            mock.patch.dict(os.environ, {"GEMINI_CONFIG_DIR": str(source_dir)}, clear=False),
+            mock.patch("run_review.tempfile.mkdtemp", return_value=str(overlay_dir)),
+            mock.patch("run_review.subprocess.Popen", return_value=proc) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="gemini-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+            mock.patch("run_review.shutil.rmtree"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        settings = json.loads((overlay_dir / "settings.json").read_text(encoding="utf-8"))
+        self.assertEqual(settings["theme"], "dark")
+        self.assertEqual(settings["thinkingConfig"]["thinkingBudget"], 16384)
+        popen_env = mock_popen.call_args.kwargs["env"]
+        self.assertEqual(popen_env["GEMINI_CONFIG_DIR"], str(overlay_dir))
+
+    def test_run_review_resume_failure_retries_once_without_resume(self):
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
+        )
+
+        first_proc = self._proc(2, stdout="", stderr="resume failed")
+        second_proc = self._proc(1, stdout="", stderr="fresh exec failed")
+
+        with (
+            mock.patch(
+                "run_review.load_session",
+                return_value={"session_id": "resume-session", "round": 1, "model": "prior-model"},
+            ),
+            mock.patch("run_review.subprocess.Popen", side_effect=[first_proc, second_proc]) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        self.assertFalse(args.resume)
+        self.assertEqual(mock_popen.call_count, 2)
+        first_cmd = mock_popen.call_args_list[0].args[0]
+        second_cmd = mock_popen.call_args_list[1].args[0]
+        self.assertIn("--resume", first_cmd)
+        self.assertNotIn("--resume", second_cmd)
 
 
 if __name__ == "__main__":

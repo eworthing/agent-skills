@@ -92,6 +92,9 @@ snapshot as immutable for the duration of the round.
 
 Write a prompt that:
 
+- uses this simple order:
+  - verdict contract
+  - full implementation plan
 - asks for a review of the full implementation plan
 - focuses on sequencing, hidden assumptions, missing validation, rollback, and
   dependency gaps
@@ -112,6 +115,10 @@ python3 <skill-dir>/scripts/run_review.py \
   [--effort LEVEL] \
   [--timeout SECONDS]
 ```
+
+Do not pass `--resume` on round 1.
+Pass only the portable `--effort` value to `run_review.py`; the adapter maps it
+to each provider's native flags or settings internally.
 
 Default timeout is 600 seconds. Increase it for large plans or slower reviewers.
 
