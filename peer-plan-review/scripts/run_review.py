@@ -384,7 +384,7 @@ def build_codex_cmd(args, session_id=None):
     cmd = [binary, "exec"]
 
     if args.resume and session_id:
-        cmd.extend(["--resume", str(session_id)])
+        cmd.extend(["resume", str(session_id)])
         # --sandbox is NOT available on resume; original session policy applies
         cmd.extend(["-c", "approval_mode=never"])
     else:
@@ -427,8 +427,7 @@ def build_gemini_cmd(args, session_id=None):
 
     # Prompt via -p flag (required for headless)
     prompt_text = read_prompt(args.prompt_file)
-    if prompt_text:
-        cmd.extend(["-p", prompt_text])
+    cmd.extend(["-p", prompt_text or ""])
 
     return cmd
 

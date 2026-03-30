@@ -348,6 +348,22 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertEqual(cmd[-1], "-")
         self.assertNotIn("--resume", cmd)
 
+    def test_build_codex_cmd_resume_uses_resume_subcommand(self):
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file="/tmp/review.md",
+            resume=True,
+        )
+
+        cmd = run_review.build_codex_cmd(args, session_id="codex-session")
+
+        self.assertEqual(cmd[:4], ["codex", "exec", "resume", "codex-session"])
+        self.assertIn("approval_mode=never", cmd)
+        self.assertIn("--json", cmd)
+        self.assertNotIn("--sandbox", cmd)
+        self.assertEqual(cmd[-1], "-")
+
     def test_build_gemini_cmd_resume_uses_prompt_flag(self):
         args = make_args(
             reviewer="gemini",
@@ -368,6 +384,17 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("flash", cmd)
         self.assertIn("-p", cmd)
         self.assertIn("Review this plan carefully.\n", cmd)
+
+    def test_build_gemini_cmd_keeps_headless_flag_with_missing_prompt_text(self):
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(Path(self.tmpdir.name) / "missing-prompt.md"),
+        )
+
+        cmd = run_review.build_gemini_cmd(args)
+
+        self.assertIn("-p", cmd)
+        self.assertEqual(cmd[-1], "")
 
     def test_build_claude_cmd_sets_reviewer_system_prompt_and_effort(self):
         args = make_args(
