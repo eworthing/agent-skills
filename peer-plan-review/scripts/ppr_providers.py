@@ -42,6 +42,52 @@ BINARIES = {
     "copilot": "copilot",
 }
 
+# ---------------------------------------------------------------------------
+# Provider capability table
+# ---------------------------------------------------------------------------
+PROVIDER_CAPS = {
+    "codex": {
+        "binary": "codex",
+        "prompt_mode": "stdin",
+        "output_mode": "file",
+        "model_flag": "-m",
+        "effort_flag": "-c model_reasoning_effort={level}",
+        "resume_flag_style": "subcommand",
+        "resume_supported": True,
+        "safety_flags": ["--sandbox", "read-only", "-c", "approval_mode=never"],
+    },
+    "gemini": {
+        "binary": "gemini",
+        "prompt_mode": "flag",
+        "output_mode": "stdout",
+        "model_flag": "-m",
+        "effort_flag": "config_overlay",
+        "resume_flag_style": "flag",
+        "resume_supported": True,
+        "safety_flags": ["--sandbox", "--approval-mode", "yolo"],
+    },
+    "claude": {
+        "binary": "claude",
+        "prompt_mode": "flag",
+        "output_mode": "stdout",
+        "model_flag": "--model",
+        "effort_flag": "--effort {level}",
+        "resume_flag_style": "flag",
+        "resume_supported": True,
+        "safety_flags": ["--permission-mode", "plan"],
+    },
+    "copilot": {
+        "binary": "copilot",
+        "prompt_mode": "flag",
+        "output_mode": "stdout",
+        "model_flag": "--model",
+        "effort_flag": "--reasoning-effort {level}",
+        "resume_flag_style": "flag_eq",
+        "resume_supported": True,
+        "safety_flags": ["--no-ask-user", "--yolo", "--deny-tool=write,shell,memory"],
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Provider command builders

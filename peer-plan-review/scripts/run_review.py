@@ -9,6 +9,7 @@ Supports exec, resume, session tracking, and self-check.
 
 import argparse
 import contextlib
+import copy
 import json
 import os
 import shutil
@@ -26,6 +27,7 @@ from ppr_providers import (  # noqa: F401
     _EFFORT_DEFAULTS,
     MODEL_ALIASES,
     BINARIES,
+    PROVIDER_CAPS,
     build_codex_cmd,
     build_gemini_cmd,
     build_claude_cmd,
@@ -36,6 +38,8 @@ from ppr_io import (  # noqa: F401
     load_session,
     save_session,
     extract_text_from_output,
+    validate_prompt_file,
+    probe_writable,
 )
 from ppr_metadata import (  # noqa: F401
     extract_metadata,
@@ -43,6 +47,7 @@ from ppr_metadata import (  # noqa: F401
     extract_session_id_copilot,
     _parse_codex_session_id,
     _codex_session_files,
+    compute_plan_metadata,
 )
 from ppr_log import EventLogger  # noqa: F401
 
@@ -72,6 +77,8 @@ def parse_args():
         action="store_true",
         help="Print known model aliases for --reviewer and exit",
     )
+    p.add_argument("--error-log", default=None, help="Path to append-only JSONL error/event log")
+    p.add_argument("--review-id", default=None, help="Review ID for log correlation across rounds")
     return p.parse_args()
 
 
@@ -183,33 +190,38 @@ def _signal_handler(signum, _frame):
 # ---------------------------------------------------------------------------
 
 
-def run_review(args):
+def run_review(args, logger=None):
     """Execute the review command for the selected provider."""
     global _active_proc
 
+    if logger is None:
+        logger = EventLogger()
+
     reviewer = args.reviewer
-    session = load_session(args.session_file) if args.resume else {}
-    session_id = session.get("session_id") if args.resume else None
+    resume_requested = args.resume  # snapshot — args is never mutated
+    use_resume = resume_requested
+    fallback_used = False
 
-    # Build provider-specific command
-    builders = {
-        "codex": build_codex_cmd,
-        "gemini": build_gemini_cmd,
-        "claude": build_claude_cmd,
-        "copilot": build_copilot_cmd,
-    }
-    cmd = builders[reviewer](args, session_id)
+    session = load_session(args.session_file) if use_resume else {}
+    session_id = session.get("session_id") if use_resume else None
 
-    # Build environment
+    logger.log(
+        "execution_start",
+        provider=reviewer,
+        context={
+            "model": args.model,
+            "effort": args.effort,
+            "resume": resume_requested,
+            "session_id": session_id,
+        },
+    )
+
+    # Build environment (shared across attempts)
     env = os.environ.copy()
-
-    # Claude-specific env vars
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
 
     # Gemini effort via temp settings overlay
-    # Clone the real config dir so auth, extensions, and other state survive,
-    # then overlay the effort-specific settings.json.
     gemini_config_dir = None
     if reviewer == "gemini" and args.effort:
         budget = EFFORT_MAP["gemini"].get(args.effort)
@@ -219,10 +231,8 @@ def run_review(args):
                 "GEMINI_CONFIG_DIR",
                 str(Path("~/.gemini").expanduser()),
             )
-            # Copy existing config if present (auth, extensions, etc.)
             if Path(source_dir).is_dir():
                 shutil.copytree(source_dir, gemini_config_dir, dirs_exist_ok=True)
-            # Overlay effort settings (merges into existing settings.json)
             settings_path = Path(gemini_config_dir) / "settings.json"
             try:
                 existing = {}
@@ -239,74 +249,124 @@ def run_review(args):
             except OSError as e:
                 print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
 
-    # Prepare stdin for Codex (prompt via stdin)
+    # Prepare stdin for Codex
     stdin_data = None
     if reviewer == "codex":
         stdin_data = read_prompt(args.prompt_file)
 
-    # Snapshot Codex session files before exec for race-safe ID extraction
+    # Snapshot Codex session files before exec
     codex_sessions_before = None
     if reviewer == "codex":
         codex_sessions_before = _codex_session_files()
 
-    # Set up signal handlers for cleanup
+    # Set up signal handlers
     prev_sigterm = signal.getsignal(signal.SIGTERM)
     prev_sigint = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGTERM, _signal_handler)
     signal.signal(signal.SIGINT, _signal_handler)
 
     try:
-        print(f"Running: {reviewer} review...", file=sys.stderr)
+        # Two-attempt loop: at most one resume attempt + one fresh attempt
+        returncode = 1
+        for attempt in range(2):
+            if attempt == 0 and use_resume and session_id:
+                logger.log("resume_attempted", provider=reviewer, context={"session_id": session_id})
 
-        # Truncate output file so stale data from a prior round doesn't
-        # make has_output think the current round produced output.
-        if args.output_file and Path(args.output_file).exists():
-            Path(args.output_file).write_text("")
+            # Build provider-specific command using use_resume (not args.resume)
+            builders = {
+                "codex": build_codex_cmd,
+                "gemini": build_gemini_cmd,
+                "claude": build_claude_cmd,
+                "copilot": build_copilot_cmd,
+            }
+            # Create a lightweight namespace for the builder that reflects
+            # current resume state without mutating the original args.
+            build_args = copy.copy(args)
+            build_args.resume = use_resume
+            cmd = builders[reviewer](build_args, session_id)
 
-        if stdin_data is not None:
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                errors="replace",
-                env=env,
-                **_popen_session_kwargs(),
-            )
-        else:
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                errors="replace",
-                env=env,
-                **_popen_session_kwargs(),
-            )
-        _active_proc = proc
+            print(f"Running: {reviewer} review...", file=sys.stderr)
 
-        try:
-            stdout, stderr = proc.communicate(input=stdin_data, timeout=args.timeout)
-            returncode = proc.returncode
-        except subprocess.TimeoutExpired:
-            _kill_tree(proc)
-            # Drain pipes to avoid FD leak (process is already dead)
-            proc.communicate()
-            print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
-            return 1
+            # Truncate output file so stale data doesn't persist
+            if args.output_file and Path(args.output_file).exists():
+                Path(args.output_file).write_text("")
 
-        # Write stdout to output file for non-Codex providers
-        # (Codex uses --output-last-message)
-        if reviewer != "codex" and stdout and args.output_file:
-            with Path(args.output_file).open("w", encoding="utf-8") as f:
-                f.write(stdout)
+            if stdin_data is not None:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=env,
+                    **_popen_session_kwargs(),
+                )
+            else:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    encoding="utf-8",
+                    errors="replace",
+                    env=env,
+                    **_popen_session_kwargs(),
+                )
+            _active_proc = proc
 
-        # Write Codex JSONL events to events file
-        if reviewer == "codex" and stdout and args.events_file:
-            with Path(args.events_file).open("w", encoding="utf-8") as f:
-                f.write(stdout)
+            try:
+                stdout, stderr = proc.communicate(input=stdin_data, timeout=args.timeout)
+                returncode = proc.returncode
+            except subprocess.TimeoutExpired:
+                _kill_tree(proc)
+                proc.communicate()
+                print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
+                logger.log("provider_timeout", provider=reviewer, context={"timeout": args.timeout})
+                return 1
+
+            # Write stdout to output file for non-Codex providers
+            if reviewer != "codex" and stdout and args.output_file:
+                with Path(args.output_file).open("w", encoding="utf-8") as f:
+                    f.write(stdout)
+
+            # Write Codex JSONL events to events file
+            if reviewer == "codex" and stdout and args.events_file:
+                with Path(args.events_file).open("w", encoding="utf-8") as f:
+                    f.write(stdout)
+
+            # Check for resume fallback condition
+            if returncode != 0:
+                print(f"Reviewer exited with code {returncode}", file=sys.stderr)
+                if stderr:
+                    print(stderr, file=sys.stderr)
+
+                output_path = Path(args.output_file) if args.output_file else None
+                has_output = output_path and output_path.exists() and output_path.stat().st_size > 0
+
+                if attempt == 0 and use_resume and session_id and not has_output:
+                    print("Resume failed, falling back to fresh exec...", file=sys.stderr)
+                    logger.log(
+                        "resume_fallback",
+                        provider=reviewer,
+                        error=f"Resume failed with exit code {returncode}",
+                        context={"session_id": session_id, "has_output": False},
+                    )
+                    use_resume = False
+                    session_id = None
+                    fallback_used = True
+                    continue  # retry as fresh exec
+                else:
+                    logger.log(
+                        "provider_error",
+                        provider=reviewer,
+                        error=f"Exit code {returncode}",
+                        context={"stderr": (stderr or "")[:500]},
+                    )
+
+            break  # success or non-recoverable failure
+
+        # --- Post-execution: extract metadata and save session ---
 
         # Extract session ID
         new_session_id = None
@@ -314,9 +374,6 @@ def run_review(args):
         if reviewer == "codex":
             after = _codex_session_files()
             new_files = after - (codex_sessions_before or set())
-            # Scan all new files for ones whose cwd matches ours.
-            # If multiple match, same-cwd concurrency is ambiguous —
-            # skip metadata extraction rather than risk cross-contamination.
             cwd_matches = []
             for candidate in sorted(new_files, key=lambda p: Path(p).stat().st_mtime, reverse=True):
                 parsed_id = _parse_codex_session_id(candidate)
@@ -325,19 +382,15 @@ def run_review(args):
             if len(cwd_matches) == 1:
                 codex_session_path, new_session_id = cwd_matches[0]
             elif len(cwd_matches) > 1:
-                # Ambiguous: multiple same-cwd sessions created during
-                # this run. Skip both session_id and metadata extraction
-                # to avoid cross-contamination and resume poisoning.
                 print(
                     "Warning: multiple concurrent Codex sessions "
                     "detected in same cwd; skipping session and "
                     "metadata extraction",
                     file=sys.stderr,
                 )
-            # On resume, no new file is created — find the existing one
-            if not codex_session_path and args.resume and session_id:
+            if not codex_session_path and resume_requested and session.get("session_id"):
                 for sf in codex_sessions_before or set():
-                    if _parse_codex_session_id(sf) == session_id:
+                    if _parse_codex_session_id(sf) == session.get("session_id"):
                         codex_session_path = sf
                         break
         elif reviewer == "copilot":
@@ -345,7 +398,7 @@ def run_review(args):
         elif reviewer in ("gemini", "claude"):
             new_session_id = extract_session_id_json(args.output_file)
 
-        # Extract model metadata from structured output (before text rewrite)
+        # Extract model metadata (before text rewrite)
         meta = extract_metadata(
             args.output_file, args.events_file, reviewer, codex_session_file=codex_session_path
         )
@@ -354,20 +407,16 @@ def run_review(args):
         if reviewer in ("claude", "gemini", "copilot"):
             extract_text_from_output(args.output_file, reviewer)
 
-        # Resolve actual model: prefer detected > session (prior round)
-        # > user-specified > "default"
+        # Resolve actual model and effort
         actual_model = meta.get("model") or session.get("model") or args.model or "default"
-
-        # Save session metadata
-        # Effort: detected (from reviewer output) is the canonical value
-        # because it reflects what was actually used. Fall back to
-        # user-requested, then provider default.
         actual_effort = (
             meta.get("effort") or args.effort or _EFFORT_DEFAULTS.get(reviewer, "default")
         )
         round_num = session.get("round", 0) + 1
+
+        # Build session data with resume metadata
         session_data = {
-            "session_id": new_session_id or session_id,
+            "session_id": new_session_id or session.get("session_id"),
             "reviewer": reviewer,
             "model": actual_model,
             "model_requested": args.model or "default",
@@ -381,43 +430,45 @@ def run_review(args):
                 else "provider_default"
             ),
             "round": round_num,
+            "resume_requested": resume_requested,
+            "resume_supported": PROVIDER_CAPS.get(reviewer, {}).get("resume_supported", False),
+            "resume_attempted": resume_requested and session.get("session_id") is not None,
+            "resume_fallback_used": fallback_used,
+            "resume_reason": (
+                "fallback_to_fresh" if fallback_used
+                else "session_found" if resume_requested and session.get("session_id")
+                else "no_session_id" if resume_requested
+                else "fresh_exec"
+            ),
         }
         if meta.get("thinking_tokens") is not None:
             session_data["thinking_tokens"] = meta["thinking_tokens"]
+        if args.error_log:
+            session_data["error_log"] = args.error_log
+
+        # Plan-file metadata
+        plan_meta = compute_plan_metadata(args.plan_file)
+        if plan_meta:
+            session_data.update(plan_meta)
+
         save_session(args.session_file, session_data)
 
-        if returncode != 0:
-            print(f"Reviewer exited with code {returncode}", file=sys.stderr)
-            if stderr:
-                print(stderr, file=sys.stderr)
-
-            # Only retry as fresh exec when resume was requested AND
-            # no output was produced (i.e. the session itself failed to
-            # resume, not a crash/warning during review).  If output
-            # exists, the provider ran — retrying would duplicate the
-            # review and waste tokens.
-            output_path = Path(args.output_file) if args.output_file else None
-            has_output = output_path and output_path.exists() and output_path.stat().st_size > 0
-            if args.resume and session_id and not has_output:
-                print("Resume failed, falling back to fresh exec...", file=sys.stderr)
-                args.resume = False
-                return run_review(args)
-
-            return returncode
-
-        return 0
+        if returncode == 0:
+            logger.log("execution_complete", provider=reviewer, context={"returncode": 0})
+        return returncode
 
     except FileNotFoundError:
         print(f"Binary not found: {BINARIES[reviewer]}", file=sys.stderr)
+        logger.log("binary_not_found", provider=reviewer, error=BINARIES[reviewer])
         return 1
     except OSError as e:
         print(f"Execution error: {e}", file=sys.stderr)
+        logger.log("provider_error", provider=reviewer, error=str(e))
         return 1
     finally:
         _active_proc = None
         signal.signal(signal.SIGTERM, prev_sigterm)
         signal.signal(signal.SIGINT, prev_sigint)
-        # Clean up Gemini temp config
         if gemini_config_dir:
             shutil.rmtree(gemini_config_dir, ignore_errors=True)
 
@@ -491,32 +542,32 @@ def main():
         print("--prompt-file is required", file=sys.stderr)
         sys.exit(1)
 
-    # Validate input files exist
-    for arg_name, fpath in [("--plan-file", args.plan_file), ("--prompt-file", args.prompt_file)]:
-        if fpath and not Path(fpath).exists():
-            print(f"Error: {arg_name} not found: {fpath}", file=sys.stderr)
-            sys.exit(1)
+    # Validate --error-log requires --review-id
+    if args.error_log and not args.review_id:
+        print("Error: --review-id is required when --error-log is set", file=sys.stderr)
+        sys.exit(1)
 
-    # Validate output paths: directory must exist, and either the file
-    # already exists and is writable, or the directory is writable (so
-    # the file can be created).  On POSIX, writing to an existing file
-    # depends on file permissions, not directory permissions.
+    # Validate input files
+    if args.plan_file and not Path(args.plan_file).exists():
+        print(f"Error: --plan-file not found: {args.plan_file}", file=sys.stderr)
+        sys.exit(1)
+
+    # Strict prompt validation: exists, readable, UTF-8, non-empty
+    ok, err = validate_prompt_file(args.prompt_file)
+    if not ok:
+        print(f"Error: --prompt-file {err}", file=sys.stderr)
+        sys.exit(1)
+
+    # Validate output paths with real write probes
     for arg_name, fpath in [
         ("--output-file", args.output_file),
         ("--session-file", args.session_file),
         ("--events-file", args.events_file),
     ]:
         if fpath:
-            parent = Path(fpath).parent
-            if not parent.is_dir():
-                print(f"Error: directory for {arg_name} does not exist: {parent}", file=sys.stderr)
-                sys.exit(1)
-            if Path(fpath).exists():
-                if not os.access(fpath, os.W_OK):
-                    print(f"Error: {arg_name} exists but is not writable: {fpath}", file=sys.stderr)
-                    sys.exit(1)
-            elif not os.access(parent, os.W_OK):
-                print(f"Error: directory for {arg_name} is not writable: {parent}", file=sys.stderr)
+            ok, err = probe_writable(fpath)
+            if not ok:
+                print(f"Error: {arg_name} {err}", file=sys.stderr)
                 sys.exit(1)
 
     # Verify binary is installed
@@ -525,7 +576,8 @@ def main():
         print(f"Error: {binary} not found in PATH. Install it first.", file=sys.stderr)
         sys.exit(1)
 
-    rc = run_review(args)
+    logger = EventLogger(args.error_log, review_id=args.review_id)
+    rc = run_review(args, logger=logger)
     sys.exit(rc)
 
 

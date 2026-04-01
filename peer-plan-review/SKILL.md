@@ -73,7 +73,7 @@ Generate a short review ID and keep all artifacts in the platform temp
 directory.
 
 ```bash
-REVIEW_ID=$(uuidgen | tr '[:upper:]' '[:lower:]' | head -c 8)
+REVIEW_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex[:12])")
 TMPDIR=$(python3 -c "import tempfile; print(tempfile.gettempdir())")
 ```
 
@@ -84,6 +84,7 @@ Use these explicit paths:
 - `${TMPDIR}/ppr-${REVIEW_ID}-review.md`
 - `${TMPDIR}/ppr-${REVIEW_ID}-session.json`
 - `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl`
+- `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` (error log, retained after cleanup)
 
 Snapshot the current plan into the `plan.md` file before each round. Treat that
 snapshot as immutable for the duration of the round.
@@ -111,6 +112,8 @@ python3 <skill-dir>/scripts/run_review.py \
   --output-file <review.md> \
   --session-file <session.json> \
   --events-file <events.jsonl> \
+  --error-log <errors.jsonl> \
+  --review-id <REVIEW_ID> \
   [--model MODEL] \
   [--effort LEVEL] \
   [--timeout SECONDS]
@@ -165,6 +168,8 @@ python3 <skill-dir>/scripts/run_review.py \
   --output-file <review.md> \
   --session-file <session.json> \
   --events-file <events.jsonl> \
+  --error-log <errors.jsonl> \
+  --review-id <REVIEW_ID> \
   --resume \
   [--model MODEL] \
   [--effort LEVEL] \
@@ -175,9 +180,12 @@ Stop after approval or five total rounds, whichever comes first.
 
 ## Handle failures
 
-- If `--resume` fails and no output file was produced, the runner already falls
-  back to a fresh execution automatically. Do not submit a second manual retry
-  on top of that behavior.
+- `--resume` is a request, not a guarantee. If resume fails and no usable
+  output was produced, the runner automatically falls back to a fresh execution.
+  This fallback happens at most once per invocation. Session metadata records
+  whether resume was attempted and whether fallback occurred
+  (`resume_requested`, `resume_attempted`, `resume_fallback_used`). Do not
+  submit a second manual retry on top of the automatic fallback.
 - If the runner exits non-zero and there is no usable output, report the error
   and let the user choose whether to retry, switch reviewers, or stop.
 - If the runner exits non-zero but wrote output, try to extract the review and
@@ -191,7 +199,10 @@ Stop after approval or five total rounds, whichever comes first.
   approved it.
 - If the round limit is reached, present the latest plan plus the unresolved
   reviewer concerns.
-- Remove the five explicit temp files created for the session. Do not use globs.
+- Remove the five explicit temp files created for the session (plan, prompt,
+  review, session, events). Do not use globs. The error log
+  (`ppr-${REVIEW_ID}-errors.jsonl`) is intentionally retained for post-mortem
+  analysis and must not be deleted during cleanup.
 
 ## Rules
 

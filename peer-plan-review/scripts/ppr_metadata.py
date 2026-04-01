@@ -5,8 +5,10 @@ Extracted from run_review.py. Contains extract_metadata, session ID
 extractors, and Codex session file helpers.
 """
 
+import hashlib
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -168,3 +170,28 @@ def extract_metadata(output_file, events_file, reviewer, codex_session_file=None
                 break
 
     return meta
+
+
+def compute_plan_metadata(plan_file):
+    """Compute plan file metadata for session tracking.
+
+    Returns dict with plan_name, plan_bytes, plan_sha256, plan_mtime,
+    or empty dict if plan_file is None or doesn't exist.
+    """
+    if not plan_file:
+        return {}
+    p = Path(plan_file)
+    if not p.exists():
+        return {}
+    try:
+        stat = p.stat()
+        with p.open("rb") as f:
+            sha = hashlib.sha256(f.read()).hexdigest()
+        return {
+            "plan_name": p.name,
+            "plan_bytes": stat.st_size,
+            "plan_sha256": sha,
+            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+        }
+    except OSError:
+        return {}

@@ -60,6 +60,8 @@ def make_args(**overrides):
         "timeout": 600,
         "self_check": False,
         "list_models": False,
+        "error_log": None,
+        "review_id": None,
     }
     data.update(overrides)
     return argparse.Namespace(**data)
@@ -199,13 +201,16 @@ class TestFileValidation(unittest.TestCase):
         tmpdir = tempfile.mkdtemp(prefix="ppr-test-")
         readonly_dir = Path(tmpdir) / "readonly"
         readonly_dir.mkdir(parents=True)
+        # Create a valid prompt file so validation passes prompt checks
+        prompt_file = Path(tmpdir) / "prompt.md"
+        prompt_file.write_text("Review this plan.\n", encoding="utf-8")
         readonly_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)  # r-x
         try:
             rc, _stdout, stderr = run_script(
                 "--reviewer",
                 "claude",
                 "--prompt-file",
-                os.devnull,
+                str(prompt_file),
                 "--output-file",
                 str(readonly_dir / "out.json"),
             )
@@ -645,12 +650,555 @@ class TestRunReviewExecution(unittest.TestCase):
             rc = run_review.run_review(args)
 
         self.assertEqual(rc, 1)
-        self.assertFalse(args.resume)
+        # args.resume is NOT mutated — resume state is tracked via locals
+        self.assertTrue(args.resume)
         self.assertEqual(mock_popen.call_count, 2)
         first_cmd = mock_popen.call_args_list[0].args[0]
         second_cmd = mock_popen.call_args_list[1].args[0]
         self.assertIn("--resume", first_cmd)
         self.assertNotIn("--resume", second_cmd)
+
+
+# ---------------------------------------------------------------------------
+# Phase 1b+ new test classes
+# ---------------------------------------------------------------------------
+
+from ppr_log import EventLogger  # noqa: E402
+from ppr_io import validate_prompt_file, probe_writable  # noqa: E402
+from ppr_metadata import compute_plan_metadata  # noqa: E402
+from ppr_providers import PROVIDER_CAPS  # noqa: E402
+
+
+class TestEventLogger(unittest.TestCase):
+    """Tests for the EventLogger JSONL logger."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-logger-")
+        self.log_path = Path(self.tmpdir.name) / "events.jsonl"
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def test_writes_valid_jsonl_line(self):
+        logger = EventLogger(str(self.log_path), review_id="test123")
+        logger.log("execution_start", provider="claude")
+        lines = self.log_path.read_text().strip().splitlines()
+        self.assertEqual(len(lines), 1)
+        data = json.loads(lines[0])
+        self.assertEqual(data["event"], "execution_start")
+        self.assertEqual(data["provider"], "claude")
+        self.assertEqual(data["review_id"], "test123")
+
+    def test_appends_across_calls(self):
+        logger = EventLogger(str(self.log_path), review_id="test")
+        logger.log("event_a")
+        logger.log("event_b")
+        lines = self.log_path.read_text().strip().splitlines()
+        self.assertEqual(len(lines), 2)
+
+    def test_noop_when_no_path(self):
+        logger = EventLogger(None)
+        logger.log("should_not_crash")  # no exception
+
+    def test_includes_all_fields(self):
+        logger = EventLogger(str(self.log_path), review_id="r1")
+        logger.log("test_event", provider="codex", round_num=3, error="boom", context={"k": "v"})
+        data = json.loads(self.log_path.read_text().strip())
+        self.assertIn("ts", data)
+        self.assertEqual(data["review_id"], "r1")
+        self.assertEqual(data["event"], "test_event")
+        self.assertEqual(data["provider"], "codex")
+        self.assertEqual(data["round"], 3)
+        self.assertEqual(data["error"], "boom")
+        self.assertEqual(data["ctx"], {"k": "v"})
+
+    def test_handles_unwritable_log_path(self):
+        logger = EventLogger("/nonexistent/dir/events.jsonl", review_id="r1")
+        logger.log("should_not_crash")  # no exception
+
+    def test_handles_missing_parent_directory(self):
+        logger = EventLogger("/tmp/ppr-missing-dir-xyz/events.jsonl", review_id="r1")
+        logger.log("should_not_crash")  # no exception
+
+    def test_handles_non_serializable_context(self):
+        logger = EventLogger(str(self.log_path), review_id="r1")
+        logger.log("test", context={"path": Path("/tmp/test")})
+        data = json.loads(self.log_path.read_text().strip())
+        self.assertIn("/tmp/test", data["ctx"]["path"])
+
+    def test_timestamp_format(self):
+        logger = EventLogger(str(self.log_path), review_id="r1")
+        logger.log("test")
+        data = json.loads(self.log_path.read_text().strip())
+        self.assertIn("+00:00", data["ts"])
+
+
+class TestPromptValidation(unittest.TestCase):
+    """Tests for validate_prompt_file."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-prompt-")
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def test_empty_prompt_rejected(self):
+        f = Path(self.tmpdir.name) / "empty.md"
+        f.write_text("", encoding="utf-8")
+        ok, err = validate_prompt_file(str(f))
+        self.assertFalse(ok)
+        self.assertIn("empty", err)
+
+    def test_whitespace_only_prompt_rejected(self):
+        f = Path(self.tmpdir.name) / "whitespace.md"
+        f.write_text("   \n\t  \n", encoding="utf-8")
+        ok, err = validate_prompt_file(str(f))
+        self.assertFalse(ok)
+        self.assertIn("empty", err)
+
+    def test_binary_prompt_rejected(self):
+        f = Path(self.tmpdir.name) / "binary.md"
+        f.write_bytes(bytes([0x80, 0x81, 0x82, 0x83]))
+        ok, err = validate_prompt_file(str(f))
+        self.assertFalse(ok)
+        self.assertIn("UTF-8", err)
+
+    def test_valid_prompt_accepted(self):
+        f = Path(self.tmpdir.name) / "valid.md"
+        f.write_text("Review this plan.\n", encoding="utf-8")
+        ok, err = validate_prompt_file(str(f))
+        self.assertTrue(ok)
+        self.assertIsNone(err)
+
+    @unittest.skipIf(
+        sys.platform == "win32", "POSIX file permissions not supported on Windows"
+    )
+    def test_unreadable_prompt_rejected(self):
+        f = Path(self.tmpdir.name) / "unreadable.md"
+        f.write_text("content", encoding="utf-8")
+        f.chmod(0o000)
+        try:
+            ok, err = validate_prompt_file(str(f))
+            self.assertFalse(ok)
+            self.assertIn("not readable", err)
+        finally:
+            f.chmod(stat.S_IRWXU)
+
+
+class TestWriteProbes(unittest.TestCase):
+    """Tests for probe_writable."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-probe-")
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def test_existing_writable_file(self):
+        f = Path(self.tmpdir.name) / "writable.json"
+        f.write_text("{}", encoding="utf-8")
+        ok, err = probe_writable(str(f))
+        self.assertTrue(ok)
+        self.assertIsNone(err)
+
+    @unittest.skipIf(
+        sys.platform == "win32", "POSIX file permissions not supported on Windows"
+    )
+    def test_existing_readonly_file(self):
+        f = Path(self.tmpdir.name) / "readonly.json"
+        f.write_text("{}", encoding="utf-8")
+        f.chmod(stat.S_IRUSR)
+        try:
+            ok, err = probe_writable(str(f))
+            self.assertFalse(ok)
+            self.assertIn("not writable", err)
+        finally:
+            f.chmod(stat.S_IRWXU)
+
+    def test_new_file_in_writable_dir(self):
+        ok, err = probe_writable(str(Path(self.tmpdir.name) / "new.json"))
+        self.assertTrue(ok)
+        self.assertIsNone(err)
+
+    @unittest.skipIf(
+        sys.platform == "win32", "POSIX directory permissions not supported on Windows"
+    )
+    def test_new_file_in_readonly_dir(self):
+        readonly = Path(self.tmpdir.name) / "readonly"
+        readonly.mkdir()
+        readonly.chmod(stat.S_IRUSR | stat.S_IXUSR)
+        try:
+            ok, err = probe_writable(str(readonly / "new.json"))
+            self.assertFalse(ok)
+            self.assertIn("not writable", err)
+        finally:
+            readonly.chmod(stat.S_IRWXU)
+
+    def test_path_is_directory(self):
+        d = Path(self.tmpdir.name) / "subdir"
+        d.mkdir()
+        ok, err = probe_writable(str(d))
+        self.assertFalse(ok)
+        self.assertIn("not a regular file", err)
+
+    @unittest.skipIf(
+        sys.platform == "win32", "Symlink creation requires elevated privileges on Windows"
+    )
+    def test_path_is_symlink_to_directory(self):
+        d = Path(self.tmpdir.name) / "target_dir"
+        d.mkdir()
+        link = Path(self.tmpdir.name) / "link_to_dir"
+        link.symlink_to(d)
+        ok, err = probe_writable(str(link))
+        self.assertFalse(ok)
+        self.assertIn("not a regular file", err)
+
+    @unittest.skipIf(
+        sys.platform == "win32", "FIFOs require POSIX"
+    )
+    def test_path_is_fifo(self):
+        fifo = Path(self.tmpdir.name) / "test.fifo"
+        os.mkfifo(str(fifo))
+        ok, err = probe_writable(str(fifo))
+        self.assertFalse(ok)
+        self.assertIn("not a regular file", err)
+
+
+class TestProviderCapabilityTable(unittest.TestCase):
+    """Tests for PROVIDER_CAPS."""
+
+    def test_all_providers_have_caps(self):
+        from ppr_providers import BINARIES
+        for provider in BINARIES:
+            self.assertIn(provider, PROVIDER_CAPS, f"Missing PROVIDER_CAPS for {provider}")
+
+    def test_caps_fields_present(self):
+        required = {"binary", "prompt_mode", "output_mode", "model_flag",
+                     "effort_flag", "resume_flag_style", "resume_supported", "safety_flags"}
+        for provider, caps in PROVIDER_CAPS.items():
+            for field in required:
+                self.assertIn(field, caps, f"Missing {field} in PROVIDER_CAPS[{provider}]")
+
+
+class TestResumeMetadata(unittest.TestCase):
+    """Tests for resume metadata in session data."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-resume-meta-")
+        self.prompt_file = Path(self.tmpdir.name) / "prompt.md"
+        self.prompt_file.write_text("Review.\n", encoding="utf-8")
+        self.output_file = Path(self.tmpdir.name) / "review.json"
+        self.session_file = Path(self.tmpdir.name) / "session.json"
+        self.events_file = Path(self.tmpdir.name) / "events.jsonl"
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    @staticmethod
+    def _proc(returncode, stdout="", stderr=""):
+        proc = mock.MagicMock()
+        proc.communicate.return_value = (stdout, stderr)
+        proc.returncode = returncode
+        proc.poll.return_value = returncode
+        return proc
+
+    def test_session_records_resume_requested_false(self):
+        args = make_args(
+            reviewer="claude", prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file), session_file=str(self.session_file),
+            events_file=str(self.events_file), resume=False,
+        )
+        proc = self._proc(0, stdout='{"result":"ok"}')
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="s1"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args)
+        session = json.loads(self.session_file.read_text())
+        self.assertFalse(session["resume_requested"])
+        self.assertFalse(session["resume_fallback_used"])
+        self.assertEqual(session["resume_reason"], "fresh_exec")
+
+    def test_session_records_resume_requested_true(self):
+        args = make_args(
+            reviewer="claude", prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file), session_file=str(self.session_file),
+            events_file=str(self.events_file), resume=True,
+        )
+        proc = self._proc(0, stdout='{"result":"ok"}')
+        with (
+            mock.patch("run_review.load_session", return_value={"session_id": "s1", "round": 1}),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="s1"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args)
+        session = json.loads(self.session_file.read_text())
+        self.assertTrue(session["resume_requested"])
+        self.assertTrue(session["resume_attempted"])
+        self.assertEqual(session["resume_reason"], "session_found")
+
+    def test_session_records_fallback(self):
+        args = make_args(
+            reviewer="claude", prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file), session_file=str(self.session_file),
+            events_file=str(self.events_file), resume=True,
+        )
+        first_proc = self._proc(2, stdout="", stderr="resume failed")
+        second_proc = self._proc(0, stdout='{"result":"ok"}')
+        with (
+            mock.patch("run_review.load_session", return_value={"session_id": "s1", "round": 1}),
+            mock.patch("run_review.subprocess.Popen", side_effect=[first_proc, second_proc]),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="s2"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args)
+        session = json.loads(self.session_file.read_text())
+        self.assertTrue(session["resume_requested"])
+        self.assertTrue(session["resume_fallback_used"])
+        self.assertEqual(session["resume_reason"], "fallback_to_fresh")
+
+
+class TestPlanMetadata(unittest.TestCase):
+    """Tests for compute_plan_metadata."""
+
+    def test_computes_correctly(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("# Test Plan\nStep 1\n")
+            f.flush()
+            meta = compute_plan_metadata(f.name)
+        try:
+            self.assertEqual(meta["plan_name"], Path(f.name).name)
+            self.assertEqual(meta["plan_bytes"], Path(f.name).stat().st_size)
+            self.assertEqual(len(meta["plan_sha256"]), 64)
+            self.assertIn("+00:00", meta["plan_mtime"])
+        finally:
+            Path(f.name).unlink()
+
+    def test_plan_name_is_filename_only(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("content")
+            f.flush()
+            meta = compute_plan_metadata(f.name)
+        try:
+            self.assertNotIn("/", meta["plan_name"])
+        finally:
+            Path(f.name).unlink()
+
+    def test_missing_file_returns_empty(self):
+        meta = compute_plan_metadata("/nonexistent/plan.md")
+        self.assertEqual(meta, {})
+
+    def test_none_returns_empty(self):
+        meta = compute_plan_metadata(None)
+        self.assertEqual(meta, {})
+
+
+class TestCorruption(unittest.TestCase):
+    """Tests for edge cases with corrupt/unexpected files."""
+
+    def test_zero_byte_output_no_crash(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("")
+            tmp_path = f.name
+        try:
+            from ppr_io import extract_text_from_output
+            extract_text_from_output(tmp_path, "claude")  # should not raise
+            self.assertEqual(Path(tmp_path).read_text(), "")
+        finally:
+            Path(tmp_path).unlink()
+
+    def test_corrupt_session_returns_empty(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("{corrupt json")
+            tmp_path = f.name
+        try:
+            from ppr_io import load_session
+            result = load_session(tmp_path)
+            self.assertEqual(result, {})
+        finally:
+            Path(tmp_path).unlink()
+
+    def test_resume_with_no_session_id(self):
+        """Resume=True but session file has no session_id — should not crash."""
+        tmpdir = tempfile.mkdtemp(prefix="ppr-corrupt-")
+        prompt = Path(tmpdir) / "prompt.md"
+        prompt.write_text("Review.\n", encoding="utf-8")
+        session = Path(tmpdir) / "session.json"
+        session.write_text("{}", encoding="utf-8")
+
+        args = make_args(
+            reviewer="claude", prompt_file=str(prompt),
+            output_file=str(Path(tmpdir) / "out.json"),
+            session_file=str(session),
+            events_file=str(Path(tmpdir) / "events.jsonl"),
+            resume=True,
+        )
+
+        proc = mock.MagicMock()
+        proc.communicate.return_value = ('{"result":"ok"}', "")
+        proc.returncode = 0
+        proc.poll.return_value = 0
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value=None),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+        self.assertEqual(rc, 0)
+        shutil.rmtree(tmpdir)
+
+    def test_nonzero_exit_with_output_still_extracts(self):
+        """Non-zero exit but output present — should extract and not retry."""
+        tmpdir = tempfile.mkdtemp(prefix="ppr-extract-")
+        prompt = Path(tmpdir) / "prompt.md"
+        prompt.write_text("Review.\n", encoding="utf-8")
+        output = Path(tmpdir) / "review.json"
+        output.write_text('{"result":"Review text here"}', encoding="utf-8")
+
+        args = make_args(
+            reviewer="claude", prompt_file=str(prompt),
+            output_file=str(output),
+            session_file=str(Path(tmpdir) / "session.json"),
+            events_file=str(Path(tmpdir) / "events.jsonl"),
+            resume=False,
+        )
+
+        proc = mock.MagicMock()
+        proc.communicate.return_value = ('{"result":"Review text here"}', "warning")
+        proc.returncode = 1
+        proc.poll.return_value = 1
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="s1"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+        self.assertEqual(rc, 1)  # returns the error code, doesn't retry
+        shutil.rmtree(tmpdir)
+
+    def test_resume_with_output_does_not_retry(self):
+        """Resume failure WITH output — should NOT fallback to fresh exec."""
+        tmpdir = tempfile.mkdtemp(prefix="ppr-no-retry-")
+        prompt = Path(tmpdir) / "prompt.md"
+        prompt.write_text("Review.\n", encoding="utf-8")
+        output = Path(tmpdir) / "review.json"
+
+        args = make_args(
+            reviewer="claude", prompt_file=str(prompt),
+            output_file=str(output),
+            session_file=str(Path(tmpdir) / "session.json"),
+            events_file=str(Path(tmpdir) / "events.jsonl"),
+            resume=True,
+        )
+
+        proc = mock.MagicMock()
+        # Non-zero exit but produces output
+        proc.communicate.return_value = ('{"result":"partial review"}', "error")
+        proc.returncode = 1
+        proc.poll.return_value = 1
+
+        with (
+            mock.patch("run_review.load_session", return_value={"session_id": "s1", "round": 1}),
+            mock.patch("run_review.subprocess.Popen", return_value=proc) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="s1"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+        self.assertEqual(rc, 1)
+        # Only one Popen call — no retry
+        self.assertEqual(mock_popen.call_count, 1)
+        shutil.rmtree(tmpdir)
+
+
+class TestMockPathCompatibility(unittest.TestCase):
+    """Verify re-export mock paths intercept calls from run_review.run_review()."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-compat-")
+        self.prompt_file = Path(self.tmpdir.name) / "prompt.md"
+        self.prompt_file.write_text("Review.\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    @staticmethod
+    def _proc(returncode=0, stdout='{"result":"ok"}', stderr=""):
+        proc = mock.MagicMock()
+        proc.communicate.return_value = (stdout, stderr)
+        proc.returncode = returncode
+        proc.poll.return_value = returncode
+        return proc
+
+    def _run_and_check(self):
+        """Run run_review with standard mocks, return mock objects for assertions."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(Path(self.tmpdir.name) / "out.json"),
+            session_file=str(Path(self.tmpdir.name) / "session.json"),
+            events_file=str(Path(self.tmpdir.name) / "events.jsonl"),
+        )
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=self._proc()) as m_popen,
+            mock.patch("run_review.extract_metadata", return_value={}) as m_meta,
+            mock.patch("run_review.extract_text_from_output") as m_text,
+            mock.patch("run_review.extract_session_id_json", return_value="s1"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args)
+            return {"popen": m_popen, "meta": m_meta, "text": m_text}
+
+    def test_extract_metadata_intercepted(self):
+        mocks = self._run_and_check()
+        mocks["meta"].assert_called()
+
+    def test_extract_text_intercepted(self):
+        mocks = self._run_and_check()
+        mocks["text"].assert_called()
+
+    def test_build_cmd_intercepted(self):
+        sentinel_cmd = ["echo", "test"]
+        with (
+            mock.patch("run_review.build_claude_cmd", return_value=sentinel_cmd) as mock_build,
+            mock.patch("run_review.subprocess.Popen", return_value=self._proc()),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="s1"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            args = make_args(
+                reviewer="claude",
+                prompt_file=str(self.prompt_file),
+                output_file=str(Path(self.tmpdir.name) / "out.json"),
+                session_file=str(Path(self.tmpdir.name) / "session.json"),
+                events_file=str(Path(self.tmpdir.name) / "events.jsonl"),
+            )
+            run_review.run_review(args)
+            mock_build.assert_called_once()
 
 
 if __name__ == "__main__":

@@ -5,8 +5,11 @@ Extracted from run_review.py. Contains session load/save and output text
 extraction.
 """
 
+import contextlib
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -75,3 +78,56 @@ def extract_text_from_output(output_file, reviewer):
             f"for {reviewer}: {e}. File left as raw output.",
             file=sys.stderr,
         )
+
+
+def validate_prompt_file(prompt_file):
+    """Validate prompt file: exists, readable, UTF-8, non-empty.
+
+    Returns (ok: bool, error_message: str | None).
+    """
+    p = Path(prompt_file)
+    if not p.exists():
+        return False, f"not found: {prompt_file}"
+    try:
+        with p.open("r", encoding="utf-8") as f:
+            content = f.read()
+    except PermissionError:
+        return False, f"exists but is not readable: {prompt_file}"
+    except UnicodeDecodeError:
+        return False, f"is not valid UTF-8: {prompt_file}"
+    except OSError as e:
+        return False, f"cannot read: {prompt_file}: {e}"
+    if not content.strip():
+        return False, f"is empty: {prompt_file}"
+    return True, None
+
+
+def probe_writable(fpath):
+    """Test actual writability of fpath.
+
+    Returns (ok: bool, error_message: str | None).
+    Rejects non-regular existing paths (directories, FIFOs, sockets, devices).
+    Path.is_file() follows symlinks, so symlink-to-regular-file passes.
+    """
+    p = Path(fpath)
+    parent = p.parent
+    if not parent.is_dir():
+        return False, f"directory does not exist: {parent}"
+    if p.exists():
+        if not p.is_file():
+            return False, f"exists but is not a regular file: {fpath}"
+        try:
+            with p.open("a"):
+                pass
+            return True, None
+        except OSError as e:
+            return False, f"exists but is not writable: {fpath}: {e}"
+    else:
+        try:
+            fd, probe = tempfile.mkstemp(dir=str(parent), prefix=".ppr-probe-")
+            os.close(fd)
+            with contextlib.suppress(OSError):
+                os.unlink(probe)
+            return True, None
+        except OSError as e:
+            return False, f"directory is not writable: {parent}: {e}"
