@@ -33,3 +33,5 @@ Changes take effect in the next Claude Code session (no restart of the current s
 ## Distribution
 
 For installing on other machines (not local dev), use the copy or `npx skills add` methods documented in the README.
+
+@RTK.md
