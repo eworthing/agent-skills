@@ -57,6 +57,43 @@ If the reviewer is omitted, ask which reviewer to use.
 If the model is omitted, tell the user once that the provider default model
 will be used and that they can pass a model override explicitly.
 
+## Review stance
+
+Two stances are available:
+
+- **Standard** (default): Cooperative review seeking to improve the plan.
+  Uses the iterative loop (up to 5 rounds) to converge on approval.
+- **Adversarial**: Deliberately skeptical single-round review. The reviewer
+  tries to find reasons the plan should NOT proceed. Runs one round only —
+  present findings and let the user triage. Does not enter the revision loop.
+
+Use adversarial when the user asks to "pressure-test", "break the plan",
+"adversarial review", or "find holes in" a plan.
+
+### Adversarial prompt template
+
+When writing the adversarial prompt, include these instructions for the
+reviewer:
+
+- Default to skepticism — assume the plan can fail in subtle, high-cost,
+  or user-visible ways until evidence says otherwise
+- Do not give credit for good intent, partial fixes, or likely follow-up work
+- Focus on expensive, dangerous, or hard-to-detect failures:
+  - Auth, permissions, trust boundaries
+  - Data loss, corruption, irreversible state changes
+  - Rollback safety, idempotency gaps
+  - Race conditions, ordering assumptions, stale state
+  - Missing error handling for degraded dependencies
+  - Schema/version compatibility risks
+  - Observability gaps that would hide failure
+- Prefer one strong, well-evidenced finding over multiple weak ones
+- Use the same structured output format (### Blocking Issues with [B1] tags,
+  ### Non-Blocking Issues with [N1] tags, Section/Lines references)
+- End with `VERDICT: APPROVED` or `VERDICT: REVISE`
+
+After the single adversarial round, present findings and wait for user
+direction. Do not enter the revision loop. Go directly to Finalize.
+
 ## Preflight
 
 1. Resolve `<skill-dir>` relative to this `SKILL.md`.
@@ -89,18 +126,45 @@ Use these explicit paths:
 Snapshot the current plan into the `plan.md` file before each round. Treat that
 snapshot as immutable for the duration of the round.
 
+Number every line of the plan snapshot so the reviewer can cite specific lines.
+Use a simple prefix format (e.g., `cat -n` style). Include the numbered plan
+in the prompt, not the raw plan. This grounds any line references the reviewer
+produces.
+
 ## Round 1
 
-Write a prompt that:
+Write a prompt that includes:
 
-- uses this simple order:
-  - verdict contract
-  - full implementation plan
-- asks for a review of the full implementation plan
-- focuses on sequencing, hidden assumptions, missing validation, rollback, and
-  dependency gaps
-- requires the final non-empty line to be exactly one of:
-  `VERDICT: APPROVED` or `VERDICT: REVISE`
+1. The verdict contract: the final non-empty line must be exactly
+   `VERDICT: APPROVED` or `VERDICT: REVISE`
+2. The line-numbered implementation plan
+3. Instructions requesting this output structure:
+
+```
+### Reasoning
+Full analysis of the plan covering sequencing, hidden assumptions,
+missing validation, rollback, and dependency gaps.
+
+### Blocking Issues
+- [B1] (HIGH|MEDIUM|LOW) Short description of blocking issue
+  Section: <plan section name> (lines <N-M>)
+  Recommendation: Concrete fix or mitigation
+
+(Write "None" if no blocking issues.)
+
+### Non-Blocking Issues
+- [N1] Short description of non-blocking issue
+  Section: <plan section name> (lines <N-M>)
+  Recommendation: Suggested improvement
+
+(Write "None" if no non-blocking issues.)
+
+VERDICT: APPROVED or VERDICT: REVISE
+```
+
+Per-issue confidence (HIGH, MEDIUM, LOW) is required on blocking issues,
+optional on non-blocking. Section and line references refer to the
+numbered plan provided in the prompt.
 
 Run the adapter:
 
@@ -133,7 +197,17 @@ Default timeout is 600 seconds. Increase it for large plans or slower reviewers.
 2. Read the review output file.
 3. Parse the verdict from the last non-empty line, searching upward from the
    bottom of the file.
-4. Present the review with a header that uses the actual metadata from the
+4. Attempt to extract structured findings from the review using
+   `parse_structured_review()` from `ppr_io.py`:
+   - Scopes parsing to `### Blocking Issues` and `### Non-Blocking Issues`
+     sections only (ignores `### Reasoning` to prevent false positives)
+   - Extracts `[B<n>]`/`[N<n>]` tagged findings with confidence, section
+     references, and recommendations
+   If structured parsing succeeds, present findings in a summary table
+   ordered by severity before showing the full review text.
+   If structured parsing fails (returns empty list), present the raw
+   review text as today — graceful degradation.
+5. Present the review with a header that uses the actual metadata from the
    session file:
 
 ```text
@@ -148,6 +222,9 @@ then to the provider default or `"default"` as appropriate.
 
 ## Revise and re-review
 
+This section applies to standard reviews only. For adversarial stance,
+skip directly to Finalize after Round 1.
+
 When the verdict is `REVISE`:
 
 1. Address the review point by point.
@@ -155,9 +232,14 @@ When the verdict is `REVISE`:
 3. Write a short `Changes since last round` bullet list.
 4. Rebuild the prompt in this order:
    - verdict contract
-   - previous reviewer feedback
+   - previous reviewer feedback (include finding IDs so the reviewer can
+     see what was already raised)
    - `Changes since last round`
-   - updated full plan
+   - updated line-numbered full plan
+   Each round uses fresh per-round IDs (B1, B2, N1, etc.). Do not ask the
+   reviewer to continue numbering from a previous round. If the host needs
+   cross-round continuity, it maps findings after parsing based on content
+   similarity.
 5. Re-run the adapter with `--resume`.
 
 ```bash
@@ -197,8 +279,14 @@ Stop after approval or five total rounds, whichever comes first.
 
 - If approved, present the final revised plan and note that the reviewer
   approved it.
-- If the round limit is reached, present the latest plan plus the unresolved
-  reviewer concerns.
+- If the round limit is reached (standard stance), present the latest plan
+  plus the unresolved reviewer concerns.
+- If adversarial stance completed its single round with REVISE, present the
+  findings as-is — there is no revision loop to exhaust.
+- In all three cases, after presenting the outcome, STOP. Do not begin
+  implementing changes, editing code, or modifying files based on the review
+  findings. Explicitly ask the user which findings, if any, they want
+  addressed before taking any action.
 - Remove the five explicit temp files created for the session (plan, prompt,
   review, session, events). Do not use globs. The error log
   (`ppr-${REVIEW_ID}-errors.jsonl`) is intentionally retained for post-mortem
@@ -213,3 +301,5 @@ Stop after approval or five total rounds, whichever comes first.
 - Treat the prompt, review, session, and events files as sensitive because they
   contain the plan text.
 - Show actual model and effort values from the session file, not guessed values.
+- After the review loop completes, do not auto-apply fixes or begin
+  implementation. Present findings and wait for user direction.

@@ -30,6 +30,7 @@ FIXTURES_DIR = str(Path(SCRIPT_DIR).parent / "evals" / "fixtures")
 sys.path.insert(0, SCRIPT_DIR)
 import run_review  # noqa: E402
 from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
+from ppr_io import parse_structured_review  # noqa: E402
 
 
 def run_script(*extra_args):
@@ -1199,6 +1200,161 @@ class TestMockPathCompatibility(unittest.TestCase):
             )
             run_review.run_review(args)
             mock_build.assert_called_once()
+
+
+class TestStructuredReviewParsing(unittest.TestCase):
+    """Tests for parse_structured_review() — section-scoped finding extraction."""
+
+    def test_finding_with_confidence_section_recommendation(self):
+        text = """\
+### Reasoning
+Some analysis here with [B1] mentioned in passing.
+
+### Blocking Issues
+- [B1] (HIGH) Race condition in migration step
+  Section: Step 3 — Database migration (lines 42-55)
+  Recommendation: Add dependency gate between steps 2 and 3
+
+### Non-Blocking Issues
+- [N1] Monitoring gap
+  Section: Step 7 — Post-deploy (line 95)
+  Recommendation: Add health checks
+
+VERDICT: REVISE
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 2)
+        b1 = findings[0]
+        self.assertEqual(b1["id"], "B1")
+        self.assertEqual(b1["severity"], "blocking")
+        self.assertEqual(b1["confidence"], "HIGH")
+        self.assertIn("Race condition", b1["description"])
+        self.assertEqual(b1["section"], "Step 3 — Database migration")
+        self.assertEqual(b1["lines"], "42-55")
+        self.assertEqual(b1["recommendation"], "Add dependency gate between steps 2 and 3")
+        n1 = findings[1]
+        self.assertEqual(n1["id"], "N1")
+        self.assertEqual(n1["severity"], "non_blocking")
+
+    def test_finding_without_confidence(self):
+        text = """\
+### Blocking Issues
+- [B1] Missing rollback strategy
+
+### Non-Blocking Issues
+None
+
+VERDICT: REVISE
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["id"], "B1")
+        self.assertIsNone(findings[0]["confidence"])
+
+    def test_non_blocking_severity(self):
+        text = """\
+### Blocking Issues
+None
+
+### Non-Blocking Issues
+- [N1] Consider adding smoke test
+  Recommendation: Add post-deploy verification
+
+VERDICT: APPROVED
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["severity"], "non_blocking")
+        self.assertEqual(findings[0]["recommendation"], "Add post-deploy verification")
+
+    def test_plain_text_returns_empty(self):
+        text = "This is just plain text review.\n\nVERDICT: REVISE\n"
+        findings = parse_structured_review(text)
+        self.assertEqual(findings, [])
+
+    def test_markdown_bold_tags(self):
+        text = """\
+### Blocking Issues
+- **[B1]** (MEDIUM) Bold-tagged finding
+  Section: Step 1 (lines 1-5)
+
+### Non-Blocking Issues
+None
+
+VERDICT: REVISE
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["id"], "B1")
+        self.assertEqual(findings[0]["confidence"], "MEDIUM")
+
+    def test_multi_finding_across_sections(self):
+        text = """\
+### Reasoning
+Analysis...
+
+### Blocking Issues
+- [B1] (HIGH) First blocker
+  Section: Step 1 (lines 1-10)
+- [B2] (MEDIUM) Second blocker
+  Section: Step 2 (lines 20-30)
+
+### Non-Blocking Issues
+- [N1] First suggestion
+- [N2] Second suggestion
+
+VERDICT: REVISE
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 4)
+        ids = [f["id"] for f in findings]
+        self.assertEqual(ids, ["B1", "B2", "N1", "N2"])
+
+    def test_reasoning_section_contamination(self):
+        """[B1] in ### Reasoning must NOT produce a false positive."""
+        text = """\
+### Reasoning
+The plan mentions [B1] rollback but I disagree with the approach.
+
+### Blocking Issues
+None
+
+### Non-Blocking Issues
+None
+
+VERDICT: APPROVED
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(findings, [])
+
+    def test_multiline_spacing(self):
+        """Findings separated by blank lines with varying indent."""
+        text = """\
+### Blocking Issues
+- [B1] (HIGH) First issue
+  Section: Step 1 (lines 1-5)
+  Recommendation: Fix it
+
+- [B2] (LOW) Second issue
+  Section: Step 2 (lines 10-15)
+  Recommendation: Also fix
+
+### Non-Blocking Issues
+None
+
+VERDICT: REVISE
+"""
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 2)
+        self.assertEqual(findings[0]["recommendation"], "Fix it")
+        self.assertEqual(findings[1]["recommendation"], "Also fix")
+
+    def test_section_heading_trailing_whitespace(self):
+        """Section heading with trailing spaces should still match."""
+        text = "### Blocking Issues   \n- [B1] (HIGH) Found an issue\n\n### Non-Blocking Issues\nNone\n\nVERDICT: REVISE\n"
+        findings = parse_structured_review(text)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["id"], "B1")
 
 
 if __name__ == "__main__":

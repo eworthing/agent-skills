@@ -8,6 +8,7 @@ extraction.
 import contextlib
 import json
 import os
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -78,6 +79,92 @@ def extract_text_from_output(output_file, reviewer):
             f"for {reviewer}: {e}. File left as raw output.",
             file=sys.stderr,
         )
+
+
+# ---------------------------------------------------------------------------
+# Structured review parsing (adapted from quorum-review run_quorum.py)
+# ---------------------------------------------------------------------------
+
+
+def _extract_section(text, heading):
+    """Extract content under a ### heading, stopping at the next ### or end."""
+    pattern = re.compile(
+        rf"^###\s+{re.escape(heading)}\s*$(.+?)(?=^###\s|\Z)",
+        re.MULTILINE | re.DOTALL,
+    )
+    m = pattern.search(text)
+    return m.group(1) if m else ""
+
+
+_RE_FINDING_TAG = re.compile(
+    r"^\s*-\s*\*{0,2}\[([BN])(\d+)\]\*{0,2}"
+    r"(?:\s*\((HIGH|MEDIUM|LOW)\))?"
+    r"\s*(.+)",
+    re.MULTILINE | re.IGNORECASE,
+)
+_RE_SECTION_REF = re.compile(
+    r"^\s+Section:\s*(.+?)(?:\s*\(lines?\s*([\d\-,\s]+)\))?\s*$",
+)
+_RE_RECOMMENDATION = re.compile(
+    r"^\s+Recommendation:\s*(.+)$",
+)
+
+
+def _parse_finding_block(section_text, tag_match):
+    """Parse a single finding, consuming indented continuation lines."""
+    kind = tag_match.group(1).upper()
+    num = tag_match.group(2)
+    conf = tag_match.group(3)
+    desc = tag_match.group(4).strip()
+
+    finding = {
+        "id": f"{kind}{num}",
+        "severity": "blocking" if kind == "B" else "non_blocking",
+        "confidence": conf.upper() if conf else None,
+        "description": desc,
+    }
+
+    rest = section_text[tag_match.end():]
+    if rest.startswith("\n"):
+        rest = rest[1:]
+    lines_after = rest.split("\n")
+    for line in lines_after:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("- "):
+            break
+        sec_m = _RE_SECTION_REF.match(line)
+        if sec_m:
+            finding["section"] = sec_m.group(1).strip()
+            if sec_m.group(2):
+                finding["lines"] = sec_m.group(2).strip()
+            continue
+        rec_m = _RE_RECOMMENDATION.match(line)
+        if rec_m:
+            finding["recommendation"] = rec_m.group(1).strip()
+            continue
+
+    return finding
+
+
+def parse_structured_review(review_text):
+    """Parse structured findings from review text.
+
+    Scopes to ### Blocking Issues and ### Non-Blocking Issues sections
+    to avoid false positives from ### Reasoning content.
+
+    Returns list of finding dicts, or empty list if no structured
+    findings found. Each dict has: id, severity, confidence,
+    description, and optionally section, lines, recommendation.
+    """
+    findings = []
+    for heading in ("Blocking Issues", "Non-Blocking Issues"):
+        section_text = _extract_section(review_text, heading)
+        if not section_text:
+            continue
+        for m in _RE_FINDING_TAG.finditer(section_text):
+            finding = _parse_finding_block(section_text, m)
+            findings.append(finding)
+    return findings
 
 
 def validate_prompt_file(prompt_file):
