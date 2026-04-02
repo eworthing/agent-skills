@@ -1000,12 +1000,18 @@ REVIEW_CONTRACT_V2 = (
     "### Blocking Issues\n"
     "Issues that MUST be resolved before execution. Use [B1], [B2], etc.\n"
     "Optionally include per-issue confidence: (HIGH), (MEDIUM), or (LOW).\n"
+    "For each issue, include a Section: line referencing the plan section name\n"
+    "and line numbers from the numbered plan (e.g., Section: Step 3 (lines 42-55)).\n"
     "- [B1] (HIGH) Description of blocking issue...\n"
+    "  Section: <plan section> (lines <N-M>)\n"
+    "  Recommendation: Concrete fix or mitigation\n"
     "- [B2] (MEDIUM) Description of blocking issue...\n"
     "(Write \"None\" if no blocking issues.)\n\n"
     "### Non-Blocking Issues\n"
     "Suggestions and improvements. Use [N1], [N2], etc.\n"
     "- [N1] Description...\n"
+    "  Section: <plan section> (lines <N-M>)\n"
+    "  Recommendation: Suggested improvement\n"
     "(Write \"None\" if no non-blocking issues.)\n\n"
     "### Confidence\n"
     "State your confidence in this review: HIGH, MEDIUM, or LOW\n\n"
@@ -1047,7 +1053,11 @@ CROSS_CRITIQUE_INSTRUCTIONS = (
     "After reviewing the other panelists' feedback...\n\n"
     "### Blocking Issues\n"
     "- [B1] (HIGH) BLK-001 remains unaddressed — auth is still missing\n"
-    "- [B2] (MEDIUM) New: No rate limiting on public API\n\n"
+    "  Section: Auth middleware (lines 12-18)\n"
+    "  Recommendation: Add role-based access control before deployment\n"
+    "- [B2] (MEDIUM) New: No rate limiting on public API\n"
+    "  Section: API gateway (lines 34-40)\n"
+    "  Recommendation: Add token-bucket rate limiter\n\n"
     "### Non-Blocking Issues\n"
     "None\n\n"
     "### Confidence\n"
@@ -1073,6 +1083,13 @@ def load_review_md(directory=None):
     return ""
 
 
+def _number_plan(plan_text):
+    """Add line numbers to plan text for reviewer citation."""
+    lines = plan_text.split("\n")
+    width = len(str(len(lines)))
+    return "\n".join(f"{i + 1:>{width}}\t{line}" for i, line in enumerate(lines))
+
+
 def write_initial_prompt(
     prompt_file,
     reviewer_index,
@@ -1096,7 +1113,7 @@ def write_initial_prompt(
         f"rounds you will see their feedback and can respond to it. For now, provide\n"
         f"your independent assessment.\n\n"
         f"## Plan\n\n"
-        f"{plan_text}\n"
+        f"{_number_plan(plan_text)}\n"
     )
 
     Path(prompt_file).write_text(content, encoding="utf-8")
@@ -1126,7 +1143,7 @@ def write_deliberation_prompt(
         f"## Changes Since Last Round (by HOST)\n\n"
         f"{changes_summary}\n\n"
         f"## Updated Plan\n\n"
-        f"{plan_text}\n"
+        f"{_number_plan(plan_text)}\n"
     )
 
     Path(prompt_file).write_text(content, encoding="utf-8")
@@ -1158,7 +1175,7 @@ def write_cross_critique_prompt(
         f"## Changes Since Last Round (by HOST)\n\n"
         f"{changes_summary}\n\n"
         f"## Updated Plan\n\n"
-        f"{plan_text}\n"
+        f"{_number_plan(plan_text)}\n"
     )
 
     Path(prompt_file).write_text(content, encoding="utf-8")

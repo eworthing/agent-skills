@@ -130,6 +130,29 @@ verification. Use `--skip-verification` to bypass.
 when further rounds are mathematically futile (no open blockers, none meet
 threshold, or all at max support).
 
+## Adversarial stance
+
+An optional single-round stress test that runs all panel members with a
+skeptical prompt stance. Use when the user asks to "pressure-test",
+"break the plan", or "adversarial review" before committing to a full
+multi-round quorum.
+
+When adversarial is requested:
+
+1. Parse the panel and validate (same as Step 0).
+2. Snapshot and line-number the plan (same as Steps 1-2).
+3. For each reviewer, write an adversarial prompt (same template as
+   peer-plan-review's adversarial stance: skepticism-first, attack
+   surface checklist, structured [B1]/[N1] output) and run via
+   `run_review.py` (NOT `run_quorum.py`).
+4. Collect all findings across reviewers. Deduplicate by description
+   similarity. Present all findings with reviewer attribution.
+5. STOP. Do not enter cross-critique, verification, or the revision loop.
+   Present findings and wait for user direction.
+
+This is a lightweight alternative to the full quorum. For convergence
+and consensus, use the standard quorum workflow.
+
 ## Agent Instructions
 
 ### Step 0: Parse arguments & validate panel
@@ -196,7 +219,12 @@ Temp files per reviewer (where `R` is the 1-indexed reviewer number):
 ### Step 2: Capture the plan
 
 Write the current plan to `<TMPDIR>/qr-${QUORUM_ID}-plan.md`.
-This is the immutable input for round 1.
+This snapshot is the immutable input for round 1. Store it unnumbered.
+
+Line numbering is applied at prompt-write time when constructing each
+reviewer's prompt — the prompt writers in `run_quorum.py` handle this
+automatically. The raw plan file stays unnumbered so the host can edit it
+cleanly between rounds. Numbering is reapplied fresh before each round.
 
 ### Step 3: Submit to panel (Round 1)
 
@@ -375,6 +403,11 @@ sends you to Step 7.
 [Latest plan text with remaining concerns noted]
 ```
 
+Regardless of the outcome, after presenting the final result STOP. Do not
+begin implementing changes, editing code, or modifying files based on the
+review findings. Explicitly ask the user which findings, if any, they want
+addressed before taking any action.
+
 ### Step 8: Cleanup
 
 Remove all temp files (explicit list, no glob):
@@ -412,3 +445,6 @@ Remove all temp files (explicit list, no glob):
 - `shrink-quorum` never reduces below 3 active reviewers
 - The final report must state original panel size, active panel size, and
   applied threshold
+- After the quorum review completes, do not auto-apply fixes or begin
+  implementation. Present the verdict and findings, then wait for user
+  direction.
