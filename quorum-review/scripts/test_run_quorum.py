@@ -989,7 +989,7 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
         }
         left = _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor)
         conflict = _make_issue("BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor)
-        related = _make_issue("BLK-003", "blocking", 1, 3, "B3", "Add auth guard", anchor=anchor)
+        related = _make_issue("BLK-003", "blocking", 1, 3, "B3", "Add rate limiting to endpoint", anchor=anchor)
 
         classification, reason = classify_merge_candidate(left, conflict)
         self.assertEqual(classification, "CONFLICT")
@@ -999,7 +999,7 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
         self.assertEqual(classification, "RELATED_DISTINCT")
 
     def test_classify_high_similarity_anchor_as_equivalent(self):
-        """Paraphrased issues on the same anchor merge at >= 0.70 similarity."""
+        """Paraphrased issues on the same anchor merge at >= 0.50 similarity."""
         anchor = {
             "artifact_path": "src/app.py",
             "anchor_kind": "line_range",

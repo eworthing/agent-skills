@@ -1435,6 +1435,34 @@ def _line_range_overlap(left_anchor, right_anchor, proximity=3):
     return not (left_end + proximity < right_start or right_end + proximity < left_start)
 
 
+def _normalize_section(section):
+    """Normalize a section string for fuzzy comparison.
+
+    Strips parenthetical suffixes like '(lines 28-31)', leading path
+    prefixes like 'API Endpoints > ', and collapses whitespace so that
+    different reviewer notations for the same section match.
+    """
+    if not section:
+        return ""
+    s = re.sub(r"\(lines?\s*[\d\-,\s]+\)", "", section)
+    # Strip leading path prefixes ("Foo > Bar > Baz" → "Baz")
+    if " > " in s:
+        s = s.rsplit(" > ", 1)[-1]
+    return " ".join(s.lower().split()).strip()
+
+
+def _sections_related(left_section, right_section):
+    """Fuzzy section comparison: exact match after normalization, or
+    one normalized section is a substring of the other."""
+    left_norm = _normalize_section(left_section)
+    right_norm = _normalize_section(right_section)
+    if not left_norm or not right_norm:
+        return False
+    if left_norm == right_norm:
+        return True
+    return left_norm in right_norm or right_norm in left_norm
+
+
 def _anchors_related(left, right):
     left_anchor = left.get("anchor") or {}
     right_anchor = right.get("anchor") or {}
@@ -1445,13 +1473,14 @@ def _anchors_related(left, right):
     if left_anchor.get("artifact_path") and left_anchor.get("artifact_path") == right_anchor.get("artifact_path"):
         if _line_range_overlap(left_anchor, right_anchor):
             return True
-        if left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") and left_anchor.get("section") and left_anchor.get("section") == right_anchor.get("section"):
+        if left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") and _sections_related(left_anchor.get("section"), right_anchor.get("section")):
             return True
         if left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "hunk":
             return True
-    if left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "section":
-        if left_anchor.get("section") and left_anchor.get("section") == right_anchor.get("section"):
-            return True
+    left_section = left_anchor.get("section")
+    right_section = right_anchor.get("section")
+    if left_section and right_section and _sections_related(left_section, right_section):
+        return True
     return False
 
 
@@ -1538,9 +1567,10 @@ def classify_merge_candidate(left, right):
     if left_anchor.get("anchor_hash") and left_anchor.get("anchor_hash") == right_anchor.get("anchor_hash"):
         return "EQUIVALENT", "shared anchor hash"
     # High similarity with overlapping anchors — reviewers paraphrasing the
-    # same concern in different words.  The 0.70 bar is deliberately above
-    # the RELATED_DISTINCT range so only genuinely equivalent issues merge.
-    if anchor_related and similarity >= 0.70 and not conflict_signal:
+    # same concern in different words.  Real-world paraphrases of the same
+    # vulnerability typically land in the 0.40-0.60 similarity range, so the
+    # 0.50 bar balances catching genuine duplicates against false merges.
+    if anchor_related and similarity >= 0.50 and not conflict_signal:
         return "EQUIVALENT", "high similarity on the same anchor"
     # Very high similarity without anchor — the wording alone is strong
     # enough evidence the reviewers mean the same thing.
