@@ -717,7 +717,14 @@ def _summary_similarity(left, right):
     left_tokens = set(_summary_tokens(left_norm))
     right_tokens = set(_summary_tokens(right_norm))
     if left_tokens and right_tokens:
-        ratio = max(ratio, len(left_tokens & right_tokens) / len(left_tokens | right_tokens))
+        jaccard = len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
+        # Overlap coefficient: fraction of the smaller set's terms found in the
+        # larger set.  Handles the common case where one reviewer is terse
+        # ("SQL injection on login") and another verbose ("the login query is
+        # vulnerable to SQL injection because it interpolates ...").  Jaccard
+        # penalises length differences; overlap does not.
+        overlap = len(left_tokens & right_tokens) / min(len(left_tokens), len(right_tokens))
+        ratio = max(ratio, jaccard, overlap)
     return ratio
 
 
