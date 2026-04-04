@@ -145,8 +145,10 @@ Only compare issues that share:
 Each candidate pair is classified as one of:
 
 - `EQUIVALENT` — issues describe the same concern with the same or overlapping
-  anchors. Determined by identical normalized summaries with related anchors, or
-  by matching `anchor_hash`. These are the only pairs that merge.
+  anchors. Determined by: identical normalized summaries with related anchors,
+  matching `anchor_hash`, high lexical similarity (>= 0.70) on the same anchor,
+  or very high similarity (>= 0.85) without anchor. Conflict signals block
+  EQUIVALENT classification. These are the only pairs that merge.
 - `RELATED_DISTINCT` — issues touch the same code area or topic but raise
   meaningfully different concerns (e.g., "add auth check" and "add audit
   logging" on the same endpoint). Created when anchors overlap but summaries

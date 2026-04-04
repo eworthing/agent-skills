@@ -413,11 +413,11 @@ def _extract_issue_anchor(block_text):
 # Structured review parsing (v2)
 # ---------------------------------------------------------------------------
 
-_RE_BLOCKING = re.compile(r"^\s*-\s*\*{0,2}\[B(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
+_RE_BLOCKING = re.compile(r"^\s*(?:-\s*)?\*{0,2}\[B(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
 _RE_BLOCKING_WITH_CONF = re.compile(
-    r"^\s*-\s*\*{0,2}\[B(\d+)\]\s*\((HIGH|MEDIUM|LOW)\)\*{0,2}\s*(.+)", re.MULTILINE | re.IGNORECASE
+    r"^\s*(?:-\s*)?\*{0,2}\[B(\d+)\]\s*\((HIGH|MEDIUM|LOW)\)\*{0,2}\s*(.+)", re.MULTILINE | re.IGNORECASE
 )
-_RE_NON_BLOCKING = re.compile(r"^\s*-\s*\*{0,2}\[N(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
+_RE_NON_BLOCKING = re.compile(r"^\s*(?:-\s*)?\*{0,2}\[N(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
 _RE_CONFIDENCE = re.compile(
     r"(?:^|\n)\s*(?:###?\s*)?Confidence\s*[:\-]?\s*\n?\s*(HIGH|MEDIUM|LOW)",
     re.IGNORECASE,
@@ -1537,6 +1537,15 @@ def classify_merge_candidate(left, right):
         return "RELATED_DISTINCT", "same wording but different anchors"
     if left_anchor.get("anchor_hash") and left_anchor.get("anchor_hash") == right_anchor.get("anchor_hash"):
         return "EQUIVALENT", "shared anchor hash"
+    # High similarity with overlapping anchors — reviewers paraphrasing the
+    # same concern in different words.  The 0.70 bar is deliberately above
+    # the RELATED_DISTINCT range so only genuinely equivalent issues merge.
+    if anchor_related and similarity >= 0.70 and not conflict_signal:
+        return "EQUIVALENT", "high similarity on the same anchor"
+    # Very high similarity without anchor — the wording alone is strong
+    # enough evidence the reviewers mean the same thing.
+    if similarity >= 0.85 and not conflict_signal:
+        return "EQUIVALENT", "very high lexical similarity"
     if conflict_signal and anchor_related:
         return "CONFLICT", "opposing actions on the same anchor"
     if anchor_related:

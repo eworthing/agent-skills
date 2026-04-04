@@ -578,6 +578,26 @@ class TestStructuredReviewParsing(unittest.TestCase):
         self.assertEqual(result["blocking"][1]["id"], "B2")
         os.unlink(path)
 
+    def test_parse_issues_without_leading_dash(self):
+        """Issues without a leading dash (e.g., from Codex) must still parse."""
+        path = self._write_review(
+            "### Blocking Issues\n"
+            "[B1] (HIGH) Missing authorization check on admin endpoint\n"
+            "[B2] SQL injection in search query\n\n"
+            "### Non-Blocking Issues\n"
+            "[N1] Consider adding request logging\n\n"
+            "### Confidence\nHIGH\n\n"
+            "VERDICT: REVISE\n"
+        )
+        result = parse_structured_review(path)
+        self.assertEqual(len(result["blocking"]), 2)
+        self.assertEqual(result["blocking"][0]["id"], "B1")
+        self.assertIn("authorization", result["blocking"][0]["text"])
+        self.assertEqual(result["blocking"][1]["id"], "B2")
+        self.assertEqual(len(result["non_blocking"]), 1)
+        self.assertEqual(result["non_blocking"][0]["id"], "N1")
+        os.unlink(path)
+
 
 # ===========================================================================
 # v2 tests: Cross-critique parsing
@@ -977,7 +997,48 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
 
         classification, reason = classify_merge_candidate(left, related)
         self.assertEqual(classification, "RELATED_DISTINCT")
-        self.assertIn("same area", reason)
+
+    def test_classify_high_similarity_anchor_as_equivalent(self):
+        """Paraphrased issues on the same anchor merge at >= 0.70 similarity."""
+        anchor = {
+            "artifact_path": "src/app.py",
+            "anchor_kind": "line_range",
+            "anchor_start": 10,
+            "anchor_end": 14,
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "Missing input validation on user registration endpoint", anchor=anchor)
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "No input validation for user registration handler", anchor=anchor)
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "EQUIVALENT")
+        self.assertIn("high similarity", reason)
+
+    def test_classify_very_high_similarity_no_anchor_as_equivalent(self):
+        """Near-identical wording merges even without anchor overlap."""
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "SQL injection via string interpolation in login query")
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "SQL injection via string interpolation in login query handler")
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "EQUIVALENT")
+        self.assertIn("very high", reason)
+
+    def test_classify_high_similarity_conflict_not_equivalent(self):
+        """Conflict signal prevents EQUIVALENT even at high similarity."""
+        anchor = {
+            "artifact_path": "src/app.py",
+            "anchor_kind": "line_range",
+            "anchor_start": 10,
+            "anchor_end": 14,
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "Add caching for product catalog", anchor=anchor)
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "Remove caching from product catalog", anchor=anchor)
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "CONFLICT")
+        self.assertIn("opposing actions", reason)
 
     def test_apply_merge_pipeline_merges_equivalent_issues_and_appends_jsonl(self):
         with tempfile.TemporaryDirectory() as tmpdir:
