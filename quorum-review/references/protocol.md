@@ -1,146 +1,207 @@
-# Quorum Review — Protocol Reference
+# Quorum Review — Protocol Reference (v3)
 
-Read this file when you need detailed understanding of the review format,
-cross-critique protocol, or issue ledger schema beyond what's in SKILL.md.
+This file is the source of truth for `run_quorum.py`, `run_review.py`, and the
+review prompts they generate.
 
-## Review contract (v2.4)
+## Modes
 
-Each reviewer is prompted to produce a structured review with these sections:
+- `plan` and `spec` share the same tribunal path.
+- `code` reviews a code diff/change and requires anchors.
+- `--mode` defaults to `plan`.
+- `--verifier provider:model` selects the independent verifier; if omitted, the
+  orchestrator auto-selects a verifier outside the active panel.
 
-```
+## Review contracts
+
+### Plan/spec
+
+Each reviewer must produce:
+
+```md
 ### Reasoning
-Write your complete analysis of the plan here. Consider architecture,
-security, testing, performance, and any other relevant areas. This
-section MUST come before your issue lists.
-
 ### Blocking Issues
-- [B1] (HIGH) Description of blocking issue...
-- [B2] (MEDIUM) Description of blocking issue...
-(Write "None" if no blocking issues.)
-
 ### Non-Blocking Issues
-- [N1] Description...
-(Write "None" if no non-blocking issues.)
-
 ### Confidence
-HIGH, MEDIUM, or LOW
-
 ### Scope
-architecture, security, testing, API design, performance
-
-VERDICT: APPROVED or VERDICT: REVISE
+VERDICT: APPROVED|REVISE
 ```
 
-Per-issue confidence (`HIGH`, `MEDIUM`, `LOW`) is optional. If omitted, the
-review-level confidence is used as the default for each issue.
+- Blocking and non-blocking issues use canonical labels like `[B1]` and `[N1]`.
+- Anchors should be section/line references, e.g. `Section: Step 3 (lines 42-55)`.
+- The verdict line must be the last non-empty line.
 
-**Verdict protocol:**
-- The VERDICT must be the **LAST non-empty line** of each review output
-- Must be exactly: `VERDICT: APPROVED` or `VERDICT: REVISE`
-- Parse verdict from the bottom of the output file upward
+### Code
 
-**Fallback**: If a reviewer produces unstructured text, the orchestrator
-extracts only the verdict (v1 behavior). All other fields default to empty.
+Code reviews use the same section structure, but blocking/non-blocking issues
+must include an anchor line naming a file path and either a line range or diff
+hunk, e.g.:
 
-## Cross-critique protocol (rounds 2+)
+```md
+- [B1] (HIGH) Missing auth check
+  Anchor: src/auth/admin.ts (lines 45-52)
+```
 
-In rounds 2+, reviewers respond to each open issue before providing their
-updated review. The response tags are:
+Accepted anchor keys include `Anchor:`, `Section:`, `File:`, `Path:`, and
+`Hunk:`. The parser also preserves line ranges and diff hunk markers when
+present.
 
-- `[AGREE BLK-001]` — confirms the issue is valid
-- `[DISAGREE BLK-001] reason` — disputes with explanation
-- `[REFINE BLK-001] revised text` — agrees but refines scope (counts as support)
+## Cross-critique
+
+Rounds 2+ use anonymous cross-critique before the updated review:
+
+- `[AGREE BLK-001]` — confirm the issue is valid
+- `[DISAGREE BLK-001] reason` — dispute the issue
+- `[REFINE BLK-001] revised text` — keep the issue but narrow or clarify it
 - `[B-NEW] description` — new blocking issue
 - `[N-NEW] description` — new non-blocking issue
 
-Cross-critique responses are placed BEFORE the standard review sections.
-Every open issue should receive a response — silence means no data.
+Rules:
 
-**Important:** In rounds 2+, reviewers should use `[B-NEW]`/`[N-NEW]` tags for
-ALL new issues discovered during cross-critique. The orchestrator also scans
-standard `### Blocking Issues` and `### Non-Blocking Issues` sections for
-untagged new issues, but explicit tags ensure reliable registration and prevent
-ambiguity with restated existing issues.
+1. Every open issue must receive exactly one response.
+2. Reviewer identities stay anonymous in shared context (`Reviewer A/B/C...`).
+3. Hidden role labels never appear in cross-critique context.
 
-## Issue ledger schema
+## Issue ledger
 
-Issues get **canonical, immutable IDs** assigned by the orchestrator:
-- Blocking: `BLK-001`, `BLK-002`, etc.
-- Non-blocking: `NB-001`, `NB-002`, etc.
+The ledger is canonical, immutable-by-ID, and stored at
+`<TMPDIR>/qr-${QUORUM_ID}-ledger.json`.
 
-IDs are monotonically increasing and never reused. Each issue tracks:
+### Core shape
 
-| Field | Description |
-|-------|-------------|
-| `id` | Canonical ID (BLK-001, NB-001, etc.) |
-| `severity` | `blocking` or `non_blocking` |
-| `status` | `open`, `resolved`, `merged`, `invalidated_by_verifier` |
-| `proposed_by` | Reviewer index who first raised it (always counts as 1 support) |
-| `endorsed_by` | Reviewer indices who used [AGREE] |
-| `refined_by` | Reviewer indices who used [REFINE] |
-| `disputed_by` | Reviewer indices who used [DISAGREE] |
-| `support_count` | 1 (proposer) + len(endorsed_by) + len(refined_by) |
-| `dispute_count` | len(disputed_by) |
-| `merged_from` | IDs of issues absorbed by host-agent merge |
-| `owner_summary` | Current description text |
-| `confidence` | Issue-level confidence (HIGH/MEDIUM/LOW or null) |
-
-The ledger is stored at `<TMPDIR>/qr-${QUORUM_ID}-ledger.json`.
-
-### Merge protocol
-
-When the host agent identifies semantically equivalent issues in Step 5:
-
-1. Pick the survivor (clearest description)
-2. Add absorbed issue IDs to survivor's `merged_from` list
-3. Set absorbed issues' status to `"merged"`
-4. Add a merge record to the `merges` array: `{"survivor": "BLK-001", "absorbed": "BLK-003", "reason": "..."}`
-5. Combine `endorsed_by`, `refined_by`, `disputed_by` lists (deduplicate reviewer indices)
-6. Recalculate: `support_count` = 1 + len(endorsed_by) + len(refined_by),
-   `dispute_count` = len(disputed_by)
-
-## Round details
-
-### Round 1 — Independent parallel review
-
-Each reviewer receives the review contract, panel context ("You are reviewer N
-of M"), and the full plan text. No prior reviews visible, no identities,
-parallel execution by default.
-
-### Round 2 — Anonymous cross-critique
-
-Each reviewer receives the review contract, cross-critique instructions, all
-round 1 reviews (labeled Reviewer A/B/C — no provider/model info), the current
-issue ledger summary, host changes summary, and the updated plan.
-
-### Rounds 3+ — Compressed context
-
-Same cross-critique format, but with compressed context instead of full prose:
-issue ledger table + condensed per-reviewer issue lists. Blind mode strips
-support/dispute counts to prevent conformity anchoring.
-
-### Verification stage
-
-After cross-critique with surviving blockers, the first active panel reviewer
-verifies each surviving blocker (`VERIFIED` or `INVALIDATED`). Blockers with
-unanimous support skip verification (high-probability true positives).
-Use `--skip-verification` to bypass.
-
-### Early exit signals
-
-The orchestrator checks after each round whether further rounds are futile:
-- No open blockers → APPROVED
-- No blockers meet threshold → APPROVED
-- All surviving at max support → can't change, stop
-
-The `early_exit` and `early_exit_reason` fields in the tally JSON signal this.
-
-### Derived verdict rule
-
-```
-APPROVED = no blocking issue has support_count >= threshold
-REVISE   = one or more blocking issues have support_count >= threshold
+```json
+{
+  "id": "BLK-001",
+  "identity": {
+    "severity": "blocking",
+    "status": "open",
+    "round_introduced": 1
+  },
+  "anchor": {
+    "artifact_kind": "code_diff",
+    "artifact_path": "src/middleware/auth.ts",
+    "anchor_kind": "line_range",
+    "anchor_start": 45,
+    "anchor_end": 52,
+    "anchor_hash": "sha256:..."
+  },
+  "claim": {
+    "summary": "Missing JWT validation on admin route",
+    "category": "security",
+    "impact": "Unauthorized access possible",
+    "evidence_refs": []
+  },
+  "adjudication": {
+    "proposed_by": [1],
+    "endorsed_by": [3],
+    "refined_by": [],
+    "disputed_by": [2],
+    "support_count": 2,
+    "dispute_count": 1,
+    "merged_from": []
+  },
+  "verification": {
+    "status": "pending",
+    "verified_by": null,
+    "verification_rationale": null
+  },
+  "relations": {
+    "related_distinct": [],
+    "conflicts_with": []
+  }
+}
 ```
 
-Individual reviewer verdicts are **advisory**; the ledger-derived verdict is
-authoritative.
+### Ledger rules
+
+- `support_count = len(proposed_by) + len(endorsed_by) + len(refined_by)`
+- `dispute_count = len(disputed_by)`
+- `claim` holds the canonical summary/category/impact.
+- `verification.status` is `pending`, `verified`, or `invalidated`.
+- `relations.related_distinct` and `relations.conflicts_with` are relation-only
+  links; they do not absorb support counts.
+
+Legacy top-level aliases are still migrated in memory so old ledgers remain
+usable.
+
+## Merge pipeline
+
+Merges are conservative and auditable.
+
+### Candidate generation
+
+Only compare issues that share:
+
+- the same severity
+- the same `artifact_path` when an artifact path exists
+- overlapping or nearby line ranges / the same diff hunk in code mode
+- optional lexical similarity on normalized summaries
+- optional category
+
+### Classification
+
+Each candidate pair is classified as one of:
+
+- `EQUIVALENT`
+- `RELATED_DISTINCT`
+- `CONFLICT`
+- `UNCERTAIN`
+
+`SUBSUMES` is intentionally not part of v3.
+
+### Application
+
+- Only `EQUIVALENT` pairs are merged.
+- `RELATED_DISTINCT` and `CONFLICT` add relation links only.
+- `UNCERTAIN` is logged and left alone.
+- Never merge across severity.
+- Every decision is appended to `merge-log.jsonl`.
+
+Round 1 keeps the raw independent ledger for verdict purposes; merge results are
+persisted for later rounds. From round 2 onward, the merged ledger feeds the
+next round and the final verdict.
+
+## Verification
+
+Verification is independent from the panel.
+
+- `--verifier provider:model` is required for explicit verifier selection.
+- If omitted, the orchestrator auto-selects a verifier outside the active panel.
+- The verifier never sees support counts, reviewer identities, or prior debate.
+- The verifier sees only the current artifact, the blocker ID, anchor data, the
+  blocker summary, and the verification contract.
+- Output must be exactly `VERIFIED <BLOCKER_ID>` or
+  `INVALIDATED <BLOCKER_ID>` on the first non-empty line, followed by one concise
+  rationale.
+- Invalidated blockers are excluded from the derived verdict and early-exit
+  checks.
+
+## Round flow
+
+1. **Round 1** — independent parallel review.
+2. **Ledger build** — assign canonical IDs and capture anchors.
+3. **Merge** — write conservative merge decisions and keep relation-only cases
+   separate.
+4. **Rounds 2+** — anonymous cross-critique with compressed later rounds and
+   blind mode.
+5. **Verification** — validate surviving blockers with an external verifier.
+6. **Verdict** — derive APPROVED/REVISE from surviving blocking issues only.
+
+The artifact verdict is ledger-derived and authoritative; individual reviewer
+verdicts are advisory.
+
+## Role packs
+
+Role labels are hidden from peers but used to sharpen each reviewer's prompt.
+
+- `plan` / `spec`: Skeptic, Constraint Guardian, User Advocate,
+  Integrator-minded reviewer
+- `code`: Correctness reviewer, Security reviewer, Maintainability reviewer,
+  Performance/operability reviewer
+
+## Compatibility notes
+
+- `REVIEW.md` rubric text is still appended to the first-round prompt.
+- Plan/spec review remains backward-compatible with the v2 tribunal path.
+- Code review adds anchors but keeps the same structured output and ledger math.
+- The system stays file-based and stateless; no external DB or heavy infra is
+  required.

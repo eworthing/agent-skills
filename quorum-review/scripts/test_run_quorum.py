@@ -7,6 +7,7 @@ Tier 1: Local tests that exercise orchestrator logic (no external CLIs).
 Run:  python3 scripts/test_run_quorum.py
 """
 
+import argparse
 import json
 import os
 import subprocess
@@ -22,7 +23,9 @@ SCRIPT = str(Path(SCRIPT_DIR) / "run_quorum.py")
 # Import functions for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
 import run_quorum  # noqa: E402
+import run_review  # noqa: E402
 from run_quorum import (  # noqa: E402
+    _make_issue,
     CROSS_CRITIQUE_INSTRUCTIONS,
     EXIT_APPROVED,
     EXIT_INDETERMINATE,
@@ -30,6 +33,8 @@ from run_quorum import (  # noqa: E402
     MAX_ROUNDS_LIMIT,
     MIN_QUORUM_SIZE,
     REVIEW_CONTRACT_V2,
+    apply_merge_pipeline,
+    classify_merge_candidate,
     _extract_section,
     _is_unanimous,
     build_issue_ledger,
@@ -68,6 +73,42 @@ def run_script(*extra_args):
         timeout=30,
     )
     return result.returncode, result.stdout, result.stderr
+
+
+def make_issue(
+    issue_id,
+    summary,
+    *,
+    severity="blocking",
+    status="open",
+    support_count=1,
+    dispute_count=0,
+    verification_status="pending",
+    anchor=None,
+):
+    """Build a v3-style issue record for tests."""
+    issue = run_quorum._make_issue(
+        issue_id,
+        severity,
+        1,
+        1,
+        issue_id,
+        summary,
+        anchor=anchor,
+    )
+    issue["status"] = status
+    issue["adjudication"]["status"] = status
+    issue["adjudication"]["proposed_by"] = [1]
+    issue["adjudication"]["endorsed_by"] = list(range(2, support_count + 1))
+    issue["adjudication"]["refined_by"] = []
+    issue["adjudication"]["disputed_by"] = list(range(100, 100 + dispute_count))
+    if status == "invalidated_by_verifier" and verification_status == "pending":
+        verification_status = "invalidated"
+    issue["verification"]["status"] = verification_status
+    if verification_status == "invalidated":
+        issue["status"] = "invalidated_by_verifier"
+        issue["adjudication"]["status"] = "invalidated_by_verifier"
+    return run_quorum._sync_issue_aliases(issue)
 
 
 # ===========================================================================
@@ -852,6 +893,166 @@ class TestIssueLedger(unittest.TestCase):
 
 
 # ===========================================================================
+# v3 tests: Ledger migration and merge pipeline
+# ===========================================================================
+
+
+class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
+    """Tests for v3 ledger migration and deterministic merge behavior."""
+
+    def test_legacy_flat_ledger_migrates_to_nested_schema(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ledger_file = Path(tmpdir) / "legacy-ledger.json"
+            legacy = {
+                "next_blk_id": 2,
+                "next_nb_id": 1,
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "source_reviewer": 1,
+                        "source_label": "B1",
+                        "round_introduced": 1,
+                        "severity": "blocking",
+                        "status": "open",
+                        "text": "No auth on admin routes",
+                        "owner_summary": "No auth on admin routes",
+                        "proposed_by": 1,
+                        "endorsed_by": [2],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 2,
+                        "dispute_count": 0,
+                        "merged_from": [],
+                        "conflict": ["BLK-002"],
+                        "anchor": {
+                            "path": "src/auth.py",
+                            "line_start": 12,
+                            "line_end": 18,
+                        },
+                    },
+                ],
+                "merges": [
+                    {"survivor": "BLK-001", "absorbed": "BLK-002", "round": 1},
+                ],
+                "rounds": {"1": {"reviewer_count": 3}},
+            }
+            ledger_file.write_text(json.dumps(legacy), encoding="utf-8")
+
+            loaded = load_ledger(str(ledger_file))
+            issue = loaded["issues"][0]
+
+            self.assertEqual(loaded["schema_version"], 3)
+            self.assertEqual(loaded["version"], 3)
+            self.assertEqual(issue["identity"]["severity"], "blocking")
+            self.assertEqual(issue["claim"]["summary"], "No auth on admin routes")
+            self.assertEqual(issue["anchor"]["artifact_path"], "src/auth.py")
+            self.assertEqual(issue["anchor"]["anchor_kind"], "line_range")
+            self.assertEqual(issue["anchor"]["anchor_start"], 12)
+            self.assertEqual(issue["relations"]["conflict"], ["BLK-002"])
+            self.assertEqual(loaded["merges"][0]["absorbed"], ["BLK-002"])
+            self.assertEqual(loaded["merges"][0]["classification"], "EQUIVALENT")
+
+            save_ledger(str(ledger_file), loaded)
+            saved = json.loads(ledger_file.read_text(encoding="utf-8"))
+            self.assertEqual(saved["schema_version"], 3)
+            self.assertIn("identity", saved["issues"][0])
+            self.assertIn("relations", saved["issues"][0])
+
+    def test_classify_merge_candidate_relation_only_outcomes(self):
+        anchor = {
+            "artifact_path": "src/app.py",
+            "anchor_kind": "line_range",
+            "anchor_start": 10,
+            "anchor_end": 14,
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor)
+        conflict = _make_issue("BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor)
+        related = _make_issue("BLK-003", "blocking", 1, 3, "B3", "Add auth guard", anchor=anchor)
+
+        classification, reason = classify_merge_candidate(left, conflict)
+        self.assertEqual(classification, "CONFLICT")
+        self.assertIn("opposing actions", reason)
+
+        classification, reason = classify_merge_candidate(left, related)
+        self.assertEqual(classification, "RELATED_DISTINCT")
+        self.assertIn("same area", reason)
+
+    def test_apply_merge_pipeline_merges_equivalent_issues_and_appends_jsonl(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "merge01"
+
+            def make_ledger():
+                return {
+                    "next_blk_id": 3,
+                    "next_nb_id": 2,
+                    "issues": [
+                        _make_issue("BLK-001", "blocking", 1, 1, "B1", "No auth on admin routes"),
+                        _make_issue("BLK-002", "blocking", 1, 2, "B2", "No auth on admin routes"),
+                        _make_issue("NB-001", "non_blocking", 1, 3, "N1", "Add logging"),
+                    ],
+                    "merges": [],
+                    "rounds": {"1": {"reviewer_count": 3, "blocking_open": 2, "nb_open": 1, "approved_count": 0}},
+                }
+
+            ledger = make_ledger()
+            result = apply_merge_pipeline(ledger, quorum_id, tmpdir, 1)
+
+            self.assertEqual(result["merged"], [{"survivor": "BLK-001", "absorbed": ["BLK-002"]}])
+            self.assertEqual(len(result["candidates"]), 1)
+
+            survivor = next(issue for issue in ledger["issues"] if issue["id"] == "BLK-001")
+            absorbed = next(issue for issue in ledger["issues"] if issue["id"] == "BLK-002")
+            self.assertEqual(survivor["status"], "open")
+            self.assertEqual(survivor["support_count"], 2)
+            self.assertEqual(survivor["merged_from"], ["BLK-002"])
+            self.assertEqual(absorbed["status"], "merged")
+            self.assertEqual(absorbed["adjudication"]["status"], "merged")
+
+            log_path = Path(result["log_path"])
+            first_lines = log_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(first_lines), 2)
+            self.assertEqual(json.loads(first_lines[0])["action"], "merge_candidate")
+            self.assertEqual(json.loads(first_lines[1])["action"], "merge_applied")
+
+            second_ledger = make_ledger()
+            apply_merge_pipeline(second_ledger, quorum_id, tmpdir, 2)
+            appended_lines = log_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(appended_lines), 4)
+
+    def test_apply_merge_pipeline_records_conflict_relations(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "merge02"
+            anchor = {
+                "artifact_path": "src/app.py",
+                "anchor_kind": "line_range",
+                "anchor_start": 10,
+                "anchor_end": 14,
+            }
+            ledger = {
+                "next_blk_id": 3,
+                "next_nb_id": 1,
+                "issues": [
+                    _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor),
+                    _make_issue("BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor),
+                ],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 2, "nb_open": 0, "approved_count": 0}},
+            }
+
+            result = apply_merge_pipeline(ledger, quorum_id, tmpdir, 1)
+
+            self.assertEqual(result["merged"], [])
+            left = next(issue for issue in ledger["issues"] if issue["id"] == "BLK-001")
+            right = next(issue for issue in ledger["issues"] if issue["id"] == "BLK-002")
+            self.assertEqual(left["relations"]["conflict"], ["BLK-002"])
+            self.assertEqual(right["relations"]["conflict"], ["BLK-001"])
+            self.assertEqual(left["status"], "open")
+            self.assertEqual(right["status"], "open")
+            self.assertEqual(left["support_count"], 1)
+            self.assertEqual(right["support_count"], 1)
+
+
+# ===========================================================================
 # v2 tests: Derived verdict
 # ===========================================================================
 
@@ -863,8 +1064,7 @@ class TestDerivedVerdict(unittest.TestCase):
         """APPROVED when no blockers survive threshold."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 1, "owner_summary": "Minor concern"},
+                make_issue("BLK-001", "Minor concern", support_count=1),
             ],
             "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
         }
@@ -878,12 +1078,9 @@ class TestDerivedVerdict(unittest.TestCase):
         """REVISE when blockers survive, regardless of advisory verdicts."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "owner_summary": "Auth missing"},
-                {"id": "BLK-002", "severity": "blocking", "status": "open",
-                 "support_count": 1, "owner_summary": "Minor"},
-                {"id": "NB-001", "severity": "non_blocking", "status": "open",
-                 "support_count": 3, "owner_summary": "Nice to have"},
+                make_issue("BLK-001", "Auth missing", support_count=2),
+                make_issue("BLK-002", "Minor", support_count=1),
+                make_issue("NB-001", "Nice to have", severity="non_blocking", support_count=3),
             ],
             "next_blk_id": 3, "next_nb_id": 2, "merges": [], "rounds": {},
         }
@@ -898,8 +1095,7 @@ class TestDerivedVerdict(unittest.TestCase):
         """Resolved issues don't affect verdict."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "resolved",
-                 "support_count": 3, "owner_summary": "Fixed now"},
+                make_issue("BLK-001", "Fixed now", status="resolved", support_count=3),
             ],
             "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
         }
@@ -911,8 +1107,7 @@ class TestDerivedVerdict(unittest.TestCase):
         """Unanimous threshold requires all reviewers to support."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "owner_summary": "Issue"},
+                make_issue("BLK-001", "Issue", support_count=2),
             ],
             "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
         }
@@ -921,7 +1116,8 @@ class TestDerivedVerdict(unittest.TestCase):
         self.assertEqual(verdict, "APPROVED")
 
         # But if support is 3/3, it survives
-        ledger["issues"][0]["support_count"] = 3
+        ledger["issues"][0]["adjudication"]["endorsed_by"] = [2, 3]
+        run_quorum._sync_issue_aliases(ledger["issues"][0])
         verdict, surviving, _dropped = derive_verdict(ledger, "unanimous", 3)
         self.assertEqual(verdict, "REVISE")
         self.assertEqual(len(surviving), 1)
@@ -930,10 +1126,8 @@ class TestDerivedVerdict(unittest.TestCase):
         """format_issue_consensus produces readable output."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "owner_summary": "Auth missing"},
-                {"id": "NB-001", "severity": "non_blocking", "status": "open",
-                 "support_count": 1, "owner_summary": "Add docs"},
+                make_issue("BLK-001", "Auth missing", support_count=2),
+                make_issue("NB-001", "Add docs", severity="non_blocking", support_count=1),
             ],
             "next_blk_id": 2, "next_nb_id": 2, "merges": [], "rounds": {},
         }
@@ -1563,10 +1757,19 @@ class TestVerificationStage(unittest.TestCase):
         """Targeted verification prompts for surviving blockers."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "owner_summary": "Auth missing"},
-                {"id": "BLK-002", "severity": "blocking", "status": "open",
-                 "support_count": 1, "owner_summary": "Minor"},
+                make_issue(
+                    "BLK-001",
+                    "Auth missing",
+                    support_count=2,
+                    anchor={
+                        "artifact_kind": "plan",
+                        "section": "API gateway",
+                        "anchor_start": 34,
+                        "anchor_end": 40,
+                        "raw": "Section: API gateway (lines 34-40)",
+                    },
+                ),
+                make_issue("BLK-002", "Minor", support_count=1),
             ],
             "next_blk_id": 3, "next_nb_id": 1, "merges": [], "rounds": {},
         }
@@ -1574,11 +1777,17 @@ class TestVerificationStage(unittest.TestCase):
         # Only BLK-001 survives supermajority (2/3), BLK-002 doesn't (1/3)
         self.assertEqual(len(prompts), 1)
         self.assertEqual(prompts[0]["issue_id"], "BLK-001")
-        self.assertIn("BLK-001", prompts[0]["prompt"])
-        self.assertIn("Auth missing", prompts[0]["prompt"])
-        self.assertIn("VERIFIED", prompts[0]["prompt"])
-        self.assertIn("INVALIDATED", prompts[0]["prompt"])
-        self.assertIn("Plan text", prompts[0]["prompt"])
+        prompt = prompts[0]["prompt"]
+        self.assertIn("BLK-001", prompt)
+        self.assertIn("Auth missing", prompt)
+        self.assertIn("API gateway", prompt)
+        self.assertIn("lines 34-40", prompt)
+        self.assertIn("VERIFIED", prompt)
+        self.assertIn("INVALIDATED", prompt)
+        self.assertIn("Plan text", prompt)
+        self.assertNotIn("support count", prompt.lower())
+        self.assertNotIn("reviewer identities", prompt.lower())
+        self.assertNotIn("prior debate", prompt.lower())
 
     def test_verification_response_parsing_verified(self):
         """Parse VERIFIED responses."""
@@ -1634,6 +1843,50 @@ class TestVerificationStage(unittest.TestCase):
 
 
 # ===========================================================================
+# v2.1 tests: Verifier prompt routing
+# ===========================================================================
+
+
+class TestVerifierPromptRouting(unittest.TestCase):
+    """Tests that Claude prompt routing switches for verification prompts."""
+
+    def test_claude_verification_prompt_uses_verifier_system_prompt(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("## Verification Contract\n\n")
+            f.flush()
+            args = argparse.Namespace(
+                prompt_file=f.name,
+                resume=False,
+                model=None,
+                effort=None,
+            )
+            cmd = run_review.build_claude_cmd(args)
+            self.assertIn("--append-system-prompt", cmd)
+            prompt = cmd[cmd.index("--append-system-prompt") + 1]
+            self.assertIn("independent verifier", prompt)
+            self.assertIn("VERIFIED <ID>", prompt)
+            self.assertNotIn("VERDICT: APPROVED", prompt)
+            os.unlink(f.name)
+
+    def test_claude_verification_mode_flag_overrides_prompt_sniffing(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
+            f.write("## Regular Review\n\n")
+            f.flush()
+            args = argparse.Namespace(
+                prompt_file=f.name,
+                resume=False,
+                model=None,
+                effort=None,
+                verification_mode=True,
+            )
+            cmd = run_review.build_claude_cmd(args)
+            prompt = cmd[cmd.index("--append-system-prompt") + 1]
+            self.assertIn("independent verifier", prompt)
+            self.assertIn("VERIFIED <ID>", prompt)
+            os.unlink(f.name)
+
+
+# ===========================================================================
 # v2.1 tests: Threshold language
 # ===========================================================================
 
@@ -1666,22 +1919,8 @@ class TestDeriveVerdictSkipsInvalidated(unittest.TestCase):
             "next_blk_id": 3,
             "next_nb_id": 1,
             "issues": [
-                {
-                    "id": "BLK-001",
-                    "severity": "blocking",
-                    "status": "invalidated_by_verifier",
-                    "support_count": 3,
-                    "dispute_count": 0,
-                    "owner_summary": "Was invalidated",
-                },
-                {
-                    "id": "BLK-002",
-                    "severity": "blocking",
-                    "status": "open",
-                    "support_count": 1,
-                    "dispute_count": 2,
-                    "owner_summary": "Low support",
-                },
+                make_issue("BLK-001", "Was invalidated", status="invalidated_by_verifier", support_count=3),
+                make_issue("BLK-002", "Low support", support_count=1, dispute_count=2),
             ],
             "merges": [],
             "rounds": {},
@@ -1693,6 +1932,62 @@ class TestDeriveVerdictSkipsInvalidated(unittest.TestCase):
         # Only BLK-002 is in dropped (open but below threshold)
         self.assertEqual(len(dropped), 1)
         self.assertEqual(dropped[0]["id"], "BLK-002")
+
+    def test_derive_verdict_skips_verification_invalidated_status(self):
+        ledger = {
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "issues": [
+                make_issue(
+                    "BLK-001",
+                    "Was invalidated",
+                    support_count=3,
+                    verification_status="invalidated",
+                ),
+            ],
+            "merges": [],
+            "rounds": {},
+        }
+        verdict, surviving, dropped = derive_verdict(ledger, "super", 3)
+        self.assertEqual(verdict, "APPROVED")
+        self.assertEqual(surviving, [])
+        self.assertEqual(dropped, [])
+
+
+class TestVerificationSync(unittest.TestCase):
+    """Verification results must sync into verdict snapshots before derivation."""
+
+    def test_sync_verification_state_marks_copy_invalidated(self):
+        verdict_ledger = {
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "issues": [
+                make_issue("BLK-001", "Missing validation", support_count=3),
+            ],
+            "merges": [],
+            "rounds": {},
+        }
+        source_ledger = json.loads(json.dumps(verdict_ledger))
+        source_issue = source_ledger["issues"][0]
+        source_issue["verification"]["status"] = "invalidated"
+        source_issue["verification"]["verified_by"] = {"provider": "copilot", "model": "gpt-5.4"}
+        source_issue["verification"]["verification_rationale"] = "Anchor does not support the claim."
+        source_issue["status"] = "invalidated_by_verifier"
+        source_issue["adjudication"]["status"] = "invalidated_by_verifier"
+
+        run_quorum._sync_verification_state(verdict_ledger, source_ledger)
+
+        synced_issue = verdict_ledger["issues"][0]
+        self.assertEqual(synced_issue["status"], "invalidated_by_verifier")
+        self.assertEqual(synced_issue["verification"]["status"], "invalidated")
+        self.assertEqual(
+            synced_issue["verification"]["verified_by"],
+            {"provider": "copilot", "model": "gpt-5.4"},
+        )
+        verdict, surviving, dropped = derive_verdict(verdict_ledger, "super", 3)
+        self.assertEqual(verdict, "APPROVED")
+        self.assertEqual(surviving, [])
+        self.assertEqual(dropped, [])
 
 
 # ===========================================================================
@@ -1706,7 +2001,7 @@ class TestIsUnanimous(unittest.TestCase):
     def test_is_unanimous_true(self):
         ledger = {
             "issues": [
-                {"id": "BLK-001", "support_count": 3},
+                make_issue("BLK-001", "Issue", support_count=3),
             ],
         }
         self.assertTrue(_is_unanimous(ledger, "BLK-001", 3))
@@ -1714,7 +2009,7 @@ class TestIsUnanimous(unittest.TestCase):
     def test_is_unanimous_false(self):
         ledger = {
             "issues": [
-                {"id": "BLK-001", "support_count": 2},
+                make_issue("BLK-001", "Issue", support_count=2),
             ],
         }
         self.assertFalse(_is_unanimous(ledger, "BLK-001", 3))
@@ -1735,8 +2030,7 @@ class TestShouldExitEarly(unittest.TestCase):
     def test_should_exit_early_no_blockers(self):
         ledger = {
             "issues": [
-                {"id": "NB-001", "severity": "non_blocking", "status": "open",
-                 "support_count": 2, "dispute_count": 0},
+                make_issue("NB-001", "Suggestion", severity="non_blocking", support_count=2),
             ],
         }
         should_exit, reason = should_exit_early(ledger, "super", 3)
@@ -1746,8 +2040,7 @@ class TestShouldExitEarly(unittest.TestCase):
     def test_should_exit_early_no_surviving(self):
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 1, "dispute_count": 2},
+                make_issue("BLK-001", "Issue", support_count=1, dispute_count=2),
             ],
         }
         should_exit, reason = should_exit_early(ledger, "super", 3)
@@ -1757,8 +2050,7 @@ class TestShouldExitEarly(unittest.TestCase):
     def test_should_exit_early_max_support(self):
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 3, "dispute_count": 0},
+                make_issue("BLK-001", "Issue", support_count=3),
             ],
         }
         should_exit, reason = should_exit_early(ledger, "super", 3)
@@ -1768,8 +2060,7 @@ class TestShouldExitEarly(unittest.TestCase):
     def test_should_exit_early_not_yet(self):
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "dispute_count": 0},
+                make_issue("BLK-001", "Issue", support_count=2),
             ],
         }
         should_exit, reason = should_exit_early(ledger, "super", 3)
@@ -2067,8 +2358,18 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
         """Unit test: plan_text content appears in generated prompts."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "owner_summary": "Security flaw"},
+                make_issue(
+                    "BLK-001",
+                    "Security flaw",
+                    support_count=2,
+                    anchor={
+                        "artifact_kind": "plan",
+                        "section": "Security",
+                        "anchor_start": 12,
+                        "anchor_end": 18,
+                        "raw": "Section: Security (lines 12-18)",
+                    },
+                ),
             ],
             "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
         }
@@ -2077,8 +2378,10 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
         self.assertEqual(len(prompts), 1)
         self.assertIn("BLK-001", prompts[0]["issue_id"])
         # Plan text must be embedded in the prompt
+        self.assertIn("Security", prompts[0]["prompt"])
         self.assertIn("My Specific Plan", prompts[0]["prompt"])
         self.assertIn("auth middleware", prompts[0]["prompt"])
+        self.assertNotIn("support count", prompts[0]["prompt"].lower())
 
     def test_generate_verification_prompts_wrong_arity_raises(self):
         """Calling with 3 args (the old bug) must raise TypeError."""
@@ -2099,7 +2402,6 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
         run_single_reviewer to write a canned verification response, and
         confirms no TypeError at the call site.
         """
-        import inspect
         from unittest.mock import patch
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -2114,23 +2416,18 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
                 "next_blk_id": 2,
                 "next_nb_id": 1,
                 "issues": [
-                    {
-                        "id": "BLK-001",
-                        "severity": "blocking",
-                        "status": "open",
-                        "support_count": 2,
-                        "dispute_count": 0,
-                        "owner_summary": "Missing input validation",
-                        "confidence": "HIGH",
-                        "scope": "security",
-                        "proposed_by": 1,
-                        "endorsed_by": [2],
-                        "refined_by": [],
-                        "disputed_by": [],
-                        "agreed_by": [1, 2],
-                        "disagreed_by": [],
-                        "merged_from": [],
-                    },
+                    make_issue(
+                        "BLK-001",
+                        "Missing input validation",
+                        support_count=2,
+                        anchor={
+                            "artifact_kind": "plan",
+                            "section": "Security",
+                            "anchor_start": 12,
+                            "anchor_end": 18,
+                            "raw": "Section: Security (lines 12-18)",
+                        },
+                    ),
                 ],
                 "merges": [],
                 "rounds": {"1": {"reviewer_count": 3, "active_reviewers": [1, 2, 3]}},
@@ -2154,11 +2451,12 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
 
             # Track whether run_single_reviewer was called for verification
             verification_calls = []
+            verifier_calls = []
 
             def mock_run_single_reviewer(
                 run_review_py, provider, model, plan_file_arg,
                 prompt_file, output_file, session_file, events_file,
-                effort="high", resume=False, timeout=300,
+                effort="high", resume=False, timeout=300, verification_mode=False,
             ):
                 # Write a canned VERIFIED response
                 Path(output_file).write_text(
@@ -2166,6 +2464,7 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
                     encoding="utf-8",
                 )
                 verification_calls.append(output_file)
+                verifier_calls.append((provider, model, output_file))
                 return 0
 
             # Patch sys.argv for parse_args and run_single_reviewer
@@ -2179,6 +2478,7 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
                 "--tmpdir", tmpdir,
                 "--ledger-file", ledger_file,
                 "--sequential",
+                "--verifier", "copilot:gpt-5.4",
             ]
 
             # Create deliberation and changes files expected by round 2
@@ -2204,6 +2504,34 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
                 len(verify_calls), 0,
                 "Verification path was not exercised — test is not covering the bug",
             )
+            self.assertTrue(
+                any(provider == "copilot" and model == "gpt-5.4" for provider, model, _ in verifier_calls),
+                f"Expected explicit verifier copilot:gpt-5.4, saw {verifier_calls}",
+            )
+
+
+# ===========================================================================
+# v3 tests: Verifier selection
+# ===========================================================================
+
+
+class TestVerifierSelection(unittest.TestCase):
+    """Tests for independent verifier selection."""
+
+    def test_auto_selects_verifier_outside_active_panel(self):
+        panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+        verifier = run_quorum.resolve_verifier(panel)
+        self.assertNotIn(verifier, panel)
+
+    def test_explicit_verifier_must_be_outside_active_panel(self):
+        panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+        with self.assertRaises(SystemExit):
+            run_quorum.resolve_verifier(panel, "claude:sonnet")
+
+    def test_auto_select_verifier_fails_when_exhausted(self):
+        panel = list(run_quorum.VERIFIER_CANDIDATE_SPECS)
+        with self.assertRaises(SystemExit):
+            run_quorum.resolve_verifier(panel)
 
 
 # ===========================================================================
@@ -2269,15 +2597,8 @@ class TestMainOrchestration(unittest.TestCase):
             tally = json.loads(Path(tally_file).read_text(encoding="utf-8"))
             self.assertEqual(tally["derived_verdict"], "APPROVED")
 
-    def test_round1_with_blockers_still_approved(self):
-        """Round 1 with blockers → APPROVED (each blocker has support_count=1).
-
-        In round 1, each reviewer proposes issues independently, so every
-        blocker starts with support_count=1. No threshold (majority, super,
-        unanimous) is met for panels of 3+. The derived verdict is APPROVED.
-        The host agent must merge equivalent issues in Step 5 and re-submit
-        for cross-critique before blockers can build sufficient support.
-        """
+    def test_round1_with_blockers_applies_merge_pipeline(self):
+        """Round 1 keeps the advisory verdict, but saves the merged ledger."""
         from unittest.mock import patch
 
         review_text = (
@@ -2311,17 +2632,23 @@ class TestMainOrchestration(unittest.TestCase):
                               side_effect=self._mock_reviewer(review_text)):
                 with self.assertRaises(SystemExit) as cm:
                     run_quorum.main()
-                # Round 1 blockers have support_count=1 < majority(2), so APPROVED
                 self.assertEqual(cm.exception.code, EXIT_APPROVED)
 
-            # Ledger should still have the blocking issues recorded
             ledger_file = os.path.join(tmpdir, "qr-integ2-ledger.json")
             ledger = json.loads(Path(ledger_file).read_text(encoding="utf-8"))
-            blocking = [i for i in ledger["issues"] if i["severity"] == "blocking"]
-            self.assertEqual(len(blocking), 3)  # one per reviewer
-            # All have support_count=1 (only proposer)
-            for issue in blocking:
-                self.assertEqual(issue["support_count"], 1)
+            blocking = [
+                i for i in ledger["issues"]
+                if i["severity"] == "blocking" and i["status"] == "open"
+            ]
+            self.assertEqual(len(blocking), 1)
+            self.assertEqual(blocking[0]["support_count"], 3)
+            self.assertEqual(blocking[0]["merged_from"], ["BLK-002", "BLK-003"])
+
+            tally_file = os.path.join(tmpdir, "qr-integ2-tally.json")
+            tally = json.loads(Path(tally_file).read_text(encoding="utf-8"))
+            self.assertEqual(tally["derived_verdict"], "APPROVED")
+            self.assertEqual(tally["merged_count"], 2)
+            self.assertEqual(tally["merge_candidate_count"], 3)
 
     def test_round1_unstructured_exits_3(self):
         """Round 1 with all unstructured reviews → exit code 3 (INDETERMINATE)."""

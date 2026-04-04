@@ -42,6 +42,66 @@
         {"id": "verdict-is-revise", "description": "Final verdict is REVISE (the plan has real architectural gaps)", "type": "verdict_check"},
         {"id": "structured-output", "description": "Output contains canonical issue IDs and clear verdict section", "type": "format_check"}
       ]
+    },
+    {
+      "id": 3,
+      "name": "code-clean-approval",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-clean-approval.patch",
+      "expected_output": "Should approve a safe refactor that replaces string interpolation with parameterized SQL and adds basic input validation. No blocking issues should survive.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-clean-approval.patch"],
+      "assertions": [
+        {"id": "verdict-is-approved", "description": "Final derived verdict is APPROVED", "type": "verdict_check"},
+        {"id": "no-blocking-issues", "description": "No surviving blocking issues are reported", "type": "content_check"},
+        {"id": "code-anchors-present", "description": "Output includes code-review anchors or diff hunk references", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 4,
+      "name": "code-duplicate-merge",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-duplicate-merge.patch",
+      "expected_output": "Should flag the missing admin authorization check. Equivalent findings from multiple reviewers should merge into one surviving blocker with consolidated support rather than counting as separate blockers.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-duplicate-merge.patch"],
+      "assertions": [
+        {"id": "verdict-is-revise", "description": "Final derived verdict is REVISE", "type": "verdict_check"},
+        {"id": "merged-support-count", "description": "Output shows the merged blocker accumulating support (for example support 3/3 or merged_from metadata)", "type": "content_check"},
+        {"id": "authorization-blocker-detected", "description": "At least one blocking issue mentions the missing authorization guard", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 5,
+      "name": "code-distinct-separate",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-distinct-separate.patch",
+      "expected_output": "Should keep the missing authorization and sensitive logging as separate blockers. Related issues at the same location must not be merged into one umbrella issue.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-distinct-separate.patch"],
+      "assertions": [
+        {"id": "verdict-is-revise", "description": "Final derived verdict is REVISE", "type": "verdict_check"},
+        {"id": "separate-blockers-present", "description": "Output includes at least two distinct blocking issues", "type": "content_check"},
+        {"id": "secret-logging-detected", "description": "At least one issue mentions logging sensitive data or card numbers", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 6,
+      "name": "code-invalidated-blocker",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code and let the verifier be auto-selected outside the panel.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-invalidated-blocker.patch",
+      "expected_output": "Should surface any initial concern about token extraction, then have the independent verifier invalidate the false blocker because the diff already validates the bearer token format. Final verdict should be APPROVED.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-invalidated-blocker.patch"],
+      "assertions": [
+        {"id": "verdict-is-approved", "description": "Final derived verdict is APPROVED", "type": "verdict_check"},
+        {"id": "invalidated-blocker-observed", "description": "Output includes an INVALIDATED blocker or invalidation rationale", "type": "content_check"},
+        {"id": "verifier-stage-reached", "description": "Output shows that the external verification stage was exercised", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 7,
+      "name": "code-broad-narrow",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-broad-narrow.patch",
+      "expected_output": "Should keep the broad search-abuse concern separate from the narrower result-set concern. Similar issues should not launder support counts into one merged blocker.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-broad-narrow.patch"],
+      "assertions": [
+        {"id": "verdict-is-revise", "description": "Final derived verdict is REVISE", "type": "verdict_check"},
+        {"id": "no-count-laundering", "description": "Output shows distinct issues rather than one broad umbrella blocker absorbing support", "type": "content_check"},
+        {"id": "search-blocker-detected", "description": "At least one issue mentions the search query or result-set concern", "type": "content_check"}
+      ]
     }
   ]
 }

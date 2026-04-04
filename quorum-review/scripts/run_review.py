@@ -80,6 +80,11 @@ def parse_args():
         action="store_true",
         help="Print known model aliases for --reviewer and exit",
     )
+    p.add_argument(
+        "--verification-mode",
+        action="store_true",
+        help="Use the verifier system prompt instead of the reviewer prompt",
+    )
     return p.parse_args()
 
 
@@ -453,11 +458,29 @@ def build_claude_cmd(args, session_id=None):
     cmd.extend(["--allowedTools", "WebSearch,WebFetch"])
     cmd.extend(["--output-format", "json"])
     cmd.extend(["--max-turns", "10"])
+    verification_mode = bool(
+        getattr(args, "verification_mode", False)
+        or (
+            prompt_text
+            and (
+                prompt_text.lstrip().startswith("## Verification Request")
+                or prompt_text.lstrip().startswith("## Verification Contract")
+            )
+        )
+    )
+    system_prompt = (
+        "You are an independent verifier outside the active panel. "
+        "Validate a single blocker using only the blocker ID, anchor, summary, "
+        "and current artifact/context provided. End with VERIFIED <ID> or "
+        "INVALIDATED <ID> on the last non-empty line."
+        if verification_mode
+        else "You are a code reviewer. Analyze the plan and provide feedback. "
+        "End with VERDICT: APPROVED or VERDICT: REVISE on the last line."
+    )
     cmd.extend(
         [
             "--append-system-prompt",
-            "You are a code reviewer. Analyze the plan and provide feedback. "
-            "End with VERDICT: APPROVED or VERDICT: REVISE on the last line.",
+            system_prompt,
         ]
     )
 
