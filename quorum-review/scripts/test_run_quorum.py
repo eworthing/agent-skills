@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-test_run_quorum.py — Deterministic test suite for run_quorum.py (v2).
+test_run_quorum.py — Deterministic test suite for run_quorum.py (v3).
 
 Tier 1: Local tests that exercise orchestrator logic (no external CLIs).
 
@@ -26,6 +26,7 @@ import run_quorum  # noqa: E402
 import run_review  # noqa: E402
 from run_quorum import (  # noqa: E402
     _make_issue,
+    _role_for_mode,
     CROSS_CRITIQUE_INSTRUCTIONS,
     EXIT_APPROVED,
     EXIT_INDETERMINATE,
@@ -35,6 +36,7 @@ from run_quorum import (  # noqa: E402
     REVIEW_CONTRACT_V2,
     apply_merge_pipeline,
     classify_merge_candidate,
+    generate_merge_candidates,
     _extract_section,
     _is_unanimous,
     build_issue_ledger,
@@ -1044,8 +1046,8 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             self.assertEqual(result["merged"], [])
             left = next(issue for issue in ledger["issues"] if issue["id"] == "BLK-001")
             right = next(issue for issue in ledger["issues"] if issue["id"] == "BLK-002")
-            self.assertEqual(left["relations"]["conflict"], ["BLK-002"])
-            self.assertEqual(right["relations"]["conflict"], ["BLK-001"])
+            self.assertEqual(left["relations"]["conflicts_with"], ["BLK-002"])
+            self.assertEqual(right["relations"]["conflicts_with"], ["BLK-001"])
             self.assertEqual(left["status"], "open")
             self.assertEqual(right["status"], "open")
             self.assertEqual(left["support_count"], 1)
@@ -2836,6 +2838,200 @@ class TestRound2SectionScan(unittest.TestCase):
             self.assertEqual(len(nb_scan), 1)
             self.assertIn("request logging", nb_scan[0]["text"])
             self.assertEqual(nb_scan[0]["round_introduced"], 2)
+
+
+# ===========================================================================
+# v3 tests: UNCERTAIN classification
+# ===========================================================================
+
+
+class TestUncertainClassification(unittest.TestCase):
+    """UNCERTAIN candidates must be logged but not merged or linked."""
+
+    def test_classify_returns_uncertain_for_low_similarity_same_area(self):
+        anchor = {
+            "artifact_path": "src/app.py",
+            "anchor_kind": "line_range",
+            "anchor_start": 10,
+            "anchor_end": 14,
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor)
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2", "Refactor database pool", anchor=anchor)
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "UNCERTAIN")
+
+    def test_apply_merge_pipeline_leaves_uncertain_untouched(self):
+        """UNCERTAIN pairs must not merge, must not create relation links."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            anchor = {
+                "artifact_path": "src/app.py",
+                "anchor_kind": "line_range",
+                "anchor_start": 10,
+                "anchor_end": 14,
+            }
+            ledger = {
+                "next_blk_id": 3,
+                "next_nb_id": 1,
+                "issues": [
+                    _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor),
+                    _make_issue("BLK-002", "blocking", 1, 2, "B2", "Refactor database pool", anchor=anchor),
+                ],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 2, "blocking_open": 2, "nb_open": 0, "approved_count": 0}},
+            }
+            result = apply_merge_pipeline(ledger, "uncertain01", tmpdir, 1)
+            self.assertEqual(result["merged"], [])
+            left = next(i for i in ledger["issues"] if i["id"] == "BLK-001")
+            right = next(i for i in ledger["issues"] if i["id"] == "BLK-002")
+            self.assertEqual(left["status"], "open")
+            self.assertEqual(right["status"], "open")
+            self.assertEqual(left["support_count"], 1)
+            self.assertEqual(right["support_count"], 1)
+            # UNCERTAIN must NOT create relation links
+            self.assertEqual(left["relations"].get("related_distinct", []), [])
+            self.assertEqual(left["relations"].get("conflicts_with", []), [])
+            self.assertEqual(right["relations"].get("related_distinct", []), [])
+            self.assertEqual(right["relations"].get("conflicts_with", []), [])
+
+
+# ===========================================================================
+# v3 tests: Cross-severity merge blocking
+# ===========================================================================
+
+
+class TestCrossSeverityMergeBlocking(unittest.TestCase):
+    """Issues of different severity must never form merge candidates."""
+
+    def test_no_candidates_across_severity(self):
+        """Blocking and non-blocking issues with identical text must not be candidates."""
+        ledger = {
+            "next_blk_id": 2,
+            "next_nb_id": 2,
+            "issues": [
+                _make_issue("BLK-001", "blocking", 1, 1, "B1", "Missing auth on admin routes"),
+                _make_issue("NB-001", "non_blocking", 1, 2, "N1", "Missing auth on admin routes"),
+            ],
+            "merges": [],
+            "rounds": {"1": {"reviewer_count": 2, "blocking_open": 1, "nb_open": 1, "approved_count": 0}},
+        }
+        candidates = generate_merge_candidates(ledger)
+        self.assertEqual(candidates, [])
+
+    def test_apply_merge_pipeline_no_cross_severity(self):
+        """Merge pipeline must not merge issues of different severity."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ledger = {
+                "next_blk_id": 2,
+                "next_nb_id": 2,
+                "issues": [
+                    _make_issue("BLK-001", "blocking", 1, 1, "B1", "Missing auth on admin routes"),
+                    _make_issue("NB-001", "non_blocking", 1, 2, "N1", "Missing auth on admin routes"),
+                ],
+                "merges": [],
+                "rounds": {"1": {"reviewer_count": 2, "blocking_open": 1, "nb_open": 1, "approved_count": 0}},
+            }
+            result = apply_merge_pipeline(ledger, "xsev01", tmpdir, 1)
+            self.assertEqual(result["merged"], [])
+            self.assertEqual(ledger["issues"][0]["status"], "open")
+            self.assertEqual(ledger["issues"][1]["status"], "open")
+
+
+# ===========================================================================
+# v3 tests: Role pack activation per mode
+# ===========================================================================
+
+
+class TestRolePackActivation(unittest.TestCase):
+    """Role packs must vary by mode and cycle across reviewers."""
+
+    def test_plan_mode_uses_plan_roles(self):
+        self.assertEqual(_role_for_mode("plan", 1), "Skeptic")
+        self.assertEqual(_role_for_mode("plan", 2), "Constraint Guardian")
+        self.assertEqual(_role_for_mode("plan", 3), "User Advocate")
+        self.assertEqual(_role_for_mode("plan", 4), "Integrator-minded reviewer")
+
+    def test_spec_mode_uses_plan_roles(self):
+        self.assertEqual(_role_for_mode("spec", 1), "Skeptic")
+
+    def test_code_mode_uses_code_roles(self):
+        self.assertEqual(_role_for_mode("code", 1), "Correctness reviewer")
+        self.assertEqual(_role_for_mode("code", 2), "Security reviewer")
+        self.assertEqual(_role_for_mode("code", 3), "Maintainability reviewer")
+        self.assertEqual(_role_for_mode("code", 4), "Performance/operability reviewer")
+
+    def test_roles_cycle_for_large_panel(self):
+        self.assertEqual(_role_for_mode("code", 5), "Correctness reviewer")
+
+    def test_role_label_embedded_in_initial_prompt(self):
+        """write_initial_prompt includes the role label in prompt text."""
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+        try:
+            write_initial_prompt(
+                tmp_path,
+                reviewer_index=2,
+                total_reviewers=3,
+                review_contract="## Contract\n",
+                plan_text="Some plan.",
+                mode="code",
+                role_label="Security reviewer",
+            )
+            content = Path(tmp_path).read_text(encoding="utf-8")
+            self.assertIn("Security reviewer", content)
+            self.assertIn("Your private role", content)
+        finally:
+            os.unlink(tmp_path)
+
+
+# ===========================================================================
+# v3 tests: Verifier prompt blindness
+# ===========================================================================
+
+
+class TestVerifierPromptBlindness(unittest.TestCase):
+    """Verification prompts must never contain support counts or identities."""
+
+    def test_verification_prompt_excludes_support_fields(self):
+        ledger = {
+            "issues": [
+                make_issue(
+                    "BLK-001",
+                    "Missing auth",
+                    support_count=3,
+                    anchor={
+                        "artifact_kind": "code_diff",
+                        "artifact_path": "src/auth.ts",
+                        "anchor_kind": "line_range",
+                        "anchor_start": 10,
+                        "anchor_end": 20,
+                    },
+                ),
+            ],
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
+        }
+        prompts = generate_verification_prompts(ledger, "# Code diff", "super", 3)
+        self.assertEqual(len(prompts), 1)
+        prompt_text = prompts[0]["prompt"]
+        # Must not contain any support/dispute accounting
+        self.assertNotIn("support_count", prompt_text)
+        self.assertNotIn("dispute_count", prompt_text)
+        self.assertNotIn("proposed_by", prompt_text)
+        self.assertNotIn("endorsed_by", prompt_text)
+        self.assertNotIn("refined_by", prompt_text)
+        self.assertNotIn("disputed_by", prompt_text)
+        # Must not contain reviewer identity references
+        self.assertNotIn("Reviewer A", prompt_text)
+        self.assertNotIn("Reviewer B", prompt_text)
+        self.assertNotIn("Reviewer C", prompt_text)
+        # Must contain only the expected fields
+        self.assertIn("BLK-001", prompt_text)
+        self.assertIn("Missing auth", prompt_text)
+        self.assertIn("src/auth.ts", prompt_text)
+        self.assertIn("Code diff", prompt_text)
 
 
 if __name__ == "__main__":

@@ -102,6 +102,42 @@
         {"id": "no-count-laundering", "description": "Output shows distinct issues rather than one broad umbrella blocker absorbing support", "type": "content_check"},
         {"id": "search-blocker-detected", "description": "At least one issue mentions the search query or result-set concern", "type": "content_check"}
       ]
+    },
+    {
+      "id": 8,
+      "name": "code-conflict-relation-only",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-conflict-relation.patch",
+      "expected_output": "Should surface two blockers with conflicting recommendations on the same code location (e.g., 'add caching' vs 'remove caching'). The merge pipeline should classify them as CONFLICT and record relation links, not merge them.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-conflict-relation.patch"],
+      "assertions": [
+        {"id": "conflict-relation-recorded", "description": "Output shows CONFLICT classification or conflicts_with relation between the two issues", "type": "content_check"},
+        {"id": "no-merge-of-conflicts", "description": "Both conflicting issues remain open with separate IDs — neither is merged into the other", "type": "content_check"},
+        {"id": "support-counts-independent", "description": "Each issue retains its own support count without absorption from the other", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 9,
+      "name": "code-uncertain-left-alone",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-uncertain-pair.patch",
+      "expected_output": "Should surface two issues in the same file area that are too dissimilar to classify confidently. The merge pipeline should log them as UNCERTAIN and leave both issues completely untouched — no merge, no relation link.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-uncertain-pair.patch"],
+      "assertions": [
+        {"id": "uncertain-logged", "description": "Merge log contains an UNCERTAIN classification entry", "type": "content_check"},
+        {"id": "both-issues-open", "description": "Both issues remain open with independent status and support counts", "type": "content_check"},
+        {"id": "no-relation-links", "description": "Neither issue has related_distinct or conflicts_with links to the other", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 10,
+      "name": "merge-log-integrity",
+      "prompt": "Review this code diff with a quorum. Use claude:sonnet, gemini:pro, and codex as the panel. Run in --mode code --max-rounds 2.\n\nThe diff is at /Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-merge-log-check.patch",
+      "expected_output": "After two rounds, the merge-log.jsonl file should exist and contain at least one merge_candidate entry and one merge_applied entry with correct action fields.",
+      "files": ["/Users/Shared/git/agent-skills/quorum-review-workspace/iteration-2/code-merge-log-check.patch"],
+      "assertions": [
+        {"id": "merge-log-exists", "description": "The merge-log.jsonl file was created in the temp directory", "type": "content_check"},
+        {"id": "merge-candidate-action", "description": "At least one line in merge-log.jsonl has action 'merge_candidate'", "type": "content_check"},
+        {"id": "merge-applied-action", "description": "At least one line in merge-log.jsonl has action 'merge_applied' with survivor and absorbed fields", "type": "content_check"}
+      ]
     }
   ]
 }

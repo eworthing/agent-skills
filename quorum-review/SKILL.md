@@ -47,7 +47,15 @@ Notes:
 - `--mode` defaults to `plan`; `spec` uses the same tribunal path as `plan`.
 - `--verifier` must be an external provider:model pair. If omitted, the
   orchestrator auto-selects a verifier outside the panel.
-- `--max-rounds` has a hard cap of 5.
+- `--threshold` controls how many supporters a blocker needs to survive:
+  - `unanimous` — all reviewers must support the blocker.
+  - `super` (default) — all but one reviewer (N-1 of N).
+  - `majority` — simple majority (more than half).
+- `--max-rounds` has a hard cap of 5. At round 5 the orchestrator forces a
+  final verdict regardless of convergence.
+- `--skip-verification` bypasses the independent verifier stage. Use this when
+  you want faster turnaround and trust the panel's consensus without external
+  validation (e.g., during iterative drafting).
 
 ## Modes
 
@@ -70,7 +78,13 @@ First-round reviewer prompts always include:
 
 For code reviews, each issue should include an anchor line naming a file path
 and either a line range or diff hunk. For plan/spec reviews, anchors can point
-to plan sections and line ranges.
+to plan sections and line ranges. Anchor format examples:
+
+```
+Anchor: src/auth/admin.ts (lines 45-52)
+File: src/middleware/cors.ts Hunk: @@ -120,5 +125,8 @@
+Section: Phase 3 — Dual-write migration (lines 88-102)
+```
 
 If a `REVIEW.md` file is present, its contents are appended to the review
 contract as project-specific guidance.
@@ -107,7 +121,10 @@ Hidden role labels never appear in the shared deliberation context.
 - Only `EQUIVALENT` pairs merge.
 - `RELATED_DISTINCT` and `CONFLICT` only add relations.
 - `UNCERTAIN` is logged and left alone.
-- Every merge decision is appended to `merge-log.jsonl`.
+- Every merge decision is appended to `merge-log.jsonl`. Each line is a JSON
+  object with an `action` field (`merge_candidate`, `merge_applied`,
+  `relation_only`, or `log_only`) plus the relevant issue IDs,
+  classification, and reason.
 - Independent verification sees the artifact, blocker ID, anchor, and summary
   only.
 - Invalidated blockers are excluded from the final verdict.

@@ -113,6 +113,9 @@ The ledger is canonical, immutable-by-ID, and stored at
 
 ### Ledger rules
 
+- `anchor_hash` is a SHA-256 of the anchor content (file path + line range or
+  hunk text). Two issues with the same `anchor_hash` are eligible for
+  `EQUIVALENT` classification.
 - `support_count = len(proposed_by) + len(endorsed_by) + len(refined_by)`
 - `dispute_count = len(disputed_by)`
 - `claim` holds the canonical summary/category/impact.
@@ -141,10 +144,19 @@ Only compare issues that share:
 
 Each candidate pair is classified as one of:
 
-- `EQUIVALENT`
-- `RELATED_DISTINCT`
-- `CONFLICT`
-- `UNCERTAIN`
+- `EQUIVALENT` — issues describe the same concern with the same or overlapping
+  anchors. Determined by identical normalized summaries with related anchors, or
+  by matching `anchor_hash`. These are the only pairs that merge.
+- `RELATED_DISTINCT` — issues touch the same code area or topic but raise
+  meaningfully different concerns (e.g., "add auth check" and "add audit
+  logging" on the same endpoint). Created when anchors overlap but summaries
+  diverge, or when summaries are lexically similar but anchors differ.
+- `CONFLICT` — issues propose opposing actions on the same anchor (e.g., "add
+  caching" vs "remove caching"). Detected by shared anchor plus opposing
+  verb signals in the summaries.
+- `UNCERTAIN` — issues share an anchor area but lack sufficient lexical or
+  semantic evidence to classify. Logged and left completely untouched — no
+  merge, no relation link.
 
 `SUBSUMES` is intentionally not part of v3.
 
