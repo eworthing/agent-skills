@@ -999,7 +999,7 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
         self.assertEqual(classification, "RELATED_DISTINCT")
 
     def test_classify_high_similarity_anchor_as_equivalent(self):
-        """Paraphrased issues on the same anchor merge at >= 0.50 similarity."""
+        """Paraphrased issues on the same anchor merge when concern signatures match."""
         anchor = {
             "artifact_path": "src/app.py",
             "anchor_kind": "line_range",
@@ -1009,20 +1009,141 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
         left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
                            "Missing input validation on user registration endpoint", anchor=anchor)
         right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "No input validation for user registration handler", anchor=anchor)
+                             "No input validation for user registration handler", anchor=anchor)
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "EQUIVALENT")
-        self.assertIn("high similarity", reason)
+        self.assertIn("signature", reason)
 
     def test_classify_very_high_similarity_no_anchor_as_equivalent(self):
-        """Near-identical wording merges even without anchor overlap."""
+        """Near-identical wording can merge without anchors when signatures match."""
         left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
                            "SQL injection via string interpolation in login query")
         right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
                             "SQL injection via string interpolation in login query handler")
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "EQUIVALENT")
-        self.assertIn("very high", reason)
+        self.assertIn("signature", reason)
+
+    def test_classify_distinct_concerns_same_anchor_as_related_distinct(self):
+        """Different blockers on the same endpoint must not merge."""
+        anchor = {
+            "artifact_path": "src/auth.py",
+            "anchor_kind": "section",
+            "section": "POST /api/auth/login",
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "Missing rate limiting on login", anchor=anchor)
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "Missing CSRF protection on login", anchor=anchor)
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "RELATED_DISTINCT")
+        self.assertIn("same area", reason)
+
+    def test_classify_broad_and_narrow_no_anchor_as_related_distinct(self):
+        """A broad blocker must not absorb a narrower blocker without anchors."""
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "Missing auth on admin route")
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "Missing auth and CSRF protection on admin route")
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "RELATED_DISTINCT")
+        self.assertIn("lexically related", reason)
+
+    def test_classify_same_summary_different_section_paths_as_related_distinct(self):
+        """Shared tail section names must not collapse distinct section anchors."""
+        left = _make_issue(
+            "BLK-001",
+            "blocking",
+            1,
+            1,
+            "B1",
+            "Missing auth guard",
+            anchor={"anchor_kind": "section", "section": "Admin Flows > Authentication"},
+        )
+        right = _make_issue(
+            "BLK-002",
+            "blocking",
+            1,
+            2,
+            "B2",
+            "Missing auth guard",
+            anchor={"anchor_kind": "section", "section": "User Flows > Authentication"},
+        )
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "RELATED_DISTINCT")
+        self.assertIn("different anchors", reason)
+
+    def test_classify_same_summary_different_hunks_as_related_distinct(self):
+        """Same file but different hunks must not merge as one blocker."""
+        left = _make_issue(
+            "BLK-001",
+            "blocking",
+            1,
+            1,
+            "B1",
+            "Missing auth guard",
+            anchor={
+                "artifact_kind": "code_diff",
+                "artifact_path": "src/routes.ts",
+                "anchor_kind": "hunk",
+                "anchor_hash": "sha256:hunk-1",
+                "raw": "@@ -10,4 +10,5 @@",
+            },
+        )
+        right = _make_issue(
+            "BLK-002",
+            "blocking",
+            1,
+            2,
+            "B2",
+            "Missing auth guard",
+            anchor={
+                "artifact_kind": "code_diff",
+                "artifact_path": "src/routes.ts",
+                "anchor_kind": "hunk",
+                "anchor_hash": "sha256:hunk-2",
+                "raw": "@@ -40,4 +41,5 @@",
+            },
+        )
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "RELATED_DISTINCT")
+        self.assertIn("different anchors", reason)
+
+    def test_classify_same_anchor_hash_distinct_concerns_as_related_distinct(self):
+        """Same anchor hash still needs the same concern to merge."""
+        anchor = {
+            "artifact_kind": "code_diff",
+            "artifact_path": "src/routes.ts",
+            "anchor_kind": "line_range",
+            "anchor_start": 10,
+            "anchor_end": 14,
+            "anchor_hash": "sha256:same-anchor",
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "Missing auth guard on admin route", anchor=anchor)
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "Missing input validation on admin route", anchor=anchor)
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "RELATED_DISTINCT")
+        self.assertIn("same area", reason)
+
+    def test_classify_same_anchor_hash_conflict_as_conflict(self):
+        """Shared anchor hashes must still respect conflict detection."""
+        anchor = {
+            "artifact_kind": "code_diff",
+            "artifact_path": "src/cache.ts",
+            "anchor_kind": "line_range",
+            "anchor_start": 20,
+            "anchor_end": 24,
+            "anchor_hash": "sha256:cache-anchor",
+        }
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
+                           "Add caching on product route", anchor=anchor)
+        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
+                            "Remove caching on product route", anchor=anchor)
+        classification, reason = classify_merge_candidate(left, right)
+        self.assertEqual(classification, "CONFLICT")
+        self.assertIn("opposing actions", reason)
 
     def test_classify_high_similarity_conflict_not_equivalent(self):
         """Conflict signal prevents EQUIVALENT even at high similarity."""
@@ -2868,6 +2989,59 @@ class TestRound2SectionScan(unittest.TestCase):
             # Should still have exactly 1 issue (the original BLK-001)
             self.assertEqual(len(updated["issues"]), 1)
             self.assertEqual(updated["issues"][0]["id"], "BLK-001")
+
+    def test_round2_dashless_reference_without_sections_is_not_registered(self):
+        """Cross-critique references like [B2] must not become section-scan issues."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "scan03b"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+            ledger = self._base_ledger()
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "[AGREE BLK-001]\n"
+                "[B2] See reviewer 1's point — this is already captured.\n\n"
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+
+            self.assertEqual(len(updated["issues"]), 1)
+            self.assertEqual(updated["issues"][0]["id"], "BLK-001")
+
+    def test_round2_dashless_issue_inside_explicit_section_is_still_registered(self):
+        """Dashless structured items inside a real section still count for section-scan."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            quorum_id = "scan03c"
+            panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
+            ledger = self._base_ledger()
+
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
+                "[AGREE BLK-001]\n\n"
+                "### Blocking Issues\n"
+                "[B2] Missing rate limiting on public API\n\n"
+                "### Non-Blocking Issues\nNone\n\n"
+                "VERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
+                "[AGREE BLK-001]\nVERDICT: REVISE\n"
+            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
+                "VERDICT: APPROVED\n"
+            )
+
+            updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
+            scan_issues = [
+                issue for issue in updated["issues"]
+                if issue["source_label"] == "section-scan"
+            ]
+            self.assertEqual(len(scan_issues), 1)
+            self.assertIn("rate limiting", scan_issues[0]["text"].lower())
 
     def test_round2_section_scan_catches_untagged_non_blocking(self):
         """New non-blocking issues in ### Non-Blocking Issues without [N-NEW] get registered."""

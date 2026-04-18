@@ -433,20 +433,26 @@ def _extract_section(text, header):
     Returns the section body text, or the full text if the header is not found
     (backward compatibility with unstructured reviews).
     """
+    section_text, _found = _extract_section_with_presence(text, header)
+    return section_text
+
+
+def _extract_section_with_presence(text, header):
+    """Return (section_text, found) for a ### section header."""
     pattern = re.compile(
         r"(?:^|\n)###\s+" + re.escape(header) + r"\s*\n",
         re.IGNORECASE,
     )
     match = pattern.search(text)
     if not match:
-        return text  # fallback: search entire text
+        return text, False  # fallback: search entire text
 
     start = match.end()
     # Find the next ### header (but not #### sub-headers)
     next_header = re.search(r"\n###\s+(?!#)", text[start:])
     if next_header:
-        return text[start : start + next_header.start()]
-    return text[start:]
+        return text[start : start + next_header.start()], True
+    return text[start:], True
 
 
 def parse_structured_review(review_file):
@@ -465,8 +471,12 @@ def parse_structured_review(review_file):
     verdict = parse_verdict(review_file)
 
     # Extract section text to avoid matching issues from Reasoning section
-    blocking_section = _extract_section(text, "Blocking Issues")
-    nb_section = _extract_section(text, "Non-Blocking Issues")
+    blocking_section, has_blocking_section = _extract_section_with_presence(
+        text, "Blocking Issues"
+    )
+    nb_section, has_nb_section = _extract_section_with_presence(
+        text, "Non-Blocking Issues"
+    )
 
     # Parse blocking issues — try per-issue confidence first
     conf_matches = {
@@ -525,6 +535,8 @@ def parse_structured_review(review_file):
         "verdict": verdict,
         "raw_text": text,
         "structured": structured,
+        "has_blocking_section": has_blocking_section,
+        "has_non_blocking_section": has_nb_section,
     }
 
 
@@ -675,6 +687,29 @@ _STOPWORDS = {
 }
 _POSITIVE_VERBS = {"add", "allow", "enable", "keep", "permit", "retain", "support", "use"}
 _NEGATIVE_VERBS = {"avoid", "block", "deny", "disable", "drop", "forbid", "remove"}
+_MERGE_IGNORE_TOKENS = {
+    "endpoint",
+    "endpoints",
+    "handler",
+    "handlers",
+    "route",
+    "routes",
+    "path",
+    "paths",
+    "file",
+    "files",
+    "line",
+    "lines",
+    "hunk",
+    "diff",
+    "query",
+    "queries",
+}
+_MERGE_TOKEN_ALIASES = {
+    "authentication": "auth",
+    "authorisation": "auth",
+    "authorization": "auth",
+}
 
 
 def _as_list(value):
@@ -717,15 +752,33 @@ def _summary_similarity(left, right):
     left_tokens = set(_summary_tokens(left_norm))
     right_tokens = set(_summary_tokens(right_norm))
     if left_tokens and right_tokens:
-        jaccard = len(left_tokens & right_tokens) / len(left_tokens | right_tokens)
-        # Overlap coefficient: fraction of the smaller set's terms found in the
-        # larger set.  Handles the common case where one reviewer is terse
-        # ("SQL injection on login") and another verbose ("the login query is
-        # vulnerable to SQL injection because it interpolates ...").  Jaccard
-        # penalises length differences; overlap does not.
-        overlap = len(left_tokens & right_tokens) / min(len(left_tokens), len(right_tokens))
-        ratio = max(ratio, jaccard, overlap)
+        ratio = max(ratio, len(left_tokens & right_tokens) / len(left_tokens | right_tokens))
     return ratio
+
+
+def _anchor_context_tokens(anchor):
+    anchor = anchor if isinstance(anchor, dict) else {}
+    tokens = set()
+    for field in ("artifact_path", "section"):
+        value = anchor.get(field)
+        if value:
+            tokens.update(_summary_tokens(str(value)))
+    return tokens
+
+
+def _canonical_merge_token(token):
+    return _MERGE_TOKEN_ALIASES.get(token, token)
+
+
+def _issue_merge_signature(issue):
+    anchor = issue.get("anchor") if isinstance(issue, dict) else {}
+    ignore = _anchor_context_tokens(anchor) | _MERGE_IGNORE_TOKENS | _NEGATION_WORDS
+    tokens = [
+        _canonical_merge_token(token)
+        for token in _summary_tokens(_issue_summary(issue))
+        if token not in ignore
+    ]
+    return tuple(tokens)
 
 
 def _normalize_anchor(anchor, artifact_kind="plan"):
@@ -1370,46 +1423,48 @@ def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
                 if _issue_summary(i)
             }
 
-            for section_issue in parsed["blocking"]:
-                text = section_issue["text"].strip()
-                normalized = _normalize_text(text)
-                if normalized not in existing_texts:
-                    canonical_id = f"BLK-{ledger['next_blk_id']:03d}"
-                    ledger["next_blk_id"] += 1
-                    new_issue = _make_issue(
-                        canonical_id,
-                        "blocking",
-                        round_num,
-                        idx,
-                        "section-scan",
-                        text,
-                        anchor=section_issue.get("anchor"),
-                        category=category,
-                        confidence=section_issue.get("confidence"),
-                    )
-                    ledger["issues"].append(new_issue)
-                    issue_map[canonical_id] = new_issue
-                    existing_texts.add(normalized)
+            if parsed.get("has_blocking_section"):
+                for section_issue in parsed["blocking"]:
+                    text = section_issue["text"].strip()
+                    normalized = _normalize_text(text)
+                    if normalized not in existing_texts:
+                        canonical_id = f"BLK-{ledger['next_blk_id']:03d}"
+                        ledger["next_blk_id"] += 1
+                        new_issue = _make_issue(
+                            canonical_id,
+                            "blocking",
+                            round_num,
+                            idx,
+                            "section-scan",
+                            text,
+                            anchor=section_issue.get("anchor"),
+                            category=category,
+                            confidence=section_issue.get("confidence"),
+                        )
+                        ledger["issues"].append(new_issue)
+                        issue_map[canonical_id] = new_issue
+                        existing_texts.add(normalized)
 
-            for section_issue in parsed["non_blocking"]:
-                text = section_issue["text"].strip()
-                normalized = _normalize_text(text)
-                if normalized not in existing_texts:
-                    canonical_id = f"NB-{ledger['next_nb_id']:03d}"
-                    ledger["next_nb_id"] += 1
-                    new_issue = _make_issue(
-                        canonical_id,
-                        "non_blocking",
-                        round_num,
-                        idx,
-                        "section-scan",
-                        text,
-                        anchor=section_issue.get("anchor"),
-                        category=category,
-                    )
-                    ledger["issues"].append(new_issue)
-                    issue_map[canonical_id] = new_issue
-                    existing_texts.add(normalized)
+            if parsed.get("has_non_blocking_section"):
+                for section_issue in parsed["non_blocking"]:
+                    text = section_issue["text"].strip()
+                    normalized = _normalize_text(text)
+                    if normalized not in existing_texts:
+                        canonical_id = f"NB-{ledger['next_nb_id']:03d}"
+                        ledger["next_nb_id"] += 1
+                        new_issue = _make_issue(
+                            canonical_id,
+                            "non_blocking",
+                            round_num,
+                            idx,
+                            "section-scan",
+                            text,
+                            anchor=section_issue.get("anchor"),
+                            category=category,
+                        )
+                        ledger["issues"].append(new_issue)
+                        issue_map[canonical_id] = new_issue
+                        existing_texts.add(normalized)
 
             if parsed["verdict"] == "APPROVED":
                 approved_count += 1
@@ -1445,29 +1500,23 @@ def _line_range_overlap(left_anchor, right_anchor, proximity=3):
 def _normalize_section(section):
     """Normalize a section string for fuzzy comparison.
 
-    Strips parenthetical suffixes like '(lines 28-31)', leading path
-    prefixes like 'API Endpoints > ', and collapses whitespace so that
-    different reviewer notations for the same section match.
+    Strips parenthetical suffixes like '(lines 28-31)' and collapses
+    whitespace. Deliberately keeps the full section path so different parent
+    sections do not collapse into one anchor.
     """
     if not section:
         return ""
     s = re.sub(r"\(lines?\s*[\d\-,\s]+\)", "", section)
-    # Strip leading path prefixes ("Foo > Bar > Baz" → "Baz")
-    if " > " in s:
-        s = s.rsplit(" > ", 1)[-1]
     return " ".join(s.lower().split()).strip()
 
 
 def _sections_related(left_section, right_section):
-    """Fuzzy section comparison: exact match after normalization, or
-    one normalized section is a substring of the other."""
+    """Conservative section comparison after normalization."""
     left_norm = _normalize_section(left_section)
     right_norm = _normalize_section(right_section)
     if not left_norm or not right_norm:
         return False
-    if left_norm == right_norm:
-        return True
-    return left_norm in right_norm or right_norm in left_norm
+    return left_norm == right_norm
 
 
 def _anchors_related(left, right):
@@ -1475,18 +1524,38 @@ def _anchors_related(left, right):
     right_anchor = right.get("anchor") or {}
     if not left_anchor or not right_anchor:
         return False
-    if left_anchor.get("anchor_hash") and left_anchor.get("anchor_hash") == right_anchor.get("anchor_hash"):
+    if (
+        left_anchor.get("anchor_hash")
+        and left_anchor.get("anchor_hash") == right_anchor.get("anchor_hash")
+    ):
         return True
-    if left_anchor.get("artifact_path") and left_anchor.get("artifact_path") == right_anchor.get("artifact_path"):
+    if (
+        left_anchor.get("artifact_path")
+        and left_anchor.get("artifact_path") == right_anchor.get("artifact_path")
+    ):
         if _line_range_overlap(left_anchor, right_anchor):
             return True
-        if left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") and _sections_related(left_anchor.get("section"), right_anchor.get("section")):
+        if (
+            left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "section"
+            and _sections_related(left_anchor.get("section"), right_anchor.get("section"))
+        ):
             return True
-        if left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "hunk":
+        if (
+            left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "hunk"
+            and left_anchor.get("raw")
+            and left_anchor.get("raw") == right_anchor.get("raw")
+        ):
             return True
     left_section = left_anchor.get("section")
     right_section = right_anchor.get("section")
-    if left_section and right_section and _sections_related(left_section, right_section):
+    if (
+        left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "section"
+        and not left_anchor.get("artifact_path")
+        and not right_anchor.get("artifact_path")
+        and left_section
+        and right_section
+        and _sections_related(left_section, right_section)
+    ):
         return True
     return False
 
@@ -1566,25 +1635,21 @@ def classify_merge_candidate(left, right):
     right_anchor = right.get("anchor") or {}
     left_has_location = _anchor_has_location(left_anchor)
     right_has_location = _anchor_has_location(right_anchor)
+    left_signature = _issue_merge_signature(left)
+    right_signature = _issue_merge_signature(right)
+    same_signature = bool(left_signature) and left_signature == right_signature
 
+    if conflict_signal and anchor_related:
+        return "CONFLICT", "opposing actions on the same anchor"
     if same_norm:
         if anchor_related or (not left_has_location and not right_has_location):
             return "EQUIVALENT", "identical normalized summaries"
         return "RELATED_DISTINCT", "same wording but different anchors"
-    if left_anchor.get("anchor_hash") and left_anchor.get("anchor_hash") == right_anchor.get("anchor_hash"):
-        return "EQUIVALENT", "shared anchor hash"
-    # High similarity with overlapping anchors — reviewers paraphrasing the
-    # same concern in different words.  Real-world paraphrases of the same
-    # vulnerability typically land in the 0.40-0.60 similarity range, so the
-    # 0.50 bar balances catching genuine duplicates against false merges.
-    if anchor_related and similarity >= 0.50 and not conflict_signal:
-        return "EQUIVALENT", "high similarity on the same anchor"
-    # Very high similarity without anchor — the wording alone is strong
-    # enough evidence the reviewers mean the same thing.
-    if similarity >= 0.85 and not conflict_signal:
-        return "EQUIVALENT", "very high lexical similarity"
-    if conflict_signal and anchor_related:
-        return "CONFLICT", "opposing actions on the same anchor"
+    if same_signature:
+        if anchor_related:
+            return "EQUIVALENT", "matching concern signature on the same anchor"
+        if not left_has_location and not right_has_location:
+            return "EQUIVALENT", "matching concern signature without anchors"
     if anchor_related:
         if similarity >= 0.35:
             return "RELATED_DISTINCT", "same area but meaningfully different concerns"

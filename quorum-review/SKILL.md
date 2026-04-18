@@ -121,6 +121,9 @@ Hidden role labels never appear in the shared deliberation context.
 - Only `EQUIVALENT` pairs merge.
 - `RELATED_DISTINCT` and `CONFLICT` only add relations.
 - `UNCERTAIN` is logged and left alone.
+- `EQUIVALENT` is intentionally strict: matching location alone is not enough,
+  and broad lexical similarity alone is not enough. The concerns also need to
+  match.
 - Every merge decision is appended to `merge-log.jsonl`. Each line is a JSON
   object with an `action` field (`merge_candidate`, `merge_applied`,
   `relation_only`, or `log_only`) plus the relevant issue IDs,
@@ -176,4 +179,3 @@ python3 scripts/run_quorum.py \
 - Merge handling is conservative: only equivalent issues merge; related issues
   stay linked.
 - Invalidated blockers no longer drive a REVISE verdict.
-

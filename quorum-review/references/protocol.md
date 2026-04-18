@@ -114,8 +114,9 @@ The ledger is canonical, immutable-by-ID, and stored at
 ### Ledger rules
 
 - `anchor_hash` is a SHA-256 of the anchor content (file path + line range or
-  hunk text). Two issues with the same `anchor_hash` are eligible for
-  `EQUIVALENT` classification.
+  hunk text). Two issues with the same `anchor_hash` are strong evidence that
+  the issues refer to the same location, but they still need matching concern
+  signatures before they qualify as `EQUIVALENT`.
 - `support_count = len(proposed_by) + len(endorsed_by) + len(refined_by)`
 - `dispute_count = len(disputed_by)`
 - `claim` holds the canonical summary/category/impact.
@@ -146,9 +147,11 @@ Each candidate pair is classified as one of:
 
 - `EQUIVALENT` — issues describe the same concern with the same or overlapping
   anchors. Determined by: identical normalized summaries with related anchors,
-  matching `anchor_hash`, lexical similarity (>= 0.50) on the same anchor,
-  or very high similarity (>= 0.85) without anchor. Conflict signals block
-  EQUIVALENT classification. These are the only pairs that merge.
+  or matching concern signatures on the same anchor (or, when neither issue has
+  a location anchor, matching concern signatures without anchors). `anchor_hash`
+  alone is not enough, and raw lexical similarity alone is not enough. Conflict
+  signals block `EQUIVALENT` classification. These are the only pairs that
+  merge.
 - `RELATED_DISTINCT` — issues touch the same code area or topic but raise
   meaningfully different concerns (e.g., "add auth check" and "add audit
   logging" on the same endpoint). Created when anchors overlap but summaries
@@ -168,6 +171,9 @@ Each candidate pair is classified as one of:
 - `RELATED_DISTINCT` and `CONFLICT` add relation links only.
 - `UNCERTAIN` is logged and left alone.
 - Never merge across severity.
+- Section-scan fallback only registers issues from explicit `### Blocking
+  Issues` / `### Non-Blocking Issues` sections; inline `[B2]` references in
+  cross-critique prose must not create new ledger items.
 - Every decision is appended to `merge-log.jsonl`.
 
 Round 1 keeps the raw independent ledger for verdict purposes; merge results are
