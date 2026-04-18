@@ -24,7 +24,7 @@ from unittest import mock
 # Resolve paths relative to this test file
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 SCRIPT = str(Path(SCRIPT_DIR) / "run_review.py")
-FIXTURES_DIR = str(Path(SCRIPT_DIR).parent / "evals" / "fixtures")
+FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
@@ -63,6 +63,7 @@ def make_args(**overrides):
         "list_models": False,
         "error_log": None,
         "review_id": None,
+        "summary_file": None,
     }
     data.update(overrides)
     return argparse.Namespace(**data)
@@ -1182,8 +1183,9 @@ class TestMockPathCompatibility(unittest.TestCase):
 
     def test_build_cmd_intercepted(self):
         sentinel_cmd = ["echo", "test"]
+        mock_build = mock.Mock(return_value=sentinel_cmd)
         with (
-            mock.patch("run_review.build_claude_cmd", return_value=sentinel_cmd) as mock_build,
+            mock.patch.dict("run_review.BUILDERS", {"claude": mock_build}),
             mock.patch("run_review.subprocess.Popen", return_value=self._proc()),
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
@@ -1355,6 +1357,111 @@ VERDICT: REVISE
         findings = parse_structured_review(text)
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["id"], "B1")
+
+
+class TestProviderRegistry(unittest.TestCase):
+    """PROVIDERS is the single source of truth; derived dicts must match."""
+
+    def test_derived_views_match_registry(self):
+        from ppr_providers import (
+            BINARIES,
+            BUILDERS,
+            EFFORT_MAP,
+            MODEL_ALIASES,
+            PROVIDER_CAPS,
+            PROVIDERS,
+            _EFFORT_DEFAULTS,
+        )
+        self.assertEqual(set(BINARIES), set(PROVIDERS))
+        for name, p in PROVIDERS.items():
+            self.assertEqual(BINARIES[name], p["binary"])
+            self.assertIs(BUILDERS[name], p["build_cmd"])
+            self.assertEqual(EFFORT_MAP[name], p["effort_map"])
+            self.assertEqual(_EFFORT_DEFAULTS[name], p["effort_default"])
+            self.assertEqual(MODEL_ALIASES[name], p["model_aliases"])
+            self.assertEqual(PROVIDER_CAPS[name], p["caps"])
+
+    def test_get_provider_returns_entry(self):
+        from ppr_providers import get_provider
+        codex = get_provider("codex")
+        self.assertEqual(codex["binary"], "codex")
+        self.assertTrue(codex["resume_supported"])
+        with self.assertRaises(KeyError):
+            get_provider("nonexistent")
+
+    def test_all_providers_have_required_keys(self):
+        from ppr_providers import PROVIDERS
+        required = {
+            "binary", "effort_map", "effort_default", "model_aliases",
+            "resume_supported", "build_cmd", "caps",
+        }
+        for name, p in PROVIDERS.items():
+            self.assertTrue(required.issubset(p.keys()), f"{name} missing keys")
+            self.assertTrue(callable(p["build_cmd"]))
+
+
+class TestSessionDurability(unittest.TestCase):
+    """save_session must be atomic — partial writes must not clobber the target."""
+
+    def test_save_session_atomic_rename(self):
+        from ppr_io import save_session
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir) / "session.json"
+            target.write_text(json.dumps({"round": 1, "session_id": "abc"}))
+            save_session(str(target), {"round": 2, "session_id": "def"})
+            self.assertEqual(json.loads(target.read_text())["round"], 2)
+            self.assertFalse((Path(tmpdir) / "session.json.tmp").exists())
+
+    def test_save_session_failure_preserves_target(self):
+        from ppr_io import save_session
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target = Path(tmpdir) / "session.json"
+            target.write_text(json.dumps({"round": 1}))
+            with mock.patch("ppr_io.json.dump", side_effect=OSError("disk full")):
+                save_session(str(target), {"round": 2})
+            self.assertEqual(json.loads(target.read_text())["round"], 1)
+            self.assertFalse((Path(tmpdir) / "session.json.tmp").exists())
+
+
+class TestSummaryFile(unittest.TestCase):
+    """write_summary emits machine-readable per-round summary JSON."""
+
+    def test_summary_with_findings(self):
+        from ppr_io import write_summary
+        with tempfile.TemporaryDirectory() as tmpdir:
+            review = Path(tmpdir) / "review.md"
+            review.write_text(
+                "### Blocking Issues\n"
+                "- [B1] (HIGH) problem one\n"
+                "- [B2] (MEDIUM) problem two\n\n"
+                "### Non-Blocking Issues\n"
+                "- [N1] nit\n\n"
+                "VERDICT: REVISE\n"
+            )
+            summary = Path(tmpdir) / "summary.json"
+            write_summary(
+                str(summary),
+                str(review),
+                {"reviewer": "codex", "model": "gpt-5.4", "effort": "medium", "round": 2},
+            )
+            data = json.loads(summary.read_text())
+            self.assertEqual(data["verdict"], "REVISE")
+            self.assertEqual(data["reviewer"], "codex")
+            self.assertEqual(data["finding_count"], 3)
+            self.assertEqual(data["blocking_count"], 2)
+
+    def test_summary_missing_output_file(self):
+        from ppr_io import write_summary
+        with tempfile.TemporaryDirectory() as tmpdir:
+            summary = Path(tmpdir) / "summary.json"
+            write_summary(str(summary), str(Path(tmpdir) / "nope.md"), {"reviewer": "claude"})
+            data = json.loads(summary.read_text())
+            self.assertIsNone(data["verdict"])
+            self.assertEqual(data["finding_count"], 0)
+
+    def test_summary_none_path_is_noop(self):
+        from ppr_io import write_summary
+        write_summary(None, None, {})  # must not raise
 
 
 if __name__ == "__main__":

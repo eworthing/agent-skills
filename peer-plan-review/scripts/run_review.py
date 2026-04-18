@@ -27,11 +27,14 @@ from ppr_providers import (  # noqa: F401
     _EFFORT_DEFAULTS,
     MODEL_ALIASES,
     BINARIES,
+    BUILDERS,
     PROVIDER_CAPS,
+    PROVIDERS,
     build_codex_cmd,
     build_gemini_cmd,
     build_claude_cmd,
     build_copilot_cmd,
+    get_provider,
     read_prompt,
 )
 from ppr_io import (  # noqa: F401
@@ -40,6 +43,7 @@ from ppr_io import (  # noqa: F401
     extract_text_from_output,
     validate_prompt_file,
     probe_writable,
+    write_summary,
 )
 from ppr_metadata import (  # noqa: F401
     extract_metadata,
@@ -79,6 +83,11 @@ def parse_args():
     )
     p.add_argument("--error-log", default=None, help="Path to append-only JSONL error/event log")
     p.add_argument("--review-id", default=None, help="Review ID for log correlation across rounds")
+    p.add_argument(
+        "--summary-file",
+        default=None,
+        help="Path to write machine-readable per-round summary JSON",
+    )
     return p.parse_args()
 
 
@@ -272,18 +281,12 @@ def run_review(args, logger=None):
             if attempt == 0 and use_resume and session_id:
                 logger.log("resume_attempted", provider=reviewer, context={"session_id": session_id})
 
-            # Build provider-specific command using use_resume (not args.resume)
-            builders = {
-                "codex": build_codex_cmd,
-                "gemini": build_gemini_cmd,
-                "claude": build_claude_cmd,
-                "copilot": build_copilot_cmd,
-            }
+            # Build provider-specific command using use_resume (not args.resume).
             # Create a lightweight namespace for the builder that reflects
             # current resume state without mutating the original args.
             build_args = copy.copy(args)
             build_args.resume = use_resume
-            cmd = builders[reviewer](build_args, session_id)
+            cmd = BUILDERS[reviewer](build_args, session_id)
 
             print(f"Running: {reviewer} review...", file=sys.stderr)
 
@@ -452,6 +455,9 @@ def run_review(args, logger=None):
             session_data.update(plan_meta)
 
         save_session(args.session_file, session_data)
+
+        if args.summary_file:
+            write_summary(args.summary_file, args.output_file, session_data)
 
         if returncode == 0:
             logger.log("execution_complete", provider=reviewer, context={"returncode": 0})

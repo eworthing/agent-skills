@@ -26,14 +26,72 @@ def load_session(session_file):
 
 
 def save_session(session_file, data):
-    """Save session metadata to JSON file."""
+    """Save session metadata to JSON file atomically.
+
+    Writes to a sibling .tmp file and renames on success so a mid-write
+    crash cannot leave the caller with a truncated or empty session file.
+    """
     if not session_file:
         return
+    target = Path(session_file)
+    tmp = target.with_suffix(target.suffix + ".tmp")
     try:
-        with Path(session_file).open("w", encoding="utf-8") as f:
+        with tmp.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+        os.replace(tmp, target)
     except OSError as e:
         print(f"Warning: could not save session: {e}", file=sys.stderr)
+        with contextlib.suppress(OSError):
+            tmp.unlink()
+
+
+def _parse_verdict(output_file):
+    if not output_file or not Path(output_file).exists():
+        return None
+    try:
+        text = Path(output_file).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    for line in reversed([ln.strip() for ln in text.splitlines() if ln.strip()]):
+        if line.startswith("VERDICT:"):
+            verdict = line.split(":", 1)[1].strip().upper()
+            if verdict in ("APPROVED", "REVISE"):
+                return verdict
+    return None
+
+
+def write_summary(summary_file, output_file, session_data):
+    """Write a machine-readable per-round summary JSON.
+
+    Non-Claude hosts can consume this without reimplementing
+    parse_structured_review. Failures are logged to stderr and do not
+    propagate — the summary file is best-effort telemetry.
+    """
+    if not summary_file:
+        return
+    try:
+        text = ""
+        if output_file and Path(output_file).exists():
+            text = Path(output_file).read_text(encoding="utf-8", errors="replace")
+        findings = parse_structured_review(text) if text else []
+        blocking = sum(1 for f in findings if f.get("id", "").startswith("B"))
+        summary = {
+            "verdict": _parse_verdict(output_file),
+            "reviewer": session_data.get("reviewer"),
+            "model": session_data.get("model"),
+            "effort": session_data.get("effort"),
+            "round": session_data.get("round"),
+            "finding_count": len(findings),
+            "blocking_count": blocking,
+            "resume_fallback_used": session_data.get("resume_fallback_used", False),
+        }
+        target = Path(summary_file)
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+        os.replace(tmp, target)
+    except OSError as e:
+        print(f"Warning: could not write summary: {e}", file=sys.stderr)
 
 
 def extract_text_from_output(output_file, reviewer):

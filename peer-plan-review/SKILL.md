@@ -11,295 +11,159 @@ description: >
 
 # Peer Plan Review
 
-Use this skill to pressure-test a plan before execution. The host agent owns the
-plan and revises it between rounds. The reviewer critiques only; it never edits
-files or runs the host workflow.
+Pressure-test a plan before execution. The host agent owns the plan and revises
+it between rounds. The reviewer critiques only; it never edits files or runs
+the host workflow.
 
-## Use the bundled resources
+## Bundled resources
 
-- Use `scripts/run_review.py` for all provider-specific CLI invocation, resume
-  handling, output capture, model normalization, and metadata extraction. Do not
-  reimplement those flags manually.
-- Read exactly one provider reference after selecting the reviewer:
-  `references/codex.md`, `references/gemini.md`, `references/claude.md`, or
-  `references/copilot.md`.
-- When the user asks which models are available, prefer:
-  `python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`
-  instead of relying on a static table in memory.
+- `scripts/run_review.py` — provider-specific CLI invocation, resume, output
+  capture, model normalization, metadata extraction. Do not reimplement it.
+- Provider references — read exactly one after the reviewer is chosen:
+  [`references/codex.md`](references/codex.md),
+  [`references/gemini.md`](references/gemini.md),
+  [`references/claude.md`](references/claude.md),
+  [`references/copilot.md`](references/copilot.md).
+- [`references/output-format.md`](references/output-format.md) — structured
+  output template to include in every prompt.
+- [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI
+  flags, session-file contract.
+- [`references/adversarial.md`](references/adversarial.md) — prompt
+  additions for the adversarial stance.
+- [`references/env.md`](references/env.md) — env vars the runner reads
+  (`GEMINI_CONFIG_DIR`, `CODEX_HOME`,
+  `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`).
+
+For available models prefer:
+`python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`.
 
 ## Require a plan source
 
-Before starting, confirm that one of these exists:
-
-- The current session already has a plan to review
-- The user pasted the plan in the conversation
-- The user pointed to a plan file
-
-If no plan is available, ask the user what to review.
+Before starting, confirm one of: a plan already in the session, a plan pasted
+by the user, or a file path. If none, ask.
 
 ## Parse reviewer arguments
 
-Accept explicit command-style or natural-language inputs. Normalize to:
+Normalize to:
 
-- `reviewer`: `codex`, `gemini`, `claude`, or `copilot`
-- `model`: optional
-- `effort`: optional `low`, `medium`, `high`, or `xhigh`
+- `reviewer` — `codex`, `gemini`, `claude`, `copilot` (required; ask if omitted)
+- `model` — optional; pass-through if not a known alias
+- `effort` — optional `low | medium | high | xhigh`
 
-Parsing rule:
-
-- If the token after the reviewer is exactly one of `low`, `medium`, `high`,
-  or `xhigh`, treat it as `effort` and leave `model` unset.
-- Otherwise treat that token as the `model`, and read the next token as
-  optional `effort`.
-
-If the reviewer is omitted, ask which reviewer to use.
-
-If the model is omitted, tell the user once that the provider default model
-will be used and that they can pass a model override explicitly.
+Parsing rule: the first token after the reviewer is `effort` iff it is one of
+those four literals; otherwise treat it as `model` and read the next token as
+optional `effort`. If `model` is omitted, tell the user once that the provider
+default will be used.
 
 ## Review stance
 
-Two stances are available:
-
-- **Standard** (default): Cooperative review seeking to improve the plan.
-  Uses the iterative loop (up to 5 rounds) to converge on approval.
-- **Adversarial**: Deliberately skeptical single-round review. The reviewer
-  tries to find reasons the plan should NOT proceed. Runs one round only —
-  present findings and let the user triage. Does not enter the revision loop.
-
-Use adversarial when the user asks to "pressure-test", "break the plan",
-"adversarial review", or "find holes in" a plan.
-
-### Adversarial prompt template
-
-When writing the adversarial prompt, include these instructions for the
-reviewer:
-
-- Default to skepticism — assume the plan can fail in subtle, high-cost,
-  or user-visible ways until evidence says otherwise
-- Do not give credit for good intent, partial fixes, or likely follow-up work
-- Focus on expensive, dangerous, or hard-to-detect failures:
-  - Auth, permissions, trust boundaries
-  - Data loss, corruption, irreversible state changes
-  - Rollback safety, idempotency gaps
-  - Race conditions, ordering assumptions, stale state
-  - Missing error handling for degraded dependencies
-  - Schema/version compatibility risks
-  - Observability gaps that would hide failure
-- Prefer one strong, well-evidenced finding over multiple weak ones
-- Use the same structured output format (### Blocking Issues with [B1] tags,
-  ### Non-Blocking Issues with [N1] tags, Section/Lines references)
-- End with `VERDICT: APPROVED` or `VERDICT: REVISE`
-
-After the single adversarial round, present findings and wait for user
-direction. Do not enter the revision loop. Go directly to Finalize.
+- **Standard** (default): cooperative, iterative loop (up to 5 rounds).
+- **Adversarial**: deliberately skeptical single-round review — see
+  `references/adversarial.md`. Trigger on *pressure-test*, *break the plan*,
+  *adversarial review*, *find holes in*.
 
 ## Preflight
 
 1. Resolve `<skill-dir>` relative to this `SKILL.md`.
-2. Read `references/<provider>.md` for install, auth, and CLI-specific notes.
-3. Verify the reviewer CLI is available:
-   `python3 <skill-dir>/scripts/run_review.py --self-check --reviewer <provider>`
-4. If the user supplied an unfamiliar shorthand model, warn once and continue.
-   The runner already normalizes known aliases and passes unknown values through
-   as raw model IDs.
+2. Read `references/<provider>.md`.
+3. Verify the CLI:
+   `python3 <skill-dir>/scripts/run_review.py --self-check --reviewer <provider>`.
+4. If the user supplied an unfamiliar shorthand model, warn once and continue —
+   the runner passes unknown values through as raw IDs.
 
 ## Create a review session
-
-Generate a short review ID and keep all artifacts in the platform temp
-directory.
 
 ```bash
 REVIEW_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex[:12])")
 TMPDIR=$(python3 -c "import tempfile; print(tempfile.gettempdir())")
 ```
 
-Use these explicit paths:
+Paths:
 
 - `${TMPDIR}/ppr-${REVIEW_ID}-plan.md`
 - `${TMPDIR}/ppr-${REVIEW_ID}-prompt.md`
 - `${TMPDIR}/ppr-${REVIEW_ID}-review.md`
 - `${TMPDIR}/ppr-${REVIEW_ID}-session.json`
 - `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl`
-- `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` (error log, retained after cleanup)
+- `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` *(retained after cleanup)*
 
-Snapshot the current plan into the `plan.md` file before each round. Treat that
-snapshot as immutable for the duration of the round.
-
-Number every line of the plan snapshot so the reviewer can cite specific lines.
-Use a simple prefix format (e.g., `cat -n` style). Include the numbered plan
-in the prompt, not the raw plan. This grounds any line references the reviewer
-produces.
+Snapshot the plan into `plan.md` before each round and treat the snapshot as
+immutable for the round. Number every line (`cat -n` style) so the reviewer can
+cite specific lines — include the **numbered** plan in the prompt.
 
 ## Round 1
 
-Write a prompt that includes:
+Build a prompt with:
 
-1. The verdict contract: the final non-empty line must be exactly
-   `VERDICT: APPROVED` or `VERDICT: REVISE`
-2. The line-numbered implementation plan
-3. Instructions requesting this output structure:
+1. Verdict contract: final non-empty line must be `VERDICT: APPROVED` or
+   `VERDICT: REVISE`.
+2. The line-numbered plan.
+3. The structured output template from `references/output-format.md`.
 
-```
-### Reasoning
-Full analysis of the plan covering sequencing, hidden assumptions,
-missing validation, rollback, and dependency gaps.
-
-### Blocking Issues
-- [B1] (HIGH|MEDIUM|LOW) Short description of blocking issue
-  Section: <plan section name> (lines <N-M>)
-  Recommendation: Concrete fix or mitigation
-
-(Write "None" if no blocking issues.)
-
-### Non-Blocking Issues
-- [N1] Short description of non-blocking issue
-  Section: <plan section name> (lines <N-M>)
-  Recommendation: Suggested improvement
-
-(Write "None" if no non-blocking issues.)
-
-VERDICT: APPROVED or VERDICT: REVISE
-```
-
-Per-issue confidence (HIGH, MEDIUM, LOW) is required on blocking issues,
-optional on non-blocking. Section and line references refer to the
-numbered plan provided in the prompt.
-
-Run the adapter:
-
-```bash
-python3 <skill-dir>/scripts/run_review.py \
-  --reviewer <provider> \
-  --plan-file <plan.md> \
-  --prompt-file <prompt.md> \
-  --output-file <review.md> \
-  --session-file <session.json> \
-  --events-file <events.jsonl> \
-  --error-log <errors.jsonl> \
-  --review-id <REVIEW_ID> \
-  [--model MODEL] \
-  [--effort LEVEL] \
-  [--timeout SECONDS]
-```
-
-Do not pass `--resume` on round 1.
-Pass only the portable `--effort` value to `run_review.py`; the adapter maps it
-to each provider's native flags or settings internally.
-
-Default timeout is 600 seconds. Increase it for large plans or slower reviewers.
+Run the adapter (see `references/adapter-cli.md` for the full flag list). Omit
+`--resume` on round 1. Default timeout 600 s — raise for large plans.
 
 ## Read the result
 
-1. Read the session file first and extract the actual model and effort used.
-   Key fields: `model`, `model_requested`, `effort`, `effort_source`,
-   `effort_requested`, and for Gemini `thinking_tokens`.
+1. Read the session file; extract actual `model`, `effort`, `effort_source`
+   (and Gemini `thinking_tokens`).
 2. Read the review output file.
-3. Parse the verdict from the last non-empty line, searching upward from the
-   bottom of the file.
-4. Attempt to extract structured findings from the review using
-   `parse_structured_review()` from `ppr_io.py`:
-   - Scopes parsing to `### Blocking Issues` and `### Non-Blocking Issues`
-     sections only (ignores `### Reasoning` to prevent false positives)
-   - Extracts `[B<n>]`/`[N<n>]` tagged findings with confidence, section
-     references, and recommendations
-   If structured parsing succeeds, present findings in a summary table
-   ordered by severity before showing the full review text.
-   If structured parsing fails (returns empty list), present the raw
-   review text as today — graceful degradation.
-5. Present the review with a header that uses the actual metadata from the
-   session file:
+3. Parse the verdict from the last non-empty line, searching upward.
+4. Call `parse_structured_review()` from `ppr_io.py`. Scopes to `### Blocking
+   Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags
+   with confidence, section/line refs, and recommendations. On success, present
+   findings in a severity-ordered summary table before the full review text.
+   On empty result, present the raw review — graceful degradation.
+5. Header:
+   `## Peer Review - Round N (reviewer: <provider>, model: <actual>, effort: <actual>)`
 
-```text
-## Peer Review - Round N (reviewer: <provider>, model: <actual-model>, effort: <actual-effort>)
-```
-
-If no valid verdict is present, treat the round as `REVISE` and say that the
-verdict parse failed.
-
-If `model` or `effort` is missing, fall back to the user-requested value and
-then to the provider default or `"default"` as appropriate.
+If no valid verdict: treat as `REVISE` and say the verdict parse failed.
+If `model` or `effort` is missing: fall back to requested → provider default →
+`"default"`.
 
 ## Revise and re-review
 
-This section applies to standard reviews only. For adversarial stance,
-skip directly to Finalize after Round 1.
+Standard stance only. Adversarial skips directly to Finalize after round 1.
 
-When the verdict is `REVISE`:
+On `REVISE`:
 
-1. Address the review point by point.
+1. Address each finding.
 2. Rewrite the plan snapshot with the updated full plan.
 3. Write a short `Changes since last round` bullet list.
-4. Rebuild the prompt in this order:
-   - verdict contract
-   - previous reviewer feedback (include finding IDs so the reviewer can
-     see what was already raised)
-   - `Changes since last round`
-   - updated line-numbered full plan
-   Each round uses fresh per-round IDs (B1, B2, N1, etc.). Do not ask the
-   reviewer to continue numbering from a previous round. If the host needs
-   cross-round continuity, it maps findings after parsing based on content
-   similarity.
-5. Re-run the adapter with `--resume`.
+4. Rebuild the prompt in this order: verdict contract → previous reviewer
+   feedback (with finding IDs) → `Changes since last round` → updated numbered
+   plan. Each round uses fresh per-round IDs.
+5. Re-run the adapter with `--resume` added.
 
-```bash
-python3 <skill-dir>/scripts/run_review.py \
-  --reviewer <provider> \
-  --plan-file <plan.md> \
-  --prompt-file <prompt.md> \
-  --output-file <review.md> \
-  --session-file <session.json> \
-  --events-file <events.jsonl> \
-  --error-log <errors.jsonl> \
-  --review-id <REVIEW_ID> \
-  --resume \
-  [--model MODEL] \
-  [--effort LEVEL] \
-  [--timeout SECONDS]
-```
-
-Stop after approval or five total rounds, whichever comes first.
+Stop after approval or five rounds, whichever comes first.
 
 ## Handle failures
 
-- `--resume` is a request, not a guarantee. If resume fails and no usable
-  output was produced, the runner automatically falls back to a fresh execution.
-  This fallback happens at most once per invocation. Session metadata records
-  whether resume was attempted and whether fallback occurred
-  (`resume_requested`, `resume_attempted`, `resume_fallback_used`). Do not
-  submit a second manual retry on top of the automatic fallback.
-- If the runner exits non-zero and there is no usable output, report the error
-  and let the user choose whether to retry, switch reviewers, or stop.
-- If the runner exits non-zero but wrote output, try to extract the review and
-  verdict anyway before deciding it failed.
-- If the reviewer binary is missing, fail fast and quote the installation path
-  or command from the selected provider reference.
+- `--resume` is a request, not a guarantee. The runner auto-falls-back to a
+  fresh execution once if resume fails with no usable output.
+  `resume_requested`, `resume_attempted`, `resume_fallback_used` record this.
+  Do not submit a second manual retry on top of the automatic fallback.
+- Runner non-zero + no output: report and ask the user to retry, switch
+  reviewers, or stop.
+- Runner non-zero + some output: try to extract the review anyway.
+- Binary missing: fail fast and quote the install command from the provider
+  reference.
 
 ## Finalize
 
-- If approved, present the final revised plan and note that the reviewer
-  approved it.
-- If the round limit is reached (standard stance), present the latest plan
-  plus the unresolved reviewer concerns.
-- If adversarial stance completed its single round with REVISE, present the
-  findings as-is — there is no revision loop to exhaust.
-- In all three cases, after presenting the outcome, STOP. Do not begin
-  implementing changes, editing code, or modifying files based on the review
-  findings. Explicitly ask the user which findings, if any, they want
-  addressed before taking any action.
-- Remove the five explicit temp files created for the session (plan, prompt,
-  review, session, events). Do not use globs. The error log
-  (`ppr-${REVIEW_ID}-errors.jsonl`) is intentionally retained for post-mortem
-  analysis and must not be deleted during cleanup.
+- Approved → present the final revised plan; note reviewer approval.
+- Round limit (standard) → present the latest plan + unresolved concerns.
+- Adversarial round ended `REVISE` → present findings as-is.
+- **In all cases, STOP.** Do not begin implementing changes, editing code, or
+  modifying files. Ask the user which findings, if any, they want addressed.
+- Remove the five session temp files (plan, prompt, review, session, events).
+  Do not use globs. The error log is intentionally retained for post-mortem.
 
 ## Rules
 
-- Keep the reviewer read-only. Do not ask it to modify files, execute the host
-  workflow, or manage artifacts.
-- Use full-output capture for every round. Do not rely on tail-scraping.
-- Never use transcript-sharing flags such as `--share` or `--share-gist`.
-- Treat the prompt, review, session, and events files as sensitive because they
-  contain the plan text.
-- Show actual model and effort values from the session file, not guessed values.
-- After the review loop completes, do not auto-apply fixes or begin
-  implementation. Present findings and wait for user direction.
+- Keep the reviewer read-only. Never ask it to modify files or execute the host
+  workflow.
+- Capture full output each round. No tail-scraping.
+- Never use transcript-sharing flags (`--share`, `--share-gist`).
+- Treat prompt/review/session/events files as sensitive (they contain plan text).
+- Show actual model/effort from the session file, not guessed values.
