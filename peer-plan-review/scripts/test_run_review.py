@@ -88,10 +88,10 @@ class TestListModels(unittest.TestCase):
     """Tests 1-2: --list-models output."""
 
     def test_list_models_all_providers(self):
-        """Test 1: --list-models prints all 4 providers with correct aliases."""
+        """Test 1: --list-models prints all 5 providers with correct aliases."""
         rc, stdout, stderr = run_script("--list-models")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
-        for provider in ("claude", "gemini", "codex", "copilot"):
+        for provider in ("claude", "gemini", "codex", "copilot", "opencode"):
             self.assertIn(
                 provider, stdout, f"Provider {provider} missing from --list-models output"
             )
@@ -102,7 +102,7 @@ class TestListModels(unittest.TestCase):
         # Gemini should have auto, pro, flash, flash-lite
         self.assertIn("flash", stdout)
         self.assertIn("pro", stdout)
-        # Codex/copilot should indicate raw IDs
+        # Codex/copilot/opencode should indicate raw IDs
         self.assertIn("raw model IDs", stdout)
 
     def test_list_models_single_provider(self):
@@ -354,6 +354,32 @@ class TestOutputParsing(unittest.TestCase):
         self.assertEqual(meta.get("model"), "test-codex-model")
         self.assertEqual(meta.get("effort"), "high")
 
+    def test_extract_text_opencode(self):
+        """Test 8e: opencode JSONL fixture extracts review text correctly."""
+        fixture = Path(FIXTURES_DIR) / "opencode_output.jsonl"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tmp:
+            with fixture.open() as f:
+                tmp.write(f.read())
+            tmp_path = tmp.name
+        try:
+            extract_text_from_output(tmp_path, "opencode")
+            with Path(tmp_path).open() as f:
+                text = f.read()
+            self.assertIn("VERDICT: REVISE", text)
+            self.assertIn("Blocking Issues", text)
+            self.assertIn("No rollback strategy", text)
+            # Should be plain text, not JSONL
+            self.assertNotIn('"type":"text"', text)
+        finally:
+            Path(tmp_path).unlink()
+
+    def test_extract_session_id_opencode(self):
+        """Test 8f: opencode session ID extracted from first JSONL line."""
+        from ppr_metadata import extract_session_id_opencode
+        fixture = Path(FIXTURES_DIR) / "opencode_output.jsonl"
+        sid = extract_session_id_opencode(str(fixture))
+        self.assertEqual(sid, "ses_fixture12345abcdef")
+
     def test_malformed_output_warning(self):
         """Test 9: Malformed JSON emits warning, file left as-is."""
         fixture = Path(FIXTURES_DIR) / "malformed.json"
@@ -517,6 +543,58 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("--reasoning-effort", cmd)
         self.assertIn("medium", cmd)
 
+    def test_build_opencode_cmd_fresh_exec_maps_effort_and_safety(self):
+        args = make_args(
+            reviewer="opencode",
+            prompt_file=str(self.prompt_file),
+            output_file="/tmp/review.jsonl",
+            model="opencode-go/deepseek-v4-pro",
+            effort="xhigh",
+        )
+
+        cmd = run_review.build_opencode_cmd(args)
+
+        self.assertEqual(cmd[:3], ["opencode", "run", "Review this plan carefully.\n"])
+        self.assertIn("--format", cmd)
+        self.assertIn("json", cmd)
+        self.assertIn("--dangerously-skip-permissions", cmd)
+        self.assertIn("-m", cmd)
+        self.assertIn("opencode-go/deepseek-v4-pro", cmd)
+        self.assertIn("--variant", cmd)
+        self.assertIn("max", cmd)
+        self.assertNotIn("-s", cmd)
+
+    def test_build_opencode_cmd_resume_uses_session_flag(self):
+        args = make_args(
+            reviewer="opencode",
+            prompt_file=str(self.prompt_file),
+            output_file="/tmp/review.jsonl",
+            resume=True,
+        )
+
+        cmd = run_review.build_opencode_cmd(args, session_id="open-session-42")
+
+        self.assertEqual(cmd[:3], ["opencode", "run", "Review this plan carefully.\n"])
+        self.assertIn("--format", cmd)
+        self.assertIn("json", cmd)
+        self.assertIn("-s", cmd)
+        self.assertIn("open-session-42", cmd)
+
+    def test_build_opencode_cmd_no_model_no_effort(self):
+        args = make_args(
+            reviewer="opencode",
+            prompt_file=str(self.prompt_file),
+        )
+
+        cmd = run_review.build_opencode_cmd(args)
+
+        self.assertEqual(cmd[:3], ["opencode", "run", "Review this plan carefully.\n"])
+        self.assertIn("--format", cmd)
+        self.assertIn("json", cmd)
+        self.assertIn("--dangerously-skip-permissions", cmd)
+        self.assertNotIn("-m", cmd)
+        self.assertNotIn("--variant", cmd)
+
 
 class TestSelfCheckUnit(unittest.TestCase):
     """Pure unit tests for self_check edge cases."""
@@ -572,6 +650,11 @@ class TestSelfCheck(unittest.TestCase):
     @unittest.skipUnless(shutil.which("copilot"), "copilot CLI not installed")
     def test_self_check_copilot(self):
         rc, _stdout, stderr = run_script("--self-check", "--reviewer", "copilot")
+        self.assertEqual(rc, 0, f"stderr: {stderr}")
+
+    @unittest.skipUnless(shutil.which("opencode"), "opencode CLI not installed")
+    def test_self_check_opencode(self):
+        rc, _stdout, stderr = run_script("--self-check", "--reviewer", "opencode")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
 
 

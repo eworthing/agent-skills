@@ -8,6 +8,7 @@ extractors, and Codex session file helpers.
 import hashlib
 import json
 import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -75,6 +76,18 @@ def extract_session_id_copilot(output_file):
     except OSError:
         pass
     return None
+
+
+def extract_session_id_opencode(output_file):
+    """Extract sessionID from first line of opencode JSONL output."""
+    if not output_file or not Path(output_file).exists():
+        return None
+    try:
+        with Path(output_file).open(encoding="utf-8") as f:
+            first = json.loads(f.readline())
+            return first.get("sessionID")
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 def extract_metadata(output_file, events_file, reviewer, codex_session_file=None):
@@ -168,6 +181,41 @@ def extract_metadata(output_file, events_file, reviewer, codex_session_file=None
                 pass
             if meta.get("model"):
                 break
+
+    # opencode: model/variant live in export, NOT the JSONL stream
+    if reviewer == "opencode" and output_file and Path(output_file).exists():
+        try:
+            with Path(output_file).open(encoding="utf-8") as f:
+                first = json.loads(f.readline())
+            session_id = first.get("sessionID")
+            if session_id:
+                export = subprocess.run(
+                    ["opencode", "export", session_id],
+                    capture_output=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=15,
+                )
+                if export.returncode == 0:
+                    data = json.loads(export.stdout)
+                    for msg in data.get("messages", []):
+                        model = msg.get("info", {}).get("model", {})
+                        if model.get("providerID") and model.get("modelID"):
+                            meta["model"] = f"{model['providerID']}/{model['modelID']}"
+                            # Reverse-map variant from opencode (max→xhigh)
+                            variant = model.get("variant")
+                            if variant:
+                                _REVERSE_EFFORT_OPENCODE = {
+                                    "low": "low", "medium": "medium",
+                                    "high": "high", "max": "xhigh",
+                                }
+                                meta["effort"] = _REVERSE_EFFORT_OPENCODE.get(
+                                    variant, variant
+                                )
+                            break
+        except (json.JSONDecodeError, OSError, subprocess.TimeoutExpired,
+                subprocess.SubprocessError):
+            pass
 
     return meta
 

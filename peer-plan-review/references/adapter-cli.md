@@ -22,7 +22,7 @@ python3 <skill-dir>/scripts/run_review.py \
 
 ## Flags
 
-- `--reviewer`: `codex`, `gemini`, `claude`, or `copilot`. Required.
+- `--reviewer`: `codex`, `gemini`, `claude`, `copilot`, or `opencode`. Required.
 - `--resume`: include on rounds 2+ only. The runner falls back to a fresh
   execution once if resume fails with no usable output.
 - `--model`: provider-specific model ID or known alias. `--list-models

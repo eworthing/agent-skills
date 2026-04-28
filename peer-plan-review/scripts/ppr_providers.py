@@ -153,6 +153,28 @@ def build_copilot_cmd(args, session_id=None):
     return cmd
 
 
+def build_opencode_cmd(args, session_id=None):
+    """Build opencode run command. Prompt passed as positional arg."""
+    binary = BINARIES["opencode"]
+    prompt_text = read_prompt(args.prompt_file)
+    cmd = [binary, "run", prompt_text or ""]
+
+    cmd.extend(["--format", "json"])
+    cmd.append("--dangerously-skip-permissions")
+
+    if args.resume and session_id:
+        cmd.extend(["-s", session_id])
+
+    if args.model:
+        cmd.extend(["-m", args.model])
+
+    if args.effort:
+        level = EFFORT_MAP["opencode"].get(args.effort, args.effort)
+        cmd.extend(["--variant", level])
+
+    return cmd
+
+
 def read_prompt(prompt_file):
     """Read prompt text from file."""
     if not prompt_file or not Path(prompt_file).exists():
@@ -259,6 +281,37 @@ PROVIDERS = {
             "resume_supported": True,
             "safety_flags": ["--no-ask-user", "--yolo", "--deny-tool=write,shell,memory"],
         },
+    },
+    "opencode": {
+        "binary": "opencode",
+        "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "max"},
+        "effort_default": "medium",
+        "model_aliases": {
+            "deepseek": "opencode-go/deepseek-v4-pro",
+            "deepseek-flash": "opencode-go/deepseek-v4-flash",
+            "kimi": "opencode-go/kimi-k2.6",
+            "kimi-vision": "opencode-go/kimi-k2.5",
+            "mimo": "opencode-go/mimo-v2.5",
+            "mimo-pro": "opencode-go/mimo-v2.5-pro",
+            "mimo-omni": "opencode-go/mimo-v2-omni",
+            "qwen": "opencode-go/qwen3.6-plus",
+            "glm": "opencode-go/glm-5.1",
+            "minimax": "opencode-go/minimax-m2.7",
+        },
+        "resume_supported": True,
+        "build_cmd": build_opencode_cmd,
+        "caps": {
+            "binary": "opencode",
+            "prompt_mode": "positional",
+            "output_mode": "stdout",
+            "model_flag": "-m",
+            "effort_flag": "--variant {level}",
+            "resume_flag_style": "flag",
+            "resume_supported": True,
+            "safety_flags": ["--dangerously-skip-permissions"],
+        },
+        # opencode-go model discovery command — used by --list-models
+        "list_models_cmd": ["opencode", "models", "opencode-go"],
     },
 }
 

@@ -34,6 +34,7 @@ from ppr_providers import (  # noqa: F401
     build_gemini_cmd,
     build_claude_cmd,
     build_copilot_cmd,
+    build_opencode_cmd,
     get_provider,
     read_prompt,
 )
@@ -49,6 +50,7 @@ from ppr_metadata import (  # noqa: F401
     extract_metadata,
     extract_session_id_json,
     extract_session_id_copilot,
+    extract_session_id_opencode,
     _parse_codex_session_id,
     _codex_session_files,
     compute_plan_metadata,
@@ -398,6 +400,8 @@ def run_review(args, logger=None):
                         break
         elif reviewer == "copilot":
             new_session_id = extract_session_id_copilot(args.output_file)
+        elif reviewer == "opencode":
+            new_session_id = extract_session_id_opencode(args.output_file)
         elif reviewer in ("gemini", "claude"):
             new_session_id = extract_session_id_json(args.output_file)
 
@@ -407,7 +411,7 @@ def run_review(args, logger=None):
         )
 
         # Extract plain text from structured output
-        if reviewer in ("claude", "gemini", "copilot"):
+        if reviewer in ("claude", "gemini", "copilot", "opencode"):
             extract_text_from_output(args.output_file, reviewer)
 
         # Resolve actual model and effort
@@ -535,13 +539,39 @@ def main():
         for provider in providers:
             aliases = MODEL_ALIASES.get(provider, {})
             if aliases:
-                print(f"{provider}: {', '.join(sorted(aliases.keys()))}")
+                alias_strs = [
+                    f"{k} ({v})" for k, v in sorted(aliases.items())
+                ]
+                print(f"{provider}: {', '.join(alias_strs)}")
             else:
-                print(f"{provider}: (raw model IDs only — no aliases)")
+                # Try provider-native model listing for empty-alias providers
+                p = PROVIDERS.get(provider, {})
+                list_cmd = p.get("list_models_cmd")
+                if list_cmd:
+                    try:
+                        result = subprocess.run(
+                            list_cmd,
+                            capture_output=True,
+                            encoding="utf-8",
+                            errors="replace",
+                            timeout=15,
+                        )
+                        if result.returncode == 0 and result.stdout.strip():
+                            models = [
+                                m.strip() for m in result.stdout.strip().splitlines()
+                                if m.strip()
+                            ]
+                            print(f"{provider}: {', '.join(models)}")
+                        else:
+                            print(f"{provider}: (raw model IDs only — no aliases)")
+                    except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
+                        print(f"{provider}: (raw model IDs only — no aliases)")
+                else:
+                    print(f"{provider}: (raw model IDs only — no aliases)")
         sys.exit(0)
 
     if not args.reviewer:
-        print("--reviewer is required (codex, gemini, claude, copilot)", file=sys.stderr)
+        print("--reviewer is required (codex, gemini, claude, copilot, opencode)", file=sys.stderr)
         sys.exit(1)
 
     if not args.prompt_file:

@@ -2,11 +2,12 @@
 name: peer-plan-review
 description: >
   Send an implementation plan to another AI agent such as Codex, Gemini CLI,
-  Claude Code, or Copilot for iterative review, then revise and re-submit until
-  the reviewer approves or the round limit is reached. Use when the user wants
-  a second opinion on a plan, asks for cross-agent review, mentions 'codex
-  review', 'gemini review', 'claude review', or 'copilot review', wants to
-  validate a plan before executing it, or asks for peer review.
+  Claude Code, Copilot, or opencode for iterative review, then revise and
+  re-submit until the reviewer approves or the round limit is reached. Use when
+  the user wants a second opinion on a plan, asks for cross-agent review,
+  mentions 'codex review', 'gemini review', 'claude review', 'copilot review',
+  or 'opencode review', wants to validate a plan before executing it, or asks
+  for peer review.
 ---
 
 # Peer Plan Review
@@ -20,7 +21,8 @@ Pressure-test plan before execution. Host agent own plan, revise between rounds.
   [`references/codex.md`](references/codex.md),
   [`references/gemini.md`](references/gemini.md),
   [`references/claude.md`](references/claude.md),
-  [`references/copilot.md`](references/copilot.md).
+  [`references/copilot.md`](references/copilot.md),
+  [`references/opencode.md`](references/opencode.md).
 - [`references/output-format.md`](references/output-format.md) — structured output template. Include in every prompt.
 - [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract.
 - [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
@@ -39,7 +41,7 @@ Before start, confirm one of: plan already in session, plan pasted by user, or f
 
 Normalize to:
 
-- `reviewer` — `codex`, `gemini`, `claude`, `copilot` (required; ask if omitted)
+- `reviewer` — `codex`, `gemini`, `claude`, `copilot`, `opencode` (required; ask if omitted)
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 

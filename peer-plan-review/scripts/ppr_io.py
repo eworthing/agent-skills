@@ -119,6 +119,21 @@ def extract_text_from_output(output_file, reviewer):
                 except json.JSONDecodeError:
                     continue
             text = "\n".join(messages) if messages else content
+        elif reviewer == "opencode":
+            # JSONL: collect text from type=text events, skip reasoning
+            messages = []
+            for line in content.splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    event = json.loads(line)
+                    if event.get("type") == "text":
+                        msg = event.get("part", {}).get("text", "")
+                        if msg:
+                            messages.append(msg)
+                except json.JSONDecodeError:
+                    continue
+            text = "\n".join(messages) if messages else content
         else:
             # Single JSON object (Claude, Gemini)
             data = json.loads(content)
