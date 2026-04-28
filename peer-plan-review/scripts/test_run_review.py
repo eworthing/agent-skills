@@ -24,6 +24,7 @@ from unittest import mock
 # Resolve paths relative to this test file
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 SCRIPT = str(Path(SCRIPT_DIR) / "run_review.py")
+PATHS_SCRIPT = str(Path(SCRIPT_DIR) / "ppr_paths.py")
 FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 
 # Import functions from run_review for direct unit tests
@@ -42,6 +43,20 @@ def run_script(*extra_args):
         encoding="utf-8",
         errors="replace",
         timeout=30,
+    )
+    return result.returncode, result.stdout, result.stderr
+
+
+def run_paths_script(*extra_args, env=None):
+    """Run ppr_paths.py as subprocess, return (returncode, stdout, stderr)."""
+    cmd = [sys.executable, PATHS_SCRIPT, *list(extra_args)]
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=30,
+        env=env,
     )
     return result.returncode, result.stdout, result.stderr
 
@@ -221,6 +236,51 @@ class TestFileValidation(unittest.TestCase):
         finally:
             readonly_dir.chmod(stat.S_IRWXU)
             shutil.rmtree(tmpdir)
+
+
+class TestPathHelper(unittest.TestCase):
+    """Canonical temp-path helper must not depend on ad hoc env vars."""
+
+    def test_shell_output_without_prompt_file_env(self):
+        env = os.environ.copy()
+        env.pop("PROMPT_FILE", None)
+        rc, stdout, stderr = run_paths_script(
+            "--review-id",
+            "abc123def456",
+            "--tmpdir",
+            "/tmp",
+            "--format",
+            "shell",
+            env=env,
+        )
+        self.assertEqual(rc, 0, f"stderr: {stderr}")
+        self.assertIn("export PROMPT_FILE=/tmp/ppr-abc123def456-prompt.md", stdout)
+        self.assertIn("export PLAN_FILE=/tmp/ppr-abc123def456-plan.md", stdout)
+        self.assertEqual(stderr, "")
+
+    def test_json_output_from_review_id_file(self):
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("resume-round-2\n")
+            review_id_file = f.name
+        try:
+            rc, stdout, stderr = run_paths_script(
+                "--review-id-file",
+                review_id_file,
+                "--tmpdir",
+                "/tmp",
+            )
+            self.assertEqual(rc, 0, f"stderr: {stderr}")
+            data = json.loads(stdout)
+            self.assertEqual(data["review_id"], "resume-round-2")
+            self.assertEqual(data["prompt_file"], "/tmp/ppr-resume-round-2-prompt.md")
+            self.assertEqual(data["session_file"], "/tmp/ppr-resume-round-2-session.json")
+        finally:
+            Path(review_id_file).unlink()
+
+    def test_invalid_review_id_exits_nonzero(self):
+        rc, _stdout, stderr = run_paths_script("--review-id", "../bad")
+        self.assertNotEqual(rc, 0)
+        self.assertIn("review id must contain only", stderr)
 
 
 class TestOutputParsing(unittest.TestCase):

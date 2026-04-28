@@ -64,10 +64,14 @@ Parsing rule: first token after reviewer is `effort` iff one of those four liter
 
 ```bash
 REVIEW_ID=$(python3 -c "import uuid; print(uuid.uuid4().hex[:12])")
-TMPDIR=$(python3 -c "import tempfile; print(tempfile.gettempdir())")
+eval "$(
+  python3 <skill-dir>/scripts/ppr_paths.py \
+    --review-id "$REVIEW_ID" \
+    --format shell
+)"
 ```
 
-Paths:
+Canonical temp files:
 
 - `${TMPDIR}/ppr-${REVIEW_ID}-plan.md`
 - `${TMPDIR}/ppr-${REVIEW_ID}-prompt.md`
@@ -75,6 +79,14 @@ Paths:
 - `${TMPDIR}/ppr-${REVIEW_ID}-session.json`
 - `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl`
 - `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` *(retained after cleanup)*
+
+If you persist the current review for later rounds, persist the `REVIEW_ID`
+only, then reconstruct all file paths with `ppr_paths.py`. Do not use ad hoc
+inline Python that reads `PROMPT_FILE` or related path vars from the
+environment before they have been exported.
+
+Example for a persisted id file:
+`python3 <skill-dir>/scripts/ppr_paths.py --review-id-file /tmp/ppr-current-id.txt --format shell`
 
 Snapshot plan into `plan.md` before each round. Treat snapshot immutable for round. Number every line (`cat -n` style) so reviewer cite specific lines — include **numbered** plan in prompt.
 

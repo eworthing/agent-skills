@@ -27,6 +27,7 @@ references/
   env.md              env vars read by the runner
 scripts/
   run_review.py       adapter CLI entrypoint
+  ppr_paths.py        canonical temp-path helper for review sessions
   ppr_io.py           session I/O, output parsing, summaries
   ppr_providers.py    provider command builders
   ppr_metadata.py     model/effort/session extraction
