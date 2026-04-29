@@ -94,20 +94,29 @@ def write_summary(summary_file, output_file, session_data):
         print(f"Warning: could not write summary: {e}", file=sys.stderr)
 
 
-def extract_text_from_output(output_file, reviewer):
-    """Extract review text from structured output and rewrite as plain text."""
+def extract_text_from_output(output_file, reviewer, content=None):
+    """Extract review text from structured output and rewrite as plain text.
+
+    If content is provided, it is used instead of reading the output file.
+    This eliminates temporal coupling: callers can read the file once,
+    extract metadata from the structured content, then pass the same
+    content here for text extraction without worrying about ordering.
+    """
     if not output_file or not Path(output_file).exists():
         return
     try:
-        with Path(output_file).open(encoding="utf-8") as f:
-            content = f.read().strip()
-        if not content:
+        if content is not None:
+            raw_content = content.strip()
+        else:
+            with Path(output_file).open(encoding="utf-8") as f:
+                raw_content = f.read().strip()
+        if not raw_content:
             return
 
         if reviewer == "copilot":
             # JSONL: one JSON object per line
             messages = []
-            for line in content.splitlines():
+            for line in raw_content.splitlines():
                 if not line.strip():
                     continue
                 try:
@@ -118,11 +127,11 @@ def extract_text_from_output(output_file, reviewer):
                             messages.append(msg)
                 except json.JSONDecodeError:
                     continue
-            text = "\n".join(messages) if messages else content
+            text = "\n".join(messages) if messages else raw_content
         elif reviewer == "opencode":
             # JSONL: collect text from type=text events, skip reasoning
             messages = []
-            for line in content.splitlines():
+            for line in raw_content.splitlines():
                 if not line.strip():
                     continue
                 try:
@@ -133,16 +142,16 @@ def extract_text_from_output(output_file, reviewer):
                             messages.append(msg)
                 except json.JSONDecodeError:
                     continue
-            text = "\n".join(messages) if messages else content
+            text = "\n".join(messages) if messages else raw_content
         else:
             # Single JSON object (Claude, Gemini)
-            data = json.loads(content)
+            data = json.loads(raw_content)
             if reviewer == "claude":
-                text = data.get("result", content)
+                text = data.get("result", raw_content)
             elif reviewer == "gemini":
-                text = data.get("response", content)
+                text = data.get("response", raw_content)
             else:
-                text = content
+                text = raw_content
 
         with Path(output_file).open("w", encoding="utf-8") as f:
             f.write(text if isinstance(text, str) else json.dumps(text))

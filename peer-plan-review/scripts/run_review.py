@@ -19,43 +19,46 @@ import sys
 import tempfile
 from pathlib import Path
 
+from ppr_io import (
+    extract_text_from_output,
+    load_session,
+    probe_writable,
+    save_session,
+    validate_prompt_file,
+    write_summary,
+)
+from ppr_log import EventLogger
+from ppr_metadata import (
+    _codex_session_files,
+    _extract_opencode_metadata_via_export,
+    _parse_codex_session_id,
+    compute_plan_metadata,
+    extract_metadata,
+    extract_session_id_copilot,
+    extract_session_id_json,
+    extract_session_id_opencode,
+)
+from ppr_process import _kill_tree, _popen_session_kwargs
+
 # ---------------------------------------------------------------------------
 # Re-exports from submodules (preserves mock.patch("run_review.X") paths)
 # ---------------------------------------------------------------------------
 from ppr_providers import (  # noqa: F401
-    EFFORT_MAP,
     _EFFORT_DEFAULTS,
-    MODEL_ALIASES,
     BINARIES,
     BUILDERS,
+    EFFORT_MAP,
+    MODEL_ALIASES,
     PROVIDER_CAPS,
     PROVIDERS,
-    build_codex_cmd,
-    build_gemini_cmd,
     build_claude_cmd,
+    build_codex_cmd,
     build_copilot_cmd,
+    build_gemini_cmd,
     build_opencode_cmd,
     get_provider,
     read_prompt,
 )
-from ppr_io import (  # noqa: F401
-    load_session,
-    save_session,
-    extract_text_from_output,
-    validate_prompt_file,
-    probe_writable,
-    write_summary,
-)
-from ppr_metadata import (  # noqa: F401
-    extract_metadata,
-    extract_session_id_json,
-    extract_session_id_copilot,
-    extract_session_id_opencode,
-    _parse_codex_session_id,
-    _codex_session_files,
-    compute_plan_metadata,
-)
-from ppr_log import EventLogger  # noqa: F401
 
 
 def parse_args():
@@ -149,45 +152,8 @@ def self_check(reviewer):
         return False
 
 
-# Session helpers, metadata extraction, command builders, and text extraction
-# have been moved to ppr_io.py, ppr_metadata.py, and ppr_providers.py.
-# They are re-exported above for backward compatibility.
-
-
-
-
-# ---------------------------------------------------------------------------
-# Process tree management
-# ---------------------------------------------------------------------------
-
-
-def _kill_tree(proc):
-    """Kill process and all descendants."""
-    if sys.platform == "win32":
-        subprocess.run(
-            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
-            capture_output=True,
-        )
-        proc.wait()
-    else:
-        try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            proc.wait(timeout=5)
-        except (subprocess.TimeoutExpired, ProcessLookupError):
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            pass
-
-
-def _popen_session_kwargs():
-    """Return Popen kwargs for process-group isolation, per platform."""
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-    return {"start_new_session": True}
-
+# Process tree management has been moved to ppr_process.py.
+# It is re-exported above for backward compatibility.
 
 # Module-level for signal handler access
 _active_proc = None
@@ -419,14 +385,32 @@ def run_review(args, logger=None):
         elif reviewer in ("gemini", "claude"):
             new_session_id = extract_session_id_json(args.output_file)
 
-        # Extract model metadata (before text rewrite)
-        meta = extract_metadata(
-            args.output_file, args.events_file, reviewer, codex_session_file=codex_session_path
-        )
+        # Read output file content once (eliminates temporal coupling with
+        # extract_text_from_output, which overwrites the file)
+        output_content = None
+        if reviewer in ("claude", "gemini", "copilot", "opencode") and args.output_file:
+            out_p = Path(args.output_file)
+            if out_p.exists():
+                with contextlib.suppress(OSError):
+                    output_content = out_p.read_text(encoding="utf-8", errors="replace")
 
-        # Extract plain text from structured output
+        # Opencode: extract metadata via subprocess export (explicit side-effect)
+        opencode_export_meta = {}
+        if reviewer == "opencode" and new_session_id:
+            opencode_export_meta = _extract_opencode_metadata_via_export(new_session_id)
+
+        # Extract model metadata (uses pre-read content for claude/gemini/copilot)
+        meta = extract_metadata(
+            args.output_file, args.events_file, reviewer,
+            codex_session_file=codex_session_path,
+            output_content=output_content, logger=logger
+        )
+        if opencode_export_meta:
+            meta.update(opencode_export_meta)
+
+        # Extract plain text from structured output (uses pre-read content)
         if reviewer in ("claude", "gemini", "copilot", "opencode"):
-            extract_text_from_output(args.output_file, reviewer)
+            extract_text_from_output(args.output_file, reviewer, content=output_content)
 
         # Resolve actual model and effort
         actual_model = meta.get("model") or session.get("model") or args.model or "default"

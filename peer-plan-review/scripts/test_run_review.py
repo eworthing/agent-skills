@@ -11,8 +11,8 @@ Run:  python3 scripts/test_run_review.py
 import argparse
 import json
 import os
-import signal
 import shutil
+import signal
 import stat
 import subprocess
 import sys
@@ -30,8 +30,8 @@ FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
 import run_review  # noqa: E402
-from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
 from ppr_io import parse_structured_review  # noqa: E402
+from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
 
 
 def run_script(*extra_args):
@@ -803,28 +803,28 @@ _CREATE_NEW_PROCESS_GROUP = 0x00000200  # Windows constant sentinel for testing
 class TestPlatformHelpers(unittest.TestCase):
     """Tests for cross-platform process helpers."""
 
-    @mock.patch("run_review.sys")
+    @mock.patch("ppr_process.sys")
     def test_popen_session_kwargs_posix(self, mock_sys):
         mock_sys.platform = "linux"
         result = run_review._popen_session_kwargs()
         self.assertEqual(result, {"start_new_session": True})
 
     @mock.patch(
-        "run_review.subprocess.CREATE_NEW_PROCESS_GROUP", _CREATE_NEW_PROCESS_GROUP, create=True
+        "ppr_process.subprocess.CREATE_NEW_PROCESS_GROUP", _CREATE_NEW_PROCESS_GROUP, create=True
     )
-    @mock.patch("run_review.sys")
+    @mock.patch("ppr_process.sys")
     def test_popen_session_kwargs_windows(self, mock_sys):
         mock_sys.platform = "win32"
         result = run_review._popen_session_kwargs()
         self.assertIn("creationflags", result)
         self.assertEqual(result["creationflags"], _CREATE_NEW_PROCESS_GROUP)
 
-    @mock.patch("run_review.sys")
+    @mock.patch("ppr_process.sys")
     def test_kill_tree_windows_uses_taskkill(self, mock_sys):
         mock_sys.platform = "win32"
         mock_proc = mock.MagicMock()
         mock_proc.pid = 12345
-        with mock.patch("run_review.subprocess.run") as mock_run:
+        with mock.patch("ppr_process.subprocess.run") as mock_run:
             run_review._kill_tree(mock_proc)
             mock_run.assert_called_once_with(
                 ["taskkill", "/T", "/F", "/PID", "12345"],
@@ -832,17 +832,103 @@ class TestPlatformHelpers(unittest.TestCase):
             )
             mock_proc.wait.assert_called_once()
 
-    @mock.patch("run_review.sys")
+    @mock.patch("ppr_process.sys")
     def test_kill_tree_posix_uses_killpg(self, mock_sys):
         mock_sys.platform = "linux"
         mock_proc = mock.MagicMock()
         mock_proc.pid = 12345
         with (
-            mock.patch("run_review.os.getpgid", return_value=12345),
-            mock.patch("run_review.os.killpg"),
+            mock.patch("ppr_process.os.getpgid", return_value=12345),
+            mock.patch("ppr_process.os.killpg"),
         ):
             run_review._kill_tree(mock_proc)
             mock_proc.wait.assert_called()
+
+
+class TestOpencodeMetadataExport(unittest.TestCase):
+    """Tests for _extract_opencode_metadata_via_export (Finding #3)."""
+
+    @mock.patch("ppr_metadata.subprocess.run")
+    def test_extracts_model_and_effort_from_export(self, mock_run):
+        """Valid export JSON returns model (providerID/modelID) and effort (max→xhigh)."""
+        from ppr_metadata import _extract_opencode_metadata_via_export
+
+        export_json = json.dumps({
+            "messages": [
+                {
+                    "info": {
+                        "model": {
+                            "providerID": "opencode-go",
+                            "modelID": "deepseek-v4-pro",
+                            "variant": "max",
+                        }
+                    }
+                }
+            ]
+        })
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "export", "ses_1"], 0, stdout=export_json, stderr=""
+        )
+        meta = _extract_opencode_metadata_via_export("ses_1")
+        self.assertEqual(meta["model"], "opencode-go/deepseek-v4-pro")
+        self.assertEqual(meta["effort"], "xhigh")
+
+    @mock.patch("ppr_metadata.subprocess.run")
+    def test_nonzero_returncode_returns_empty(self, mock_run):
+        """Non-zero exit code from opencode export returns empty dict."""
+        from ppr_metadata import _extract_opencode_metadata_via_export
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "export", "ses_1"], 1, stdout="", stderr="not found"
+        )
+        meta = _extract_opencode_metadata_via_export("ses_1")
+        self.assertEqual(meta, {})
+
+    @mock.patch("ppr_metadata.subprocess.run")
+    def test_timeout_returns_empty(self, mock_run):
+        """TimeoutExpired returns empty dict."""
+        from ppr_metadata import _extract_opencode_metadata_via_export
+
+        mock_run.side_effect = subprocess.TimeoutExpired(
+            ["opencode", "export", "ses_1"], 15
+        )
+        meta = _extract_opencode_metadata_via_export("ses_1")
+        self.assertEqual(meta, {})
+
+    @mock.patch("ppr_metadata.subprocess.run")
+    def test_malformed_export_json_returns_empty(self, mock_run):
+        """Malformed JSON in export stdout returns empty dict."""
+        from ppr_metadata import _extract_opencode_metadata_via_export
+
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "export", "ses_1"], 0, stdout="{not json", stderr=""
+        )
+        meta = _extract_opencode_metadata_via_export("ses_1")
+        self.assertEqual(meta, {})
+
+    @mock.patch("ppr_metadata.subprocess.run")
+    def test_variant_fallback_passthrough(self, mock_run):
+        """Unrecognized variant is passed through unchanged."""
+        from ppr_metadata import _extract_opencode_metadata_via_export
+
+        export_json = json.dumps({
+            "messages": [
+                {
+                    "info": {
+                        "model": {
+                            "providerID": "opencode-go",
+                            "modelID": "deepseek-v4-pro",
+                            "variant": "unknown-effort",
+                        }
+                    }
+                }
+            ]
+        })
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "export", "ses_1"], 0, stdout=export_json, stderr=""
+        )
+        meta = _extract_opencode_metadata_via_export("ses_1")
+        self.assertEqual(meta["effort"], "unknown-effort")
 
 
 class TestRunReviewExecution(unittest.TestCase):
@@ -994,8 +1080,8 @@ class TestRunReviewExecution(unittest.TestCase):
 # Phase 1b+ new test classes
 # ---------------------------------------------------------------------------
 
+from ppr_io import probe_writable, validate_prompt_file  # noqa: E402
 from ppr_log import EventLogger  # noqa: E402
-from ppr_io import validate_prompt_file, probe_writable  # noqa: E402
 from ppr_metadata import compute_plan_metadata  # noqa: E402
 from ppr_providers import PROVIDER_CAPS  # noqa: E402
 
@@ -1693,13 +1779,13 @@ class TestProviderRegistry(unittest.TestCase):
 
     def test_derived_views_match_registry(self):
         from ppr_providers import (
+            _EFFORT_DEFAULTS,
             BINARIES,
             BUILDERS,
             EFFORT_MAP,
             MODEL_ALIASES,
             PROVIDER_CAPS,
             PROVIDERS,
-            _EFFORT_DEFAULTS,
         )
         self.assertEqual(set(BINARIES), set(PROVIDERS))
         for name, p in PROVIDERS.items():

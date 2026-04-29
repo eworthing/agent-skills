@@ -5,12 +5,18 @@ Extracted from run_review.py. Contains extract_metadata, session ID
 extractors, and Codex session file helpers.
 """
 
+import contextlib
 import hashlib
 import json
 import os
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
+_REVERSE_EFFORT_OPENCODE = {
+    "low": "low", "medium": "medium",
+    "high": "high", "max": "xhigh",
+}
 
 
 def _codex_session_files():
@@ -90,19 +96,43 @@ def extract_session_id_opencode(output_file):
         return None
 
 
-def extract_metadata(output_file, events_file, reviewer, codex_session_file=None):
-    """Extract model/effort metadata from structured output before text rewrite.
+def extract_metadata(output_file, events_file, reviewer, codex_session_file=None,
+                     output_content=None, logger=None):
+    """Extract model/effort metadata from structured output.
 
-    Returns dict with 'model' and optionally 'effort' if discoverable.
-    Must be called BEFORE extract_text_from_output (which overwrites the file).
+    For providers that read the output file (claude, gemini, copilot),
+    output_content can be passed to avoid reading the file (eliminating
+    temporal coupling with extract_text_from_output).
+
+    Opencode metadata is NOT extracted here — callers must use
+    _extract_opencode_metadata_via_export() separately for the
+    subprocess-based export path.
+
+    Returns dict with 'model' and optionally 'effort' if discoverable,
+    or empty dict on failure.
     """
     meta = {}
 
+    def _log_warn(reason):
+        if logger:
+            with contextlib.suppress(Exception):
+                logger.log("metadata_warning", provider=reviewer, error=str(reason))
+
     # Claude / Gemini: single JSON object
-    if reviewer in ("claude", "gemini") and output_file and Path(output_file).exists():
-        try:
-            with Path(output_file).open(encoding="utf-8") as f:
-                data = json.load(f)
+    if reviewer in ("claude", "gemini"):
+        raw = output_content
+        if raw is None and output_file and Path(output_file).exists():
+            try:
+                raw = Path(output_file).read_text(encoding="utf-8")
+            except OSError as e:
+                _log_warn(e)
+                return meta
+        if raw:
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError as e:
+                _log_warn(e)
+                return meta
             if reviewer == "claude":
                 # Claude JSON: {"result": "...", "model": "claude-opus-4-6", ...}
                 if data.get("model"):
@@ -125,28 +155,30 @@ def extract_metadata(output_file, events_file, reviewer, codex_session_file=None
                             meta["thinking_tokens"] = int(thoughts)
                 if not meta.get("model") and data.get("model"):
                     meta["model"] = data["model"]
-        except (json.JSONDecodeError, OSError):
-            pass
 
     # Copilot: JSONL — model is in session.tools_updated or
     # tool.execution_complete events under data.model
-    if reviewer == "copilot" and output_file and Path(output_file).exists():
-        try:
-            with Path(output_file).open(encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        event = json.loads(line)
-                        data = event.get("data", {})
-                        if isinstance(data, dict) and data.get("model"):
-                            meta["model"] = data["model"]
-                            break
-                    except json.JSONDecodeError:
-                        continue
-        except OSError:
-            pass
+    if reviewer == "copilot":
+        raw = output_content
+        if raw is None and output_file and Path(output_file).exists():
+            try:
+                raw = Path(output_file).read_text(encoding="utf-8")
+            except OSError as e:
+                _log_warn(e)
+                return meta
+        if raw:
+            for line in raw.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                    data = event.get("data", {})
+                    if isinstance(data, dict) and data.get("model"):
+                        meta["model"] = data["model"]
+                        break
+                except json.JSONDecodeError:
+                    continue
 
     # Codex: model/effort live in the on-disk session file (turn_context
     # event), NOT in the stdout JSONL stream.  Fall back to the stdout
@@ -177,46 +209,46 @@ def extract_metadata(output_file, events_file, reviewer, codex_session_file=None
                                     meta["model"] = model
                         except json.JSONDecodeError:
                             continue
-            except OSError:
-                pass
+            except OSError as e:
+                _log_warn(e)
             if meta.get("model"):
                 break
 
-    # opencode: model/variant live in export, NOT the JSONL stream
-    if reviewer == "opencode" and output_file and Path(output_file).exists():
-        try:
-            with Path(output_file).open(encoding="utf-8") as f:
-                first = json.loads(f.readline())
-            session_id = first.get("sessionID")
-            if session_id:
-                export = subprocess.run(
-                    ["opencode", "export", session_id],
-                    capture_output=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=15,
-                )
-                if export.returncode == 0:
-                    data = json.loads(export.stdout)
-                    for msg in data.get("messages", []):
-                        model = msg.get("info", {}).get("model", {})
-                        if model.get("providerID") and model.get("modelID"):
-                            meta["model"] = f"{model['providerID']}/{model['modelID']}"
-                            # Reverse-map variant from opencode (max→xhigh)
-                            variant = model.get("variant")
-                            if variant:
-                                _REVERSE_EFFORT_OPENCODE = {
-                                    "low": "low", "medium": "medium",
-                                    "high": "high", "max": "xhigh",
-                                }
-                                meta["effort"] = _REVERSE_EFFORT_OPENCODE.get(
-                                    variant, variant
-                                )
-                            break
-        except (json.JSONDecodeError, OSError, subprocess.TimeoutExpired,
-                subprocess.SubprocessError):
-            pass
+    return meta
 
+
+def _extract_opencode_metadata_via_export(session_id):
+    """Extract opencode metadata via `opencode export <session_id>`.
+
+    This is a side-effecting operation (shells out to the opencode CLI).
+    Callers must decide whether to invoke it. All other metadata extraction
+    is handled by extract_metadata().
+
+    Returns dict with 'model' and optionally 'effort', or empty dict on
+    any failure (openocode not installed, timeout, malformed export, etc.).
+    """
+    meta = {}
+    try:
+        export = subprocess.run(
+            ["opencode", "export", session_id],
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=15,
+        )
+        if export.returncode == 0:
+            data = json.loads(export.stdout)
+            for msg in data.get("messages", []):
+                model = msg.get("info", {}).get("model", {})
+                if model.get("providerID") and model.get("modelID"):
+                    meta["model"] = f"{model['providerID']}/{model['modelID']}"
+                    variant = model.get("variant")
+                    if variant:
+                        meta["effort"] = _REVERSE_EFFORT_OPENCODE.get(variant, variant)
+                    break
+    except (json.JSONDecodeError, OSError, subprocess.TimeoutExpired,
+            subprocess.SubprocessError):
+        pass
     return meta
 
 
@@ -239,7 +271,7 @@ def compute_plan_metadata(plan_file):
             "plan_name": p.name,
             "plan_bytes": stat.st_size,
             "plan_sha256": sha,
-            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat(),
         }
     except OSError:
         return {}

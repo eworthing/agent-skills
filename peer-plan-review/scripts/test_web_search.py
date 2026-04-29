@@ -11,16 +11,18 @@ Usage:
 """
 
 import argparse
-import contextlib
 import json
 import os
 import shutil
-import signal
 import subprocess
 import sys
 import tempfile
 import time
 from pathlib import Path
+
+SCRIPT_DIR = str(Path(__file__).resolve().parent)
+sys.path.insert(0, SCRIPT_DIR)
+from ppr_process import _kill_tree, _popen_session_kwargs  # noqa: E402
 
 TIMEOUT = 180  # seconds — URL fetch can be slow (Gemini/Copilot take 50-70s)
 
@@ -31,31 +33,6 @@ PROMPT = (
     "You MUST actually fetch/read the page content — do NOT guess from memory. "
     "Do NOT use any file tools."
 )
-
-
-def _kill_tree(proc):
-    """Kill process and all descendants."""
-    if sys.platform == "win32":
-        subprocess.run(
-            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
-            capture_output=True,
-        )
-        proc.wait()
-    else:
-        try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            proc.wait(timeout=5)
-        except (subprocess.TimeoutExpired, ProcessLookupError):
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        proc.wait()
-
-
-def _popen_session_kwargs():
-    """Return Popen kwargs for process-group isolation, per platform."""
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-    return {"start_new_session": True}
 
 
 def test_claude_web(output_file):
