@@ -35,11 +35,15 @@ codex exec \
 
 `-m MODEL` or `--model MODEL`
 
+**Default (no `-m`):** Last-used model from user config. On first install, defaults to OpenAI's current flagship model. Available models: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`.
+
 ## Reasoning effort
 
 `-c model_reasoning_effort=<level>`
 
 Levels: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
+
+**Default (no effort flag):** Last-used reasoning effort from user config. On first install, defaults to OpenAI's API default for the selected model.
 
 ## Resume
 

@@ -45,7 +45,7 @@ Normalize to:
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 
-Parsing rule: first token after reviewer is `effort` iff one of those four literals; otherwise treat as `model`, read next token as optional `effort`. If `model` omitted, tell user once provider default used.
+Parsing rule: first token after reviewer is `effort` iff one of those four literals; otherwise treat as `model`, read next token as optional `effort`. If `model` omitted, tell user once provider default used. If `effort` omitted, no effort flag is injected — each provider uses its own persisted config or built-in default.
 
 ## Review stance
 

@@ -54,9 +54,13 @@ the review directly with populated `content` fields.
 
 `--model MODEL` or `COPILOT_MODEL` env var
 
+**Default (no `--model`):** `GPT-5.4 mini` (verified April 2026).
+
 ## Reasoning effort
 
 `--reasoning-effort low|medium|high|xhigh` (confirmed v1.0.5, direct 1:1 mapping)
+
+**Default (no effort flag):** Last-used reasoning effort from user config. On first install, defaults to `medium`.
 
 ## Resume
 

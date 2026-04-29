@@ -40,9 +40,17 @@ Stream-json events: `init`, `message`, `tool_use`, `tool_result`, `error`, `resu
 
 `-m MODEL` (aliases: `auto`, `pro`, `flash`, `flash-lite`)
 
+Concrete model IDs can also be passed directly (e.g., `gemini-3.1-pro-preview`, `gemini-3-flash-preview`).
+
+**Default (no `-m`):** `gemini-3-flash-preview` (verified April 2026).
+
 ## Reasoning effort
 
 No CLI flag. Use settings file with `thinkingConfig.thinkingBudget` (integer token count, default 8192) or `thinkingLevel: "HIGH"` (Gemini 3.x).
+
+**Default (no effort flag):** `thinkingBudget: 8192` from Gemini's default `settings.json`. The skill only overlays effort when `--effort` is explicitly passed.
+
+**Effort overlay works for all Gemini 3.x models** including `gemini-3.1-pro-preview` and `gemini-3-flash-preview`. The skill maps portable effort levels to thinking budgets: `low` → 2048, `medium` → 8192, `high` → 16384, `xhigh` → 32768.
 
 Adapter clones the real config dir (`$GEMINI_CONFIG_DIR` or `~/.gemini`) to a temp directory, overlays the effort `thinkingConfig` into the existing `settings.json`, and points `GEMINI_CONFIG_DIR` at the clone. This preserves auth (`oauth_creds.json`), extensions, and other state.
 

@@ -44,11 +44,15 @@ claude -p "PROMPT" \
 
 `--model sonnet|opus|haiku|<full-id>` (e.g., `claude-opus-4-6`). `--fallback-model` for overload fallback.
 
+**Default (no `--model`):** `Opus 4.7 (1M context)` (verified April 2026).
+
 ## Reasoning effort
 
 `--effort <level>`: `low`, `medium`, `high`, `max` (default `medium` for Opus 4.6).
 
 `xhigh` maps to `max` (Claude's highest level).
+
+**Default (no effort flag):** Last-used effort from user config. On first install, defaults to `medium`.
 
 Legacy: `CLAUDE_CODE_EFFORT_LEVEL` env var also works but prefer the CLI flag.
 

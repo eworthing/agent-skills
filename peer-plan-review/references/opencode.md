@@ -51,6 +51,8 @@ List available models: `opencode models opencode-go`
 
 Common opencode-go models: `deepseek-v4-pro`, `deepseek-v4-flash`, `kimi-k2.6`, `mimo-v2.5`, `mimo-v2.5-pro`, `qwen3.6-plus`, `minimax-m2.7`, `glm-5.1`
 
+**Default (no `-m`):** Last-used model from the current project session. If no prior session exists, falls back to the provider's configured default (verified April 2026: `opencode-go/qwen3.6-plus`).
+
 ## Reasoning effort
 
 `--variant <level>` — provider-specific, passed through to the model API. Supported values depend on the model:
@@ -60,6 +62,8 @@ Common opencode-go models: `deepseek-v4-pro`, `deepseek-v4-flash`, `kimi-k2.6`, 
 - Kimi, Qwen, GLM, MiniMax: no variant support (flag silently ignored)
 
 The adapter maps portable `xhigh` → `max`.
+
+**Default (no effort flag):** Model-dependent. Many opencode-go models ignore `--variant` entirely. No effort is injected by the skill when unspecified.
 
 ## Resume
 
