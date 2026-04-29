@@ -88,8 +88,6 @@ def build_claude_cmd(args, session_id=None):
 
     if args.resume and session_id:
         cmd.extend(["--resume", session_id])
-    else:
-        cmd.append("--no-session-persistence")
 
     cmd.extend(["--permission-mode", "plan"])
     cmd.extend(["--tools", "Read,Grep,Glob,WebSearch,WebFetch"])

@@ -441,6 +441,18 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertEqual(cmd[-1], "-")
         self.assertNotIn("--resume", cmd)
 
+    def test_build_codex_cmd_no_model_no_effort(self):
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file="/tmp/review.md",
+        )
+
+        cmd = run_review.build_codex_cmd(args)
+
+        self.assertNotIn("-m", cmd)
+        self.assertNotIn("model_reasoning_effort", cmd)
+
     def test_build_codex_cmd_resume_uses_resume_subcommand(self):
         args = make_args(
             reviewer="codex",
@@ -456,6 +468,20 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("--json", cmd)
         self.assertNotIn("--sandbox", cmd)
         self.assertEqual(cmd[-1], "-")
+
+    def test_build_codex_cmd_resume_true_but_no_session_id_is_fresh_exec(self):
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file="/tmp/review.md",
+            resume=True,
+        )
+
+        cmd = run_review.build_codex_cmd(args, session_id=None)
+
+        self.assertNotIn("resume", cmd)
+        self.assertIn("--sandbox", cmd)
+        self.assertIn("read-only", cmd)
 
     def test_build_gemini_cmd_resume_uses_prompt_flag(self):
         args = make_args(
@@ -477,6 +503,40 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("flash", cmd)
         self.assertIn("-p", cmd)
         self.assertIn("Review this plan carefully.\n", cmd)
+
+    def test_build_gemini_cmd_fresh_exec_maps_effort(self):
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            model="pro",
+            effort="high",
+        )
+
+        cmd = run_review.build_gemini_cmd(args)
+
+        self.assertIn("-p", cmd)
+        self.assertIn("Review this plan carefully.\n", cmd)
+        self.assertIn("--sandbox", cmd)
+        self.assertIn("--approval-mode", cmd)
+        self.assertIn("yolo", cmd)
+        self.assertIn("--output-format", cmd)
+        self.assertIn("json", cmd)
+        self.assertIn("-m", cmd)
+        self.assertIn("pro", cmd)
+        self.assertNotIn("--resume", cmd)
+
+    def test_build_gemini_cmd_resume_true_but_no_session_id_is_fresh_exec(self):
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            model="flash",
+            resume=True,
+        )
+
+        cmd = run_review.build_gemini_cmd(args, session_id=None)
+
+        self.assertNotIn("--resume", cmd)
+        self.assertIn("-p", cmd)
 
     def test_build_gemini_cmd_keeps_headless_flag_with_missing_prompt_text(self):
         args = make_args(
@@ -500,7 +560,6 @@ class TestCommandBuilders(unittest.TestCase):
         cmd = run_review.build_claude_cmd(args)
 
         self.assertEqual(cmd[:3], ["claude", "-p", "Review this plan carefully.\n"])
-        self.assertIn("--no-session-persistence", cmd)
         self.assertIn("--permission-mode", cmd)
         self.assertIn("plan", cmd)
         self.assertIn("--tools", cmd)
@@ -517,6 +576,47 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("opus", cmd)
         self.assertIn("--effort", cmd)
         self.assertIn("max", cmd)
+        self.assertNotIn("--resume", cmd)
+
+    def test_build_claude_cmd_fresh_does_not_disable_session_persistence(self):
+        """Round 1 fresh exec must NOT include --no-session-persistence,
+        otherwise round 2 --resume will fail because the session was never saved."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+        )
+
+        cmd = run_review.build_claude_cmd(args)
+
+        self.assertNotIn("--no-session-persistence", cmd)
+
+    def test_build_claude_cmd_resume_adds_resume_flag(self):
+        """When resume=True and session_id is provided, --resume <id> must be added."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            resume=True,
+        )
+
+        cmd = run_review.build_claude_cmd(args, session_id="claude-sess-123")
+
+        self.assertIn("--resume", cmd)
+        self.assertIn("claude-sess-123", cmd)
+        self.assertNotIn("--no-session-persistence", cmd)
+
+    def test_build_claude_cmd_resume_true_but_no_session_id_is_fresh_exec(self):
+        """If resume=True but session_id is None, command should be a fresh exec
+        (no --resume flag, no --no-session-persistence)."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            resume=True,
+        )
+
+        cmd = run_review.build_claude_cmd(args, session_id=None)
+
+        self.assertNotIn("--resume", cmd)
+        self.assertNotIn("--no-session-persistence", cmd)
 
     def test_build_copilot_cmd_sets_headless_review_flags(self):
         args = make_args(
@@ -542,6 +642,33 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("gpt-5.4", cmd)
         self.assertIn("--reasoning-effort", cmd)
         self.assertIn("medium", cmd)
+
+    def test_build_copilot_cmd_fresh_exec_no_resume(self):
+        args = make_args(
+            reviewer="copilot",
+            prompt_file=str(self.prompt_file),
+            model="gpt-5.4",
+            effort="medium",
+        )
+
+        cmd = run_review.build_copilot_cmd(args)
+
+        self.assertEqual(cmd[:4], ["copilot", "-p", "Review this plan carefully.\n", "-s"])
+        self.assertNotIn("--resume", cmd)
+        self.assertIn("--no-ask-user", cmd)
+        self.assertIn("--yolo", cmd)
+
+    def test_build_copilot_cmd_resume_true_but_no_session_id_is_fresh_exec(self):
+        args = make_args(
+            reviewer="copilot",
+            prompt_file=str(self.prompt_file),
+            resume=True,
+        )
+
+        cmd = run_review.build_copilot_cmd(args, session_id=None)
+
+        self.assertNotIn("--resume", cmd)
+        self.assertIn("--no-ask-user", cmd)
 
     def test_build_opencode_cmd_fresh_exec_maps_effort_and_safety(self):
         args = make_args(
@@ -594,6 +721,18 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("--dangerously-skip-permissions", cmd)
         self.assertNotIn("-m", cmd)
         self.assertNotIn("--variant", cmd)
+
+    def test_build_opencode_cmd_resume_true_but_no_session_id_is_fresh_exec(self):
+        args = make_args(
+            reviewer="opencode",
+            prompt_file=str(self.prompt_file),
+            resume=True,
+        )
+
+        cmd = run_review.build_opencode_cmd(args, session_id=None)
+
+        self.assertNotIn("-s", cmd)
+        self.assertIn("--dangerously-skip-permissions", cmd)
 
 
 class TestSelfCheckUnit(unittest.TestCase):
@@ -802,6 +941,53 @@ class TestRunReviewExecution(unittest.TestCase):
         second_cmd = mock_popen.call_args_list[1].args[0]
         self.assertIn("--resume", first_cmd)
         self.assertNotIn("--resume", second_cmd)
+
+    def test_run_review_claude_round1_to_round2_session_persistence(self):
+        """Round 1 fresh exec must produce a command without --no-session-persistence,
+        so that round 2 resume can find the session."""
+        # Round 1: fresh exec
+        args_round1 = make_args(
+            reviewer="claude", prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file), session_file=str(self.session_file),
+            events_file=str(self.events_file), resume=False,
+        )
+        proc1 = self._proc(0, stdout='{"result":"ok","session_id":"round1-sess"}')
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc1) as mock_popen1,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="round1-sess"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args_round1)
+
+        round1_cmd = mock_popen1.call_args_list[0].args[0]
+        self.assertNotIn("--no-session-persistence", round1_cmd)
+        self.assertNotIn("--resume", round1_cmd)
+
+        # Round 2: resume=True with session_id from round 1
+        args_round2 = make_args(
+            reviewer="claude", prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file), session_file=str(self.session_file),
+            events_file=str(self.events_file), resume=True,
+        )
+        proc2 = self._proc(0, stdout='{"result":"ok","session_id":"round2-sess"}')
+        with (
+            mock.patch("run_review.load_session", return_value={"session_id": "round1-sess", "round": 1}),
+            mock.patch("run_review.subprocess.Popen", return_value=proc2) as mock_popen2,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="round2-sess"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args_round2)
+
+        round2_cmd = mock_popen2.call_args_list[0].args[0]
+        self.assertIn("--resume", round2_cmd)
+        self.assertIn("round1-sess", round2_cmd)
+        self.assertNotIn("--no-session-persistence", round2_cmd)
 
 
 # ---------------------------------------------------------------------------
