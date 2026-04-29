@@ -502,7 +502,7 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("-m", cmd)
         self.assertIn("flash", cmd)
         self.assertIn("-p", cmd)
-        self.assertIn("Review this plan carefully.\n", cmd)
+        self.assertEqual(cmd[-1], "")
 
     def test_build_gemini_cmd_fresh_exec_maps_effort(self):
         args = make_args(
@@ -515,7 +515,7 @@ class TestCommandBuilders(unittest.TestCase):
         cmd = run_review.build_gemini_cmd(args)
 
         self.assertIn("-p", cmd)
-        self.assertIn("Review this plan carefully.\n", cmd)
+        self.assertEqual(cmd[-1], "")
         self.assertIn("--sandbox", cmd)
         self.assertIn("--approval-mode", cmd)
         self.assertIn("yolo", cmd)
@@ -559,7 +559,7 @@ class TestCommandBuilders(unittest.TestCase):
 
         cmd = run_review.build_claude_cmd(args)
 
-        self.assertEqual(cmd[:3], ["claude", "-p", "Review this plan carefully.\n"])
+        self.assertEqual(cmd[:3], ["claude", "-p", ""])
         self.assertIn("--permission-mode", cmd)
         self.assertIn("plan", cmd)
         self.assertIn("--tools", cmd)
@@ -629,7 +629,7 @@ class TestCommandBuilders(unittest.TestCase):
 
         cmd = run_review.build_copilot_cmd(args, session_id="copilot-session")
 
-        self.assertEqual(cmd[:4], ["copilot", "-p", "Review this plan carefully.\n", "-s"])
+        self.assertEqual(cmd[:4], ["copilot", "-p", "", "-s"])
         self.assertIn("--resume=copilot-session", cmd)
         self.assertIn("--no-ask-user", cmd)
         self.assertIn("--yolo", cmd)
@@ -653,7 +653,7 @@ class TestCommandBuilders(unittest.TestCase):
 
         cmd = run_review.build_copilot_cmd(args)
 
-        self.assertEqual(cmd[:4], ["copilot", "-p", "Review this plan carefully.\n", "-s"])
+        self.assertEqual(cmd[:4], ["copilot", "-p", "", "-s"])
         self.assertNotIn("--resume", cmd)
         self.assertIn("--no-ask-user", cmd)
         self.assertIn("--yolo", cmd)
@@ -681,7 +681,7 @@ class TestCommandBuilders(unittest.TestCase):
 
         cmd = run_review.build_opencode_cmd(args)
 
-        self.assertEqual(cmd[:3], ["opencode", "run", "Review this plan carefully.\n"])
+        self.assertEqual(cmd[:3], ["opencode", "run", ""])
         self.assertIn("--format", cmd)
         self.assertIn("json", cmd)
         self.assertIn("--dangerously-skip-permissions", cmd)
@@ -701,7 +701,7 @@ class TestCommandBuilders(unittest.TestCase):
 
         cmd = run_review.build_opencode_cmd(args, session_id="open-session-42")
 
-        self.assertEqual(cmd[:3], ["opencode", "run", "Review this plan carefully.\n"])
+        self.assertEqual(cmd[:3], ["opencode", "run", ""])
         self.assertIn("--format", cmd)
         self.assertIn("json", cmd)
         self.assertIn("-s", cmd)
@@ -715,7 +715,7 @@ class TestCommandBuilders(unittest.TestCase):
 
         cmd = run_review.build_opencode_cmd(args)
 
-        self.assertEqual(cmd[:3], ["opencode", "run", "Review this plan carefully.\n"])
+        self.assertEqual(cmd[:3], ["opencode", "run", ""])
         self.assertIn("--format", cmd)
         self.assertIn("json", cmd)
         self.assertIn("--dangerously-skip-permissions", cmd)

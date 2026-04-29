@@ -71,9 +71,8 @@ def build_gemini_cmd(args, session_id=None):
     if args.model:
         cmd.extend(["-m", args.model])
 
-    # Prompt via -p flag (required for headless)
-    prompt_text = read_prompt(args.prompt_file)
-    cmd.extend(["-p", prompt_text or ""])
+    # -p requires an argument; prompt text is piped via stdin
+    cmd.extend(["-p", ""])
 
     return cmd
 
@@ -82,9 +81,8 @@ def build_claude_cmd(args, session_id=None):
     """Build Claude Code command."""
     binary = BINARIES["claude"]
 
-    # Prompt via -p flag
-    prompt_text = read_prompt(args.prompt_file)
-    cmd = [binary, "-p", prompt_text or ""]
+    # -p requires an argument; prompt text is piped via stdin
+    cmd = [binary, "-p", ""]
 
     if args.resume and session_id:
         cmd.extend(["--resume", session_id])
@@ -116,8 +114,8 @@ def build_copilot_cmd(args, session_id=None):
     """Build Copilot CLI command."""
     binary = BINARIES["copilot"]
 
-    prompt_text = read_prompt(args.prompt_file)
-    cmd = [binary, "-p", prompt_text or "", "-s"]
+    # -p requires an argument; prompt text is piped via stdin
+    cmd = [binary, "-p", "", "-s"]
 
     if args.resume and session_id:
         cmd.extend([f"--resume={session_id}"])
@@ -152,10 +150,10 @@ def build_copilot_cmd(args, session_id=None):
 
 
 def build_opencode_cmd(args, session_id=None):
-    """Build opencode run command. Prompt passed as positional arg."""
+    """Build opencode run command."""
     binary = BINARIES["opencode"]
-    prompt_text = read_prompt(args.prompt_file)
-    cmd = [binary, "run", prompt_text or ""]
+    # Prompt text is piped via stdin; run still needs an empty string to avoid interactive mode
+    cmd = [binary, "run", ""]
 
     cmd.extend(["--format", "json"])
     cmd.append("--dangerously-skip-permissions")
@@ -235,7 +233,7 @@ PROVIDERS = {
         "build_cmd": build_gemini_cmd,
         "caps": {
             "binary": "gemini",
-            "prompt_mode": "flag",
+            "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "-m",
             "effort_flag": "config_overlay",
@@ -253,7 +251,7 @@ PROVIDERS = {
         "build_cmd": build_claude_cmd,
         "caps": {
             "binary": "claude",
-            "prompt_mode": "flag",
+            "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "--model",
             "effort_flag": "--effort {level}",
@@ -271,7 +269,7 @@ PROVIDERS = {
         "build_cmd": build_copilot_cmd,
         "caps": {
             "binary": "copilot",
-            "prompt_mode": "flag",
+            "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "--model",
             "effort_flag": "--reasoning-effort {level}",
@@ -300,7 +298,7 @@ PROVIDERS = {
         "build_cmd": build_opencode_cmd,
         "caps": {
             "binary": "opencode",
-            "prompt_mode": "positional",
+            "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "-m",
             "effort_flag": "--variant {level}",

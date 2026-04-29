@@ -176,7 +176,10 @@ def _kill_tree(proc):
         except (subprocess.TimeoutExpired, ProcessLookupError):
             with contextlib.suppress(ProcessLookupError):
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        proc.wait()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
 
 
 def _popen_session_kwargs():
@@ -243,7 +246,12 @@ def run_review(args, logger=None):
                 str(Path("~/.gemini").expanduser()),
             )
             if Path(source_dir).is_dir():
-                shutil.copytree(source_dir, gemini_config_dir, dirs_exist_ok=True)
+                shutil.copytree(
+                    source_dir,
+                    gemini_config_dir,
+                    ignore=shutil.ignore_patterns("cache", "tmp", "extensions", "sessions"),
+                    dirs_exist_ok=True,
+                )
             settings_path = Path(gemini_config_dir) / "settings.json"
             try:
                 existing = {}
@@ -355,8 +363,13 @@ def run_review(args, logger=None):
                         "resume_fallback",
                         provider=reviewer,
                         error=f"Resume failed with exit code {returncode}",
-                        context={"session_id": session_id, "has_output": False},
+                        context={
+                            "session_id": session_id,
+                            "has_output": False,
+                            "stderr": (stderr or "")[:500],
+                        },
                     )
+
                     use_resume = False
                     session_id = None
                     fallback_used = True
@@ -379,8 +392,9 @@ def run_review(args, logger=None):
         if reviewer == "codex":
             after = _codex_session_files()
             new_files = after - (codex_sessions_before or set())
+            valid_files = [p for p in new_files if Path(p).is_file()]
             cwd_matches = []
-            for candidate in sorted(new_files, key=lambda p: Path(p).stat().st_mtime, reverse=True):
+            for candidate in sorted(valid_files, key=lambda p: Path(p).stat().st_mtime, reverse=True):
                 parsed_id = _parse_codex_session_id(candidate)
                 if parsed_id:
                     cwd_matches.append((candidate, parsed_id))

@@ -169,6 +169,17 @@ def _extract_section(text, heading):
     return m.group(1) if m else ""
 
 
+def _strip_markdown_wrappers(text):
+    """Strip balanced markdown wrappers like **text** or __text__."""
+    text = text.strip()
+    for wrap in ("***", "**", "*", "___", "__", "_"):
+        if text.startswith(wrap) and text.endswith(wrap) and len(text) >= 2 * len(wrap):
+            inner = text[len(wrap):-len(wrap)]
+            # Recurse for nested wrappers
+            return _strip_markdown_wrappers(inner)
+    return text
+
+
 _RE_FINDING_TAG = re.compile(
     r"^\s*-\s*\*{0,2}\[([BN])(\d+)\]\*{0,2}"
     r"(?:\s*\((HIGH|MEDIUM|LOW)\))?"
@@ -188,7 +199,7 @@ def _parse_finding_block(section_text, tag_match):
     kind = tag_match.group(1).upper()
     num = tag_match.group(2)
     conf = tag_match.group(3)
-    desc = tag_match.group(4).strip()
+    desc = _strip_markdown_wrappers(tag_match.group(4))
 
     finding = {
         "id": f"{kind}{num}",
