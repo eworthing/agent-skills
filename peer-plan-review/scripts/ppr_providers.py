@@ -67,6 +67,9 @@ def build_gemini_cmd(args, session_id=None):
     # writes.  plan mode hangs on URL fetch permission prompts in headless.
     cmd.extend(["--approval-mode", "yolo"])
     cmd.extend(["--output-format", "json"])
+    # Review runs do not need user-installed Gemini extensions. Disabling them
+    # avoids startup failures from unrelated, locally broken extension files.
+    cmd.extend(["--extensions", ""])
 
     if args.model:
         cmd.extend(["-m", args.model])

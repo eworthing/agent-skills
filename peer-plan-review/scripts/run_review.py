@@ -201,42 +201,51 @@ def run_review(args, logger=None):
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
 
-    # Gemini effort via temp settings overlay
+    # Gemini runs through a temp config overlay. The review runner needs auth
+    # and durable settings, but not mutable local approval policy, sessions,
+    # caches, or extensions from the user's real Gemini home.
     gemini_config_dir = None
-    if reviewer == "gemini" and args.effort:
-        budget = EFFORT_MAP["gemini"].get(args.effort)
-        if budget:
-            gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
-            source_dir = os.environ.get(
-                "GEMINI_CONFIG_DIR",
-                str(Path("~/.gemini").expanduser()),
-            )
-            if Path(source_dir).is_dir():
-                shutil.copytree(
-                    source_dir,
-                    gemini_config_dir,
-                    ignore=shutil.ignore_patterns("cache", "tmp", "extensions", "sessions"),
-                    dirs_exist_ok=True,
-                )
-            settings_path = Path(gemini_config_dir) / "settings.json"
-            try:
-                existing = {}
-                if settings_path.exists():
-                    with settings_path.open(encoding="utf-8") as f:
-                        try:
-                            existing = json.load(f)
-                        except json.JSONDecodeError:
-                            existing = {}
+    if reviewer == "gemini":
+        budget = EFFORT_MAP["gemini"].get(args.effort) if args.effort else None
+        gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
+        source_dir = os.environ.get(
+            "GEMINI_CONFIG_DIR",
+            str(Path("~/.gemini").expanduser()),
+        )
+        source_path = Path(source_dir)
+        if source_path.is_dir():
+            for child in source_path.iterdir():
+                if not child.is_file():
+                    continue
+                try:
+                    shutil.copy2(child, Path(gemini_config_dir) / child.name)
+                except OSError as e:
+                    print(
+                        f"Warning: could not copy Gemini config file {child.name}: {e}",
+                        file=sys.stderr,
+                    )
+        settings_path = Path(gemini_config_dir) / "settings.json"
+        try:
+            existing = {}
+            if settings_path.exists():
+                with settings_path.open(encoding="utf-8") as f:
+                    try:
+                        existing = json.load(f)
+                    except json.JSONDecodeError:
+                        existing = {}
+            if budget:
                 existing["thinkingConfig"] = {"thinkingBudget": budget}
-                with settings_path.open("w", encoding="utf-8") as f:
-                    json.dump(existing, f)
-                env["GEMINI_CONFIG_DIR"] = gemini_config_dir
-            except OSError as e:
-                print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
+            with settings_path.open("w", encoding="utf-8") as f:
+                json.dump(existing, f)
+            env["GEMINI_CONFIG_DIR"] = gemini_config_dir
+        except OSError as e:
+            print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
+            shutil.rmtree(gemini_config_dir, ignore_errors=True)
+            gemini_config_dir = None
 
-    # Prepare stdin for Codex
+    # Prepare prompt stdin for providers configured for stdin prompting.
     stdin_data = None
-    if reviewer == "codex":
+    if PROVIDER_CAPS[reviewer].get("prompt_mode") == "stdin":
         stdin_data = read_prompt(args.prompt_file)
 
     # Snapshot Codex session files before exec

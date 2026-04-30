@@ -52,7 +52,7 @@ No CLI flag. Use settings file with `thinkingConfig.thinkingBudget` (integer tok
 
 **Effort overlay works for all Gemini 3.x models** including `gemini-3.1-pro-preview` and `gemini-3-flash-preview`. The skill maps portable effort levels to thinking budgets: `low` → 2048, `medium` → 8192, `high` → 16384, `xhigh` → 32768.
 
-Adapter clones the real config dir (`$GEMINI_CONFIG_DIR` or `~/.gemini`) to a temp directory, overlays the effort `thinkingConfig` into the existing `settings.json`, and points `GEMINI_CONFIG_DIR` at the clone. This preserves auth (`oauth_creds.json`), extensions, and other state.
+Adapter builds a temp config overlay from top-level files in the real config dir (`$GEMINI_CONFIG_DIR` or `~/.gemini`) and points `GEMINI_CONFIG_DIR` at the overlay for every Gemini run. The overlay preserves auth (`oauth_creds.json`) and durable settings, excludes config subdirectories such as `cache`, `tmp`, `extensions`, `sessions`, and `policies`, and overlays `thinkingConfig` into `settings.json` only when `--effort` is explicitly passed.
 
 ## Resume
 

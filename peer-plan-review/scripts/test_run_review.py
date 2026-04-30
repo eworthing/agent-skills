@@ -523,6 +523,8 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("json", cmd)
         self.assertIn("-m", cmd)
         self.assertIn("pro", cmd)
+        extensions_index = cmd.index("--extensions")
+        self.assertEqual(cmd[extensions_index + 1], "")
         self.assertNotIn("--resume", cmd)
 
     def test_build_gemini_cmd_resume_true_but_no_session_id_is_fresh_exec(self):
@@ -992,6 +994,120 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertEqual(settings["thinkingConfig"]["thinkingBudget"], 16384)
         popen_env = mock_popen.call_args.kwargs["env"]
         self.assertEqual(popen_env["GEMINI_CONFIG_DIR"], str(overlay_dir))
+
+    def test_run_review_gemini_effort_overlay_excludes_auto_saved_policies(self):
+        source_dir = Path(self.tmpdir.name) / "source-config"
+        policies_dir = source_dir / "policies"
+        policies_dir.mkdir(parents=True)
+        (source_dir / "settings.json").write_text("{}", encoding="utf-8")
+        (policies_dir / "auto-saved.toml").write_text(
+            '[allow]\ncommand = "python3 -c \\"very large stale prompt\\""\n',
+            encoding="utf-8",
+        )
+        overlay_dir = Path(self.tmpdir.name) / "overlay-config"
+        overlay_dir.mkdir()
+
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            effort="high",
+        )
+
+        proc = self._proc(0, stdout='{"response":"ok"}')
+        with (
+            mock.patch.dict(os.environ, {"GEMINI_CONFIG_DIR": str(source_dir)}, clear=False),
+            mock.patch("run_review.tempfile.mkdtemp", return_value=str(overlay_dir)),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="gemini-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+            mock.patch("run_review.shutil.rmtree"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        self.assertFalse((overlay_dir / "policies" / "auto-saved.toml").exists())
+
+    def test_run_review_gemini_without_effort_uses_isolated_config_overlay(self):
+        source_dir = Path(self.tmpdir.name) / "source-config"
+        policies_dir = source_dir / "policies"
+        policies_dir.mkdir(parents=True)
+        (source_dir / "settings.json").write_text('{"theme":"dark"}', encoding="utf-8")
+        (policies_dir / "auto-saved.toml").write_text(
+            '[allow]\ncommand = "python3 -c \\"very large stale prompt\\""\n',
+            encoding="utf-8",
+        )
+        overlay_dir = Path(self.tmpdir.name) / "overlay-config"
+        overlay_dir.mkdir()
+
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            effort=None,
+        )
+
+        proc = self._proc(0, stdout='{"response":"ok"}')
+        with (
+            mock.patch.dict(os.environ, {"GEMINI_CONFIG_DIR": str(source_dir)}, clear=False),
+            mock.patch("run_review.tempfile.mkdtemp", return_value=str(overlay_dir)),
+            mock.patch("run_review.subprocess.Popen", return_value=proc) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="gemini-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+            mock.patch("run_review.shutil.rmtree"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        settings = json.loads((overlay_dir / "settings.json").read_text(encoding="utf-8"))
+        self.assertEqual(settings["theme"], "dark")
+        self.assertFalse((overlay_dir / "policies" / "auto-saved.toml").exists())
+        popen_env = mock_popen.call_args.kwargs["env"]
+        self.assertEqual(popen_env["GEMINI_CONFIG_DIR"], str(overlay_dir))
+
+    def test_run_review_gemini_pipes_prompt_via_stdin(self):
+        source_dir = Path(self.tmpdir.name) / "source-config"
+        source_dir.mkdir()
+        overlay_dir = Path(self.tmpdir.name) / "overlay-config"
+        overlay_dir.mkdir()
+        args = make_args(
+            reviewer="gemini",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+        )
+
+        proc = self._proc(0, stdout='{"response":"ok"}')
+        with (
+            mock.patch.dict(os.environ, {"GEMINI_CONFIG_DIR": str(source_dir)}, clear=False),
+            mock.patch("run_review.subprocess.Popen", return_value=proc) as mock_popen,
+            mock.patch("run_review.tempfile.mkdtemp", return_value=str(overlay_dir)),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="gemini-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+            mock.patch("run_review.shutil.rmtree"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(mock_popen.call_args.kwargs["stdin"], subprocess.PIPE)
+        proc.communicate.assert_called_once_with(
+            input="Review this plan carefully.\n",
+            timeout=args.timeout,
+        )
 
     def test_run_review_resume_failure_retries_once_without_resume(self):
         args = make_args(
