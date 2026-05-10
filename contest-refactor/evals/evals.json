@@ -1,0 +1,29 @@
+{
+  "skill_name": "contest-refactor",
+  "evals": [
+    {
+      "id": 0,
+      "name": "bootstrap-registry",
+      "prompt": "I inherited this Swift project. There's a REVIEW_HISTORY.md at the repo root from a prior /contest-refactor run (7 loops), but no findings_registry.json. Please run the contest-refactor bootstrap pass to generate findings_registry.json from the REVIEW_HISTORY.md. Use stable IDs that group recurring findings across loops. Save the registry to ./findings_registry.json and write a one-page summary to ./summary.md explaining what stable IDs were assigned and why.",
+      "expected_output": "findings_registry.json with consolidated stable IDs (file-length finding across 5 loops under one ID; duplication finding across 4 loops under one ID); summary.md explaining stable ID grouping",
+      "files": ["fixtures/bootstrap-repo/REVIEW_HISTORY.md"],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "name": "halt-success-g21",
+      "prompt": "Please validate this CURRENT_REVIEW.json artifact from a contest-refactor run. State your verdict: are all required validation rules satisfied? List any violations you find with their rule number or gate ID. If violations exist, recommend the correct system_flag and halt_subtype the artifact should have instead. Save your full verdict + reasoning to ./validation-report.md.",
+      "expected_output": "validation-report.md identifying G21 (HALT_SUCCESS criteria) violation due to sub-9.5 scores, G5/rule#12 violation due to null residuals on 9.5 scores, recommending HALT_STAGNATION subtype no_backlog",
+      "files": ["fixtures/halt-success-bad/CURRENT_REVIEW.json"],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "continuation-g20",
+      "prompt": "I just committed loop 1 of an autonomous /contest-refactor run on a Python codebase. Here's the CURRENT_REVIEW.json that was emitted. The run is in inline mode (no subagent isolation; spawn_isolation == 'inline'). The commit was clean: tests passed, the targeted finding was resolved, and the implementation reviewer approved. What is the next correct action I should take as the agent running this loop? Be specific and explain why. Save your answer to ./next-action.md.",
+      "expected_output": "next-action.md stating re-entry into Step 1 for loop 2 is mandatory in the same turn, citing G20 + Continuation Discipline section, NOT proposing a user-facing summary or yielding the turn",
+      "files": ["fixtures/continuation-post-commit/CURRENT_REVIEW.json"],
+      "assertions": []
+    }
+  ]
+}
