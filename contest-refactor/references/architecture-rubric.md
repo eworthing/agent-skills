@@ -144,6 +144,14 @@ A 9.5 without an identified residual is fake-clean reward. Downgrade to 9.
 
 `HALT_SUCCESS` requires every scorecard category at 10, OR at 9.5+ with an **accepted** residual. Any **queued** residual blocks `HALT_SUCCESS`.
 
+Terminal normalization rule: before any HALT emit, a category at 9 cannot mean
+"excellent but I did not account for the last local concern." If the 9-anchor is
+met and no Noticeable-or-worse fix remains, promote the category to 9.5 with an
+accepted residual, or to 10 if no source-backed residual can be named. Keep a
+category below 9.5 at halt only when the review names a source-backed blocker
+showing the 9-anchor is not met and explains why that blocker is not a valid
+backlog item.
+
 ### Architecture quality
 - **10** — Module graph enforced by source. Every Seam either has real Adapter variation or encodes policy, failure isolation, or platform isolation that survives the deletion test. No pass-through wrappers. No costume layers. No Repository theater. No Protocol soup. Ownership of every mutable concern traceable from one Module. A senior reviewer cannot identify a structural improvement that preserves behavior and improves Leverage or Locality.
 - **9** — Contest-grade. Module graph enforced by source, not convention. Interfaces have Depth. Seams either have real Adapter variation or encode policy/failure isolation. Deletion tests leave little pass-through structure.

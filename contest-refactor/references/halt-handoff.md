@@ -149,19 +149,22 @@ in your message. I'll resume the loop with your answer as the resolved decision.
 
 ### Subtype: `no_backlog`
 
-**Condition**: `[STATE: CONTINUE]` with empty Improvement Backlog while not at 9.5+. No remaining findings pass evidence chain (G3) — none can be cited with file:line + behavior/architectural harm.
+**Condition**: `[STATE: CONTINUE]` with empty Improvement Backlog while not at 9.5+ after Residual Accounting Pass/G23. Every score below 9.5 names a source-backed blocker that keeps the dimension's 9-anchor unmet and cannot honestly become a backlog item or accepted residual. If a dimension's 9-anchor is met and the only leftovers are Cosmetic for contest, ADR-carved-out, framework-constrained, or SPT-failing candidates, this subtype is illegal for that dimension; those leftovers are accepted residuals and should normally produce `HALT_SUCCESS`.
 
 #### Handoff template
 
 ```
 Loop N ended at HALT_STAGNATION (subtype: no_backlog).
 
-What this means: Scorecard is at <X>/10 average — not at 9.5+ — but I cannot
-generate a backlog item that passes the evidence chain. Either the codebase has
-weaknesses that don't show up in the architectural tests this rubric uses, or
-the rubric is mis-calibrated for this codebase.
+What this means: Scorecard is at <X>/10 average — not at 9.5+ — and the
+remaining blockers keep one or more dimensions below the 9-anchor. I cannot
+generate a backlog item that passes the evidence chain or Simplify Pressure
+Test, and the blockers are not acceptable residuals.
 
 Current scorecard: <list>
+
+Residual accounting:
+  - <category>: <blocker> — why it is not backlog-worthy and not accepted
 
 Next step options:
   (a) Accept the halt — the rubric and the codebase don't agree on what's left

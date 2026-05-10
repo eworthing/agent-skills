@@ -24,7 +24,29 @@ Ordered investigation method, meta-rules, simplify pressure test, evidence disci
 7. **Review hidden state machines.** Many booleans/optionals encoding one logical state, drifting flags, duplicated state across layers, navigation drift from domain state, invalid async combinations.
 8. **Review tests and regressions.** Tests at real Interfaces, async tests without sleeps, failure paths, deterministic ordering, untested stateful Modules.
 9. **Use metrics as supporting evidence.** Map every metric finding to source and behavior. Reject metric-only claims.
-10. **Merge judgment.** Produce verdict, scorecard, findings, backlog.
+10. **Merge judgment.** Produce verdict, scorecard, findings, backlog, then run the Residual Accounting Pass below before choosing a HALT state.
+
+## Residual Accounting Pass
+
+Run this after candidate findings are accepted, rejected, or downgraded, and
+before choosing `HALT_SUCCESS` or `HALT_STAGNATION`.
+
+For each score below 9.5:
+
+1. Ask whether the dimension's 9-anchor is met in current source.
+2. If the 9-anchor is met, account for every remaining source-backed candidate:
+   - Noticeable-or-worse and passes Simplify Pressure Test -> add to Improvement Backlog; state is `CONTINUE`.
+   - Requires product or ownership decision -> halt as `HALT_STAGNATION` subtype `user_decision`.
+   - Cosmetic for contest, ADR-carved-out, framework-constrained, or fails Simplify Pressure Test because every fix adds ceremony -> set score to 9.5 with `residual_disposition: "accepted"` and include the rationale.
+   - No source-backed residual can be named -> set score to 10.
+3. If the 9-anchor is not met, keep the lower score only when the scorecard or
+   `unresolved_reason` names the source-backed blocker and explains why the loop
+   cannot turn it into a valid backlog item.
+
+Do not emit `HALT_STAGNATION` subtype `no_backlog` just because rejected
+candidates were not backlog-worthy. Rejected candidates still affect terminal
+scoring: either they are accepted residuals, they prove a real sub-9.5 blocker,
+or they are not residuals and the score moves to 10.
 
 ## Friction Proof Before Seam Recommendation
 

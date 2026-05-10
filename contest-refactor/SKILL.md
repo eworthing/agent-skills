@@ -44,7 +44,7 @@ When the loop reaches each step, load the named references. Loading earlier is f
 | Pre-Step 0 | `SKILL.md` (this file), `references/trust-model.md`, `references/architecture-rubric.md`, `references/method.md` | — |
 | Step 0 | `references/lenses.md` → selected lens (`references/lens-apple.md` or `references/lens-generic.md`) | `CONTEXT.md`, `docs/adr/*` if present |
 | Step 1 | Selected lens (loaded fresh by loop subagent — Step 0 happens once in main but each loop subagent reloads the lens from disk); `references/method.md` (10-step Method including step 1.5 registry lookup); `references/architecture-rubric.md` (Score Anchors + Severity Anchors) | `REVIEW_HISTORY.md` + `findings_registry.json` (delta basis + stable IDs) |
-| Step 1 emit | `references/output-format.md` (Markdown structure + JSON schema), `references/validation.md` (hard gates + quality pass; **G21 HALT_SUCCESS criteria fires here whenever the agent considers writing `state: HALT_SUCCESS`** — empty backlog at sub-9.5 is `HALT_STAGNATION` subtype `no_backlog`, not success), `references/halt-handoff.md` (when emitting any HALT state) | — |
+| Step 1 emit | `references/output-format.md` (Markdown structure + JSON schema), `references/validation.md` (hard gates + quality pass; **G21 HALT_SUCCESS criteria fires here whenever the agent considers writing `state: HALT_SUCCESS`; G23 residual accounting fires whenever the agent considers `HALT_STAGNATION/no_backlog`**), `references/halt-handoff.md` (when emitting any HALT state) | — |
 | Step 2 | `references/method.md` (Simplify Pressure Test); `references/architecture-rubric.md` (Unified Seam Policy) | — |
 | Step 3 | `references/output-format.md` (Loop N Result + JSON loop_result), `references/validation.md` (G1 + G2 + G15 + G16 + G17 + G18 + G19 + **G22 commit/divider format** hard gates re-run before commit; **G20 post-commit when `spawn_isolation: inline`**; G21 HALT_SUCCESS criteria fires whenever the agent considers HALT_SUCCESS), `references/implementation-reviewer.md` (subagent prompt + routing), `references/provider-adapters.md` (reviewer-spawn profile + read-only allow-list) | — |
 
@@ -172,7 +172,7 @@ Branch on the system flag after Step 1 writes the review:
 - `[STATE: HALT_STAGNATION]` → archive, commit review artifacts only, **terminate**. Skip Step 2 + Step 3. Inline → report unresolved blocker; Loop Isolation → return JSON with `unresolved_reason`.
 - `[STATE: HALT_LOOP_CAP]` → archive, commit review artifacts only, **terminate**. Skip Step 2 + Step 3. Inline → summarize; Loop Isolation → return JSON with `unresolved_reason`.
 - `[STATE: CONTINUE]` with non-empty Improvement Backlog → proceed to Step 2.
-- `[STATE: CONTINUE]` with empty Improvement Backlog → escalate to `[STATE: HALT_STAGNATION]` (nothing to refactor but not at 9.5+) and terminate.
+- `[STATE: CONTINUE]` with empty Improvement Backlog → first run the Residual Accounting Pass in `references/method.md` and G23 in `references/validation.md`; only then escalate to `[STATE: HALT_STAGNATION]` subtype `no_backlog` if sub-9.5 scores still have explicit non-backlog blockers.
 
 **Backlog presence rules per system flag** (enforced by hard gate G9):
 
@@ -200,6 +200,7 @@ Meta-Rules + Evidence Discipline: [references/method.md](references/method.md). 
 - Every score above 7 has at least one source-backed reason. G4.
 - Every score of 10 explains why no behavior-preserving source-backed improvement is available. G6.
 - 9.5+ on a category requires the 9-anchor met **plus** explicit residual identification. G5.
+- Terminal scorecards cannot strand a category at 9 with only cosmetic, ADR-accepted, or SPT-failing candidates. Promote to 9.5 accepted residual, promote to 10 if no residual exists, or keep sub-9.5 only with a named non-backlog blocker. G23.
 - "Code simplicity" drops → over-engineered the last refactor; revert.
 - Delta computed against previous loop's `CURRENT_REVIEW.md` (now archived in `REVIEW_HISTORY.md`).
 
@@ -251,7 +252,7 @@ Set by Step 1; enforced by Step 1 Routing. When emitting any HALT, the loop suba
   - `no_progress` — 3 consecutive loops with no scorecard category UP AND remaining backlog items don't pass Simplify Pressure Test (structural wall).
   - `oscillation` — same `stable_id` reappears as Priority 1 in two non-consecutive loops with at least one intervening occurrence whose `status: "resolved"` for that `stable_id`. Skip occurrences with `status: "rejected_attempt"` when scanning. (Pre-PR-1 / schema_version 1: legacy heuristic = same `loop_local_id` Priority 1 string match across two loops after a "fix".) Registry's `occurrences[]` is the audit trail.
   - `user_decision` — ambiguity requires product/ownership decision the loop cannot make. `open_question_for_user` non-null.
-  - `no_backlog` — `[STATE: CONTINUE]` with empty Improvement Backlog while not at 9.5+ (no remaining findings pass G3 evidence chain).
+  - `no_backlog` — `[STATE: CONTINUE]` with empty Improvement Backlog while not at 9.5+ after Residual Accounting Pass/G23 (remaining sub-9.5 scores name blockers that cannot be accepted residuals and cannot become valid backlog items).
 - `[STATE: HALT_LOOP_CAP]` — loop counter reached cap (default 10; override via `CONTEST_REFACTOR_LOOP_CAP` env var, first-line directive `<!-- loop_cap: N -->` in `CURRENT_REVIEW.md`, or user flag `--cap N`). `halt_subtype: null`.
 - `[STATE: CONTINUE]` — otherwise.
 

@@ -24,6 +24,14 @@
       "expected_output": "next-action.md stating re-entry into Step 1 for loop 2 is mandatory in the same turn, citing G20 + Continuation Discipline section, NOT proposing a user-facing summary or yielding the turn",
       "files": ["fixtures/continuation-post-commit/CURRENT_REVIEW.json"],
       "assertions": []
+    },
+    {
+      "id": 3,
+      "name": "no-backlog-residual-accounting",
+      "prompt": "Please validate this CURRENT_REVIEW.json artifact from a contest-refactor run. State your verdict: are all required validation rules satisfied? List any violations you find with their rule number or gate ID. If violations exist, recommend the correct system_flag and halt_subtype the artifact should have instead. Save your full verdict + reasoning to ./validation-report.md.",
+      "expected_output": "validation-report.md identifying G23 and output-format rule #19 violation because HALT_STAGNATION/no_backlog has sub-9.5 scores but only rejected cosmetic, ADR-carved-out, or SPT-failing candidates. It should recommend promoting those dimensions to 9.5 accepted residuals or 10, or switching to CONTINUE only if a Noticeable-or-worse candidate passes SPT.",
+      "files": ["fixtures/no-backlog-residual-accounting/CURRENT_REVIEW.json"],
+      "assertions": []
     }
   ]
 }

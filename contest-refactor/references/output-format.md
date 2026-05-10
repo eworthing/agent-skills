@@ -41,6 +41,9 @@ Format: `[Score] | [Delta: UP/DOWN/SAME vs prev loop] | [Concrete proof: file:li
 Scores CANNOT increase without structural proof. Code simplicity drops → over-engineered the last refactor; revert.
 Award 10 only when the dimension matches its 10-anchor and no source-backed behavior-preserving improvement is identifiable.
 Every score above 7 must have at least one source-backed reason in this text.
+When emitting `HALT_STAGNATION/no_backlog`, every score below 9.5 must also name
+the source-backed blocker that keeps the dimension below the 9.5 threshold and
+why it is not a valid backlog item or accepted residual.
 
 - Architecture quality:
 - State management and runtime ownership:
@@ -254,7 +257,7 @@ The JSON file is a faithful mirror of the Markdown contract. Every Markdown fiel
   // Strengths (required, may be empty)
   "strengths": ["Reducer pure, effect pump deterministic — AppEngine.swift:46-58"],
 
-  // Findings (required; 3-5 default, 6-7 max; empty allowed only when state == HALT_SUCCESS)
+  // Findings (required; 3-5 default, 6-7 max; empty allowed when state == HALT_SUCCESS or HALT_STAGNATION/no_backlog)
   "findings": [
     {
       "loop_local_id": "F1",                                               // required, "F<n>", fresh per loop, ordered by Priority. Replaces legacy "id" field at schema_version >= 2.
@@ -306,7 +309,9 @@ The JSON file is a faithful mirror of the Markdown contract. Every Markdown fiel
       "score_impact": "Architecture quality + State management each +1.0"              // required
     }
   ],
-  // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP}; null otherwise
+  // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP}; null otherwise.
+  // For HALT_STAGNATION/no_backlog, include residual accounting for each score < 9.5:
+  // blocker, why it keeps the 9-anchor unmet, and why it is not backlog-worthy or accepted.
   "unresolved_reason": null,
 
   // Deepening Candidates (required array; 0-3 items; never invents new concerns)
@@ -529,7 +534,7 @@ If REVIEW_HISTORY.md exists at first invocation but REVIEW_HISTORY.json does not
 3. `proof` non-empty when `score > 7` OR when `unverifiable_due_to_build_failure == true` (in the build-failure case `proof` is the carry-forward note rather than a structural citation).
 4. `residual_blocking_10` non-empty when `9.5 ≤ score < 10`; null when `score == 10`.
 5. `dependency_category` non-null when finding is a Coupling & Leakage finding (title or `what_is_wrong` references domain↔framework or domain↔persistence leakage). Allowed values: `in-process` | `local-substitutable` | `remote-owned` | `true-external` (no synonyms; no `remote but owned` or `true external`).
-6. `findings` count is 3-5 (or up to 7 if each addition changes verdict/scorecard/backlog). Two exceptions: (a) **empty** allowed only when `state == "HALT_SUCCESS"`; (b) **exactly 1 finding** allowed when the build-failure path is active — detected as `state == "CONTINUE"` AND at least one scorecard entry has `unverifiable_due_to_build_failure == true`. The single finding must be the build-failure finding (`severity: "Likely disqualifier"`, `test_failed: "n/a"`).
+6. `findings` count is 3-5 (or up to 7 if each addition changes verdict/scorecard/backlog). Three exceptions: (a) **empty** allowed when `state == "HALT_SUCCESS"`; (b) **empty** allowed when `state == "HALT_STAGNATION"` AND `halt_subtype == "no_backlog"`; (c) **exactly 1 finding** allowed when the build-failure path is active — detected as `state == "CONTINUE"` AND at least one scorecard entry has `unverifiable_due_to_build_failure == true`. The single finding must be the build-failure finding (`severity: "Likely disqualifier"`, `test_failed: "n/a"`). Rule #19 independently validates no-backlog residual accounting.
 7. `backlog` presence by `state`:
    - `CONTINUE` → non-empty (1-3 items)
    - `HALT_SUCCESS` → empty
@@ -548,9 +553,10 @@ If REVIEW_HISTORY.md exists at first invocation but REVIEW_HISTORY.json does not
 18. **Halt handoff required**: when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`}:
     - schema_version 1: `halt_handoff_text` non-empty string built from the matching template in `references/halt-handoff.md` with all placeholders resolved.
     - **schema_version >= 2 (PR 4)**: `halt_handoff` object non-null with `text` non-empty AND `expected_actions[]` array (may be empty). Each HandoffAction must satisfy: if `match_paths` is non-empty, `match_kind` must be `all_of`; if `match_paths` is empty, `match_kind` ∈ {`any_of`, `no_drift_expected`}. Null on `CONTINUE`.
-19. **user_decision coherence**: when `halt_subtype == "user_decision"`, `open_question_for_user` (in subagent return JSON) and `unresolved_reason` must both be non-null and consistent.
-20. **Stable ID presence (PR 1)**: *Applies when schema_version >= 2.* Every emitted finding (in CONTINUE and HALT loops alike) has both `loop_local_id` (regex `^F\d+$`) and `stable_id` (regex `^F-\d{3,}$`) non-empty. `stable_id` either matches an entry in `findings_registry.json` (lookup via Method Step 1.5 fuzzy-match rules above) or is a new ID equal to `findings_registry.next_serial - 1` after that loop's increment. Reviewer-rejected loops still emit findings with stable_id; the registry occurrence carries `status: "rejected_attempt"`.
-21. **Interface test coverage citation (PR 3)**: *Applies when schema_version >= 2.* When `loop_result.what_changed` contains any keyword from § Deepening Keywords AND the diff contains no test file changes, `loop_result.interface_test_coverage_path` must be non-null with at least one entry. Each entry must have `target_symbol` non-empty, `target_symbol_kind` matching the regex `^(new|existing_deepened|existing_[a-z_]+_interface)$` (canonical: `new` or `existing_deepened`; role-bearing variants like `existing_bootstrap_interface` accepted when the symbol is a stable named-role interface), AND `distinguishes_no_op == true`. Otherwise `interface_test_coverage_path` is null.
-22. **re_validation_context coherence (PR 4)**: *Applies when schema_version >= 2.* When `re_validated_at_sha` is non-null, `re_validation_context` is required with all fields non-null (`drift_commit_count`, `prior_handoff_actions_taken`, `expected_actions_unmatched`, `why_halt_persists`, `re_validation_run_by`). Each `prior_handoff_actions_taken` entry's `match_kind` must equal the corresponding action's `match_kind` from the prior loop's `halt_handoff.expected_actions[]`. `re_validation_run_by == "main_agent_step_neg_one"` (canonical for current protocol).
+19. **no_backlog residual accounting**: when `state == "HALT_STAGNATION"` AND `halt_subtype == "no_backlog"`, `unresolved_reason` must account for every score `< 9.5`: the source-backed blocker, why it keeps the 9-anchor unmet, and why it cannot be a backlog item or accepted residual. Rejected Cosmetic/ADR/SPT-failing candidates alone do not satisfy this rule when the dimension's 9-anchor is met; those become accepted residuals at 9.5 or disappear into a score of 10.
+20. **user_decision coherence**: when `halt_subtype == "user_decision"`, `open_question_for_user` (in subagent return JSON) and `unresolved_reason` must both be non-null and consistent.
+21. **Stable ID presence (PR 1)**: *Applies when schema_version >= 2.* Every emitted finding (in CONTINUE and HALT loops alike) has both `loop_local_id` (regex `^F\d+$`) and `stable_id` (regex `^F-\d{3,}$`) non-empty. `stable_id` either matches an entry in `findings_registry.json` (lookup via Method Step 1.5 fuzzy-match rules above) or is a new ID equal to `findings_registry.next_serial - 1` after that loop's increment. Reviewer-rejected loops still emit findings with stable_id; the registry occurrence carries `status: "rejected_attempt"`.
+22. **Interface test coverage citation (PR 3)**: *Applies when schema_version >= 2.* When `loop_result.what_changed` contains any keyword from § Deepening Keywords AND the diff contains no test file changes, `loop_result.interface_test_coverage_path` must be non-null with at least one entry. Each entry must have `target_symbol` non-empty, `target_symbol_kind` matching the regex `^(new|existing_deepened|existing_[a-z_]+_interface)$` (canonical: `new` or `existing_deepened`; role-bearing variants like `existing_bootstrap_interface` accepted when the symbol is a stable named-role interface), AND `distinguishes_no_op == true`. Otherwise `interface_test_coverage_path` is null.
+23. **re_validation_context coherence (PR 4)**: *Applies when schema_version >= 2.* When `re_validated_at_sha` is non-null, `re_validation_context` is required with all fields non-null (`drift_commit_count`, `prior_handoff_actions_taken`, `expected_actions_unmatched`, `why_halt_persists`, `re_validation_run_by`). Each `prior_handoff_actions_taken` entry's `match_kind` must equal the corresponding action's `match_kind` from the prior loop's `halt_handoff.expected_actions[]`. `re_validation_run_by == "main_agent_step_neg_one"` (canonical for current protocol).
 
 Both CURRENT_REVIEW.md / .json AND `findings_registry.json` AND `REVIEW_HISTORY.json` (when schema_version >= 2) are committed at end of each loop alongside the code change.
