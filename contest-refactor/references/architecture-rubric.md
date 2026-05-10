@@ -17,11 +17,12 @@ Prefer these terms over vague phrases such as "clean code," "well structured," "
 
 ## Vocabulary — Smells (use only in this exact sense)
 
-- **Architecture costume layer** — folder, protocol, target, or naming scheme that suggests architecture but does not control writes, dependencies, or runtime authority.
+- **Architecture costume layer** — folder, protocol, target, or naming scheme that suggests architecture but does not control writes, dependencies, or runtime authority. **Sub-pattern: rule-driven sidecar.** A `final class` whose body is `var x; var y; init() {}`, paired with another class that holds a `let` reference to the first and is the *only* writer; doc string explains the split as "the boundary rule says executors / handlers / managers must not own mutable stored vars." The mutable state still exists, still belongs to one writer, and is now spread across two files. Self-imposed style rules that produce 1:1 sidecars are themselves the costume layer — flag the sidecar AND the rule. The rule is purchasing nothing the type system can verify.
 - **Repository theater** — repository/protocol split with one real Adapter where the Interface adds no policy, failure isolation, replacement value, or Locality.
 - **Protocol soup** — many protocols with shallow Interfaces, one real Adapter each, justification limited to testability.
 - **Fake simplification** — shorter code that hides ownership, failure behavior, state transitions, or async lifetime.
-- **Fake-clean reward** — scoring up because names, folders, comments, previews, or test count look tidy while ownership, seams, or tests are weak.
+- **Fake-clean reward** — scoring up because names, folders, comments, previews, or test count look tidy while ownership, seams, or tests are weak. **Sub-pattern: aggregate-test-count-as-test-strategy.** Loop sees N passing tests, scores `test_strategy` ≥ 9 without auditing which surfaces have direct test files. Authority Map cross-check (lens-apple.md, method.md Step 8) is the corrective: walk each concern, confirm a direct test file exists. Shell seams (`AppRuntime`, root scene, URL guard) and contest-relevant feature flows (multi-branch entry views) need direct tests, not transitive coverage from deep reducer tests.
+- **Anchored-to-history confirmation** — fresh critic loop starts by reading the prior `CURRENT_REVIEW.md`, then writes a scorecard that "confirms" the prior verdict without re-deriving any dimension's score from current source. Prior `8.6 → 9.5` jumps with no diff between loops are the visible symptom. Cure is in `method.md` Step 1: re-derive the scorecard from source first, consult the prior review only after the independent score is written.
 
 ## Smell List (smoke, not findings)
 
@@ -174,11 +175,13 @@ backlog item.
 - **3** — Racing async flows, unclear actor isolation, or unsafe shared mutable state likely.
 
 ### Test strategy and regression resistance
-- **10** — Tests target real Interfaces and survive refactor. Failure paths, cancellation, async ordering covered without sleeps or timing hacks. Stateful Modules have meaningful tests at the right surface. Suite would catch a contest-relevant regression introduced by a future change.
-- **9** — Tests target real Interfaces, assert outcomes, avoid sleeps, cover failure paths, protect architecture boundaries.
-- **7** — Tests hit useful surfaces, but timing waits, shallow coverage, or implementation-mirroring tests reduce trust.
+- **10** — Tests target real Interfaces and survive refactor. Failure paths, cancellation, async ordering covered without sleeps or timing hacks. Stateful Modules have meaningful tests at the right surface. Suite would catch a contest-relevant regression introduced by a future change. Authority Map cross-check passes: every concern with `verdict: Single and clear` has at least one test exercising its mutation paths through the Interface; every shell seam (`AppRuntime`, root scene, URL/scene-phase bridges) has a direct test file; every contest-relevant feature flow has feature-surface tests for present/dismiss + cancel + branch coverage.
+- **9** — Tests target real Interfaces, assert outcomes, avoid sleeps, cover failure paths, protect architecture boundaries. Authority Map cross-check passes for every concern; at most one named shell seam or feature-flow gap remains and it is documented as accepted residual.
+- **7** — Tests hit useful surfaces, but timing waits, shallow coverage, or implementation-mirroring tests reduce trust. OR Authority Map cross-check finds 2+ shell-seam / feature-flow gaps not flagged in Findings.
 - **5** — Tests exist but mostly verify glue, snapshots, or mocks rather than product behavior and ownership.
 - **3** — Stateful domain or runtime Modules lack meaningful tests.
+
+**Anti-anchor**: a passing test count is not test strategy. Aggregate count → score is fake-clean reward. The 9-anchor requires the Authority Map cross-check from `method.md` Step 8 / `lens-apple.md § Authority-Map test-surface cross-check`. If shell seams or contest-relevant feature flows lack direct tests, the score ceiling is 8 regardless of how many reducer-level tests pass.
 
 ### Overall implementation credibility
 - **10** — Code earns its architecture at every layer. No honesty leaks. No fake-clean reward available. A senior reviewer reading the code in source order would find architectural claims confirmed at every Seam, owner, and lifecycle boundary.
