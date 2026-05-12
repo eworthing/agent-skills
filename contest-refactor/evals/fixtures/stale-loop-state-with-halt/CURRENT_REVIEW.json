@@ -1,0 +1,47 @@
+{
+  "schema_version": 3,
+  "loop": 6,
+  "loop_cap": 10,
+  "state": "HALT_STAGNATION",
+  "halt_subtype": "no_progress",
+  "halt_handoff_text": null,
+  "halt_handoff": {
+    "text": "Loop 6 ended at HALT_STAGNATION (subtype: no_progress). 3 consecutive loops with no scorecard category UP.",
+    "expected_actions": [{"action_id": "accept-halt", "description": "Accept the halt — current source is contest-grade-enough.", "match_keywords": [], "match_paths": [], "match_kind": "no_drift_expected"}]
+  },
+  "re_validated_at_sha": null,
+  "re_validation_context": null,
+  "dry_run": false,
+  "provider": "claude_code",
+  "loop_model": "claude-sonnet-4-6",
+  "loop_model_source": "default",
+  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model_source": "default",
+  "spawn_isolation": "subagent",
+  "findings_registry_path": "./findings_registry.json",
+  "discovery": null,
+  "verdict": "Good app, but not top-tier yet",
+  "verdict_explanation": "Loop 6 halted at no_progress; LOOP_STATE.json from a stale interrupted run remains on disk.",
+  "scorecard": {
+    "architecture_quality":      {"score": 9.0, "delta": "SAME", "proof": "Core/AppState.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "state_management":          {"score": 9.0, "delta": "SAME", "proof": "Core/AppState.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "domain_modeling":           {"score": 8.5, "delta": "SAME", "proof": "Core/Models.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "data_flow":                 {"score": 8.5, "delta": "SAME", "proof": "Core/Effects.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "framework_idioms":          {"score": 9.0, "delta": "SAME", "proof": "App/RootView.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "concurrency":               {"score": 9.0, "delta": "SAME", "proof": "Core/Adapters/Spotify.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "simplicity":                {"score": 9.0, "delta": "SAME", "proof": "Core/Reducer.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "test_strategy":             {"score": 8.5, "delta": "SAME", "proof": "Tests/", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false},
+    "credibility":               {"score": 9.0, "delta": "SAME", "proof": "App/AppEngine.swift", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false}
+  },
+  "authority_map": [],
+  "strengths": ["Stable scorecard"],
+  "findings": [
+    {"loop_local_id": "F1", "stable_id": "F-005", "title": "Backlog item fails Simplify Pressure Test", "why_it_matters": "Carried forward.", "what_is_wrong": "Adding ceremony, not real fix.", "evidence": ["Tests/Features/AddSoundFeatureTests.swift"], "test_failed": "n/a", "dependency_category": null, "leverage_impact": "n/a", "locality_impact": "n/a", "metric_signal": "none", "why_weakens_submission": "Not a winnable structural fix.", "severity": "Cosmetic for contest", "adr_conflicts": [], "adr_reopen_justification": null, "minimal_correction_path": "Accept halt or scope down.", "blast_radius": {"change": [], "avoid": []}}
+  ],
+  "simplification_check": {"structurally_necessary": "Carried forward, not actionable", "new_seam_justified": false, "new_seam_adapters": [], "should_not_be_done": "Add Coordinator", "tests_after_fix": "n/a"},
+  "backlog": [{"priority": 1, "title": "Backlog item fails Simplify Pressure Test", "kind": "polish", "rank": "minor", "why_it_matters": "Carried forward.", "score_impact": "n/a"}],
+  "unresolved_reason": "3 consecutive loops with no scorecard UP; remaining backlog fails Simplify Pressure Test.",
+  "deepening_candidates": [],
+  "builder_notes": [{"pattern": "Structural wall", "how_to_recognize": "Backlog items would add ceremony.", "smallest_coding_rule": "Accept halt or scope down."}],
+  "narrative": "Loop 6 halted at no_progress."
+}

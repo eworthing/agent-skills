@@ -98,9 +98,12 @@ done
 printf '  test-like files: %s\n' "$test_count"
 if [ "$test_count" -gt 800 ]; then
   printf '  WARNING: large test corpus (>800 files). Step 0 should refuse full suite as loop oracle; require --quick variant.\n'
+  printf '  SUGGESTION: invoke /contest-refactor with --test-filter <pattern> for incremental ground truth.\n'
+  printf '              full-suite reverify is required before HALT_SUCCESS (G21).\n'
   exit_code=1
 elif [ "$test_count" -gt 200 ]; then
   printf '  NOTE: medium test corpus (>200 files). Loop runtime per iteration may exceed 5 min.\n'
+  printf '        consider --test-filter <pattern> for incremental scoping (G21 reverify before HALT_SUCCESS).\n'
 fi
 printf '\n'
 
@@ -147,6 +150,12 @@ printf '[review artifacts]\n'
                         || printf '  REVIEW_HISTORY.md: absent\n'
 [ -f CURRENT_REVIEW.json ] && printf '  CURRENT_REVIEW.json: present\n' \
                           || printf '  CURRENT_REVIEW.json: absent\n'
+if [ -f LOOP_STATE.json ]; then
+  printf '  WARNING: LOOP_STATE.json present — prior /contest-refactor loop interrupted mid-Step-3.\n'
+  printf '           Resume by re-invoking /contest-refactor (Resume Detection routes via Precedence Matrix row 5),\n'
+  printf '           or pass --reset to discard partial state.\n'
+  exit_code=1
+fi
 printf '\n'
 
 # --- Git sanity ---

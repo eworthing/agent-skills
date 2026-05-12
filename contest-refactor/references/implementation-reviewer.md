@@ -153,7 +153,7 @@ Rules:
 |---|---|
 | `approved` | Proceed to Step 3 step 6 (archive) + step 7 (commit code + artifacts). |
 | `conditional` (1st pass) | Apply each item in `conditions[]` to the diff. Re-spawn reviewer. If 2nd pass also `conditional` or `rejected`, treat as rejected. |
-| `rejected` | `git checkout -- <changed-paths>` to revert the code change. Update `loop_result`: `targeted_finding_status: "carried_forward"`, `unintended_regression: "<reviewer.reason>"`. Append reviewer's `regressions[]` and `reason` as a new section `## Loop N Implementation Review` in `CURRENT_REVIEW.md`. Commit ONLY the review artifacts (no code). Continue to next loop with the same finding promoted to Priority 1 + reviewer reason as added context. |
+| `rejected` | **Narrow revert (schema_version >= 3)**: for each path in `loop_result.changed_paths[]`, look up its blob sha in `LOOP_STATE.pre_step3_blob_shas`; restore via `git checkout <blob-sha> -- <path>` per file. For paths whose recorded blob sha is `null` (path was untracked at Step 3 sub-step 0), use `git rm --cached <path>` and delete the working-tree file. **Do NOT** use the broad `git checkout -- <changed-paths>` (could overwrite pre-existing unstaged user edits in those files; the dirty-tree precondition in Step 0 should prevent that case but the per-blob restore is the canonical safe path). Update `loop_result`: `targeted_finding_status: "carried_forward"`, `unintended_regression: "<reviewer.reason>"`. Append reviewer's `regressions[]` and `reason` as a new section `## Loop N Implementation Review` in `CURRENT_REVIEW.md`. Commit ONLY the review artifacts (no code). Continue to next loop with the same finding promoted to Priority 1 + reviewer reason as added context. |
 
 ## Budget
 
@@ -170,8 +170,22 @@ Rules:
 - Does not consult `REVIEW_HISTORY.md`. The reviewer is loop-local; cross-loop pattern detection is the Critic's job.
 - Does not run tests or build. Step 3 step 3 already did that and reverted on break. Reviewer reads source post-diff only.
 
-## Failure modes
+## Failure modes (schema_version >= 3 retry envelope)
 
-- **Reviewer subagent times out or errors** → loop subagent treats as `conditional` with `conditions: ["reviewer unavailable; manual verification required"]`, surfaces to user via `open_question_for_user` in the loop's return JSON, halts the loop. Do not silently approve.
-- **Reviewer returns malformed JSON** → loop subagent retries once with prompt prefix "Your prior response was malformed. Return ONLY the JSON object specified."; second malformed = treat as `rejected`.
-- **Reviewer cited file does not exist** → reviewer should reject with `reason: "<file> not found in current source"`. If reviewer approves with a phantom citation, loop subagent's G15 gate (see `validation.md`) catches the phantom on artifact review.
+Transient failure modes (timeout / spawn error / malformed JSON) **retry once with timeout doubled** (default 90s → 180s). Substantive verdicts (approve / reject / conditional with code-related reason) do not retry — those are the reviewer's actual judgment.
+
+**Retry rules:**
+
+- Record each attempt in `implementation_review.retry_attempts[]` (array of `{attempt: int, outcome: "ok" | "timeout" | "spawn_error" | "malformed_json", error: string|null, duration_ms: int|null}`).
+- Set `implementation_review.retry_count` to the final attempt number (1 or 2).
+- Set `implementation_review.retry_cause` to the transient cause iff `retry_count == 2` (enum: `"timeout"`, `"spawn_error"`, `"malformed_json"`, or `null`).
+- `implementation_review.reason` and `verdict` reflect the **final attempt's substantive outcome**. A successful second attempt produces normal `approved` / `rejected` / `conditional` with reason about the diff, not about the transient. The reason field never mentions "after 2 attempts" or transient causes — those live in `retry_cause` / `retry_attempts[]`.
+- Per-mode retry behavior:
+  - **Timeout** → re-spawn reviewer with timeout doubled. Same prompt verbatim.
+  - **Spawn error** (subagent failed to launch) → re-spawn after 2-second backoff. Same prompt verbatim.
+  - **Malformed JSON** → re-spawn with prompt prefix `"Your prior response was malformed. Return ONLY the JSON object specified."`. Timeout doubled.
+- **Both attempts failing** → `verdict: "rejected"`, `reason: "reviewer unavailable; manual verification required"` exactly, `retry_cause: <the transient cause from attempt 2>`, `retry_count: 2`. Revert code per Routing § rejected below. Surface `open_question_for_user` in the loop's return JSON only when the second attempt's failure differs from the first (e.g., timeout then malformed) — a clean repeat-timeout proceeds to silent rejection.
+
+**Reviewer cited file does not exist** → reviewer should reject with `reason: "<file> not found in current source"`. If reviewer approves with a phantom citation, loop subagent's G15 gate (see `validation.md`) catches the phantom on artifact review.
+
+**G27 in [validation.md](validation.md)** enforces these invariants at artifact emit.

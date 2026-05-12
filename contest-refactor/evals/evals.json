@@ -32,6 +32,70 @@
       "expected_output": "validation-report.md identifying G23 and output-format rule #19 violation because HALT_STAGNATION/no_backlog has sub-9.5 scores but only rejected cosmetic, ADR-carved-out, or SPT-failing candidates. It should recommend promoting those dimensions to 9.5 accepted residuals or 10, or switching to CONTINUE only if a Noticeable-or-worse candidate passes SPT.",
       "files": ["fixtures/no-backlog-residual-accounting/CURRENT_REVIEW.json"],
       "assertions": []
+    },
+    {
+      "id": 4,
+      "name": "dry-run-halt-after-step2",
+      "prompt": "Please validate this CURRENT_REVIEW.json artifact from a contest-refactor --dry-run invocation. The user asked me to verify the dry-run halt is well-formed. State your verdict: are all required validation rules satisfied for HALT_DRY_RUN at schema_version 3? List any violations with rule number or gate ID. Save the full verdict to ./validation-report.md.",
+      "expected_output": "validation-report.md confirming G9 row (HALT_DRY_RUN requires non-empty backlog and dry_run==true), G1 confirms `## Loop N Plan (dry-run)` section present, halt_handoff matches HALT_DRY_RUN template per halt-handoff.md, G21 and G23 untouched (HALT_DRY_RUN bypasses both), output-format rule #24 (HALT_DRY_RUN coherence) satisfied: state==HALT_DRY_RUN AND dry_run==true AND halt_subtype==null AND loop_result/implementation_review absent.",
+      "files": ["fixtures/dry-run-halt-after-step2/CURRENT_REVIEW.json"],
+      "assertions": []
+    },
+    {
+      "id": 5,
+      "name": "dry-run-rerun-no-reset",
+      "prompt": "I had a prior /contest-refactor --dry-run invocation that emitted HALT_DRY_RUN with this CURRENT_REVIEW.json (dry_run: true on disk). I'm about to re-invoke /contest-refactor WITHOUT --dry-run. What is the correct behavior? Does the loop need a --reset first? Should it execute the planned Step 3, or re-plan from scratch? Save your answer to ./next-action.md citing the relevant skill sections.",
+      "expected_output": "next-action.md stating: re-invoke without --dry-run executes Step 3 immediately. NO --reset needed (the --dry-run flag is invocation-scoped per Step 3 sub-step 2 of the plan and per halt-handoff.md HALT_DRY_RUN section). The artifact's dry_run: true is audit-only — the user's CLI flag is authoritative. Loop continues with the same Priority-1 finding from the existing Improvement Backlog; the Step 2 plan in `## Loop N Plan (dry-run)` section is the plan that will execute.",
+      "files": ["fixtures/dry-run-rerun-no-reset/CURRENT_REVIEW.json"],
+      "assertions": []
+    },
+    {
+      "id": 6,
+      "name": "loop-state-mid-step3-resume-step7",
+      "prompt": "I'm resuming a /contest-refactor run that was interrupted mid-Step-3. Here are the on-disk artifacts. The LOOP_STATE.json says step_started: 7 and step_completed: 6 (so step 7 was interrupted mid-execution). implementation_review is already populated. What is the correct resume action? Cite the resume-detection.md case routing. Save your answer to ./resume-action.md.",
+      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 5 (LOOP_STATE.json present AND state == 'CONTINUE') → § Resume from LOOP_STATE.json Case D (step_started > step_completed). Replay step 7 (PR 1 reject-path registry update). Honor existing implementation_review verdict (reviewer is stateless on resume; do not re-spawn). Idempotency rules in SKILL.md Step 3 sub-step 4 guarantee no duplication.",
+      "files": ["fixtures/loop-state-mid-step3-resume-step7/CURRENT_REVIEW.json", "fixtures/loop-state-mid-step3-resume-step7/LOOP_STATE.json"],
+      "assertions": []
+    },
+    {
+      "id": 7,
+      "name": "loop-state-post-commit-pre-delete",
+      "prompt": "I'm resuming a /contest-refactor run that was interrupted between commit and LOOP_STATE.json delete. The LOOP_STATE.json has step_started: 11, step_completed: 10, commit_attempted_sha set to the current HEAD sha. What is the correct resume action? Cite the case in resume-detection.md. Save your answer to ./resume-action.md.",
+      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 5 → § Resume from LOOP_STATE.json Case B (step_started == 11 AND commit_attempted_sha non-null AND step_completed < 11 AND HEAD == commit_attempted_sha). Action: write step_completed: 11 (bookkeeping), then delete LOOP_STATE.json. Proceed to loop N+1 dispatch via Continuation Discipline. The commit already landed; replaying it would create a duplicate.",
+      "files": ["fixtures/loop-state-post-commit-pre-delete/CURRENT_REVIEW.json", "fixtures/loop-state-post-commit-pre-delete/LOOP_STATE.json"],
+      "assertions": []
+    },
+    {
+      "id": 8,
+      "name": "reviewer-retry-then-success",
+      "prompt": "Please validate this CURRENT_REVIEW.json artifact. The implementation_review records a reviewer that timed out on attempt 1 and succeeded on attempt 2. State your verdict: is G27 satisfied? Is the reason field correctly scoped to the substantive verdict (not the transient cause)? Save the full verdict to ./validation-report.md.",
+      "expected_output": "validation-report.md confirming G27 satisfied: retry_count == 2, retry_cause == 'timeout', retry_attempts[] has 2 entries with first.outcome == 'timeout' matching retry_cause, second.outcome == 'ok'. reason field text contains substantive diff verdict only (e.g., 'All three checks passed; targeted finding F1 no longer present in current source.') with no mention of 'after 2 attempts' or transient causes. Code is NOT reverted; loop proceeds to commit. output-format rule #25 (Retry envelope shape) also satisfied.",
+      "files": ["fixtures/reviewer-retry-then-success/CURRENT_REVIEW.json"],
+      "assertions": []
+    },
+    {
+      "id": 9,
+      "name": "reviewer-retry-then-reject",
+      "prompt": "Please validate this CURRENT_REVIEW.json artifact. The implementation_review records a reviewer that hit spawn_error on both attempts. What is the correct routing? Is the reason field's text canonical? Should the loop revert code, and via what mechanism? Save the full verdict to ./validation-report.md.",
+      "expected_output": "validation-report.md confirming G27 satisfied: retry_count == 2, retry_cause == 'spawn_error', retry_attempts[] has 2 entries both with outcome 'spawn_error', verdict == 'rejected', reason == 'reviewer unavailable; manual verification required' EXACTLY (canonical phrase per implementation-reviewer.md § Failure modes). loop_result.targeted_finding_status == 'carried_forward' and loop_result.unintended_regression == implementation_review.reason (G15 reject↔loop_result coherence, output-format rule #16). Narrow revert path per implementation-reviewer.md § Routing rejected: for each path in loop_result.changed_paths[], git checkout <blob-sha> -- <path> using LOOP_STATE.pre_step3_blob_shas. Commit review artifacts only (no code).",
+      "files": ["fixtures/reviewer-retry-then-reject/CURRENT_REVIEW.json", "fixtures/reviewer-retry-then-reject/LOOP_STATE.json"],
+      "assertions": []
+    },
+    {
+      "id": 10,
+      "name": "incremental-then-halt-success",
+      "prompt": "Please validate this CURRENT_REVIEW.json artifact. The current loop is attempting HALT_SUCCESS. The REVIEW_HISTORY.json shows 3 prior loops with discovery.test_scope == 'incremental'. The current loop also has discovery.test_scope == 'incremental'. State your verdict and recommend the correct routing if there's a violation. Save the full verdict to ./validation-report.md.",
+      "expected_output": "validation-report.md identifying G21 violation: at HALT_SUCCESS, when any prior loop in REVIEW_HISTORY.json had test_scope == 'incremental', the current (HALT_SUCCESS-emitting) loop must have test_scope == 'full' with a passing full-suite run cited as evidence. Recommendation: re-run with full suite (override --test-filter), record test_scope: 'full', cite the full-suite run as HALT_SUCCESS evidence. Until then, downgrade state to CONTINUE pending reverify.",
+      "files": ["fixtures/incremental-then-halt-success/CURRENT_REVIEW.json", "fixtures/incremental-then-halt-success/REVIEW_HISTORY.json"],
+      "assertions": []
+    },
+    {
+      "id": 11,
+      "name": "stale-loop-state-with-halt",
+      "prompt": "I'm re-invoking /contest-refactor and find both LOOP_STATE.json (last_checkpoint_at 25 hours ago) AND CURRENT_REVIEW.json with state == HALT_STAGNATION. What is the correct routing per Resume Precedence Matrix? Should the loop auto-resume? Save your answer to ./resume-action.md.",
+      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 2 (LOOP_STATE.json present AND last_checkpoint_at > 24h ago) → orphan: emit --reset recommendation handoff, do NOT auto-resume. Tell user: 'found mid-loop checkpoint older than 24h — likely orphaned. Re-invoke with --reset to discard, or commit/stash any in-flight work first.' Note: row 2 wins over row 7 (which would have routed to drift handling) because the matrix is first-match-wins top-down. G28 orphan detection invariant cited.",
+      "files": ["fixtures/stale-loop-state-with-halt/CURRENT_REVIEW.json", "fixtures/stale-loop-state-with-halt/LOOP_STATE.json"],
+      "assertions": []
     }
   ]
 }

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "loop": 5,
+  "step_started": 6,
+  "step_completed": 6,
+  "started_at": "2026-05-12T15:00:00Z",
+  "last_checkpoint_at": "2026-05-12T15:01:30Z",
+  "artifacts_written": [
+    "CURRENT_REVIEW.md",
+    "CURRENT_REVIEW.json",
+    "Tests/Features/AddSoundFeatureTests.swift"
+  ],
+  "changed_paths": [
+    "Tests/Features/AddSoundFeatureTests.swift"
+  ],
+  "pre_step3_blob_shas": {
+    "Tests/Features/AddSoundFeatureTests.swift": null
+  },
+  "registry_pending_writes": [
+    {
+      "stable_id": "F-003",
+      "occurrence": {"loop": 5, "loop_local_id": "F1", "status": "rejected_attempt", "sha": "<pending>", "reviewer_reason": "reviewer unavailable; manual verification required"},
+      "idempotency_key": "loop5-F-003-rejected_attempt"
+    }
+  ],
+  "commit_message_draft": null,
+  "implementation_review": {
+    "verdict": "rejected",
+    "reason": "reviewer unavailable; manual verification required",
+    "checks": {"reality": "skipped", "honesty": "skipped", "regression": "skipped"},
+    "regressions": [],
+    "conditions": [],
+    "rounds": 1,
+    "retry_count": 2,
+    "retry_cause": "spawn_error",
+    "retry_attempts": [
+      {"attempt": 1, "outcome": "spawn_error", "error": "subagent failed to launch: resource limit", "duration_ms": 1200},
+      {"attempt": 2, "outcome": "spawn_error", "error": "subagent failed to launch: resource limit", "duration_ms": 1180}
+    ]
+  },
+  "commit_attempted_sha": null
+}

@@ -173,3 +173,94 @@ Future iterations could push 89→95+ via:
 - **2.3/8.4 Recoverability/Idempotency** — `LOOP_STATE.json` mid-loop checkpoint (P1 #12) so Step-3 interrupt resumes without restarting Step 1.
 - **6.2/8.5 Input Validation/Escape Hatches** — `--scope <dir>` flag (loop only touches subset) + `--force-lens <name>` flag (override lens detection for monorepos).
 - **7.3 Testability** — fixture repos under `assets/fixtures/{good,bad,medium}/` with expected scorecards; dry-run-on-fixture eval harness.
+
+---
+
+## Re-Score Detail (2026-05-12)
+
+State of skill: SKILL.md 285 lines / 9 H2 sections; 11 reference files (~1990 lines); 26 hard gates G1-G26; `evals/evals.json` + 4 fixture scenarios (`bootstrap-repo`, `halt-success-bad`, `continuation-post-commit`, `no-backlog-residual-accounting`); 7 user flags (`--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model`); per-loop archive compression at schema_version >= 2; structured `halt_handoff` object with `expected_actions[]` matching.
+
+| # | Criterion | 2026-05-09 | 2026-05-12 | Notes |
+|---|-----------|------------|------------|-------|
+| 1.1 | Completeness | 4 | 4 | Lens registry + Step -1 resume + 4 halt subtypes. |
+| 1.2 | Correctness | 4 | 4 | G21/G23/G26 close anchor-drift, no-backlog, fresh-critic-confirms-prior loopholes. |
+| 1.3 | Appropriateness | 4 | 4 | Plain-markdown protocol; zero deps; per-loop subagent isolation budget honored. |
+| 2.1 | Fault Tolerance | 3 | 3 | Build-failure path + reviewer timeout→rejected + provider unknown→inline. No retry envelope for transient infra/flake. |
+| 2.2 | Error Reporting | 4 | 4 | 26 hard gates; structured `halt_handoff` w/ `expected_actions[]`; per-subtype handoff templates. |
+| 2.3 | Recoverability | 3 | 3 | Step -1 resume detection + drift re-validation. No mid-loop checkpoint between Step 3 sub-steps. |
+| 3.1 | Token Cost | 4 | 3 | SKILL.md grew 190→285 lines (Step -1 expansion, Reference Load Matrix detail, registry rules). Still load-bearing but pushed back into the 250-400 band. |
+| 3.2 | Execution Efficiency | 3 | 3 | Per-loop archive compression in REVIEW_HISTORY.md (PR 5) saves ~1790 tokens/loop. Still no incremental test option. |
+| 4.1 | Learnability | 4 | 4 | Reference Load Matrix per step + Trust Model + Step-1 Routing table; cold-start path explicit. |
+| 4.2 | Consistency | 4 | 4 | Gate naming, state-flag enums, JSON shapes uniform; rule numbers cross-referenced from gates. |
+| 4.3 | Feedback Quality | 3 | 3 | Halt handoff templates rich; per-loop one-liner allowed but no scannable structured terminal summary defined. |
+| 4.4 | Error Prevention | 3 | 4 | G1-G26 (was G1-G14) + reviewer subagent + payload-as-evidence + Continuation Discipline + dry-run.sh. Gate enforcement still instruction-based; coverage materially wider. |
+| 5.1 | Discoverability | 4 | 4 | example-review.md + dry-run.sh + EVAL.md w/ revision history. |
+| 5.2 | Forgiveness | 3 | 3 | Commit-per-loop + no destructive ops + `--reset` archives instead of deleting. |
+| 6.1 | Credential Handling | 4 | 4 | N/A. |
+| 6.2 | Input Validation | 3 | 4 | `--provider` required on multi-env-var conflict; runtime warn; xcodebuild refuse; loop cap; provider/model `*_source` audit; payload-as-evidence rule. |
+| 6.3 | Data Safety | 3 | 3 | No destructive git; reviewer-reject reverts via `git checkout --`. |
+| 7.1 | Modularity | 4 | 4 | 11 reference files; lens registry + per-stack lenses; provider-adapters split. |
+| 7.2 | Modifiability | 4 | 4 | New lens = drop file + 1 row in lenses.md; new gate = append validation.md; new provider = row in provider-adapters.md table. |
+| 7.3 | Testability | 3 | 4 | `evals/evals.json` + 4 fixture scenarios with expected outputs (bootstrap, G21 violation, G20 continuation, G23 no_backlog). Real harness, not just example-review.md. |
+| 8.1 | Trigger Precision | 4 | 4 | Slash command + ICA terms + Actor-Critic + explicit "Use when…" contexts. |
+| 8.2 | Progressive Disclosure | 4 | 4 | Reference Load Matrix gates per-step loads; 11 reference files. |
+| 8.3 | Composability | 4 | 4 | `CURRENT_REVIEW.json` + `REVIEW_HISTORY.json` + `findings_registry.json` (stable F-IDs across loops) + structured `halt_handoff` object + subagent routing JSON. |
+| 8.4 | Idempotency | 3 | 3 | Step -1 resume + drift detection + re-validation handle most cases; mid-Step-3 interrupt between commit and registry write still undefined. |
+| 8.5 | Escape Hatches | 3 | 4 | 7 user flags (`--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model`) + 3 env vars + first-line directive + dry-run.sh. Full coverage. |
+| | **TOTAL** | **89** | **92** | +3 points; Excellent band (90-100). |
+
+## Revision History
+
+| Date | Score | Notes |
+|------|-------|-------|
+| 2026-05-12 | 92/100 | Excellent band reached. Gains: 4.4 Error Prevention 3→4 (G15-G26 doubled gate coverage; Continuation Discipline + G20 close inline-mode close-out drift; G21/G23/G26 close anchor-drift / no-backlog / fresh-critic-confirms-prior failure modes); 6.2 Input Validation 3→4 (provider/model source audit, multi-provider conflict requires explicit flag); 7.3 Testability 3→4 (`evals/evals.json` + 4 fixture scenarios with expected outputs); 8.5 Escape Hatches 3→4 (7 user flags incl. `--scope/--force-lens/--provider/--loop-model/--reviewer-model`). Loss: 3.1 Token Cost 4→3 (SKILL.md 190→285 lines after Step -1 + provider detection + registry rules; still load-bearing — no fluff to cut without losing safety). Net: +3. |
+
+## Remaining Gaps (3/4 → 4/4 candidates, post 92)
+
+- **2.1 Fault Tolerance** — no retry envelope for transient infra failures (network blip during reviewer subagent spawn, compiler crash, flaky test). Currently any of these = treat as ground truth = misroute the loop.
+- **2.3 Recoverability** + **8.4 Idempotency** — mid-Step-3 checkpoint. Interrupt between step 11 commit and steps 8-10 registry write leaves `findings_registry.json` and `CURRENT_REVIEW.json` desynchronized; resume path undefined.
+- **3.1 Token Cost** — pull Step -1 sub-steps (0.5 provider detection / 0.6 registry bootstrap / 4 / 4a / 4b drift handling) into `references/resume-detection.md`. Would trim SKILL.md back toward ~200 lines without losing the Reference Load Matrix or state machine spine.
+- **3.2 Execution Efficiency** — incremental test mode (changed-files-only Step 1) for large repos.
+- **4.3 Feedback Quality** — define a structured per-loop one-liner emit format (e.g. `loop 3/10 | F3 collapse-repository-theater | arch 8.0→8.5 UP | tests green | reviewer: approved | 47s`) so callers can grep it.
+- **5.2 Forgiveness** + **6.3 Data Safety** — `--dry-run` mode that walks Step 1 + Step 2 but stops before Step 3 code edits (separate from `dry-run.sh` which only walks Step 0 preflight).
+
+---
+
+## Re-Score Detail (2026-05-12+, post-implementation)
+
+State: SKILL.md 265 lines (was 285); 12 reference files (~2200 lines); 29 hard gates G1-G29 + Q8 (was 26); 9 user flags (was 7) — added `--dry-run` + `--test-filter <pattern>`; 12 fixture scenarios (was 4) — added 8 covering all peer-flagged risky branches; new artifact `LOOP_STATE.json` (own schema_version: 1); schema bump to v3 across `CURRENT_REVIEW.json` / `REVIEW_HISTORY.json` / `findings_registry.json` with v2→v3 default-fill; new halt state `HALT_DRY_RUN`; pre-Step-3 blob-sha snapshot for narrow revert.
+
+| # | Criterion | 2026-05-12 | 2026-05-12+ | Notes |
+|---|-----------|------------|-------------|-------|
+| 1.1 | Completeness | 4 | 4 | HALT_DRY_RUN + dry-run-rerun semantics + per-stack incremental commands. Already 4. |
+| 1.2 | Correctness | 4 | 4 | Resume Precedence Matrix (9 rows top-down) + 5-case LOOP_STATE.json routing closes all peer-flagged interrupt branches. |
+| 1.3 | Appropriateness | 4 | 4 | Plain markdown protocol; LOOP_STATE.json on own schema track; no new deps. |
+| 2.1 | Fault Tolerance | 3 | 4 | Reviewer 2-attempt retry envelope w/ timeout doubled + retry_count/retry_cause/retry_attempts[] split from review reason; build-flake guard re-runs once for determinism w/ passing-run-as-oracle scoring discipline. G27 enforces. |
+| 2.2 | Error Reporting | 4 | 4 | 29 hard gates; structured halt_handoff w/ expected_actions[]; HALT_DRY_RUN handoff template. |
+| 2.3 | Recoverability | 3 | 4 | LOOP_STATE.json mid-Step-3 checkpoint w/ pre/post step_started/step_completed pair semantics + commit_attempted_sha for post-commit/pre-delete branch + 5-case resume routing (Cases A-E). G28 enforces. |
+| 3.1 | Token Cost | 3 | 4 | SKILL.md trimmed 285→265 (Step -1 sub-steps extracted to references/resume-detection.md, ~107 lines). Within target band. |
+| 3.2 | Execution Efficiency | 3 | 4 | --test-filter opt-in + per-stack incremental commands (lens-apple + lens-generic) + G21 full-suite reverify before HALT_SUCCESS. Per-loop archive compression already PR 5. |
+| 4.1 | Learnability | 4 | 4 | Explicit "first action: load resume-detection.md" directive in SKILL.md Step -1 entry; Resume Precedence Matrix is self-contained. |
+| 4.2 | Consistency | 4 | 4 | Gate naming, state-flag enums, JSON shapes uniform; new G27/G28/G29 follow same template. |
+| 4.3 | Feedback Quality | 3 | 4 | Per-Loop Progress Line Format defined in output-format.md w/ HALT_SUCCESS / HALT_DRY_RUN / HALT_STAGNATION / HALT_LOOP_CAP variants; Q8 quality pass enforces. Examples provided. |
+| 4.4 | Error Prevention | 4 | 4 | G27 + G28 + G29 added to existing G1-G26; pre-loop dirty-tree precondition + pre-Step-3 blob-sha snapshot. |
+| 5.1 | Discoverability | 4 | 4 | dry-run.sh now warns on LOOP_STATE.json presence; example-review.md unchanged. |
+| 5.2 | Forgiveness | 3 | 4 | --dry-run flag halts after Step 2 plan; HALT_DRY_RUN handoff with menu. Narrow-revert via pre_step3_blob_shas instead of broad git checkout. Invocation-scoped dry-run avoids reset friction. |
+| 6.1 | Credential Handling | 4 | 4 | N/A. |
+| 6.2 | Input Validation | 4 | 4 | --dry-run + --test-filter parsed at Step -1 step 1; dirty-tree precondition checks blast-radius overlap; provider conflict still requires --provider. |
+| 6.3 | Data Safety | 3 | 4 | --dry-run + clean-tree precondition + pre_step3_blob_shas restore source guarantee narrow revert preserves user's pre-loop unstaged edits. No destructive git ops. |
+| 7.1 | Modularity | 4 | 4 | resume-detection.md split (12 reference files now); LOOP_STATE.json on own schema track. |
+| 7.2 | Modifiability | 4 | 4 | New halt state = bullet in SKILL.md + section in halt-handoff.md + row in G9 table. New gate = append validation.md. |
+| 7.3 | Testability | 4 | 4 | 12 fixture scenarios (was 4) covering bootstrap, halt-success, continuation, no-backlog, dry-run-halt, dry-run-rerun, mid-step-3-resume, post-commit-pre-delete, retry-success, retry-reject, incremental-then-halt, stale-checkpoint. |
+| 8.1 | Trigger Precision | 4 | 4 | Slash command + ICA terms + Actor-Critic + explicit "Use when…" contexts. |
+| 8.2 | Progressive Disclosure | 4 | 4 | Reference Load Matrix gates per-step loads; 12 reference files; explicit pre-branching load directive in SKILL.md Step -1. |
+| 8.3 | Composability | 4 | 4 | LOOP_STATE.json + structured retry_attempts[] + structured halt_handoff + per-loop progress line format = full machine-parseable surface. |
+| 8.4 | Idempotency | 3 | 4 | Step 6 reviewer stateless; Step 9 archive uses divider+(loop, schema_version) dedup keys; Step 10 registry write uses idempotency_key per pending entry; Step 11 commit_attempted_sha distinguishes post-commit/pre-delete. |
+| 8.5 | Escape Hatches | 4 | 4 | 9 user flags (--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model/--dry-run/--test-filter) + 3 env vars + first-line directive + dry-run.sh preflight. |
+| | **TOTAL** | **92** | **96** | +4 points; deeper into Excellent band (90-100). |
+
+## Revision History
+
+| Date | Score | Notes |
+|------|-------|-------|
+| 2026-05-12+ | 96/100 | All 6 EVAL gaps + peer-review revisions shipped via copilot/gpt-5.4/high pressure-test (2 rounds; round 1 produced 6 blocking + 3 non-blocking; round 2 approved with 2 non-blocking refinements which were also addressed). Gains: 2.1 Fault Tolerance 3→4 (reviewer retry envelope w/ retry_count/retry_cause/retry_attempts[] split from review reason; build-flake guard); 2.3 Recoverability 3→4 (LOOP_STATE.json mid-Step-3 checkpoint w/ step_started/step_completed pair semantics + commit_attempted_sha + 5-case resume routing); 3.1 Token Cost 3→4 (SKILL.md 285→265 via resume-detection.md extract); 3.2 Execution Efficiency 3→4 (--test-filter opt-in + per-stack incremental commands + G21 full-suite reverify); 4.3 Feedback Quality 3→4 (Per-Loop Progress Line Format spec + Q8 quality pass); 5.2 Forgiveness 3→4 (--dry-run flag + HALT_DRY_RUN handoff + narrow revert via pre_step3_blob_shas); 6.3 Data Safety 3→4 (clean-tree precondition + pre_step3_blob_shas restore source); 8.4 Idempotency 3→4 (Step 6/9/10/11 idempotency keys + commit_attempted_sha discrimination). Net: +4. New gates: G27 (retry envelope), G28 (checkpoint freshness), G29 (schema v3 invariants), Q8 (per-loop progress line). New artifact: LOOP_STATE.json (schema_version 1). New halt state: HALT_DRY_RUN. Schema bump CURRENT_REVIEW/REVIEW_HISTORY/findings_registry v2→v3 with backward-compat default-fill table. 8 new eval fixtures (12 total). Plan reviewed by copilot/gpt-5.4/high; final non-blocking refinements (N4 narrow-revert restore source via pre-Step-3 blob snapshot, N5 fixture-count consistency) addressed before exit. |

@@ -5,7 +5,40 @@ Each loop produces two files at repo root:
 - `CURRENT_REVIEW.md` — human-readable, structured below
 - `CURRENT_REVIEW.json` — machine-readable mirror
 
+Mid-Step-3 a third file `LOOP_STATE.json` is present (per § LOOP_STATE.json schema below); deleted on Step 3 step 11.f after the loop's commit lands.
+
 Previous `CURRENT_REVIEW.md` is appended to `REVIEW_HISTORY.md` (preceded by `--- Loop N (UTC timestamp) ---`) before being overwritten. This preserves cross-loop deltas without keeping multiple live files.
+
+## Schema version 3 changelog
+
+`CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, and `findings_registry.json` bump `schema_version: 2 → 3`. `LOOP_STATE.json` is a new file on its own track at `schema_version: 1`. Backward compatibility:
+
+- v2 artifacts on disk at re-invocation are honored read-only by Step -1; missing v3 fields default per the table below.
+- A loop running at v3 writes v3 artifacts; mixed-version `REVIEW_HISTORY.json.loops[]` entries are legal (each entry carries its own `schema_version`).
+- G29 in [validation.md](validation.md) enforces these invariants.
+
+### v2 → v3 default-fill table (when reading a v2 artifact)
+
+| Missing v3 field | Default |
+|---|---|
+| `dry_run` (top-level CURRENT_REVIEW.json) | `false` |
+| `discovery.test_scope` | `"full"` |
+| `discovery.test_filter` | `null` |
+| `discovery.working_tree_dirty_paths` | `[]` |
+| `implementation_review.retry_count` | `1` |
+| `implementation_review.retry_cause` | `null` |
+| `implementation_review.retry_attempts` | `[{"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}]` |
+| `loop_result.changed_paths` | `[]` |
+
+### v3 changes (additive; no breaking changes)
+
+- New halt state `HALT_DRY_RUN` (state enum extended); `halt_subtype: null`.
+- New top-level field `dry_run` (boolean, audit only — re-invocation reads the user's CLI flag, not this field).
+- New discovery fields `test_scope`, `test_filter`, `working_tree_dirty_paths`.
+- New `implementation_review` fields `retry_count`, `retry_cause`, `retry_attempts[]` (transient retry metadata; substantive verdict stays in `reason`).
+- New `loop_result.changed_paths[]` (paths the loop touched; restore source for narrow revert in conjunction with `LOOP_STATE.pre_step3_blob_shas`).
+- New `LOOP_STATE.json` artifact for mid-Step-3 checkpointing.
+- New gates G27 (retry envelope), G28 (checkpoint freshness), G29 (schema v3 invariants); new quality pass Q8 (per-loop progress line).
 
 ## CURRENT_REVIEW.md Structure
 
@@ -176,15 +209,16 @@ The JSON file is a faithful mirror of the Markdown contract. Every Markdown fiel
 ```jsonc
 {
   // Loop bookkeeping (required)
-  "schema_version": 2,                          // int, required. Existing pre-2026-05-09 artifacts default to 1; new gates G16-G20 + new fields apply only when >= 2.
+  "schema_version": 3,                          // int, required. Pre-2026-05-09 = 1; PR 1-5 series = 2; this revision = 3 (adds dry_run, test_scope, retry_count metadata, LOOP_STATE.json track).
   "loop": 3,                                    // int, 1-based
   "loop_cap": 10,                               // int
-  "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_STAGNATION | HALT_LOOP_CAP
+  "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_STAGNATION | HALT_LOOP_CAP | HALT_DRY_RUN (HALT_DRY_RUN at schema_version >= 3 only)
   "halt_subtype": null,                         // enum (required when state == HALT_STAGNATION; null otherwise): no_progress | oscillation | user_decision | no_backlog
   "halt_handoff_text": null,                    // legacy schema_version=1 field. At schema_version >= 2 use `halt_handoff` object below instead.
   "halt_handoff": null,                         // (PR 4, schema_version >= 2) required when state ∈ {HALT_*}; null on CONTINUE. Replaces flat halt_handoff_text. Object schema below.
   "re_validated_at_sha": null,                  // string sha; populated by Resume Detection when drift was checked and same halt persists.
   "re_validation_context": null,                // (PR 4, schema_version >= 2) required when re_validated_at_sha non-null. Object schema below.
+  "dry_run": false,                             // (schema_version >= 3) boolean. Audit trail of the last loop's invocation flag. NOT read on re-invocation; the user's CLI --dry-run flag is authoritative. true ⇒ state == "HALT_DRY_RUN" AND a "## Loop N Plan (dry-run)" section exists in CURRENT_REVIEW.md.
 
   // Provider/model state (required when schema_version >= 2; on every loop, not first-loop-only)
   "provider": "claude_code",                    // enum: claude_code | codex | opencode | unknown. Detected per references/provider-adapters.md § Detection.
@@ -204,7 +238,10 @@ The JSON file is a faithful mirror of the Markdown contract. Every Markdown fiel
     "build_command": "./build_install_launch.sh ios --skip-preflight",
     "lens": "Apple",                            // enum: Apple | Generic
     "adrs": ["ADR-0001: reject transport parity tests"],
-    "domain_terms": ["AppState", "InstanceID", "TileCueResolver"]
+    "domain_terms": ["AppState", "InstanceID", "TileCueResolver"],
+    "test_scope": "full",                       // (schema_version >= 3) enum: full | incremental. default "full". "incremental" iff --test-filter <pattern> set on this invocation.
+    "test_filter": null,                        // (schema_version >= 3) null | string. non-null iff test_scope == "incremental"; the pattern appended to the discovered test command per the active lens.
+    "working_tree_dirty_paths": []              // (schema_version >= 3) array of paths dirty at Step 0 (`git status --porcelain`). Empty = clean tree. Non-empty AND any path overlaps Step 2 plan's predicted touch list → loop aborts pre-Step-3 with the "commit or stash before running" message.
   },
 
   // Verdict (required)
@@ -347,6 +384,7 @@ The JSON file is a faithful mirror of the Markdown contract. Every Markdown fiel
     "evidence_change_is_honest": "swift test 1439 passed; lint clean",
     "targeted_finding_status": "resolved",                            // enum: resolved | carried_forward
     "unintended_regression": null,                                    // null or string describing the regression
+    "changed_paths": ["BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"],  // (schema_version >= 3) array of source paths the loop touched. Populated by `git diff --name-only HEAD` after step 1. Restore source for the narrow-revert path on reviewer rejection (combined with LOOP_STATE.pre_step3_blob_shas for per-path blob restore).
 
     // Indirect coverage citation (PR 3, schema_version >= 2). Required when what_changed contains a Deepening Keyword AND no test files appear in the diff. Otherwise null.
     "interface_test_coverage_path": [
@@ -373,10 +411,68 @@ The JSON file is a faithful mirror of the Markdown contract. Every Markdown fiel
     },
     "regressions": [],                                                // array of strings; empty when verdict approved
     "conditions": [],                                                 // array of strings; empty when verdict approved (populated only mid-loop on conditional)
-    "rounds": 1                                                       // int; number of reviewer invocations this loop (1 normally; 2 when conditional → re-spawn)
+    "rounds": 1,                                                      // int; number of reviewer invocations this loop (1 normally; 2 when conditional → re-spawn)
+    "retry_count": 1,                                                 // (schema_version >= 3) int 1..2. 1 = first-attempt success/clean failure; 2 = retried after transient infra failure.
+    "retry_cause": null,                                              // (schema_version >= 3) null | "timeout" | "spawn_error" | "malformed_json". non-null iff retry_count == 2. Substantive verdict reasons stay in `reason`; transient causes live here.
+    "retry_attempts": [                                               // (schema_version >= 3) array, length == retry_count. Audit detail. Each entry: {attempt: int, outcome: "ok"|"timeout"|"spawn_error"|"malformed_json", error: null|string, duration_ms: null|int}.
+      {"attempt": 1, "outcome": "ok", "error": null, "duration_ms": 7250}
+    ]
   }
 }
 ```
+
+## Per-Loop Progress Line Format (schema_version >= 3)
+
+Every loop dispatch (CONTINUE) and every HALT_* emit prints a single one-line progress summary to the terminal so callers (`/loop`, wrapper agents, log greppers) can track loop activity without parsing the full review. Q8 in [validation.md](validation.md) is the quality-pass check; the format is:
+
+```
+loop <N>/<cap> | F<n> <slug> | <dim> <a>→<b> <UP|DOWN|SAME> | tests <green|red|n/a> | reviewer: <approved|rejected|conditional|n/a> | <duration>s
+```
+
+Field rules:
+
+- `<N>/<cap>` — `loop` and `loop_cap` from CURRENT_REVIEW.json.
+- `F<n>` — `loop_local_id` of the targeted Priority-1 finding for the loop. `n/a` on HALT_SUCCESS / HALT_DRY_RUN.
+- `<slug>` — kebab-case finding title, max 40 chars (e.g., "collapse-repository-theater"). Truncate at 40 chars without ellipsis. `none` on HALT_SUCCESS.
+- `<dim>` — scorecard short code: `arch` | `tests` | `concur` | `error` | `code` | `ownership` | `coupling` | `depth` | `impl`. Pick the dimension with the largest absolute delta this loop; ties broken alphabetically.
+- `<a>→<b>` — prior loop's score → current loop's score (e.g., `8.0→8.5`). `n/a→n/a` when no prior loop exists (loop 1).
+- `<UP|DOWN|SAME>` — delta enum from the picked dimension's scorecard entry.
+- `<green|red|n/a>` — test status: `green` if Step 1 build/tests passed, `red` if failed (build-failure path), `n/a` for HALT_DRY_RUN (Step 1 ran but no claim emitted).
+- `<approved|rejected|conditional|n/a>` — `implementation_review.verdict` from the loop. `n/a` for HALT_DRY_RUN / HALT_SUCCESS / HALT_LOOP_CAP / HALT_STAGNATION (no refactor executed).
+- `<duration>` — wall-clock seconds from Step 1 start to Step 3 step 11 commit (or to halt emit, when no commit). Integer.
+
+### Variants
+
+HALT_SUCCESS:
+```
+loop <N>/<cap> | HALT_SUCCESS | scorecard: <avg_score> | tests green | <duration>s
+```
+
+HALT_DRY_RUN:
+```
+loop <N>/<cap> | HALT_DRY_RUN | plan-only (Step 2) | tests <green|red|n/a> | <duration>s
+```
+
+HALT_STAGNATION:
+```
+loop <N>/<cap> | HALT_STAGNATION/<subtype> | F<n> <slug> | <dim> <a>→<b> SAME | tests <green|red> | <duration>s
+```
+
+HALT_LOOP_CAP:
+```
+loop <N>/<cap> | HALT_LOOP_CAP | F<n> <slug> (carried) | <dim> <a>→<b> <delta> | tests <green|red> | <duration>s
+```
+
+### Examples
+
+```
+loop 3/10 | F3 collapse-repository-theater | arch 8.0→8.5 UP | tests green | reviewer: approved | 47s
+loop 7/10 | HALT_SUCCESS | scorecard: 9.6 | tests green | 38s
+loop 1/10 | HALT_DRY_RUN | plan-only (Step 2) | tests green | 12s
+loop 4/10 | HALT_STAGNATION/oscillation | F2 splice-workflow-file | arch 8.5→8.5 SAME | tests green | 51s
+```
+
+Q8 verifies presence and shape; format violations never block emit.
 
 ## halt_handoff object (PR 4, schema_version >= 2)
 
@@ -460,13 +556,78 @@ collapsed | consolidated | merged | deepened | inlined | extracted | flattened
 
 When `loop_result.what_changed` contains any of these keywords (case-insensitive substring match) AND no test files appear in the diff, the indirect-coverage carve-out applies and `loop_result.interface_test_coverage_path` is required.
 
+## LOOP_STATE.json schema (own track, schema_version: 1)
+
+Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/after every Step 3 sub-step (`step_started` written pre-work, `step_completed` written post-work, both fsynced); deleted at Step 3 sub-step 11.f after the loop's commit lands. Resume routing in [resume-detection.md § Resume from LOOP_STATE.json](resume-detection.md) keys off `(step_started, step_completed, commit_attempted_sha)`.
+
+```jsonc
+{
+  "schema_version": 1,
+  "loop": 3,                                    // int. Must equal CURRENT_REVIEW.json.loop. Mismatch routes to --reset (Resume Precedence Matrix row 3).
+  "step_started": 7,                            // int 1..11. The Step 3 sub-step whose work has begun but not yet completed.
+  "step_completed": 6,                          // int 0..11. The highest Step 3 sub-step whose work is fully on disk and idempotent-safe. step_started > step_completed = mid-step interrupt; replay required.
+  "started_at": "2026-05-12T14:30:22Z",         // ISO-8601 UTC. When the loop's Step 3 began.
+  "last_checkpoint_at": "2026-05-12T14:31:05Z", // ISO-8601 UTC. Updated on every checkpoint write. > 24h old at resume time = orphan (Resume Precedence Matrix row 2).
+  "artifacts_written": [                        // array of paths (relative to repo root) modified or created since loop's Step 3 began. Used to verify expected on-disk state during resume.
+    "CURRENT_REVIEW.md",
+    "CURRENT_REVIEW.json",
+    "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"
+  ],
+  "changed_paths": [                            // copy of loop_result.changed_paths once Step 3 step 4 has run (the diff is final at that point). Empty before step 4.
+    "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"
+  ],
+  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 BEFORE any edit. Maps path → blob sha (or null if path was untracked at sub-step 0). Restore source for narrow revert: `git checkout <blob-sha> -- <path>` per file with a recorded sha; `git rm --cached <path>` for null entries (untracked-then-created files). Guarantees revert restores the pre-loop state of those files even when the user's working tree had unstaged edits in them at loop start (though the dirty-tree precondition in Step 0 should prevent that case).
+    "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift": "9b2a13c4...",
+    "BenchHypeKit/Tests/AppReducerWorkflowTests.swift": null
+  },
+  "registry_pending_writes": [                  // array of mutations queued for findings_registry.json but not yet flushed. Each entry carries idempotency_key for replay-safe re-write at resume.
+    {
+      "stable_id": "F-007",
+      "occurrence": {"loop": 3, "loop_local_id": "F3", "status": "resolved", "sha": "<pending>"},
+      "idempotency_key": "loop3-F-007-resolved"
+    }
+  ],
+  "commit_message_draft": null,                 // populated at Step 3 sub-step 11.a; null before. The draft commit subject line that will be passed to `git commit`.
+  "implementation_review": null,                // verbatim copy of CURRENT_REVIEW.json.implementation_review once Step 3 step 6 completes; null before. Honored on resume (reviewer is stateless; re-spawning is wasteful when verdict already in hand).
+  "commit_attempted_sha": null                  // populated at Step 3 sub-step 11.d AFTER `git commit` succeeds and BEFORE LOOP_STATE.json delete in 11.f. Distinguishes "commit landed but cleanup interrupted" (Case B in resume-detection.md) from "commit interrupted before HEAD updated" (Case C).
+}
+```
+
+### Lifecycle
+
+1. **Init** (Step 3 sub-step 0): write with `step_started: 1, step_completed: 0`, populated `pre_step3_blob_shas`, empty arrays, `null` for review/commit fields. fsync.
+2. **Per-sub-step k in {1..11}**:
+   - 2a. Write `step_started: k`. fsync.
+   - 2b. Execute sub-step k's body.
+   - 2c. Write `step_completed: k`. fsync. Also update `last_checkpoint_at`.
+3. **Sub-step 11 commit detail**:
+   - 11.a. Write `commit_message_draft: <subject>`. fsync.
+   - 11.b. Write `step_started: 11`. fsync.
+   - 11.c. `git commit`.
+   - 11.d. On commit success, write `commit_attempted_sha: <new HEAD>`. fsync.
+   - 11.e. Write `step_completed: 11`. fsync.
+   - 11.f. Delete `LOOP_STATE.json` (atomic rename to `.json.deleting` then unlink).
+4. **Resume entry**: see [resume-detection.md § Resume from LOOP_STATE.json](resume-detection.md) Cases A-E.
+
+### Idempotency requirements (replay-safe)
+
+The pair `(step_started, step_completed)` is the recovery key:
+- `step_started == step_completed` → clean boundary; resume continues at sub-step k+1.
+- `step_started > step_completed` → step `step_started` was interrupted mid-execution; replay it.
+
+Per-step idempotency:
+- Step 6 (Implementation Review): reviewer is stateless. If `implementation_review` is non-null on resume, honor the existing verdict; do not re-spawn.
+- Step 9 (archive): `REVIEW_HISTORY.md` append checks for existing `--- Loop N (UTC <ts>) ---` divider before appending. `REVIEW_HISTORY.json.loops[]` append uses `(loop, schema_version)` as dedup key.
+- Step 10 (registry write): each `registry_pending_writes[]` entry's `idempotency_key` is checked against `findings_registry.json.entries[].occurrences[].idempotency_key`; replay skips entries already present.
+- Step 11 (commit): `commit_attempted_sha` populated post-commit-pre-delete distinguishes Cases B and C in resume routing.
+
 ## findings_registry.json schema
 
 External file at repo root. Created on first loop or via Step -1 step 0.6 bootstrap; persisted across loops; committed alongside CURRENT_REVIEW.{md,json} + REVIEW_HISTORY.{md,json}. Never embedded in CURRENT_REVIEW.json — referenced by `findings_registry_path`.
 
 ```jsonc
 {
-  "registry_schema_version": 2,        // int. Independent of CURRENT_REVIEW.json schema_version. Both default to 2 going forward.
+  "registry_schema_version": 3,        // int. Independent of CURRENT_REVIEW.json schema_version. v3 (this revision) accepts an optional `idempotency_key` per occurrence (used by Step 3 step 10 replay-safe writes, see § LOOP_STATE.json).
   "next_serial": 8,                    // int. Monotonically incremented as new stable_ids are assigned.
   "entries": [
     {
@@ -483,7 +644,7 @@ External file at repo root. Created on first loop or via Step -1 step 0.6 bootst
       "occurrences": [
         {"loop": 1, "loop_local_id": "F3", "status": "open", "sha": "<observation_sha>"},
         {"loop": 3, "loop_local_id": "F3", "status": "fixed_by_user", "sha": "c066b0b"},
-        {"loop": 5, "loop_local_id": "F2", "status": "rejected_attempt", "sha": "<resolution_sha>", "reviewer_reason": "<one sentence>"}
+        {"loop": 5, "loop_local_id": "F2", "status": "rejected_attempt", "sha": "<resolution_sha>", "reviewer_reason": "<one sentence>", "idempotency_key": "loop5-F-007-rejected_attempt"}
       ]
     }
   ]
@@ -515,10 +676,11 @@ Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_
 
 ```jsonc
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "loops": [
     { /* full CURRENT_REVIEW.json snapshot for loop 1, schema_version: 1 if pre-migration */ },
-    { /* full CURRENT_REVIEW.json snapshot for loop 2 */ }
+    { /* full CURRENT_REVIEW.json snapshot for loop 2, schema_version: 2 */ },
+    { /* full CURRENT_REVIEW.json snapshot for loop 3, schema_version: 3 (mixed-version loops[] entries are legal — each carries its own schema_version) */ }
   ]
 }
 ```
@@ -550,7 +712,7 @@ If REVIEW_HISTORY.md exists at first invocation but REVIEW_HISTORY.json does not
 15. **Implementation review presence**: `implementation_review` is required when `loop_result` is present (i.e., a refactor was executed); absent when `loop_result` is absent. Final committed `verdict` ∈ {`approved`, `rejected`} — `conditional` is a mid-loop transient state that must be resolved (re-spawn → approved or rejected) before commit. `rounds` ≥ 1; `rounds == 2` only when first reviewer pass returned `conditional`.
 16. **Reject ↔ loop_result coherence**: when `implementation_review.verdict == "rejected"`, `loop_result.targeted_finding_status` must equal `"carried_forward"` AND `loop_result.unintended_regression` must equal `implementation_review.reason`. Mismatch = G2 fails.
 17. **Halt subtype required**: when `state == "HALT_STAGNATION"`, `halt_subtype` ∈ {`no_progress`, `oscillation`, `user_decision`, `no_backlog`}. Other halts must have `halt_subtype: null`.
-18. **Halt handoff required**: when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`}:
+18. **Halt handoff required**: when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`, `HALT_DRY_RUN`} (HALT_DRY_RUN at schema_version >= 3 only):
     - schema_version 1: `halt_handoff_text` non-empty string built from the matching template in `references/halt-handoff.md` with all placeholders resolved.
     - **schema_version >= 2 (PR 4)**: `halt_handoff` object non-null with `text` non-empty AND `expected_actions[]` array (may be empty). Each HandoffAction must satisfy: if `match_paths` is non-empty, `match_kind` must be `all_of`; if `match_paths` is empty, `match_kind` ∈ {`any_of`, `no_drift_expected`}. Null on `CONTINUE`.
 19. **no_backlog residual accounting**: when `state == "HALT_STAGNATION"` AND `halt_subtype == "no_backlog"`, `unresolved_reason` must account for every score `< 9.5`: the source-backed blocker, why it keeps the 9-anchor unmet, and why it cannot be a backlog item or accepted residual. Rejected Cosmetic/ADR/SPT-failing candidates alone do not satisfy this rule when the dimension's 9-anchor is met; those become accepted residuals at 9.5 or disappear into a score of 10.
@@ -558,5 +720,13 @@ If REVIEW_HISTORY.md exists at first invocation but REVIEW_HISTORY.json does not
 21. **Stable ID presence (PR 1)**: *Applies when schema_version >= 2.* Every emitted finding (in CONTINUE and HALT loops alike) has both `loop_local_id` (regex `^F\d+$`) and `stable_id` (regex `^F-\d{3,}$`) non-empty. `stable_id` either matches an entry in `findings_registry.json` (lookup via Method Step 1.5 fuzzy-match rules above) or is a new ID equal to `findings_registry.next_serial - 1` after that loop's increment. Reviewer-rejected loops still emit findings with stable_id; the registry occurrence carries `status: "rejected_attempt"`.
 22. **Interface test coverage citation (PR 3)**: *Applies when schema_version >= 2.* When `loop_result.what_changed` contains any keyword from § Deepening Keywords AND the diff contains no test file changes, `loop_result.interface_test_coverage_path` must be non-null with at least one entry. Each entry must have `target_symbol` non-empty, `target_symbol_kind` matching the regex `^(new|existing_deepened|existing_[a-z_]+_interface)$` (canonical: `new` or `existing_deepened`; role-bearing variants like `existing_bootstrap_interface` accepted when the symbol is a stable named-role interface), AND `distinguishes_no_op == true`. Otherwise `interface_test_coverage_path` is null.
 23. **re_validation_context coherence (PR 4)**: *Applies when schema_version >= 2.* When `re_validated_at_sha` is non-null, `re_validation_context` is required with all fields non-null (`drift_commit_count`, `prior_handoff_actions_taken`, `expected_actions_unmatched`, `why_halt_persists`, `re_validation_run_by`). Each `prior_handoff_actions_taken` entry's `match_kind` must equal the corresponding action's `match_kind` from the prior loop's `halt_handoff.expected_actions[]`. `re_validation_run_by == "main_agent_step_neg_one"` (canonical for current protocol).
+
+24. **HALT_DRY_RUN coherence (schema_version >= 3)**: when `state == "HALT_DRY_RUN"`, `dry_run == true` AND `halt_subtype == null` AND `halt_handoff` non-null with text from [halt-handoff.md § HALT_DRY_RUN](halt-handoff.md). The CURRENT_REVIEW.md must contain a `## Loop N Plan (dry-run)` section with the Step 2 execution plan. `loop_result` and `implementation_review` must be absent (no Step 3 work was executed). `backlog` must be non-empty (the plan derives from a Priority-1 finding). G9 backlog purity is unaffected.
+
+25. **Retry envelope shape (schema_version >= 3)**: `implementation_review.retry_count ∈ {1, 2}`. When `retry_count == 1`: `retry_cause == null` AND `retry_attempts[]` has exactly 1 entry. When `retry_count == 2`: `retry_cause ∈ {"timeout", "spawn_error", "malformed_json"}` AND `retry_attempts[]` has exactly 2 entries AND the first entry's `outcome` matches `retry_cause`. The `reason` field text MUST NOT mention "after 2 attempts" or transient causes; transient metadata lives in `retry_cause` / `retry_attempts[]` only. When both attempts fail, `verdict == "rejected"` AND `reason == "reviewer unavailable; manual verification required"` exactly.
+
+26. **changed_paths populated (schema_version >= 3)**: when `loop_result` is present, `loop_result.changed_paths[]` non-empty (loop must have touched at least one path; an empty diff means nothing was changed and `loop_result` itself should be absent per rule #8).
+
+27. **test_scope coherence (schema_version >= 3)**: `discovery.test_scope ∈ {"full", "incremental"}`. When `"incremental"`: `discovery.test_filter` non-null and non-empty string. When `"full"`: `discovery.test_filter` null. Per [validation.md G21 extension](validation.md), `state == "HALT_SUCCESS"` requires `discovery.test_scope == "full"` if any prior loop in REVIEW_HISTORY.json had incremental scope.
 
 Both CURRENT_REVIEW.md / .json AND `findings_registry.json` AND `REVIEW_HISTORY.json` (when schema_version >= 2) are committed at end of each loop alongside the code change.

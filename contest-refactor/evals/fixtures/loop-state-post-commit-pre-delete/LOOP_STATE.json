@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "loop": 3,
+  "step_started": 11,
+  "step_completed": 10,
+  "started_at": "2026-05-12T14:30:22Z",
+  "last_checkpoint_at": "2026-05-12T14:32:14Z",
+  "artifacts_written": [
+    "CURRENT_REVIEW.md",
+    "CURRENT_REVIEW.json",
+    "Core/NavigationStore.swift",
+    "App/RootView.swift",
+    "REVIEW_HISTORY.md",
+    "REVIEW_HISTORY.json",
+    "findings_registry.json"
+  ],
+  "changed_paths": [
+    "Core/NavigationStore.swift",
+    "App/RootView.swift"
+  ],
+  "pre_step3_blob_shas": {
+    "Core/NavigationStore.swift": "9b2a13c4f0e1d2a3b4c5d6e7f8a9b0c1d2e3f4a5",
+    "App/RootView.swift": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
+  },
+  "registry_pending_writes": [],
+  "commit_message_draft": "loop 3: collapse navigation duplicate writers; finding F1 (stable_id F-001) resolved [registry: +0 findings, ~1 occurrence]",
+  "implementation_review": {
+    "verdict": "approved",
+    "reason": "All three checks passed; targeted finding F1 no longer present in current source.",
+    "checks": {"reality": "passed", "honesty": "passed", "regression": "passed"},
+    "regressions": [],
+    "conditions": [],
+    "rounds": 1,
+    "retry_count": 1,
+    "retry_cause": null,
+    "retry_attempts": [{"attempt": 1, "outcome": "ok", "error": null, "duration_ms": 7250}]
+  },
+  "commit_attempted_sha": "abc123def4567890abcdef1234567890abcdef12"
+}

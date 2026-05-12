@@ -1,0 +1,11 @@
+{
+  "schema_version": 3,
+  "loops": [
+    {"schema_version": 3, "loop": 1, "state": "CONTINUE", "discovery": {"test_scope": "incremental", "test_filter": "auth"}},
+    {"schema_version": 3, "loop": 2, "state": "CONTINUE", "discovery": null},
+    {"schema_version": 3, "loop": 3, "state": "CONTINUE", "discovery": null},
+    {"schema_version": 3, "loop": 4, "state": "CONTINUE", "discovery": null},
+    {"schema_version": 3, "loop": 5, "state": "CONTINUE", "discovery": null},
+    {"schema_version": 3, "loop": 6, "state": "CONTINUE", "discovery": null}
+  ]
+}

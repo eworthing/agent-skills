@@ -178,6 +178,56 @@ Next step options:
 
 ---
 
+## HALT_DRY_RUN (schema_version >= 3)
+
+Triggered when `--dry-run` was set on the current invocation; the loop ran Step 0 + Step 1 + Step 2 (planning) and halted at the Step 2 dry-run gate before Step 3 execution. The flag is **invocation-scoped, not persisted** — re-invoking without `--dry-run` executes Step 3 normally.
+
+### Subagent records
+
+- `system_flag: "HALT_DRY_RUN"`
+- `halt_subtype: null`
+- `unresolved_reason: null`
+- `dry_run: true` (audit-only field in CURRENT_REVIEW.json; not read by next invocation)
+
+### What gets emitted at halt
+
+- `## Loop N Plan (dry-run)` section appended to `CURRENT_REVIEW.md` containing the Step 2 execution plan (file change list, files-not-to-touch list, blast radius bound).
+- `CURRENT_REVIEW.json` mirrors with `state: "HALT_DRY_RUN"` and `dry_run: true`.
+- No `loop_result`. No `implementation_review`. No commit (the dry-run state itself does not commit; the user re-invokes to execute).
+
+### Handoff template
+
+```
+Loop N ended at HALT_DRY_RUN — --dry-run was set on this invocation, so I ran
+Step 0 (Discovery), Step 1 (Critic), and Step 2 (Architect plan) but stopped
+before Step 3 (Execution). No code changes. No commit.
+
+Targeted Priority-1 finding: F<id> — <title>
+
+The plan I would execute (in CURRENT_REVIEW.md "Loop N Plan (dry-run)" section):
+  Files to change: <comma-separated list>
+  Files NOT to touch: <comma-separated list>
+  Blast radius: bounded to the change list above
+  Expected scorecard impact: <one line>
+
+Next step options:
+  (a) Execute the plan — re-invoke "/contest-refactor" (no flag). The --dry-run
+      flag is invocation-scoped; absence of the flag means execute. No --reset
+      needed.
+  (b) Re-plan with a different target — edit the Improvement Backlog in
+      CURRENT_REVIEW.md to promote a different finding to Priority 1, then
+      re-invoke "/contest-refactor --dry-run" to see the new plan.
+  (c) Abort — leave the dry-run state on disk; nothing was changed.
+```
+
+### Notes
+
+- **No --reset required to execute**: the dry-run flag is held in invocation memory only. The artifact's `dry_run: true` field is audit-only — it records the last loop's invocation flag but does not gate the next invocation. Re-invoking without `--dry-run` proceeds to Step 3 immediately.
+- **G9 backlog purity** still applies: the Step 2 plan must derive from the existing Improvement Backlog (Priority-1 finding); no new concerns introduced at the dry-run gate.
+- **G21 / G23 untouched**: HALT_SUCCESS criteria and residual accounting are not relevant to HALT_DRY_RUN (no scoring claim is made beyond carry-forward). [validation.md G23 § HALT_DRY_RUN bypass](validation.md) makes this explicit.
+
+---
+
 ## HALT_LOOP_CAP
 
 Triggered when loop counter reaches cap (default 10; override via env var or directive).
@@ -263,8 +313,12 @@ When user invokes `/contest-refactor --reset` or selects a reset option from a h
 ```
 Reset complete. Archived prior CURRENT_REVIEW.md to REVIEW_HISTORY.md with
 divider "--- HALT_<state> reset by user (UTC <timestamp>) ---". Cleared
-CURRENT_REVIEW.json. Loop counter reset to 1. Removed any <!-- loop_cap: N -->
-directive.
+CURRENT_REVIEW.json. <if LOOP_STATE.json was present: Deleted LOOP_STATE.json
+(orphaned mid-Step-3 checkpoint discarded).> Loop counter reset to 1.
+Removed any <!-- loop_cap: N --> directive.
+
+Preserved across reset: findings_registry.json + REVIEW_HISTORY.json
+(cross-loop oscillation detection survives the reset).
 
 Starting fresh from current source. Running Step 0 Discovery now.
 ```

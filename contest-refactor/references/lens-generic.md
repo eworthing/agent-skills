@@ -36,6 +36,19 @@ Apply when stack detected is Rust, Go, Python, Node, Java, Kotlin, Ruby, etc. Us
 - Each mutable concern: one source of truth.
 - Tests live at module interfaces. Replace, don't layer.
 
+## Incremental Test Scoping
+
+Used when `--test-filter <pattern>` is set on the invocation. Step 0 records `test_scope: "incremental"` and `test_filter: "<pattern>"` in CURRENT_REVIEW.json discovery (first loop only). Per-stack patterns:
+
+- pytest: `pytest -k <pattern>`  OR  `pytest tests/<dir>/`
+- cargo: `cargo test <module_path>::`
+- go: `go test ./pkg/<dir>/...`
+- vitest: `vitest <pattern>`  OR  `vitest --changed`
+- jest: `jest --testPathPattern <pattern>`
+- tox: `tox -e <env> -- -k <pattern>`
+
+Trade-off: incremental misses regressions outside `<pattern>`. G21 in [validation.md](validation.md) requires a full-suite reverify before HALT_SUCCESS when any prior loop in REVIEW_HISTORY ran incremental.
+
 ## Generic Core Questions
 
 1. Would experienced engineers in this language respect this as high-quality?

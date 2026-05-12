@@ -130,6 +130,17 @@ A passing test count is not test strategy. Before scoring `test_strategy` ≥ 9,
 
 Aggregate count → test_strategy is a fake-clean reward. Surface coverage → test_strategy is honest evidence.
 
+## Incremental Test Scoping
+
+Used when `--test-filter <pattern>` is set on the invocation. Step 0 records `test_scope: "incremental"` and `test_filter: "<pattern>"` in CURRENT_REVIEW.json discovery (first loop only). Per-stack patterns:
+
+- XCTest: `swift test --filter <ModuleTests>.<TestClass>/<testMethod>`
+- Module-level: `swift test --filter <ModuleTests>`
+- Package-level: `cd <pkg_dir> && swift test --filter <pattern>`
+- xcodebuild equivalent: `xcodebuild test -only-testing:<Target>/<Class>/<Method>`
+
+Trade-off: incremental misses regressions outside `<pattern>`. G21 in [validation.md](validation.md) requires a full-suite reverify before HALT_SUCCESS when any prior loop in REVIEW_HISTORY ran incremental.
+
 ## Useful Metrics
 
 When available:
