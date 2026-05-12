@@ -2,18 +2,11 @@
 name: bash-macos
 author: eworthing
 description: >-
-  Prevents GNU and Bash 4 assumptions in repository shell scripts and keeps scripts
-  compatible with macOS Bash 3.2 and BSD tools. Also applies naming conventions
-  (lowercase snake_case, verb-first). Use when creating or editing .sh files,
-  creating or renaming shell or Python scripts in scripts/ or the repo root,
-  debugging script failures on macOS, or dealing with sed, readlink, mapfile,
-  or shell portability issues.
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Glob
+  Keeps shell scripts portable across macOS (Bash 3.2, BSD userland) and Linux
+  (Bash 4+, GNU coreutils). Use when writing or editing .sh files, debugging
+  "command not found", "invalid option", or "mapfile: command not found" errors,
+  fixing GNU-vs-BSD sed/grep/date/readlink issues, or renaming shell scripts
+  (snake_case verb-first).
 ---
 
 # Bash macOS Compatibility
@@ -31,20 +24,31 @@ Use when:
 - Proposing shell commands for macOS dev machines
 - Debugging "command not found" or "invalid option" errors in scripts
 
-See also:
+## References
 
+- [references/forbidden-features.md](references/forbidden-features.md) — full Bash 4+ feature matrix + workarounds
+- [references/template.md](references/template.md) — minimal portable script template + shellcheck guide
 - [references/output-modes.md](references/output-modes.md) — three-mode compact/verbose/raw output helpers
 - [references/naming.md](references/naming.md) — full naming verb table and checklist
 
-## Bash Version Target
+## Shell Target
 
-Target Bash 3.2 (macOS default). Use this shebang and guard:
+Target `/bin/bash` 3.2 explicitly. Note the macOS shell landscape:
+
+- `/bin/bash` — Bash 3.2.x (frozen since GPLv3). Skill target.
+- `/bin/sh` — separate binary; runs in POSIX mode. Does **not** honor `[[`,
+  `((`, arrays, or `local`. If your shebang is `#!/bin/sh`, none of the
+  bashisms in this skill apply.
+- `/bin/zsh` — default *user* login shell since Catalina (2019). Scripts with
+  `#!/bin/bash` still run under bash, not zsh. zsh has different array indexing
+  (1-based), different glob behavior, and no `set -o pipefail` by default.
+
+Shebang + version guard:
 
 ```bash
 #!/bin/bash
 set -euo pipefail
 
-# Ensure we're running under bash (script logic must remain compatible with bash 3.2)
 if [[ -z "${BASH_VERSINFO:-}" ]] || [[ "${BASH_VERSINFO[0]}" -lt 3 ]]; then
   echo "ERROR: Requires bash (macOS ships bash 3.2)" >&2
   exit 2
@@ -53,47 +57,16 @@ fi
 
 ## Forbidden Features (Bash 4+ only)
 
-| Feature | Bash Version | Workaround |
-|---------|--------------|------------|
-| `declare -A` (associative arrays) | 4.0+ | Use indexed arrays or functions |
-| `mapfile` / `readarray` | 4.0+ | Use `while read` loop |
-| `${var,,}` lowercase | 4.0+ | Use `tr '[:upper:]' '[:lower:]'` |
-| `${var^^}` uppercase | 4.0+ | Use `tr '[:lower:]' '[:upper:]'` |
-| `shopt -s globstar` (`**`) | 4.0+ | Use `find` instead |
-| `coproc` | 4.0+ | Use named pipes |
-| `wait -n` | 4.3+ | Use `wait` without `-n` |
+Bash 4+ features that don't exist on macOS's `/bin/bash`:
 
-### Associative Array Workaround
+- `declare -A` (associative arrays)
+- `mapfile` / `readarray`
+- `${var,,}` / `${var^^}` case conversion
+- `shopt -s globstar` (`**`)
+- `coproc`, `wait -n`, `local -n`
 
-```bash
-# WRONG - Bash 4+ only
-declare -A colors
-colors["red"]="#FF0000"
-echo "${colors[$key]}"
-
-# CORRECT - Use functions or case statements
-get_color() {
-  case "$1" in
-    red)   echo "#FF0000" ;;
-    blue)  echo "#0000FF" ;;
-    *)     echo "#000000" ;;
-  esac
-}
-color=$(get_color "red")
-```
-
-### mapfile Workaround
-
-```bash
-# WRONG - Bash 4+ only
-mapfile -t lines < "$file"
-
-# CORRECT - Works on Bash 3.2
-lines=()
-while IFS= read -r line; do
-  lines+=("$line")
-done < "$file"
-```
+See [references/forbidden-features.md](references/forbidden-features.md) for
+the full matrix with workarounds for each.
 
 ## BSD vs GNU Userland
 
@@ -136,7 +109,7 @@ realpath_portable() {
 }
 ```
 
-### Command Existence Check
+### Command existence check
 
 ```bash
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -150,49 +123,56 @@ fi
 
 ## Required Patterns
 
-### Long options
-
-Bash `getopts` only supports short options; accept `--help` (and friends) by mapping long options to short ones before parsing.
-
-```bash
-args=()
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --help) args+=("-h") ;;
-    --) shift; break ;;
-    *) args+=("$1") ;;
-  esac
-  shift
-done
-set -- "${args[@]}" "$@"
-```
-
-### Error Handling
+### Error handling
 
 ```bash
 die() { echo "ERROR: $*" >&2; exit 1; }
 ```
 
-### Color Output Helpers
-
-Use ANSI color codes for scannable success/warning/failure output. Use
-`printf` rather than `echo -e` — `echo -e` is not POSIX and some shells
-(including `/bin/sh` on macOS when not run as bash) print `-e` literally:
+**`set -E` for ERR trap in functions.** Bash 3.2's `ERR` trap does not
+propagate into shell functions, subshells, or command substitutions by default.
+If you want a `trap '...' ERR` handler to fire from inside functions, set
+`-E` (alias `set -o errtrace`):
 
 ```bash
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-RED='\033[0;31m'
-NC='\033[0m'
+set -Eeuo pipefail
+trap 'echo "FAILED at line $LINENO" >&2' ERR
+```
 
+Without `-E`, the trap silently never fires from helper functions and you lose
+the failure signal.
+
+### Argument validation
+
+Fail fast on missing required input. Use `${VAR:-}` form under `set -u` —
+bare `$VAR` triggers "unbound variable" before the test runs:
+
+```bash
+[[ -z "${PROJECT_ROOT:-}" ]] && die "PROJECT_ROOT env var required"
+[[ $# -lt 1 ]] && { usage; die "missing <target> argument"; }
+[[ -f "$1" ]] || die "not a file: $1"
+```
+
+### Dry-run pattern
+
+Gate destructive operations behind a single `run_cmd` helper driven by
+`DRY_RUN="${DRY_RUN:-0}"` — easier to audit than scattering `if [[ $DRY_RUN ]]`
+everywhere. See [references/template.md](references/template.md) for the
+helper.
+
+### Color output helpers
+
+Use `printf '%b\n'` for ANSI-colored status output, not `echo -e` (`echo -e`
+is not POSIX and `/bin/sh` on macOS prints `-e` literally):
+
+```bash
+GREEN='\033[0;32m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; NC='\033[0m'
 info() { printf '%b\n' "${GREEN}✓${NC} $1"; }
 warn() { printf '%b\n' "${YELLOW}⚠${NC} $1"; }
 fail() { printf '%b\n' "${RED}✗${NC} $1"; }
 ```
 
-Prefer `info`/`fail` over raw `echo` for user-facing status messages. Use `warn` for non-fatal issues.
-
-### Safe Temp Directory
+### Safe temp directory
 
 ```bash
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/project.XXXXXX")"
@@ -200,110 +180,35 @@ cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT INT TERM
 ```
 
-### Quoting Rules
+### Quoting rules
 
 - **Always** quote variables: `"$var"`, `"${arr[@]}"`
 - **Never** parse `ls` output
 - Use `printf '%s\n'` instead of `echo -e`
 
-## Minimal Script Template
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-# Ensure we're running under bash (script logic must remain compatible with bash 3.2)
-if [[ -z "${BASH_VERSINFO:-}" ]] || [[ "${BASH_VERSINFO[0]}" -lt 3 ]]; then
-  echo "ERROR: Requires bash (macOS ships bash 3.2)" >&2
-  exit 2
-fi
-
-have() { command -v "$1" >/dev/null 2>&1; }
-die() { echo "ERROR: $*" >&2; exit 1; }
-
-usage() {
-  cat <<EOF
-Usage: $(basename "$0") [options]
-
-Options:
-  -h, --help   Show help
-EOF
-}
-
-case "${1:-}" in
-  -h|--help) usage; exit 0 ;;
-esac
-
-# Script logic here
-```
-
 ## Verification Checklist
 
 Before marking a script complete:
 
-- [ ] Shebang is `#!/bin/bash` or `#!/bin/sh`
-- [ ] No `declare -A` (associative arrays)
-- [ ] No `mapfile` or `readarray`
-- [ ] No `${var,,}` or `${var^^}` case conversion
-- [ ] Uses `sed -E` not `sed -r`
-- [ ] Uses `grep -E` not `grep -P`
-- [ ] All variables quoted
-- [ ] Syntax check passes: `bash -n script.sh`
-- [ ] Shellcheck passes (if available): `shellcheck -s bash script.sh`
+- [ ] `#!/bin/bash` + `set -euo pipefail` (add `-E` if using `trap ERR`)
+- [ ] No Bash 4+ features ([forbidden-features.md](references/forbidden-features.md))
+- [ ] `sed -E` not `sed -r`; `grep -E` not `grep -P`
+- [ ] All variables quoted; never parses `ls`
+- [ ] `bash -n script.sh` + `shellcheck -s bash script.sh` pass
 - [ ] Runs on macOS: `/bin/bash script.sh --help`
-- [ ] Name follows snake_case verb-first (e.g. `run_tests.sh`)
-- [ ] If script produces verbose subprocess output, uses three-mode compact/verbose/raw output with `capture_run` and `.artifacts/<tool>/latest.log`
-
-## Quick Syntax Check
-
-```bash
-# Verify script parses without errors
-bash -n script.sh
-
-# Run with verbose debugging
-bash -x script.sh
-
-# Shellcheck (if available) - catches many compatibility issues
-if have shellcheck; then
-  shellcheck -s bash script.sh
-fi
-```
-
-### Shellcheck Integration
-
-[Shellcheck](https://www.shellcheck.net/) is highly recommended. Install via:
-
-```bash
-brew install shellcheck
-```
-
-Run on all project scripts:
-
-```bash
-shellcheck scripts/*.sh
-```
-
-Key shellcheck codes for compatibility:
-- **SC2039**: Uses non-POSIX features (catches Bash 4+ issues)
-- **SC2086**: Double quote to prevent globbing/splitting
-- **SC2034**: Variable appears unused (helps find typos)
+- [ ] Name is snake_case verb-first (e.g. `run_tests.sh`)
+- [ ] Destructive ops gated behind `DRY_RUN` or confirmation
+- [ ] Verbose subprocess output uses 3-mode compact/verbose/raw pattern
 
 ## Token-Efficient Output
 
-Scripts producing verbose subprocess output (builds, linters, test runners,
-coverage) must offer three modes:
+Scripts producing verbose subprocess output (builds, linters, tests, coverage)
+must offer three modes: `compact` (default; one-line-per-stage + top 10 lines
+on failure), `--verbose` (top 50 lines), `--raw` (passthrough teed to
+`${ROOT_DIR}/.artifacts/<tool>/latest.log`).
 
-| Mode | Flag | Behavior |
-|------|------|----------|
-| compact | *(default)* | One-line-per-stage summary; top 10 lines on failure |
-| verbose | `--verbose` | Top 50 lines of failing stages |
-| raw | `--raw` | Full passthrough, teed to log file |
-
-Logs go to `${ROOT_DIR}/.artifacts/<tool-name>/latest.log`.
-
-See [references/output-modes.md](references/output-modes.md) for the full
-helper set (`capture_run`, `show_failure_detail`, per-stage functions, mode
-dispatch, control flow).
+See [references/output-modes.md](references/output-modes.md) for `capture_run`,
+`show_failure_detail`, per-stage functions, and mode dispatch.
 
 ## Common Gotcha: Arrays in Conditionals
 
