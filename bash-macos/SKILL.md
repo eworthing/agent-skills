@@ -119,9 +119,20 @@ sed -E 's/pattern/replacement/g' "$file" > "$TMP_DIR/out" && mv "$TMP_DIR/out" "
 
 ### Portable realpath (no `readlink -f`)
 
+Pure-bash, no external interpreter (macOS 12.3+ does not ship `python3` by
+default). Resolves to an absolute path; does not follow symlinks beyond the
+final component — sufficient for most script-local path resolution:
+
 ```bash
 realpath_portable() {
-  python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1"
+  local target="$1"
+  if [[ -d "$target" ]]; then
+    (cd "$target" && pwd -P)
+  else
+    local dir
+    dir="$(cd "$(dirname "$target")" && pwd -P)"
+    printf '%s/%s\n' "$dir" "$(basename "$target")"
+  fi
 }
 ```
 
@@ -164,17 +175,19 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 ### Color Output Helpers
 
-Use ANSI color codes for scannable success/warning/failure output:
+Use ANSI color codes for scannable success/warning/failure output. Use
+`printf` rather than `echo -e` — `echo -e` is not POSIX and some shells
+(including `/bin/sh` on macOS when not run as bash) print `-e` literally:
 
 ```bash
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-NC='\033[0m'  # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
-info() { echo -e "${GREEN}✓${NC} $1"; }
-warn() { echo -e "${YELLOW}⚠${NC} $1"; }
-fail() { echo -e "${RED}✗${NC} $1"; }
+info() { printf '%b\n' "${GREEN}✓${NC} $1"; }
+warn() { printf '%b\n' "${YELLOW}⚠${NC} $1"; }
+fail() { printf '%b\n' "${RED}✗${NC} $1"; }
 ```
 
 Prefer `info`/`fail` over raw `echo` for user-facing status messages. Use `warn` for non-fatal issues.
@@ -317,10 +330,3 @@ PATH-installed tools; none for git hooks (Git convention: `pre-commit`).
 
 See [references/naming.md](references/naming.md) for the full verb table,
 prefix vs subdirectory guidance, and naming checklist.
-
-## Constraints
-
-- Target Bash 3.2 (macOS default)
-- Assume BSD userland (sed, grep, date, stat)
-- Never use GNU-only flags without detection/fallback
-- Always quote variable expansions
