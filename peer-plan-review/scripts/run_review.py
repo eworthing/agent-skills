@@ -44,12 +44,6 @@ from ppr_process import _kill_tree, _popen_session_kwargs
 # Re-exports from submodules (preserves mock.patch("run_review.X") paths)
 # ---------------------------------------------------------------------------
 from ppr_providers import (  # noqa: F401
-    _EFFORT_DEFAULTS,
-    BINARIES,
-    BUILDERS,
-    EFFORT_MAP,
-    MODEL_ALIASES,
-    PROVIDER_CAPS,
     PROVIDERS,
     build_claude_cmd,
     build_codex_cmd,
@@ -63,7 +57,7 @@ from ppr_providers import (  # noqa: F401
 
 def parse_args():
     p = argparse.ArgumentParser(description="Peer plan review CLI adapter")
-    p.add_argument("--reviewer", required=False, choices=BINARIES.keys(), help="Reviewer backend")
+    p.add_argument("--reviewer", required=False, choices=PROVIDERS.keys(), help="Reviewer backend")
     p.add_argument("--plan-file", help="Path to plan markdown file")
     p.add_argument("--prompt-file", help="Path to review prompt file")
     p.add_argument("--output-file", help="Path to write reviewer response")
@@ -103,10 +97,11 @@ def parse_args():
 
 def self_check(reviewer):
     """Verify the reviewer CLI is installed and responsive."""
-    binary = BINARIES.get(reviewer)
-    if not binary:
+    provider = PROVIDERS.get(reviewer)
+    if not provider:
         print(f"Unknown reviewer: {reviewer}", file=sys.stderr)
         return False
+    binary = provider["binary"]
 
     path = shutil.which(binary)
     if not path:
@@ -206,7 +201,7 @@ def run_review(args, logger=None):
     # caches, or extensions from the user's real Gemini home.
     gemini_config_dir = None
     if reviewer == "gemini":
-        budget = EFFORT_MAP["gemini"].get(args.effort) if args.effort else None
+        budget = PROVIDERS["gemini"]["effort_map"].get(args.effort) if args.effort else None
         gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
         source_dir = os.environ.get(
             "GEMINI_CONFIG_DIR",
@@ -245,7 +240,7 @@ def run_review(args, logger=None):
 
     # Prepare prompt stdin for providers configured for stdin prompting.
     stdin_data = None
-    if PROVIDER_CAPS[reviewer].get("prompt_mode") == "stdin":
+    if PROVIDERS[reviewer]["caps"].get("prompt_mode") == "stdin":
         stdin_data = read_prompt(args.prompt_file)
 
     # Snapshot Codex session files before exec
@@ -271,7 +266,7 @@ def run_review(args, logger=None):
             # current resume state without mutating the original args.
             build_args = copy.copy(args)
             build_args.resume = use_resume
-            cmd = BUILDERS[reviewer](build_args, session_id)
+            cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id)
 
             print(f"Running: {reviewer} review...", file=sys.stderr)
 
@@ -424,7 +419,8 @@ def run_review(args, logger=None):
         # Resolve actual model and effort
         actual_model = meta.get("model") or session.get("model") or args.model or "default"
         actual_effort = (
-            meta.get("effort") or args.effort or _EFFORT_DEFAULTS.get(reviewer, "default")
+            meta.get("effort") or args.effort
+            or PROVIDERS.get(reviewer, {}).get("effort_default", "default")
         )
         round_num = session.get("round", 0) + 1
 
@@ -445,7 +441,7 @@ def run_review(args, logger=None):
             ),
             "round": round_num,
             "resume_requested": resume_requested,
-            "resume_supported": PROVIDER_CAPS.get(reviewer, {}).get("resume_supported", False),
+            "resume_supported": PROVIDERS.get(reviewer, {}).get("caps", {}).get("resume_supported", False),
             "resume_attempted": resume_requested and session.get("session_id") is not None,
             "resume_fallback_used": fallback_used,
             "resume_reason": (
@@ -475,8 +471,9 @@ def run_review(args, logger=None):
         return returncode
 
     except FileNotFoundError:
-        print(f"Binary not found: {BINARIES[reviewer]}", file=sys.stderr)
-        logger.log("binary_not_found", provider=reviewer, error=BINARIES[reviewer])
+        binary = PROVIDERS[reviewer]["binary"]
+        print(f"Binary not found: {binary}", file=sys.stderr)
+        logger.log("binary_not_found", provider=reviewer, error=binary)
         return 1
     except OSError as e:
         print(f"Execution error: {e}", file=sys.stderr)
@@ -499,7 +496,7 @@ def _validate_model(args):
     """Normalize model alias or warn if unrecognized."""
     if not args.model or not args.reviewer:
         return
-    aliases = MODEL_ALIASES.get(args.reviewer, {})
+    aliases = PROVIDERS.get(args.reviewer, {}).get("model_aliases", {})
     if not aliases:
         # Providers with no aliases (codex, copilot): pass through silently
         return
@@ -534,7 +531,7 @@ def main():
         if not args.reviewer:
             # Check all providers
             all_ok = True
-            for r in BINARIES:
+            for r in PROVIDERS:
                 if not self_check(r):
                     all_ok = False
             sys.exit(0 if all_ok else 1)
@@ -542,9 +539,9 @@ def main():
             sys.exit(0 if self_check(args.reviewer) else 1)
 
     if args.list_models:
-        providers = [args.reviewer] if args.reviewer else list(MODEL_ALIASES.keys())
+        providers = [args.reviewer] if args.reviewer else list(PROVIDERS.keys())
         for provider in providers:
-            aliases = MODEL_ALIASES.get(provider, {})
+            aliases = PROVIDERS.get(provider, {}).get("model_aliases", {})
             if aliases:
                 alias_strs = [
                     f"{k} ({v})" for k, v in sorted(aliases.items())
@@ -614,7 +611,7 @@ def main():
                 sys.exit(1)
 
     # Verify binary is installed
-    binary = BINARIES[args.reviewer]
+    binary = PROVIDERS[args.reviewer]["binary"]
     if not shutil.which(binary):
         print(f"Error: {binary} not found in PATH. Install it first.", file=sys.stderr)
         sys.exit(1)

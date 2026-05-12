@@ -1,16 +1,14 @@
 """
-ppr_providers.py — Provider registry, command builders, and constants.
+ppr_providers.py — Provider registry and command builders.
 
 TO ADD A NEW PROVIDER:
-    1. Add one entry to the PROVIDERS dict at the bottom of this file
-       (below the build_*_cmd functions).
-    2. Create references/<provider>.md with install/auth/CLI notes.
-    3. If session-ID extraction needs a custom path, add it to ppr_metadata.py
-       and wire it into the registry entry.
+    1. Write a build_<name>_cmd(args, session_id) function above the
+       PROVIDERS dict.
+    2. Add one entry to the PROVIDERS dict at the bottom of this file.
+    3. Create references/<provider>.md with install/auth/CLI notes.
+    4. If session-ID extraction needs a custom path, add it to ppr_metadata.py.
 
-All other modules (run_review.py, ppr_metadata.py, tests) consume the derived
-BINARIES / EFFORT_MAP / MODEL_ALIASES / PROVIDER_CAPS / _EFFORT_DEFAULTS views
-below — no call sites need to change.
+All call sites consume PROVIDERS directly (or via get_provider()).
 """
 
 from pathlib import Path
@@ -26,8 +24,7 @@ def build_codex_cmd(args, session_id=None):
 
     Web search/fetch works without flag changes — read-only sandbox +
     approval_mode=never already permits web access."""
-    binary = BINARIES["codex"]
-    cmd = [binary, "exec"]
+    cmd = ["codex", "exec"]
 
     if args.resume and session_id:
         cmd.extend(["resume", str(session_id)])
@@ -46,7 +43,7 @@ def build_codex_cmd(args, session_id=None):
         cmd.extend(["-m", args.model])
 
     if args.effort:
-        level = EFFORT_MAP["codex"].get(args.effort, args.effort)
+        level = PROVIDERS["codex"]["effort_map"].get(args.effort, args.effort)
         cmd.extend(["-c", f"model_reasoning_effort={level}"])
 
     # stdin marker — prompt is piped via stdin
@@ -56,8 +53,7 @@ def build_codex_cmd(args, session_id=None):
 
 def build_gemini_cmd(args, session_id=None):
     """Build Gemini CLI command."""
-    binary = BINARIES["gemini"]
-    cmd = [binary]
+    cmd = ["gemini"]
 
     if args.resume and session_id:
         cmd.extend(["--resume", str(session_id)])
@@ -82,10 +78,8 @@ def build_gemini_cmd(args, session_id=None):
 
 def build_claude_cmd(args, session_id=None):
     """Build Claude Code command."""
-    binary = BINARIES["claude"]
-
     # -p requires an argument; prompt text is piped via stdin
-    cmd = [binary, "-p", ""]
+    cmd = ["claude", "-p", ""]
 
     if args.resume and session_id:
         cmd.extend(["--resume", session_id])
@@ -107,7 +101,7 @@ def build_claude_cmd(args, session_id=None):
         cmd.extend(["--model", args.model])
 
     if args.effort:
-        level = EFFORT_MAP["claude"].get(args.effort, args.effort)
+        level = PROVIDERS["claude"]["effort_map"].get(args.effort, args.effort)
         cmd.extend(["--effort", level])
 
     return cmd
@@ -115,10 +109,8 @@ def build_claude_cmd(args, session_id=None):
 
 def build_copilot_cmd(args, session_id=None):
     """Build Copilot CLI command."""
-    binary = BINARIES["copilot"]
-
     # -p requires an argument; prompt text is piped via stdin
-    cmd = [binary, "-p", "", "-s"]
+    cmd = ["copilot", "-p", "", "-s"]
 
     if args.resume and session_id:
         cmd.extend([f"--resume={session_id}"])
@@ -146,7 +138,7 @@ def build_copilot_cmd(args, session_id=None):
         cmd.extend(["--model", args.model])
 
     if args.effort:
-        level = EFFORT_MAP["copilot"].get(args.effort, args.effort)
+        level = PROVIDERS["copilot"]["effort_map"].get(args.effort, args.effort)
         cmd.extend(["--reasoning-effort", level])
 
     return cmd
@@ -154,9 +146,8 @@ def build_copilot_cmd(args, session_id=None):
 
 def build_opencode_cmd(args, session_id=None):
     """Build opencode run command."""
-    binary = BINARIES["opencode"]
     # Prompt text is piped via stdin; run still needs an empty string to avoid interactive mode
-    cmd = [binary, "run", ""]
+    cmd = ["opencode", "run", ""]
 
     cmd.extend(["--format", "json"])
     cmd.append("--dangerously-skip-permissions")
@@ -168,7 +159,7 @@ def build_opencode_cmd(args, session_id=None):
         cmd.extend(["-m", args.model])
 
     if args.effort:
-        level = EFFORT_MAP["opencode"].get(args.effort, args.effort)
+        level = PROVIDERS["opencode"]["effort_map"].get(args.effort, args.effort)
         cmd.extend(["--variant", level])
 
     return cmd
@@ -319,12 +310,3 @@ def get_provider(name):
     """Look up a provider by name. Raises KeyError on unknown provider."""
     return PROVIDERS[name]
 
-
-# Derived views — kept for backward compatibility. Do NOT edit these directly;
-# edit PROVIDERS above and they stay consistent.
-BINARIES = {name: p["binary"] for name, p in PROVIDERS.items()}
-EFFORT_MAP = {name: p["effort_map"] for name, p in PROVIDERS.items()}
-_EFFORT_DEFAULTS = {name: p["effort_default"] for name, p in PROVIDERS.items()}
-MODEL_ALIASES = {name: p["model_aliases"] for name, p in PROVIDERS.items()}
-PROVIDER_CAPS = {name: p["caps"] for name, p in PROVIDERS.items()}
-BUILDERS = {name: p["build_cmd"] for name, p in PROVIDERS.items()}

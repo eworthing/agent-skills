@@ -1199,7 +1199,7 @@ class TestRunReviewExecution(unittest.TestCase):
 from ppr_io import probe_writable, validate_prompt_file  # noqa: E402
 from ppr_log import EventLogger  # noqa: E402
 from ppr_metadata import compute_plan_metadata  # noqa: E402
-from ppr_providers import PROVIDER_CAPS  # noqa: E402
+from ppr_providers import PROVIDERS  # noqa: E402
 
 
 class TestEventLogger(unittest.TestCase):
@@ -1398,19 +1398,19 @@ class TestWriteProbes(unittest.TestCase):
 
 
 class TestProviderCapabilityTable(unittest.TestCase):
-    """Tests for PROVIDER_CAPS."""
+    """Tests for the caps field on every PROVIDERS entry."""
 
     def test_all_providers_have_caps(self):
-        from ppr_providers import BINARIES
-        for provider in BINARIES:
-            self.assertIn(provider, PROVIDER_CAPS, f"Missing PROVIDER_CAPS for {provider}")
+        for name, p in PROVIDERS.items():
+            self.assertIn("caps", p, f"Missing caps on PROVIDERS[{name}]")
 
     def test_caps_fields_present(self):
         required = {"binary", "prompt_mode", "output_mode", "model_flag",
                      "effort_flag", "resume_flag_style", "resume_supported", "safety_flags"}
-        for provider, caps in PROVIDER_CAPS.items():
+        for name, p in PROVIDERS.items():
+            caps = p["caps"]
             for field in required:
-                self.assertIn(field, caps, f"Missing {field} in PROVIDER_CAPS[{provider}]")
+                self.assertIn(field, caps, f"Missing {field} in PROVIDERS[{name}].caps")
 
 
 class TestResumeMetadata(unittest.TestCase):
@@ -1715,8 +1715,9 @@ class TestMockPathCompatibility(unittest.TestCase):
     def test_build_cmd_intercepted(self):
         sentinel_cmd = ["echo", "test"]
         mock_build = mock.Mock(return_value=sentinel_cmd)
+        from ppr_providers import PROVIDERS as _PROVIDERS
         with (
-            mock.patch.dict("run_review.BUILDERS", {"claude": mock_build}),
+            mock.patch.dict(_PROVIDERS["claude"], {"build_cmd": mock_build}),
             mock.patch("run_review.subprocess.Popen", return_value=self._proc()),
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
@@ -1891,26 +1892,7 @@ VERDICT: REVISE
 
 
 class TestProviderRegistry(unittest.TestCase):
-    """PROVIDERS is the single source of truth; derived dicts must match."""
-
-    def test_derived_views_match_registry(self):
-        from ppr_providers import (
-            _EFFORT_DEFAULTS,
-            BINARIES,
-            BUILDERS,
-            EFFORT_MAP,
-            MODEL_ALIASES,
-            PROVIDER_CAPS,
-            PROVIDERS,
-        )
-        self.assertEqual(set(BINARIES), set(PROVIDERS))
-        for name, p in PROVIDERS.items():
-            self.assertEqual(BINARIES[name], p["binary"])
-            self.assertIs(BUILDERS[name], p["build_cmd"])
-            self.assertEqual(EFFORT_MAP[name], p["effort_map"])
-            self.assertEqual(_EFFORT_DEFAULTS[name], p["effort_default"])
-            self.assertEqual(MODEL_ALIASES[name], p["model_aliases"])
-            self.assertEqual(PROVIDER_CAPS[name], p["caps"])
+    """PROVIDERS is the single source of truth for all provider plumbing."""
 
     def test_get_provider_returns_entry(self):
         from ppr_providers import get_provider
