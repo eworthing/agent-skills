@@ -131,8 +131,13 @@ def check_name_matches_dir(skill_path):
 
 @check("No extraneous files", "structure")
 def check_no_extraneous(skill_path):
-    """Check for files that shouldn't be in a skill (README, CHANGELOG, etc.)."""
-    bad_files = {"README.md", "CHANGELOG.md", "INSTALLATION_GUIDE.md",
+    """Check for files that shouldn't be in a skill (CHANGELOG, etc.).
+
+    README.md is allowed alongside SKILL.md: SKILL.md is agent-facing, README.md
+    is human-facing for GitHub browsing. EVAL.md is allowed because that's what
+    this evaluator writes.
+    """
+    bad_files = {"CHANGELOG.md", "INSTALLATION_GUIDE.md",
                  "QUICK_REFERENCE.md", "LICENSE", "LICENSE.md"}
     found = []
     for f in os.listdir(skill_path):
@@ -324,6 +329,14 @@ def check_no_ext_deps(skill_path):
         "_thread", "__future__",
     }
 
+    # Sibling-module names that live in scripts/ — those are intra-skill imports,
+    # not external deps.
+    siblings = {
+        os.path.splitext(f)[0]
+        for f in os.listdir(scripts_dir)
+        if f.endswith(".py") and not f.startswith(".")
+    }
+
     ext_deps = []
     for f in os.listdir(scripts_dir):
         if not f.endswith(".py"):
@@ -339,13 +352,15 @@ def check_no_ext_deps(skill_path):
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     top = alias.name.split(".")[0]
-                    if top not in stdlib:
-                        ext_deps.append(f"{f}: import {alias.name}")
+                    if top in stdlib or top in siblings:
+                        continue
+                    ext_deps.append(f"{f}: import {alias.name}")
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     top = node.module.split(".")[0]
-                    if top not in stdlib:
-                        ext_deps.append(f"{f}: from {node.module}")
+                    if top in stdlib or top in siblings:
+                        continue
+                    ext_deps.append(f"{f}: from {node.module}")
 
     if ext_deps:
         return CheckResult("Scripts use no external dependencies", CheckResult.WARN,
