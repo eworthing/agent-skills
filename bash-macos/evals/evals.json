@@ -1,0 +1,49 @@
+{
+  "skill_name": "bash-macos",
+  "evals": [
+    {
+      "id": 0,
+      "name": "cold-start-git-branches-recent",
+      "prompt": "Write a portable shell script `list_recent_branches.sh` that prints all local git branches modified in the last 7 days, one per line. The script must run on stock macOS (Bash 3.2, BSD `date`). Save it to a file the user can run with `/bin/bash list_recent_branches.sh`.",
+      "expected_output": "A working .sh script with #!/bin/bash, set -euo pipefail, no Bash 4+ features (no mapfile, no declare -A), uses BSD-compatible date arithmetic (e.g. `date -v-7d` or numeric epoch math, NOT `date -d '7 days ago'`), and prints branch names from `git for-each-ref refs/heads/`.",
+      "files": [],
+      "assertions": [
+        {"name": "has_bash_shebang", "check": "First line is `#!/bin/bash` or `#!/usr/bin/env bash`"},
+        {"name": "has_strict_mode", "check": "Contains `set -euo pipefail` (or equivalent)"},
+        {"name": "no_mapfile", "check": "Does NOT contain `mapfile` or `readarray`"},
+        {"name": "no_assoc_array", "check": "Does NOT contain `declare -A`"},
+        {"name": "no_gnu_date_d", "check": "Does NOT contain `date -d ` (with space) — that's GNU-only"},
+        {"name": "uses_bsd_or_epoch", "check": "Uses `date -v` (BSD) or epoch arithmetic for date math"},
+        {"name": "snake_case_name", "check": "Filename is `list_recent_branches.sh` (verb-first snake_case)"},
+        {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "mapfile-to-bash3",
+      "prompt": "This shell script fails on macOS with `mapfile: command not found`. Fix it so it runs on Bash 3.2 while preserving behavior (read each line of file.txt into an array `lines`):\n\n```bash\n#!/bin/bash\nset -euo pipefail\nmapfile -t lines < file.txt\nfor line in \"${lines[@]}\"; do\n  echo \"got: $line\"\ndone\n```",
+      "expected_output": "Same script with `mapfile` replaced by a `while IFS= read -r ... do lines+=(\"$line\") done < file.txt` loop. Must preserve `-t` semantics (no trailing newlines) and `-r` (no backslash interpretation).",
+      "files": [],
+      "assertions": [
+        {"name": "no_mapfile", "check": "Does NOT contain `mapfile` or `readarray`"},
+        {"name": "uses_while_read", "check": "Contains `while IFS= read -r` or equivalent loop"},
+        {"name": "appends_to_array", "check": "Contains `lines+=` or `lines[${#lines[@]}]=`"},
+        {"name": "preserves_iteration", "check": "Still iterates over `\"${lines[@]}\"`"},
+        {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "naming-rename",
+      "prompt": "Our repo has a script called `SyncLogs.sh`. We want to rename it to follow the project's naming conventions. What should it be renamed to, and why? Also show me the `git mv` command to do it.",
+      "expected_output": "Renamed to `sync_logs.sh` (lowercase snake_case, verb-first). Reasoning cites snake_case + verb-first rule. Provides `git mv SyncLogs.sh sync_logs.sh` command.",
+      "files": [],
+      "assertions": [
+        {"name": "correct_target_name", "check": "Recommends `sync_logs.sh` as the new name"},
+        {"name": "cites_snake_case", "check": "Mentions snake_case or lowercase rule"},
+        {"name": "cites_verb_first", "check": "Mentions verb-first rule"},
+        {"name": "shows_git_mv", "check": "Shows `git mv SyncLogs.sh sync_logs.sh` (case-sensitive rename may need two-step on case-insensitive FS)"}
+      ]
+    }
+  ]
+}
