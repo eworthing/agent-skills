@@ -1,3 +1,37 @@
+# agent-skills — Project Conventions
+
+This repo holds reusable skills for AI coding agents (Claude Code, Codex CLI, opencode, Gemini CLI, Copilot CLI). See [README.md](README.md) for the full skill catalog.
+
+## Layout
+
+- One skill per top-level directory.
+- Each skill:
+  - `SKILL.md` — YAML frontmatter (`name`, `description`, `allowed-tools`) + body. Description must contain a "Use when…" trigger phrase.
+  - `references/*.md` — optional progressive-disclosure files. Linked from SKILL.md.
+  - `scripts/*` — optional helper executables. Bash scripts target macOS 3.2 + Linux 4+ (see `bash-macos` skill).
+  - `EVAL.md` — quality score against the skill-evaluator rubric. Target ≥ 90/100 before publishing.
+
+## Workflow
+
+- Skill descriptions: lead with capabilities, include "Use when…" trigger phrases (required by `scripts/eval-skill.py`).
+- Shell scripts: portable Bash only — no `mapfile`, no GNU-only `sed`/`date` flags. Consult `bash-macos/SKILL.md` when writing.
+- Edits validate with: `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py <skill-dir>`. Aim for 100% on automated checks + ≥ 90 on the manual rubric.
+- Commit style: `feat(<skill-name>): <change> (<old-score>→<new-score> EVAL)` when an eval score shifts. Otherwise standard Conventional Commits.
+
+## Installation (Symlink Pattern)
+
+Every skill is installed by symlinking from this repo into each agent's per-user skills directory:
+
+```bash
+ln -s "$PWD/<skill>" "$HOME/.claude/skills/<skill>"
+ln -s "$PWD/<skill>" "$HOME/.codex/skills/<skill>"
+ln -s "$PWD/<skill>" "$HOME/.config/opencode/skills/<skill>"
+```
+
+Symlinks (not copies) so repo edits propagate immediately to every agent.
+
+---
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 
