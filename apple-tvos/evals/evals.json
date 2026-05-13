@@ -50,6 +50,54 @@
       "expected_output": "verdict.md states 'clean'. Snippet uses `.fullScreenCover()` (tvOS-D01 satisfied), Menu-button dismissal via `.onExitCommand` (tvOS-A01 satisfied), default focus set on appear via `@FocusState` without `DispatchQueue.main.asyncAfter` (tvOS-A03 satisfied). No buttons use `.plain` with custom styling. No glass-on-glass. No destructive dialog. No issues.",
       "files": ["fixtures/onexitcommand-correct.swift"],
       "expected_rule_ids": []
+    },
+    {
+      "id": 6,
+      "name": "pod-without-focusstate",
+      "prompt": "Review fixtures/pod-without-focusstate.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-F02: ChannelTile is POD (no @State / @Observable) and is made focusable but has no parent @FocusState + `.focused(_:equals:)` to anchor focus identity. On parent redraw of ChannelGrid, focus may move unexpectedly. Fix: add `@FocusState private var focusedID: Channel.ID?` and `.focused($focusedID, equals: channel.id)` on each tile.",
+      "files": ["fixtures/pod-without-focusstate.swift"],
+      "expected_rule_ids": ["tvOS-F02"]
+    },
+    {
+      "id": 7,
+      "name": "animation-on-focusable",
+      "prompt": "Review fixtures/animation-on-focusable.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-F03: `.animation(.spring..., value: highlighted)` is applied to the Button (the focusable element) where it fights the built-in focus hover effect, producing jitter on real hardware. Fix: move `.animation(...)` inside the label closure scoped to the `.scaleEffect` child content, not on the outer Button.",
+      "files": ["fixtures/animation-on-focusable.swift"],
+      "expected_rule_ids": ["tvOS-F03"]
+    },
+    {
+      "id": 8,
+      "name": "no-settle-delay",
+      "prompt": "Review fixtures/no-settle-delay.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-F04: ShowCard starts an expensive video preview the moment focus arrives. Rapid swiping through cards starts and immediately cancels playback on every passed card. Fix: add a token-based settle delay (focusToken counter + Task.sleep guard) so only the final focused card triggers preview playback.",
+      "files": ["fixtures/no-settle-delay.swift"],
+      "expected_rule_ids": ["tvOS-F04"]
+    },
+    {
+      "id": 9,
+      "name": "paging-scroll",
+      "prompt": "Review fixtures/paging-scroll.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-F06 (severity 3): `.scrollTargetBehavior(.paging)` on horizontal carousel produces jarring full-screen page jumps on 1920x1080. Fix: switch to `.scrollTargetBehavior(.viewAligned)` for smoother focus-to-focus navigation matching tvOS platform expectations. Bypass note: keep `.paging` only if the design intent is a true full-screen pager (onboarding, slideshow).",
+      "files": ["fixtures/paging-scroll.swift"],
+      "expected_rule_ids": ["tvOS-F06"]
+    },
+    {
+      "id": 10,
+      "name": "focus-helper-traits",
+      "prompt": "Review fixtures/focus-helper-traits.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-A04: zero-size `Rectangle().fill(.clear)` used purely as a default-focus helper carries `.accessibilityAddTraits(.isButton)` — VoiceOver announces a spurious 'Button' with no label. Fix: replace `.accessibilityAddTraits(.isButton)` with `.accessibilityHidden(true)`; better still, use `.defaultFocus($defaultFocus, .button)` on a real focusable element instead of a hidden Rectangle.",
+      "files": ["fixtures/focus-helper-traits.swift"],
+      "expected_rule_ids": ["tvOS-A04"]
+    },
+    {
+      "id": 11,
+      "name": "glass-on-glass",
+      "prompt": "Review fixtures/glass-on-glass.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-D02: `.buttonStyle(.glass)` and `.buttonStyle(.glassProminent)` applied to toolbar buttons. The system already renders toolbar chrome with Liquid Glass treatment on tvOS — stacking glass-style buttons on top produces muddy double-blur. Fix: drop the explicit glass button styles in chrome; the system applies the appropriate treatment automatically. Reserve `.glass` / `.glassProminent` for non-chrome contexts.",
+      "files": ["fixtures/glass-on-glass.swift"],
+      "expected_rule_ids": ["tvOS-D02"]
     }
   ]
 }

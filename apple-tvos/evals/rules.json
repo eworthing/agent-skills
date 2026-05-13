@@ -1,0 +1,151 @@
+{
+  "skill_name": "apple-tvos",
+  "schema_version": 1,
+  "severity_legend": {
+    "1": "Data loss or focus break — severity-1 rules have no bypass for destructive cases.",
+    "2": "UX regression visible to users.",
+    "3": "Polish / consistency."
+  },
+  "areas": {
+    "focus": "references/focus-engine.md",
+    "accessibility": "references/accessibility.md",
+    "design": "references/design-regressions.md"
+  },
+  "rules": [
+    {
+      "id": "tvOS-F01",
+      "area": "focus",
+      "severity": 1,
+      "summary": "No .focusable() on container wrappers.",
+      "rationale": "Focus stops at the outer view; children never receive focus.",
+      "bypass": "Containers intentionally acting as a single focusable unit — use a real Button instead.",
+      "reference": "references/focus-engine.md#tvos-f01--composition-no-focusable-on-containers"
+    },
+    {
+      "id": "tvOS-F02",
+      "area": "focus",
+      "severity": 1,
+      "summary": "Pair focusable POD rows with parent @FocusState.",
+      "rationale": "Anchors focus identity against parent redraws.",
+      "bypass": "Rows that already hold @State / @Observable — SwiftUI tracks identity via the property wrapper.",
+      "reference": "references/focus-engine.md#tvos-f02--pod-views--focusstate"
+    },
+    {
+      "id": "tvOS-F03",
+      "area": "focus",
+      "severity": 2,
+      "summary": "Scope custom .animation() to child content, not the focusable view.",
+      "rationale": "Custom animation on focusable view fights the built-in hover effect.",
+      "bypass": ".animation(nil, ...) to explicitly disable; animations on @FocusState-driven properties.",
+      "reference": "references/focus-engine.md#tvos-f03--animation-focus-hover-conflict"
+    },
+    {
+      "id": "tvOS-F04",
+      "area": "focus",
+      "severity": 2,
+      "summary": "Use token-based settle delay for focus-driven animations.",
+      "rationale": "Avoids noise during rapid swiping.",
+      "bypass": "Cheap idempotent focus reactions (color tint) that cancel cleanly.",
+      "reference": "references/focus-engine.md#tvos-f04--animation-focus-settle-delay"
+    },
+    {
+      "id": "tvOS-F05",
+      "area": "focus",
+      "severity": 1,
+      "summary": "ScrollView needs focusable children to be scrollable.",
+      "rationale": "Scroll on tvOS is focus-driven.",
+      "bypass": "Code branched #if !os(tvOS); single-screen content that fits without scrolling.",
+      "reference": "references/focus-engine.md#tvos-f05--scroll-focus-driven-scrolling"
+    },
+    {
+      "id": "tvOS-F06",
+      "area": "focus",
+      "severity": 3,
+      "summary": "Prefer .scrollTargetBehavior(.viewAligned) over .paging.",
+      "rationale": "Full-page jumps on 1920x1080 feel jarring; .viewAligned matches platform expectations.",
+      "bypass": "True full-screen pager UX (onboarding, slideshow) where page boundaries are intentional.",
+      "reference": "references/focus-engine.md#tvos-f06--scroll-viewaligned-over-paging"
+    },
+    {
+      "id": "tvOS-F07",
+      "area": "focus",
+      "severity": 2,
+      "summary": "Verify focus animations on real Apple TV hardware.",
+      "rationale": "Simulator does not replicate the hover curve, perspective lift, or specular shine.",
+      "bypass": "Animations not interacting with focus — still smoke-test on hardware before shipping.",
+      "reference": "references/focus-engine.md#tvos-f07--animation-simulator-vs-hardware"
+    },
+    {
+      "id": "tvOS-A01",
+      "area": "accessibility",
+      "severity": 2,
+      "summary": "Dismiss modals via .onExitCommand, not visible Close button.",
+      "rationale": "Menu button is the canonical tvOS dismissal. Close buttons clutter layout and confuse focus.",
+      "bypass": "Cross-platform shared code — .onExitCommand also triggers on macOS Escape (tvOS 13+, macOS 10.15+); no-op on iOS / iPadOS.",
+      "reference": "references/accessibility.md#tvos-a01--modal-dismissal-menu-button-not-close-button"
+    },
+    {
+      "id": "tvOS-A02",
+      "area": "accessibility",
+      "severity": 1,
+      "summary": "Destructive confirmationDialog / alert declares Cancel first.",
+      "rationale": "tvOS focus engine places default focus on first declared button; no pointer to override.",
+      "bypass": "Non-destructive confirmations where either choice is safe. Never bypass for role: .destructive.",
+      "reference": "references/accessibility.md#tvos-a02--destructive-confirmation-dialog-default-focus-severity-1"
+    },
+    {
+      "id": "tvOS-A03",
+      "area": "accessibility",
+      "severity": 1,
+      "summary": "Never manually reassert focus via DispatchQueue.main.asyncAfter.",
+      "rationale": "Hijacks events VoiceOver and Switch Control expect to handle themselves.",
+      "bypass": "None. Use focus containment (.fullScreenCover, scoped @FocusState).",
+      "reference": "references/accessibility.md#voiceover-on-tvos"
+    },
+    {
+      "id": "tvOS-A04",
+      "area": "accessibility",
+      "severity": 2,
+      "summary": "Hide non-actionable focus helpers with .accessibilityHidden(true).",
+      "rationale": "Rectangle().fill(.clear) used to capture focus should not announce as a button.",
+      "bypass": "Genuinely actionable helpers — model as a real Button.",
+      "reference": "references/accessibility.md#voiceover-on-tvos"
+    },
+    {
+      "id": "tvOS-D01",
+      "area": "design",
+      "severity": 1,
+      "summary": "Use .fullScreenCover() for tvOS modals, not .sheet().",
+      "rationale": ".sheet() focus containment is not reliable on tvOS; assume leak unless verified on hardware.",
+      "bypass": "Cross-platform code may use .sheet() on iOS branches and .fullScreenCover() on tvOS.",
+      "reference": "references/design-regressions.md#tvos-d01--modal-focus-containment"
+    },
+    {
+      "id": "tvOS-D02",
+      "area": "design",
+      "severity": 2,
+      "summary": "No glass-on-glass.",
+      "rationale": "Glass button (.glass / .glassProminent) inside glass-backed modal or chrome surface produces muddy double-blur.",
+      "bypass": "Glass chrome surfaces (toolbar / nav bar / tab bar) where the foreground itself is not glass.",
+      "reference": "references/design-regressions.md#tvos-d02--glass-on-glass-anti-pattern"
+    },
+    {
+      "id": "tvOS-D03",
+      "area": "design",
+      "severity": 2,
+      "summary": "No .buttonStyle(.plain) with custom styling on focusable views.",
+      "rationale": "Loses automatic focus-ring management; rings clip against ScrollView containers.",
+      "bypass": "Non-focusable content rows (display only) can use .plain safely.",
+      "reference": "references/design-regressions.md#tvos-d03--why-not-plain-with-custom-styling-on-tvos"
+    },
+    {
+      "id": "tvOS-D04",
+      "area": "design",
+      "severity": 2,
+      "summary": "Walk tvOS QA checklist before merging.",
+      "rationale": "Toolbar traversal, default focus on entry, Menu-button dismiss path, no focus flicker.",
+      "bypass": "PRs that touch zero tvOS-rendered code.",
+      "reference": "references/design-regressions.md#tvos-d04--tvos-focus-traversal-qa-checklist"
+    }
+  ]
+}

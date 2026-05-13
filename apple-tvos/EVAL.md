@@ -1,10 +1,10 @@
 # apple-tvos Evaluation
 
-**Date:** 2026-05-13 (P1 lift: rule IDs + bypass contexts + eval fixtures + context7 corrections)
+**Date:** 2026-05-13 (P2 lift: rules.md extract + full eval coverage + rules.json)
 **Evaluator:** Claude Opus 4.7
 **Skill version:** Definitive tvOS skill — focus engine + accessibility deltas + design regressions
 **Automated score:** 13/13 (100%)
-**Manual score:** **96/100**
+**Manual score:** **99/100**
 
 ---
 
@@ -67,7 +67,7 @@ precedent.
 | 2.1 | Fault Tolerance | 4/4 | Guidance teaches resilience: settle-delay debounce token, POD + `@FocusState` identity anchor, focus-containment alternative to manual reassertion. |
 | 2.2 | Error Reporting | 3/4 | Severity-1 designation surfaces UX-failure cost. No structured "diagnostic" output (doc-only). Could lift to 4 with a single-screen "tvOS gotcha decision tree" / glossary at top of SKILL.md. |
 | 2.3 | Recoverability | 4/4 | Reads idempotent. Manual-focus-reassertion anti-pattern + containment alternative explicitly cover the "regression appeared, what now?" recovery path. |
-| 3.1 | Token Cost | 3/4 | SKILL.md 204 lines after rule index + bypass contexts (was 129, target <150 for 4/4). 150–250 band = 3/4. References 188 + 112 + 174 lines split by topic; agent loads only relevant one. Lift to 4: extract rule index + bypass table to `references/rules.md` and link from SKILL.md. |
+| 3.1 | Token Cost | 4/4 | SKILL.md 119 lines (target <150). Rule index + per-rule bypass extracted to `references/rules.md` (129 lines). References split by topic; agent loads only relevant one. |
 | 3.2 | Execution Efficiency | 4/4 | Progressive disclosure via 3-level hierarchy (description → SKILL.md router → topic reference). |
 | 4.1 | Learnability | 4/4 | Headline Rules section in SKILL.md is self-contained for 80% of cases; references reachable when a rule needs more depth. Code pairs labeled WRONG / CORRECT. |
 | 4.2 | Consistency | 4/4 | Same structure across all 3 reference files: wrong/right code, mitigation paragraph, cross-refs section. Same severity vocabulary. |
@@ -80,13 +80,13 @@ precedent.
 | 6.3 | Data Safety | 4/4 | Doc-only — no writes. |
 | 7.1 | Modularity | 4/4 | SKILL.md = pure router. Three topic references map 1:1 to three topic areas. |
 | 7.2 | Modifiability | 4/4 | Adding a new tvOS topic = new reference file + scope-table row + headline-rules section + review-checklist block. Pattern obvious from existing 3. |
-| 7.3 | Testability | 3/4 | `evals/evals.json` with 6 fixtures (5 violation cases + 1 clean) covering 7 of 13 testable rule IDs (F01, F05, A01, A02, A03, D01, D03). Lift to 4: add fixtures for F02, F03, F04, F06, A04, D02 (F07 + D04 not source-evaluable). |
+| 7.3 | Testability | 4/4 | `evals/evals.json` with 12 fixtures (11 violation cases + 1 clean false-positive check). Full coverage of all 13 source-evaluable rules (F01–F06, A01–A04, D01–D03). F07 (hardware-only) + D04 (procedural QA checklist) not source-evaluable by design. |
 | 8.1 | Trigger Precision | 4/4 | Description has 6+ specific scenarios per topic, "Use when…" phrase, scope-vs-auth boundary explicit ("authoritative community `swiftui-expert-skill` owns iOS/macOS depth"). |
 | 8.2 | Progressive Disclosure | 4/4 | Three levels: description → SKILL.md (router, 129 lines) → 3 topic references (focus-engine, accessibility, design-regressions). |
-| 8.3 | Composability | 3/4 | Cross-refs into 5 sibling skills make composition explicit. No machine-readable rule index (e.g. JSON) for agents to ingest. Doc-only skills can reasonably stop at 3. |
+| 8.3 | Composability | 4/4 | `evals/rules.json` machine-readable rule index (15 rules with id / area / severity / summary / rationale / bypass / reference path + severity legend + area paths). Cross-refs into 5 sibling skills + 1 auth skill make composition explicit. |
 | 8.4 | Idempotency | 4/4 | Doc reads idempotent. |
 | 8.5 | Escape Hatches | 4/4 | Each headline rule in SKILL.md has an explicit *Bypass / N/A* line covering shared-code carve-outs, non-tvOS-supporting apps, and version-specific exemptions. tvOS-A02 / tvOS-A03 explicitly marked "no bypass" for severity-1 cases. |
-| **TOTAL** | | **96/100** | Excellent band (≥ 90). Three P1 lifts: 4.3 +1, 7.3 +1, 8.5 +1 (= +3). Side-effect loss: 3.1 Token Cost 4→3 (SKILL.md 129→204 lines). Net: +2. |
+| **TOTAL** | | **99/100** | Excellent band (≥ 90). Three P2 lifts on top of P1: 3.1 Token Cost 3→4 (`references/rules.md` extract, SKILL.md back to 119), 7.3 Testability 3→4 (full source-evaluable coverage 13/13), 8.3 Composability 3→4 (`evals/rules.json`). Remaining −1: 2.2 Error Reporting 3/4 (no decision-tree at top of SKILL.md). |
 
 ## Priority Fixes
 
@@ -101,16 +101,20 @@ precedent.
 - **`.onExitCommand` cross-platform claim.** Was: "no-op on iOS/macOS". Now: "tvOS 13+ AND macOS 10.15+; triggers on Escape on macOS; no-op on iOS / iPadOS / visionOS." Per Apple SwiftUI docs (`/websites/developer_apple_swiftui`).
 - **`.glassBackgroundEffect()` in glass-on-glass example.** Was used in a tvOS code sample; modifier is **visionOS-only**. Rewrote the example to use chrome glass surfaces (`.toolbar` + `.buttonStyle(.glass)`) and `.fullScreenCover` content with `.borderedProminent` for tvOS.
 
-### P1 — Remaining (lifts 97 → 99)
+### P2 — Shipped (2026-05-13)
 
-4. **7.3 Testability 3→4.** Add fixtures for tvOS-F02 (POD without `@FocusState`), tvOS-F03 (custom `.animation()` on focusable view), tvOS-F04 (no settle delay), tvOS-F06 (`.paging` over `.viewAligned`), tvOS-A04 (`.accessibilityAddTraits(.isButton)` on Rectangle), tvOS-D02 (glass-on-glass). tvOS-F07 + tvOS-D04 are procedural; not source-evaluable.
+4. **3.1 Token Cost 3→4.** ✅ Rule index + bypass extracted to `references/rules.md` (129 lines). SKILL.md 204 → 119.
+5. **7.3 Testability 3→4.** ✅ 6 new fixtures (F02, F03, F04, F06, A04, D02). Full source-evaluable coverage 13/13.
+6. **8.3 Composability 3→4.** ✅ `evals/rules.json` — 15 rules with id / area / severity / summary / rationale / bypass / reference path + severity legend + area paths.
 
-### P2 — Nice to Have
+### Remaining (lifts 99 → 100)
 
-5. **2.2 Error Reporting 3→4.** "tvOS Gotcha Decision Tree" at top of SKILL.md: "Symptom → reference → rule ID."
-6. **8.3 Composability 3→4.** Generate `evals/rules.json` (machine-readable rule index: id, area, summary, severity, reference-path).
-7. **`.sheet()` focus-leak version specificity.** Reworded as "assume leak unless verified on hardware for the specific deployment target" — still not a hard version threshold. Apple does not publish reliability matrix; live verification is the standard.
-8. **Frontmatter `version: 1.0.0`** field.
+7. **2.2 Error Reporting 3→4.** "tvOS Gotcha Decision Tree" at top of SKILL.md: "Symptom → reference → rule ID." Only remaining sub-4 criterion.
+
+### Deferred (not score-blocking)
+
+- **`.sheet()` focus-leak version specificity.** Apple does not publish a reliability matrix; live hardware verification is the standard documented in tvOS-D01.
+- **Frontmatter `version: 1.0.0`** field. Repo convention not yet standard.
 
 ## Revision History
 
@@ -123,3 +127,4 @@ precedent.
 | 2026-05-13 (rename + expand) | _pending_ | Renamed to `apple-tvos`. Absorbed tvOS deltas from eliminated `swiftui-accessibility` (Menu dismissal, destructive dialog focus) → new `references/accessibility.md`. Absorbed tvOS deltas from eliminated `swiftui-design-review` (modal containment, focus reassertion anti-pattern, glass-on-glass, button-style focus-ring, QA checklist) → new `references/design-regressions.md`. Dropped `references/observable-state.md` (@AppStorage gotcha conflicts with auth `state-management.md` guidance). Renamed `tvos.md` → `focus-engine.md`. SKILL.md rewritten as 3-topic router with combined review checklist. |
 | 2026-05-13 (re-score) | 94/100 | Full-rubric re-evaluation after rename + expand. Excellent band reached. Strengths: Completeness 4, scope discipline 4 (sibling-skill table + auth deferral), token cost 4 (SKILL.md 129 lines), trigger precision 4 (134-word description with 15+ scenarios). Gaps: 7.3 Testability 2 (no eval fixtures), 4.3 Feedback Quality 3 (no rule-ID index), 8.5 Escape Hatches 3 (no per-rule N/A contexts), 8.3 Composability 3 (no machine-readable rule index), 2.2 Error Reporting 3 (no decision tree). |
 | 2026-05-13 (P1 lift) | 96/100 | Three P1 gaps shipped: 4.3 Feedback Quality 3→4 (rule index `tvOS-F01..F07`, `tvOS-A01..A04`, `tvOS-D01..D04` with severity column; review checklist + reference headers cite IDs), 7.3 Testability 2→3 (`evals/evals.json` with 6 fixtures covering 7 of 13 testable rule IDs, including 1 clean fixture as false-positive check), 8.5 Escape Hatches 3→4 (per-rule *Bypass / N/A* lines; severity-1 A02 / A03 marked "no bypass"). Side-effect loss: 3.1 Token Cost 4→3 (SKILL.md 129→204 lines). Net: +2. Context7-driven corrections: `.onExitCommand` cross-platform claim fixed (macOS Escape, not no-op); `.glassBackgroundEffect()` removed from glass-on-glass tvOS example (visionOS-only modifier). |
+| 2026-05-13 (P2 lift) | 99/100 | Three P2 lifts: 3.1 Token Cost 3→4 (rule index + bypass extracted to `references/rules.md`; SKILL.md 204→119), 7.3 Testability 3→4 (6 new fixtures F02 / F03 / F04 / F06 / A04 / D02; full 13/13 source-evaluable coverage — F07 + D04 procedural by design), 8.3 Composability 3→4 (`evals/rules.json` — 15 rules with id / area / severity / summary / rationale / bypass / reference + severity legend + area paths). Net: +3. Only remaining sub-4 criterion: 2.2 Error Reporting (no decision tree). |
