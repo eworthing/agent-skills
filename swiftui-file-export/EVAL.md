@@ -106,7 +106,7 @@ Path: /Users/Shared/git/agent-skills/swiftui-file-export
 | 7.3 | Testability | 3/4 | Patterns are testable in host app via UI tests; skill itself has no code to test. |
 | 8.1 | Trigger Precision | 4/4 | Description includes 12+ specific triggers (fileExporter, Transferable, ShareLink, NSSavePanel, CSV/JSON, menu bar, sandbox, silent failure). |
 | 8.2 | Progressive Disclosure | 3/4 | Two-level (frontmatter description → SKILL.md). No references/ yet because the body is still compact enough; could split debugging into references if it grows. |
-| 8.3 | Composability | 3/4 | Composes naturally with swiftui-design-tokens, swiftui-accessibility, and ios-security-hardening. No machine-readable output (n/a for guidance skill). |
+| 8.3 | Composability | 3/4 | Composes naturally with swiftui-design-tokens, xctest-ui-testing (identifier conventions + AccessibilityMarkerView for fileExporter sheet markers), and ios-security-hardening. No machine-readable output (n/a for guidance skill). |
 | 8.4 | Idempotency | 4/4 | Documentation skill; re-reading is always safe. |
 | 8.5 | Escape Hatches | 4/4 | "Do NOT Use For" section explicitly lists out-of-scope cases (file import, tvOS-only, server writes). |
 | | **TOTAL** | **92/100** | Solid, publishable. |

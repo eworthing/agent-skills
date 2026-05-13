@@ -176,11 +176,13 @@ reduce-motion alternatives live there.
 
 ## Cross-References
 
-- `xctest-ui-testing` references/tvos.md — XCUITest focus assertions,
-  Siri Remote API, focus reachability audit
-- `swiftui-design-review` references/liquid-glass-and-tvos.md — design
-  review checklist for tvOS focus regressions
-- `swiftui-accessibility` references/tvos.md — `.onExitCommand` Menu
-  dismissal, identifier naming convention
-- `swiftui-design-tokens` references/motion-tokens.md — platform-branched
-  spring tokens and reduce-motion alternatives
+- [references/accessibility.md](accessibility.md) — `.onExitCommand` Menu
+  dismissal, destructive dialog default focus, VoiceOver on tvOS
+- [references/design-regressions.md](design-regressions.md) — modal focus
+  containment, manual focus reassertion anti-pattern, glass-on-glass,
+  button-style focus-ring, tvOS focus-traversal QA checklist
+- `xctest-ui-testing` `references/tvos.md` — XCUITest focus assertions,
+  Siri Remote API, focus reachability audit; typed-enum identifier
+  conventions; `AccessibilityMarkerView` for tvOS root markers
+- `swiftui-design-tokens` `references/motion-tokens.md` —
+  platform-branched spring tokens and reduce-motion alternatives

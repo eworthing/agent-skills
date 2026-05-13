@@ -53,7 +53,8 @@ Do NOT use when:
 - The change is documentation- or comment-only
 - Only one platform is supported by the target — no conditionals needed
 - The question is about Swift Concurrency, accessibility, or design tokens
-  (use `swift-concurrency`, `swiftui-accessibility`, `swiftui-design-tokens`)
+  (use `swift-concurrency`, `apple-tvos` for tvOS-specific deltas,
+  `swiftui-design-tokens`)
 
 ## Platform Conditionals: `canImport` vs `os(...)`
 
@@ -162,7 +163,7 @@ of UIKit APIs at the symbol level. Always prefer `#if os(...)` for API gating.
 | Haptics | `UIImpactFeedbackGenerator` and friends require `#if os(iOS)` — `canImport(UIKit)` is **not** sufficient |
 | Focus | Use `.focusSection()`, `.focusable()`, `.onMoveCommand`, `.focused($state)` instead of touch / hover |
 | Pointer | No mouse / trackpad APIs; gate cursor + hover modifiers |
-| `Menu` button dismissal | Press the Menu button (`UIPressType.menu`) — see `swiftui-accessibility` skill for the standard dismissal handler |
+| `Menu` button dismissal | Press the Menu button (`UIPressType.menu`) — see `apple-tvos` `references/accessibility.md` for the standard `.onExitCommand` dismissal handler |
 
 Example — haptics gating done right:
 
@@ -325,7 +326,7 @@ the lowest-common-denominator equivalents.
 
 - `swift-file-splitting` — visibility-preserving file extraction
 - `swiftui-drag-drop` — drag-and-drop architecture, including tvOS gating
-- `swiftui-accessibility` — tvOS Menu-button dismissal and focus rules
+- `apple-tvos` — tvOS focus engine, accessibility deltas (Menu-button dismissal, destructive dialog focus), and design regressions
 - `xctest-ui-testing` — full XCTest testability checklist
 - `swiftui-expert-skill` — modern SwiftUI API surface, including deprecated-API replacements (`references/latest-apis.md`)
 
