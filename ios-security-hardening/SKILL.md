@@ -2,9 +2,12 @@
 name: ios-security-hardening
 author: eworthing
 description: >-
-  Applies input-validation and file-handling safeguards for untrusted data. Relevant
-  when importing files, restoring backups, handling URLs or user-provided paths, or
-  reviewing features that accept external input.
+  Applies input-validation and file-handling safeguards for untrusted data including
+  path-traversal prevention, URL scheme/domain allowlisting, multi-source image
+  reference resolution, CSV/JSON sanitization, AI prompt sanitization, sandbox
+  directory usage, and iOS Data Protection levels. Use when importing files,
+  restoring backups, handling URLs or user-provided paths, processing CSV/JSON
+  from external sources, or reviewing features that accept external input.
 allowed-tools:
   - Read
   - Write
@@ -106,6 +109,104 @@ private func isAllowedDomain(_ host: String?) -> Bool {
     return allowedDomains.contains { host.hasSuffix($0) }
 }
 ```
+
+HTTP is intentionally allowed alongside HTTPS for image CDN references — some
+public image CDNs still serve over HTTP. The domain allowlist remains the
+primary security boundary; never relax the allowlist to broaden scheme support.
+
+#### URL Source Resolution (multi-source image references)
+
+When an image reference can be an asset catalog name, bundled asset, local file,
+or remote URL (e.g., when importing from CSV/JSON where references may take any
+form), resolve the source type at the boundary and branch on it. Asset catalog
+and bundled-asset references skip URL validation entirely; remote URLs and local
+files go through scheme/domain/path validation.
+
+Supported reference formats:
+
+- `asset://image-name` → asset catalog lookup
+- `file://bundle/image-name` → bundled asset catalog
+- Scheme-less strings (e.g., `"Sun"`) → asset catalog
+- `https://...` / `http://...` → remote URL (scheme + domain allowlist)
+- `file:///path/...` → local file (validated against trusted roots)
+
+```swift
+enum ImageSource {
+    case assetCatalog(String)
+    case localFile(URL)
+    case remoteURL(URL)
+}
+
+func imageSource(from reference: String, allowedDomains: [String]) -> ImageSource? {
+    // Asset catalog scheme
+    if reference.hasPrefix("asset://") {
+        let name = String(reference.dropFirst("asset://".count))
+        return name.isEmpty ? nil : .assetCatalog(name)
+    }
+
+    // Bundled asset
+    if reference.hasPrefix("file://bundle/") {
+        let name = String(reference.dropFirst("file://bundle/".count))
+        return name.isEmpty ? nil : .assetCatalog(name)
+    }
+
+    // Scheme-less → treat as asset catalog name
+    if URL(string: reference)?.scheme == nil {
+        return reference.isEmpty ? nil : .assetCatalog(reference)
+    }
+
+    // URL forms — validate scheme + (for remote) domain
+    guard let url = URL(string: reference),
+          let scheme = url.scheme?.lowercased() else {
+        return nil
+    }
+
+    if scheme == "file" {
+        // Local file: caller must additionally validate against trusted roots
+        return .localFile(url)
+    }
+
+    guard ["https", "http"].contains(scheme),
+          let host = url.host,
+          allowedDomains.contains(where: { host.hasSuffix($0) }) else {
+        return nil
+    }
+    return .remoteURL(url)
+}
+```
+
+Callers branch on the case and load each source type with the appropriate API
+(asset catalog name through the platform image loader, remote/local URLs
+through `AsyncImage`):
+
+```swift
+if let source = imageSource(from: item.imageRef, allowedDomains: ["cdn.example.com"]) {
+    switch source {
+    case let .assetCatalog(name):
+        if let image = loadAssetCatalogImage(named: name) {
+            image.resizable().aspectRatio(contentMode: .fill)
+        } else {
+            placeholder
+        }
+    case let .localFile(url), let .remoteURL(url):
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case let .success(image): image.resizable()
+            case .failure, .empty: placeholder
+            @unknown default: placeholder
+            }
+        }
+    }
+} else {
+    placeholder
+}
+```
+
+This pattern protects against three classes of mistake: (1) passing
+asset-catalog names to `AsyncImage` (silent failure — no network request, no
+image), (2) passing remote URLs to the platform's image catalog loader (silent
+failure — name not found), (3) accepting a scheme like `javascript:` or
+`data:` (would pass an unvalidated `URL(string:)` check).
 
 #### CSV/Input Sanitization
 
@@ -298,33 +399,36 @@ func export(to filename: String) throws {
 }
 ```
 
-### Example 2: Generic Image URL Loading
+### Example 2: Multi-Source Image Reference Loading
+
+When image references can be any of: asset catalog name, bundled asset, local
+file, or remote URL — branch on source type. See "URL Source Resolution"
+section above for the full `imageSource(from:allowedDomains:)` helper.
 
 **Before:**
 ```swift
-// WRONG - doesn't validate URL source
-AsyncImage(url: URL(string: item.imageUrl))
+// WRONG - blindly trusts string is a URL; silently fails for asset names
+AsyncImage(url: URL(string: item.imageRef))
 ```
 
 **After:**
 ```swift
-// CORRECT - validate URL scheme and domain before loading
-func validatedImageURL(from urlString: String) -> URL? {
-    guard let url = URL(string: urlString),
-          let scheme = url.scheme?.lowercased(),
-          ["https", "http"].contains(scheme),
-          isAllowedDomain(url.host) else {
-        return nil
-    }
-    return url
-}
-
-if let url = validatedImageURL(from: item.imageUrl) {
-    AsyncImage(url: url) { phase in
-        switch phase {
-        case let .success(image): image.resizable()
-        case .failure, .empty: placeholder
-        @unknown default: placeholder
+if let source = imageSource(from: item.imageRef,
+                             allowedDomains: ["cdn.example.com"]) {
+    switch source {
+    case let .assetCatalog(name):
+        if let image = loadAssetCatalogImage(named: name) {
+            image.resizable().aspectRatio(contentMode: .fill)
+        } else {
+            placeholder
+        }
+    case let .localFile(url), let .remoteURL(url):
+        AsyncImage(url: url) { phase in
+            switch phase {
+            case let .success(image): image.resizable()
+            case .failure, .empty: placeholder
+            @unknown default: placeholder
+            }
         }
     }
 } else {
