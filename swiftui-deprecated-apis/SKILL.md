@@ -4,10 +4,12 @@ author: eworthing
 original-author: Antoine van der Lee (AvdLee)
 source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
-  Replaces deprecated SwiftUI and Swift APIs with supported equivalents. Relevant when
-  Xcode reports deprecation warnings, when modernizing older code, or when editing code
-  that uses APIs such as NavigationView, foregroundColor, cornerRadius, or older
-  onChange signatures.
+  Replaces deprecated SwiftUI and Swift APIs with supported equivalents across
+  iOS, macOS, and tvOS. Use when Xcode reports deprecation warnings, when
+  modernizing older code, when editing code that uses APIs such as
+  NavigationView, foregroundColor, cornerRadius, accentColor, onChange,
+  GeometryReader, UIImpactFeedbackGenerator, Text("a") + Text("b"), or older
+  onChange/Task.sleep/sheet(isPresented:) signatures.
 allowed-tools:
   - Read
   - Write
@@ -90,6 +92,12 @@ xcodebuild build -scheme YourScheme -destination 'generic/platform=iOS'
 | `sheet(isPresented:)` with optional data | `sheet(item:)` | Safely unwraps the optional |
 | `confirmationDialog` on unrelated view | Attach to the triggering UI element | Enables Liquid Glass source animations on iOS 26 |
 
+### Text
+
+| Deprecated | Modern Replacement | Notes |
+|------------|-------------------|-------|
+| `Text("A") + Text("B")` | `Text("\(textA)\(textB)")` (string interpolation) | `+` concatenation is deprecated; use interpolation or compose with `Group { Text(...); Text(...) }` if styling differs |
+
 ### Scroll
 
 | Deprecated | Modern Replacement | Notes |
@@ -102,11 +110,11 @@ xcodebuild build -scheme YourScheme -destination 'generic/platform=iOS'
 |-------------------|-------------------|-------|
 | Fill + stroke overlay | Chain `.fill().stroke()` | Single-pass since iOS 17 |
 
-### Haptics (iOS 17+)
+### Haptics (iOS/macOS only, not tvOS)
 
 | Deprecated | Modern Replacement | Notes |
 |------------|-------------------|-------|
-| `UIImpactFeedbackGenerator` | `.sensoryFeedback(_:trigger:)` modifier | SwiftUI-native haptic API (iOS 17+) |
+| `UIImpactFeedbackGenerator` | `.sensoryFeedback(_:trigger:)` modifier | SwiftUI-native haptic API (iOS 17+). tvOS has no haptics hardware — no replacement, gate with `#if !os(tvOS)`. |
 
 ### Environment Keys
 
@@ -140,8 +148,8 @@ xcodebuild build -scheme YourScheme -destination 'generic/platform=iOS'
 | Deprecated Pattern | Modern Replacement | Availability | Notes |
 |-------------------|-------------------|-------------|-------|
 | `GeometryReader` (measuring) | `.onGeometryChange(for:of:action:)` | iOS 16+ | Fires only on value change |
-| `GeometryReader` (sizing) | `containerRelativeFrame()` | iOS 17+ | When only relative sizing needed |
-| `GeometryReader` (effects) | `.visualEffect { }` | iOS 17+ | For position-based visual changes |
+| `GeometryReader` (sizing) | `containerRelativeFrame()` | iOS 17+ / tvOS 17+ / macOS 14+ | When only relative sizing needed. On tvOS: only sees `ScrollView`/`NavigationStack`/`List` as containers — not arbitrary parents |
+| `GeometryReader` (effects) | `.visualEffect { }` | iOS 17+ / tvOS 17+ / macOS 14+ | For position-based visual changes. Safe with the tvOS focus system — does not interfere with focus animation |
 
 ### Accessibility
 
