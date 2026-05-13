@@ -101,24 +101,29 @@ Catalyst specifically:
 
 ## SwiftUI API Availability Matrix
 
-Each row links to the canonical Apple Developer documentation page for
-drift-checking against new SDKs.
+This is a **functional** availability table — a "Yes" means the API both
+compiles and behaves meaningfully on that platform. Apple's symbol-level
+availability is sometimes broader than functional availability; where the
+two diverge, this table follows what is useful in practice and the Notes
+column explains the gap. Each row links to the canonical Apple Developer
+documentation page for drift-checking against new SDKs.
 
 | API | iOS | iPadOS | Catalyst | macOS | tvOS | Notes | Apple Docs |
 |---|---|---|---|---|---|---|---|
 | `TabView` style `.page` | Yes | Yes | Yes | **No** | Yes | Use `.automatic` on macOS | [PageTabViewStyle](https://developer.apple.com/documentation/swiftui/pagetabviewstyle) |
 | `fullScreenCover` | Yes | Yes | Yes | **No** | Yes | Modifier is unavailable on macOS — use `.sheet` | [fullScreenCover](https://developer.apple.com/documentation/swiftui/view/fullscreencover(ispresented:ondismiss:content:)) |
-| `@Environment(\.editMode)` | Yes | Yes | Yes | **No** | **No** | iOS / iPadOS / Catalyst only | [editMode](https://developer.apple.com/documentation/swiftui/environmentvalues/editmode) |
+| `@Environment(\.editMode)` | Yes | Yes | Yes | **No** | **No** (functional) | Symbol exists on tvOS per Apple docs but there is no edit interface — gate with `#if os(iOS)` to avoid dead code | [editMode](https://developer.apple.com/documentation/swiftui/environmentvalues/editmode) |
 | `.topBarLeading` / `.topBarTrailing` | Yes | Yes | Yes | **No** | **No** | macOS / tvOS need different placements | [ToolbarItemPlacement](https://developer.apple.com/documentation/swiftui/toolbaritemplacement) |
-| `glassEffect` modifier | Yes | Yes | Yes | Yes | Yes | Available across SwiftUI 5+ targets | [glassEffect](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:isenabled:)) |
-| Drag-and-drop **receiving** (`.onDrop`, `DropDelegate`) | Yes | Yes | Yes | Yes | **No** | tvOS has no pointer / touch drag source | [onDrop](https://developer.apple.com/documentation/swiftui/view/ondrop(of:istargeted:perform:)-1xxgu) |
+| `glassEffect` modifier | iOS 26+ | iPadOS 26+ | Catalyst 26+ | macOS 26+ | tvOS 26+ | Liquid Glass — wrap with `if #available(iOS 26, *)` for older deployment targets | [glassEffect](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:)) |
+| Drag-and-drop **receiving** (`.onDrop`, `DropDelegate`) | Yes | Yes | Yes | Yes | **No** | tvOS has no pointer / touch drag source | [onDrop](https://developer.apple.com/documentation/swiftui/view/ondrop(of:istargeted:perform:)) |
 | `UIImpactFeedbackGenerator` (haptics) | Yes | Yes | Yes | **No** (use `NSHapticFeedbackManager`) | **No** (no hardware) | Gate with `#if os(iOS)`, not `canImport(UIKit)` | [UIImpactFeedbackGenerator](https://developer.apple.com/documentation/uikit/uiimpactfeedbackgenerator) |
-| `@CommandsBuilder` `ForEach` composition | n/a | n/a | n/a | **Fragile** | n/a | macOS commands — flatten via `Menu` for portability | [CommandsBuilder](https://developer.apple.com/documentation/swiftui/commandsbuilder) |
-| `NavigationSplitView` sidebar visibility default | Auto | Auto | Auto | Visible | n/a | macOS / Catalyst often need explicit `.detailOnly` or `.all` defaults | [NavigationSplitView](https://developer.apple.com/documentation/swiftui/navigationsplitview) |
+| `@CommandsBuilder` `ForEach` composition | n/a | n/a | n/a | **Fragile** | n/a | macOS commands — flatten via `Menu` for portability across SDK versions | [CommandsBuilder](https://developer.apple.com/documentation/swiftui/commandsbuilder) |
+| `NavigationSplitView` | iOS 16+ | iPadOS 16+ | Catalyst 16+ | macOS 13+ | tvOS 16+ (adapts to single column) | macOS / Catalyst often need explicit `columnVisibility` of `.detailOnly` or `.all` | [NavigationSplitView](https://developer.apple.com/documentation/swiftui/navigationsplitview) |
 
 When in doubt, check the Apple Developer "Availability" line in the symbol's
 documentation — SwiftUI sometimes ships the **type** on a platform but the
-**modifier or initializer** is unavailable.
+**modifier or initializer** is unavailable, and sometimes the symbol exists
+but the platform offers no UI affordance to drive it.
 
 ## Per-Platform Detail
 
@@ -179,13 +184,15 @@ running a build:
 ./scripts/audit-platform-guards.sh path/to/your/swift/tree
 ```
 
-Detects:
+Detects (script trap code → corresponding recovery-playbook entry):
 
-1. `canImport(UIKit)` gating UIKit symbols that crash at runtime on tvOS
-2. `@Environment(\.editMode)` wrapped by bare `#if !os(tvOS)` (macOS also lacks it)
-3. `.tabViewStyle(.page)` without an `os(macOS)` branch
-4. `.topBarLeading` / `.topBarTrailing` without an `os(macOS)` branch
-5. `.fullScreenCover` without an `os(macOS)` branch
+| Script | Detects | Recovery |
+|---|---|---|
+| `T1` | `canImport(UIKit)` gating UIKit symbols that crash at runtime on tvOS | `E1`, `E4` |
+| `T2` | `@Environment(\.editMode)` wrapped by bare `#if !os(tvOS)` (macOS also lacks the edit interface) | `E2` (analogous) |
+| `T3` | `.tabViewStyle(.page)` without an `os(macOS)` branch | `E6` |
+| `T4` | `.topBarLeading` / `.topBarTrailing` without an `os(macOS)` branch | `E2` |
+| `T5` | `.fullScreenCover` without an `os(macOS)` branch | `E8` |
 
 Exit code 0 = clean, 1 = at least one hit. Output format matches the
 `APPLE-MP-FAIL <platform> <error-class> <file>:<line>: <message>` line shape
@@ -195,6 +202,8 @@ documented in `references/recovery.md`.
 
 - `swift-file-splitting` — visibility-preserving file extraction
 - `swiftui-drag-drop` — drag-and-drop architecture, including tvOS gating
+- `swiftui-design-tokens` — design tokens for spacing, typography, motion,
+  button styling; macOS form style
 - `apple-tvos` — tvOS focus engine, accessibility deltas (Menu-button dismissal,
   destructive dialog focus), and design regressions
 - `xctest-ui-testing` — full XCTest testability checklist

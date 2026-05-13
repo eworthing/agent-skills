@@ -1,7 +1,7 @@
 # Mac Catalyst Gotchas
 
-Catalyst inherits the iOS API surface but renders through AppKit. Things that
-work on iPad regularly diverge here.
+Catalyst inherits the iOS API surface and renders through a UIKit variant that
+bridges to AppKit on macOS. Things that work on iPad regularly diverge here.
 
 ## Branching Catalyst-Specifically
 
