@@ -7,7 +7,7 @@ make executable (`chmod +x`), and replace the marked sections.
 
 ```bash
 #!/bin/bash
-set -euo pipefail
+set -euo pipefail   # add -E if you trap ERR and want it to fire inside functions
 
 # Ensure we're running under bash (script logic must remain compatible with bash 3.2)
 if [[ -z "${BASH_VERSINFO:-}" ]] || [[ "${BASH_VERSINFO[0]}" -lt 3 ]]; then
@@ -44,7 +44,10 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-set -- "${args[@]}" "$@"
+# Bash 3.2 + set -u: outer ${args[@]+...} is intentionally unquoted to guard
+# against empty/unset array (a quoted whole expression would emit one empty
+# string and break the guard). Inner "${args[@]}" stays quoted.
+set -- ${args[@]+"${args[@]}"} "$@"
 
 case "${1:-}" in
   -h|--help) usage; exit 0 ;;

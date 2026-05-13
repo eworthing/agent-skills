@@ -79,7 +79,7 @@ macOS uses BSD tools, not GNU. Common incompatibilities:
 | `grep -P` | `grep -E` | No PCRE; use extended regex |
 | `date -d` | `date -j -f` | Date parsing differs completely |
 | `readlink -f` | See below | Works on recent macOS; use `realpath_portable()` fallback if targeting older macOS |
-| `xargs -r` | Restructure | Accepted on recent macOS; restructure if targeting older macOS |
+| `xargs -r` | Largely unneeded | BSD `xargs` already skips empty stdin; `-r` is accepted on modern macOS (tested 13+) but mostly cosmetic. For unknown versions, guard the pipeline: `[[ -n "$(cmd)" ]] && cmd \| xargs ...` |
 | `stat -c` | `stat -f` | Different format syntax |
 
 ### Avoid `sed -i` for portability
@@ -92,9 +92,11 @@ sed -E 's/pattern/replacement/g' "$file" > "$TMP_DIR/out" && mv "$TMP_DIR/out" "
 
 ### Portable realpath (no `readlink -f`)
 
-Pure-bash, no external interpreter (macOS 12.3+ does not ship `python3` by
-default). Resolves to an absolute path; does not follow symlinks beyond the
-final component — sufficient for most script-local path resolution:
+Pure-bash, no external interpreter (macOS no longer ships a working
+`python3` at `/usr/bin/python3` by default — it's a CLT stub that prompts
+to install Xcode CLT, so scripts can't rely on it). Resolves to an
+absolute path; does not follow symlinks beyond the final component —
+sufficient for most script-local path resolution:
 
 ```bash
 realpath_portable() {
@@ -212,15 +214,29 @@ See [references/output-modes.md](references/output-modes.md) for `capture_run`,
 
 ## Common Gotcha: Arrays in Conditionals
 
+On Bash 3.2 with `set -u`, an array that was never declared triggers
+"unbound variable" when expanded — even inside the `${#...}` length
+operator. The `:-` default does **not** apply inside `${#...}`; the
+unbound check fires first.
+
 ```bash
-# WRONG - empty array expansion fails with set -u
+# WRONG - ${#name:-default} does not work; the :- never applies inside ${#...}
+if [[ ${#arr[@]:-0} -gt 0 ]]; then ...   # still errors if arr never declared
+
+# CORRECT - declare the array empty before use
+arr=()
 if [[ ${#arr[@]} -gt 0 ]]; then ...
 
-# CORRECT - guard with default
-if [[ ${#arr[@]:-0} -gt 0 ]]; then ...
-# Or initialize array before use
-arr=()
+# CORRECT - guard the expansion when the array may be unset
+for x in ${arr[@]+"${arr[@]}"}; do ...
 ```
+
+**Note on the `${arr[@]+"${arr[@]}"}` idiom:** the outer `${arr[@]+...}`
+is deliberately left unquoted — the one documented exception to the
+"always quote variables" rule above. Quoting the whole expression
+(`"${arr[@]+\"${arr[@]}\"}"`) would expand to a single empty string when
+the array is unset, defeating the guard. The **inner** `"${arr[@]}"`
+stays quoted to preserve element boundaries.
 
 ## Script Naming Conventions
 

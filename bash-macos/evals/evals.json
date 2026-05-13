@@ -14,7 +14,7 @@
         {"name": "no_assoc_array", "check": "Does NOT contain `declare -A`"},
         {"name": "no_gnu_date_d", "check": "Does NOT contain `date -d ` (with space) — that's GNU-only"},
         {"name": "uses_bsd_or_epoch", "check": "Uses `date -v` (BSD) or epoch arithmetic for date math"},
-        {"name": "snake_case_name", "check": "Filename is `list_recent_branches.sh` (verb-first snake_case)"},
+        {"name": "snake_case_name", "check": "Output script's saved filename is `list_recent_branches.sh` (verb-first snake_case) — prompt-level expectation; evals.json is reviewed by humans, not auto-graded by `eval-skill.py` in this repo"},
         {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
       ]
     },
