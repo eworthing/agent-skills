@@ -4,13 +4,18 @@ author: eworthing
 original-author: Antoine van der Lee (AvdLee)
 source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
-  Ensures accessible, VoiceOver-friendly interactive SwiftUI UI on iOS,
-  macOS, and tvOS with correct identifiers, labels, traits, and focus
-  behavior. Use when adding or changing buttons, toggles, forms, sheets,
-  or screens, fixing accessibility / VoiceOver / a11y /
-  accessibilityIdentifier issues, applying tvOS Menu-button dismissal,
-  setting up typed-enum identifier naming for UI tests, or ensuring safe
-  default focus on destructive confirmation dialogs.
+  SwiftUI accessibility deltas for iOS, macOS, and tvOS: typed-enum
+  identifier-as-API-contract pattern, cross-platform
+  `AccessibilityMarkerView` (UIKit + AppKit) for root-marker overlays,
+  destructive confirmation dialog focus ordering, and tvOS Menu-button
+  dismissal. Use when wiring or renaming `accessibilityIdentifier`
+  values that UI tests depend on, attaching root markers to modal
+  containers without violating the leaf-only identifier rule, building
+  destructive `confirmationDialog` / `alert` cases where default focus
+  ordering must protect against accidental data loss (severity-1 on
+  tvOS), or implementing Menu-button dismissal for modals on tvOS.
+  Generic VoiceOver / traits / Dynamic Type guidance lives in the
+  authoritative `swiftui-expert-skill` (`references/accessibility-patterns.md`).
 allowed-tools:
   - Read
   - Write
@@ -20,46 +25,91 @@ allowed-tools:
   - Bash
 ---
 
-# Accessibility Compliance
+# SwiftUI Accessibility Deltas
 
-## Purpose
+## Scope
 
-Ensures VoiceOver compatibility, proper accessibility semantics, and
-correct identifier placement for iOS, macOS, and tvOS apps. For tvOS
-focus-engine specifics (Menu-button dismissal, focus traversal rules,
-typed-enum identifier naming convention) see
-[references/tvos.md](references/tvos.md).
+Project-specific accessibility patterns that augment the authoritative
+`swiftui-expert-skill` (`references/accessibility-patterns.md`). This
+skill owns four deltas:
 
-## When to Use This Skill
+1. **Identifier-as-API-contract** — typed-enum pattern, rename order
+2. **`AccessibilityMarkerView`** — cross-platform UIKit + AppKit marker
+3. **Destructive dialog focus ordering** — severity-1 on tvOS
+4. **tvOS Menu-button dismissal** — see [references/tvos.md](references/tvos.md)
 
-- Adding interactive UI elements or custom controls
-- Adding accessibility identifiers for UI testing
-- User says "fix a11y", "VoiceOver support", "accessibility audit"
-- Code review flags accessibility concerns
+For generic VoiceOver, traits, labels, Dynamic Type, Reduce Motion, and
+custom actions guidance, defer to
+`swiftui-expert-skill` `references/accessibility-patterns.md`.
 
-## Workflow
+| Concern | Skill |
+|---|---|
+| General VoiceOver / labels / traits / Dynamic Type / reduce motion | `swiftui-expert-skill` (`references/accessibility-patterns.md`) |
+| tvOS focus engine (hover conflict, settle delay, focus-driven scroll) | `swiftui-tvos-focus` |
+| UI testing patterns and root-marker discovery | `xctest-ui-testing` |
+| Design review (modal focus containment, glass-on-glass) | `swiftui-design-review` |
+| Cross-platform conditionals (`#if os(tvOS)`, haptics) | `apple-multiplatform` |
 
-### Step 1: Audit Accessibility Patterns
+## 1. Identifiers as a Stable API Contract
 
-```bash
-# Find potential violations
-rg '\.accessibilityIdentifier\(|\.accessibilityLabel\(|\.accessibilityHint\(' --glob '*.swift'
+Accessibility identifiers are an API contract between the app and the UI
+test target. Renaming an identifier is an API migration, not a
+refactor. Wrong order produces a test-suite outage between the two
+commits.
 
-# Find tap gestures that should be buttons
-rg '\.onTapGesture' --glob '*.swift'
+### Rename Order
 
-# Find containers that use .contain
-rg 'accessibilityElement\(children:\s*\.contain\)' --glob '*.swift'
-```
+1. Update test code (and any testability documentation) to reference the
+   new identifier value **first**.
+2. Update the view's `.accessibilityIdentifier(...)` to the new value
+   **second**.
 
-### Step 2: Apply Correct Patterns
+### Typed-Enum Single Source of Truth
 
-#### Identifier Placement Rule
-
-Apply identifiers to LEAF elements only. Adding `.accessibilityIdentifier()` to a container with `.accessibilityElement(children: .contain)` causes the identifier to conflict with the child element tree, making it unreliable for UI testing.
+Use a typed enum shared between app and test targets. Never inline raw
+identifier strings in either side — inline strings drift the moment one
+side renames and the other does not.
 
 ```swift
-// WRONG - identifier on container
+// Shared between app and test targets
+enum ScreenIdentifiers {
+    enum MyScreen {
+        static let root = "MyScreen_Root"
+        static let close = "MyScreen_CloseButton"
+        static let primaryAction = "MyScreen_PrimaryAction"
+    }
+
+    enum Settings {
+        static let root = "Settings_Root"
+        static let appearanceToggle = "Settings_AppearanceToggle"
+    }
+}
+
+// View
+Button("Save") { save() }
+    .accessibilityIdentifier(ScreenIdentifiers.MyScreen.primaryAction)
+
+// Test
+app.buttons[ScreenIdentifiers.MyScreen.primaryAction].tap()
+```
+
+Naming rules:
+
+- Root identifiers end in `_Root` (paired with the marker pattern below).
+- Component identifiers follow `<Screen>_<Component>` — gives every test
+  target a stable prefix to grep when a screen is renamed.
+- Avoid identifiers that include user data (`"Item_\(item.name)"`). Use
+  the stable id (`"Item_\(item.id)"`).
+
+### Identifier Placement: Leaves Only
+
+Adding `.accessibilityIdentifier()` to a container with
+`.accessibilityElement(children: .contain)` makes the identifier
+unreliable for UI testing — the identifier conflicts with the child
+element tree.
+
+```swift
+// WRONG — identifier on container
 VStack {
     Text("Label")
     Button("Action") { }
@@ -67,208 +117,93 @@ VStack {
 .accessibilityElement(children: .contain)
 .accessibilityIdentifier("myContainer")  // VIOLATION
 
-// CORRECT - identifier on leaf element
+// CORRECT — identifier on leaf, marker overlay for the container
 VStack {
     Text("Label")
     Button("Action") { }
         .accessibilityIdentifier("myButton")
 }
 .accessibilityElement(children: .contain)
+.overlay(alignment: .topLeading) {
+    AccessibilityMarkerView(identifier: "MyScreen_Root")
+        .frame(width: 1, height: 1)
+}
 ```
 
-#### Decision Tree: Removing an Identifier from a Container
+## 2. `AccessibilityMarkerView` — Cross-Platform Root Marker
 
-When you find an `.accessibilityIdentifier()` on a container with `.contain`:
-
-1. **Check UI tests** — does any test reference this identifier?
-2. **If yes** — replace with a hidden marker view overlay (see below)
-3. **If no** — simply remove the identifier
-
-The hidden marker view pattern provides a reliable, zero-size accessibility element for UI test discovery without interfering with the container's child semantics:
+The plain SwiftUI `Color.clear` marker pattern works on iOS but is
+**unreliable on macOS** — `Color.clear` overlays do not always reach
+the AppKit accessibility tree. UIKit and AppKit native views reliably
+expose identifiers across all three platforms.
 
 ```swift
-// Hidden marker view for UI test discovery
-VStack { /* content */ }
-    .accessibilityElement(children: .contain)
-    .overlay(alignment: .topLeading) {
-        Color.clear
-            .frame(width: 1, height: 1)
-            .accessibilityElement()
-            .accessibilityIdentifier("MyScreen_Root")
-            .accessibilityHidden(true)  // Hidden from VoiceOver but visible to XCUITest
+#if canImport(UIKit)
+import UIKit
+
+struct AccessibilityMarkerView: UIViewRepresentable {
+    let identifier: String
+
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView()
+        v.isAccessibilityElement = true
+        v.accessibilityIdentifier = identifier
+        v.isUserInteractionEnabled = false
+        return v
     }
-```
 
-For cross-platform reliability (the `Color.clear` overlay is occasionally
-unreliable on macOS), use the `AccessibilityMarkerView` pattern from the
-`xctest-ui-testing` skill — it provides concrete UIKit and AppKit
-implementations of a zero-size accessibility marker. Identifier naming
-convention (typed-enum, `<Screen>_Root` suffix) is in
-[references/tvos.md](references/tvos.md).
-
-#### Button vs Tap Gesture
-
-Buttons provide built-in accessibility traits. Using `.onTapGesture` on non-button elements makes them invisible to VoiceOver as interactive controls.
-
-```swift
-// WRONG - tap gesture on non-button
-Text("Click me")
-    .onTapGesture { action() }
-
-// CORRECT - use Button for actionable content
-Button("Click me") { action() }
-    .buttonStyle(.plain)
-```
-
-#### Icon Buttons Must Include Text
-
-Buttons with image labels must always include text for VoiceOver, even if invisible.
-Prefer the Button initializer that natively includes a text label:
-
-```swift
-// BEST - text label built into initializer (VoiceOver reads "Add Item")
-Button("Add Item", systemImage: "plus", action: addItem)
-
-// ACCEPTABLE - manual label
-Button { addItem() } label: {
-    Image(systemName: "plus")
+    func updateUIView(_ uiView: UIView, context: Context) {
+        uiView.accessibilityIdentifier = identifier
+    }
 }
-.accessibilityLabel("Add Item")
+#elseif canImport(AppKit)
+import AppKit
 
-// WRONG - no text label at all
-Button { addItem() } label: {
-    Image(systemName: "plus")
+struct AccessibilityMarkerView: NSViewRepresentable {
+    let identifier: String
+
+    final class MarkerView: NSView {
+        let identifier: String
+        init(identifier: String) {
+            self.identifier = identifier
+            super.init(frame: .zero)
+            setAccessibilityIdentifier(identifier)
+            setAccessibilityElement(true)
+        }
+        required init?(coder: NSCoder) { nil }
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        MarkerView(identifier: identifier)
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
 }
-```
-
-The same applies to `Menu`: use `Menu("Options", systemImage: "ellipsis.circle") { }`
-rather than an image-only label.
-
-#### Decorative Images
-
-For images that are purely decorative, use `Image(decorative:)` instead of adding `accessibilityHidden()` after the fact:
-
-```swift
-// BEST - decorative initializer (automatically hidden from VoiceOver)
-Image(decorative: "backgroundPattern")
-
-// ACCEPTABLE - manual hiding
-Image("backgroundPattern")
-    .accessibilityHidden(true)
-```
-
-#### Modal Dimmer Pattern
-
-```swift
-// WRONG - backdrop is an accessibility button
-Color.black.opacity(0.5)
-    .accessibilityAddTraits(.isButton)
-    .accessibilityLabel("Close")
-
-// CORRECT - backdrop is hidden from VoiceOver, explicit close button provided
-Color.clear
-    .background(.regularMaterial)
-    .ignoresSafeArea()
-    .accessibilityHidden(true)
-
-#if !os(tvOS)
-Button("Close") { dismiss() }
-    .accessibilityIdentifier("CloseButton")
 #endif
 ```
 
-On tvOS, dismiss via the Menu button (`.onExitCommand { dismiss() }`)
-instead of an explicit Close button — see
-[references/tvos.md](references/tvos.md).
-
-#### Focus Management Tap Areas
+Apply as a 1×1 overlay on the container that needs a root identifier:
 
 ```swift
-// WRONG - button trait on focus helper
-Rectangle()
-    .fill(.clear)
-    .accessibilityAddTraits(.isButton)
-    .onTapGesture { focusItem() }
-
-// CORRECT - hide non-actionable focus helpers
-Rectangle()
-    .fill(.clear)
-    .accessibilityHidden(true)
-    .onTapGesture { focusItem() }
-```
-
-### Step 3: VoiceOver Custom Actions
-
-Use `.accessibilityActions { }` to expose custom actions for VoiceOver users:
-
-```swift
-// CORRECT - closure syntax with ViewBuilder
-ItemView(item: item)
-    .accessibilityActions {
-        Button("Move Up") { moveItemUp(item.id) }
-        Button("Move Down") { moveItemDown(item.id) }
-        Button("Delete") { deleteItem(item.id) }
-    }
-
-// WRONG - passing view directly (syntax error)
-.accessibilityActions(myActionsView)  // Error: expects closure
-```
-
-**Key point:** The `.accessibilityActions { }` modifier requires a ViewBuilder closure
-containing Buttons, not a view passed as a parameter.
-
-### Step 4: Reduce Motion
-
-Respect the `accessibilityReduceMotion` environment value. When enabled, replace
-motion-based animations with opacity fades or remove them entirely:
-
-```swift
-@Environment(\.accessibilityReduceMotion) var reduceMotion
-
-SomeView()
-    .animation(reduceMotion ? nil : .spring, value: isExpanded)
-    .opacity(reduceMotion && !isVisible ? 0 : 1)
-```
-
-### Step 5: Voice Control Input Labels
-
-Use `.accessibilityInputLabels()` for buttons with complex or frequently changing labels:
-
-```swift
-Button("\(category.label) (\(category.items.count) items)") { selectCategory() }
-    .accessibilityInputLabels(["Select category", category.label])
-```
-
-### Step 6: Semantic Labels
-
-Provide meaningful labels for custom controls:
-
-```swift
-Button {
-    toggleFavorite()
-} label: {
-    Image(systemName: isFavorite ? "star.fill" : "star")
+.overlay(alignment: .topLeading) {
+    AccessibilityMarkerView(identifier: "Settings_Root")
+        .frame(width: 1, height: 1)
 }
-.accessibilityLabel(isFavorite ? "Remove from favorites" : "Add to favorites")
-.accessibilityIdentifier("FavoriteButton")
 ```
 
-### Step 7: Manual VoiceOver Testing
+UI tests then `waitForExistence` on `app.otherElements["Settings_Root"]`
+to reliably detect modal presentation.
 
-1. Enable VoiceOver (triple-click side button on iOS)
-2. Navigate through the interface
-3. Verify announcements are meaningful
-4. Ensure all interactive elements are reachable
-5. Check focus order makes sense
+## 3. Destructive Confirmation Dialog Focus Ordering
 
-## Confirmation Dialog Accessibility
-
-### Safe Default Focus
-
-Destructive confirmation dialogs should have the safe option (Cancel/Keep) focused by default to prevent accidental data loss. On tvOS this is severity-1 — the focus engine puts initial focus on the first button in declaration order, and there is no pointer to override it. Declaring a destructive button first puts data one Select press away.
+`confirmationDialog` / `alert` initial focus follows declaration order.
+On tvOS this is **severity-1** — there is no pointer to override
+default focus, so a destructive button declared first is one Select
+press away from accidental data loss. On iOS / macOS the same pattern
+is good practice; on tvOS it is mandatory.
 
 ```swift
-// CORRECT - Cancel is default focused (appears first)
+// CORRECT — safe option declared first, gets default focus
 .confirmationDialog("Delete All Items?", isPresented: $showDeleteConfirm) {
     Button("Cancel", role: .cancel) { }
     Button("Delete All", role: .destructive) { deleteAll() }
@@ -277,61 +212,53 @@ Destructive confirmation dialogs should have the safe option (Cancel/Keep) focus
 }
 ```
 
-### Button Ordering Patterns
+### Button Ordering Matrix
 
-| Dialog Type | First Button (Default Focus) | Second Button |
-|-------------|------------------------------|---------------|
+| Dialog type | First button (default focus) | Second button |
+|---|---|---|
 | Destructive | Cancel / Keep | Delete / Remove |
 | Confirmation | Cancel / No | Confirm / Yes |
 | Discard changes | Keep Editing | Discard |
 
-## Toast & Notification Accessibility
+## 4. tvOS Menu-Button Dismissal
 
-### Screen Reader Announcements
+Full reference: [references/tvos.md](references/tvos.md).
 
-Toasts must announce their content to VoiceOver users:
-
-```swift
-struct ToastView: View {
-    let message: String
-
-    var body: some View {
-        HStack {
-            Image(systemName: "checkmark.circle.fill")
-            Text(message)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(message)
-        .accessibilityAddTraits(.updatesFrequently)
-    }
-}
-```
-
-### Live Region Announcements (iOS 17+)
+On tvOS the canonical modal dismissal is the Siri Remote Menu button,
+surfaced via `.onExitCommand`. Do not place a visible Close button on
+tvOS — it clutters the layout and can break focus traversal. Use a
+cross-platform branch when sharing modal content:
 
 ```swift
-.onChange(of: toastMessage) { _, newMessage in
-    if let message = newMessage {
-        AccessibilityNotification.Announcement(message).post()
+ModalContent()
+    .onExitCommand { dismiss() }           // tvOS Menu button (no-op on iOS/macOS)
+#if !os(tvOS)
+    .overlay(alignment: .topTrailing) {
+        Button("Close") { dismiss() }
+            .accessibilityIdentifier(ScreenIdentifiers.MyScreen.close)
     }
-}
+#endif
 ```
 
-### Toast Accessibility Requirements
+## Review Checklist
 
-| Requirement | Implementation |
-|-------------|----------------|
-| Auto-announce on appear | `AccessibilityNotification.Announcement` |
-| Pausable by VoiceOver | Don't auto-dismiss while VoiceOver reading |
-| Readable content | `.accessibilityLabel` with full message |
-| Non-blocking | Toast should not trap focus or block navigation |
+### Identifier API
+- [ ] All identifier strings come from a shared typed-enum source of truth (no inline literals in views or tests)
+- [ ] Identifier renames updated in tests **before** views
+- [ ] No `.accessibilityIdentifier()` on containers with `.accessibilityElement(children: .contain)`
+- [ ] Root markers attached via `AccessibilityMarkerView`, not `Color.clear`
+- [ ] No user data in identifiers (`item.id`, not `item.name`)
 
-## Common Mistakes to Avoid
+### Destructive Dialogs
+- [ ] Destructive `confirmationDialog` / `alert` declares safe button first
+- [ ] tvOS destructive dialogs verified on hardware (default focus = safe option)
 
-1. **Identifier on container** — Never add `.accessibilityIdentifier()` to elements with `.accessibilityElement(children: .contain)`
-2. **Button trait on non-buttons** — Dimmers and tap helpers should use `.accessibilityHidden(true)`
-3. **Missing labels on icon-only buttons** — Use `Button("Label", systemImage:, action:)` initializer
-4. **Duplicate announcements** — One close mechanism is enough
-5. **Tap gesture instead of Button** — Always prefer `Button` for actionable content
-6. **`Image("name")` for decorative images** — Use `Image(decorative:)` instead
-7. **Ignoring Reduce Motion** — Gate animations with `accessibilityReduceMotion`
+### tvOS
+- [ ] Modals use `.onExitCommand { dismiss() }` for Menu-button dismissal
+- [ ] Close buttons gated `#if !os(tvOS)` on cross-platform modals
+- [ ] Focus helpers (zero-size tap targets) marked `.accessibilityHidden(true)`, not `.isButton`
+- [ ] No manual `isFocused = true` from `DispatchQueue.main.asyncAfter` (hijacks VoiceOver / Switch Control)
+
+## References
+
+- [references/tvos.md](references/tvos.md) — Menu-button dismissal, focus traversal rules, VoiceOver on tvOS, identifier naming convention, focus-helper anti-patterns
