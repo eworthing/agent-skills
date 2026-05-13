@@ -2,10 +2,16 @@
 name: swift-linting
 author: eworthing
 description: >-
-  Resolves SwiftFormat and SwiftLint issues and explains repository formatting
-  rules. Use when pre-commit hooks fail, commits are blocked by formatting or
-  lint errors, or code changes require swiftlint:disable, function-body cleanup,
-  or formatting adjustments.
+  Resolves repository-specific SwiftFormat / SwiftLint rule violations on
+  Apple-platform projects. Use when pre-commit hooks are blocking a
+  commit with a lint error, when a `function_body_length` /
+  `type_body_length` / `file_length` / `cyclomatic_complexity` /
+  `line_length` violation surfaces, when planning a justified
+  `// swiftlint:disable:next ...` with rationale, or when reconciling
+  SwiftFormat output with hand-formatted code. Targets the
+  repo-prescriptive lint config. For concurrency-specific lints like
+  `async_without_await` see the authoritative community
+  `swift-concurrency` (`references/linting.md`).
 allowed-tools:
   - Read
   - Write
