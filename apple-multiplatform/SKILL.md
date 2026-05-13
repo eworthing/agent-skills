@@ -327,7 +327,7 @@ the lowest-common-denominator equivalents.
 - `swiftui-drag-drop` — drag-and-drop architecture, including tvOS gating
 - `swiftui-accessibility` — tvOS Menu-button dismissal and focus rules
 - `xctest-ui-testing` — full XCTest testability checklist
-- `swiftui-deprecated-apis` — modern replacements for deprecated SwiftUI APIs
+- `swiftui-expert-skill` — modern SwiftUI API surface, including deprecated-API replacements (`references/latest-apis.md`)
 
 ## Constraints
 

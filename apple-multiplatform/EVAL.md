@@ -125,7 +125,7 @@ kept here.
 | 7.3 | Testability | 3/4 | Per-platform `xcodebuild` invocations are the test mechanism, and the failure-pattern table doubles as an assertion table. No automated drift detection against new SDKs. |
 | 8.1 | Trigger Precision | 4/4 | Description names specific symbols (`editMode`, `TabView .page` / `.automatic`, `@CommandsBuilder`, `XCUICoordinate`, `NSToolbar`, `#if os()`, `#if canImport()`) and lists nine distinct "Use when" contexts. |
 | 8.2 | Progressive Disclosure | 3/4 | Single-file body; topic-keyed sections function as a skimmable index. No `references/` split yet — would be the obvious P2 upgrade. |
-| 8.3 | Composability | 4/4 | Cross-links five sibling skills (`swift-file-splitting`, `swiftui-drag-drop`, `swiftui-accessibility`, `xctest-ui-testing`, `swiftui-deprecated-apis`) where their coverage is more authoritative. |
+| 8.3 | Composability | 4/4 | Cross-links five sibling skills (`swift-file-splitting`, `swiftui-drag-drop`, `swiftui-accessibility`, `xctest-ui-testing`, `swiftui-expert-skill`) where their coverage is more authoritative. |
 | 8.4 | Idempotency | 4/4 | Reference content; reading it repeatedly produces the same outcome. Build commands are themselves idempotent. |
 | 8.5 | Escape Hatches | 3/4 | "Do NOT use when" list scopes it out of doc-only / single-platform / off-topic changes. Build invocations are noted as lowest-common-denominator with "prefer your wrapper script if you have one". |
 | | **TOTAL** | **93/100** | **Excellent** — publishable |

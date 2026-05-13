@@ -86,7 +86,7 @@ Rejected (Tiercade-coupled):
 | 7.3 | Testability | 2/4 | No mechanism to detect drift against Apple platform releases. No upstream Apple HIG citations. |
 | 8.1 | Trigger Precision | 4/4 | Description specific; trigger phrase present; iOS/macOS/tvOS coverage explicit. |
 | 8.2 | Progressive Disclosure | 4/4 | Body covers common path; spring catalog + selection guide in references/motion-tokens.md; raw values in references/token-values.md. |
-| 8.3 | Composability | 3/4 | Cross-links `swiftui-deprecated-apis` (deprecated API replacements) and `swiftui-patterns` (animation mechanics). Could cross-link to `swiftui-design-review` once Liquid Glass content lands there. |
+| 8.3 | Composability | 3/4 | Cross-links `swiftui-expert-skill` (deprecated API replacements via `references/latest-apis.md`) and `swiftui-patterns` (animation mechanics). Could cross-link to `swiftui-design-review` once Liquid Glass content lands there. |
 | 8.4 | Idempotency | 4/4 | Read-only. |
 | 8.5 | Escape Hatches | 3/4 | Exemptions section documents acceptable hardcoded values (user-selectable presets, color computations). |
 | | **TOTAL** | **92/100** | **Excellent** — publishable |

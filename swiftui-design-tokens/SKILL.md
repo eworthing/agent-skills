@@ -345,4 +345,4 @@ RGB channel calculations in color pickers are functional, not design violations:
 var color: Color { Color(red: r / 255, green: g / 255, blue: b / 255) }
 ```
 
-See the `swiftui-deprecated-apis` skill for deprecated API replacements (e.g., `foregroundColor` -> `foregroundStyle`).
+See the `swiftui-expert-skill` skill (`references/latest-apis.md`) for deprecated API replacements (e.g., `foregroundColor` -> `foregroundStyle`).
