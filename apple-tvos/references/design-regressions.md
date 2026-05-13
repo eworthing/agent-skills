@@ -7,7 +7,27 @@ collisions, macOS window-resize stability, cross-platform parity),
 review work belongs in the consuming project's PR template or
 `AGENTS.md`. This file covers only tvOS-specific design regressions.
 
-## Liquid Glass: Chrome Only on tvOS
+## tvOS-D01 — Modal Focus Containment
+
+On tvOS, focus must be **trapped** inside an open modal until it
+dismisses. `.sheet()` containment is not reliable on tvOS — press right
+repeatedly and focus may leak to elements behind the sheet. Assume leak
+unless the specific deployment target has been verified on hardware.
+`.fullScreenCover()` (tvOS 14.0+) reliably traps focus.
+
+```swift
+// WRONG on tvOS — focus can leak out
+.sheet(isPresented: $showModal) { ModalContent() }
+
+// CORRECT on tvOS — full-screen cover traps focus, dismisses via Menu
+.fullScreenCover(isPresented: $showModal) { ModalContent() }
+```
+
+When reviewing a UI change that adds a new modal on tvOS, verify focus
+containment in the manual-QA pass: open the modal, press right (or
+down, depending on layout) 5+ times, and confirm focus stays inside.
+
+## tvOS-D02 — Glass-on-Glass Anti-Pattern
 
 Apply glass materials only on **chrome surfaces** (persistent toolbar,
 navigation bar, tab bar). Never on modal content stacked on top of an
@@ -16,8 +36,6 @@ foregrounds. Generic Liquid Glass adoption rules live in the
 authoritative community `swiftui-expert-skill`
 (`references/liquid-glass.md`); this section covers only the tvOS-focus
 implications.
-
-### tvOS-D02 — Glass-on-Glass Anti-Pattern
 
 On tvOS the system applies Liquid Glass automatically to chrome
 surfaces (toolbar, navigation bar, tab bar) and to `.buttonStyle(.glass)`
@@ -54,20 +72,7 @@ from system chrome surfaces.)
 }
 ```
 
-### Button-Style Selection on tvOS (tvOS-D02 / tvOS-D03)
-
-| Container | Primary | Secondary |
-|---|---|---|
-| Persistent toolbar (chrome) | `.glassProminent` | `.glass` |
-| Modal / `.fullScreenCover` content | `.borderedProminent` | `.bordered` |
-| Focusable content cards | `.card` | — |
-| Non-focusable content rows | `.plain` | `.plain` |
-
-On tvOS, the focus engine renders its own emphasis — do not also tint
-bordered buttons. On iOS/macOS, apply `.tint(Palette.brand)` to bordered
-buttons (see `swiftui-design-tokens`).
-
-### tvOS-D03 — Why Not `.plain` With Custom Styling On tvOS
+## tvOS-D03 — Why Not `.plain` With Custom Styling On tvOS
 
 `.buttonStyle(.plain)` + custom glass/rounded styling on focusable
 buttons *compiles fine* but loses the focus engine's automatic focus
@@ -99,27 +104,23 @@ ring spacing, clipping prevention, and (on tvOS 26+) Liquid Glass focus
 treatment are all handled automatically. The plain-style escape hatch is
 only safe for non-focusable content rows.
 
-## tvOS-D01 — Modal Focus Containment
+### Button-Style Selection Matrix
 
-On tvOS, focus must be **trapped** inside an open modal until it
-dismisses. `.sheet()` containment is not reliable on tvOS — press right
-repeatedly and focus may leak to elements behind the sheet. Assume leak
-unless the specific deployment target has been verified on hardware.
-`.fullScreenCover()` (tvOS 14.0+) reliably traps focus.
+Joint reference for tvOS-D02 (glass-on-glass) and tvOS-D03 (plain on
+focusable):
 
-```swift
-// WRONG on tvOS — focus can leak out
-.sheet(isPresented: $showModal) { ModalContent() }
+| Container | Primary | Secondary |
+|---|---|---|
+| Persistent toolbar (chrome) | `.glassProminent` | `.glass` |
+| Modal / `.fullScreenCover` content | `.borderedProminent` | `.bordered` |
+| Focusable content cards | `.card` | — |
+| Non-focusable content rows | `.plain` | `.plain` |
 
-// CORRECT on tvOS — full-screen cover traps focus, dismisses via Menu
-.fullScreenCover(isPresented: $showModal) { ModalContent() }
-```
+On tvOS, the focus engine renders its own emphasis — do not also tint
+bordered buttons. On iOS/macOS, apply `.tint(Palette.brand)` to bordered
+buttons (see `swiftui-design-tokens`).
 
-When reviewing a UI change that adds a new modal on tvOS, verify focus
-containment in the manual-QA pass: open the modal, press right (or
-down, depending on layout) 5+ times, and confirm focus stays inside.
-
-## tvOS-A03 / tvOS-D03 — Anti-Pattern: Manual Focus Reassertion
+## Anti-Pattern: Manual Focus Reassertion (tvOS-A03)
 
 If a tvOS focus regression appears, the wrong fix is to add a manual
 focus reset loop:
@@ -136,6 +137,10 @@ modals, scope `@FocusState` to the smallest possible region, and let the
 tvOS focus system handle focus on view appear/disappear. Manual
 reassertion hijacks focus events that VoiceOver and Switch Control
 expect to control themselves.
+
+Rule lives in [accessibility.md](accessibility.md#tvos-a03--no-manual-focus-reassertion);
+repeated here because it surfaces during design review as a tempting
+"quick fix."
 
 ## tvOS-D04 — tvOS Focus Traversal QA Checklist
 
@@ -167,7 +172,8 @@ Surface these in the design-review note even if CI is green.
 
 - [references/focus-engine.md](focus-engine.md) — focus mechanics
 - [references/accessibility.md](accessibility.md) — Menu dismissal,
-  destructive dialog focus matrix, VoiceOver on tvOS
+  destructive dialog focus matrix, VoiceOver on tvOS, manual focus
+  reassertion (tvOS-A03)
 - `swiftui-expert-skill` (`references/liquid-glass.md`) — generic
   Liquid Glass adoption rules (auth)
 - `swiftui-design-tokens` — platform-branched motion springs, button

@@ -118,13 +118,6 @@ final focused element actually triggers its expensive animation. Every
 intermediate focus change increments `focusToken` and invalidates
 already-scheduled work.
 
-## tvOS-F07 — Animation: Simulator vs Hardware
-
-The tvOS Simulator does **not** replicate focus animations faithfully —
-the hover effect curve, perspective lift, and specular shine all behave
-differently than on Apple TV hardware. Always verify focus animations on
-real hardware before declaring an animation issue solved.
-
 ## tvOS-F05 — Scroll: Focus-Driven Scrolling
 
 On tvOS, users don't free-scroll. Scrolling happens because focus moved
@@ -167,6 +160,13 @@ ScrollView(.horizontal) {
 }
 .scrollTargetBehavior(.viewAligned)   // preferred on tvOS
 ```
+
+## tvOS-F07 — Animation: Simulator vs Hardware
+
+The tvOS Simulator does **not** replicate focus animations faithfully —
+the hover effect curve, perspective lift, and specular shine all behave
+differently than on Apple TV hardware. Always verify focus animations on
+real hardware before declaring an animation issue solved.
 
 ## Motion Tokens
 

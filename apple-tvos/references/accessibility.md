@@ -85,20 +85,26 @@ by the physical interaction model — verify on real hardware.
 
 ## VoiceOver on tvOS
 
-VoiceOver on tvOS uses focus traversal, not direct touch. Implications:
+VoiceOver on tvOS uses focus traversal, not direct touch. Focus order
+matters more than visual order — VoiceOver reads elements in the order
+driven by `.focusable()` and `@FocusState`. Verify the focus path
+covers every readable element.
 
-- **Focus order matters more.** VoiceOver reads elements in focus order
-  (driven by `.focusable()` and `@FocusState`), not visual order. Verify
-  that the focus path covers every readable element.
-- **tvOS-A03 — Don't manually reassert focus.** Setting `isFocused =
-  true` from `DispatchQueue.main.asyncAfter` hijacks events VoiceOver
-  and Switch Control expect to handle themselves. Use focus containment
-  (modals via `.fullScreenCover()`, scoped `@FocusState`) instead. See
-  `references/design-regressions.md` for the full anti-pattern callout.
-- **tvOS-A04 — No `.accessibilityAddTraits(.isButton)` on focus
-  helpers.** A zero-size `Rectangle().fill(.clear)` used purely to
-  capture focus should be `.accessibilityHidden(true)`. Otherwise
-  VoiceOver will announce a spurious "Button" with no label.
+### tvOS-A03 — No Manual Focus Reassertion
+
+Setting `isFocused = true` from `DispatchQueue.main.asyncAfter` hijacks
+events VoiceOver and Switch Control expect to handle themselves. Use
+focus containment (modals via `.fullScreenCover()`, scoped
+`@FocusState`) instead. See
+[references/design-regressions.md](design-regressions.md#anti-pattern-manual-focus-reassertion-tvos-a03)
+for the full anti-pattern callout.
+
+### tvOS-A04 — Hide Non-Actionable Focus Helpers from VoiceOver
+
+A zero-size `Rectangle().fill(.clear)` used purely to capture focus
+should be `.accessibilityHidden(true)`, not
+`.accessibilityAddTraits(.isButton)`. Otherwise VoiceOver announces a
+spurious "Button" with no label.
 
 ## Cross-References
 

@@ -100,7 +100,7 @@
       "summary": "Never manually reassert focus via DispatchQueue.main.asyncAfter.",
       "rationale": "Hijacks events VoiceOver and Switch Control expect to handle themselves.",
       "bypass": "None. Use focus containment (.fullScreenCover, scoped @FocusState).",
-      "reference": "references/accessibility.md#voiceover-on-tvos"
+      "reference": "references/accessibility.md#tvos-a03--no-manual-focus-reassertion"
     },
     {
       "id": "tvOS-A04",
@@ -109,7 +109,7 @@
       "summary": "Hide non-actionable focus helpers with .accessibilityHidden(true).",
       "rationale": "Rectangle().fill(.clear) used to capture focus should not announce as a button.",
       "bypass": "Genuinely actionable helpers — model as a real Button.",
-      "reference": "references/accessibility.md#voiceover-on-tvos"
+      "reference": "references/accessibility.md#tvos-a04--hide-non-actionable-focus-helpers-from-voiceover"
     },
     {
       "id": "tvOS-D01",

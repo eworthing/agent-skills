@@ -1,6 +1,6 @@
 # apple-tvos Evaluation
 
-**Date:** 2026-05-13 (P2 lift: rules.md extract + full eval coverage + rules.json)
+**Date:** 2026-05-13 (P3 cleanup: rule-order + per-rule anchors for A03/A04)
 **Evaluator:** Claude Opus 4.7
 **Skill version:** Definitive tvOS skill — focus engine + accessibility deltas + design regressions
 **Automated score:** 13/13 (100%)
@@ -107,9 +107,21 @@ precedent.
 5. **7.3 Testability 3→4.** ✅ 6 new fixtures (F02, F03, F04, F06, A04, D02). Full source-evaluable coverage 13/13.
 6. **8.3 Composability 3→4.** ✅ `evals/rules.json` — 15 rules with id / area / severity / summary / rationale / bypass / reference path + severity legend + area paths.
 
+### P3 — Shipped (2026-05-13, audit pass)
+
+7. **focus-engine.md rule order.** ✅ F07 moved from between F04 and F05 to after F06 — file order now matches numeric index in SKILL.md.
+8. **design-regressions.md rule order.** ✅ D01 (sev-1, modal focus containment) now leads. D02 / D03 promoted from `###` to `##` (no longer subordinate to "Liquid Glass: Chrome Only" subsection). Order: D01 → D02 → D03 → D04.
+9. **A03 / A04 per-rule anchors.** ✅ Promoted from bullets under `## VoiceOver on tvOS` to dedicated `### tvOS-A03 — No Manual Focus Reassertion` and `### tvOS-A04 — Hide Non-Actionable Focus Helpers from VoiceOver` headings. `evals/rules.json` references updated. Previously both pointed to `#voiceover-on-tvos` — now resolve to per-rule anchors.
+10. **Anti-Pattern section dual-tag.** ✅ `## tvOS-A03 / tvOS-D03 — Anti-Pattern: Manual Focus Reassertion` heading retitled to `## Anti-Pattern: Manual Focus Reassertion (tvOS-A03)` — D03 conflation removed (D03 is `.plain` button styling, not focus reassertion). Added forward-link to accessibility.md rule.
+11. **Button-Style Selection matrix attribution.** ✅ Header `### Button-Style Selection on tvOS (tvOS-D02 / tvOS-D03)` retitled `### Button-Style Selection Matrix` with prose subhead clarifying joint D02 + D03 reference.
+
 ### Remaining (lifts 99 → 100)
 
-7. **2.2 Error Reporting 3→4.** "tvOS Gotcha Decision Tree" at top of SKILL.md: "Symptom → reference → rule ID." Only remaining sub-4 criterion.
+12. **2.2 Error Reporting 3→4.** "tvOS Gotcha Decision Tree" at top of SKILL.md: "Symptom → reference → rule ID." Only remaining sub-4 criterion.
+
+### Deferred (carried forward)
+
+- **rules.md / rules.json drift.** Same rule data lives in both `references/rules.md` (markdown) and `evals/rules.json`. Manual sync risk. Consider generating one from the other in a future pass.
 
 ### Deferred (not score-blocking)
 
@@ -128,3 +140,4 @@ precedent.
 | 2026-05-13 (re-score) | 94/100 | Full-rubric re-evaluation after rename + expand. Excellent band reached. Strengths: Completeness 4, scope discipline 4 (sibling-skill table + auth deferral), token cost 4 (SKILL.md 129 lines), trigger precision 4 (134-word description with 15+ scenarios). Gaps: 7.3 Testability 2 (no eval fixtures), 4.3 Feedback Quality 3 (no rule-ID index), 8.5 Escape Hatches 3 (no per-rule N/A contexts), 8.3 Composability 3 (no machine-readable rule index), 2.2 Error Reporting 3 (no decision tree). |
 | 2026-05-13 (P1 lift) | 96/100 | Three P1 gaps shipped: 4.3 Feedback Quality 3→4 (rule index `tvOS-F01..F07`, `tvOS-A01..A04`, `tvOS-D01..D04` with severity column; review checklist + reference headers cite IDs), 7.3 Testability 2→3 (`evals/evals.json` with 6 fixtures covering 7 of 13 testable rule IDs, including 1 clean fixture as false-positive check), 8.5 Escape Hatches 3→4 (per-rule *Bypass / N/A* lines; severity-1 A02 / A03 marked "no bypass"). Side-effect loss: 3.1 Token Cost 4→3 (SKILL.md 129→204 lines). Net: +2. Context7-driven corrections: `.onExitCommand` cross-platform claim fixed (macOS Escape, not no-op); `.glassBackgroundEffect()` removed from glass-on-glass tvOS example (visionOS-only modifier). |
 | 2026-05-13 (P2 lift) | 99/100 | Three P2 lifts: 3.1 Token Cost 3→4 (rule index + bypass extracted to `references/rules.md`; SKILL.md 204→119), 7.3 Testability 3→4 (6 new fixtures F02 / F03 / F04 / F06 / A04 / D02; full 13/13 source-evaluable coverage — F07 + D04 procedural by design), 8.3 Composability 3→4 (`evals/rules.json` — 15 rules with id / area / severity / summary / rationale / bypass / reference + severity legend + area paths). Net: +3. Only remaining sub-4 criterion: 2.2 Error Reporting (no decision tree). |
+| 2026-05-13 (P3 audit) | 99/100 | Cleanup pass — no rubric score change, fixes correctness and discoverability defects. (1) focus-engine.md: F07 moved from between F04 and F05 to after F06 — numeric order restored. (2) design-regressions.md: D01 now leads (sev-1 modal containment), D02 + D03 promoted from `###` (subordinate to "Liquid Glass: Chrome Only") to `##`. Anti-Pattern section retitled `Anti-Pattern: Manual Focus Reassertion (tvOS-A03)` — D03 conflation removed. Button-Style matrix subhead clarified. (3) accessibility.md: A03 + A04 promoted from bullets under `## VoiceOver on tvOS` to dedicated `### tvOS-A03 — No Manual Focus Reassertion` + `### tvOS-A04 — Hide Non-Actionable Focus Helpers from VoiceOver` headings. (4) `evals/rules.json`: A03 + A04 reference anchors updated from shared `#voiceover-on-tvos` to per-rule anchors. All 15 anchors validated. |
