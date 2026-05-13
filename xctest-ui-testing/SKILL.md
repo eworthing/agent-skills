@@ -2,13 +2,24 @@
 name: xctest-ui-testing
 author: eworthing
 description: >-
-  Writes and debugs XCTest UI automation for iOS, macOS, and tvOS apps. Covers
-  accessibility identifiers, root-marker patterns for modal detection, wait-for-element
-  strategies, drag-and-drop tests, sheet/alert testing, macOS activation/window-pinning
-  helpers, platform divergence handling, and the new-component testability checklist.
-  Use when writing or debugging UI tests, investigating flaky or timing-sensitive
-  failures, wiring accessibility identifiers, introducing a new modal/sheet/overlay/screen
-  that needs test coverage, or working on cross-platform XCUITest infrastructure.
+  Writes, debugs, and selectively executes XCTest UI automation for iOS,
+  macOS, and tvOS apps. Covers accessibility identifiers
+  (typed-enum-as-API-contract, leaf-only placement, `AccessibilityMarkerView`
+  UIKit + AppKit code for cross-platform root markers), root-marker
+  patterns for modal detection, wait-for-element strategies, drag-and-drop
+  tests, sheet / alert testing, macOS activation / window-pinning helpers,
+  platform divergence handling, new-component testability checklist,
+  and `.xctestrun`-based selective execution (build-for-testing vs
+  test-without-building, `-only-testing`, list / range / glob / match /
+  class / id selection modes, zero-test detection, `PIPESTATUS` exit
+  propagation, `-retry-tests-on-failure`). Use when writing or debugging
+  UI tests, investigating flaky or timing-sensitive failures, wiring
+  accessibility identifiers, introducing a new modal / sheet / overlay /
+  screen that needs test coverage, working on cross-platform XCUITest
+  infrastructure, debugging "Executed 0 tests", reproducing CI-only
+  failures with selective execution, or building wrapper runner scripts.
+  The authoritative community `swift-testing-expert` covers the Swift
+  Testing framework (unit tests); XCUITest UI automation stays here.
 allowed-tools:
   - Read
   - Write
@@ -35,7 +46,16 @@ identifiers, wait-for-element strategies, and common pitfalls.
 
 ## Running Tests
 
-Use `xcodebuild test` or your project's test script:
+Two execution paths:
+
+- **All tests, one shot:** `xcodebuild test -scheme YourApp -destination ...`
+- **Selective execution / debugging flake / "Executed 0 tests" diagnosis:** see
+  [references/runner.md](references/runner.md) for the `.xctestrun`
+  model — `build-for-testing` once on a generic destination, then
+  `test-without-building` selectively on a real destination. Covers
+  `-only-testing` selection, wrapper-script flag surface
+  (`--list`/`--range`/`--glob`/`--match`/`--class`/`--id`), zero-test
+  detection, exit-code propagation, and `-retry-tests-on-failure`.
 
 ```bash
 # Run all UI tests
@@ -429,3 +449,13 @@ TestIdentifiers enum, direct-launch support, dialog/detent tests,
 - Keep individual tests under 15 seconds to prevent timeouts
 - Use `waitForExistence` instead of `Thread.sleep` for timing
 - Use existing identifier naming patterns in the project for consistency
+
+## Sibling Skills
+
+| Concern | Skill |
+|---|---|
+| Swift Testing unit-test framework (`#expect`, `#require`, traits, parameterized, parallel isolation, XCTest migration) | `swift-testing-expert` (community) — defers to XCUITest for UI automation |
+| Selective execution mechanics (`.xctestrun`, `build-for-testing` vs `test-without-building`, wrapper-script flag surface) | [references/runner.md](references/runner.md) |
+| Cross-platform conditionals (`#if os(tvOS)`, Catalyst, `XCUICoordinate` divergence) | `apple-multiplatform` |
+| tvOS focus assertions, Siri Remote API, focus reachability audit | `apple-tvos` `references/focus-engine.md` |
+| New-component testability checklist | [references/new-component-checklist.md](references/new-component-checklist.md) |

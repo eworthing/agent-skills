@@ -347,7 +347,12 @@ the lowest-common-denominator equivalents.
 - `swiftui-drag-drop` — drag-and-drop architecture, including tvOS gating
 - `apple-tvos` — tvOS focus engine, accessibility deltas (Menu-button dismissal, destructive dialog focus), and design regressions
 - `xctest-ui-testing` — full XCTest testability checklist
-- `swiftui-expert-skill` — modern SwiftUI API surface, including deprecated-API replacements (`references/latest-apis.md`)
+- `swiftui-expert-skill` (community) — modern SwiftUI API surface:
+  - `references/latest-apis.md` — deprecated-API replacements
+  - `references/macos-scenes.md` — Settings, MenuBarExtra, WindowGroup, multi-window patterns
+  - `references/macos-views.md` — HSplitView, Table, PasteButton, AppKit interop
+  - `references/macos-window-styling.md` — toolbar styles, window sizing, Commands
+- `swift-concurrency` (community) — async/await, actors, Sendable, Swift 6 migration; cross-platform concerns shared with `apple-multiplatform`
 
 ## Constraints
 

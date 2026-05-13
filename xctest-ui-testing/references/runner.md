@@ -1,28 +1,18 @@
----
-name: xctest-runner
-author: eworthing
-description: >-
-  Runs targeted XCTest subsets on iOS, macOS, and tvOS using `.xctestrun` and
-  `xcodebuild test-without-building`. Use when executing a single test, class,
-  or suite slice, debugging flaky UI tests, diagnosing "Executed 0 tests",
-  reproducing CI-only XCTest failures with selective execution, preserving an
-  `.xcresult` for post-mortem inspection, or building or modifying a wrapper
-  runner script (list/range/glob/match/class/id selection modes,
-  `-retry-tests-on-failure`, zero-test guardrails, `PIPESTATUS` exit
-  propagation).
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - Glob
----
+# XCTest Selection + `.xctestrun` Execution
 
-# XCTest Selection + .xctestrun
+> Reference for the parent `xctest-ui-testing` skill. Folded in 2026-05-13 from the eliminated `xctest-runner` skill.
 
-## Purpose
+Run *only the tests you care about* while keeping selection,
+destinations, temp files, and exit codes correct. This file covers the
+conceptual model and guardrails for selective XCTest execution on iOS,
+macOS, and tvOS.
 
-Run *only the tests you care about* while keeping selection, destinations, temp files, and exit
-codes correct. This skill covers the conceptual model and guardrails for selective iOS test execution.
+Triggers: single test / class / suite slice, debugging flaky UI tests,
+diagnosing "Executed 0 tests", reproducing CI-only XCTest failures with
+selective execution, preserving an `.xcresult` for post-mortem inspection,
+or building / modifying a wrapper runner script (list / range / glob /
+match / class / id selection modes, `-retry-tests-on-failure`,
+zero-test guardrails, `PIPESTATUS` exit propagation).
 
 ## When to Use This Skill
 
