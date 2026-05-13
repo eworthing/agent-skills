@@ -4,10 +4,13 @@ author: eworthing
 original-author: Antoine van der Lee (AvdLee)
 source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
-  Ensures accessible, VoiceOver-friendly interactive SwiftUI UI with correct identifiers,
-  labels, traits, and focus behavior. Relevant when adding or changing buttons, toggles,
-  forms, sheets, or screens, or when fixing accessibility, VoiceOver, a11y, or
-  accessibilityIdentifier issues.
+  Ensures accessible, VoiceOver-friendly interactive SwiftUI UI on iOS,
+  macOS, and tvOS with correct identifiers, labels, traits, and focus
+  behavior. Use when adding or changing buttons, toggles, forms, sheets,
+  or screens, fixing accessibility / VoiceOver / a11y /
+  accessibilityIdentifier issues, applying tvOS Menu-button dismissal,
+  setting up typed-enum identifier naming for UI tests, or ensuring safe
+  default focus on destructive confirmation dialogs.
 allowed-tools:
   - Read
   - Write
@@ -21,7 +24,11 @@ allowed-tools:
 
 ## Purpose
 
-Ensures VoiceOver compatibility, proper accessibility semantics, and correct identifier placement for iOS apps.
+Ensures VoiceOver compatibility, proper accessibility semantics, and
+correct identifier placement for iOS, macOS, and tvOS apps. For tvOS
+focus-engine specifics (Menu-button dismissal, focus traversal rules,
+typed-enum identifier naming convention) see
+[references/tvos.md](references/tvos.md).
 
 ## When to Use This Skill
 
@@ -92,6 +99,13 @@ VStack { /* content */ }
     }
 ```
 
+For cross-platform reliability (the `Color.clear` overlay is occasionally
+unreliable on macOS), use the `AccessibilityMarkerView` pattern from the
+`xctest-ui-testing` skill — it provides concrete UIKit and AppKit
+implementations of a zero-size accessibility marker. Identifier naming
+convention (typed-enum, `<Screen>_Root` suffix) is in
+[references/tvos.md](references/tvos.md).
+
 #### Button vs Tap Gesture
 
 Buttons provide built-in accessibility traits. Using `.onTapGesture` on non-button elements makes them invisible to VoiceOver as interactive controls.
@@ -157,9 +171,15 @@ Color.clear
     .ignoresSafeArea()
     .accessibilityHidden(true)
 
+#if !os(tvOS)
 Button("Close") { dismiss() }
     .accessibilityIdentifier("CloseButton")
+#endif
 ```
+
+On tvOS, dismiss via the Menu button (`.onExitCommand { dismiss() }`)
+instead of an explicit Close button — see
+[references/tvos.md](references/tvos.md).
 
 #### Focus Management Tap Areas
 
@@ -245,7 +265,7 @@ Button {
 
 ### Safe Default Focus
 
-Destructive confirmation dialogs should have the safe option (Cancel/Keep) focused by default to prevent accidental data loss:
+Destructive confirmation dialogs should have the safe option (Cancel/Keep) focused by default to prevent accidental data loss. On tvOS this is severity-1 — the focus engine puts initial focus on the first button in declaration order, and there is no pointer to override it. Declaring a destructive button first puts data one Select press away.
 
 ```swift
 // CORRECT - Cancel is default focused (appears first)
