@@ -64,6 +64,37 @@ focus-reassertion anti-pattern, and the tvOS focus-traversal QA list are
 detailed in
 [references/liquid-glass-and-tvos.md](references/liquid-glass-and-tvos.md).
 
+#### Destructive Actions
+
+When reviewing a UI change that introduces or modifies a destructive
+action (delete, reset, clear, regenerate), apply this rule:
+
+| Action Type | Confirmation Required? | Reason |
+|-------------|------------------------|--------|
+| Destructive + Undoable | No | User can undo (e.g. `clearList`, hide a row) |
+| Destructive + NOT Undoable | Yes | Cannot recover (e.g. `permanentReset`, `regenerateAll`) |
+
+Verify the action's destructiveness against its reversibility, not its
+verb. A scary-sounding "Clear" with an undo stack does not need a
+confirmation dialog; an innocuous-sounding "Regenerate" that wipes user
+input does.
+
+#### Keyboard Shortcut Collision Audit
+
+After adding or changing any `.keyboardShortcut(...)` modifier, audit
+the codebase for collisions across every surface that can register a
+shortcut (Commands, toolbar buttons, menu items, focused-view modifiers):
+
+```bash
+rg -n 'keyboardShortcut\(' YourApp
+```
+
+If two actions bind the same key combination, resolve it in the Commands
+layer (where shortcut ownership is centralized) or by changing the
+shortcut on one of the colliding actions. A duplicate binding produces
+silent non-determinism — whichever view installs its modifier later
+wins, and the loser fails silently.
+
 ### Step 3: Manual QA (High-Risk Flows)
 
 **iPhone:**
@@ -99,6 +130,13 @@ detailed in
   returns focus to the trigger element
 - Modal focus containment: focus stays inside open modals (test by
   pressing right 5+ times)
+
+**Cross-platform parity principle**: if the app supports tvOS, prefer
+parity across platforms unless the platform genuinely diverges. tvOS has
+no keyboard shortcuts, so a `Cmd+N` action on iOS/macOS will not have a
+tvOS counterpart — that's a real divergence. A toolbar action available
+on iOS but missing on tvOS without a stated reason is almost always an
+oversight.
 
 For tvOS-specific glass material and focus-containment rules, see
 [references/liquid-glass-and-tvos.md](references/liquid-glass-and-tvos.md).

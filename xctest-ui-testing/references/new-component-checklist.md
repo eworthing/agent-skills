@@ -35,6 +35,13 @@ enum MyComponent {
 }
 ```
 
+The enum is the API contract between view and test. Both sides import it;
+neither side inlines the raw string. Renaming an identifier is then an
+API migration with a defined order: update the enum case + test
+references first, update the view's `.accessibilityIdentifier(...)` use
+second. Doing it in the opposite order produces a window where tests
+can't find the element and CI fails on a green diff.
+
 ## 3. Add Direct Launch Support (Recommended)
 
 Enable launching the app directly to this screen for faster, more reliable

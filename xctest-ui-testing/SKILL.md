@@ -77,6 +77,25 @@ Handle these in your app's startup code to route directly to the target screen.
 2. Never assign `.accessibilityIdentifier()` to a parent with `.accessibilityElement(children: .contain)` -- the identifier won't propagate correctly
 3. Use a consistent naming pattern: `ComponentName_ElementName`
 
+### Identifiers Are a Stable API Contract
+
+Treat accessibility identifiers as a stable API contract between the app
+and the UI test target. Renaming an identifier is an API migration, not
+a refactor:
+
+1. Update the test code (and any testability documentation) to reference
+   the new identifier value FIRST.
+2. Update the view's `.accessibilityIdentifier(...)` to the new value
+   SECOND.
+
+Reversing this order produces a test-suite outage between the two
+commits. Use a typed enum (e.g. `enum TestIdentifiers` / `enum ActionID`)
+as the single source of truth — both the view and the test target import
+the same enum. Never inline raw identifier strings in tests OR views;
+inline strings drift the moment one side renames and the other side
+doesn't. See [references/new-component-checklist.md](references/new-component-checklist.md)
+for the `TestIdentifiers` enum pattern.
+
 ### Root Markers for Modals
 
 To reliably detect whether a modal or overlay is presented, place a small
