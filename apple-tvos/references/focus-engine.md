@@ -5,7 +5,7 @@ patterns from the rest of the platform family — composition, animation,
 and scroll all have tvOS-specific caveats that don't show up on iOS or
 macOS.
 
-## Composition: No `.focusable()` on Containers
+## tvOS-F01 — Composition: No `.focusable()` on Containers
 
 Applying `.focusable()` to a container that wraps focusable children
 blocks focus from reaching the children. The focus engine stops at the
@@ -28,7 +28,7 @@ HStack {
 }
 ```
 
-## POD Views + `@FocusState`
+## tvOS-F02 — POD Views + `@FocusState`
 
 POD views (no property wrappers) get SwiftUI's `memcmp` fast-path
 diffing, but on tvOS pure-POD focusable rows risk **focus identity loss
@@ -57,7 +57,7 @@ struct Grid: View {
 This gives the focus engine a stable identity anchor independent of the
 view's POD identity.
 
-## Animation: Focus Hover Conflict
+## tvOS-F03 — Animation: Focus Hover Conflict
 
 tvOS has a built-in focus hover effect — a ~200ms perspective lift with
 specular shine — applied to every focusable element. Custom `.animation()`
@@ -85,7 +85,7 @@ If you still see jitter, wrap the animated content in a `Group` with its
 own `.animation()` inside an `.overlay()`, leaving the card's focus
 animation completely untouched.
 
-## Animation: Focus Settle Delay
+## tvOS-F04 — Animation: Focus Settle Delay
 
 For animations that should only run **after** focus has fully settled
 (thumbnail playback, detail loading, expensive content reveal), use a
@@ -118,14 +118,14 @@ final focused element actually triggers its expensive animation. Every
 intermediate focus change increments `focusToken` and invalidates
 already-scheduled work.
 
-## Animation: Simulator vs Hardware
+## tvOS-F07 — Animation: Simulator vs Hardware
 
 The tvOS Simulator does **not** replicate focus animations faithfully —
 the hover effect curve, perspective lift, and specular shine all behave
 differently than on Apple TV hardware. Always verify focus animations on
 real hardware before declaring an animation issue solved.
 
-## Scroll: Focus-Driven Scrolling
+## tvOS-F05 — Scroll: Focus-Driven Scrolling
 
 On tvOS, users don't free-scroll. Scrolling happens because focus moved
 to a focusable child that was off-screen, and the framework scrolls to
@@ -153,7 +153,7 @@ ScrollView {
 }
 ```
 
-## Scroll: `.viewAligned` over `.paging`
+## tvOS-F06 — Scroll: `.viewAligned` over `.paging`
 
 `.scrollTargetBehavior(.paging)` works on tvOS but full-page jumps on a
 1920x1080 display feel visually jarring. `.viewAligned` gives smoother

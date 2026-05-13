@@ -17,19 +17,35 @@ authoritative community `swiftui-expert-skill`
 (`references/liquid-glass.md`); this section covers only the tvOS-focus
 implications.
 
-### Glass-on-Glass Anti-Pattern
+### tvOS-D02 — Glass-on-Glass Anti-Pattern
+
+On tvOS the system applies Liquid Glass automatically to chrome
+surfaces (toolbar, navigation bar, tab bar) and to `.buttonStyle(.glass)`
+/ `.glassProminent` / `.card` focusable buttons. Stacking a glass
+button on top of a chrome surface that's already glass-rendered
+produces visible double blur.
+
+(`.glassBackgroundEffect()` itself is visionOS-only — do not apply on
+tvOS. Glass appearance on tvOS comes from the button styles above and
+from system chrome surfaces.)
 
 ```swift
-// WRONG — glass button inside a modal that already has a glass background
-.fullScreenCover(isPresented: $showSettings) {
-    VStack {
-        Button("Apply") { /* ... */ }
+// WRONG — glass button placed inside a toolbar (chrome already glass)
+.toolbar {
+    ToolbarItem(placement: .primaryAction) {
+        Button("Settings") { /* ... */ }
             .buttonStyle(.glass)           // glass-on-glass artifact
     }
-    .glassBackgroundEffect()
 }
 
-// CORRECT — solid bordered buttons inside a glass-backed modal
+// CORRECT — let the system render chrome glass; use bordered inside content
+.toolbar {
+    ToolbarItem(placement: .primaryAction) {
+        Button("Settings") { /* ... */ }   // default style picks up chrome treatment
+    }
+}
+
+// CORRECT inside modal content — solid bordered buttons
 .fullScreenCover(isPresented: $showSettings) {
     VStack {
         Button("Apply") { /* ... */ }
@@ -38,7 +54,7 @@ implications.
 }
 ```
 
-### Button-Style Selection on tvOS
+### Button-Style Selection on tvOS (tvOS-D02 / tvOS-D03)
 
 | Container | Primary | Secondary |
 |---|---|---|
@@ -51,7 +67,7 @@ On tvOS, the focus engine renders its own emphasis — do not also tint
 bordered buttons. On iOS/macOS, apply `.tint(Palette.brand)` to bordered
 buttons (see `swiftui-design-tokens`).
 
-### Why Not `.plain` With Custom Styling On tvOS
+### tvOS-D03 — Why Not `.plain` With Custom Styling On tvOS
 
 `.buttonStyle(.plain)` + custom glass/rounded styling on focusable
 buttons *compiles fine* but loses the focus engine's automatic focus
@@ -83,12 +99,13 @@ ring spacing, clipping prevention, and (on tvOS 26+) Liquid Glass focus
 treatment are all handled automatically. The plain-style escape hatch is
 only safe for non-focusable content rows.
 
-## Modal Focus Containment
+## tvOS-D01 — Modal Focus Containment
 
 On tvOS, focus must be **trapped** inside an open modal until it
-dismisses. `.sheet()` does not reliably trap focus on older tvOS
-versions — press right repeatedly and focus may leak to elements behind
-the sheet.
+dismisses. `.sheet()` containment is not reliable on tvOS — press right
+repeatedly and focus may leak to elements behind the sheet. Assume leak
+unless the specific deployment target has been verified on hardware.
+`.fullScreenCover()` (tvOS 14.0+) reliably traps focus.
 
 ```swift
 // WRONG on tvOS — focus can leak out
@@ -102,7 +119,7 @@ When reviewing a UI change that adds a new modal on tvOS, verify focus
 containment in the manual-QA pass: open the modal, press right (or
 down, depending on layout) 5+ times, and confirm focus stays inside.
 
-## Anti-Pattern: Manual Focus Reassertion
+## tvOS-A03 / tvOS-D03 — Anti-Pattern: Manual Focus Reassertion
 
 If a tvOS focus regression appears, the wrong fix is to add a manual
 focus reset loop:
@@ -120,7 +137,7 @@ tvOS focus system handle focus on view appear/disappear. Manual
 reassertion hijacks focus events that VoiceOver and Switch Control
 expect to control themselves.
 
-## tvOS Focus Traversal QA Checklist
+## tvOS-D04 — tvOS Focus Traversal QA Checklist
 
 When a UI change ships on tvOS, walk through:
 

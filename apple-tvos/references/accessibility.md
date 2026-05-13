@@ -6,7 +6,7 @@ iOS/macOS. For generic VoiceOver, traits, Dynamic Type, and Reduce Motion,
 defer to the authoritative community `swiftui-expert-skill`
 (`references/accessibility-patterns.md`).
 
-## Modal Dismissal: Menu Button, Not Close Button
+## tvOS-A01 — Modal Dismissal: Menu Button, Not Close Button
 
 On iOS and macOS, modals usually carry an explicit Close / Cancel button.
 On tvOS, the canonical dismissal is the **Menu button** on the Siri
@@ -39,7 +39,7 @@ affordance:
 
 ```swift
 ModalContent()
-    .onExitCommand { dismiss() }           // tvOS Menu button
+    .onExitCommand { dismiss() }           // tvOS Menu button + macOS Escape key
 #if !os(tvOS)
     .overlay(alignment: .topTrailing) {
         Button("Close") { dismiss() }
@@ -48,10 +48,13 @@ ModalContent()
 #endif
 ```
 
-`.onExitCommand` is a no-op on iOS/macOS, so it's safe to apply on every
-platform — but the visible Close button must be `#if !os(tvOS)`.
+Availability: `.onExitCommand` is **tvOS 13.0+ AND macOS 10.15+**. On
+macOS it triggers on the Escape key — not a no-op. On iOS / iPadOS /
+visionOS it has no effect, so the modifier is safe to apply
+unconditionally. The visible Close button must be `#if !os(tvOS)` to
+avoid the focus / layout collisions described above.
 
-## Destructive Confirmation Dialog Default Focus (Severity-1)
+## tvOS-A02 — Destructive Confirmation Dialog Default Focus (Severity-1)
 
 `confirmationDialog` / `alert` initial focus follows declaration order.
 On tvOS this is **severity-1** — the focus engine puts initial focus on
@@ -87,15 +90,15 @@ VoiceOver on tvOS uses focus traversal, not direct touch. Implications:
 - **Focus order matters more.** VoiceOver reads elements in focus order
   (driven by `.focusable()` and `@FocusState`), not visual order. Verify
   that the focus path covers every readable element.
-- **Don't manually reassert focus.** Setting `isFocused = true` from
-  `DispatchQueue.main.asyncAfter` hijacks events VoiceOver and Switch
-  Control expect to handle themselves. Use focus containment (modals via
-  `.fullScreenCover()`, scoped `@FocusState`) instead. See
+- **tvOS-A03 — Don't manually reassert focus.** Setting `isFocused =
+  true` from `DispatchQueue.main.asyncAfter` hijacks events VoiceOver
+  and Switch Control expect to handle themselves. Use focus containment
+  (modals via `.fullScreenCover()`, scoped `@FocusState`) instead. See
   `references/design-regressions.md` for the full anti-pattern callout.
-- **No `.accessibilityAddTraits(.isButton)` on focus helpers.** A
-  zero-size `Rectangle().fill(.clear)` used purely to capture focus
-  should be `.accessibilityHidden(true)`. Otherwise VoiceOver will
-  announce a spurious "Button" with no label.
+- **tvOS-A04 — No `.accessibilityAddTraits(.isButton)` on focus
+  helpers.** A zero-size `Rectangle().fill(.clear)` used purely to
+  capture focus should be `.accessibilityHidden(true)`. Otherwise
+  VoiceOver will announce a spurious "Button" with no label.
 
 ## Cross-References
 

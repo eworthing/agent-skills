@@ -1,0 +1,55 @@
+{
+  "skill_name": "apple-tvos",
+  "schema_version": 1,
+  "description": "Each eval gives a SwiftUI snippet with a tvOS deployment target. Agent must list tvOS rule IDs (e.g. tvOS-F01) violated, or confirm clean if none. Expected output names the violation set plus severity. False positives (e.g. flagging `.viewAligned` when none is present) are failures.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "container-focusable",
+      "prompt": "Review fixtures/container-focusable.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-F01 (`.focusable()` on HStack container blocks focus reaching child CardView instances; remove `.focusable()` from the HStack — focus reaches cards via their `.focused($focusedID, equals:)`). No other violations.",
+      "files": ["fixtures/container-focusable.swift"],
+      "expected_rule_ids": ["tvOS-F01"]
+    },
+    {
+      "id": 1,
+      "name": "destructive-dialog-wrong-order",
+      "prompt": "Review fixtures/destructive-dialog.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-A02 severity-1: destructive `Delete All` button declared first → default focus on Delete on tvOS, one Select press away from data loss. Fix: declare `Cancel` first.",
+      "files": ["fixtures/destructive-dialog.swift"],
+      "expected_rule_ids": ["tvOS-A02"]
+    },
+    {
+      "id": 2,
+      "name": "manual-focus-reassertion-and-sheet",
+      "prompt": "Review fixtures/manual-focus-reassertion.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-A03 (manual focus reassertion via `DispatchQueue.main.asyncAfter` hijacks VoiceOver/Switch Control; replace with `.defaultFocus` or scoped `@FocusState` on appear) AND tvOS-D01 (`.sheet()` for tvOS modal — focus containment not reliable; use `.fullScreenCover()`). Should also flag tvOS-A01 implicitly because the modal's `Close` button is visible without `#if !os(tvOS)` gating and lacks `.onExitCommand`.",
+      "files": ["fixtures/manual-focus-reassertion.swift"],
+      "expected_rule_ids": ["tvOS-A03", "tvOS-D01", "tvOS-A01"]
+    },
+    {
+      "id": 3,
+      "name": "plain-button-with-custom-styling",
+      "prompt": "Review fixtures/plain-button-style.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-D03: focusable Button uses `.buttonStyle(.plain)` with custom material background inside a horizontal ScrollView. Focus ring will clip against ScrollView. Fix: use `.buttonStyle(.bordered)` or `.buttonStyle(.card)` to let the focus engine own ring rendering.",
+      "files": ["fixtures/plain-button-style.swift"],
+      "expected_rule_ids": ["tvOS-D03"]
+    },
+    {
+      "id": 4,
+      "name": "text-only-scrollview",
+      "prompt": "Review fixtures/text-only-scrollview.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md cites tvOS-F05: ScrollView contains only non-focusable Text views, so scrolling is impossible on tvOS (no focus target to drive scroll). Fix: either make each line `.focusable()` + `.focused($focusedID, equals: line.id)`, or branch with `#if os(tvOS)` to a paginated focusable variant.",
+      "files": ["fixtures/text-only-scrollview.swift"],
+      "expected_rule_ids": ["tvOS-F05"]
+    },
+    {
+      "id": 5,
+      "name": "onexitcommand-correct-clean",
+      "prompt": "Review fixtures/onexitcommand-correct.swift for tvOS rule violations. Target: tvOS 17+. List every apple-tvos rule ID violated, or state 'clean' if none. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md states 'clean'. Snippet uses `.fullScreenCover()` (tvOS-D01 satisfied), Menu-button dismissal via `.onExitCommand` (tvOS-A01 satisfied), default focus set on appear via `@FocusState` without `DispatchQueue.main.asyncAfter` (tvOS-A03 satisfied). No buttons use `.plain` with custom styling. No glass-on-glass. No destructive dialog. No issues.",
+      "files": ["fixtures/onexitcommand-correct.swift"],
+      "expected_rule_ids": []
+    }
+  ]
+}
