@@ -2,10 +2,12 @@
 name: swiftui-design-tokens
 author: eworthing
 description: >-
-  Applies project design tokens for colors, spacing, typography, and button styling in
-  SwiftUI. Relevant when adding or changing visual styling, replacing hardcoded
-  padding, font, or color values, or working on semantic color, spacing, or typography
-  consistency.
+  Applies project design tokens for colors, spacing, typography, motion, and
+  button styling in SwiftUI on iOS, macOS, and tvOS. Use when adding or
+  changing visual styling, defining or extending spring/timed motion tokens,
+  choosing reduce-motion alternatives, replacing hardcoded padding, font, or
+  color values, picking platform-appropriate button styles, applying macOS
+  form styling, or sizing modal frames with tokens.
 allowed-tools:
   - Read
   - Write
@@ -164,6 +166,11 @@ Always provide alternatives when `accessibilityReduceMotion` is true:
 .animation(reduceMotion ? Motion.fast : Motion.spring, value: isExpanded)
 ```
 
+For the full motion token catalog -- spring tokens (`lift`, `drop`,
+platform-branched `focusSpring`), reduce-motion alternatives
+(`liftReduced`, `dropReduced`), and the per-interaction selection guide
+table -- see [references/motion-tokens.md](references/motion-tokens.md).
+
 ## Button Styles
 
 ### Context-Based Selection
@@ -208,6 +215,54 @@ ZStack {
     ModalContent()
 }
 ```
+
+## Form Styling (macOS)
+
+Let SwiftUI pick the platform-default form style instead of forcing a
+specific look. `.formStyle(.automatic)` tracks Apple's current design
+direction (currently column-style on macOS) and adapts as the platform
+evolves:
+
+```swift
+Form {
+    Section("Appearance") { /* ... */ }
+}
+#if os(macOS)
+.formStyle(.automatic)
+.scenePadding()
+#endif
+```
+
+`.scenePadding()` produces the recommended spacing around the root view
+of a macOS window. Apple's Settings documentation pairs `.automatic` with
+`.scenePadding()` for the same reason -- both adapt to platform context
+automatically.
+
+Avoid hardcoding `.formStyle(.grouped)` unless you specifically want the
+iOS-style grouped look on macOS.
+
+## Modal Sizing
+
+Use sizing tokens for modal frames instead of magic numbers. Define a
+namespace such as `ScaledDimensions` (or extend `Metrics`) so window sizes
+stay consistent and adapt to Dynamic Type or accessibility scaling:
+
+```swift
+enum ScaledDimensions {
+    static let modalWidth: CGFloat = 1200
+    static let modalHeight: CGFloat = 860
+}
+
+// Use the token
+.frame(maxWidth: ScaledDimensions.modalWidth,
+       maxHeight: ScaledDimensions.modalHeight)
+
+// Avoid -- magic numbers, drift across modals
+.frame(maxWidth: 1200, maxHeight: 860)
+```
+
+If you need different sizes per platform, branch inside the token
+definition rather than at every callsite.
 
 ## View Modifiers
 
