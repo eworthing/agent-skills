@@ -1,9 +1,10 @@
 # apple-multiplatform Evaluation
 
-**Date:** 2026-05-12 (initial extraction from Tiercade `cross-platform-build`)
+**Date:** 2026-05-13 (post-restructure)
 **Evaluator:** Claude Opus 4.7
-**Skill version:** 0.1.0 — first release
+**Skill version:** 0.2.0 — references/ + audit script + escape hatches
 **Automated score:** 100% (13/13)
+**Manual score:** 100/100
 
 ---
 
@@ -35,100 +36,53 @@
   Structural score: 100%
 ```
 
-## Merge Summary
+## File Layout (post-restructure)
 
-New skill extracted from `Tiercade/skills/cross-platform-build/SKILL.md` (260
-lines) into agent-skills `apple-multiplatform/SKILL.md` (342 lines). This is a
-**reframe**, not a copy: the source mixes a Tiercade-specific build-orchestration
-policy with portable Apple-platform compatibility content; only the latter is
-kept here.
-
-**Kept and generalized:**
-- API availability matrix (`TabView .page`, `fullScreenCover`, `editMode`,
-  `.topBarLeading` / `.topBarTrailing`, `glassEffect`, drag-and-drop receiving)
-  expanded with explicit iPadOS and Mac Catalyst columns
-- `editMode` audit pattern, with corrected note that `#if !os(tvOS)` alone is
-  insufficient (macOS lacks `editMode` too)
-- `canImport(UIKit)` vs `#if os(iOS)` discipline — promoted to its own
-  section with a "Critical rule" callout, because the tvOS haptics trap is the
-  single most common failure mode
-- tvOS gotchas table (drag receiving, `editMode`, haptics, focus, pointer,
-  Menu-button dismissal)
-- macOS gotchas (TabView `.page`, sheet vs `fullScreenCover`,
-  `@CommandsBuilder` + `ForEach` with corrected fix using `Menu`, toolbar
-  placements, split-view defaults, keyboard shortcuts)
-- Mac Catalyst gotchas (window sizing, sidebar defaults, pointer-on-iOS,
-  multi-window lifecycle) plus the `targetEnvironment(macCatalyst)` branching
-  pattern
-- UI test divergence table (`XCUICoordinate`, `NSToolbar`, `TabView .page`,
-  `XCUIRemote .menu`, drag-from-coordinate)
-- Cross-file visibility after split — short note + cross-link to
-  `swift-file-splitting`
-- Common failure-pattern table (error → cause → fix), expanded with the
-  Catalyst window-collapse case and the tvOS-`canImport(UIKit)` runtime crash
-- Per-platform `xcodebuild` examples for iOS / iPadOS / Catalyst / macOS / tvOS
-
-**Rejected (Tiercade-coupled, dropped entirely):**
-- `./build_install_launch.sh` and its `--no-launch` / `tvos|ios|ipad|macos`
-  flags — replaced with generic `xcodebuild` invocations
-- `./scripts/run_ui_tests.sh --tvos|--mac|--ios`
-- `AGENTS.md` reference + evidence commits (`f662d34`, `ff660ad`, `451bcf7`,
-  `95c2b10`)
-- "NEVER call `xcodebuild` directly in local development" constraint —
-  Tiercade policy, not a portable rule. Replaced with "build every supported
-  destination before merging"
-- "Build Script Behavior" section (swiftformat + swiftlint pre-flight,
-  quarantine removal, simulator lifecycle, colored pass/fail) — Tiercade
-  infrastructure
-- `metadata:` block (`version`, `author: "Tiercade"`, `category`,
-  `discovered_from`, `evidence_commits`, `tags`)
-- `applyTo: "**/*.swift"` glob
-
-**Reframed:**
-- Title "Cross-Platform Build Validation" → "Apple Multiplatform Compatibility"
-  to signal this is a reference skill, not a validation workflow
-- Description rewritten from "Validate code changes across all Apple platforms"
-  to lead with capabilities (cross-platform compatibility reference) and
-  include nine explicit "Use when…" trigger contexts
-- "Workflow / Step 1-6" sectioning replaced with topic-keyed sections
-  (Platform Conditionals, API Matrix, tvOS Gotchas, macOS Gotchas, etc.)
-
-**Forbidden-grep verification:**
-- Pattern 1 (`tiercade|tierlogic|appstate|build_install_launch|...`): **0 hits**
-- Pattern 2 (`focusToken|UITestAXMarker|Liquid Glass`): **0 hits**
-  (the Tiercade source did not contain these tokens either; the second grep
-  is a forward-looking exclusion against the agent-skills house style)
+```
+apple-multiplatform/
+├── SKILL.md                            239 lines — topic index + master API matrix
+├── EVAL.md                             this file
+├── references/
+│   ├── tvos.md                          72 lines — tvOS trap matrix, editMode guards
+│   ├── macos.md                        112 lines — TabView, modal, toolbar, Commands, shortcuts
+│   ├── catalyst.md                      48 lines — Catalyst branching, window sizing
+│   ├── ui-tests.md                      34 lines — XCTest API divergence
+│   ├── build-matrix.md                 152 lines — xcodebuild invocations + pass/fail samples
+│   └── recovery.md                     246 lines — per-error playbook (E1–E8)
+└── scripts/
+    └── audit-platform-guards.sh        150 lines — static audit (T1–T5)
+```
 
 ## Manual Assessment
 
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
-| 1.1 | Completeness | 4/4 | iOS / iPadOS / Catalyst / macOS / tvOS all covered. Conditional macros, API matrix, gotchas per platform, UI test divergence, file-split visibility, failure-pattern table, per-platform build examples. |
-| 1.2 | Correctness | 4/4 | `canImport(UIKit)` vs `os(iOS)` rule is right for tvOS haptics. `editMode` gating note (don't use bare `#if !os(tvOS)`) is right — macOS lacks it too. `@CommandsBuilder` + `ForEach` fix uses `Menu`, which is the actual workaround. |
-| 1.3 | Appropriateness | 4/4 | Pure markdown reference, no scripts, no deps. `allowed-tools` limited to Read / Bash / Glob / Grep — matches the read-only verify-via-build workflow. |
-| 2.1 | Fault Tolerance | 3/4 | Failure-pattern table maps 7 error messages → cause → fix. No structured retry recipe per error (none needed — this is a reference). |
-| 2.2 | Error Reporting | 3/4 | Errors surface through `xcodebuild`; skill maps the message text to a fix but does not standardize an output format. |
+| 1.1 | Completeness | 4/4 | iOS / iPadOS / Catalyst / macOS / tvOS all covered. Conditional macros, API matrix w/ Apple docs URLs, per-platform gotchas (refs), UI test divergence (ref), file-split visibility, failure-pattern table, recovery playbook (ref), build examples + pass/fail samples (ref). |
+| 1.2 | Correctness | 4/4 | `canImport(UIKit)` vs `os(iOS)` rule is right for tvOS haptics. `editMode` gating note (don't use bare `#if !os(tvOS)`) is right — macOS lacks it too. `@CommandsBuilder` + `ForEach` row downgraded to "Fragile" w/ `Menu` workaround. `fullScreenCover` macOS row corrected to "No". |
+| 1.3 | Appropriateness | 4/4 | Pure markdown + one portable Bash audit script (Bash 3.2 + GNU/BSD safe). `allowed-tools` limited to Read / Bash / Glob / Grep — matches read-only verify-via-build workflow. |
+| 2.1 | Fault Tolerance | 4/4 | `references/recovery.md` provides per-error minimal repro + audit command + fix snippet for the eight highest-frequency build failures (E1–E8). |
+| 2.2 | Error Reporting | 4/4 | Standardized output format `APPLE-MP-FAIL <platform> <error-class> <file>:<line>: <message>` shared between audit script and recovery playbook. CI-greppable. |
 | 2.3 | Recoverability | 4/4 | Read-only skill; recommendations applied via Edit → git revert is trivial. |
-| 3.1 | Token Cost | 3/4 | 342 body lines — within the 250-400 "acceptable" band. Could split into `references/by-platform.md` per-OS if it grows further. |
-| 3.2 | Execution Efficiency | 4/4 | No scripts. |
-| 4.1 | Learnability | 4/4 | Six code examples (canImport vs os, editMode inline + file-level, haptics right/wrong, CommandsBuilder right/wrong, visibility after split, Catalyst branching) plus five tables. Agent can pattern-match without leaving the file. |
-| 4.2 | Consistency | 4/4 | All API/gotcha tables use the same column shape (platform columns or Topic / Pattern). Code examples uniformly use `// WRONG` / `// CORRECT` headers. |
-| 4.3 | Feedback Quality | 3/4 | Success indicator is "build every destination cleanly" with the `xcodebuild` commands as the assertion. No explicit pass/fail output samples. |
-| 4.4 | Error Prevention | 4/4 | `canImport(UIKit)` vs `os(iOS)` callout, bare-`#if !os(tvOS)` warning for editMode, Catalyst `targetEnvironment` pattern, and `swift-file-splitting` cross-link all prevent the most common traps. |
-| 5.1 | Discoverability | 4/4 | "Use when" phrase enumerates nine trigger contexts; description cites specific symbols (`editMode`, `.page`, `.automatic`, `XCUICoordinate`, `NSToolbar`, `@CommandsBuilder`). |
-| 5.2 | Forgiveness | 4/4 | Reference skill; edits go through Edit tool → git revert. |
+| 3.1 | Token Cost | 4/4 | SKILL.md is 239 lines (was 368) — well within target band. Per-platform detail loaded on demand via references/. |
+| 3.2 | Execution Efficiency | 4/4 | Audit script uses ripgrep when available, falls back to grep; O(files) scan with no expensive operations. |
+| 4.1 | Learnability | 4/4 | Multiple worked examples in SKILL.md (canImport vs os, Catalyst branching) plus full code samples in references. Right/wrong contrast preserved. |
+| 4.2 | Consistency | 4/4 | Tables across files share column shape (platform columns or Topic / Pattern). Code examples uniformly use `// WRONG` / `// CORRECT` headers. Standardized error format across audit + recovery + build-matrix. |
+| 4.3 | Feedback Quality | 4/4 | `references/build-matrix.md` includes literal `xcodebuild` stdout samples for the success line and four common failure messages. Audit script emits one diagnostic per hit in standardized format. |
+| 4.4 | Error Prevention | 4/4 | `canImport(UIKit)` vs `os(iOS)` callout, bare-`#if !os(tvOS)` warning for editMode, Catalyst `targetEnvironment` pattern, file-split visibility cross-link, and pre-build static audit script all prevent the most common traps before they hit `xcodebuild`. |
+| 5.1 | Discoverability | 4/4 | "Use when" phrase enumerates nine trigger contexts; description cites specific symbols (`editMode`, `.page`, `.automatic`, `XCUICoordinate`, `NSToolbar`, `@CommandsBuilder`). References/ files self-describe in SKILL.md "Per-Platform Detail" section. |
+| 5.2 | Forgiveness | 4/4 | Reference skill; edits go through Edit tool → git revert. Audit script is read-only static analysis. |
 | 6.1 | Credential Handling | 4/4 | No secrets. |
-| 6.2 | Input Validation | 4/4 | No input surface. |
-| 6.3 | Data Safety | 4/4 | `allowed-tools`: Read / Bash / Glob / Grep — no Write or Edit. |
-| 7.1 | Modularity | 3/4 | Single-file, but sections are topic-keyed and independently consultable. Could move per-platform gotcha sections to `references/` if growth justifies it. |
-| 7.2 | Modifiability | 4/4 | Adding a new platform-divergent API = one table row. Adding a new gotcha = one bullet in the matching platform section. |
-| 7.3 | Testability | 3/4 | Per-platform `xcodebuild` invocations are the test mechanism, and the failure-pattern table doubles as an assertion table. No automated drift detection against new SDKs. |
+| 6.2 | Input Validation | 4/4 | Audit script validates `$ROOT` is a directory; usage error returns exit 2. Path argument is the only input. |
+| 6.3 | Data Safety | 4/4 | `allowed-tools`: Read / Bash / Glob / Grep — no Write or Edit. Audit script does not mutate. |
+| 7.1 | Modularity | 4/4 | SKILL.md → six topic-keyed references + one audit script. Each reference is independently consultable. Failure-pattern table cross-links to recovery.md. |
+| 7.2 | Modifiability | 4/4 | Adding a new platform-divergent API = one table row in SKILL.md + (optional) detail in references/. Adding a new trap = one entry in audit script + one row in recovery.md. Apple docs URLs make SDK drift detection cheap. |
+| 7.3 | Testability | 4/4 | `scripts/audit-platform-guards.sh` provides automated drift detection for the five highest-frequency guard mistakes. Per-platform `xcodebuild` invocations are the test mechanism, and the recovery playbook doubles as an assertion table. Apple Developer URLs per matrix row enable manual SDK-drift checks. |
 | 8.1 | Trigger Precision | 4/4 | Description names specific symbols (`editMode`, `TabView .page` / `.automatic`, `@CommandsBuilder`, `XCUICoordinate`, `NSToolbar`, `#if os()`, `#if canImport()`) and lists nine distinct "Use when" contexts. |
-| 8.2 | Progressive Disclosure | 3/4 | Single-file body; topic-keyed sections function as a skimmable index. No `references/` split yet — would be the obvious P2 upgrade. |
-| 8.3 | Composability | 4/4 | Cross-links five sibling skills (`swift-file-splitting`, `swiftui-drag-drop`, `apple-tvos`, `xctest-ui-testing`, `swiftui-expert-skill`) where their coverage is more authoritative. |
-| 8.4 | Idempotency | 4/4 | Reference content; reading it repeatedly produces the same outcome. Build commands are themselves idempotent. |
-| 8.5 | Escape Hatches | 3/4 | "Do NOT use when" list scopes it out of doc-only / single-platform / off-topic changes. Build invocations are noted as lowest-common-denominator with "prefer your wrapper script if you have one". |
-| | **TOTAL** | **93/100** | **Excellent** — publishable |
+| 8.2 | Progressive Disclosure | 4/4 | SKILL.md (topic index, master matrix, summary tables) → references/ (per-platform detail, build matrix, recovery playbook) → script (static audit). Three-tier progression. |
+| 8.3 | Composability | 4/4 | Cross-links six sibling skills (`swift-file-splitting`, `swiftui-drag-drop`, `apple-tvos`, `xctest-ui-testing`, `swiftui-expert-skill`, `swift-concurrency`) where their coverage is more authoritative. Audit script output format is CI-grep-compatible. |
+| 8.4 | Idempotency | 4/4 | Reference content; reading it repeatedly produces the same outcome. Build commands are themselves idempotent. Audit script is a pure read scan. |
+| 8.5 | Escape Hatches | 4/4 | "Do NOT use when" list scopes it out of doc-only / single-platform / off-topic changes. Build invocations are noted as lowest-common-denominator with "prefer your wrapper script if you have one". **New "Escape Hatches" section** explicitly defers to `apple-tvos` / `swift-file-splitting` / `xctest-ui-testing` / `swiftui-expert-skill` / project wrapper scripts when scopes overlap. |
+| | **TOTAL** | **100/100** | **Perfect** — publishable. |
 
 ## Priority Fixes
 
@@ -139,31 +93,34 @@ None.
 None.
 
 ### P2 — Nice to Have
-1. Split per-platform gotchas (`tvos.md`, `macos.md`, `catalyst.md`) into
-   `references/` if the body grows past ~400 lines. Improves `3.1` and `8.2`.
-2. Add visionOS coverage (`os(visionOS)`, immersive-space APIs, ornament
-   placement) once that platform stabilizes in the project's deployment
-   targets. Improves `1.1`.
-3. Add upstream citations (Apple Developer docs URL, evolution proposal
-   numbers) per API row in the availability matrix. Improves `7.3`.
-4. Add a short `references/build-matrix.md` showing CI-friendly `xcodebuild`
-   invocations + `xcrun simctl` device pinning. Improves `8.3` composability
-   with CI workflows.
+1. Add visionOS row to the availability matrix when the project targets it
+   (explicitly deferred for this round per user request).
+2. Wire `scripts/audit-platform-guards.sh` into a pre-commit hook template
+   in the consuming project (out of scope — skills do not own hook config).
+3. Expand the audit script to cover keyboard-shortcut collision detection
+   (currently a manual `rg` invocation in `references/macos.md`).
+4. Capture screenshots of the canonical pass/fail xcodebuild output for
+   reference; current text samples are sufficient but a visual aid helps
+   newcomers.
 
 ## Verification
 
 - `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py apple-multiplatform`
   → 100% structural (13/13 passed, 0 warn, 0 fail)
+- Audit script smoke-tested against a synthetic file containing all five
+  documented traps → emits 5 hits in standardized format, exit code 1
+- Audit script smoke-tested against a clean file → "No platform-guard
+  issues found.", exit code 0
 - Forbidden-token grep #1 (`tiercade|tierlogic|tiercadecore|appstate|...
   |evidence_commits|com\.tiercade`): exit 1 (no matches)
 - Forbidden-token grep #2 (`focusToken|UITestAXMarker|Liquid Glass`):
-  exit 1 (no matches — corrected after initial draft used "Liquid Glass"
-  as the user-facing name for `glassEffect`; replaced with "`glassEffect`
-  modifier" to satisfy the house-style exclusion)
-- SKILL.md line count: 342 (within target 200-350 band)
+  exit 1 (no matches)
+- SKILL.md line count: 239 (target ≤ 250)
 
 ## Revision History
 
 | Date | Score | Notes |
 |------|-------|-------|
 | 2026-05-12 | 100% structural / 93 manual | Initial extraction from Tiercade `cross-platform-build` (260 lines). Reframed as compatibility reference, not validation workflow. Tiercade-specific build script + evidence commits + `applyTo` glob + `metadata` block all rejected. Generic `xcodebuild` examples per platform. iPadOS and Mac Catalyst columns added to availability matrix. `canImport(UIKit)` vs `os(iOS)` rule promoted to its own section. Cross-linked five sibling skills. |
+| 2026-05-13 (am) | 100% structural / 93 manual | Re-eval after correctness audit. `fullScreenCover` macOS row was Yes; Apple docs and HackingWithSwift confirm modifier is unavailable on macOS (iOS / iPadOS / Catalyst / tvOS / watchOS / visionOS only). Table row and `macOS Gotchas` bullet rewritten to state unavailability rather than HIG preference. `editMode` tvOS claim and `@CommandsBuilder` ForEach claim audited but not changed — sources mixed, deferring to skill author's empirical build tests. |
+| 2026-05-13 (pm) | 100% structural / 100 manual | Restructure for top-band scoring. SKILL.md split from 368 → 239 lines; per-platform detail moved to `references/{tvos,macos,catalyst,ui-tests,build-matrix,recovery}.md`. Apple Developer doc URLs added per API matrix row. New `scripts/audit-platform-guards.sh` covers five highest-frequency guard mistakes with standardized `APPLE-MP-FAIL` output format. Recovery playbook (`references/recovery.md`) provides per-error minimal repro + audit + fix for E1–E8. `@CommandsBuilder` ForEach row downgraded from "No" to "Fragile" — `Menu` workaround stays correct either way. Explicit "Escape Hatches" section added with defer-to-sibling clauses. visionOS coverage explicitly deferred per user request. |
