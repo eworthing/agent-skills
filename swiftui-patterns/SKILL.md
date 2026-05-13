@@ -4,10 +4,13 @@ author: eworthing
 original-author: Antoine van der Lee (AvdLee)
 source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
-  Applies SwiftUI composition, identity, list, grid, animation, and scroll-performance
-  patterns. Relevant when building or restructuring SwiftUI views, reusable containers,
-  lists, grids, or animations, or when diagnosing janky scrolling, re-rendering, or
-  view-identity problems.
+  Applies SwiftUI composition, identity, list, grid, animation, scroll,
+  text-formatting, and tvOS-focus performance patterns across iOS, macOS,
+  and tvOS. Use when building or restructuring SwiftUI views, reusable
+  containers, lists, grids, or animations, diagnosing janky scrolling,
+  re-rendering, or view-identity problems, optimizing POD diffing,
+  handling tvOS focus hover conflicts or focus settle delays, or wiring
+  focus-driven scroll behavior.
 allowed-tools:
   - Read
   - Write
@@ -18,6 +21,26 @@ allowed-tools:
 ---
 
 # SwiftUI Patterns
+
+## Scope
+
+This skill owns SwiftUI **rendering invariants** — composition, identity,
+diffing performance, animation mechanics, scroll handling, text
+formatting, and tvOS focus-engine caveats.
+
+For adjacent concerns use the appropriate sibling skill:
+
+| Concern | Skill |
+|---|---|
+| State management, `@Observable`, app-level state | `swiftui-expert-skill` |
+| Deprecated SwiftUI APIs (`foregroundColor`, `cornerRadius`, `NavigationView`, old `onChange`) | `swiftui-deprecated-apis` |
+| Design tokens (colors, spacing, motion tokens, button styles) | `swiftui-design-tokens` |
+| Accessibility identifiers, VoiceOver, focus dismissal | `swiftui-accessibility` |
+| UI testing patterns and accessibility-marker views | `xctest-ui-testing` |
+
+tvOS-specific composition, animation, and scroll patterns (focus hover
+conflict, focus settle delay, focus-driven scrolling, POD + `@FocusState`)
+are documented in [references/tvos.md](references/tvos.md).
 
 ## View Composition & Container Patterns
 
@@ -96,6 +119,10 @@ Keep logic out of view body — extract button actions to methods.
 - **Decoration** (badge, border, shadow): `.overlay()` / `.background()` — child inherits parent size
 - **Peer composition** (views jointly defining layout): `ZStack` — children participate independently
 
+**tvOS:** never apply `.focusable()` to a container wrapping focusable
+children — it blocks focus from reaching them. See
+[references/tvos.md](references/tvos.md).
+
 ---
 
 ## Performance
@@ -135,6 +162,10 @@ struct StatCard: View {
 1. Pass only needed primitive values, not entire model objects
 2. Use `@ViewBuilder let content: Content` instead of closures
 3. Keep `@State`/`@FocusState` in parent views when possible
+
+**tvOS:** POD focusable rows can lose focus identity on parent redraw.
+Pair them with `@FocusState` + `.focused(_:equals:)` in the parent —
+details in [references/tvos.md](references/tvos.md).
 
 ### Key Rules
 
@@ -201,6 +232,13 @@ patterns (phase/keyframe animations, Animatable protocol, transitions), see:
   }
   ```
 
+**tvOS:** custom `.animation()` on focusable elements can fight the
+built-in focus hover effect, causing jitter; scope animation to inner
+content instead. For long-running animations on focus change (thumbnail
+playback, detail loads), use the token-based settle-delay pattern in
+[references/tvos.md](references/tvos.md). The tvOS Simulator does not
+replicate focus animations faithfully — verify on hardware.
+
 ---
 
 ## Scroll Patterns
@@ -229,9 +267,32 @@ This reduces callback frequency at the framework level:
 }
 ```
 
-### ScrollViewReader
+### Programmatic Scrolling
 
-Use `ScrollViewReader` with stable IDs for programmatic scrolling:
+For new code on iOS 17+ / tvOS 17+ / macOS 14+, prefer
+`.scrollPosition(id:)` over `ScrollViewReader`. It's the modern,
+declarative replacement:
+
+```swift
+@State private var scrolledID: Item.ID?
+
+ScrollView {
+    LazyVStack {
+        ForEach(items) { item in
+            ItemRow(item: item).id(item.id)
+        }
+    }
+    .scrollTargetLayout()
+}
+.scrollPosition(id: $scrolledID)
+.onChange(of: items.count) { _, _ in
+    if let last = items.last?.id {
+        withAnimation { scrolledID = last }
+    }
+}
+```
+
+For pre-17 deployment, `ScrollViewReader` is still supported:
 
 ```swift
 ScrollViewReader { proxy in
@@ -258,6 +319,11 @@ ScrollViewReader { proxy in
 
 Combine with `.scrollTargetLayout()` on the inner stack and
 `containerRelativeFrame()` (also iOS 17+) for full-width pages.
+
+**tvOS:** scrolling is **focus-driven** — a `ScrollView` with no
+focusable children is unscrollable. Prefer `.viewAligned` over `.paging`;
+full-page jumps on a 1920x1080 display feel jarring. Details and a
+fix-it pattern are in [references/tvos.md](references/tvos.md).
 
 ### `.visualEffect` (iOS 17+)
 
@@ -333,11 +399,15 @@ the main thread using `CGImageSourceCreateThumbnailAtIndex`:
 
 ```swift
 actor ImageProcessor {
-    func downsample(data: Data, to targetSize: CGSize) -> UIImage? {
+    /// Caller passes a `displayScale` — usually
+    /// `@Environment(\.displayScale)` read in the SwiftUI view that
+    /// requests the thumbnail. Avoid `UIScreen.main.scale` (deprecated
+    /// since iOS 16 — does not handle multi-window scenes correctly).
+    func downsample(data: Data, to targetSize: CGSize, displayScale: CGFloat) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
             return nil
         }
-        let maxDim = max(targetSize.width, targetSize.height) * UIScreen.main.scale
+        let maxDim = max(targetSize.width, targetSize.height) * displayScale
         let options: [CFString: Any] = [
             kCGImageSourceThumbnailMaxPixelSize: maxDim,
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -349,6 +419,13 @@ actor ImageProcessor {
         }
         return UIImage(cgImage: cgImage)
     }
+}
+
+// Call site
+struct ThumbnailView: View {
+    @Environment(\.displayScale) private var displayScale
+    // ...
+    .task { image = await processor.downsample(data: data, to: size, displayScale: displayScale) }
 }
 ```
 
@@ -389,15 +466,21 @@ toolbars and search bars.
 - [ ] State updates gated by value comparison in hot paths
 - [ ] Large lists use `LazyVStack`/`LazyHStack`
 - [ ] `Self._printChanges()` gated with `#if DEBUG` if present
+- [ ] **tvOS:** Focusable POD rows use `@FocusState` binding for stable focus
+- [ ] **tvOS:** No `.focusable()` on container wrappers
 
 ### Animation
 - [ ] Using `.animation(_:value:)` with value parameter (not deprecated form)
 - [ ] `withAnimation` for event-driven animations
 - [ ] Transitions paired with animation context **outside** conditional
 - [ ] Transforms preferred over layout changes for animated properties
+- [ ] **tvOS:** No custom `.animation()` fighting focus hover — scope to children
+- [ ] **tvOS:** Long-running focus-change animations use token-based settle delay
 
 ### Scroll
-- [ ] `ScrollViewReader` uses stable IDs
+- [ ] New code uses `.scrollPosition(id:)` (iOS 17+); `ScrollViewReader` for older targets
+- [ ] **tvOS:** All scrollable content contains focusable children
+- [ ] **tvOS:** Prefer `.viewAligned` over `.paging` for smoother navigation
 
 ### Text
 - [ ] Using `Text(value, format:)` not `String(format:)`
@@ -407,3 +490,4 @@ toolbars and search bars.
 
 - [references/animation-guide.md](references/animation-guide.md) — Animation mechanics, transitions, Animatable, phase/keyframe animators
 - [references/performance-guide.md](references/performance-guide.md) — POD views, equatable views, view composition, anti-patterns
+- [references/tvos.md](references/tvos.md) — tvOS focus engine patterns: focus-driven scrolling, focus hover conflict, settle delay, POD + `@FocusState`, container-`.focusable()` caveats
