@@ -5,12 +5,15 @@ original-author: Antoine van der Lee (AvdLee)
 source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
   Applies SwiftUI composition, identity, list, grid, animation, scroll,
-  text-formatting, and tvOS-focus performance patterns across iOS, macOS,
-  and tvOS. Use when building or restructuring SwiftUI views, reusable
-  containers, lists, grids, or animations, diagnosing janky scrolling,
-  re-rendering, or view-identity problems, optimizing POD diffing,
-  handling tvOS focus hover conflicts or focus settle delays, or wiring
-  focus-driven scroll behavior.
+  text-formatting, observable-state, and tvOS-focus performance patterns
+  across iOS, macOS, and tvOS. Use when building or restructuring SwiftUI
+  views, reusable containers, lists, grids, or animations, diagnosing
+  janky scrolling, re-rendering, or view-identity problems, optimizing
+  POD diffing, wiring `@Observable` / `@Bindable` state containers,
+  routing view binding to observable state, fixing `@AppStorage` view
+  updates not firing inside `@Observable` classes, handling tvOS focus
+  hover conflicts or focus settle delays, or wiring focus-driven scroll
+  behavior.
 allowed-tools:
   - Read
   - Write
@@ -32,7 +35,7 @@ For adjacent concerns use the appropriate sibling skill:
 
 | Concern | Skill |
 |---|---|
-| State management, `@Observable`, app-level state | `swiftui-expert-skill` |
+| App-level state architecture, store-of-stores composition | `swiftui-expert-skill` |
 | Deprecated SwiftUI APIs (`foregroundColor`, `cornerRadius`, `NavigationView`, old `onChange`) | `swiftui-deprecated-apis` |
 | Design tokens (colors, spacing, motion tokens, button styles) | `swiftui-design-tokens` |
 | Accessibility identifiers, VoiceOver, focus dismissal | `swiftui-accessibility` |
@@ -122,6 +125,15 @@ Keep logic out of view body — extract button actions to methods.
 **tvOS:** never apply `.focusable()` to a container wrapping focusable
 children — it blocks focus from reaching them. See
 [references/tvos.md](references/tvos.md).
+
+---
+
+## Observable State
+
+For `@Observable` + `@MainActor` + `final class` state containers, `@Bindable`
+view binding, mutation routing through methods, undo-snapshot capture, and
+error surfacing — and the silent-failure gotcha with **`@AppStorage` inside
+`@Observable`** — see [references/observable-state.md](references/observable-state.md).
 
 ---
 
@@ -490,4 +502,5 @@ toolbars and search bars.
 
 - [references/animation-guide.md](references/animation-guide.md) — Animation mechanics, transitions, Animatable, phase/keyframe animators
 - [references/performance-guide.md](references/performance-guide.md) — POD views, equatable views, view composition, anti-patterns
+- [references/observable-state.md](references/observable-state.md) — `@Observable` + `@MainActor` containers, `@Bindable`, mutation routing, undo snapshots, error surfacing, typed-error taxonomy, **`@AppStorage`-in-`@Observable` silent-failure gotcha**
 - [references/tvos.md](references/tvos.md) — tvOS focus engine patterns: focus-driven scrolling, focus hover conflict, settle delay, POD + `@FocusState`, container-`.focusable()` caveats
