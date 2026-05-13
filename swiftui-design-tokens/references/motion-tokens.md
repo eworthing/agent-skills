@@ -116,5 +116,7 @@ accessibility setting is asking the app to avoid.
 
 For SwiftUI animation mechanics (implicit vs explicit animations,
 `Animatable`, transitions, phase/keyframe animators) see the
-`swiftui-patterns` skill -- this file is only the token catalog and
-selection guide.
+authoritative `swiftui-expert-skill` (`references/animation-basics.md`,
+`animation-transitions.md`, `animation-advanced.md`) -- this file is
+only the token catalog and selection guide. tvOS focus-animation
+caveats live in `swiftui-tvos-focus`.
