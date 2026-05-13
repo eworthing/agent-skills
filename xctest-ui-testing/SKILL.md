@@ -2,10 +2,13 @@
 name: xctest-ui-testing
 author: eworthing
 description: >-
-  Writes and debugs XCTest UI automation for BenchHype screens and flows. Relevant
-  when adding UI tests, investigating flaky or timing-sensitive UI failures, wiring
-  accessibility identifiers to support UI automation, or introducing a new modal,
-  sheet, overlay, or screen that should be covered by UI tests from the start.
+  Writes and debugs XCTest UI automation for iOS, macOS, and tvOS apps. Covers
+  accessibility identifiers, root-marker patterns for modal detection, wait-for-element
+  strategies, drag-and-drop tests, sheet/alert testing, macOS activation/window-pinning
+  helpers, platform divergence handling, and the new-component testability checklist.
+  Use when writing or debugging UI tests, investigating flaky or timing-sensitive
+  failures, wiring accessibility identifiers, introducing a new modal/sheet/overlay/screen
+  that needs test coverage, or working on cross-platform XCUITest infrastructure.
 allowed-tools:
   - Read
   - Write
@@ -92,8 +95,60 @@ This approach works because:
 - The identifier is always in the accessibility tree when the view is presented
 - Tests can use `waitForExistence` on this marker for reliable timing
 
-If plain SwiftUI accessibility doesn't surface reliably, wrap a UIKit
-view (UIViewRepresentable) with the identifier set on the native UIView.
+If plain SwiftUI accessibility doesn't surface reliably (especially on macOS,
+where `Color.clear` markers don't always reach the AppKit accessibility tree),
+wrap a platform-native view in a `UIViewRepresentable` /
+`NSViewRepresentable`:
+
+```swift
+#if canImport(UIKit)
+import UIKit
+
+struct AccessibilityMarkerView: UIViewRepresentable {
+    let identifier: String
+    func makeUIView(context: Context) -> UIView {
+        let v = UIView()
+        v.isAccessibilityElement = true
+        v.accessibilityIdentifier = identifier
+        v.isUserInteractionEnabled = false
+        return v
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {
+        uiView.accessibilityIdentifier = identifier
+    }
+}
+#elseif canImport(AppKit)
+import AppKit
+
+struct AccessibilityMarkerView: NSViewRepresentable {
+    let identifier: String
+    final class MarkerView: NSView {
+        let identifier: String
+        init(identifier: String) {
+            self.identifier = identifier
+            super.init(frame: .zero)
+            setAccessibilityIdentifier(identifier)
+            setAccessibilityElement(true)
+        }
+        required init?(coder: NSCoder) { nil }
+    }
+    func makeNSView(context: Context) -> NSView { MarkerView(identifier: identifier) }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+#endif
+```
+
+Use it as the marker overlay:
+
+```swift
+.overlay(alignment: .topLeading) {
+    AccessibilityMarkerView(identifier: "MyModal_Root")
+        .frame(width: 1, height: 1)
+}
+```
+
+UIKit/AppKit native views reliably expose identifiers to the accessibility tree
+across all three platforms; `Color.clear` does not.
 
 ## Test Patterns
 
@@ -167,6 +222,99 @@ alert.buttons["Delete"].tap()
 When testing sheets with `.presentationDetents()`, verify behavior at
 different detent sizes by checking element visibility.
 
+## macOS-Specific Patterns
+
+### Ensure App Is Frontmost Before Events
+
+XCUITest on macOS sends keyboard and click events to whatever window has key
+status. If your app isn't frontmost, events go to the wrong window (Xcode,
+the simulator, Finder) and fail silently. **Always** activate the app before
+keyboard or click events. Use escalating strategies — `XCUIApplication.activate()`
+alone is not reliable on every macOS release:
+
+```swift
+import AppKit
+import XCTest
+
+func ensureAppIsFrontmost(_ app: XCUIApplication,
+                          bundleIdentifier: String,
+                          timeout: TimeInterval = 5) {
+    // 1. XCUIApplication.activate() — works most of the time
+    app.activate()
+
+    let deadline = Date().addingTimeInterval(timeout)
+    while Date() < deadline {
+        if NSWorkspace.shared.frontmostApplication?.bundleIdentifier == bundleIdentifier {
+            return
+        }
+        // 2. NSRunningApplication direct activation
+        if let running = NSRunningApplication.runningApplications(
+                            withBundleIdentifier: bundleIdentifier
+                        ).first {
+            running.activate(options: [.activateIgnoringOtherApps])
+        }
+        Thread.sleep(forTimeInterval: 0.1)
+    }
+    // 3. Last resort: AppleScript / Dock click (project-specific helper)
+}
+```
+
+Call this immediately after `app.launch()` and before any `typeKey`, `tap()`,
+or coordinate-based action.
+
+### Pin Window Size for Stable Coordinates
+
+Coordinate-based tests (drag, click-at-position) on macOS are sensitive to
+window size. Pin a known size in `-uiTest` mode:
+
+```swift
+#if os(macOS)
+import AppKit
+
+@MainActor
+func pinTestWindowSize() {
+    guard ProcessInfo.processInfo.arguments.contains("-uiTest"),
+          let window = NSApplication.shared.windows.first else {
+        return
+    }
+    window.setContentSize(NSSize(width: 1280, height: 800))
+    window.styleMask.remove(.resizable)
+    window.center()
+}
+```
+
+Call from your app's first scene/window after launch. Tests then reason in a
+fixed coordinate space regardless of the developer's display resolution.
+
+### Toolbar / Keyboard Reliability
+
+- SwiftUI toolbar backed by `NSToolbar` does **not** expose individual toolbar
+  items reliably to the accessibility tree. Prefer menu items / keyboard
+  shortcuts for toolbar actions in tests.
+- `typeKey` can be unreliable across macOS releases — prefer menu bar
+  navigation (`app.menuBars.menuItems["Action Name"].click()`) when available.
+- Always call `ensureAppIsFrontmost(_:bundleIdentifier:)` before any
+  keyboard-based interaction.
+
+## Platform Divergences Matrix
+
+Cross-platform XCUITest exposes the same `XCUIApplication` API, but the
+underlying interaction model differs.
+
+| Feature | iOS | tvOS | macOS |
+|---------|-----|------|-------|
+| Toolbar buttons | Direct accessibility identifier | Via focus navigation | `NSToolbar`-backed; often not exposed — use menu bar |
+| Modal dismissal | Tap close / swipe down | `XCUIRemote.shared.press(.menu)` | Tap close / `typeKey(.escape, ...)` |
+| Drag & drop | `press(forDuration:thenDragTo:)` | Not supported | `press(forDuration:thenDragTo:)` (window-pinned) |
+| Keyboard | `typeText` / `typeKey` | Limited | `typeKey` + frontmost activation required |
+| Activation | Not applicable | Not applicable | **Required before every event burst** |
+| Coordinate stability | Layout-driven | Layout-driven | **Pin window size in `-uiTest`** |
+| Focus assertions | N/A | `element.hasFocus` | N/A |
+
+For tvOS-specific patterns (Siri Remote, focus assertions, focus reachability
+audits, modal focus containment), see
+[references/tvos.md](references/tvos.md).
+
 ## Critical Gotchas
 
 ### LazyVStack Hides Accessibility Elements
@@ -229,29 +377,6 @@ Accessibility modifiers must be applied in this order to work correctly:
 Reversing the order (e.g., setting identifier before combine) can cause
 the identifier to be lost.
 
-## Adding Test Files to Xcode Project
-
-New UI test files must be added to the Xcode project to compile and run.
-Unlike SwiftPM where files are auto-discovered, `.xcodeproj` requires
-explicit file references in `project.pbxproj`.
-
-For each new test file, add entries to:
-1. **PBXBuildFile** section
-2. **PBXFileReference** section
-3. **UITests PBXGroup** children
-4. **UITests PBXSourcesBuildPhase** files
-
-Generate UUIDs for the file reference and build file entries:
-```bash
-uuidgen | tr -d '-' | cut -c1-24  # FileRef UUID
-uuidgen | tr -d '-' | cut -c1-24  # BuildFile UUID
-```
-
-Verify the file is included:
-```bash
-xcodebuild test -scheme YourApp -list | grep YourNewTestClass
-```
-
 ## Debugging Tips
 
 ### Element Not Found
@@ -271,107 +396,12 @@ Common causes:
 
 ## New Component Checklist
 
-When adding a new modal, sheet, overlay, or screen, follow this checklist to ensure
-it is testable from the start.
-
-### 1. Cross-Check Presentations vs Root Markers
-
-After adding or changing a `.sheet` or `.fullScreenCover`, verify that
-each destination view has a root marker (see "Root Markers for Modals" above).
-
-```bash
-# Find all presentation sites
-rg '\.sheet\(|\.fullScreenCover\(' --glob '*.swift' YourApp/Views -n
-```
-
-### 2. Create a TestIdentifiers Enum
-
-In your UI test target, create a section for the component's identifiers.
-This gives tests a single source of truth:
-
-```swift
-// MARK: - MyComponent
-
-enum MyComponent {
-    static let root = "MyComponent_Root"
-    static let close = "MyComponent_Close"
-    static let tabPrefix = "MyComponent_Tab_"
-    static let searchField = "MyComponent_SearchField"
-}
-```
-
-### 3. Add Direct Launch Support (Optional but Recommended)
-
-Enable launching the app directly to this screen for faster, more
-reliable tests:
-
-```swift
-// In your app's launch argument handling
-if ProcessInfo.processInfo.arguments.contains("-uiTestPresent") {
-    if let screenArg = /* parse the argument */ {
-        switch screenArg {
-        case "myComponent":
-            // Navigate directly to MyComponent
-        }
-    }
-}
-```
-
-### 4. Update Testability Documentation
-
-Document the new identifiers in your project's testability docs:
-
-```markdown
-**MyComponent (modal)**
-
-- `MyComponent_Root` (root marker)
-- `MyComponent_Close` (close button)
-- `MyComponent_Tab_<Name>` (tab buttons)
-- `MyComponent_SearchField` (search input)
-```
-
-### 5. Add Confirmation Dialog Tests (if applicable)
-
-If your component uses `.alert()` or `.confirmationDialog()`:
-
-```swift
-@MainActor
-func testMyComponentShowsConfirmationDialog() throws {
-    let app = XCUIApplication()
-    app.launchArguments.append(contentsOf: ["-uiTest", "-uiTestPresent", "myComponent"])
-    app.launch()
-
-    app.buttons[TestIdentifiers.MyComponent.deleteButton].tap()
-
-    let alert = app.alerts.firstMatch
-    XCTAssertTrue(alert.waitForExistence(timeout: 5))
-    XCTAssertTrue(alert.buttons["Cancel"].exists)
-}
-```
-
-### 6. Add Sheet Detent Tests (if using detents)
-
-If your component uses `.presentationDetents()`:
-
-```swift
-@MainActor
-func testMyComponentSheetDetents() throws {
-    let app = XCUIApplication()
-    app.launchArguments.append(contentsOf: ["-uiTest"])
-    app.launch()
-
-    app.buttons["ShowMyComponent"].tap()
-
-    let root = app.otherElements[TestIdentifiers.MyComponent.root]
-    XCTAssertTrue(root.waitForExistence(timeout: 5))
-}
-```
-
-### 7. Add Test Files to Xcode Project
-
-If you created new `.swift` test files, add them to the Xcode project.
-See "Adding Test Files to Xcode Project" above for the required
-`project.pbxproj` entries.
+When adding a new modal, sheet, overlay, or screen, follow the 8-step
+testability checklist before merging. See
+[references/new-component-checklist.md](references/new-component-checklist.md)
+for the full checklist (cross-checking presentations vs markers,
+TestIdentifiers enum, direct-launch support, dialog/detent tests,
+`.xcodeproj` integration, and cross-platform verification).
 
 ## Constraints
 
