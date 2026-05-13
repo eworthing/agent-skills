@@ -49,6 +49,39 @@ Apply `.tint(Palette.brand)` to bordered buttons on non-tvOS for brand
 consistency. On tvOS, the focus engine renders its own emphasis — do not
 also tint.
 
+### Why Not `.plain` With Custom Styling On tvOS
+
+`.buttonStyle(.plain)` + custom glass/rounded styling on focusable buttons
+*compiles fine* but loses the focus engine's automatic focus-ring handling.
+Symptoms on real tvOS hardware:
+
+- Focus rings clipped by enclosing `ScrollView` containers
+- Focus rings overlapped by adjacent rows
+- Developer adds manual spacing tweaks (`.padding(.vertical, 16)`) trying
+  to compensate, which never fully fixes the visual artifacts and breaks
+  layout density
+
+```swift
+// WRONG on tvOS — manual styling loses focus ring management
+Button(action: tap) {
+    HStack { /* content */ }
+        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+}
+.buttonStyle(.plain)   // focus ring now clips against ScrollView
+
+// CORRECT on tvOS — let the system own focus rendering
+Button(action: tap) {
+    HStack { /* content */ }
+}
+.buttonStyle(.bordered)   // automatic focus ring + Liquid Glass on focus
+```
+
+`.bordered` and `.borderedProminent` integrate with the focus engine: ring
+spacing, clipping prevention, and (on tvOS 26+) Liquid Glass focus
+treatment are all handled automatically. The plain-style escape hatch is
+only safe for non-focusable content rows, where there is no focus ring to
+render in the first place.
+
 ## tvOS Modal Focus Containment
 
 On tvOS, focus must be **trapped** inside an open modal until it
