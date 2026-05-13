@@ -2,9 +2,14 @@
 name: xctest-runner
 author: eworthing
 description: >-
-  Runs targeted XCTest subsets with .xctestrun and xcodebuild test-without-building.
-  Relevant when executing a single test or suite slice, diagnosing Executed 0 tests,
-  or reproducing CI-only XCTest failures with selective execution.
+  Runs targeted XCTest subsets on iOS, macOS, and tvOS using `.xctestrun` and
+  `xcodebuild test-without-building`. Use when executing a single test, class,
+  or suite slice, debugging flaky UI tests, diagnosing "Executed 0 tests",
+  reproducing CI-only XCTest failures with selective execution, preserving an
+  `.xcresult` for post-mortem inspection, or building or modifying a wrapper
+  runner script (list/range/glob/match/class/id selection modes,
+  `-retry-tests-on-failure`, zero-test guardrails, `PIPESTATUS` exit
+  propagation).
 allowed-tools:
   - Read
   - Write
@@ -90,6 +95,8 @@ When building or modifying test runner scripts, maintain these invariants:
 2. **Single cleanup trap** — Remove temp files and ephemeral xcresults in one trap handler
 3. **Exit code propagation** — When piping through formatters, use `${PIPESTATUS[0]}` (bash) or equivalent
 4. **Zero-test detection** — Explicitly treat "Executed 0 tests" as failure. This catches destination mismatches silently passing CI
+5. **"No tests matched" fails fast** — When a selection pattern resolves to zero candidates, exit non-zero *before* invoking `xcodebuild`. Silent zero-match is the most common source of "tests passed but nothing ran" CI green
+6. **Preserve `.xcresult` on demand** — Keep a `--keep-result` (or equivalent) opt-in so flaky failures can be inspected with `xcrun xcresulttool` after the fact; default to cleanup to avoid DerivedData bloat
 
 ```bash
 # Zero-test detection example
@@ -109,6 +116,43 @@ xcrun simctl list devices available
 # Common destination format
 -destination 'platform=iOS Simulator,name=iPhone 16'
 -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M4)'
+```
+
+### Step 6: Recommended Runner-Script Flag Surface
+
+A useful wrapper around `xcodebuild test-without-building` exposes multiple
+selection modes — picking tests by qualified ID is the only thing
+`xcodebuild` understands directly, but humans and CI usually want broader
+matching. Recommended flag surface:
+
+| Flag | Selects | Example |
+|------|---------|---------|
+| `--list` | Enumerate without running (sanity check before selecting) | `runner --list` |
+| `--range "N-M"` | Sequential subset from the enumerated list | `runner --range "1-10"` |
+| `--glob "<pattern>"` | Shell-style glob on test names | `runner --glob "testToolbar*"` |
+| `--match "<substring>"` | Substring match across class and method names | `runner --match "DragDrop"` |
+| `--class <ClassName>` | Whole-class selection | `runner --class SettingsTests` |
+| `--id "<Bundle/Class/method()>"` | Fully qualified single test (passes straight to `-only-testing`) | `runner --id "AppUITests/SettingsTests/testDarkModeToggle()"` |
+| `--keep-result` | Skip post-run cleanup of `.xcresult` for flake investigation | `runner --keep-result --id ...` |
+
+Implementation pattern: resolve every flag to one or more
+`-only-testing` arguments before invoking `xcodebuild`. Fail fast if the
+resolved set is empty.
+
+```bash
+# Pseudocode
+case "$mode" in
+  list)  enumerate_tests ;;
+  range) selected=$(enumerate_tests | sed -n "${start},${end}p") ;;
+  glob)  selected=$(enumerate_tests | grep -E "$pattern_to_regex") ;;
+  match) selected=$(enumerate_tests | grep "$substring") ;;
+  class) selected="$bundle/$class" ;;
+  id)    selected="$qualified_id" ;;
+esac
+[ -z "$selected" ] && { echo "ERROR: no tests matched"; exit 1; }
+xcodebuild test-without-building -xctestrun "$xctestrun" \
+    -destination "$destination" \
+    $(printf -- '-only-testing %s ' $selected)
 ```
 
 ## Common Mistakes to Avoid
