@@ -220,6 +220,25 @@ differently.
   often set `columnVisibility` explicitly on macOS.
 - **Keyboard shortcuts** — modifiers map differently; `Cmd` is canonical, not
   Ctrl.
+- **Keyboard shortcut collision audit** — after adding or changing any
+  `.keyboardShortcut(...)` modifier, audit the codebase for collisions
+  across every surface that can register a shortcut (Commands, toolbar
+  buttons, menu items, focused-view modifiers):
+  ```bash
+  rg -n 'keyboardShortcut\(' YourApp
+  ```
+  If two actions bind the same key combination, resolve it in the Commands
+  layer (where shortcut ownership is centralized) or by changing the
+  shortcut on one of the colliding actions. A duplicate binding produces
+  silent non-determinism — whichever view installs its modifier later
+  wins, and the loser fails silently. Also verify no collision with
+  system shortcuts (`Cmd+W`, `Cmd+Q`, `Cmd+,`, `Cmd+H`).
+- **Window resize-down stability** — drag the window to its minimum
+  width. Critical toolbar actions must remain visible (no truncation to
+  overflow menus for primary actions).
+- **Settings form style** — use `.formStyle(.automatic)` (see
+  `swiftui-design-tokens`). Forcing `.grouped` produces an iOS-looking
+  dialog on macOS that feels foreign.
 
 ## Mac Catalyst Gotchas
 

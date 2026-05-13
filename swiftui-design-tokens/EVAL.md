@@ -57,7 +57,7 @@ Rejected (Tiercade-coupled):
   (target already uses generic `Palette.categoryColor`)
 - `TierRowView(tier:app:)` example
 - `docs/patterns/ui-pattern-button-styles-spec-implemented.md` doc paths
-- Glass-on-glass anti-pattern → deferred to pair 4 (`swiftui-design-review`)
+- Glass-on-glass anti-pattern → originally deferred to `swiftui-design-review`; that skill was eliminated 2026-05-13. Generic Liquid Glass adoption lives in auth `swiftui-expert-skill` `references/liquid-glass.md`; tvOS focus-context glass-on-glass lives in `apple-tvos` `references/design-regressions.md`.
   so Liquid Glass content consolidates there and stays out of this skill's body
 
 ## Manual Assessment
@@ -86,7 +86,7 @@ Rejected (Tiercade-coupled):
 | 7.3 | Testability | 2/4 | No mechanism to detect drift against Apple platform releases. No upstream Apple HIG citations. |
 | 8.1 | Trigger Precision | 4/4 | Description specific; trigger phrase present; iOS/macOS/tvOS coverage explicit. |
 | 8.2 | Progressive Disclosure | 4/4 | Body covers common path; spring catalog + selection guide in references/motion-tokens.md; raw values in references/token-values.md. |
-| 8.3 | Composability | 3/4 | Cross-links `swiftui-expert-skill` (deprecated API replacements via `references/latest-apis.md`; animation mechanics via `animation-*.md`) and `swiftui-tvos-focus` (tvOS focus-animation caveats). Could cross-link to `swiftui-design-review` once Liquid Glass content lands there. |
+| 8.3 | Composability | 3/4 | Cross-links `swiftui-expert-skill` (deprecated API replacements via `references/latest-apis.md`; animation mechanics via `animation-*.md`; generic Liquid Glass via `liquid-glass.md`) and `apple-tvos` (tvOS focus-animation caveats; tvOS-context glass-on-glass). |
 | 8.4 | Idempotency | 4/4 | Read-only. |
 | 8.5 | Escape Hatches | 3/4 | Exemptions section documents acceptable hardcoded values (user-selectable presets, color computations). |
 | | **TOTAL** | **92/100** | **Excellent** — publishable |
@@ -100,7 +100,7 @@ None.
 None.
 
 ### P2 — Nice to Have
-1. Cross-link `swiftui-design-review` once that skill lands Liquid Glass content (pair 4).
+1. ~~Cross-link `swiftui-design-review` once that skill lands Liquid Glass content~~ — design-review eliminated 2026-05-13; Liquid Glass coverage now lives in auth `swiftui-expert-skill` `references/liquid-glass.md` (generic) and `apple-tvos` `references/design-regressions.md` (tvOS focus context). Cross-links updated.
 2. Add upstream Apple HIG/Settings sample citations to Form Styling and Spring Animations sections. Improves `7.3` testability.
 3. Add diagnostic recipes table (symptom → likely token misuse) for `4.3`.
 
