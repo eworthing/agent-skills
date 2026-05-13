@@ -113,6 +113,8 @@ xcodebuild build -scheme YourScheme -destination 'generic/platform=iOS'
 wc -l Sources/Views/SomeView.swift Sources/Views/SomeView+Feature.swift
 ```
 
+For multi-platform projects, build **every** deployment target — visibility errors can pass on one platform and fail on another (commonly: tvOS passes, macOS / Mac Catalyst fails). Repeat with `-destination 'generic/platform=tvOS'`, `-destination 'generic/platform=macOS'`, etc. See [troubleshooting.md → cross-platform visibility trap](references/troubleshooting.md#build-error--fix-matrix).
+
 If the build fails, see [troubleshooting.md](references/troubleshooting.md) for the error-to-fix matrix. If verification looks wrong, `git restore .` to undo and re-plan.
 
 ## Common Mistakes
