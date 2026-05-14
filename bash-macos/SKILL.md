@@ -35,7 +35,9 @@ Use when:
 
 Target `/bin/bash` 3.2 explicitly. Note the macOS shell landscape:
 
-- `/bin/bash` — Bash 3.2.x (frozen since GPLv3). Skill target.
+- `/bin/bash` — Bash 3.2.x (frozen since GPLv3). Skill target. See
+  [Supported on Bash 3.2](#supported-on-bash-32) for the explicit allow-list
+  of features that DO work here.
 - `/bin/sh` — separate binary; runs in POSIX mode. Does **not** honor `[[`,
   `((`, arrays, or `local`. If your shebang is `#!/bin/sh`, none of the
   bashisms in this skill apply.
@@ -68,6 +70,19 @@ Bash 4+ features that don't exist on macOS's `/bin/bash`:
 See [references/forbidden-features.md](references/forbidden-features.md) for
 the full matrix with workarounds for each.
 
+## Supported on Bash 3.2
+
+These DO work — no need to drop to POSIX `sh`:
+
+- `[[ ... ]]`, `(( ... ))`, indexed arrays (`${arr[@]}`, `${#arr[@]}`)
+- `local` in functions; `printf -v` assignment
+- Process substitution `<(...)` / `>(...)`, herestrings `<<<`, `read -a`
+- `=~` regex (POSIX ERE; captures in `BASH_REMATCH`; engine differs BSD vs GNU)
+- `set -o pipefail`, `trap ... ERR` (with `set -E` for in-function propagation)
+- ANSI-C quoting `$'...'`
+
+Drop to `/bin/sh` only when the shebang demands it.
+
 ## BSD vs GNU Userland
 
 macOS uses BSD tools, not GNU. Common incompatibilities:
@@ -88,6 +103,22 @@ Prefer writing to a temp file and moving it into place (works on BSD and GNU `se
 
 ```bash
 sed -E 's/pattern/replacement/g' "$file" > "$TMP_DIR/out" && mv "$TMP_DIR/out" "$file"
+```
+
+### Portable date arithmetic
+
+BSD `date` has no `-d`. Use `-v±Nu` (BSD) or branch:
+
+```bash
+seven_days_ago=$(date -v-7d +%s)              # BSD / macOS
+seven_days_ago=$(date -d '7 days ago' +%s)    # GNU / Linux — NOT macOS
+
+# Portable both ways:
+if date -v-7d +%s >/dev/null 2>&1; then
+  seven_days_ago=$(date -v-7d +%s)
+else
+  seven_days_ago=$(date -d '7 days ago' +%s)
+fi
 ```
 
 ### Portable realpath (no `readlink -f`)
@@ -144,6 +175,40 @@ trap 'echo "FAILED at line $LINENO" >&2' ERR
 Without `-E`, the trap silently never fires from helper functions and you lose
 the failure signal.
 
+### `local` + command substitution
+
+`local` returns 0, hiding the inner command's exit status from `set -e`:
+
+```bash
+# WRONG - failing_cmd's failure swallowed by local's exit 0
+local x="$(failing_cmd)"
+
+# CORRECT - separate declaration from assignment
+local x
+x="$(failing_cmd)"
+```
+
+Same trap with `declare`, `readonly`, `export`.
+
+### `pipefail` + SIGPIPE
+
+Under `set -o pipefail`, `producer | head -n1` exits non-zero: `head` closes
+the pipe and `producer` dies of `SIGPIPE` (exit 141).
+
+```bash
+producer | head -n1                                # fires under set -eo pipefail
+
+# Mitigation A (preferred) — drain so producer finishes naturally:
+producer | { head -n1; cat >/dev/null; }
+
+# Mitigation B — swallow producer's exit; also hides real failures, not
+# just SIGPIPE:
+{ producer || true; } | head -n1
+```
+
+`awk 'NR==1 {print; exit}'` is **not** a fix — `exit` closes the pipe the
+same way `head` does.
+
 ### Argument validation
 
 Fail fast on missing required input. Use `${VAR:-}` form under `set -u` —
@@ -195,6 +260,7 @@ Before marking a script complete:
 - [ ] `#!/bin/bash` + `set -euo pipefail` (add `-E` if using `trap ERR`)
 - [ ] No Bash 4+ features ([forbidden-features.md](references/forbidden-features.md))
 - [ ] `sed -E` not `sed -r`; `grep -E` not `grep -P`
+- [ ] BSD `date` uses `-v` or `-j -f`, not `-d`
 - [ ] All variables quoted; never parses `ls`
 - [ ] `bash -n script.sh` + `shellcheck -s bash script.sh` pass
 - [ ] Runs on macOS: `/bin/bash script.sh --help`
