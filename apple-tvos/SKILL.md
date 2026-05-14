@@ -6,19 +6,16 @@ source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
   Definitive tvOS reference for SwiftUI on Apple TV: focus engine,
   accessibility deltas, and design-regression checks. Use when building
-  or debugging tvOS focus behavior (settle delays on rapid card swiping,
-  hover effect fighting custom `.animation()`, `.focusable()` on container
-  wrappers blocking children, focus identity loss across redraws,
+  or debugging tvOS focus behavior (settle delays, `.focusable()`
+  container blocking children, focus identity loss across redraws,
   `ScrollView` with no focusable children, `.viewAligned` vs `.paging`,
-  Simulator vs Apple TV hardware divergence), applying tvOS accessibility
-  patterns (`.onExitCommand` Menu button dismissal, destructive
-  `confirmationDialog` / `alert` default focus ordering — severity-1
-  on tvOS, VoiceOver traversal), or auditing tvOS design regressions
-  (modal focus containment leakage, manual focus reassertion via
-  `DispatchQueue.main.asyncAfter`, glass-on-glass, `.buttonStyle(.plain)`
-  focus-ring clipping, focus-traversal QA checklist). The authoritative
-  community `swiftui-expert-skill` owns iOS/macOS depth; this skill
-  owns tvOS deltas.
+  Simulator vs hardware divergence), applying tvOS accessibility patterns
+  (`.onExitCommand` Menu dismissal, destructive `confirmationDialog` /
+  `alert` default focus — severity-1 on tvOS, VoiceOver traversal), or
+  auditing tvOS design regressions (modal focus containment leakage,
+  manual focus reassertion, glass-on-glass, `.buttonStyle(.plain)`
+  focus-ring clipping). The community `swiftui-expert-skill` owns
+  iOS/macOS depth; this skill owns tvOS deltas.
 allowed-tools:
   - Read
   - Write
