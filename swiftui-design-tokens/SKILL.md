@@ -171,6 +171,12 @@ platform-branched `focusSpring`), reduce-motion alternatives
 (`liftReduced`, `dropReduced`), and the per-interaction selection guide
 table -- see [references/motion-tokens.md](references/motion-tokens.md).
 
+See Apple's [HIG Motion guide](https://developer.apple.com/design/human-interface-guidelines/motion)
+for platform-level motion principles. The [`Spring` API docs](https://developer.apple.com/documentation/swiftui/spring)
+document `response` and `dampingFraction` semantics; for tvOS
+[`.bouncy()`](https://developer.apple.com/documentation/SwiftUI/Animation/bouncy(duration:extraBounce:))
+see the `Animation` documentation.
+
 ## Button Styles
 
 ### Context-Based Selection
@@ -237,6 +243,9 @@ Form {
 of a macOS window. Apple's Settings documentation pairs `.automatic` with
 `.scenePadding()` for the same reason -- both adapt to platform context
 automatically.
+
+API reference: [`FormStyle`](https://developer.apple.com/documentation/swiftui/formstyle)
+and [`scenePadding(_:)`](https://developer.apple.com/documentation/SwiftUI/View/scenePadding(_:)).
 
 Avoid hardcoding `.formStyle(.grouped)` unless you specifically want the
 iOS-style grouped look on macOS.
@@ -306,6 +315,23 @@ VStack(spacing: Metrics.spacingSm) {
 }
 .padding(Metrics.spacingMd)  // 24pt padding
 ```
+
+## Diagnostic Recipes
+
+When visual issues surface, use this table to identify likely token misuse:
+
+| Symptom | Likely Cause | Fix |
+|---------|-------------|-----|
+| Inconsistent corner radii across cards | Raw numbers instead of `Metrics.rSm`/`rMd`/`rLg` | Replace with `Metrics.r*` tokens |
+| Headings vary in size across screens | Mixing raw `Font.system(size:)` with `TypeScale` | Use only `TypeScale.h1`/`h2`/`h3` |
+| Animation feels harsh with accessibility | No reduce-motion gate on spring animations | Add `reduceMotion ? .reduced : .spring` ternary |
+| Uneven spacing between sections | Raw padding values instead of `Metrics.spacing*` | Switch to semantic spacing tokens |
+| Colors don't adapt in dark mode | Hardcoded `Color.white`/`.black` | Use semantic `Palette.*` colors with Asset Catalog variants |
+| Button looks wrong for its context | Wrong button style for that UI region | Check Button Styles context table above |
+| Modal has missing or excessive padding on macOS | Missing `.scenePadding()` | Add `#if os(macOS)` `.scenePadding()` block |
+| Drag animation feels jittery | No `lift`/`drop` token, raw `.spring()` inline | Use `Motion.lift`/`Motion.drop` tokens |
+| Focus animation too bouncy on iOS | tvOS `.bouncy()` used without platform branch | Wrap in `#if os(tvOS)` with iOS fallback |
+| Text doesn't scale with accessibility settings | Raw `Font.system(size:)` without `@ScaledMetric` | Use `@ScaledMetric` or Dynamic Type fonts |
 
 ## Auditing for Hardcoded Values
 
