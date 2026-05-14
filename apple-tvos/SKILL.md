@@ -4,23 +4,21 @@ author: eworthing
 original-author: Antoine van der Lee (AvdLee)
 source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
-  Definitive tvOS reference: focus engine, accessibility deltas, and
-  design-regression checks for SwiftUI on Apple TV. Use when building or
-  debugging tvOS focus behavior (settle delays on rapid card swiping,
-  focus hover effect fighting custom `.animation()`, `.focusable()` on
-  container wrappers blocking child focus, focus identity loss on POD
-  rows after parent redraw, focus-driven scrolling failing because a
-  `ScrollView` has no focusable children, picking between `.viewAligned`
-  and `.paging`, verifying focus animations against Simulator vs Apple
-  TV hardware divergence), applying tvOS accessibility patterns
-  (`.onExitCommand` Menu button dismissal, destructive `confirmationDialog`
-  / `alert` default focus ordering — severity-1 on tvOS, VoiceOver focus
-  traversal), or auditing tvOS design regressions (modal focus
-  containment leakage, manual focus reassertion anti-pattern via
-  `DispatchQueue.main.asyncAfter`, glass-on-glass anti-pattern,
-  `.buttonStyle(.plain)` focus-ring clipping, tvOS focus-traversal QA
-  checklist). The authoritative community `swiftui-expert-skill` owns
-  iOS/macOS depth; this skill owns tvOS deltas.
+  Definitive tvOS reference for SwiftUI on Apple TV: focus engine,
+  accessibility deltas, and design-regression checks. Use when building
+  or debugging tvOS focus behavior (settle delays on rapid card swiping,
+  hover effect fighting custom `.animation()`, `.focusable()` on container
+  wrappers blocking children, focus identity loss across redraws,
+  `ScrollView` with no focusable children, `.viewAligned` vs `.paging`,
+  Simulator vs Apple TV hardware divergence), applying tvOS accessibility
+  patterns (`.onExitCommand` Menu button dismissal, destructive
+  `confirmationDialog` / `alert` default focus ordering — severity-1
+  on tvOS, VoiceOver traversal), or auditing tvOS design regressions
+  (modal focus containment leakage, manual focus reassertion via
+  `DispatchQueue.main.asyncAfter`, glass-on-glass, `.buttonStyle(.plain)`
+  focus-ring clipping, focus-traversal QA checklist). The authoritative
+  community `swiftui-expert-skill` owns iOS/macOS depth; this skill
+  owns tvOS deltas.
 allowed-tools:
   - Read
   - Write
