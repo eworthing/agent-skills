@@ -4,19 +4,16 @@ author: eworthing
 description: >-
   Writes, debugs, and selectively executes XCTest UI automation for iOS,
   macOS, and tvOS apps. Covers accessibility identifiers (typed-enum
-  contract, leaf-only placement, `AccessibilityMarkerView` UIKit+AppKit
-  root markers), wait-for-element, drag-and-drop, sheet/alert testing,
-  macOS activation / window-pinning, platform divergence, new-component
-  testability checklist, and `.xctestrun`-based selective execution
-  (build-for-testing vs test-without-building, `-only-testing`,
-  list/range/glob/match/class/id selection, zero-test detection,
-  `PIPESTATUS` propagation, `-retry-tests-on-failure`). Use when writing
-  or debugging UI tests, investigating flaky failures, wiring
-  accessibility identifiers, adding a new modal/sheet/overlay needing
-  test coverage, debugging "Executed 0 tests", reproducing CI-only
-  failures, or building runner scripts. The authoritative community
-  `swift-testing-expert` covers Swift Testing (unit tests); XCUITest
-  UI automation stays here.
+  contract, leaf-only placement, cross-platform root markers),
+  wait-for-element, drag-and-drop, sheet/alert testing, macOS
+  window-pinning, platform divergence, and `.xctestrun`-based selective
+  execution (`-only-testing`, list/range/glob/match/class/id selection,
+  zero-test detection, `PIPESTATUS` propagation, `-retry-tests-on-failure`).
+  Use when writing or debugging UI tests, investigating flaky failures,
+  wiring accessibility identifiers, adding a modal/sheet needing
+  coverage, debugging "Executed 0 tests", reproducing CI-only failures,
+  or building runner scripts. The community `swift-testing-expert`
+  covers Swift Testing (unit tests); XCUITest UI automation stays here.
 allowed-tools:
   - Read
   - Write
