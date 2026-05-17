@@ -1,0 +1,28 @@
+category,forbidden_pattern,why_bad,apple_native_alternative,severity
+navigation,hamburger menu on iPhone,Non-native for primary iPhone app navigation,TabView or NavigationStack toolbar,hard_reject
+navigation,custom tab bar,Breaks native safe areas behavior and system expectations,Native TabView,hard_reject
+navigation,custom navigation bar,Breaks platform conventions and accessibility behavior,Native NavigationStack toolbar,hard_reject
+navigation,website header,Web/landing-page pattern,Native navigation title and toolbar,hard_reject
+navigation,website footer,Web/landing-page pattern,Native tab bar or settings/about screen,hard_reject
+navigation,breadcrumbs,Desktop web navigation pattern,NavigationStack back behavior or sidebar selection,revise
+actions,Material Floating Action Button,Android/Material pattern and often absolute-positioned,Toolbar button or bottom toolbar action,hard_reject
+actions,bottom-right floating add button,Web/Material drift,Top trailing toolbar Add button,hard_reject
+actions,hover-only action,Unavailable on touch-first iPhone,Visible button/menu action,hard_reject
+layout,dashboard card grid on iPhone,Web/SaaS pattern poor for compact width,Single-column List or grouped sections,hard_reject
+layout,masonry grid on iPhone,Dense web layout poor for touch scanning,List or adaptive LazyVGrid only when content is visual,revise
+layout,hero CTA inside app workflow,Landing-page pattern not native app workflow,Navigation title plus primary toolbar or inline action,hard_reject
+layout,right rail AI assistant on iPhone,Desktop web pattern unusable on compact width,Sheet or dedicated assistant screen,hard_reject
+layout,stretched iPhone on iPad,Wastes regular width and ignores iPadOS idioms,NavigationSplitView or inspector,hard_reject
+style,Tailwind SaaS visual grammar,Web template feel,Native grouped backgrounds and semantic typography,revise
+style,heavy drop shadow cards,Web card aesthetic and visual noise,Grouped background or subtle native material,revise
+style,decorative gradient blob background,Generic AI/web decoration and contrast risk,System background or restrained accent surface,revise
+style,glass content cards,Readability and Reduce Transparency risk,Opaque content surface,hard_reject
+style,glass-on-glass,Contrast and depth hierarchy failure,Single material layer only on chrome/accessory surfaces,hard_reject
+style,full-screen glass background,Not native content treatment and poor readability,System background with material only on bars,hard_reject
+text,tiny gray essential text,Contrast and Dynamic Type risk,Semantic body/subheadline with label/secondaryLabel,hard_reject
+text,fixed-height text container,Breaks Dynamic Type,Flexible layout with multiline text,hard_reject
+accessibility,color-only meaning,Fails Differentiate Without Color,Add text/icon/shape signal,hard_reject
+accessibility,motion-dependent meaning,Fails Reduce Motion,Static equivalent state indicator,hard_reject
+implementation,absolute positioned primary controls,Fragile SwiftUI mapping and unsafe areas,Native toolbar/safe-area inset,hard_reject
+implementation,DOM-like nested wrappers,Encourages poor SwiftUI hierarchy,Semantic SwiftUI containers,revise
+implementation,pixel-perfect CSS layout,Does not translate cleanly to SwiftUI,Native adaptive layout,revise

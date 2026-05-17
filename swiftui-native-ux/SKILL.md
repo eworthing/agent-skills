@@ -1,20 +1,18 @@
 ---
 name: swiftui-native-ux
 description: >-
-  Use when designing, building, reviewing, or restructuring SwiftUI screens for
-  iPhone or iPad — picking between TabView, NavigationStack, or
-  NavigationSplitView; deciding empty/detail pane states; adapting iPhone
-  layouts to iPad; deciding sheet vs inspector vs sidebar vs pinned pane;
-  rewriting a screen that "doesn't feel native" or feels like a
-  web/React/Material/Tailwind/dashboard port; restructuring settings, home,
-  list/detail, or now-playing screens; or auditing a SwiftUI view for Dynamic
-  Type, VoiceOver, Reduce Transparency, Liquid Glass, or visual hierarchy.
-  Trigger on SwiftUI UI questions targeting iOS/iPadOS (any version, including
-  iOS 26), Apple-native look and feel, iPad multi-pane decisions,
-  sheet/inspector/popover choice, accessibility review of a SwiftUI screen, or
-  asking what's "wrong" with an iPhone/iPad screen. Skip for pure backend,
-  data modeling, networking, macOS-only AppKit, UIKit-only layout, or
-  non-Apple platforms.
+  Use when designing, reviewing, or restructuring SwiftUI screens for iPhone or
+  iPad — picking TabView vs NavigationStack vs NavigationSplitView; adapting
+  iPhone layouts to iPad; sheet vs inspector vs sidebar choice; rewriting
+  screens that feel like a web/React/Material/Tailwind/dashboard port;
+  auditing Dynamic Type, VoiceOver, Reduce Transparency, Liquid Glass, or
+  visual hierarchy. Also use for Google Stitch or Stitch MCP visual variants,
+  DESIGN.md / DESIGN-swiftui.md tokens, or translating Stitch design-to-code
+  output to SwiftUI. Trigger on iOS/iPadOS 26 SwiftUI questions, Apple-native
+  look and feel, iPad multi-pane decisions, sheet/inspector/popover choice,
+  accessibility review, or asking what's "wrong" with an iPhone/iPad screen.
+  Skip pure backend, data modeling, networking, macOS-only AppKit, UIKit-only
+  layout, non-Apple platforms.
 allowed-tools:
   - Read
   - Write
@@ -40,6 +38,7 @@ Pick a workflow before reading the rest of this file.
 - Screen "works but looks bland / generic / noisy" → `workflows/polish-visual-hierarchy.md` (+ `references/visual-hierarchy.md`).
 - Accessibility / Dynamic Type / VoiceOver / Reduce Motion concerns → `workflows/audit-accessibility.md` (+ `references/accessibility.md`).
 - Liquid Glass question (where it belongs, where it doesn't) → `references/liquid-glass.md`.
+- Handing a screen off to Google Stitch / Stitch MCP, writing DESIGN.md / DESIGN-swiftui.md, or translating Stitch design-to-code output to SwiftUI → `workflows/stitch-design-handoff.md` (+ `references/stitch-handoff-format.md`, `references/stitch-output-review.md`, `references/design-md-swiftui.md`, `references/stitch-tool-capability-map.md`, `references/stitch-examples.md`, `references/stitch-negative-prompts.md`, `data/stitch-negative-constraints.csv`, `templates/stitch-apple-native-brief.md`).
 - Choosing between TabView / NavigationStack / NavigationSplitView / sheet / inspector → `references/navigation-patterns.md`.
 
 ## Target Baseline
@@ -76,6 +75,9 @@ Use this skill when the task involves:
 - using Liquid Glass
 - auditing accessibility, Dynamic Type, motion, transparency, localization, or VoiceOver order
 - generating previews or state variants for UI
+- using Google Stitch / Stitch MCP for visual variants
+- writing or revising DESIGN.md / DESIGN-swiftui.md tokens
+- translating Stitch design-to-code output into native SwiftUI
 
 Do not use this skill for backend architecture, data modeling alone, networking alone, or non-UI code unless the UI contract is affected.
 
@@ -100,6 +102,8 @@ This skill owns iPhone and iPad SwiftUI native UX. Several adjacent skills own n
 - React / Tailwind / shadcn / Next.js / generic web UI work — this skill does not handle web stacks → `ui-ux-pro-max`.
 
 When the task fits one of the rows above more squarely than it fits this skill's iPhone/iPad design scope, hand off and stop. When the task is mostly design but needs one detail from a sibling (e.g. a Liquid Glass screen with a fileExporter button), use both: this skill drives the screen shape; the sibling fills the detail.
+
+When running the Stitch workflow (`workflows/stitch-design-handoff.md`), this skill owns brief construction, output critique, and SwiftUI translation, but still defers to: `swiftui-design-tokens` for project-specific token application, `swiftui-expert-skill` for final SwiftUI code review and Liquid Glass API depth, and `apple-multiplatform` for any `#if os(...)` gating that comes out of the translation. Do not let Stitch override those skills.
 
 ## Always Apply
 
@@ -143,6 +147,7 @@ Reject these unless the user explicitly asks for them and the tradeoff is docume
 - fixed-height rows that break Dynamic Type
 - forced dark mode without a user setting
 - networking or persistence side effects inside `View.body`
+- Stitch HTML/CSS hierarchy ported verbatim into SwiftUI view tree (house rule — no HIG rule against it; SwiftUI-implementability rationale)
 
 ## Source Use Policy
 
@@ -155,6 +160,8 @@ Practitioner sources provide lenses.
 Web sources provide translated concepts or anti-patterns.
 
 Do not treat all sources as equal. A practitioner blog can sharpen judgment, but it should not overrule Apple platform behavior. A web design system can teach hierarchy, but it must not leak Tailwind, Material, or SaaS-dashboard structure into SwiftUI.
+
+Stitch sources slot in at the tool tier. Google Stitch docs and MCP/tool documentation are authoritative for Stitch capabilities only — what the tool can fetch, what variant prompts it accepts, how to call its MCP. They are **not** authoritative for native app behavior; Apple HIG and SwiftUI platform rules outrank them on any visual or navigation decision. React/Tailwind Stitch prompt examples are workflow hints, not Apple-native design guidance — translate away the web framing before applying.
 
 ## Load References As Needed
 
@@ -170,6 +177,14 @@ Do not treat all sources as equal. A practitioner blog can sharpen judgment, but
 - Generated code contract: `references/generation-output-format.md`
 - Expert critique passes: `references/expert-lenses.md`
 - Evidence tiers and source policy: `references/source-architecture.md`
+- Stitch handoff prompt format: `references/stitch-handoff-format.md`
+- Stitch output review rubric: `references/stitch-output-review.md`
+- DESIGN.md / DESIGN-swiftui.md token guidance: `references/design-md-swiftui.md`
+- Stitch MCP/SDK tool capability map: `references/stitch-tool-capability-map.md`
+- Stitch brief worked examples: `references/stitch-examples.md`
+- Stitch negative-prompt experiments: `references/stitch-negative-prompts.md`
+- Stitch machine-readable anti-patterns: `data/stitch-negative-constraints.csv`
+- Reusable Apple-native Stitch brief: `templates/stitch-apple-native-brief.md`
 
 ## Load Workflows As Needed
 
@@ -179,6 +194,7 @@ Do not treat all sources as equal. A practitioner blog can sharpen judgment, but
 - Web-style UI rewrite: `workflows/rewrite-web-ui-native.md`
 - Visual hierarchy polish: `workflows/polish-visual-hierarchy.md`
 - Accessibility audit: `workflows/audit-accessibility.md`
+- Stitch design handoff: `workflows/stitch-design-handoff.md`
 
 ## Default Workflow
 
@@ -216,6 +232,17 @@ When critiquing UI, provide:
 - Concrete fixes.
 - Optional rewrite plan.
 - Code only when asked or clearly useful.
+
+When running a Stitch workflow, provide:
+
+- Native structure chosen **before** prompting Stitch.
+- Brief sent to Stitch (or the resolved template).
+- Variant request and what was asked to differ.
+- Output review against the rubric in `references/stitch-output-review.md`.
+- Accepted visual ideas (palette, typography, density, hierarchy, mood).
+- Rejected web/Material/Tailwind/SaaS patterns, with the matching `data/stitch-negative-constraints.csv` row when applicable.
+- DESIGN.md / DESIGN-swiftui.md changes, if any.
+- SwiftUI-native implementation plan — containers, states, accessibility, iPhone/iPad behavior. No verbatim HTML/CSS porting.
 
 ## Tone Of Review
 

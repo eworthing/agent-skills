@@ -82,3 +82,4 @@ _All P2 issues resolved 2026-05-17._
 |------|-------|-------|
 | 2026-05-17 | 94/100 | Baseline — initial skill commit |
 | 2026-05-17 | 95/100 | P1+P2 fixes: Liquid Glass examples, iPad multiwindow recipes, keyboard command set, design-tokens cross-link |
+| 2026-05-17 | 95/100 | Add Stitch design-handoff workflow (9 new files: 1 workflow + 6 references + `data/stitch-negative-constraints.csv` + `templates/stitch-apple-native-brief.md`). SKILL.md routed via section anchors. Description compressed 948→846 chars (Codex headroom). House-rule labels applied. Paste-export fallback when no MCP tool found. Peer-reviewed by codex gpt-5.5 across 3 rounds. Structural 13/13 retained. |
