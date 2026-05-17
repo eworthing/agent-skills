@@ -4,3 +4,5 @@ __pycache__/
 .DS_Store
 quorum-review-workspace/
 bash-macos-workspace/
+swiftui-native-ux-workspace/
+temp/
