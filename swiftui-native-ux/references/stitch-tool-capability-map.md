@@ -9,13 +9,21 @@ Stitch integrations may expose different tool names depending on whether the wor
 - Antigravity workflow
 - Claude Code / Cursor / Gemini CLI / Codex / OpenCode integration
 
-Do not assume exact tool names.
+Do not assume exact tool names. Do not assume a Stitch MCP server is installed at all — many setups will use the paste-export fallback in `workflows/stitch-design-handoff.md` Step 4c.
+
+## MCP tool naming in agent runtimes
+
+Most agent runtimes prefix MCP server tools when they surface them. In Claude Code the wrapped form is `mcp__<server>__<tool>` (e.g. `mcp__stitch__generate_screen`). The bare names in the capability table below are the *server-side* names — call the wrapped form your runtime actually exposes, never the bare string.
 
 ## Required Runtime Behavior
 
-Before invoking Stitch tools, discover available MCP tools or inspect the configured server documentation.
+Before invoking Stitch tools:
 
-Map available tools to capabilities:
+1. **List the MCP tools your runtime actually exposes.** If none look Stitch-related, jump to the paste-export fallback. Do not invent tool calls.
+2. Match each available tool to a capability below by behavior (what the tool does), not by exact string match. Tool authors choose their own names.
+3. Verify the tool's input schema before calling — the names below are illustrative, not authoritative.
+
+Capability map (names are illustrative possibilities — match by capability, not literal string):
 
 | Capability | Possible Names / Shapes |
 |---|---|

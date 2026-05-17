@@ -87,31 +87,36 @@ Use `templates/stitch-apple-native-brief.md` as the starting template. See `refe
 
 ## Step 4: Fetch Output
 
-Use available Stitch MCP/SDK tools to fetch:
+**Discover first, then call.** Do not assume any Stitch MCP server is installed or which tool names it exposes. Most agent environments do not have a Stitch MCP at all; the most common path here is the paste-export fallback below.
 
-- screenshot/image
-- HTML/CSS/code
+### 4a. Discovery
+
+1. List currently available MCP tools (in Claude Code: inspect the `mcp__*` tool surface; in other agents, list configured MCP servers).
+2. Match each tool against the capability table in `references/stitch-tool-capability-map.md`. The names there are illustrative possibilities, not a canonical contract — match by *capability* (create project / generate screen / fetch image / fetch code / fetch metadata), not by literal string.
+3. Note the actual MCP tool prefix the agent runtime uses (Claude Code wraps server tools as `mcp__<server>__<tool>` — call the wrapped name, not the bare name from the capability table).
+
+### 4b. If a Stitch MCP server is available
+
+Fetch any combination of:
+
+- screenshot/image (preferred for review)
+- HTML/CSS/code (parse for anti-patterns, do not port structure)
 - design metadata
 - screen description
 - project or screen context
 
-Do not assume a specific tool name. Discover tools at runtime. See `references/stitch-tool-capability-map.md` for the capability-to-tool-name mapping.
+Prefer image plus code/metadata when both exist. Never rely solely on generated HTML for review.
 
-Known possible tool shapes include:
+### 4c. Paste-export fallback (most common path)
 
-- fetch screen code
-- fetch screen image
-- get HTML
-- get image
-- get project
-- get screen
-- generate screen
-- edit screen
-- create project
+If discovery returns no matching capabilities for fetch-screen-image / fetch-screen-code / fetch-project-metadata — or if no Stitch MCP server is configured at all — stop calling tools entirely and ask the user for any of:
 
-### Fallback when no MCP tool is found
+- a screenshot file or URL
+- exported HTML
+- a Stitch project share link
+- a plain-text screen description
 
-If MCP tool discovery returns no matching capabilities for any of fetch-screen-code / fetch-screen-image / fetch-project-metadata, stop calling tools and ask the user to paste or export the Stitch result. The review rubric works against any input shape — image-only critique is explicitly allowed.
+The review rubric in `references/stitch-output-review.md` works against any of these input shapes. Image-only critique is explicitly allowed; note that as a limitation in the review output rather than blocking on it.
 
 ## Step 5: Review Before Implementation
 
