@@ -163,6 +163,72 @@ Risky uses:
 - glass behind paragraphs
 - glass over photos with text
 
+## Minimal Examples
+
+Scope: these snippets show *where* glass belongs in iOS 26 SwiftUI. For full API surface (`GlassEffectContainer`, `glassEffectID` morph, tint/interactive variants, layer-order rules), defer to `swiftui-expert-skill` `references/liquid-glass.md`.
+
+### Floating Toolbar / Control Bar
+
+```swift
+HStack(spacing: 12) {
+    Button(action: previous) { Image(systemName: "backward.fill") }
+    Button(action: playPause) { Image(systemName: "play.fill") }
+    Button(action: next) { Image(systemName: "forward.fill") }
+}
+.padding(.horizontal, 20)
+.padding(.vertical, 12)
+.glassEffect(in: .capsule)
+.padding(.bottom, 24)
+```
+
+Reduce Transparency variant (system swaps material for solid automatically; no manual branching needed when using `.glassEffect`). Verify with the Accessibility Inspector's Reduce Transparency toggle that the bar stays legible.
+
+### Map / Image Overlay Controls
+
+```swift
+ZStack(alignment: .topTrailing) {
+    Map(position: $position)
+        .ignoresSafeArea()
+
+    VStack(spacing: 8) {
+        Button(action: recenter) { Image(systemName: "location.fill") }
+        Button(action: toggleLayers) { Image(systemName: "square.3.layers.3d") }
+    }
+    .padding(8)
+    .glassEffect(in: .rect(cornerRadius: 14))
+    .padding(.trailing, 16)
+    .padding(.top, 16)
+}
+```
+
+Glass sits on top of content. The control cluster — not the map — carries the glass.
+
+### Tab Bar Background (system-provided)
+
+```swift
+TabView {
+    LibraryView().tabItem { Label("Library", systemImage: "books.vertical") }
+    SearchView().tabItem  { Label("Search",  systemImage: "magnifyingglass") }
+    ProfileView().tabItem { Label("Profile", systemImage: "person.crop.circle") }
+}
+```
+
+Do not re-apply `.glassEffect()` to the tab bar — the system already does. Stacking glass on glass is the most common regression.
+
+### Anti-Pattern: Glass on Content
+
+```swift
+// REJECT — glass on a reading card.
+VStack(alignment: .leading) {
+    Text(article.title).font(.title3.bold())
+    Text(article.body)
+}
+.padding(16)
+.glassEffect()  // ✗ violates "glass is for controls, not content"
+```
+
+Use a solid system background (`.background(.regularMaterial)` only if the card sits over imagery; otherwise plain `Color(.secondarySystemBackground)`).
+
 ## Liquid Glass Review Checklist
 
 Ask:

@@ -174,13 +174,135 @@ Good candidates:
 
 Do not add shortcuts for every button.
 
-Use:
+### Common Command Set
+
+Match Apple's expected chords. Do not reinvent.
+
+| Action | Shortcut | Modifier symbol |
+|---|---|---|
+| New | `.keyboardShortcut("n")` | ⌘N |
+| New Window | `.keyboardShortcut("n", modifiers: [.command, .shift])` | ⇧⌘N |
+| Save | `.keyboardShortcut("s")` | ⌘S |
+| Close (window/tab) | `.keyboardShortcut("w")` | ⌘W |
+| Find / Search | `.keyboardShortcut("f")` | ⌘F |
+| Refresh | `.keyboardShortcut("r")` | ⌘R |
+| Quit (Mac only) | `.keyboardShortcut("q")` | ⌘Q |
+| Confirm primary | `.keyboardShortcut(.defaultAction)` | ⏎ |
+| Cancel / dismiss | `.keyboardShortcut(.cancelAction)` | ⎋ |
+| Delete | `.keyboardShortcut(.delete)` | ⌫ |
+
+Modifier-less default; `.command` is implicit on `keyboardShortcut(_:)`.
 
 ```swift
-.keyboardShortcut("n", modifiers: .command)
+Button("New Note", action: createNote)
+    .keyboardShortcut("n")  // ⌘N
+
+Button("Save", action: save)
+    .keyboardShortcut("s")
+
+Button("Delete", role: .destructive, action: delete)
+    .keyboardShortcut(.delete)
 ```
 
-and native toolbar/menu placement where relevant.
+### Split-Pane Navigation
+
+For `NavigationSplitView`, support arrow-key navigation in the sidebar/content lists via `List(selection:)`. SwiftUI handles ↑/↓ automatically when the list has a binding selection; ensure focus reaches the list.
+
+```swift
+NavigationSplitView {
+    List(items, selection: $selected) { item in
+        Text(item.title).tag(item.id)
+    }
+} content: {
+    // detail pane responds to selection change
+} detail: {
+    EmptyView()
+}
+```
+
+### Menu Bar Commands (Mac Catalyst / Mac)
+
+Surface shortcuts through `Commands` so they appear in the menu bar and accessibility-inspector keyboard tour, not just on the button.
+
+```swift
+.commands {
+    CommandGroup(replacing: .newItem) {
+        Button("New Note", action: createNote)
+            .keyboardShortcut("n")
+    }
+    SidebarCommands()       // ⌃⌘S toggle sidebar
+    InspectorCommands()     // toggle inspector
+}
+```
+
+## Multiwindow
+
+For document-like apps, consider whether the UI should support multiple windows.
+
+### When To Adopt
+
+Ask:
+
+- Can users work on two documents/items side by side?
+- Does selection belong per window?
+- Does navigation state restore per scene?
+- Are sheets scoped to the correct scene?
+- Are singleton UI states avoided?
+
+If two yeses → adopt `WindowGroup` with per-scene state. If zero → single window is correct; do not adopt multiwindow for symmetry alone.
+
+### Scene Shape
+
+```swift
+@main
+struct NotesApp: App {
+    var body: some Scene {
+        WindowGroup(for: Note.ID.self) { $noteID in
+            NoteWindow(noteID: noteID)
+        }
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Note") {
+                    openNewWindow(for: Note.ID())
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            }
+        }
+    }
+}
+```
+
+`WindowGroup(for:)` gives each window its own document identity and isolated state. Opening a second window from `openWindow(value:)` produces a real second scene with independent selection.
+
+### Per-Scene State
+
+```swift
+struct NoteWindow: View {
+    let noteID: Note.ID?
+    @SceneStorage("selectedSection") private var section: Section = .body
+    @State private var inspectorPresented = false
+
+    var body: some View {
+        NavigationSplitView {
+            SectionList(selection: $section)
+        } detail: {
+            NoteDetail(noteID: noteID, section: section)
+        }
+        .inspector(isPresented: $inspectorPresented) { Metadata(noteID: noteID) }
+    }
+}
+```
+
+`@SceneStorage` persists per scene, not per app. Two windows can have different sidebar selections. `@AppStorage` is global — wrong tool for per-window UI state.
+
+### Pitfalls
+
+Reject:
+
+- singleton `@Observable` view-model used by every window — selection/scroll position will leak between scenes
+- sheets attached to a top-level view that lives outside the scene's `NavigationSplitView` — wrong window gets the sheet
+- `@AppStorage` for sidebar/section selection that should be per-window
+- assuming `openWindow(id:)` opens a new scene when no `WindowGroup(for:)` data type is declared
 
 ## Pointer Support
 
@@ -210,18 +332,6 @@ Consider drag and drop when:
 - iPad users benefit from spatial manipulation
 
 Do not add drag and drop as decorative complexity.
-
-## Multiwindow
-
-For document-like apps, consider whether the UI should support multiple windows.
-
-Ask:
-
-- Can users work on two documents/items side by side?
-- Does selection belong per window?
-- Does navigation state restore per scene?
-- Are sheets scoped to the correct scene?
-- Are singleton UI states avoided?
 
 ## Density
 

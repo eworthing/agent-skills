@@ -33,6 +33,8 @@ Load as needed:
 - output code contract: `references/generation-output-format.md`
 - anti-web-smells: `references/anti-web-smells.md`
 
+If the project has design tokens (named spring/timed motion tokens, project `Palette`, repo-prescribed button-style table), defer color/spacing/typography/motion choices to the `swiftui-design-tokens` skill instead of inventing values. This skill drives structure (what view, what hierarchy, what navigation); `swiftui-design-tokens` fills in the visual tokens.
+
 ## Step 3: Choose Native Structure
 
 Choose one primary structure:
