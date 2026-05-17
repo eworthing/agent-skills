@@ -85,6 +85,8 @@ Variants must differ structurally or behaviorally, not merely by color.
 
 Use `templates/stitch-apple-native-brief.md` as the starting template. See `references/stitch-examples.md` for 5 worked example briefs and `references/stitch-handoff-format.md` for the canonical format.
 
+When calling `generate_variants` against the official Stitch MCP, pass `variantOptions.variantCount: 3` (this is also the server default) and `creativeRange: EXPLORE` for the first pass. Use `aspects: ["LAYOUT"]` to vary structure while holding palette/typography, or leave `aspects` empty to let Stitch vary anything. Save `REIMAGINE` for the rare case where the current direction is fundamentally wrong.
+
 ## Step 4: Fetch Output
 
 **Discover first, then call.** Do not assume any Stitch MCP server is installed or which tool names it exposes. Most agent environments do not have a Stitch MCP at all; the most common path here is the paste-export fallback below.
@@ -97,15 +99,15 @@ Use `templates/stitch-apple-native-brief.md` as the starting template. See `refe
 
 ### 4b. If a Stitch MCP server is available
 
-Fetch any combination of:
+Canonical tool flow against the official Google Stitch MCP (verified 2026-05-17, 14 tools — see `references/stitch-tool-capability-map.md` for the full contract):
 
-- screenshot/image (preferred for review)
-- HTML/CSS/code (parse for anti-patterns, do not port structure)
-- design metadata
-- screen description
-- project or screen context
+1. `list_projects` (or `create_project` with a `title`) → get a `projectId`.
+2. `generate_screen_from_text` with `projectId`, `prompt`, and `deviceType: MOBILE` for iPhone or `deviceType: TABLET` for iPad.
+3. Read the returned `outputComponents` array — the `Asset` is the screenshot you review, `Design` and `DesignSystem` are the structured data.
 
-Prefer image plus code/metadata when both exist. Never rely solely on generated HTML for review.
+**Critical `deviceType` gotcha:** the enum is `MOBILE | TABLET | DESKTOP | AGNOSTIC`. There is no iOS-specific value; `MOBILE` covers iPhone *and* Android. Stitch will still produce Material / Tailwind / web-card output at `MOBILE` unless your brief carries explicit Apple-native exclusions. The hard-exclusion list in `references/stitch-handoff-format.md` does the heavy lifting; `deviceType` alone does not.
+
+Prefer the Asset (image) for visual review. Use Design / DesignSystem structured data only as input to token extraction in `references/design-md-swiftui.md` — never copy its layout structure into SwiftUI.
 
 ### 4c. Paste-export fallback (most common path)
 
@@ -151,6 +153,8 @@ Bad:
 
 Good:
 "Remove the bottom-right Floating Action Button. Place the Add action in the top trailing navigation bar. Keep the rest of the layout unchanged."
+
+Against the official Stitch MCP, focused revisions are `edit_screens` calls, not new `generate_variants` calls — `edit_screens` preserves the rest of the screen while applying the prompt. If you do call `generate_variants`, use `creativeRange: REFINE` to keep variants close to the source.
 
 See `references/stitch-negative-prompts.md` for 5 validation experiments showing the revise loop in action.
 
