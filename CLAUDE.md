@@ -26,6 +26,7 @@ Every skill is installed by symlinking from this repo into each agent's per-user
 ln -s "$PWD/<skill>" "$HOME/.claude/skills/<skill>"
 ln -s "$PWD/<skill>" "$HOME/.codex/skills/<skill>"
 ln -s "$PWD/<skill>" "$HOME/.config/opencode/skills/<skill>"
+ln -s "$PWD/<skill>" "$HOME/.gemini/antigravity-cli/skills/<skill>"
 ```
 
 Symlinks (not copies) so repo edits propagate immediately to every agent.

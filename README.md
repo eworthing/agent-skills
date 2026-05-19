@@ -44,6 +44,7 @@ Each agent CLI looks for skills in its own per-user directory. Best practice: **
 | Codex CLI | `~/.codex/skills/<skill>` |
 | opencode | `~/.config/opencode/skills/<skill>` |
 | Gemini CLI | `~/.agents/skills/<skill>` (shared community location) |
+| Gemini Antigravity CLI | `~/.gemini/antigravity-cli/skills/<skill>` |
 
 > **Note on `~/.agents/skills/`:** this directory is also used by external/community skills (swiftui-expert-skill, swift-concurrency, etc.). The install loop below skips any existing entry that isn't already a symlink to *this* repo — community skills are never clobbered. Gemini CLI also offers `gemini skills link <path>` as a first-party alternative.
 
@@ -64,6 +65,7 @@ ln -s "$SRC/$SKILL" "$HOME/.claude/skills/$SKILL"
 ln -s "$SRC/$SKILL" "$HOME/.codex/skills/$SKILL"
 ln -s "$SRC/$SKILL" "$HOME/.config/opencode/skills/$SKILL"
 ln -s "$SRC/$SKILL" "$HOME/.agents/skills/$SKILL"          # Gemini CLI
+ln -s "$SRC/$SKILL" "$HOME/.gemini/antigravity-cli/skills/$SKILL"  # Gemini Antigravity CLI
 ```
 
 ### Install every published skill into all four agents
@@ -83,7 +85,8 @@ DESTS=(
   "$HOME/.claude/skills"
   "$HOME/.codex/skills"
   "$HOME/.config/opencode/skills"
-  "$HOME/.agents/skills"       # Gemini CLI (shared with community skills)
+  "$HOME/.agents/skills"                   # Gemini CLI (shared with community skills)
+  "$HOME/.gemini/antigravity-cli/skills"   # Gemini Antigravity CLI
 )
 
 for dest in "${DESTS[@]}"; do
@@ -116,7 +119,7 @@ The loop is idempotent and safe in shared dirs:
 ### Verify
 
 ```bash
-for dest in ~/.claude/skills ~/.codex/skills ~/.config/opencode/skills ~/.agents/skills; do
+for dest in ~/.claude/skills ~/.codex/skills ~/.config/opencode/skills ~/.agents/skills ~/.gemini/antigravity-cli/skills; do
   echo "== $dest =="
   ls -la "$dest" | grep -- '-> '"$(pwd)" || echo "(none from this repo)"
 done
