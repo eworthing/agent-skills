@@ -1,37 +1,192 @@
-# Local Development
+# agent-skills — Project Conventions
 
-## Setup
+This repo holds reusable skills for AI coding agents (Claude Code, Codex CLI, opencode, Gemini CLI, Gemini Antigravity CLI, Copilot CLI). See [README.md](README.md) for the full skill catalog.
 
-For local development, symlink each skill directory into `~/.claude/skills/` so that edits in the repo are immediately picked up by Claude Code:
+## Layout
+
+- One skill per top-level directory.
+- Each skill:
+  - `SKILL.md` — YAML frontmatter (`name`, `description`, `allowed-tools`) + body. Description must contain a "Use when…" trigger phrase.
+  - `references/*.md` — optional progressive-disclosure files. Linked from SKILL.md.
+  - `scripts/*` — optional helper executables. Bash scripts target macOS 3.2 + Linux 4+ (see `bash-macos` skill).
+  - `EVAL.md` — quality score against the skill-evaluator rubric. Target ≥ 90/100 before publishing.
+
+## Workflow
+
+- Skill descriptions: lead with capabilities, include "Use when…" trigger phrases (required by `scripts/eval-skill.py`).
+- Shell scripts: portable Bash only — no `mapfile`, no GNU-only `sed`/`date` flags. Consult `bash-macos/SKILL.md` when writing.
+- Edits validate with: `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py <skill-dir>`. Aim for 100% on automated checks + ≥ 90 on the manual rubric.
+- Commit style: `feat(<skill-name>): <change> (<old-score>→<new-score> EVAL)` when an eval score shifts. Otherwise standard Conventional Commits.
+
+## Installation (Symlink Pattern)
+
+Every skill is installed by symlinking from this repo into each agent's per-user skills directory:
 
 ```bash
-ln -s /Users/Shared/git/agent-skills/peer-plan-review ~/.claude/skills/peer-plan-review
+ln -s "$PWD/<skill>" "$HOME/.claude/skills/<skill>"
+ln -s "$PWD/<skill>" "$HOME/.codex/skills/<skill>"
+ln -s "$PWD/<skill>" "$HOME/.config/opencode/skills/<skill>"
+ln -s "$PWD/<skill>" "$HOME/.agents/skills/<skill>"                  # Gemini CLI (shared with community skills)
+ln -s "$PWD/<skill>" "$HOME/.gemini/antigravity-cli/skills/<skill>"  # Gemini Antigravity CLI
 ```
 
-Do **not** use `cp -r` for local dev — copied directories require re-copying after every change.
+Symlinks (not copies) so repo edits propagate immediately to every agent.
 
-Do **not** use `npx skills add` for local dev — it clones from GitHub into a managed cache and won't reflect local edits.
+**Do not use `cp -r`** — copied directories require re-copying after every change.
 
-## Verifying the symlink
+**Do not use `npx skills add`** for local dev — it clones from GitHub into a managed cache and won't reflect local edits. Use it only on machines that consume (not develop) skills.
+
+### Verifying a symlink
 
 ```bash
-ls -la ~/.claude/skills/peer-plan-review
-# Should show: -> /Users/Shared/git/agent-skills/peer-plan-review
+ls -la ~/.claude/skills/<skill-name>
+# Should show: <skill-name> -> /Users/Shared/git/agent-skills/<skill-name>
 ```
 
-Changes take effect in the next Claude Code session (no restart of the current session needed).
+Changes take effect in the next agent session (no restart of the current session needed).
 
-## Adding a new skill
+### Adding a new skill
 
-1. Create a new directory in this repo with a `SKILL.md` at its root.
-2. Symlink it into `~/.claude/skills/`:
-   ```bash
-   ln -s /Users/Shared/git/agent-skills/<skill-name> ~/.claude/skills/<skill-name>
-   ```
-3. Add the skill path to `.claude/settings.json` if not already present.
+1. Create a new directory in this repo with `SKILL.md` at its root.
+2. Symlink it into every agent dir listed above.
+3. Add the skill path to `.claude/settings.json` if Claude Code needs an explicit registration.
 
-## Distribution
+### Distribution
 
-For installing on other machines (not local dev), use the copy or `npx skills add` methods documented in the README.
+For installing on machines that do not host this repo, use the copy or `npx skills add` methods documented in [README.md](README.md).
 
-@RTK.md
+---
+
+<!-- rtk-instructions v2 -->
+# RTK (Rust Token Killer) - Token-Optimized Commands
+
+## Golden Rule
+
+**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
+
+**Important**: Even in command chains with `&&`, use `rtk`:
+```bash
+# ❌ Wrong
+git add . && git commit -m "msg" && git push
+
+# ✅ Correct
+rtk git add . && rtk git commit -m "msg" && rtk git push
+```
+
+## RTK Commands by Workflow
+
+### Build & Compile (80-90% savings)
+```bash
+rtk cargo build         # Cargo build output
+rtk cargo check         # Cargo check output
+rtk cargo clippy        # Clippy warnings grouped by file (80%)
+rtk tsc                 # TypeScript errors grouped by file/code (83%)
+rtk lint                # ESLint/Biome violations grouped (84%)
+rtk prettier --check    # Files needing format only (70%)
+rtk next build          # Next.js build with route metrics (87%)
+```
+
+### Test (90-99% savings)
+```bash
+rtk cargo test          # Cargo test failures only (90%)
+rtk vitest run          # Vitest failures only (99.5%)
+rtk playwright test     # Playwright failures only (94%)
+rtk test <cmd>          # Generic test wrapper - failures only
+```
+
+### Git (59-80% savings)
+```bash
+rtk git status          # Compact status
+rtk git log             # Compact log (works with all git flags)
+rtk git diff            # Compact diff (80%)
+rtk git show            # Compact show (80%)
+rtk git add             # Ultra-compact confirmations (59%)
+rtk git commit          # Ultra-compact confirmations (59%)
+rtk git push            # Ultra-compact confirmations
+rtk git pull            # Ultra-compact confirmations
+rtk git branch          # Compact branch list
+rtk git fetch           # Compact fetch
+rtk git stash           # Compact stash
+rtk git worktree        # Compact worktree
+```
+
+Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
+
+### GitHub (26-87% savings)
+```bash
+rtk gh pr view <num>    # Compact PR view (87%)
+rtk gh pr checks        # Compact PR checks (79%)
+rtk gh run list         # Compact workflow runs (82%)
+rtk gh issue list       # Compact issue list (80%)
+rtk gh api              # Compact API responses (26%)
+```
+
+### JavaScript/TypeScript Tooling (70-90% savings)
+```bash
+rtk pnpm list           # Compact dependency tree (70%)
+rtk pnpm outdated       # Compact outdated packages (80%)
+rtk pnpm install        # Compact install output (90%)
+rtk npm run <script>    # Compact npm script output
+rtk npx <cmd>           # Compact npx command output
+rtk prisma              # Prisma without ASCII art (88%)
+```
+
+### Files & Search (60-75% savings)
+```bash
+rtk ls <path>           # Tree format, compact (65%)
+rtk read <file>         # Code reading with filtering (60%)
+rtk grep <pattern>      # Search grouped by file (75%)
+rtk find <pattern>      # Find grouped by directory (70%)
+```
+
+### Analysis & Debug (70-90% savings)
+```bash
+rtk err <cmd>           # Filter errors only from any command
+rtk log <file>          # Deduplicated logs with counts
+rtk json <file>         # JSON structure without values
+rtk deps                # Dependency overview
+rtk env                 # Environment variables compact
+rtk summary <cmd>       # Smart summary of command output
+rtk diff                # Ultra-compact diffs
+```
+
+### Infrastructure (85% savings)
+```bash
+rtk docker ps           # Compact container list
+rtk docker images       # Compact image list
+rtk docker logs <c>     # Deduplicated logs
+rtk kubectl get         # Compact resource list
+rtk kubectl logs        # Deduplicated pod logs
+```
+
+### Network (65-70% savings)
+```bash
+rtk curl <url>          # Compact HTTP responses (70%)
+rtk wget <url>          # Compact download output (65%)
+```
+
+### Meta Commands
+```bash
+rtk gain                # View token savings statistics
+rtk gain --history      # View command history with savings
+rtk discover            # Analyze Claude Code sessions for missed RTK usage
+rtk proxy <cmd>         # Run command without filtering (for debugging)
+rtk init                # Add RTK instructions to CLAUDE.md
+rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
+```
+
+## Token Savings Overview
+
+| Category | Commands | Typical Savings |
+|----------|----------|-----------------|
+| Tests | vitest, playwright, cargo test | 90-99% |
+| Build | next, tsc, lint, prettier | 70-87% |
+| Git | status, log, diff, add, commit | 59-80% |
+| GitHub | gh pr, gh run, gh issue | 26-87% |
+| Package Managers | pnpm, npm, npx | 70-90% |
+| Files | ls, read, grep, find | 60-75% |
+| Infrastructure | docker, kubectl | 85% |
+| Network | curl, wget | 65-70% |
+
+Overall average: **60-90% token reduction** on common development operations.
+<!-- /rtk-instructions -->
