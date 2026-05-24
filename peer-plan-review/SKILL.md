@@ -56,7 +56,7 @@ Before start, confirm one of: plan already in session, plan pasted by user, or f
 
 Normalize to:
 
-- `reviewer` — `codex`, `gemini`, `claude`, `copilot`, `opencode` (required; ask if omitted)
+- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`. (The `--reviewer <provider>` CLI flag uses the same five values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.)
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 
