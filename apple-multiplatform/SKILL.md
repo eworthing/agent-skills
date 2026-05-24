@@ -52,7 +52,7 @@ live in [`references/build-matrix.md`](references/build-matrix.md)).
 Use when:
 - Adding or auditing `#if os(...)` / `#if canImport(...)` guards in Swift code
 - Debugging an error that only reproduces on one platform (commonly macOS or
-  tvOS, less commonly iPad/Catalyst)
+  tvOS, less commonly iPad / Mac Catalyst)
 - Choosing between `os(...)` and `canImport(...)` for a new conditional
 - Gating `editMode`, drag-and-drop receiving, or haptics for tvOS
 - Picking SwiftUI styles whose availability differs across platforms
@@ -103,7 +103,7 @@ import AppKit
 ```
 
 Mac Catalyst is `os(iOS)` AND `targetEnvironment(macCatalyst)`. To branch
-Catalyst specifically:
+Mac Catalyst specifically:
 
 ```swift
 #if targetEnvironment(macCatalyst)
@@ -114,6 +114,10 @@ Catalyst specifically:
 ```
 
 ## SwiftUI API Availability Matrix
+
+In the matrix and code comments below, **"Catalyst" is shorthand for
+"Mac Catalyst"** (the full term used in prose). Both refer to the same
+platform — `os(iOS)` AND `targetEnvironment(macCatalyst)`.
 
 This is a **functional** availability table — a "Yes" means the API both
 compiles and behaves meaningfully on that platform. Apple's symbol-level
@@ -169,7 +173,7 @@ snippet, see [`references/recovery.md`](references/recovery.md).
 | Runtime crash on tvOS after `canImport(UIKit)` guard | UIKit imports but specific class is unavailable | Replace `canImport(UIKit)` with `os(iOS)` |
 | `Ambiguous use of '...'` | Platform-specific overloads visible together | Add explicit type annotation or branch with `#if` |
 | macOS-only `Static method 'page' requires ...` | `TabView.tabViewStyle(.page)` on macOS | Branch `tabViewStyle` per platform |
-| Catalyst window collapses on launch | Missing `.defaultSize(...)` / scene config | Specify size — see `references/catalyst.md` |
+| Mac Catalyst window collapses on launch | Missing `.defaultSize(...)` / scene config | Specify size — see `references/catalyst.md` |
 | `.fullScreenCover` not found on macOS | Modifier is unavailable on macOS | Branch to `.sheet` on macOS |
 
 ## Cross-Platform Visibility After File Splits
@@ -229,7 +233,7 @@ documented in `references/recovery.md`.
 ## Constraints
 
 - Build failures on **any** supported destination block merge. macOS and
-  Catalyst frequently surface issues tvOS misses; do not skip them.
+  Mac Catalyst frequently surface issues tvOS misses; do not skip them.
 - Prefer `#if os(...)` for API gating; reserve `#if canImport(...)` for the
   `import` statement itself.
 - Re-evaluate guards after Swift / SDK upgrades — Apple occasionally extends
