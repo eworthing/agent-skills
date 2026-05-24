@@ -16,7 +16,7 @@ allowed-tools:
   - Bash
 ---
 
-# Design System Patterns
+# SwiftUI Design Tokens
 
 ## Contents
 
@@ -114,14 +114,14 @@ sprinkling raw numbers:
 enum Metrics {
     static let grid: CGFloat = 8         // Base unit
     static let spacingXS: CGFloat = 8    // grid * 1
-    static let spacingSm: CGFloat = 16   // grid * 2
-    static let spacingMd: CGFloat = 24   // grid * 3
-    static let spacingLg: CGFloat = 32   // grid * 4
+    static let spacingSM: CGFloat = 16   // grid * 2
+    static let spacingMD: CGFloat = 24   // grid * 3
+    static let spacingLG: CGFloat = 32   // grid * 4
     static let spacingXL: CGFloat = 40   // grid * 5
 
-    static let rSm: CGFloat = 8         // Small corner radius
-    static let rMd: CGFloat = 12        // Medium corner radius
-    static let rLg: CGFloat = 16        // Large corner radius
+    static let rSM: CGFloat = 8          // Small corner radius
+    static let rMD: CGFloat = 12         // Medium corner radius
+    static let rLG: CGFloat = 16         // Large corner radius
 }
 ```
 
@@ -299,9 +299,9 @@ Create reusable modifiers for common patterns:
 struct CardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(Metrics.spacingMd)
+            .padding(Metrics.spacingMD)
             .background(Palette.surface)
-            .clipShape(.rect(cornerRadius: Metrics.rLg))
+            .clipShape(.rect(cornerRadius: Metrics.rLG))
     }
 }
 
@@ -328,10 +328,10 @@ VStack(alignment: .leading) {
 ### Spacing
 
 ```swift
-VStack(spacing: Metrics.spacingSm) {
+VStack(spacing: Metrics.spacingSM) {
     // 16pt spacing between items
 }
-.padding(Metrics.spacingMd)  // 24pt padding
+.padding(Metrics.spacingMD)  // 24pt padding
 ```
 
 ## Diagnostic Recipes
@@ -340,7 +340,7 @@ When visual issues surface, use this table to identify likely token misuse:
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| Inconsistent corner radii across cards | Raw numbers instead of `Metrics.rSm`/`rMd`/`rLg` | Replace with `Metrics.r*` tokens |
+| Inconsistent corner radii across cards | Raw numbers instead of `Metrics.rSM`/`rMD`/`rLG` | Replace with `Metrics.r*` tokens |
 | Headings vary in size across screens | Mixing raw `Font.system(size:)` with `TypeScale` | Use only `TypeScale.h1`/`h2`/`h3` |
 | Animation feels harsh with accessibility | No reduce-motion gate on spring animations | Add `reduceMotion ? .reduced : .spring` ternary |
 | Uneven spacing between sections | Raw padding values instead of `Metrics.spacing*` | Switch to semantic spacing tokens |
