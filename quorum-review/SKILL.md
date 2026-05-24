@@ -2,11 +2,32 @@
 name: quorum-review
 description: >
   Multi-provider consensus review system (v3). Orchestrates anonymous quorum
-  reviews for plans, specs, and code diffs with canonical issue IDs,
-  conservative merges, and an independent verifier.
+  reviews for plans, specs, and code diffs across reviewers from different
+  providers (Claude, Gemini, Codex, Copilot), tracks canonical issue IDs in
+  a shared ledger, merges only semantically equivalent issues, and derives
+  the final verdict from surviving blockers — not raw vote counts — with an
+  independent external verifier. Use when a single reviewer's verdict feels
+  unreliable, when you need defensible blocker IDs for audit, when planning
+  high-stakes changes (security, migrations, architecture), or when the user
+  asks for "panel review", "consensus review", "multi-model review",
+  "quorum review", or a "second opinion across AI providers".
 ---
 
 # Quorum Review — Multi-Provider Consensus (v3)
+
+## Contents
+
+- What it does
+- Invocation (flags, defaults, thresholds with when to prefer each)
+- Modes (`plan`, `spec`, `code`)
+- Review contract (sections, anchors)
+- Round flow (Round 1 → Ledger → Merge → Rounds 2+ → Verification → Verdict)
+- Cross-critique syntax
+- Merge and verification rules
+- Role packs (`plan`/`spec` vs `code`)
+- Temp files
+- Examples (plan review, code review with external verifier)
+- Migration notes from v2.4
 
 Use this skill when you need a panel of 3+ reviewers to review a plan, spec, or
 code diff and reach a ledger-derived verdict rather than a raw vote count.
@@ -44,13 +65,19 @@ Notes:
 
 - `--plan-file` is the artifact input path. In `code` mode, point it at a code
   diff or patch file.
-- `--mode` defaults to `plan`; `spec` uses the same tribunal path as `plan`.
+- `--mode` defaults to `plan`; `spec` uses the same panel path as `plan`.
 - `--verifier` must be an external provider:model pair. If omitted, the
   orchestrator auto-selects a verifier outside the panel.
-- `--threshold` controls how many supporters a blocker needs to survive:
-  - `unanimous` — all reviewers must support the blocker.
-  - `super` (default) — all but one reviewer (N-1 of N).
-  - `majority` — simple majority (more than half).
+- `--threshold` controls how many supporters a blocker needs to survive.
+  Prefer:
+  - `unanimous` — when false-positive blockers are very expensive
+    (e.g., a release-gating review) and you want every reviewer to back
+    each blocker before it can REVISE the artifact.
+  - `super` (default) — for most reviews; tolerates one dissenting
+    reviewer (N-1 of N) so a single confused panelist cannot suppress
+    a real blocker.
+  - `majority` — for fast-moving iterative drafting where you want
+    blockers to surface easily and the host agent will adjudicate.
 - `--max-rounds` has a hard cap of 5. At round 5 the orchestrator forces a
   final verdict regardless of convergence.
 - `--skip-verification` bypasses the independent verifier stage. Use this when
