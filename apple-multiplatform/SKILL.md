@@ -1,6 +1,5 @@
 ---
 name: apple-multiplatform
-author: eworthing
 description: >-
   Cross-platform Apple SwiftUI compatibility reference for iOS, iPadOS, macOS,
   Mac Catalyst, and tvOS. Use when adding platform-conditional code, debugging
@@ -19,6 +18,21 @@ allowed-tools:
 ---
 
 # Apple Multiplatform Compatibility
+
+## Contents
+
+- [Purpose](#purpose)
+- [When to Use This Skill](#when-to-use-this-skill)
+- [Platform Conditionals: `canImport` vs `os(...)`](#platform-conditionals-canimport-vs-os)
+- [SwiftUI API Availability Matrix](#swiftui-api-availability-matrix)
+- [Per-Platform Detail](#per-platform-detail)
+- [Common Failure Patterns](#common-failure-patterns)
+- [Cross-Platform Visibility After File Splits](#cross-platform-visibility-after-file-splits)
+- [Build Validation](#build-validation)
+- [Static Audit](#static-audit)
+- [Sibling Skills](#sibling-skills)
+- [Constraints](#constraints)
+- [Escape Hatches](#escape-hatches)
 
 ## Purpose
 
