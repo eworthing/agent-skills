@@ -27,6 +27,22 @@ Design, generate, critique, and revise SwiftUI interfaces so they feel native to
 
 This skill is a capability layer, not a design textbook. Keep the always-on core small. Load references and workflows only when the task needs them.
 
+## Contents
+
+- Quick Decision Tree
+- Target Baseline (iOS / iPadOS / SwiftUI versions)
+- When To Use
+- Sibling Skills — Defer When
+- Always Apply
+- Hard Rejections
+- Source Use Policy
+- Load References As Needed
+- Load Workflows As Needed
+- Default Workflow
+- Output Contract
+- Tone Of Review (prefer/reject example pairs across navigation, sheets, glass, iPad, accessibility)
+- Evidence Discipline
+
 ## Quick Decision Tree
 
 Pick a workflow before reading the rest of this file.
@@ -248,15 +264,27 @@ When running a Stitch workflow, provide:
 
 Be direct. Prefer small, concrete rules. Avoid theory dumps.
 
-Use reject/prefer pairs.
+Use reject/prefer pairs covering the skill's full surface, not just one slice:
 
-Example:
+**Lists vs. card grids (iPhone scannable content)**
+- Prefer: `List { Section { ... } }` with native row affordances.
+- Reject: Custom card grids for scannable iPhone content.
 
-Prefer:
-`List { Section { ... } }` with native row affordances.
+**Navigation root on iPad**
+- Prefer: `NavigationSplitView` with sidebar + content + detail columns.
+- Reject: `TabView` as the root container on iPad (collapses iPad-class affordances).
 
-Reject:
-Custom card grids for scannable iPhone content.
+**Modal presentation for incidental tasks**
+- Prefer: `.sheet(isPresented:)` for short, dismissible tasks; `.inspector` for properties shown alongside the focused content on iPad.
+- Reject: Push onto the navigation stack for what is conceptually a modal.
+
+**Liquid Glass surfaces**
+- Prefer: System-provided `.glassBackgroundEffect()` and toolbar surfaces with Reduce Transparency support.
+- Reject: Hand-built blur stacks (custom `Material` + `.opacity` recipes) that ignore Reduce Transparency / Increase Contrast.
+
+**Accessibility hooks on interactive rows**
+- Prefer: `.accessibilityLabel` + `.accessibilityValue` + `.accessibilityHint` distinguished per their semantic role.
+- Reject: A single concatenated `.accessibilityLabel` string that swallows the value and the action hint.
 
 ## Evidence Discipline
 
