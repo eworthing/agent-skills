@@ -1,6 +1,6 @@
 # Review Lens: Generic (non-Apple stacks)
 
-Apply when stack detected is Rust, Go, Python, Node, Java, Kotlin, Ruby, etc. Use alongside `architecture-rubric.md` (universal) — this lens is the language-agnostic complement to `lens-apple.md`.
+Apply when stack detected is Rust, Go, Python, Node, Java, Kotlin, Ruby, etc. Use alongside `architecture-rubric.md` (universal) — this lens is the language-agnostic complement to `lens-apple.md`. Findings produced here must follow The Evidence Chain from `method.md`: Claim → Source → Consequence → Remedy.
 
 ## Ownership & State
 

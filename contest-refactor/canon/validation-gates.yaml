@@ -1,0 +1,66 @@
+# Canonical validation gate IDs and titles. Sequenced; no gaps.
+# Cross-references: references/validation.md (authoritative gate text).
+# Validators assert (a) IDs are unique and sequential, (b) every referenced gate ID resolves here.
+validation_gates:
+  - id: G1
+    title: "Output structure"
+  - id: G2
+    title: "JSON schema fidelity"
+  - id: G3
+    title: "Evidence chain"
+  - id: G4
+    title: "Score-proof requirement"
+  - id: G5
+    title: "9.5 residual"
+  - id: G6
+    title: "10 anchor justification"
+  - id: G7
+    title: "No stale findings"
+  - id: G8
+    title: "No score increase without structural proof"
+  - id: G9
+    title: "Backlog purity + per-state presence"
+  - id: G10
+    title: "Deepening Candidate purity"
+  - id: G11
+    title: "Builder Notes purity"
+  - id: G12
+    title: "Seam policy + friction proof"
+  - id: G13
+    title: "Vocabulary discipline (architectural-label use only)"
+  - id: G14
+    title: "Payload not instruction"
+  - id: G15
+    title: "Implementation review present"
+  - id: G16
+    title: "Registry consistency"
+  - id: G17
+    title: "Indirect coverage citation"
+  - id: G18
+    title: "REVIEW_HISTORY.json append"
+  - id: G19
+    title: "Provider+model recorded"
+  - id: G20
+    title: "Continuation discipline (post-commit, inline mode)"
+  - id: G21
+    title: "HALT_SUCCESS criteria (pre-emit)"
+  - id: G22
+    title: "Commit + archive divider format (pre-commit)"
+  - id: G23
+    title: "Residual accounting before no_backlog (pre-emit)"
+  - id: G24
+    title: "Authority Map test-surface cross-check (pre-emit, when test_strategy >= 9)"
+  - id: G25
+    title: "Continuation-bridge delegate audit (pre-emit, when concurrency >= 9)"
+  - id: G26
+    title: "Anchor-to-source check (pre-emit on every loop after loop 1)"
+  - id: G27
+    title: "Retry envelope (pre-emit when implementation_review present, schema_version >= 3)"
+  - id: G28
+    title: "Checkpoint freshness + post-commit cleanup (during Step 3, schema_version >= 3)"
+  - id: G29
+    title: "Schema version v3 invariants (pre-emit, schema_version >= 3)"
+  - id: G30
+    title: "Retirement Precedence"
+  - id: G31
+    title: "Fingerprint Integrity"

@@ -1,0 +1,45 @@
+{
+  "registry_schema_version": 2,
+  "next_serial": 401,
+  "entries": [
+    {
+      "stable_id": "F-400",
+      "title": "Test suite reads UTC timestamps in local zone",
+      "primary_file": "Tests/Common/DateAssertions.swift",
+      "primary_evidence_lines": [21, 21],
+      "test_failed": "n/a",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 3,
+      "first_seen_sha": "aaaa111",
+      "last_seen_loop": 5,
+      "occurrences": [
+        {
+          "loop": 3,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "aaaa111",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:fd7ddc108bf845105b4cbd545db61f7a55d908f7d3bafe751a83365073a64cdd",
+            "evidence_paths_hash": "sha256:8ad2e5c7376fa982036d8074dc485d6fb0cf0659cb45fe407653409d051b7806"
+          },
+          "attempted_remedy_hash": "sha256:b72552069ca5f6914e114323a7c486baa0ce8951309f9f6e4e29a10d6be703e1"
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F2",
+          "status": "unresolvable",
+          "sha": "bbbb222",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:fd7ddc108bf845105b4cbd545db61f7a55d908f7d3bafe751a83365073a64cdd",
+            "evidence_paths_hash": "sha256:8ad2e5c7376fa982036d8074dc485d6fb0cf0659cb45fe407653409d051b7806"
+          },
+          "attempted_remedy_hash": "sha256:b72552069ca5f6914e114323a7c486baa0ce8951309f9f6e4e29a10d6be703e1",
+          "retirement": {
+            "reason": "unresolvable",
+            "rationale": "(Invalid retirement — only one prior rejected_attempt; smoke fixture exercising the Branch A insufficient-attempts failure.)"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -155,7 +155,9 @@ A score of **9.5+** (and < 10) on a category requires:
 
 A 9.5 without an identified residual is fake-clean reward. Downgrade to 9.
 
-`HALT_SUCCESS` requires every scorecard category at 10, OR at 9.5+ with an **accepted** residual. Any **queued** residual blocks `HALT_SUCCESS`.
+Accepted residuals require `reason`, `accepted_on`, and `expires`. Expired residuals cannot satisfy `HALT_SUCCESS`. If expired, the Critic reconsiders the residual as active unless current evidence shows it no longer applies.
+
+`HALT_SUCCESS` requires every scorecard category at 10, OR at 9.5+ with an **accepted** residual whose `expires` date has not passed. Any **queued** residual blocks `HALT_SUCCESS`. Any **expired** accepted residual blocks `HALT_SUCCESS`.
 
 Terminal normalization rule: before any HALT emit, a category at 9 cannot mean
 "excellent but I did not account for the last local concern." If the 9-anchor is

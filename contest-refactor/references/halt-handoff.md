@@ -34,6 +34,22 @@ Step -1 step 4a (next invocation, on drift) reads `expected_actions[]` from prio
 
 At schema_version 1, only the prose `halt_handoff_text` is emitted; no structured action matching.
 
+## Retirement precedence
+
+Per-finding retirement (Step 1.6 in [method.md](method.md)) fires **before** whole-loop stagnation. A loop may not emit `HALT_STAGNATION / oscillation` while any eligible Serious-or-worse finding is unretired. Sequence each loop:
+
+1. Apply Step 1.6 retirement rules to each registry occurrence. Any finding mechanically eligible (Branch A 3-way hash equality, or Branch B 2-way hash equality + intervening `resolved`) gets `status: "unresolvable"` plus a `retirement` block.
+2. After retirement transitions, check whether `HALT_STAGNATION / oscillation` still applies. The Step 1.6 retirement may have removed the oscillating finding from the Priority-1-eligible pool, so the loop may now continue with the next backlog item instead of halting.
+3. If `HALT_STAGNATION / oscillation` is still warranted (every remaining Serious-or-worse finding cannot be made Priority 1), emit it with `halt_handoff.remaining_serious_findings_disposition[]` per G30.
+
+A retired finding surfaces in user-visible loop output via the "Retired finding" template:
+
+```
+**Retired finding:** F-007 marked `unresolvable` after rejected attempts in loops 3 and 5. Continuing with 4 eligible backlog items.
+```
+
+Emit one such line per finding that transitioned to `unresolvable` in this loop. The per-loop archive header in `REVIEW_HISTORY.md` (PR 5 compression) also lists the loop's retirement transitions; see [output-format-markdown.md § Per-loop archive format](output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2).
+
 ---
 
 ## HALT_SUCCESS

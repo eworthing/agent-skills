@@ -51,6 +51,8 @@ Persistent state file schemas (`LOOP_STATE.json`, `findings_registry.json`, `REV
 
 The JSON file is a faithful mirror of the Markdown contract in [output-format-markdown.md](output-format-markdown.md). Every Markdown field has a JSON field; enums match the Markdown allowed values; arrays match the OutputBudget caps; proofs are required where the Markdown spec requires them.
 
+Findings produced here must follow The Evidence Chain from `method.md`: Claim → Source → Consequence → Remedy. The JSON-field mapping is documented inline in the findings schema below.
+
 ### Required-field schema (machine-readable)
 
 ```jsonc
@@ -142,25 +144,31 @@ The JSON file is a faithful mirror of the Markdown contract in [output-format-ma
   "strengths": ["Reducer pure, effect pump deterministic — AppEngine.swift:46-58"],
 
   // Findings (required; 3-5 default, 6-7 max; empty allowed when state == HALT_SUCCESS or HALT_STAGNATION/no_backlog)
+  // Findings produced here must follow The Evidence Chain from `method.md`: Claim → Source → Consequence → Remedy.
+  // JSON-field-to-Evidence-Chain mapping:
+  //   Claim       = `title` + `why_it_matters` + `what_is_wrong` (all three non-empty)
+  //   Source      = `evidence[]` (non-empty)
+  //   Consequence = `why_weakens_submission`
+  //   Remedy      = `minimal_correction_path`
   "findings": [
     {
       "loop_local_id": "F1",                                               // required, "F<n>", fresh per loop, ordered by Priority. Replaces legacy "id" field at schema_version >= 2.
       "stable_id": "F-007",                                                // required when schema_version >= 2 on every emitted finding (CONTINUE and HALT loops alike). Format "F-NNN", looked up from findings_registry.json per Method Step 1.5.
       "id": "F1",                                                          // legacy alias of loop_local_id; emitted for schema_version < 2 backward-compat. New writes can omit.
-      "title": "Navigation has two writers",                               // required
-      "why_it_matters": "...",                                             // required
-      "what_is_wrong": "...",                                               // required
-      "evidence": ["App/RootView.swift:18", "Core/NavigationStore.swift:12"],  // required, >=1 entry
+      "title": "Navigation has two writers",                               // required (Claim)
+      "why_it_matters": "...",                                             // required (Claim)
+      "what_is_wrong": "...",                                               // required (Claim)
+      "evidence": ["App/RootView.swift:18", "Core/NavigationStore.swift:12"],  // required, >=1 entry (Source)
       "test_failed": "Deletion test",                                      // enum: Deletion test | Two-adapter rule | Shallow module | Interface-as-test-surface | Replace-don't-layer | n/a
       "dependency_category": "in-process",                                 // required when finding is Coupling & Leakage; else null. enum: in-process | local-substitutable | remote-owned | true-external
       "leverage_impact": "...",                                            // required (one sentence)
       "locality_impact": "...",                                            // required (one sentence)
       "metric_signal": "none",                                             // required string; "none" allowed
-      "why_weakens_submission": "...",                                     // required
+      "why_weakens_submission": "...",                                     // required (Consequence)
       "severity": "Serious deduction",                                     // enum: Cosmetic for contest | Noticeable weakness | Serious deduction | Likely disqualifier
       "adr_conflicts": [],                                                 // required array; empty allowed; entries are ADR IDs
       "adr_reopen_justification": null,                                    // required when adr_conflicts non-empty; else null
-      "minimal_correction_path": "...",                                    // required
+      "minimal_correction_path": "...",                                    // required (Remedy)
       "blast_radius": {                                                    // required
         "change": ["Core/NavigationStore.swift", "App/RootView.swift", "Tests/NavigationStoreTests.swift"],
         "avoid": ["Features/Auth/LoginViewModel.swift"]
@@ -327,6 +335,8 @@ Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required whe
 
 ```jsonc
 "halt_handoff": {
+  "state": "HALT_STAGNATION",                                        // optional mirror of top-level state for self-contained validation; default = top-level state when absent
+  "halt_subtype": "oscillation",                                     // optional mirror of top-level halt_subtype; default = top-level halt_subtype when absent
   "text": "<full user-facing message per references/halt-handoff.md template, all placeholders resolved>",
   "expected_actions": [
     {
@@ -343,6 +353,18 @@ Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required whe
       "match_paths": [],
       "match_kind": "no_drift_expected"
     }
+  ],
+  "remaining_serious_findings_disposition": [
+    // Required at schema_version >= 2 when state == HALT_STAGNATION AND halt_subtype == "oscillation".
+    // Every Serious-or-worse finding with status ∈ {open, rejected_attempt} in the registry must appear here
+    // with a canonical `disposition` (from canon/retirement-reasons.yaml) plus the required sidecar.
+    // G30 enforces coverage; the validator rejects HALT_STAGNATION/oscillation when any eligible
+    // Serious-or-worse finding is missing or its sidecar is missing.
+    { "stable_id": "F-007", "disposition": "unresolvable" },
+    { "stable_id": "F-009", "disposition": "user_decision", "user_decision_ref": "ADR-0042" },
+    { "stable_id": "F-011", "disposition": "outside_scope", "scope_label": "audio-engine" },
+    { "stable_id": "F-013", "disposition": "unverifiable", "reason": "requires hardware test rig not available in scope" },
+    { "stable_id": "F-015", "disposition": "superseded", "superseded_by": "F-020" }
   ]
 }
 ```
@@ -353,6 +375,18 @@ Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required whe
 - `no_drift_expected` — match if `git log <halt_sha>..HEAD` returns empty.
 
 The loop subagent emits `halt_handoff.expected_actions[]` from the menu options in halt-handoff.md. Each menu option becomes a HandoffAction with `action_id` derived from the option's verb/object and `match_keywords` / `match_paths` populated from the option's referenced symbols.
+
+### remaining_serious_findings_disposition[] sidecar rules (G30)
+
+Each entry has `stable_id` plus `disposition` (one of the canonical values from `canon/retirement-reasons.yaml`) plus a required sidecar field, depending on `disposition`:
+
+- `disposition == "unresolvable"` — no extra sidecar; the registry already carries the `retirement` block (`reason` + `rationale`).
+- `disposition == "user_decision"` — `user_decision_ref` non-empty (e.g., `"ADR-0042"`).
+- `disposition == "outside_scope"` — `scope_label` non-empty (the scope label that does not cover the finding).
+- `disposition == "unverifiable"` — `reason` non-empty (one-line explanation of why the available tools cannot validate the finding's claim).
+- `disposition == "superseded"` — `superseded_by` non-empty (the stable_id of the replacement finding).
+
+A missing sidecar where one is required is a G30 failure.
 
 ## re_validation_context object (PR 4, schema_version >= 2)
 

@@ -1,0 +1,67 @@
+{
+  "registry_schema_version": 2,
+  "next_serial": 201,
+  "entries": [
+    {
+      "stable_id": "F-200",
+      "title": "Repository protocol with single Adapter",
+      "primary_file": "Core/OrderRepository.swift",
+      "primary_evidence_lines": [11, 11],
+      "test_failed": "Two-adapter rule",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 4,
+      "first_seen_sha": "1111aaa",
+      "last_seen_loop": 10,
+      "occurrences": [
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "1111aaa",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:567c33cb4770b70c638168dce4857c32b2103d5425f482b61d9d623e7b80d23c",
+            "evidence_paths_hash": "sha256:9608cdbbf90f032b440dbc95054ad543651c22a08c6bbe61648e84652a83ba17"
+          },
+          "attempted_remedy_hash": "sha256:2d8f55cc63f22d32868e6fff72e5649775e6c9171c4d7f2c8e50f3508bb97c1e"
+        },
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "2222bbb",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:567c33cb4770b70c638168dce4857c32b2103d5425f482b61d9d623e7b80d23c",
+            "evidence_paths_hash": "sha256:9608cdbbf90f032b440dbc95054ad543651c22a08c6bbe61648e84652a83ba17"
+          },
+          "attempted_remedy_hash": "sha256:abc1234567890abcdef1234567890abcdef1234567890abcdef1234567890abc"
+        },
+        {
+          "loop": 8,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "3333ccc",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:567c33cb4770b70c638168dce4857c32b2103d5425f482b61d9d623e7b80d23c",
+            "evidence_paths_hash": "sha256:9608cdbbf90f032b440dbc95054ad543651c22a08c6bbe61648e84652a83ba17"
+          },
+          "attempted_remedy_hash": "sha256:def4567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        },
+        {
+          "loop": 10,
+          "loop_local_id": "F1",
+          "status": "unresolvable",
+          "sha": "4444ddd",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:567c33cb4770b70c638168dce4857c32b2103d5425f482b61d9d623e7b80d23c",
+            "evidence_paths_hash": "sha256:9608cdbbf90f032b440dbc95054ad543651c22a08c6bbe61648e84652a83ba17"
+          },
+          "attempted_remedy_hash": "sha256:def4567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+          "retirement": {
+            "reason": "unresolvable",
+            "rationale": "Reappeared after a prior `resolved` with the same Claim+Source on the retiring occurrence; Branch B 2-way hash equality holds."
+          }
+        }
+      ]
+    }
+  ]
+}

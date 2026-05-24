@@ -1,0 +1,8 @@
+# Canonical halt subtypes. Apply only when state == HALT_STAGNATION.
+# Other HALT_* states use halt_subtype: null.
+# Cross-references: references/output-format-json.md (rule #17), SKILL.md (Halting Conditions).
+halt_subtypes:
+  - no_progress
+  - oscillation
+  - user_decision
+  - no_backlog

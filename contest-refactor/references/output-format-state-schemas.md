@@ -97,16 +97,96 @@ External file at repo root. Created on first loop or via Step -1 step 0.6 bootst
       "first_seen_sha": "<sha>",
       "last_seen_loop": 7,
       "occurrences": [
-        {"loop": 1, "loop_local_id": "F3", "status": "open", "sha": "<observation_sha>"},
-        {"loop": 3, "loop_local_id": "F3", "status": "fixed_by_user", "sha": "c066b0b"},
-        {"loop": 5, "loop_local_id": "F2", "status": "rejected_attempt", "sha": "<resolution_sha>", "reviewer_reason": "<one sentence>", "idempotency_key": "loop5-F-007-rejected_attempt"}
+        {
+          "loop": 1,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "<observation_sha>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:abcd...",
+            "evidence_paths_hash": "sha256:1234..."
+          },
+          "attempted_remedy_hash": "sha256:beef..."
+        },
+        {
+          "loop": 3,
+          "loop_local_id": "F3",
+          "status": "fixed_by_user",
+          "sha": "c066b0b",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:abcd...",
+            "evidence_paths_hash": "sha256:1234..."
+          },
+          "attempted_remedy_hash": "sha256:beef..."
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F2",
+          "status": "rejected_attempt",
+          "sha": "<resolution_sha>",
+          "reviewer_reason": "<one sentence>",
+          "idempotency_key": "loop5-F-007-rejected_attempt",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:abcd...",
+            "evidence_paths_hash": "sha256:1234..."
+          },
+          "attempted_remedy_hash": "sha256:beef..."
+        },
+        {
+          "loop": 7,
+          "loop_local_id": "F2",
+          "status": "unresolvable",
+          "sha": "<retirement_sha>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:abcd...",
+            "evidence_paths_hash": "sha256:1234..."
+          },
+          "attempted_remedy_hash": "sha256:beef...",
+          "retirement": {
+            "reason": "unresolvable",
+            "rationale": "Two rejected attempts at loops 3 and 5; identical Source paths and identical attempted Remedy. Mechanically retired."
+          }
+        }
       ]
     }
   ]
 }
 ```
 
-Occurrence `status` enum: `open` (still in backlog) | `resolved` (loop's reviewer approved a fix) | `fixed_by_user` (user resolved between loops) | `rejected_attempt` (reviewer rejected the loop's attempted fix; do not drop, the audit chain needs it).
+Occurrence `status` enum: `open` (still in backlog) | `resolved` (loop's reviewer approved a fix) | `fixed_by_user` (user resolved between loops) | `rejected_attempt` (reviewer rejected the loop's attempted fix; do not drop, the audit chain needs it) | `unresolvable` (per-finding retirement per [method.md § Step 1.6](method.md); the finding is mechanically stuck via Branch A 3-way hash equality or Branch B 2-way hash equality + intervening `resolved`. Skipped for Priority-1 selection while the latest occurrence matches the retiring basis).
+
+### Fingerprint + retirement occurrence fields (PR 1)
+
+Every occurrence emitted at `schema_version >= 2` carries:
+
+- `fingerprint.claim_consequence_hash` — SHA-256 of the normalized Claim + Consequence fields.
+- `fingerprint.evidence_paths_hash` — SHA-256 of the sorted, normalized `evidence[]` list.
+- `attempted_remedy_hash` — SHA-256 of the normalized Remedy field.
+
+When `status == "unresolvable"`, the occurrence also carries:
+
+- `retirement.reason` — value from `canon/retirement-reasons.yaml`.
+- `retirement.rationale` — non-empty free-text audit string (validator checks presence, not content).
+
+### Fingerprint algorithm (canonical, owned by `scripts/_fingerprint.py`)
+
+The Actor and Critic call `scripts/_fingerprint.py` when emitting findings; `scripts/validate-artifact.py` imports the same module and recomputes. Single owner prevents algorithm drift; G31 enforces stored hashes equal recomputed hashes.
+
+`normalize(text)` steps (order matters):
+
+1. `None` or non-string → empty string.
+2. Lowercase.
+3. Strip markdown emphasis characters: `*`, `_`, backticks.
+4. Collapse all whitespace runs (newlines, tabs, multiple spaces) to a single space.
+5. Strip leading/trailing whitespace.
+
+Hash inputs (each hash returns `"sha256:" + hex_digest`):
+
+- `claim_consequence_hash = SHA-256( normalize(title) "\n" normalize(why_it_matters) "\n" normalize(what_is_wrong) "\n" normalize(why_weakens_submission) )`
+- `evidence_paths_hash = SHA-256( "\n".join(sorted(normalize(item) for item in evidence)) )` — note the **sorting**; reordering `evidence[]` does not change the hash.
+- `attempted_remedy_hash = SHA-256( normalize(minimal_correction_path) )`
+
+Evidence Chain mapping is the same as in `method.md` § The Evidence Chain: Claim = `title` + `why_it_matters` + `what_is_wrong`; Source = `evidence`; Consequence = `why_weakens_submission`; Remedy = `minimal_correction_path`.
 
 Occurrence `sha` semantics:
 - `status == "resolved"` → resolution commit sha (the loop's commit that landed the fix; matches `Step 3 step 11` commit_sha for that loop).

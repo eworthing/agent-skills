@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "loop": 6,
+  "loop_cap": 10,
+  "state": "HALT_STAGNATION",
+  "halt_subtype": "oscillation",
+  "halt_handoff": {
+    "state": "HALT_STAGNATION",
+    "halt_subtype": "oscillation",
+    "text": "Loop 6 ended at HALT_STAGNATION/oscillation — missing disposition for F-500 on purpose.",
+    "expected_actions": [],
+    "remaining_serious_findings_disposition": []
+  },
+  "findings_registry_path": "./findings_registry.json",
+  "verdict": "Promising, but architecturally immature",
+  "verdict_explanation": "Loop cycled on a recurring finding; smoke fixture exercising G30 failure.",
+  "scorecard": {
+    "architecture_quality": {"score": 8.5, "delta": "SAME", "proof": "Domain/OrderPolicy.swift:5", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false}
+  },
+  "authority_map": [],
+  "strengths": [],
+  "findings": [
+    {
+      "loop_local_id": "F1",
+      "stable_id": "F-500",
+      "title": "Domain-policy import of CoreData",
+      "why_it_matters": "Persistence framework type bleeds into domain; policy is no longer portable.",
+      "what_is_wrong": "OrderPolicy.swift imports CoreData and uses NSManagedObject subclasses directly.",
+      "evidence": ["Domain/OrderPolicy.swift:5", "Domain/OrderPolicy.swift:48"],
+      "test_failed": "n/a",
+      "dependency_category": "in-process",
+      "leverage_impact": "Domain types are tied to a single persistence backend.",
+      "locality_impact": "Refactor cost grows linearly with call sites.",
+      "metric_signal": "none",
+      "why_weakens_submission": "Domain-framework leakage; long-term refactor cost grows with each call site.",
+      "severity": "Serious deduction",
+      "adr_conflicts": [],
+      "adr_reopen_justification": null,
+      "minimal_correction_path": "Define a domain Order struct; map at the persistence seam.",
+      "blast_radius": {
+        "change": ["Domain/OrderPolicy.swift"],
+        "avoid": []
+      }
+    }
+  ],
+  "simplification_check": {
+    "structurally_necessary": "Carve out persistence seam.",
+    "new_seam_justified": true,
+    "new_seam_adapters": ["CoreDataAdapter", "InMemoryFakeAdapter"],
+    "should_not_be_done": "none",
+    "tests_after_fix": "Domain tests stop importing CoreData."
+  },
+  "backlog": [],
+  "deepening_candidates": [],
+  "builder_notes": [],
+  "narrative": "Oscillation halt; G30 should reject because F-500 is missing from disposition list.",
+  "unresolved_reason": "F-500 keeps reappearing after attempted fixes; deferred to user_decision in next loop."
+}

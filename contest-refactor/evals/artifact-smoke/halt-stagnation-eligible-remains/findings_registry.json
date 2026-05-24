@@ -1,0 +1,52 @@
+{
+  "registry_schema_version": 2,
+  "next_serial": 501,
+  "entries": [
+    {
+      "stable_id": "F-500",
+      "title": "Domain-policy import of CoreData",
+      "primary_file": "Domain/OrderPolicy.swift",
+      "primary_evidence_lines": [5, 48],
+      "test_failed": "n/a",
+      "severity": "Serious deduction",
+      "first_seen_loop": 2,
+      "first_seen_sha": "111aaaa",
+      "last_seen_loop": 6,
+      "occurrences": [
+        {
+          "loop": 2,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "111aaaa",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:f9554c566a7dcc9379d24dd6c6d3b4fd582082ab473e15ade3ed72168a611804",
+            "evidence_paths_hash": "sha256:39eaefe579bce5cd04c3a9842011c63f31b124443f982a7afb0780d168fec119"
+          },
+          "attempted_remedy_hash": "sha256:28acbbed8f416a0f1b455b846eb2a8de574dea6c545b65f185ce7990550f5fd9"
+        },
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "222bbbb",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:f9554c566a7dcc9379d24dd6c6d3b4fd582082ab473e15ade3ed72168a611804",
+            "evidence_paths_hash": "sha256:39eaefe579bce5cd04c3a9842011c63f31b124443f982a7afb0780d168fec119"
+          },
+          "attempted_remedy_hash": "sha256:28acbbed8f416a0f1b455b846eb2a8de574dea6c545b65f185ce7990550f5fd9"
+        },
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "333cccc",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:f9554c566a7dcc9379d24dd6c6d3b4fd582082ab473e15ade3ed72168a611804",
+            "evidence_paths_hash": "sha256:39eaefe579bce5cd04c3a9842011c63f31b124443f982a7afb0780d168fec119"
+          },
+          "attempted_remedy_hash": "sha256:28acbbed8f416a0f1b455b846eb2a8de574dea6c545b65f185ce7990550f5fd9"
+        }
+      ]
+    }
+  ]
+}

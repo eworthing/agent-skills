@@ -1,19 +1,35 @@
 # Critic Method
 
-Ordered investigation method, meta-rules, simplify pressure test, evidence discipline. Used by Step 1 (Critic) of the loop.
+Ordered investigation method, meta-rules, simplify pressure test, evidence chain. Used by Step 1 (Critic) of the loop.
 
 ## Contents
 
+- [The Evidence Chain](#the-evidence-chain)
 - [Meta-Rules (apply everywhere)](#meta-rules-apply-everywhere)
 - [Method (10 steps, in order)](#method-10-steps-in-order)
 - [Residual Accounting Pass](#residual-accounting-pass)
 - [Friction Proof Before Seam Recommendation](#friction-proof-before-seam-recommendation)
 - [Deepening Opportunity Test](#deepening-opportunity-test)
 - [Simplify Pressure Test (Step 2 gate)](#simplify-pressure-test-step-2-gate)
-- [Evidence Discipline](#evidence-discipline)
 - [State / Domain Guardrails](#state--domain-guardrails)
 - [Concurrency Guardrails](#concurrency-guardrails)
 - [Test Guardrails](#test-guardrails)
+
+## The Evidence Chain
+
+NEVER select, score, or fix a finding before completing evidence diagnosis.
+EVERY finding must follow: **Claim → Source → Consequence → Remedy.**
+
+- **Claim:** what structural problem exists. In JSON, Claim is the conjunction of `title`, `why_it_matters`, and `what_is_wrong` — all three must be non-empty.
+- **Source:** exact current evidence — file:line, symbol, type, method, property, call site, test name, lint output, metric output, sanitizer report, or labeled scope limit. In JSON, this lives in `evidence[]`.
+- **Consequence:** why it weakens architecture, ownership, locality, testability, safety, reliability, score, or backlog priority. In JSON: `why_weakens_submission`.
+- **Remedy:** smallest behavior-preserving repair. In JSON: `minimal_correction_path`.
+
+The four-part rule is canonical; do not split Consequence into separate Harm and Impact in the mnemonic. The JSON schema preserves the richer field names above; the memorable rule remains four-part.
+
+If the chain cannot be shown, downgrade the claim to unresolved, scope-limited, or omit it. Do not infer architecture quality from naming alone. Do not generalize beyond evidence. Do not output private scratchpad.
+
+If scope is weak, label the claim: local finding, drift hazard, unresolved question, or scope-limited.
 
 ## Meta-Rules (apply everywhere)
 
@@ -28,7 +44,26 @@ Ordered investigation method, meta-rules, simplify pressure test, evidence disci
 ## Method (10 steps, in order)
 
 1. **Inspect current code only.** Older reviews are historical claims; require current source proof. **Anchor-to-source warning**: when a prior loop ended at `HALT_SUCCESS` and this loop is invoked against the same source SHA, do **not** re-confirm the prior verdict by checking that the same files still look honest. Re-derive the scorecard from scratch. The most common drift mode is the next loop scoring +0.5 to +1.0 above the prior `8.6 → 9.5` average without a single structural change in the diff. If you find yourself writing "fresh critic confirms prior verdict" without an independently re-derived score per dimension, you have anchored to history. Restart Step 1 from the source roots; ignore prior `CURRENT_REVIEW.md` until your independent scorecard is written.
-1.5. **Registry lookup (schema_version >= 2 only).** For each candidate finding, fuzzy-match against `findings_registry.json` per the rules in [output-format-state-schemas.md § Fuzzy-match rules](output-format-state-schemas.md#fuzzy-match-rules-method-step-15--bootstrap). Match → reuse `stable_id`, prepare to append occurrence stub `{loop: N, loop_local_id: "F<n>", status: "open"}`. No match → reserve `F-{registry.next_serial}`, increment after loop emit. Ambiguous match (2+ entries via M2, 0 via M1) → emit `open_question_for_user` in loop return JSON; halt at HALT_STAGNATION subtype `user_decision`. The loop subagent never writes `findings_registry.json` directly; carries updated registry in memory and writes to disk in Step 3 step 8.
+1.5. **Registry lookup (schema_version >= 2 only).** For each candidate finding, fuzzy-match against `findings_registry.json` per the rules in [output-format-state-schemas.md § Fuzzy-match rules](output-format-state-schemas.md#fuzzy-match-rules-method-step-15--bootstrap). Match → reuse `stable_id`, prepare to append occurrence stub `{loop: N, loop_local_id: "F<n>", status: "open"}`. No match → reserve `F-{registry.next_serial}`, increment after loop emit. Ambiguous match (2+ entries via M2, 0 via M1) → emit `open_question_for_user` in loop return JSON; halt at HALT_STAGNATION subtype `user_decision`. The loop subagent never writes `findings_registry.json` directly; carries updated registry in memory and writes to disk in Step 3 step 8. The occurrence stub's `status` is one of `open`, `resolved`, `fixed_by_user`, `rejected_attempt`, or `unresolvable` (the latter is the retirement status set by Step 1.6 — see Step 1.6 below). Registry lookup feeds Step 1.6 eligibility and retirement; do not decide oscillation or Priority 1 eligibility before registry history is loaded.
+1.6. **Backlog Eligibility and Per-Finding Retirement.**
+
+Per-finding retirement fires before whole-loop stagnation.
+
+A finding's `status` becomes `unresolvable` when the same `stable_id` has at least 2 qualifying prior occurrences proving the finding is mechanically stuck **and the retiring occurrence itself matches the branch basis**. Two branches satisfy:
+
+- **Branch A — Rejected attempts (3-way equality):** ≥2 prior `status == rejected_attempt` occurrences with identical `claim_consequence_hash` AND `evidence_paths_hash` AND `attempted_remedy_hash`, **and the retiring occurrence shares those same three hashes**. Same Claim, same Source, same Remedy tried and rejected twice and still presenting the same way → unresolvable.
+- **Branch B — Reappeared unchanged after correction (2-way equality):** ≥2 prior occurrences with identical `claim_consequence_hash` AND `evidence_paths_hash`, separated by at least one `status == resolved` occurrence, **and the retiring occurrence shares those same two hashes**. Remedy hash is intentionally not checked here because the intervening resolved occurrence already tried *some* remedy that did not stick; the proof of stuckness is materially-same Claim + Source on the retiring occurrence.
+
+Branch B trusts that prior `resolved` occurrences reflect genuine correction attempts; reviewers (Check 1 / Check 2) catch over-eager `resolved` markings before they accumulate. See Risks item 10.
+
+The Actor and Critic populate `retirement.reason ∈ canon/retirement-reasons.yaml` and a free-text `retirement.rationale` (audit only). The validator does not read the rationale for the decision; the hashes do the work.
+
+Once `status == unresolvable`, the finding is skipped for Priority 1 selection while the latest occurrence still matches the retiring basis for its branch:
+
+- **Branch A retirement** stays in effect while a later occurrence has identical `claim_consequence_hash` AND `evidence_paths_hash` AND `attempted_remedy_hash` to the retiring occurrence. Any one of those three changing reopens eligibility (new Claim/Consequence, new Source, or new Remedy available).
+- **Branch B retirement** stays in effect while a later occurrence has identical `claim_consequence_hash` AND `evidence_paths_hash`. Either of those two changing reopens eligibility (new Claim/Consequence or new Source). Remedy-hash changes alone do **not** reopen Branch B retirements because Branch B did not gate on Remedy in the first place.
+
+`HALT_STAGNATION / oscillation` is valid only when every remaining Serious-or-worse finding appears in `halt_handoff.remaining_serious_findings_disposition[]` with `disposition ∈ canon/retirement-reasons.yaml` and the required sidecar field (`user_decision_ref`, `scope_label`, `reason`, or `superseded_by`).
 2. **Map mutable runtime concerns.** For each: owner, allowed writers, readers, persistence seam, async mutation entry points, clear or ambiguous authority. **Output the Authority Map before scoring** — Step 8 (test review) cross-checks it for surface coverage.
 3. **Review architecture.** Module graph, Seams, Adapter variation, costume layers, Repository theater, Protocol soup. **Self-imposed-rule audit**: enumerate every project-local lint rule, boundary check, or doc-comment-enforced "executors must not X" rule. For each, find the type that exists *because* of the rule. If the rule produces a 1:1 sidecar / holder / box class with only `var`s and an empty `init()`, the rule is producing costume layers — flag the holder *and* the rule itself per [architecture-rubric.md § Smells § architecture costume layer](architecture-rubric.md#vocabulary--smells-use-only-in-this-exact-sense).
 4. **Review ownership.** Map actual writers (do not infer from access control alone). Reducer-style shared state may be valid but must still have clear write rules. **Continuation-bridge audit**: when an adapter uses `withCheckedThrowingContinuation` with a timeout/cancellation path, single-resume guarantees protect only the resume call — read every delegate body for unconditional state writes that fire after the continuation has been resumed (`lens-apple.md § Continuation-bridge delegate audit`).
@@ -82,26 +117,6 @@ For every proposed fix, answer:
 Plus the structural gate: Friction proven, Deletion test passes for any Module being removed, [Unified Seam Policy](architecture-rubric.md#unified-seam-policy) passes for any new Seam, Tests after the refactor live at the new Interface (per [Replace, don't layer](architecture-rubric.md#5-replace-dont-layer)).
 
 Any "no" → downgrade to simpler truthful alternative or pick next backlog item. If a clean-looking fix adds ceremony without fixing ownership, failure behavior, or Locality, reject it.
-
-## Evidence Discipline
-
-Every major claim must show this chain:
-- claim
-- source evidence (file:line, symbol, type, method, property, call site, test name, lint output, metric output, sanitizer report)
-- behavior or architectural harm
-- score or backlog impact
-
-If that chain cannot be shown, downgrade the claim to unresolved, scope-limited, or omit it.
-
-Do not infer architecture quality from naming alone.
-Do not generalize beyond evidence.
-Do not output private scratchpad.
-
-If scope is weak, label the claim:
-- local finding
-- drift hazard
-- unresolved question
-- scope-limited
 
 ## State / Domain Guardrails
 

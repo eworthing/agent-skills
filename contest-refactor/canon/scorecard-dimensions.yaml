@@ -1,0 +1,12 @@
+# Canonical scorecard dimension names. Nine dimensions; each documented in architecture-rubric.md.
+# Cross-references: references/architecture-rubric.md § Score Anchors.
+scorecard_dimensions:
+  - "Architecture quality"
+  - "State management and runtime ownership"
+  - "Concurrency and runtime safety"
+  - "Test strategy and regression resistance"
+  - "Overall implementation credibility"
+  - "Domain modeling"
+  - "Data flow and dependency design"
+  - "Framework / platform best practices"
+  - "Code simplicity and clarity"

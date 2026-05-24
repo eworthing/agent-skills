@@ -1,0 +1,8 @@
+# Canonical dependency category machine enums. JSON dependency_category fields take these exact values.
+# Display strings (e.g., "In-process") appear only in section headings.
+# Cross-references: references/architecture-rubric.md § Dependency Categorization.
+dependency_categories:
+  - in-process
+  - local-substitutable
+  - remote-owned
+  - true-external

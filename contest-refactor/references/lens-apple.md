@@ -2,7 +2,7 @@
 
 Apply when discovered stack contains `Package.swift`, `*.xcodeproj`, `*.xcworkspace`, or Swift sources dominate.
 
-This lens specializes the meta-rules in `method.md` and the score anchors in `architecture-rubric.md` for Swift/iOS. Counts do not score in either direction. Penalize duplicate-authority architecture; reward small honest architecture.
+This lens specializes the meta-rules in `method.md` and the score anchors in `architecture-rubric.md` for Swift/iOS. Counts do not score in either direction. Penalize duplicate-authority architecture; reward small honest architecture. Findings produced here must follow The Evidence Chain from `method.md`: Claim → Source → Consequence → Remedy.
 
 ## Contents
 

@@ -1,0 +1,30 @@
+{
+  "registry_schema_version": 2,
+  "next_serial": 301,
+  "entries": [
+    {
+      "stable_id": "F-300",
+      "title": "Navigation has two writers (still open)",
+      "primary_file": "App/RootView.swift",
+      "primary_evidence_lines": [18, 18],
+      "test_failed": "Deletion test",
+      "severity": "Serious deduction",
+      "first_seen_loop": 1,
+      "first_seen_sha": "abc1234",
+      "last_seen_loop": 4,
+      "occurrences": [
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "def5678",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:a13354e01d93154d339d47d8d9c956aac9d554a05c529362f676b7b72f9b0971",
+            "evidence_paths_hash": "sha256:2857f6e7d5cf0521ac03a4fbe6a85b2611f5fccc4659ab10cdc5058645ca6296"
+          },
+          "attempted_remedy_hash": "sha256:47a379db817082513f2cad0706be19463b5c967b34205e0430de99e5728916d0"
+        }
+      ]
+    }
+  ]
+}

@@ -62,6 +62,8 @@ verdict.
 
 ## Check 1 — Reality
 
+Findings produced here must follow The Evidence Chain from `method.md`: Claim → Source → Consequence → Remedy. The reviewer reads the finding's Claim + Source from the targeted finding and re-derives whether the Source still shows the Claim in current code.
+
 Does current source actually no longer exhibit the targeted finding's pattern?
 
 - Re-run the architectural test the finding cited (deletion / two-adapter / shallow

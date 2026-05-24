@@ -1,0 +1,8 @@
+# Canonical finding-occurrence statuses for findings_registry.json.
+# Cross-references: references/output-format-state-schemas.md, references/method.md Step 1.6.
+finding_statuses:
+  - open               # current-loop, newly found or reopened
+  - resolved           # finding was fixed in a prior loop
+  - fixed_by_user      # finding fixed by user outside the loop
+  - rejected_attempt   # reviewer rejected the fix in a prior loop
+  - unresolvable       # retired per Step 1.6 (Branch A 3-way hash or Branch B 2-way hash + intervening resolved)

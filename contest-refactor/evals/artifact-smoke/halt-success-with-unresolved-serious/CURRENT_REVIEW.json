@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "loop": 4,
+  "loop_cap": 10,
+  "state": "HALT_SUCCESS",
+  "halt_subtype": null,
+  "halt_handoff": {
+    "state": "HALT_SUCCESS",
+    "halt_subtype": null,
+    "text": "Loop 4 ended at HALT_SUCCESS (invalid; finding F1 still Serious).",
+    "expected_actions": []
+  },
+  "findings_registry_path": "./findings_registry.json",
+  "verdict": "Strong contender",
+  "verdict_explanation": "Invalid HALT_SUCCESS; smoke fixture.",
+  "scorecard": {
+    "architecture_quality":   {"score": 10, "delta": "SAME", "proof": "Core/AppRuntime.swift:1", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false}
+  },
+  "authority_map": [],
+  "strengths": [],
+  "findings": [
+    {
+      "loop_local_id": "F1",
+      "stable_id": "F-300",
+      "title": "Navigation has two writers (still open)",
+      "why_it_matters": "Multi-writer authority survives at HALT_SUCCESS — fake-clean reward risk.",
+      "what_is_wrong": "AppDelegate writes nav state; RootView also writes nav state.",
+      "evidence": ["App/RootView.swift:18", "Core/NavigationStore.swift:12"],
+      "test_failed": "Deletion test",
+      "dependency_category": null,
+      "leverage_impact": "Callers must learn two writers for the same concern.",
+      "locality_impact": "Bug surface spread across two files.",
+      "metric_signal": "none",
+      "why_weakens_submission": "Routing diverges; replay tests would not catch the desync.",
+      "severity": "Serious deduction",
+      "adr_conflicts": [],
+      "adr_reopen_justification": null,
+      "minimal_correction_path": "Move all writes to NavigationStore; AppDelegate reads via store.",
+      "blast_radius": {
+        "change": ["Core/NavigationStore.swift", "App/RootView.swift"],
+        "avoid": []
+      }
+    }
+  ],
+  "simplification_check": {
+    "structurally_necessary": "Collapse duplicate writers.",
+    "new_seam_justified": false,
+    "new_seam_adapters": [],
+    "should_not_be_done": "none",
+    "tests_after_fix": "Assert via NavigationStore."
+  },
+  "backlog": [],
+  "deepening_candidates": [],
+  "builder_notes": [],
+  "narrative": "Invalid HALT_SUCCESS — smoke fixture exists to confirm the validator rejects.",
+  "unresolved_reason": null
+}

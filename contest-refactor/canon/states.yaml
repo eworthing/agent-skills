@@ -1,0 +1,9 @@
+# Canonical run states for contest-refactor.
+# Source of truth. Referenced by scripts/_canon.py.
+# Cross-references: references/output-format-json.md (rule #11), SKILL.md (Halting Conditions).
+states:
+  - CONTINUE
+  - HALT_SUCCESS
+  - HALT_STAGNATION
+  - HALT_LOOP_CAP
+  - HALT_DRY_RUN

@@ -23,6 +23,8 @@ Full Trust Model (instruction authority vs factual evidence authority): see `SKI
 
 ## Hard Gates (must pass before emit)
 
+Findings produced here must follow The Evidence Chain from `method.md`: Claim → Source → Consequence → Remedy. Gates G3, G30, and G31 all depend on this canonical chain.
+
 A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
 - [ ] **G1 Output structure** — every required Markdown section present (Verdict, Scorecard, Findings, Simplification Check, Improvement Backlog, Builder Notes, Final Judge Narrative; plus Authority Map first loop or when an authority finding is Priority 1; plus Loop N Result after Step 3).
@@ -30,7 +32,7 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
   - **halt_subtype enum (rule #17)**: per-state mapping is `HALT_SUCCESS → null`, `HALT_STAGNATION → {no_progress | oscillation | user_decision | no_backlog}`, `HALT_LOOP_CAP → null`, `HALT_DRY_RUN → null` (schema_version >= 3), `CONTINUE → null`. No invented values (`"success"`, `"completed"`, `"none"` are all violations).
   - **halt_handoff mutual exclusion (rule #18)**: at `schema_version >= 2`, `halt_handoff` (object) is the live field on any HALT_*; `halt_handoff_text` is `null`. The reverse (text populated, object null) is the legacy schema_version=1 shape and is a violation at >= 2. The object's `text` field carries the full template from [halt-handoff.md](halt-handoff.md) with placeholders resolved — not a one-line summary.
   - **9.5 residual disposition (rule #12)**: any `score >= 9.5 AND score < 10` requires `residual_disposition ∈ {accepted, queued}` AND `residual_rationale_or_backlog_ref` non-null. Null fields = downgrade to 9 (also enforced by G5).
-- [ ] **G3 Evidence chain** — every Finding shows: claim → source evidence (file:line, symbol, or labeled scope-limit) → behavior/architectural harm → score/backlog impact. Missing chain = downgrade to unresolved or omit.
+- [ ] **G3 Evidence chain** — every Finding follows The Evidence Chain canonicalized in [method.md § The Evidence Chain](method.md#the-evidence-chain): Claim → Source → Consequence → Remedy. In JSON: Claim = `title` + `why_it_matters` + `what_is_wrong` (all three non-empty); Source = `evidence[]` (non-empty); Consequence = `why_weakens_submission`; Remedy = `minimal_correction_path`. Missing any one = downgrade to unresolved/scope-limited or omit.
 - [ ] **G4 Score-proof requirement** — every score above 7 has at least one source-backed reason in the final text. Missing = downgrade score until backed. **Suspended for any scorecard entry with `unverifiable_due_to_build_failure: true`** (Step 1 build-failure path); proof = the carry-forward note.
 - [ ] **G5 9.5 residual** — every score ≥ 9.5 (and < 10) names the one residual local issue blocking 10. Missing = downgrade to 9.
 - [ ] **G6 10 anchor justification** — every score of 10 explains why no behavior-preserving source-backed improvement is available.
@@ -92,6 +94,10 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
   - Mixed `REVIEW_HISTORY.json.loops[]` entries (v1 + v2 + v3) are legal; each entry carries its own `schema_version`. Validation gates apply per-entry based on its declared version.
   - `LOOP_STATE.json` is independent (`schema_version: 1` on its own track). Bumping `LOOP_STATE.json.schema_version` does not affect CURRENT_REVIEW.json compatibility.
   - Run G29 at Step 1 emit (artifact write) AND at Step -1 (artifact read). Failure → reject the emit (write path) or apply default-fill (read path).
+
+- [ ] **G30 Retirement Precedence** — Per-finding retirement must be evaluated before whole-loop stagnation. A loop may not emit `HALT_STAGNATION / oscillation` while any eligible, non-retired Serious-or-worse finding remains in the backlog. Mechanically: every Serious-or-worse finding with `status ∈ {open, rejected_attempt}` must appear in `halt_handoff.remaining_serious_findings_disposition[]` with a canonical `disposition` and its required sidecar field.
+
+- [ ] **G31 Fingerprint Integrity** — `fingerprint.claim_consequence_hash`, `fingerprint.evidence_paths_hash`, and `attempted_remedy_hash` stored on each occurrence must equal the values recomputed from the finding's current fields. Drift indicates a finding was edited after emission without rehashing.
 
 ## Quality Pass (improve if cheap; never block emit)
 
