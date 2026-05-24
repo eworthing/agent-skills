@@ -1,6 +1,5 @@
 ---
 name: swiftdata-persistence
-author: eworthing
 description: >-
   SwiftData patterns and gotchas for `@Model` entities, `ModelContext`,
   `ModelContainer`, `FetchDescriptor`, migrations, and cascade-delete
@@ -18,6 +17,21 @@ allowed-tools:
 ---
 
 # SwiftData Persistence Skill
+
+## Contents
+
+- Purpose
+- When to Use
+- Do NOT Use For
+- Critical Gotcha: Stale Bundled Entities
+- Seed-Data Migration Patterns
+- ModelContainer Setup
+- ModelContext Access in Views
+- FetchDescriptor Patterns
+- Auto-Save Pattern
+- Entity Relationships and Cascade Delete
+- Debugging Stale Entities
+- Constraints
 
 ## Purpose
 
