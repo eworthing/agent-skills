@@ -1,6 +1,5 @@
 ---
 name: swiftui-design-tokens
-author: eworthing
 description: >-
   Applies project design tokens for colors, spacing, typography, motion, and
   button styling in SwiftUI on iOS, macOS, and tvOS. Use when adding or
@@ -18,6 +17,25 @@ allowed-tools:
 ---
 
 # Design System Patterns
+
+## Contents
+
+- Overview
+- When to Use
+- Token Architecture
+- Palette (Colors)
+- Metrics (Spacing)
+- TypeScale (Typography)
+- Motion (Animation)
+- Button Styles
+- Modal Backgrounds
+- Form Styling (macOS)
+- Modal Sizing
+- View Modifiers
+- Common Patterns
+- Diagnostic Recipes
+- Auditing for Hardcoded Values
+- Exemptions (Not Violations)
 
 ## Overview
 
