@@ -14,6 +14,21 @@ description: >
 
 Pressure-test plan before execution. Host agent own plan, revise between rounds. Reviewer critique only; never edit files or run host workflow.
 
+## Contents
+
+- [Bundled resources](#bundled-resources)
+- [Require a plan source](#require-a-plan-source)
+- [Parse reviewer arguments](#parse-reviewer-arguments)
+- [Review stance](#review-stance)
+- [Preflight](#preflight)
+- [Create a review session](#create-a-review-session)
+- [Round 1](#round-1)
+- [Read the result](#read-the-result)
+- [Revise and re-review](#revise-and-re-review)
+- [Handle failures](#handle-failures)
+- [Finalize](#finalize)
+- [Rules](#rules)
+
 ## Bundled resources
 
 - `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. No reimplement.
