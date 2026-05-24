@@ -1,6 +1,5 @@
 ---
 name: swiftui-file-export
-author: eworthing
 description: >-
   SwiftUI file export patterns using the modern Transferable API on iOS 16+,
   iPadOS 16+, and macOS 13+. Covers fileExporter root-placement rules,
@@ -21,6 +20,24 @@ allowed-tools:
 ---
 
 # SwiftUI File Export Patterns
+
+## Contents
+
+- Purpose
+- When to Use
+- Do NOT Use For
+- Critical Rule #1: `.fileExporter` MUST Be at the Root View Level
+- Critical Rule #2: Never Direct-Write to User Directories
+- Critical Rule #3: Menu Bar Commands Route Through Observable State
+- Transferable Implementation
+- ShareLink vs. `.fileExporter`
+- Platform Behaviors
+- macOS Entitlements
+- Export State Flow
+- tvOS Handling
+- Debugging Export Failures
+- References
+- Constraints
 
 ## Purpose
 
