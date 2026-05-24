@@ -1,6 +1,5 @@
 ---
 name: xctest-ui-testing
-author: eworthing
 description: >-
   Writes, debugs, and selectively executes XCTest UI automation for iOS,
   macOS, and tvOS apps. Covers accessibility identifiers (typed-enum
@@ -25,17 +24,34 @@ allowed-tools:
 
 # UI Testing Skill
 
+## Contents
+
+- Overview
+- When to Use
+- Running Tests
+- Deterministic UI Test Launch
+- Accessibility Identifier Conventions
+- Test Patterns
+- macOS-Specific Patterns
+- Platform Divergences Matrix (iOS / macOS / tvOS)
+- Critical Gotchas
+- Debugging Tips
+- New Component Checklist
+- Constraints
+
 ## Overview
 
-XCTest UI automation patterns for iOS (iPhone + iPad). Covers accessibility
-identifiers, wait-for-element strategies, and common pitfalls.
+XCTest UI automation patterns for iOS (iPhone + iPad), macOS (window
+pinning, AppKit divergences), and tvOS (focus-driven navigation,
+remote-press synthesis). Covers accessibility identifiers, wait-for-element
+strategies, selective execution via `.xctestrun`, and common pitfalls.
 
 ## When to Use
 
-- Writing new UI tests
+- Writing new UI tests on iOS, macOS, or tvOS
 - Debugging test failures or flaky tests
 - Adding accessibility identifiers to views
-- Understanding XCUITest patterns on iOS
+- Understanding XCUITest patterns across Apple platforms
 - Introducing a new modal, sheet, overlay, or screen that needs test coverage
 
 ## Running Tests
