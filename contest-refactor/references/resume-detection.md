@@ -4,6 +4,15 @@ Loaded by SKILL.md Step -1 as the first action of every `/contest-refactor` invo
 
 The branches in SKILL.md Step -1 are short pointers; the load-bearing logic lives here.
 
+## Contents
+
+- [Resume Precedence Matrix](#resume-precedence-matrix)
+- [Step 0.5 — Provider detection](#step-05--provider-detection)
+- [Step 0.6 — Registry + REVIEW_HISTORY.json bootstrap](#step-06--registry--review_historyjson-bootstrap)
+- [Drift handling (matrix row 7, prior state was a HALT_*)](#drift-handling-matrix-row-7-prior-state-was-a-halt_)
+- [Resume from LOOP_STATE.json (matrix row 5)](#resume-from-loop_statejson-matrix-row-5)
+- [Notes on behavior across resume](#notes-on-behavior-across-resume)
+
 ## Resume Precedence Matrix
 
 Checked top-down, **first match wins**. Apply this matrix immediately after Step -1 step 1 (parse user flags); the matched row determines all subsequent Step -1 work.

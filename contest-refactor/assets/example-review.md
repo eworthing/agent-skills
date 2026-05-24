@@ -1,5 +1,7 @@
 # Example: CURRENT_REVIEW.md (loop 3, Apple stack)
 
+<example>
+
 ```
 ### Discovery (first loop only — re-emitted for clarity)
 - Source roots: BenchHypeKit/Sources/, BenchHype/
@@ -53,9 +55,13 @@ Loop 3 of 10
 
 CURRENT_REVIEW.json mirrors the structured fields per `references/output-format.md`.
 
+</example>
+
 ---
 
 ## Inline-mode CONTINUE transition (worked example)
+
+<example>
 
 Inline mode (no Loop Isolation subagent) requires the agent to re-enter Step 1 immediately after committing loop N. The only legal close-out of an inline run is a HALT_* handoff or a `user_decision` open question. Hard gate G20 in [validation.md](../references/validation.md) enforces this; the patterns below show what compliance looks like.
 
@@ -84,3 +90,5 @@ Inline mode (no Loop Isolation subagent) requires the agent to re-enter Step 1 i
 The wrong pattern is tempting because the loop completed cleanly: green tests, clean diff, useful commit. The natural close-out point in normal English is right here. But the protocol's contract is that an inline run terminates only on a HALT_*. Without G20 enforcement, agents drift toward the natural prose stopping point and the user has to manually re-invoke `/contest-refactor` for every subsequent loop — defeating the autonomous-loop premise of the skill.
 
 If the user actually wants a single-loop run, they pass `--cap 1`; this exits via `HALT_LOOP_CAP` after loop 1 with the proper handoff (which lists "bump cap and resume" as a menu option). Stopping early without any HALT_* never serves the user; it's always a protocol failure.
+
+</example>

@@ -2,6 +2,19 @@
 
 Ordered investigation method, meta-rules, simplify pressure test, evidence discipline. Used by Step 1 (Critic) of the loop.
 
+## Contents
+
+- [Meta-Rules (apply everywhere)](#meta-rules-apply-everywhere)
+- [Method (10 steps, in order)](#method-10-steps-in-order)
+- [Residual Accounting Pass](#residual-accounting-pass)
+- [Friction Proof Before Seam Recommendation](#friction-proof-before-seam-recommendation)
+- [Deepening Opportunity Test](#deepening-opportunity-test)
+- [Simplify Pressure Test (Step 2 gate)](#simplify-pressure-test-step-2-gate)
+- [Evidence Discipline](#evidence-discipline)
+- [State / Domain Guardrails](#state--domain-guardrails)
+- [Concurrency Guardrails](#concurrency-guardrails)
+- [Test Guardrails](#test-guardrails)
+
 ## Meta-Rules (apply everywhere)
 
 1. **Metrics support judgment; they never decide it.** Tool output (SwiftLint, Taylor, xccov, TSAN, compiler diagnostics, grep counts) is evidence to investigate. Not a verdict. Every metric-backed finding must trace metric → source → behavior.

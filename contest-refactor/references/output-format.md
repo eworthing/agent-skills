@@ -9,6 +9,32 @@ Mid-Step-3 a third file `LOOP_STATE.json` is present (per § LOOP_STATE.json sch
 
 Previous `CURRENT_REVIEW.md` is appended to `REVIEW_HISTORY.md` (preceded by `--- Loop N (UTC timestamp) ---`) before being overwritten. This preserves cross-loop deltas without keeping multiple live files.
 
+## Contents
+
+- [Schema version 3 changelog](#schema-version-3-changelog)
+- [CURRENT_REVIEW.md Structure](#current_reviewmd-structure)
+- [Contest Verdict](#contest-verdict)
+- [Scorecard (1-10)](#scorecard-1-10)
+- [Authority Map](#authority-map)
+- [Strengths That Matter](#strengths-that-matter)
+- [Findings](#findings)
+- [Simplification Check](#simplification-check)
+- [Improvement Backlog](#improvement-backlog)
+- [Deepening Candidates](#deepening-candidates)
+- [Builder Notes](#builder-notes)
+- [Final Judge Narrative](#final-judge-narrative)
+- [Loop N Result (appended at Step 3 step 4 after refactor; absent in HALT loops)](#loop-n-result-appended-at-step-3-step-4-after-refactor-absent-in-halt-loops)
+- [CURRENT_REVIEW.json Schema](#current_reviewjson-schema)
+- [Per-Loop Progress Line Format (schema_version >= 3)](#per-loop-progress-line-format-schema_version--3)
+- [halt_handoff object (PR 4, schema_version >= 2)](#halt_handoff-object-pr-4-schema_version--2)
+- [re_validation_context object (PR 4, schema_version >= 2)](#re_validation_context-object-pr-4-schema_version--2)
+- [Per-loop archive format (PR 5, schema_version >= 2)](#per-loop-archive-format-pr-5-schema_version--2)
+- [Deepening Keywords (canonical)](#deepening-keywords-canonical)
+- [LOOP_STATE.json schema (own track, schema_version: 1)](#loop_statejson-schema-own-track-schema_version-1)
+- [findings_registry.json schema](#findings_registryjson-schema)
+- [Fuzzy-match rules (Method Step 1.5 + bootstrap)](#fuzzy-match-rules-method-step-15--bootstrap)
+- [REVIEW_HISTORY.json schema](#review_historyjson-schema)
+
 ## Schema version 3 changelog
 
 `CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, and `findings_registry.json` bump `schema_version: 2 → 3`. `LOOP_STATE.json` is a new file on its own track at `schema_version: 1`. Backward compatibility:

@@ -2,6 +2,18 @@
 
 Vocabulary, smells, severity anchors, and score anchors. Adopted from `/improve-codebase-architecture` (ICA) and the iOS Swift contest review prompt. Use these terms exactly. Reject "component," "service," "API," "boundary" — overloaded, drift-prone. Consistent vocabulary keeps scorecard deltas honest across loops.
 
+## Contents
+
+- [Vocabulary — Architecture](#vocabulary--architecture)
+- [Vocabulary — Smells (use only in this exact sense)](#vocabulary--smells-use-only-in-this-exact-sense)
+- [Smell List (smoke, not findings)](#smell-list-smoke-not-findings)
+- [Architectural Tests](#architectural-tests)
+- [Unified Seam Policy](#unified-seam-policy)
+- [Dependency Categorization](#dependency-categorization)
+- [Severity Anchors](#severity-anchors)
+- [Score Anchors](#score-anchors)
+- [CONTEXT.md / docs/adr Awareness](#contextmd--docsadr-awareness)
+
 ## Vocabulary — Architecture
 
 - **Module** — interface plus implementation. Not merely a folder, file, target, or type. Scale-agnostic.

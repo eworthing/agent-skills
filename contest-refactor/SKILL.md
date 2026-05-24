@@ -7,6 +7,18 @@ description: Triggers an autonomous Actor-Critic refactoring loop against the cu
 
 Autonomous Actor-Critic loop on codebase in CWD. Target: 9.5+ in every scorecard category.
 
+## Contents
+
+- [Vocabulary (mandatory)](#vocabulary-mandatory)
+- [Trust Model](#trust-model)
+- [Reference Load Matrix](#reference-load-matrix)
+- [Loop Isolation](#loop-isolation)
+- [Continuation Discipline](#continuation-discipline)
+- [Execution State Machine](#execution-state-machine) — Step -1 through Step 3
+- [Halting Conditions](#halting-conditions)
+- [Guardrails](#guardrails)
+- [See Also](#see-also)
+
 ## Vocabulary (mandatory)
 
 Every finding, scorecard note, correction path uses these terms exactly.
@@ -204,8 +216,11 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
 9. **Archive review history**: append the now-complete `CURRENT_REVIEW.md` (preceded by `--- Loop N (UTC timestamp) ---`) to `REVIEW_HISTORY.md`. **At schema_version >= 2 (PR 5), apply per-loop archive compression per [output-format.md § Per-loop archive format](references/output-format.md#per-loop-archive-format-pr-5-schema_version--2)** — compress Discovery / Builder Notes / Simplification Check; keep Findings / Loop Result / Implementation Review / Scorecard / Authority Map / Strengths / Final Judge Narrative verbatim. Append `CURRENT_REVIEW.json` to `REVIEW_HISTORY.json.loops[]` at full fidelity (no compression in JSON archive). Do **not** delete `CURRENT_REVIEW.md` — overwrite next loop. Preserves cross-loop deltas.
 10. **Write registry to disk (PR 1, schema_version >= 2)**: write the in-memory `findings_registry.json` to disk. Run G16 again on the now-written registry.
 11. Commit code (if reviewer approved) + `CURRENT_REVIEW.md` + `CURRENT_REVIEW.json` + `REVIEW_HISTORY.md` + `REVIEW_HISTORY.json` (when schema_version >= 2) + `findings_registry.json` (when schema_version >= 2) with subject matching the G22 pattern: `loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) <status> [registry: +<n> findings, ~<n> occurrences?]`. Examples:
+
+    <example>
     - `loop 3: collapse repository-theater seam in OrderIntake; finding F3 (stable_id F-007) resolved [registry: +0 findings, ~1 occurrence]`
     - `loop 3: revert collapse attempt — reviewer rejected; finding F3 (stable_id F-007) carried_forward [registry: ~1 rejected_attempt]`
+    </example>
 
     **Forbidden subject prefixes**: `contest loop`, project name, Conventional-Commits style (`refactor:`, `chore:`). The `[registry: ...]` summary is required at `schema_version >= 2`. Run G22 at this step before invoking `git commit`.
 

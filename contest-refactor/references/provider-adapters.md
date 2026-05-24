@@ -6,6 +6,16 @@ The skill protocol is provider-agnostic. The only provider-specific surface is *
 
 Each section is dated `verified <YYYY-MM-DD>` so staleness is visible. When a provider's CLI flags drift, update this file only — the skill body references this file by section.
 
+## Contents
+
+- [Detection (read by SKILL.md Step -1 step 0.5)](#detection-read-by-skillmd-step--1-step-05)
+- [Reviewer read-only shell allow-list (uniform across providers)](#reviewer-read-only-shell-allow-list-uniform-across-providers)
+- [Loop-spawn profile (Step 0 onward)](#loop-spawn-profile-step-0-onward)
+- [Reviewer-spawn profile (Step 3 step 6)](#reviewer-spawn-profile-step-3-step-6)
+- [Model overrides](#model-overrides)
+- [When to upgrade the model](#when-to-upgrade-the-model)
+- [Token cost](#token-cost)
+
 ## Detection (read by SKILL.md Step -1 step 0.5)
 
 The main agent detects the active provider from environment variables. Binary presence on PATH is **not** consulted (multiple binaries can be installed; only one runtime is active).

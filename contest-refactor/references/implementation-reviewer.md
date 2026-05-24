@@ -4,6 +4,21 @@ Post-Step-3, pre-commit gate. Independent fresh-eyes pass on the loop's diff bef
 
 Inspired by `ce-code-review` validator pattern (compound-engineering): a separate subagent re-checks the implementation with no commitment to the author's plan. False positives are expected and acceptable; conservative bias on uncertainty.
 
+## Contents
+
+- [When it runs](#when-it-runs)
+- [Why subagent-of-subagent](#why-subagent-of-subagent)
+- [Subagent prompt template (loop subagent uses verbatim)](#subagent-prompt-template-loop-subagent-uses-verbatim)
+- [Check 1 — Reality](#check-1--reality)
+- [Check 2 — Honesty](#check-2--honesty)
+- [Check 3 — Regression](#check-3--regression)
+- [Conditional verdict](#conditional-verdict)
+- [JSON output contract](#json-output-contract)
+- [Routing (loop subagent applies after reviewer returns)](#routing-loop-subagent-applies-after-reviewer-returns)
+- [Budget](#budget)
+- [What the reviewer does NOT do](#what-the-reviewer-does-not-do)
+- [Failure modes (schema_version >= 3 retry envelope)](#failure-modes-schema_version--3-retry-envelope)
+
 ## When it runs
 
 Inside Step 3, after step 5 (G1 + G2 hard gates pass on artifacts) and **before** step 6 (archive to `REVIEW_HISTORY.md`) and step 7 (commit). Skipped on HALT loops (no diff to review).

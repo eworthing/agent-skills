@@ -4,6 +4,17 @@ Apply when discovered stack contains `Package.swift`, `*.xcodeproj`, `*.xcworksp
 
 This lens specializes the meta-rules in `method.md` and the score anchors in `architecture-rubric.md` for Swift/iOS. Counts do not score in either direction. Penalize duplicate-authority architecture; reward small honest architecture.
 
+## Contents
+
+- [SwiftUI Discipline](#swiftui-discipline)
+- [Concurrency & Runtime Safety](#concurrency--runtime-safety)
+- [Hidden State Machines (Apple-flavored)](#hidden-state-machines-apple-flavored)
+- [Ownership (Apple-flavored)](#ownership-apple-flavored)
+- [Tests / Regression Resistance (Apple-flavored)](#tests--regression-resistance-apple-flavored)
+- [Incremental Test Scoping](#incremental-test-scoping)
+- [Useful Metrics](#useful-metrics)
+- [Apple-specific Core Questions](#apple-specific-core-questions)
+
 ## SwiftUI Discipline
 
 - SwiftUI state separate from domain state. `@Observable`, `@State`, `@Bindable`, `@Environment` have clear write rules.

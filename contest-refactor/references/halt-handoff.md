@@ -9,6 +9,16 @@ The handoff is **plain language**. It explains *why* the loop stopped, *what* re
 
 This file defines the handoff for each halt state and subtype.
 
+## Contents
+
+- [Schema (PR 4, schema_version >= 2)](#schema-pr-4-schema_version--2)
+- [HALT_SUCCESS](#halt_success)
+- [HALT_STAGNATION](#halt_stagnation)
+- [HALT_DRY_RUN (schema_version >= 3)](#halt_dry_run-schema_version--3)
+- [HALT_LOOP_CAP](#halt_loop_cap)
+- [Re-validation handoff (on drift)](#re-validation-handoff-on-drift)
+- [Reset handoff](#reset-handoff)
+
 ## Schema (PR 4, schema_version >= 2)
 
 At schema_version >= 2, the handoff is emitted as a structured `halt_handoff` object (per [output-format.md § halt_handoff](output-format.md#halt_handoff-object-pr-4-schema_version--2)) with `text` (user-facing prose) and `expected_actions[]` (HandoffAction objects matching the menu options in the handoff text).

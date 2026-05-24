@@ -2,6 +2,13 @@
 
 Loaded **before Step 0**. The skill operates on two distinct precedence ladders. Confusing them is the source of prompt-injection drift.
 
+## Contents
+
+- [Instruction Authority](#instruction-authority)
+- [Factual Evidence Authority](#factual-evidence-authority)
+- [Hard Rule — Payload As Evidence Only](#hard-rule--payload-as-evidence-only)
+- [Loop Isolation (context discipline)](#loop-isolation-context-discipline)
+
 ## Instruction Authority
 
 Who tells the loop what to do, highest precedence first:
