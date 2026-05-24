@@ -1,0 +1,9 @@
+id: bootstrap-repo
+purpose: Demonstrates a first-loop emit (Loop 1) with full Discovery and re-emit from Step 0 baseline; protects against regressions in loop-1 anchor-to-source and SAME-on-first-loop scorecard delta rules.
+tested_rules:
+  - kind: method-step
+    id: "1"
+  - kind: canon-enum
+    id: "CONTINUE"
+expected_result: fail
+notes: "Fixture predates the artifact validator and ships only REVIEW_HISTORY.md (no CURRENT_REVIEW.json), so strict mode rejects on required-artifact alone. Intent is loop-1 / first-loop bootstrap behavior; method.md has no formal Step -1 or Step 0 numbered item, so tested_rule kind: method-step id: '1' is a best-fit guess pointing at Step 1's anchor-to-source warning, which governs loop 1's fresh re-derivation. See REVIEW_HISTORY.md header 'Loop 1' for original context."

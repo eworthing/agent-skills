@@ -1,0 +1,9 @@
+id: incremental-then-halt-success
+purpose: Loop 7 emits HALT_SUCCESS but prior loops 1-6 ran test_scope=incremental (REVIEW_HISTORY.json proves it); protects G21's incremental→full-suite reverify requirement before HALT_SUCCESS is allowed.
+tested_rules:
+  - kind: gate
+    id: G21
+  - kind: canon-enum
+    id: "HALT_SUCCESS"
+expected_result: fail
+notes: "Fixture ships CURRENT_REVIEW.json + REVIEW_HISTORY.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, findings_registry.json. The G21 incremental-reverify rule is currently a Critic/reviewer concern rather than a structural validate-artifact.py check; original intent preserved via tested_rules."

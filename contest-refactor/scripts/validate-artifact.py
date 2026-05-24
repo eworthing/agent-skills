@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Live-run artifact validator for the contest-refactor skill.
 
-Default mode in PR1 is advisory (WARN to stderr, exit 0). Strict mode exits
-non-zero on any failure. Both modes apply the same rule set; the flag governs
-exit code only.
+Default mode (PR2) is strict (exit non-zero on any failure). Advisory mode
+emits WARN to stderr and exits 0. Both modes apply the same rule set; the flag
+governs exit code only.
 
 Checks (every value resolves against canon/*.yaml):
 - Required artifact existence based on schema_version
@@ -629,8 +629,9 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument(
         "--mode",
         choices=("advisory", "strict"),
-        default="advisory",
-        help="advisory (default): WARN, exit 0; strict: exit non-zero on any failure",
+        default="strict",
+        help="strict (default, PR2+): exit non-zero on any failure; "
+        "advisory: WARN, exit 0",
     )
     parser.add_argument(
         "--json",

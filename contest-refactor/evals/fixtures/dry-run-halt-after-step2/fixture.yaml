@@ -1,0 +1,9 @@
+id: dry-run-halt-after-step2
+purpose: Loop emits HALT_DRY_RUN at end of Step 2 when --dry-run is set, ran Step 0 + Step 1 + Step 2 but stopped before Step 3 (execution); protects G29 schema_version 3 invariants (dry_run flag present, halt_handoff carries plan text and expected_actions).
+tested_rules:
+  - kind: gate
+    id: G29
+  - kind: canon-enum
+    id: "HALT_DRY_RUN"
+expected_result: fail
+notes: "Fixture ships only CURRENT_REVIEW.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. G29 + HALT_DRY_RUN behavior is the original intent."
