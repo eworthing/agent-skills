@@ -1,6 +1,5 @@
 ---
 name: ios-security-hardening
-author: eworthing
 description: >-
   Applies input-validation and file-handling safeguards for untrusted data including
   path-traversal prevention, URL scheme/domain allowlisting, multi-source image
@@ -18,6 +17,16 @@ allowed-tools:
 ---
 
 # Security Hardening
+
+## Contents
+
+- Purpose
+- When to Use This Skill
+- Workflow (identify attack surfaces, apply mitigations, verify)
+- Common Mistakes to Avoid
+- Examples (export file write, multi-source image refs, CSV import, AI prompts, secrets)
+- References
+- Constraints
 
 ## Purpose
 
@@ -381,15 +390,18 @@ func export(to filename: String) throws {
 **After:**
 ```swift
 func export(to filename: String) throws {
-    // Sanitize filename
-    let safe = filename
-        .replacingOccurrences(of: "..", with: "")
-        .replacingOccurrences(of: "/", with: "_")
-        .replacingOccurrences(of: "\\", with: "_")
+    // Allowlist-only sanitization (safer than blocklisting "..", "/", path separators):
+    // keep alphanumerics + "-_." and drop everything else.
+    let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
+    let safe = filename.unicodeScalars
+        .filter { allowed.contains($0) }
+        .map(String.init)
+        .joined()
+    guard !safe.isEmpty else { throw ExportError.invalidPath }
 
     let url = documentsDir.appendingPathComponent(safe)
 
-    // Verify containment
+    // Verify containment after path resolution.
     let resolved = url.standardizedFileURL
     guard resolved.path.hasPrefix(documentsDir.path) else {
         throw ExportError.invalidPath
