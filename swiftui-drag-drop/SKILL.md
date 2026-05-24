@@ -1,6 +1,5 @@
 ---
 name: swiftui-drag-drop
-author: eworthing
 description: >-
   SwiftUI drag-and-drop architecture for iOS, iPadOS, and macOS — covers
   DropDelegate vs `.onDrop`, drop-priority routing across overlapping
@@ -22,6 +21,23 @@ allowed-tools:
 ---
 
 # SwiftUI Drag & Drop
+
+## Contents
+
+- Purpose
+- When to Use
+- Do NOT Use For
+- Architecture: DropDelegate vs `.onDrop`
+- Drop Priority (Winner-Take-All)
+- DropDelegate Skeleton
+- NSItemProvider Lifecycle Rules
+- Payload Extraction Across Providers
+- Chrome / Cross-Browser Image-Drag Compatibility
+- View Attachment: Don't Attach Drops Directly to `Button`
+- Platform Gating
+- Debugging Drop Types
+- Undo Semantics
+- Constraints
 
 ## Purpose
 
