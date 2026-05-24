@@ -1,6 +1,5 @@
 ---
 name: swift-linting
-author: eworthing
 description: >-
   Resolves repository-specific SwiftFormat / SwiftLint rule violations on
   Apple-platform projects. Use when pre-commit hooks are blocking a
@@ -19,7 +18,7 @@ allowed-tools:
   - Glob
 ---
 
-# Linting & Formatting Skill
+# Swift Linting & Formatting
 
 ## Overview
 
@@ -55,6 +54,6 @@ Load the relevant reference when working on a specific subtopic. Each is focused
 ## Constraints
 
 - Never disable SwiftLint safety rules without good reason
-- Keep files under 600 lines (overlays under 400) — split early
+- Keep files under 600 lines (extension files under 400) — split early
 - Use `// swiftformat:disable` sparingly (mainly for Logger `@autoclosure`)
 - Run `swiftformat . --lint && swiftlint lint --quiet` before commits
