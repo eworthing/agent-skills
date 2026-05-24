@@ -1,6 +1,5 @@
 ---
 name: bash-macos
-author: eworthing
 description: >-
   Keeps shell scripts portable across macOS (Bash 3.2, BSD userland) and Linux
   (Bash 4+, GNU coreutils). Use when writing or editing .sh files, debugging
@@ -10,6 +9,21 @@ description: >-
 ---
 
 # Bash macOS Compatibility
+
+## Contents
+
+- Purpose
+- When to Use
+- References
+- Shell Target
+- Forbidden Features (Bash 4+ only)
+- Supported on Bash 3.2
+- BSD vs GNU Userland
+- Required Patterns
+- Verification Checklist
+- Token-Efficient Output
+- Common Gotcha: Arrays in Conditionals
+- Script Naming Conventions
 
 ## Purpose
 
