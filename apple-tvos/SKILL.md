@@ -1,8 +1,5 @@
 ---
 name: apple-tvos
-author: eworthing
-original-author: Antoine van der Lee (AvdLee)
-source: https://github.com/AvdLee/SwiftUI-Agent-Skill
 description: >-
   Definitive tvOS reference for SwiftUI on Apple TV: focus engine,
   accessibility deltas, and design-regression checks. Use when building
@@ -26,6 +23,8 @@ allowed-tools:
 ---
 
 # Apple tvOS
+
+*Adapted from [Antoine van der Lee (AvdLee)'s SwiftUI-Agent-Skill](https://github.com/AvdLee/SwiftUI-Agent-Skill) with tvOS-focused additions.*
 
 ## Scope
 
