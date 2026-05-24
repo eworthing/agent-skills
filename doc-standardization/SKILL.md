@@ -1,6 +1,5 @@
 ---
 name: doc-standardization
-author: eworthing
 description: >-
   Standardize documentation naming, organization, and cross-references in
   Markdown-based project docs. Enforces a consistent
@@ -24,6 +23,15 @@ Keep docs trees consistent as they grow: stable filename convention, valid
 internal links, ordered indexes, code↔doc identifier alignment. Catches
 naming drift, broken links, orphans, and index drift that accumulate in
 long-lived `docs/` trees.
+
+## Contents
+
+- When to Use
+- Workflow (audit → rename → fix references → re-audit)
+- Common Mistakes
+- Examples (single rename, organizing research docs)
+- Related Skills
+- References
 
 ## When to Use
 
