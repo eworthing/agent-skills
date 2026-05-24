@@ -14,7 +14,7 @@ This repo holds reusable skills for AI coding agents (Claude Code, Codex CLI, op
 ## Workflow
 
 - Skill descriptions: lead with capabilities, include "Use when…" trigger phrases (required by `scripts/eval-skill.py`).
-- Shell scripts: portable Bash only — no `mapfile`, no GNU-only `sed`/`date` flags. Consult `bash-macos/SKILL.md` when writing.
+- Shell scripts: write portable Bash targeting macOS 3.2 + Linux 4+. Use POSIX `while read` instead of `mapfile`; use BSD-compatible `sed`/`date` flags. Consult `bash-macos/SKILL.md` when writing.
 - Edits validate with: `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py <skill-dir>`. Aim for 100% on automated checks + ≥ 90 on the manual rubric.
 - Commit style: `feat(<skill-name>): <change> (<old-score>→<new-score> EVAL)` when an eval score shifts. Otherwise standard Conventional Commits.
 
@@ -32,9 +32,9 @@ ln -s "$PWD/<skill>" "$HOME/.gemini/antigravity-cli/skills/<skill>"  # Gemini An
 
 Symlinks (not copies) so repo edits propagate immediately to every agent.
 
-**Do not use `cp -r`** — copied directories require re-copying after every change.
+**Use `ln -s` instead of `cp -r`** — copied directories require re-copying after every change, while symlinks reflect repo edits instantly.
 
-**Do not use `npx skills add`** for local dev — it clones from GitHub into a managed cache and won't reflect local edits. Use it only on machines that consume (not develop) skills.
+**Use the symlink pattern above for local dev**; reserve `npx skills add` for machines that consume (not develop) skills, since it clones from GitHub into a managed cache that ignores local edits.
 
 ### Verifying a symlink
 
