@@ -76,7 +76,7 @@ Return JSON only:
   "halt_subtype": "no_progress|oscillation|user_decision|no_backlog" or null,
   "halt_handoff": {                       // PR 4, schema_version >= 2 — replaces flat halt_handoff_text
     "text": "<full user-facing message per halt-handoff.md template, placeholders resolved>",
-    "expected_actions": [...]              // HandoffAction array per output-format.md halt_handoff schema; may be empty
+    "expected_actions": [...]              // HandoffAction array per output-format-json.md halt_handoff schema; may be empty
   } or null,
   "halt_handoff_text": null,              // legacy schema_version=1 field; null at >= 2
   "priority_1_finding_id": "F<n>" or null,

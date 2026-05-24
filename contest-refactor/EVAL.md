@@ -263,4 +263,72 @@ State: SKILL.md 265 lines (was 285); 12 reference files (~2200 lines); 29 hard g
 
 | Date | Score | Notes |
 |------|-------|-------|
+| 2026-05-23 | 96/100 (skill-evaluator) + 100/A (anthropic-doctrine) | Anthropic-grade-optimizer audit (v1.2, 189 cited rules) + structural split. Diffs 1-4 (commit `178017f`): added `## Contents` TOC to SKILL.md (262 body lines) + 10 reference files >100 lines per AR-CC-S21; wrapped existing commit-subject samples in `<example>` tags (SKILL.md L207-208) + both worked sections of `assets/example-review.md` per D-EXAMPLE rule cluster. SKILL.md 97→100 on Pass-1 mechanical scorer; D-CC dimension 85%→100%. Diff 5: split `references/output-format.md` (758L) into `output-format-markdown.md` (186L), `output-format-json.md` (430L), `output-format-state-schemas.md` (145L), with `output-format.md` (17L) as thin discovery index per AR-CC-024 (each file <500L). Updated 15 cross-links across SKILL.md, halt-handoff.md, method.md, trust-model.md, validation.md, asset to redirect anchors at the new file granularity. Project's own structural eval (skill-evaluator-1.0.0): 13/13 unchanged. Voice drift: ~2% aggregate (additive TOCs + tag wraps + structural splits with verbatim content preservation). |
 | 2026-05-12+ | 96/100 | All 6 EVAL gaps + peer-review revisions shipped via copilot/gpt-5.4/high pressure-test (2 rounds; round 1 produced 6 blocking + 3 non-blocking; round 2 approved with 2 non-blocking refinements which were also addressed). Gains: 2.1 Fault Tolerance 3→4 (reviewer retry envelope w/ retry_count/retry_cause/retry_attempts[] split from review reason; build-flake guard); 2.3 Recoverability 3→4 (LOOP_STATE.json mid-Step-3 checkpoint w/ step_started/step_completed pair semantics + commit_attempted_sha + 5-case resume routing); 3.1 Token Cost 3→4 (SKILL.md 285→265 via resume-detection.md extract); 3.2 Execution Efficiency 3→4 (--test-filter opt-in + per-stack incremental commands + G21 full-suite reverify); 4.3 Feedback Quality 3→4 (Per-Loop Progress Line Format spec + Q8 quality pass); 5.2 Forgiveness 3→4 (--dry-run flag + HALT_DRY_RUN handoff + narrow revert via pre_step3_blob_shas); 6.3 Data Safety 3→4 (clean-tree precondition + pre_step3_blob_shas restore source); 8.4 Idempotency 3→4 (Step 6/9/10/11 idempotency keys + commit_attempted_sha discrimination). Net: +4. New gates: G27 (retry envelope), G28 (checkpoint freshness), G29 (schema v3 invariants), Q8 (per-loop progress line). New artifact: LOOP_STATE.json (schema_version 1). New halt state: HALT_DRY_RUN. Schema bump CURRENT_REVIEW/REVIEW_HISTORY/findings_registry v2→v3 with backward-compat default-fill table. 8 new eval fixtures (12 total). Plan reviewed by copilot/gpt-5.4/high; final non-blocking refinements (N4 narrow-revert restore source via pre-Step-3 blob snapshot, N5 fixture-count consistency) addressed before exit. |
+
+---
+
+## Anthropic Doctrine Evaluation (orthogonal rubric)
+
+The skill-evaluator-1.0.0 rubric above measures ISO 25010 + OpenSSF + agent
+heuristics (25 criteria). It does not measure adherence to Anthropic prompt
+engineering doctrine (clarity, structure, examples, model calibration,
+agent skill ecosystem rules). This section tracks the Anthropic-doctrine
+audit separately.
+
+**Rubric:** anthropic-grade-optimizer v1.2 (189 cited rules across 11
+dimensions, calibrated for `opus-4-7`). Every finding ships with verbatim
+quote and source URL.
+
+**Latest audit:** 2026-05-23 (Diffs 1-5 applied in commit `178017f` + follow-up split).
+
+| File | Pass 1 score | Findings |
+|------|--------------|----------|
+| `SKILL.md` | **100 / A** | 0 |
+| `references/architecture-rubric.md` | clean | 0 |
+| `references/halt-handoff.md` | clean | 0 |
+| `references/implementation-reviewer.md` | clean | 0 |
+| `references/lens-apple.md` | clean | 0 |
+| `references/lens-generic.md` | clean | 0 |
+| `references/lenses.md` | clean | 0 |
+| `references/method.md` | clean | 0 |
+| `references/output-format.md` (index) | clean | 0 |
+| `references/output-format-markdown.md` | clean | 0 |
+| `references/output-format-json.md` | clean | 0 |
+| `references/output-format-state-schemas.md` | clean | 0 |
+| `references/provider-adapters.md` | clean | 0 |
+| `references/resume-detection.md` | clean | 0 |
+| `references/trust-model.md` | clean | 0 |
+| `references/validation.md` | clean | 0 |
+
+**Per-dimension on SKILL.md:**
+
+| Dim | Score | Notes |
+|---|---|---|
+| D-CLAR | 100% | Direct, dense, term definitions explicit (Vocabulary § rejects overloaded terms). |
+| D-STRUCT | 100% | Hierarchy clean; tables used for routing/flag×backlog matrix; TOC. |
+| D-EXAMPLE | 100% | `<example>` tags on commit-subject samples + asset. |
+| D-REASON | 100% | Step machine + 29 hard gates (G1-G29) + Q8 = encoded CoT. |
+| D-CONTEXT | 100% | Reference Load Matrix is exemplary doc-placement discipline. |
+| D-MODEL | 100% | Provider-adapter file off-loads model specifics. |
+| D-AGENT | 100% | Subagent isolation + JSON return contract is textbook. |
+| D-EVAL | 100% | G1-G29 hard gates + `evals/evals.json` + 12 fixture scenarios. |
+| D-TOOL | 100% | N/A for this artifact (no tool defs). |
+| D-VISION | 100% | N/A. |
+| D-CC | 100% | TOC present in SKILL.md + every reference >100 lines; no body-size violations; reserved-words check passes; script framing adequate. |
+
+**Verification commands:**
+
+```bash
+# SKILL.md doctrine score
+python3 ~/.claude/skills/anthropic-grade-optimizer/scripts/pass1_mechanical.py \
+  contest-refactor/SKILL.md --type skill --target-model opus-4-7 \
+  | python3 ~/.claude/skills/anthropic-grade-optimizer/scripts/score_calculator.py /dev/stdin
+
+# Per-file sweep across all references
+for f in contest-refactor/references/*.md; do
+  python3 ~/.claude/skills/anthropic-grade-optimizer/scripts/pass1_mechanical.py \
+    "$f" --type skill --target-model opus-4-7 \
+    | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'{d[\"path\"]}: {d[\"findings_count\"]} findings')"
+done
+```

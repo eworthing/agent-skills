@@ -21,7 +21,7 @@ This file defines the handoff for each halt state and subtype.
 
 ## Schema (PR 4, schema_version >= 2)
 
-At schema_version >= 2, the handoff is emitted as a structured `halt_handoff` object (per [output-format.md § halt_handoff](output-format.md#halt_handoff-object-pr-4-schema_version--2)) with `text` (user-facing prose) and `expected_actions[]` (HandoffAction objects matching the menu options in the handoff text).
+At schema_version >= 2, the handoff is emitted as a structured `halt_handoff` object (per [output-format-json.md § halt_handoff](output-format-json.md#halt_handoff-object-pr-4-schema_version--2)) with `text` (user-facing prose) and `expected_actions[]` (HandoffAction objects matching the menu options in the handoff text).
 
 For each menu option in the handoff templates below, the loop subagent emits a corresponding HandoffAction with:
 - `action_id`: kebab-case derived from the menu option's verb + object (e.g., menu "Split file X" → `action_id: "split-file-x"`)
