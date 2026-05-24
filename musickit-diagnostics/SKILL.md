@@ -1,6 +1,5 @@
 ---
 name: musickit-diagnostics
-author: eworthing
 description: >-
   Diagnose and fix iOS MusicKit runtime failures: ICError codes (-8200,
   -8102, -7007, -7013, -7010), "Could not access Apple Music", "Failed to
@@ -24,6 +23,21 @@ allowed-tools:
 ---
 
 # MusicKit Diagnostics (iOS)
+
+**Dependencies:** native Apple frameworks only (MusicKit, AVFoundation, StoreKit, Speech). No Python / pip / Swift Package dependencies required.
+
+## Contents
+
+- Scope
+- Routing map (when to use this vs. `musickit`)
+- Diagnostic-first protocol
+- Error-code quick table
+- iOS anti-patterns
+- Simulator vs device
+- Post-fix verification checklist
+- Skip this skill when
+- Related skills
+- References
 
 ## Scope
 
