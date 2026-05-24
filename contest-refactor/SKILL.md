@@ -23,6 +23,8 @@ Autonomous Actor-Critic loop on codebase in CWD. Target: 9.5+ in every scorecard
 
 Every finding, scorecard note, correction path uses these terms exactly.
 
+**Architectural terms** (use these exactly in findings, scorecard notes, corrections):
+
 - **Module** — interface + implementation.
 - **Interface** — everything a caller must know: types, invariants, error modes, ordering, config, performance.
 - **Seam** — where an Interface lives.
@@ -31,6 +33,12 @@ Every finding, scorecard note, correction path uses these terms exactly.
 - **Leverage** — what callers get from Depth.
 - **Locality** — what maintainers get from Depth.
 - **Implementation** — code inside the Module.
+
+**Role terms** (map the Actor-Critic framing in the description to the Step labels below):
+
+- **Critic** — evaluator that grades the codebase against the rubric. Implemented as the **Critic Phase** (Step 1).
+- **Actor** — the role that authors and applies refactors. Implemented as the **Architect Phase** + **Execution Phase** (Steps 2 and 3) acting together.
+- **Judge** — final adjudicator that writes the **Final Judge Narrative** in `CURRENT_REVIEW.md` and decides loop continuation vs. completion. Lives inside the Step-3 wrap-up (see [Halting Conditions](#halting-conditions)).
 
 **Rejected terms:** component, service, API, boundary. Overloaded, drift-prone. Reject in evidence text.
 
