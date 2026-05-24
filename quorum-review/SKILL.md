@@ -74,7 +74,7 @@ Notes:
     (e.g., a release-gating review) and you want every reviewer to back
     each blocker before it can REVISE the artifact.
   - `super` (default) — for most reviews; tolerates one dissenting
-    reviewer (N-1 of N) so a single confused panelist cannot suppress
+    reviewer (N-1 of N) so a single confused reviewer cannot suppress
     a real blocker.
   - `majority` — for fast-moving iterative drafting where you want
     blockers to surface easily and the host agent will adjudicate.
