@@ -278,7 +278,7 @@ Before marking a script complete:
 - [ ] All variables quoted; never parses `ls`
 - [ ] `bash -n script.sh` + `shellcheck -s bash script.sh` pass
 - [ ] Runs on macOS: `/bin/bash script.sh --help`
-- [ ] Name is snake_case verb-first (e.g. `run_tests.sh`)
+- [ ] Name is snake_case verb-first (see naming examples below)
 - [ ] Destructive ops gated behind `DRY_RUN` or confirmation
 - [ ] Verbose subprocess output uses 3-mode compact/verbose/raw pattern
 
@@ -323,8 +323,16 @@ stays quoted to preserve element boundaries.
 Use **lowercase snake_case**, **verb-first**, max 4 words. Never collide with
 shell builtins (`test`, `exec`, `time`, `kill`, `wait`).
 
-Examples: `run_tests.sh`, `validate_config.py`, `build_image.sh`,
-`sync_logs.sh` — never `SyncLogs.sh` or `sync-logs.sh`.
+See these naming examples (read for the convention, not commands to execute):
+
+```
+run_tests.sh
+validate_config.py
+build_image.sh
+sync_logs.sh
+```
+
+Never `SyncLogs.sh` (PascalCase) or `sync-logs.sh` (kebab-case).
 
 Extensions: include `.sh`/`.py` for project-local scripts; omit for
 PATH-installed tools; none for git hooks (Git convention: `pre-commit`).
