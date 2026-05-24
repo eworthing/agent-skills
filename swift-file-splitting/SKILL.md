@@ -1,6 +1,5 @@
 ---
 name: swift-file-splitting
-author: eworthing
 description: >-
   Splits oversized Swift files into smaller units while preserving visibility and
   build correctness. Use when a Swift file nears the SwiftLint `file_length`
@@ -18,6 +17,15 @@ allowed-tools:
 
 # File Splitting
 
+## Contents
+
+- Purpose
+- When to Use
+- Workflow (commit → inspect → plan → widen visibility → create extension file → move code → register with Xcode → build & verify)
+- Common Mistakes
+- References
+- Constraints
+
 ## Purpose
 
 Split Swift files exceeding line limits while maintaining correct visibility modifiers for cross-file access. The most common gotcha: `private` properties break builds after extraction because they're invisible to extension files.
@@ -25,7 +33,7 @@ Split Swift files exceeding line limits while maintaining correct visibility mod
 ## When to Use
 
 Use when:
-- File exceeds 600 lines (400 for overlay files)
+- File exceeds 600 lines (400 for extension files)
 - SwiftLint reports a `file_length` violation
 - User says "split this file", "too long", or "extract component"
 - Logical grouping suggests separation
@@ -140,6 +148,6 @@ If the build fails, see [troubleshooting.md](references/troubleshooting.md) for 
 The 600/400 caps come from the consuming project's `.swiftlint.yml` `file_length` rule. Adjust limits there, not here.
 
 - Main files: 600 lines max
-- Overlay files: 400 lines max
+- Extension files (`OriginalFile+Feature.swift`): 400 lines max
 - Minimum split result: 100 lines (smaller splits add navigation overhead without readability gain)
 - Properties accessed cross-file must be `internal`, not `private`
