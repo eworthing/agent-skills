@@ -139,7 +139,7 @@ First 4 returned valid JSON. Fifth returned 404. Cross-verified via `gh search r
 
 ## Lessons for review discipline
 
-The 7-round adversarial review (3 Gemini + 4 Codex) did NOT catch these 4 missing competitors because both reviewers worked from the bundle text + competitor clones IN refs/competitors/. They couldn't surface competitors that weren't in either location. The `SOURCE-VERIFICATION-PROMPT.md` Class 2 ("Missed competitors") explicitly hunts for this — but only within ALREADY-cloned repos.
+The 7-round adversarial review (3 Gemini + 4 Codex) did NOT catch these 4 missing competitors because both reviewers worked from the bundle text + competitor clones IN refs/competitors/. They couldn't surface competitors that weren't in either location. `REVIEW-PROMPT.md` Class 2 ("Missed competitors") — merged from former SOURCE-VERIFICATION-PROMPT.md 2026-05-25 — explicitly hunts for this — but only within ALREADY-cloned repos.
 
 To catch missed-from-clone-set competitors, a reviewer needs:
 - Web search authority OR knowledge of additional competitors from training
