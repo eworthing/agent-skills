@@ -4,6 +4,7 @@ Compares contest-refactor's governance ingestion (Step 0 Context Discovery + `.c
 
 - **brooks-lint** (`refs/competitors/brooks-lint/`) — 12-book grounded analysis with `.brooks-lint.yaml` config + module graph from grep
 - **architecture-review-mcp** (`refs/competitors/architecture-review-mcp/`) — MCP server with AST-based NetworkX dependency + class graphs
+- **archgate-cli** (`refs/competitors/archgate-cli/`, 38★, Apache-2.0) — **operational prior art** for executable governance: markdown ADRs (`.archgate/adrs/DOMAIN-NNN-title.md`) paired 1:1 by basename with `.rules.ts` companion files that export `RuleSet` objects checked at CI / pre-commit. Added 2026-05-25 per CLAIM-DELTA after user-surfaced miss. Materially affects Gap C framing below.
 
 ## Baseline: contest-refactor today
 
@@ -23,30 +24,35 @@ Compares contest-refactor's governance ingestion (Step 0 Context Discovery + `.c
 
 Legend: **✓** = present, **partial** = weaker form, **—** = absent.
 
-| Mechanism | contest-refactor | brooks-lint | architecture-review-mcp |
-|---|:--:|:--:|:--:|
-| Project config file | ✓ `.contest-refactor.toml` | ✓ `.brooks-lint.yaml` | — |
-| Domain vocabulary from CONTEXT.md | ✓ enforced in findings | partial (CLAUDE.md implied) | — |
-| ADR enumeration | ✓ `docs/adr/` | — | — |
-| **Per-finding ADR citation + reopen justification** | ✓ `adr_conflicts[]` + `adr_reopen_justification` | — | — |
-| **Accepted-residual with MANDATORY expiry** | ✓ validator-enforced | partial (suppressions with `expires`) | — |
-| Trend-tracking history | partial (REVIEW_HISTORY.json loop-keyed) | ✓ `.brooks-lint-history.json` time-keyed | — |
-| Stack detection → lens | ✓ apple / generic | partial (language detection) | partial (parser per lang) |
-| Package manifest read | ✓ (test/build commands) | ✓ (lang + top deps) | — |
-| **Lint config ingestion** (`.swiftlint.yml`, `.eslintrc`, `ruff.toml`, etc.) | **—** | **—** | — |
-| **CI workflow ingestion** (`.github/workflows/`) | **—** | **—** | — |
-| **Boundary-rule config** (declared layers / forbidden imports) | **—** | — (heuristic only) | — (hard-coded "circular = bad") |
-| Import-graph construction | — (Critic reasons mentally) | partial (greps first 200/lang) | ✓ AST-based, NetworkX |
-| Class-graph construction | — | — | ✓ inheritance + composition |
-| Call-graph construction | — | — | — |
-| Circular dependency detection | — | ✓ Mermaid dotted edges, R5 | ✓ NetworkX SCC |
-| Fan-out > N threshold warning | — | ✓ > 5 | — |
-| Per-violation citation to **local rule source** | partial (ADR title) | — (book only) | — (module names only) |
-| Hard-coded book/lens citation | ✓ lens .md | ✓ 12 books | — |
+| Mechanism | contest-refactor | brooks-lint | architecture-review-mcp | archgate-cli |
+|---|:--:|:--:|:--:|:--:|
+| Project config file | ✓ `.contest-refactor.toml` | ✓ `.brooks-lint.yaml` | — | ✓ `.archgate/` dir |
+| Domain vocabulary from CONTEXT.md | ✓ enforced in findings | partial (CLAUDE.md implied) | — | partial (ADR `domain` field, kebab-case enum) |
+| ADR enumeration | ✓ `docs/adr/` | — | — | ✓ `.archgate/adrs/DOMAIN-NNN-*.md` (YAML frontmatter required) |
+| **Per-finding ADR citation + reopen justification** | ✓ `adr_conflicts[]` + `adr_reopen_justification` | — | — | partial (violation cites `adrId` + `ruleId`; no reopen-justification field) |
+| **Accepted-residual with MANDATORY expiry** | ✓ validator-enforced | partial (suppressions with `expires`) | — | — |
+| Trend-tracking history | partial (REVIEW_HISTORY.json loop-keyed) | ✓ `.brooks-lint-history.json` time-keyed | — | — |
+| Stack detection → lens | ✓ apple / generic | partial (language detection) | partial (parser per lang) | — (language-agnostic) |
+| Package manifest read | ✓ (test/build commands) | ✓ (lang + top deps) | — | — |
+| **Lint config ingestion** (`.swiftlint.yml`, `.eslintrc`, `ruff.toml`, etc.) | **—** | **—** | — | — |
+| **CI workflow ingestion** (`.github/workflows/`) | **—** | **—** | — | partial (CI is consumer of archgate, not ingester) |
+| **Boundary-rule config** (declared layers / forbidden imports) | **—** | — (heuristic only) | — (hard-coded "circular = bad") | **✓ executable** — `.rules.ts` companion per ADR; `RuleSet` exports async `check(ctx)` functions; sandboxed APIs: `ctx.glob/grep/readFile/readJSON`, `ctx.scopedFiles`, `ctx.changedFiles` |
+| Import-graph construction | — (Critic reasons mentally) | partial (greps first 200/lang) | ✓ AST-based, NetworkX | — (rules use grep/regex; no whole-repo graph) |
+| Class-graph construction | — | — | ✓ inheritance + composition | — |
+| Call-graph construction | — | — | — | — |
+| Circular dependency detection | — | ✓ Mermaid dotted edges, R5 | ✓ NetworkX SCC | partial (project must encode as a `.rules.ts` check) |
+| Fan-out > N threshold warning | — | ✓ > 5 | — | partial (project must encode as a `.rules.ts` check) |
+| Per-violation citation to **local rule source** | partial (ADR title) | — (book only) | — (module names only) | **✓ structured** — `{file, line, endLine, endColumn, ruleId, adrId, severity, fix}` JSON output |
+| Hard-coded book/lens citation | ✓ lens .md | ✓ 12 books | — | — (ADRs ARE the rules; no separate canon) |
+| Machine-readable output | partial (CURRENT_REVIEW.json) | — | — | ✓ `--json` (structured `results[]`) + `--ci` (GH Actions annotations) |
+| CI / pre-commit integration | partial (autonomous loop, not hook-driven) | — | — | ✓ `archgate check` (CI) + `archgate check --staged` (pre-commit); exit 0/1/2/130 disciplined |
+| LICENSE | ✓ MIT (this repo) | — | — | ✓ Apache-2.0 |
 
 ## Strategic insight
 
-Contest-refactor leads on **rule-of-record citation discipline**: ADR-aware findings + accepted-residuals with mandatory expiry are absent in both competitors. Brooks-lint cites Fowler/Hunt/Beck but never cites `.brooks-lint.yaml` line N or `architecture-guide.md § 2 Rule 6` — its findings have no local-rule traceback. But the first draft overstated the architecture-review-mcp comparison: the checked source stores `line_number` on dependency edges from parsed imports, so "never the import line that closes the cycle" was too strong.
+Contest-refactor leads on **rule-of-record citation discipline plus reopen-justification + expiring-residual machinery**: `adr_conflicts[] + adr_reopen_justification` + validator-enforced `[[accepted_residuals]].expires` are absent in every competitor including archgate. Brooks-lint cites Fowler/Hunt/Beck but never cites `.brooks-lint.yaml` line N or `architecture-guide.md § 2 Rule 6` — its findings have no local-rule traceback. The first draft also overstated the architecture-review-mcp comparison: the checked source stores `line_number` on dependency edges from parsed imports, so "never the import line that closes the cycle" was too strong.
+
+**archgate-cli (added 2026-05-25) is operational prior art for executable governance** — it implements the doc § 1 P0 ask verbatim, in production, with CI + pre-commit + agent integration. The Gap C section below was rewritten to reflect this: contest-refactor is NOT inventing executable governance, it is choosing between two strategies — adopt archgate's `.rules.ts` companion-file pattern (executable TS, sandboxed APIs) OR consume archgate output as a Step 0 ingestion source. The "executable" half is solved; contest-refactor's remaining contribution is rule-citation + reopen-justification + expiring-residual + accepted-residual discipline layered over enforcement output.
 
 Where contest-refactor lags is in **the breadth of project artifacts it ingests**. The doc's `§ 1` P0 ask spells this out: *"Parse ADRs, CI, boundary scripts, package graphs, lint configs, and rule files."* Today contest-refactor parses ADRs + manifests-for-test-commands only.
 
@@ -101,11 +107,41 @@ Record in `CURRENT_REVIEW.json.governance_context.ci_binding_rules[]`. Step 0.4 
 
 **Cost:** YAML parser + per-provider config-extractor (GH Actions vs GitLab CI) + durable governance container.
 
-### Gap C: Boundary-rule config (the doc's flagship P0 "executable governance")
+### Gap C: Boundary-rule config (executable governance — archgate prior-art reframing per CLAIM-DELTA 2026-05-25)
 
-Doc § 1 specifically asks for this. Today contest-refactor's ADR awareness is **citation-only**: a finding can `adr_conflicts: ["ADR-0003"]` but the rule itself lives in prose inside `docs/adr/0003-*.md`. There's no machine-checkable predicate.
+**Prior-art reframing**: the original draft positioned this as the doc § 1 P0 "flagship invention" for contest-refactor. archgate-cli (38★, Apache-2.0) ships this mechanism in production. The decision is no longer **whether** to adopt executable governance, but **how**: build TOML-declarative rules in contest-refactor's own config, OR consume archgate's `.rules.ts` output, OR adopt archgate's pattern verbatim.
 
-**Adopt** new top-level key in `.contest-refactor.toml`:
+**Reference mechanism (archgate)** — sourced from `refs/competitors/archgate-cli/src/formats/rules.ts:67-90` + `src/formats/adr.ts:31-45` + `src/commands/check.ts:22-157`:
+
+- ADR markdown at `.archgate/adrs/DOMAIN-NNN-title.md` with required YAML frontmatter (`id`, `title`, `domain`, `rules:bool`, optional `files[]` glob array, optional `respectGitignore:bool`); body free-form
+- Companion file `.archgate/adrs/DOMAIN-NNN-title.rules.ts` paired by exact basename, exports `RuleSet`:
+  ```typescript
+  export type RuleSet = { rules: Record<string, RuleConfig> };
+  interface RuleConfig {
+    description: string;
+    severity?: "error" | "warning" | "info";  // default "error"
+    check: (ctx: RuleContext) => Promise<void>;
+  }
+  ```
+- `RuleContext` provides sandboxed APIs: `projectRoot`, `scopedFiles` (frontmatter `files[]` resolved), `changedFiles` (auto-detected branch diff; with `--staged`, staged only), `glob(pattern)`, `grep(file, RegExp)`, `readFile(path)`, `readJSON(path)`. **No exec / spawn** — rules cannot run shell commands (sandbox limit documented at `src/formats/rules.ts`).
+- Violations reported via side-effect: `ctx.report.violation({message, file?, line?, endLine?, endColumn?, fix?})` (also `warning` + `info`).
+- Output: `--json` (structured `results[]` with `{file, line, ruleId, adrId, message, severity, fix}`) or `--ci` (GitHub Actions annotations) or default human-readable.
+- Exit codes: 0 pass / 1 violations / 2 internal error / 130 SIGINT (disciplined per archgate ADR ARCH-002).
+- CI: `archgate check`. Pre-commit: `archgate check --staged`.
+
+**Decision-fork for contest-refactor** — user directive 2026-05-25: minimize external prereqs. Default = **C.2 TOML-declarative** (no archgate dep). C.3 hybrid = opt-in interop only; C.1 full-adopt = dropped.
+
+| Strategy | Pros | Cons | Verdict |
+|---|---|---|---|
+| ~~C.1: Adopt archgate~~ (consume `.archgate/` as runtime dep) | Zero invention; production-grade | Adds external runtime prereq; couples contest-refactor to archgate evolution | **DROPPED** per user directive 2026-05-25 (keep prereqs minimal) |
+| **C.2: TOML-declarative rules in `.contest-refactor.toml`** | Stays in-skill; no external dep; declarative-only = no arbitrary code execution; pairs with contest-refactor's existing `[[accepted_residuals]]` discipline | Limited expressiveness (regex/glob only; no AST queries beyond Gap D import graph) | **DEFAULT** |
+| C.3: Hybrid — opportunistically ingest archgate output if `.archgate/` directory detected AND user opts in via flag | Zero-cost interop for archgate-using projects; no runtime dep added unless project already has archgate | Two parallel schemas; doc burden; subprocess invocation surface | Opt-in only (`--ingest-archgate` flag, default off) |
+
+**Recommended**: **C.2** (TOML-only). Step 0 sub-step 7e loads TOML `[[boundary_rules]]` if declared into `governance_context.boundary_rules[]`. Finding `boundary_rule_id` field uses `toml:rule-id-slug` source prefix. archgate stays in this doc strictly as **prior-art reference + honest-comparison comparator**, NOT as recommended dependency.
+
+C.3 stays documented as opt-in for users whose project already runs archgate independently of contest-refactor. Implementation: `--ingest-archgate` flag triggers `archgate check --json` subprocess when `.archgate/` is detected, parses output into `governance_context.archgate_violations[]`. Default off; no runtime dep introduced for the default code path.
+
+**TOML-declarative rules** (C.2 fallback for archgate-less projects):
 
 ```toml
 [[boundary_rules]]
@@ -124,11 +160,19 @@ reason = "Views read from ViewModels only"
 adr_ref = "docs/adr/0007-mvvm-boundary.md"
 ```
 
-Step 0 loads `boundary_rules[]` into `governance_context.boundary_rules[]`. Method step 3 ("Review architecture") includes boundary-violation check. Violations emit a finding with `adr_conflicts: ["ADR-0003"]` auto-populated from the rule's `adr_ref`, and a new field `boundary_rule_id: "domain-no-ui"` links the finding back to the rule.
+Step 0 loads `boundary_rules[]` into `governance_context.boundary_rules[]`. Method step 3 ("Review architecture") includes boundary-violation check. Violations emit a finding with `adr_conflicts: ["ADR-0003"]` auto-populated from the rule's `adr_ref`, and the `boundary_rule_id: "toml:domain-no-ui"` field links the finding back to the rule.
 
-Big lift — requires a lightweight import-extractor per lens (regex is acceptable; AST is gold-plating). But this is the doc's P0 mechanism contest-refactor most needs.
+**contest-refactor still owns these layers archgate doesn't**:
 
-**Cost:** New canon file `canon/boundary-rule-shape.toml`. New `governance_context.boundary_rules[]` ingestion. New finding field `boundary_rule_id`. If a new hard gate is added, keep it **structural**: "Finding with `boundary_rule_id` populated MUST have `adr_conflicts[]` non-empty AND consistent with the rule's `adr_ref`." Do not ask `validate-artifact.py` to infer boundary semantics from prose.
+1. **Reopen justification** — archgate violations cite `adrId` but have no `adr_reopen_justification` requirement when re-raising a previously-decided issue. contest-refactor's Critic Phase enforces this.
+2. **Accepted-residual with mandatory expiry** — archgate has no `expires` semantics on suppressions; contest-refactor's `[[accepted_residuals]]` + HALT_SUCCESS validator gate is unique.
+3. **Cross-loop fingerprint identity** — archgate runs check-per-invocation, no `findings_registry.json` equivalent; contest-refactor tracks finding stable IDs across loops.
+
+These layers stay in contest-refactor regardless of C.1/C.2/C.3 choice.
+
+Big lift — for C.2/C.3, requires a lightweight import-extractor per lens (regex is acceptable; AST is gold-plating per Gap D). For C.1/C.3, requires `archgate check` subprocess detection + JSON output parser.
+
+**Cost:** New canon file `canon/boundary-rule-shape.toml` (covers both `toml:` and `archgate:` source prefixes). New `governance_context.boundary_rules[]` + `governance_context.archgate_violations[]` ingestion (C.3 only). New finding field `boundary_rule_id`. If a new hard gate is added, keep it **structural**: "Finding with `boundary_rule_id` populated MUST have `adr_conflicts[]` non-empty AND consistent with the rule's `adr_ref`." Do not ask `validate-artifact.py` to infer boundary semantics from prose.
 
 ### Gap D (P1, PROMOTED from defer): Import graph for executable boundary verification
 
@@ -206,19 +250,20 @@ brooks-lint's `.brooks-lint-history.json` is optimized for time-keyed cross-mont
 
 ## Where contest-refactor is already strong (do not regress)
 
-1. **ADR-aware findings with reopen justification** — `adr_conflicts[]` + `adr_reopen_justification` has no equivalent in brooks-lint or architecture-review-mcp
-2. **Accepted-residual MANDATORY expiry date** — validator-enforced; brooks-lint's `expires` is per-finding suppression, not a structural exception with an audit trail
+1. **ADR-aware findings with reopen justification** — `adr_conflicts[]` + `adr_reopen_justification` has no equivalent in brooks-lint, architecture-review-mcp, OR archgate-cli (archgate cites `adrId` per violation but has no reopen-justification requirement when re-raising a previously-decided issue)
+2. **Accepted-residual MANDATORY expiry date** — validator-enforced; brooks-lint's `expires` is per-finding suppression, archgate has no `expires` semantics at all; contest-refactor's `[[accepted_residuals]]` + HALT_SUCCESS validator gate is structurally unique
 3. **CONTEXT.md domain vocabulary enforcement** — findings must use project terms, not generic class names
 4. **Validator catches expired residuals at HALT_SUCCESS** — concrete enforcement, not advisory
 5. **Lens system** (apple / generic) — stack-aware analysis without per-language re-tooling
+6. **Cross-loop fingerprint identity** — `findings_registry.json` with stable IDs across loops; archgate runs check-per-invocation with no cross-run identity layer
 
 ## Adoption order
 
 1. **Prerequisite: add a durable `governance_context` container** — otherwise A/B/C collide with the first-loop-only `discovery` lifecycle.
-2. **Gap C (boundary-rule config)** — flagship P0; takes contest-refactor from "ADR-aware citation" to "executable governance" verbatim per doc § 1.
+2. **Gap C — DECIDE strategy first (C.1 adopt archgate / C.2 TOML-only / C.3 hybrid)** before scoping the work. C.3 hybrid is recommended: ingest `archgate check --json` output when `.archgate/` present + ship TOML `[[boundary_rules]]` fallback for archgate-less projects. The original "flagship P0 invention" framing is retired per archgate prior art; the contribution is now reopen-justification + accepted-residual + cross-loop identity layered over whichever enforcement source.
 3. **Gap A (lint config ingestion)** — useful, but not a "quick win" once lifecycle and per-finding rule linkage are accounted for.
 4. **Gap B (CI workflow ingestion)** — useful severity context after the durable container exists.
-5. **Gap D (import graph)** — P1, PROMOTED from defer per Gemini Pro peer review. Ships after Gap C (boundary_rules) lands; provides the deterministic graph teeth that boundary-rule enforcement needs to be more than prose-citation. Pairs with TRACEABILITY-GAP Gap E (shared AST infrastructure). Add G44 gate.
+5. **Gap D (import graph)** — P1, PROMOTED from defer per Gemini Pro peer review. Ships after Gap C lands; if C.1 or C.3 chosen, archgate's `ctx.grep`/`ctx.glob` rules can compute much of this graph too, but a contest-refactor-internal graph still pays off for non-archgate users. Pairs with TRACEABILITY-GAP Gap E (shared AST infrastructure). Add G44 gate.
 6. **Gap E (trend dashboard)** — defer indefinitely; out of scope.
 
 ## Minimal Step 0 diff for Gap A (the immediate win)
