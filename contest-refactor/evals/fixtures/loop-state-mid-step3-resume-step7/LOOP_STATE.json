@@ -3,8 +3,8 @@
   "loop": 3,
   "step_started": 7,
   "step_completed": 6,
-  "started_at": "2026-05-12T14:30:22Z",
-  "last_checkpoint_at": "2026-05-12T14:31:48Z",
+  "started_at": "2026-05-25T12:00:00Z",
+  "last_checkpoint_at": "2026-05-25T13:00:00Z",
   "artifacts_written": [
     "CURRENT_REVIEW.md",
     "CURRENT_REVIEW.json",
@@ -22,7 +22,12 @@
   "registry_pending_writes": [
     {
       "stable_id": "F-001",
-      "occurrence": {"loop": 3, "loop_local_id": "F1", "status": "resolved", "sha": "<pending>"},
+      "occurrence": {
+        "loop": 3,
+        "loop_local_id": "F1",
+        "status": "resolved",
+        "sha": "<pending>"
+      },
       "idempotency_key": "loop3-F-001-resolved"
     }
   ],
@@ -30,13 +35,24 @@
   "implementation_review": {
     "verdict": "approved",
     "reason": "All three checks passed; targeted finding F1 no longer present in current source.",
-    "checks": {"reality": "passed", "honesty": "passed", "regression": "passed"},
+    "checks": {
+      "reality": "passed",
+      "honesty": "passed",
+      "regression": "passed"
+    },
     "regressions": [],
     "conditions": [],
     "rounds": 1,
     "retry_count": 1,
     "retry_cause": null,
-    "retry_attempts": [{"attempt": 1, "outcome": "ok", "error": null, "duration_ms": 7250}]
+    "retry_attempts": [
+      {
+        "attempt": 1,
+        "outcome": "ok",
+        "error": null,
+        "duration_ms": 7250
+      }
+    ]
   },
   "commit_attempted_sha": null
 }

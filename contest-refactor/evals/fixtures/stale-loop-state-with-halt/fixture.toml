@@ -1,8 +1,8 @@
 id = "stale-loop-state-with-halt"
 purpose = "HALT_STAGNATION subtype=no_progress with a LOOP_STATE.json from loop 5 whose last_checkpoint_at is 2026-05-11 (>24h before current loop 6 timestamp); protects G28 orphan detection (stale LOOP_STATE.json must be detected and cleaned, not blindly resumed)."
 expected_result = "fail"
-aspirational = true
-notes = "Fixture ships CURRENT_REVIEW.json + LOOP_STATE.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. G28's last_checkpoint_at > 24h orphan rule lives in resume-detection.md and is exercised by Step -1 resume code rather than validate-artifact.py."
+aspirational = false
+notes = "Complete v3 artifact set (PR5c). LOOP_STATE.json is INTENTIONALLY stale (last_checkpoint_at 2026-05-11, >24h old) AND loop=5 mismatches CURRENT_REVIEW.loop=6. G28 must fire two issues: loop-num mismatch + orphan detection. expected_result=fail; rule-id cross-check must match cited gate G28 against fired rule G28."
 
 [[tested_rules]]
 kind = "gate"
