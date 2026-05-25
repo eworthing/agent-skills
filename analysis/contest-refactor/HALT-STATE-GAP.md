@@ -267,5 +267,5 @@ Future schema bumps should preserve these properties that **none of the inspecte
 6. **`fingerprint{claim_consequence_hash, evidence_paths_hash}`** for cross-loop finding identity
 7. **`halt_handoff.expected_actions[]` + Step -1 drift matcher** — closes the re-invocation drift loop end-to-end
 8. **Five-reason retirement enum** for per-finding closure
-9. **`schema_version` per artifact** with default-fill table for backward-compat
+9. **`schema_version` per artifact** with default-fill table for backward-compat (canonical v2→v3→v4→v5 sequencing + per-bump default-fill rows at [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5); this gap's Gap F field defaults are co-listed there with CROSS-MODEL Gap E)
 10. **`HALT_DRY_RUN`** as a first-class halt state (not a flag) — clean integration with halt-handoff

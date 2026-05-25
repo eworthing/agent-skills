@@ -36,7 +36,7 @@ The analysis has been described in commit messages as having survived 7 rounds o
 **Revised 2026-05-25 p.m.** (verify the revisions are coherent and don't contradict unrevised sections):
 
 - `GOVERNANCE-GAP.md` — Gap C reframed per archgate prior art; decision-fork C.1/C.2/C.3 with C.2 (TOML-only) as default per user prereq directive (don't adopt archgate runtime dep). Verify the doc CLEARLY drops C.1 and demotes C.3 to opt-in; flag ambiguous "we could go either way" framing.
-- `CROSS-MODEL-CRITIC-GAP.md` — two-tier categorization (Cat 1 pre-output via stdin / Cat 2 post-output via SDK); added Bouncer + pauhu + TimmyZinin comparators; Gap E (G48 Category-2 HALT_SUCCESS gate via Gemini Flash SDK); schema_version 4→5. Verify provider/pattern assignment to category is unambiguous + G48 gate definition is clear.
+- `CROSS-MODEL-CRITIC-GAP.md` — two-tier categorization (Cat 1 pre-output via stdin / Cat 2 post-output via SDK); added Bouncer + pauhu + TimmyZinin comparators; Gap E (G48 Category-2 HALT_SUCCESS gate via Gemini Flash SDK); schema_version 4→5 (the v4→v5 default-fill table is co-owned with HALT-STATE Gap F and lives at [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5); verify CROSS-MODEL Gap E's defaults are listed there and consistent with this gap's field additions). Verify provider/pattern assignment to category is unambiguous + G48 gate definition is clear.
 - `HALT-STATE-GAP.md` — added continuous-claude-v3 comparator + temporal-scope framing (loop-spanning vs session-spanning vs permanent); added Gap F (session-spanning halt-handoff) + Gap G (context: fork Phase 1.1 Validator); cross-link to CRITIC-INDEPENDENCE-GAP. Verify "no competitor matches checkpoint mechanics" is consistently narrowed to LOOP-spanning scope (no remaining unscoped "gold standard" claims).
 - `INVENTORY.md` — count 26→47 (post-SM8 filesystem audit `ls -d refs/competitors/*/ | wc -l = 47`; pre-fix drafts said "39" which double-counted 22 initial with morning-batch attribution and missed the 8 RESEARCH-DELTA-round clones); skill-format table reordered (alirezarezvani 728 SKILLs = new largest); coverage map updated for new docs.
 
@@ -55,7 +55,7 @@ The analysis has been described in commit messages as having survived 7 rounds o
 - `canon/*.toml` — 9+ canonical enum files: `states`, `halt-subtypes`, `finding-statuses`, `retirement-reasons`, `severity-anchors`, `scorecard-dimensions`, `dependency-categories`, `fixture-rule-kinds`, `validation-gates`, `verdicts`. Gap docs propose additional canon files: `loop-phases`, `refactoring-patterns`, `tie-kinds`, `confidence-levels`, `area-verdicts`, `boundary-rule-shape`, `critic-status`, `critic-lens-signals`. Verify naming/scope collisions.
 - `references/method.md` — 10-step Critic Method + Evidence Chain + Simplify Pressure Test
 - `references/validation.md` — 31 hard gates G1-G31 + 8 quality passes Q1-Q8 (gap docs reserve G42, G43, G44, G45, G46, G47, G48, G49 — verify no unintended overlap)
-- `references/output-format-json.md` — `CURRENT_REVIEW.json` schema (the gap docs propose `schema_version: 4` and `schema_version: 5` additions; verify the v3 baseline + that v4 and v5 fields don't collide at top-level)
+- `references/output-format-json.md` — `CURRENT_REVIEW.json` schema (the gap docs propose `schema_version: 4` and `schema_version: 5` additions; verify the v3 baseline + that v4 and v5 fields don't collide at top-level; the canonical migration trajectory v2→v3→v4→v5 with per-bump default-fill rows lives at [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5))
 - `references/output-format-state-schemas.md` — `LOOP_STATE.json`, `findings_registry.json`, `REVIEW_HISTORY.json` schemas
 - `references/halt-handoff.md` — structured `halt_handoff{text, expected_actions[]}` object + drift-matcher
 - `references/resume-detection.md` — Resume Precedence Matrix (Cases A-E)
@@ -202,14 +202,14 @@ Sample 2-3 across both lists. Do they have mechanisms the gap docs missed entire
 
 ### Class 3: Schema composability errors
 
-The gap docs propose additions to `CURRENT_REVIEW.json` for `schema_version: 4` AND `schema_version: 5` (the latter introduced 2026-05-25 by CROSS-MODEL-CRITIC Gap E + HALT-STATE Gap F).
+The gap docs propose additions to `CURRENT_REVIEW.json` for `schema_version: 4` AND `schema_version: 5` (the latter introduced 2026-05-25 by CROSS-MODEL-CRITIC Gap E + HALT-STATE Gap F; canonical v2→v3→v4→v5 sequencing with per-bump default-fill rows at [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)).
 
 - Do additive fields collide at top-level?
 - `changed_hunks[]` + `critic_source` + `confidence` + `severity_rationale` + `local_lint_overrides` + `boundary_rules` + `cross_model_critic{}` + `cross_model_scoring{}` + `session_spanning_handoff{}` + `routing_rationale` + per-finding `boundary_rule_id` — all compose cleanly?
 - Does any new field break a "skip-when-X" rule? (G4/G8 suspended for `unverifiable_due_to_build_failure: true` — would new fields apply on that path?)
 - Do new canon files (`canon/confidence-levels.toml`, `canon/tie-kinds.toml`, `canon/loop-phases.toml`, `canon/refactoring-patterns.toml`, `canon/area-verdicts.toml`, `canon/boundary-rule-shape.toml`, `canon/critic-status.toml`, `canon/critic-lens-signals.toml`) collide with existing ones?
 - Gate-number reservations: G42 (TWO-LAYER-DETECTION), G43 (renamed from G34.1), G44 (GOVERNANCE-GAP Gap D), G45+G46+G47 (STATE-MACHINE-COMPOSITION-APPENDIX), G48 (CROSS-MODEL-CRITIC Gap E), G49 (CONTINUOUS-SCORING-AUGMENTATION Gap B). Any unintended overlap with existing G1-G31?
-- Schema_version 4 vs 5: is there a defined migration / default-fill table for v4-to-v5? Or are they parallel-applied (some fields v4, some v5)?
+- Schema_version 4 vs 5: the migration / default-fill table for v4→v5 now lives at [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5) (single owner, co-fed by CROSS-MODEL-CRITIC Gap E + HALT-STATE Gap F per AO1 fix). Verify both contributing gaps' default-fill entries are present and that no field is defaulted twice with conflicting values.
 
 ### Class 4: Adoption-order pathologies
 
