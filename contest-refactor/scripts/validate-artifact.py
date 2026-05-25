@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import tomllib
 from datetime import date, datetime, timezone
@@ -56,6 +57,39 @@ DISPOSITION_SIDECARS = {
     "unverifiable": "reason",
     "superseded": "superseded_by",
 }
+
+# Per-provider default models (per references/provider-adapters.md, verified 2026-05-25).
+# When *_model_source == "default", the model value MUST equal this table's entry.
+# Used by check_g19_provider_model.
+_PROVIDER_DEFAULTS: dict[str, str | None] = {
+    "claude_code": "claude-sonnet-4-6",
+    "codex": "gpt-5.4-mini",
+    "opencode": "deepseek-v4-flash",
+    "unknown": None,
+}
+
+# G27: forbidden infra-cause vocabulary in implementation_review.reason.
+# Spec at validation.md:107-108: reason must not mention "after 2 attempts" or transient
+# causes; those live in retry_cause / retry_attempts. Pattern matches only retry-envelope
+# infra phrasings the spec explicitly enumerates plus the English variant "timed out".
+_G27_FORBIDDEN_REASON_VOCAB = re.compile(
+    r"(?i)(after\s+2\s+attempts|\btimeout\b|timed\s+out|spawn[_\s]?error|malformed[_\s]?json)"
+)
+
+# G27: exact canonical phrase required when all attempts fail.
+_G27_CANONICAL_FAILED_PHRASE = "reviewer unavailable; manual verification required"
+
+# G27: retry_cause enum per spec at validation.md:107.
+_G27_RETRY_CAUSES = {"timeout", "spawn_error", "malformed_json"}
+
+# G22: archive divider regex for REVIEW_HISTORY.md per output-format-markdown.md.
+# Format: `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`
+_G22_DIVIDER_RE = re.compile(
+    r"^--- Loop \d+ \(UTC \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?(?:\+\d{2}:?\d{2})?\) ---$"
+)
+
+# G28: orphan threshold per validation.md:115 (24 hours).
+_G28_ORPHAN_SECONDS = 24 * 3600
 
 
 class Issue:
@@ -520,6 +554,422 @@ def check_g31_fingerprint_integrity(registry: dict | None) -> List[Issue]:
     return issues
 
 
+def check_g18_review_history_append(
+    current_review: dict, history: dict | None
+) -> List[Issue]:
+    """G18: REVIEW_HISTORY.json must contain exactly N entries (N = current loop),
+    and the most recent entry must equal CURRENT_REVIEW.json (parsed-dict equality).
+    Per validation.md:82-83. Schema_version >= 2.
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 2:
+        return issues
+    if history is None:
+        return issues
+    loops = history.get("loops")
+    if not isinstance(loops, list):
+        issues.append(
+            Issue(
+                "G18",
+                "REVIEW_HISTORY.json.loops must be a list",
+            )
+        )
+        return issues
+    expected_n = current_review.get("loop")
+    if isinstance(expected_n, int) and len(loops) != expected_n:
+        issues.append(
+            Issue(
+                "G18",
+                f"REVIEW_HISTORY.json has {len(loops)} loops[] entries; "
+                f"current_review.loop == {expected_n} requires exactly {expected_n} entries",
+            )
+        )
+    if loops and loops[-1] != current_review:
+        issues.append(
+            Issue(
+                "G18",
+                "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim "
+                "(parsed-dict equality)",
+            )
+        )
+    return issues
+
+
+def check_g19_provider_model(current_review: dict) -> List[Issue]:
+    """G19: provider/model attribution per validation.md:84-85 + provider-adapters.md.
+    Schema_version >= 2.
+
+    Invariants:
+    - Required keys non-empty: provider, *_model_source, spawn_isolation.
+    - *_model_source ∈ {"default", "env_override", "user_flag"}.
+    - When *_model_source == "default", model value must equal _PROVIDER_DEFAULTS[provider].
+    - provider == "unknown" ⇒ spawn_isolation == "inline" AND both models null AND
+      both sources == "default" (per provider-adapters.md § unknown explicit text).
+    - Known providers (claude_code, codex, opencode) ⇒ both models are non-null strings.
+    - Reject placeholder literal "inline-current-model".
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 2:
+        return issues
+
+    provider = current_review.get("provider")
+    loop_model = current_review.get("loop_model")
+    loop_source = current_review.get("loop_model_source")
+    reviewer_model = current_review.get("reviewer_model")
+    reviewer_source = current_review.get("reviewer_model_source")
+    spawn = current_review.get("spawn_isolation")
+
+    if not provider:
+        issues.append(Issue("G19", "provider field required (non-empty)"))
+        return issues
+    if not spawn:
+        issues.append(Issue("G19", "spawn_isolation field required (non-empty)"))
+    if not loop_source:
+        issues.append(Issue("G19", "loop_model_source field required (non-empty)"))
+    if not reviewer_source:
+        issues.append(Issue("G19", "reviewer_model_source field required (non-empty)"))
+
+    valid_sources = {"default", "env_override", "user_flag"}
+    if loop_source is not None and loop_source not in valid_sources:
+        issues.append(
+            Issue(
+                "G19",
+                f"loop_model_source={loop_source!r} not in {sorted(valid_sources)}",
+            )
+        )
+    if reviewer_source is not None and reviewer_source not in valid_sources:
+        issues.append(
+            Issue(
+                "G19",
+                f"reviewer_model_source={reviewer_source!r} not in {sorted(valid_sources)}",
+            )
+        )
+
+    if provider == "unknown":
+        if spawn != "inline":
+            issues.append(
+                Issue(
+                    "G19",
+                    f"provider='unknown' requires spawn_isolation='inline', got {spawn!r}",
+                )
+            )
+        if loop_model is not None:
+            issues.append(
+                Issue(
+                    "G19",
+                    f"provider='unknown' requires loop_model=null, got {loop_model!r}",
+                )
+            )
+        if reviewer_model is not None:
+            issues.append(
+                Issue(
+                    "G19",
+                    f"provider='unknown' requires reviewer_model=null, got {reviewer_model!r}",
+                )
+            )
+        if loop_source not in (None, "default"):
+            issues.append(
+                Issue(
+                    "G19",
+                    f"provider='unknown' requires loop_model_source='default', "
+                    f"got {loop_source!r} (per provider-adapters.md § unknown)",
+                )
+            )
+        if reviewer_source not in (None, "default"):
+            issues.append(
+                Issue(
+                    "G19",
+                    f"provider='unknown' requires reviewer_model_source='default', "
+                    f"got {reviewer_source!r} (per provider-adapters.md § unknown)",
+                )
+            )
+    elif provider in _PROVIDER_DEFAULTS:
+        # Known provider: both models must be non-null strings (and not the placeholder).
+        for field, value in (("loop_model", loop_model), ("reviewer_model", reviewer_model)):
+            if value is None or not isinstance(value, str) or not value:
+                issues.append(
+                    Issue(
+                        "G19",
+                        f"known provider {provider!r} requires {field} non-empty string, "
+                        f"got {value!r}",
+                    )
+                )
+            elif value == "inline-current-model":
+                issues.append(
+                    Issue(
+                        "G19",
+                        f"{field}={value!r} is a placeholder; record the real model identity",
+                    )
+                )
+        # Default-source ⇒ value matches provider default.
+        provider_default = _PROVIDER_DEFAULTS[provider]
+        if loop_source == "default" and isinstance(loop_model, str) and loop_model != provider_default:
+            issues.append(
+                Issue(
+                    "G19",
+                    f"loop_model={loop_model!r} marked source='default' but provider "
+                    f"{provider!r} default is {provider_default!r}",
+                )
+            )
+        if reviewer_source == "default" and isinstance(reviewer_model, str) and reviewer_model != provider_default:
+            issues.append(
+                Issue(
+                    "G19",
+                    f"reviewer_model={reviewer_model!r} marked source='default' but provider "
+                    f"{provider!r} default is {provider_default!r}",
+                )
+            )
+    else:
+        # Provider not in known table and not "unknown" — invalid value.
+        issues.append(
+            Issue(
+                "G19",
+                f"provider={provider!r} not in {sorted(_PROVIDER_DEFAULTS)} "
+                "(per provider-adapters.md)",
+            )
+        )
+    return issues
+
+
+def check_g22_archive_divider(
+    artifact_dir: Path, current_review: dict
+) -> List[Issue]:
+    """G22 (archive-divider half only): REVIEW_HISTORY.md `--- Loop ` dividers must
+    match the canonical format per output-format-markdown.md. Schema_version >= 2.
+    Commit-subject half deferred (requires runtime git context, out of scope here).
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 2:
+        return issues
+    md_path = artifact_dir / "REVIEW_HISTORY.md"
+    if not md_path.exists():
+        return issues
+    try:
+        text = md_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        issues.append(Issue("G22", f"REVIEW_HISTORY.md unreadable: {exc}"))
+        return issues
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        if line.startswith("--- Loop "):
+            if not _G22_DIVIDER_RE.match(line):
+                issues.append(
+                    Issue(
+                        "G22",
+                        f"REVIEW_HISTORY.md line {lineno}: archive divider does not match "
+                        f"`--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+                        context=line[:120],
+                    )
+                )
+    return issues
+
+
+def check_g27_retry_envelope(current_review: dict) -> List[Issue]:
+    """G27: implementation_review retry envelope shape per validation.md:104-110.
+    Schema_version >= 3.
+
+    - retry_count ∈ {1, 2}.
+    - retry_count == 1 ⇒ retry_cause is None AND len(retry_attempts) == 1.
+    - retry_count == 2 ⇒ retry_cause ∈ {timeout, spawn_error, malformed_json}
+      AND len(retry_attempts) == 2 AND retry_attempts[0]["outcome"] == retry_cause.
+    - reason MUST NOT match forbidden infra-cause vocabulary.
+    - When all attempts non-ok AND verdict == "rejected", reason must equal the
+      exact canonical phrase.
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 3:
+        return issues
+    impl = current_review.get("implementation_review")
+    if not isinstance(impl, dict):
+        return issues
+    retry_count = impl.get("retry_count")
+    retry_cause = impl.get("retry_cause")
+    retry_attempts = impl.get("retry_attempts") or []
+    reason = impl.get("reason") or ""
+    verdict = impl.get("verdict")
+
+    if retry_count not in (1, 2):
+        issues.append(
+            Issue(
+                "G27",
+                f"implementation_review.retry_count={retry_count!r} not in {{1, 2}}",
+            )
+        )
+        return issues  # downstream checks depend on retry_count being valid
+
+    if not isinstance(retry_attempts, list):
+        issues.append(
+            Issue(
+                "G27",
+                "implementation_review.retry_attempts must be a list",
+            )
+        )
+        return issues
+
+    if retry_count == 1:
+        if retry_cause is not None:
+            issues.append(
+                Issue(
+                    "G27",
+                    f"retry_count=1 requires retry_cause=null, got {retry_cause!r}",
+                )
+            )
+        if len(retry_attempts) != 1:
+            issues.append(
+                Issue(
+                    "G27",
+                    f"retry_count=1 requires retry_attempts length 1, got {len(retry_attempts)}",
+                )
+            )
+    else:  # retry_count == 2
+        if retry_cause not in _G27_RETRY_CAUSES:
+            issues.append(
+                Issue(
+                    "G27",
+                    f"retry_count=2 requires retry_cause ∈ {sorted(_G27_RETRY_CAUSES)}, "
+                    f"got {retry_cause!r}",
+                )
+            )
+        if len(retry_attempts) != 2:
+            issues.append(
+                Issue(
+                    "G27",
+                    f"retry_count=2 requires retry_attempts length 2, got {len(retry_attempts)}",
+                )
+            )
+        elif isinstance(retry_attempts[0], dict):
+            first_outcome = retry_attempts[0].get("outcome")
+            if first_outcome != retry_cause:
+                issues.append(
+                    Issue(
+                        "G27",
+                        f"retry_attempts[0].outcome={first_outcome!r} must match "
+                        f"retry_cause={retry_cause!r}",
+                    )
+                )
+
+    if isinstance(reason, str) and _G27_FORBIDDEN_REASON_VOCAB.search(reason):
+        match = _G27_FORBIDDEN_REASON_VOCAB.search(reason)
+        issues.append(
+            Issue(
+                "G27",
+                f"implementation_review.reason contains forbidden infra-cause vocab "
+                f"{match.group(0)!r}; transient causes belong in retry_cause/retry_attempts, "
+                f"not reason",
+            )
+        )
+
+    # Canonical-phrase enforcement: retry_count == 2 AND all attempts non-ok AND verdict rejected.
+    if retry_count == 2 and verdict == "rejected" and isinstance(retry_attempts, list):
+        all_failed = retry_attempts and all(
+            isinstance(a, dict) and a.get("outcome") != "ok" for a in retry_attempts
+        )
+        if all_failed and reason != _G27_CANONICAL_FAILED_PHRASE:
+            issues.append(
+                Issue(
+                    "G27",
+                    f"when retry_count=2 with all attempts non-ok and verdict=rejected, "
+                    f"implementation_review.reason must equal exactly "
+                    f"{_G27_CANONICAL_FAILED_PHRASE!r}; got {reason!r}",
+                )
+            )
+    return issues
+
+
+def check_g28_loop_state_freshness(
+    artifact_dir: Path, current_review: dict
+) -> List[Issue]:
+    """G28 (partial): LOOP_STATE.json invariants per validation.md:113-120.
+    Schema_version >= 3.
+
+    Implemented:
+    - loop-number consistency (loop_state.loop == current_review.loop)
+    - checkpoint freshness (last_checkpoint_at not >24h before now)
+    - step range (step_started ∈ 1..11, step_completed ∈ 0..11)
+    - step ordering (step_started >= step_completed)
+
+    Deferred: pre_step3_blob_shas cross-check (needs Step 2 plan context);
+    post-commit cleanup invariant (needs git HEAD comparison).
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 3:
+        return issues
+    loop_state_path = artifact_dir / "LOOP_STATE.json"
+    if not loop_state_path.exists():
+        return issues  # post-commit cleanup state is legal
+    loop_state = _load_json(loop_state_path)
+    if not isinstance(loop_state, dict):
+        issues.append(
+            Issue(
+                "G28",
+                "LOOP_STATE.json must be a JSON object",
+            )
+        )
+        return issues
+
+    ls_loop = loop_state.get("loop")
+    cr_loop = current_review.get("loop")
+    if ls_loop != cr_loop:
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.loop={ls_loop!r} must equal CURRENT_REVIEW.loop={cr_loop!r} "
+                "(mismatch routes to --reset per Resume Precedence Matrix row 3)",
+            )
+        )
+
+    step_started = loop_state.get("step_started")
+    step_completed = loop_state.get("step_completed")
+    if not isinstance(step_started, int) or step_started not in range(1, 12):
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.step_started={step_started!r} must be int in 1..11",
+            )
+        )
+    if not isinstance(step_completed, int) or step_completed not in range(0, 12):
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.step_completed={step_completed!r} must be int in 0..11",
+            )
+        )
+    if (
+        isinstance(step_started, int)
+        and isinstance(step_completed, int)
+        and step_started < step_completed
+    ):
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.step_started={step_started} < step_completed={step_completed} "
+                "(step_started >= step_completed required)",
+            )
+        )
+
+    last_checkpoint_raw = loop_state.get("last_checkpoint_at")
+    last_checkpoint = _parse_iso_timestamp(last_checkpoint_raw)
+    if last_checkpoint is None:
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.last_checkpoint_at={last_checkpoint_raw!r} not ISO-8601 parseable",
+            )
+        )
+    else:
+        now = datetime.now(timezone.utc)
+        age_seconds = (now - last_checkpoint).total_seconds()
+        if age_seconds > _G28_ORPHAN_SECONDS:
+            issues.append(
+                Issue(
+                    "G28",
+                    f"LOOP_STATE.last_checkpoint_at={last_checkpoint_raw!r} is "
+                    f"{age_seconds / 3600:.1f}h old (>24h orphan threshold); "
+                    "routes to --reset recommendation per Resume Precedence Matrix row 2",
+                )
+            )
+    return issues
+
+
 def check_halt_success_gating(
     current_review: dict, project_config: dict | None
 ) -> List[Issue]:
@@ -702,7 +1152,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
             )
         ]
     current_review = _load_json(current_review_path) or {}
-    required_issues, _history, registry = check_required_artifacts(
+    required_issues, history, registry = check_required_artifacts(
         artifact_dir, current_review
     )
     issues.extend(required_issues)
@@ -711,6 +1161,11 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_retirement_rule(current_review, registry))
     issues.extend(check_g30_disposition_coverage(current_review, registry))
     issues.extend(check_g31_fingerprint_integrity(registry))
+    issues.extend(check_g18_review_history_append(current_review, history))
+    issues.extend(check_g19_provider_model(current_review))
+    issues.extend(check_g22_archive_divider(artifact_dir, current_review))
+    issues.extend(check_g27_retry_envelope(current_review))
+    issues.extend(check_g28_loop_state_freshness(artifact_dir, current_review))
     project_config = _load_project_config(artifact_dir)
     issues.extend(check_halt_success_gating(current_review, project_config))
     issues.extend(check_g21_scorecard(current_review))
