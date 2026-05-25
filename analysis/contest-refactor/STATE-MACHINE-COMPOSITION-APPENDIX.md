@@ -307,14 +307,17 @@ Top-level CURRENT_REVIEW.json:
 }
 ```
 
-`LOOP_STATE.json` (Step 2-3 ownership band — unchanged from existing schema in output-format-state-schemas.md):
+`LOOP_STATE.json` (Step 2-3 ownership band — **schema bump required**: existing schema at `contest-refactor/references/output-format-state-schemas.md:18-43` does NOT define `current_phase`. To carry this field, `LOOP_STATE.json` bumps `schema_version: 1 → 2` with the additive default-fill below; the prior wording "unchanged from existing schema" was wrong per Codex Class 3 SC3):
 
 ```jsonc
 {
-  "current_phase": "step_3_execution",         // step_2_/step_3_* only; cross-band = G45 failure
-  // ... existing LOOP_STATE fields ...
+  "schema_version": 2,                         // bump from 1; v4→v5 CURRENT_REVIEW migration table also references this bump
+  "current_phase": "step_3_execution",         // step_2_/step_3_* only; cross-band = G45 failure (NEW in v2; defaults to "step_3_execution" when reading a v1 artifact mid-Step-3, "step_2_planning" when reading a v1 artifact pre-Step-3)
+  // ... existing LOOP_STATE fields per output-format-state-schemas.md:18-43 ...
 }
 ```
+
+LOOP_STATE.json v1 → v2 default-fill: any v1 artifact loaded by v2 code synthesizes `current_phase` from the existing `(step_started, step_completed)` pair — `step_completed < 4` → `"step_3_execution"`, `step_completed ≥ 4` → `"step_3_post_commit"`. This synthesis is non-destructive (v1 readers ignore the new field; v2 readers fill the synthesized default and re-write at next checkpoint).
 
 ## What this appendix does NOT do
 

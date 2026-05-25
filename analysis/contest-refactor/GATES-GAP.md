@@ -171,6 +171,24 @@ Records `gate_overrides: [{gate: "G24", rationale: "...", overridden_by: "user",
 
 **Defer.** Big philosophical decision; surface to user before adopting.
 
+## Gate-provenance discipline (agentlint, added 2026-05-25 per Codex Class 2 MC3)
+
+`refs/competitors/agentlint/README.md:102-109` ships a discipline that pairs naturally with contest-refactor's gate philosophy: **"Every check is backed by data, not opinions"** — sources cited per check include "265 versions of Anthropic's Claude Code system prompt", "Claude Code source code" (for hard-limit boundaries), production audits, and 6 academic papers. The hard rule at line 109: **"If a check can't cite a source, it doesn't ship."**
+
+**Why this matters for contest-refactor's gates**: contest-refactor's 31 hard gates (G1-G31, with G35+G36+G41+G45+G48 reserved per other gap docs) are deterministic structural checks, but their *anchoring* — why this specific invariant is worth a gate — is implicit in the schema-design rationale, not surfaced per-gate. agentlint's discipline would have each gate file (or registry entry) name the source-of-truth for the invariant: a specific design doc section, a documented incident, a paper, or a competitor's documented behavior.
+
+**Adoption recommendation** (P1, low-effort): augment `references/validation.md` so each gate row gets a `source` column citing the design-doc anchor that motivated the gate. Concrete shape:
+
+```markdown
+| Gate | What it checks | Failure modes | Source-of-truth |
+|---|---|---|---|
+| G1 | finding `evidence[]` non-empty when severity ≥ Serious | empty evidence + serious severity | `references/method.md § Evidence Chain` + post-mortem of loop-2026-03-14 (Critic emitted Serious finding with no evidence and the Actor couldn't act on it) |
+| G16 | registry+CURRENT_REVIEW consistency | duplicate stable_id, missing path | `output-format-state-schemas.md § findings_registry.json` + ToB `fp-check` discipline (cited in TWO-LAYER-DETECTION-GAP) |
+| ... | ... | ... | ... |
+```
+
+This is a doc-hygiene win, not a behavior change — but it forces each gate to be defensible against "why does this gate exist?" cold-read questions. Pairs cleanly with [REVIEW-PROMPT.md § Class 2](REVIEW-PROMPT.md) reviewer's job of pressure-testing gate justifications. Defer if the doc-update cost is large; can land alongside G35/G36 addition.
+
 ## What contest-refactor already wins (do not regress)
 
 1. **31 deterministic Python gates** > LLM-judgment hooks for schema/structural validation. Field-presence checks don't need an LLM.

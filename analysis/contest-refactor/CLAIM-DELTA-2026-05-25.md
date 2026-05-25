@@ -1,5 +1,8 @@
 # Claim Delta — 2026-05-25 (post-clone of 4 missed competitors)
 
+> **SUPERSEDED IN PART (added 2026-05-25 p.m.)**: This morning-batch delta was the FIRST pass at scoping new findings from the 4 morning clones. Subsequent work — [`CLAIM-DELTA-2026-05-25-pt2.md`](CLAIM-DELTA-2026-05-25-pt2.md) + the user's archgate-prereq directive — settled Gap C on the **C.2 TOML-only default + C.3 `--ingest-archgate` opt-in** decision (C.1 dropped). The phrasings below at lines 32, 119 ("redirect users to archgate as the canonical solution", "OR redirect users to archgate") are **superseded** by that decision and remain only as audit-trail of the pre-directive options space. Reader: defer to pt2 + [`GOVERNANCE-GAP.md § Gap C`](GOVERNANCE-GAP.md) for the current Gap C resolution.
+
+
 After 21-doc bundle + 3 Gemini rounds + 4 Codex rounds + APPROVED status, user surfaced 5 competitor repos claimed missing from `refs/competitors/`. Verified via `gh api`:
 
 | User claim | Verified? | Stars | Status |

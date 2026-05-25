@@ -9,10 +9,10 @@ These claims in the source landscape doc weren't supported by source inspection:
 | Claim | Reality | Source |
 |---|---|---|
 | Cygnusfear "parallel multipliers `code-review-3 / code-review 6X`" | NOT in source. Single skill with 6 sequential passes. | `cygnusfear-stuff/agents/code-reviewer.md:22-32` |
-| mattpocock deletion-test "more honest than 9.5+ scoring" | Deletion test is a **discovery heuristic** in exploration phase (per-candidate boolean), NOT a verdict-aggregation system that could replace composite scoring. Different role, can't substitute. | `mattpocock-skills/skills/improve-codebase-architecture/SKILL.md:25, 45` + `LANGUAGE.md:37` |
+| mattpocock deletion-test "more honest than 9.5+ scoring" | Deletion test is a **discovery heuristic** in exploration phase (per-candidate boolean), NOT a verdict-aggregation system that could replace composite scoring. Different role, can't substitute. | `mattpocock-skills/skills/engineering/improve-codebase-architecture/SKILL.md:25, 45` + `LANGUAGE.md:37` |
 | Ralph "fresh context per iteration" | Context survives in `.ralph/ralph-context.md`; task pointer moves. README accurate but research summary misread. | `ralph-wiggum/.ralph/` |
 | claude-review-loop "uncapped iteration" | Capped at 2 Codex runs (initial + 1 retry). | `claude-review-loop/hooks/stop-hook.sh:410` |
-| Anthropic security-review "hard exclusion list as config primitive" | Prompt-embedded, NOT config-file. 12 categories. | `anthropic-security-review/.claude/commands/security-review.md:138-160` |
+| Anthropic security-review "hard exclusion list as config primitive" | Prompt-embedded, NOT config-file. **17 enumerated entries** (16 unique — source has a duplicated `16.` numbering typo). | `anthropic-security-review/.claude/commands/security-review.md:138-156` |
 
 ## Verified findings worth importing (corrections applied)
 
@@ -44,9 +44,12 @@ These claims in the source landscape doc weren't supported by source inspection:
 
 ### anthropic-security-review verified
 
-- **Numeric confidence 0-10** with ≥0.7 filter (`.claude/commands/security-review.md:126-129`)
+- **Two confidence scales in the same prompt** (correction 2026-05-25 per Codex Class 1 SM2):
+  - Decimal bands at `:125-129` — `0.9-1.0` / `0.8-0.9` / `0.7-0.8` / `<0.7 don't report` (≥0.7 cutoff)
+  - Integer 1-10 scale at `:178-181` with `≥8` cutoff applied at `:189` (`Filter out any vulnerabilities where the sub-task reported a confidence less than 8`)
+  - Source is internally inconsistent — both scales coexist in the same prompt; adopt only the decimal-band model when porting
 - **`justification` field** in validator output (severity_rationale equivalent)
-- **12 hard exclusions** prompt-embedded: DOS, disk secrets, rate limiting, memory leaks, race conditions, outdated libs, log spoofing, test files, low-confidence patterns, memory safety in safe langs, GH Actions without untrusted input, general hardening
+- **17 enumerated hard exclusions** prompt-embedded at `:138-156` (16 unique — source has a duplicated `16.` numbering typo). Categories: DOS, disk secrets, rate limiting, memory leaks, weak input validation, GH Actions without untrusted input, lack of hardening, theoretical races, outdated libs, memory safety in safe langs, test files, log spoofing, SSRF path-only, user content in AI prompts, regex injection, regex DOS, doc files (the duplicate `16.`), audit-log absence
 - **React/Angular XSS carve-out** in prose: skip unless `dangerouslySetInnerHTML` / `bypassSecurityTrustHtml`
 - **Post-audit validator subagent** (separate from main scanner) rejects low-confidence findings before output
 
@@ -54,7 +57,7 @@ These claims in the source landscape doc weren't supported by source inspection:
 
 - **Atomic-step spec verbatim**: *"Plan the refactoring sequence as a series of atomic steps, each producing a compilable and testable intermediate state, ordered to minimize merge conflicts"* (line 15)
 - **Characterization tests rule**: *"write characterization tests for any uncovered behavior before making structural changes"* (line 12)
-- **Per-pattern commit rule**: *"Commit each refactoring step individually with a descriptive message naming the specific refactoring pattern applied"* (line 9)
+- **Per-pattern commit rule**: *"Commit each refactoring step individually with a descriptive message naming the specific refactoring pattern applied"* (line 20)
 - **BUT pattern naming is prose-only** — no canonical `[Extract Method]` format, no Fowler-catalog enum
 
 ### forensic-skills verified

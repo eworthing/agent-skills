@@ -5,7 +5,7 @@ Compares contest-refactor's halt taxonomy + state-file machinery (`canon/states.
 - **Plandex** (`refs/competitors/plandex/`) — Go agent, ~15k★, plan branching + cumulative-diff sandbox + DB-backed state
 - **PRISM** (`refs/competitors/prism/`) — post-mortem session analyzer, reads Claude Code JSONL
 - **Superpowers** (`refs/competitors/superpowers/`) — RGR loop + worktree isolation, single SessionStart hook
-- **continuous-claude-v3** (`refs/competitors/continuous-claude-v3/`) — 3.7k★ MIT, added 2026-05-25. Session-spanning git-tracked ledgers (`thoughts/ledgers/CONTINUITY_CLAUDE-<session>.md`) + git-tracked handoffs (`thoughts/shared/handoffs/<session>/<date>_<desc>.md|yaml` with Task Summary / What Worked / What Failed / Key Decisions / State to Restore payload) + permanent PostgreSQL+pgvector `archival_memory` table for cross-session semantic search. 30 hooks across PreToolUse (9) / PostToolUse (7+) / SessionStart (6) / UserPromptSubmit (5) / Stop (3) / SessionEnd (3) / PreCompact (1). Six critic-class agents (critic.md, judge.md, warden.md, validator.md, arbiter.md, atlas.md) also affect [CRITIC-INDEPENDENCE-GAP](CRITIC-INDEPENDENCE-GAP.md).
+- **continuous-claude-v3** (`refs/competitors/continuous-claude-v3/`) — 3.7k★ MIT, added 2026-05-25. Session-spanning git-tracked ledgers (`thoughts/ledgers/CONTINUITY_CLAUDE-<session>.md`) + git-tracked handoffs (`thoughts/shared/handoffs/<session>/<date>_<desc>.md|yaml` — actual YAML payload per `docs/MULTI-SESSION-ARCHITECTURE.md:89-94` and the consumer at `.claude/hooks/src/session-start-continuity.ts:118-126` carries only `session`, `goal`, `now`; prose at `:44-47` lists `done_this_session`, `blockers`, `next steps` as *intended* contents of `now` but they are not separate structured fields) + permanent PostgreSQL+pgvector `archival_memory` table for cross-session semantic search. 30 hooks across 7 trigger events per `README.md:670-680` and `.claude/hooks/README.md:29-35`: PreToolUse / PostToolUse / SessionStart / PreCompact / UserPromptSubmit / **SubagentStop** (not `Stop`) / SessionEnd; per-event counts are not enumerated in the source and prior drafts of this doc invented breakdowns — counts removed pending re-derivation from `.claude/hooks/` filesystem inventory. Six critic-class agent files (per `.claude/agents/`): `critic.md`, `judge.md`, `validate-agent.md` (not `validator.md`), `arbiter.md`, `atlas.md`; **`warden.md` does not exist** as a `.md` file — only `warden.json` (445 B) is present, so warden's role-as-agent is not a Markdown agent definition in this repo. Cross-affects [CRITIC-INDEPENDENCE-GAP](CRITIC-INDEPENDENCE-GAP.md).
 
 ## Temporal scope framing (added 2026-05-25 per CLAIM-DELTA)
 
@@ -48,7 +48,7 @@ Legend: **✓** = present, **partial** = weaker form, **—** = absent, **n/a** 
 | Per-finding retirement reasons | ✓ 5 reasons | — | — | — | — |
 | Mid-step checkpoint **file** (LOOP-spanning) | ✓ `LOOP_STATE.json` | partial (PostgreSQL-backed; no portable file) | — | — | — (no mid-loop file — different scope) |
 | Session-spanning ledger | — | — | — | — | ✓ `thoughts/ledgers/CONTINUITY_CLAUDE-<session>.md` (git-tracked, append-on-SessionEnd) |
-| Session-spanning handoff | — | — | partial (PRISM continuation/resume detection is read-only audit) | — | ✓ `thoughts/shared/handoffs/<session>/<date>_<desc>.md\|yaml` (git-tracked YAML payload with Task Summary / What Worked / What Failed / Key Decisions / State to Restore) |
+| Session-spanning handoff | — | — | partial (PRISM continuation/resume detection is read-only audit) | — | ✓ `thoughts/shared/handoffs/<session>/<date>_<desc>.yaml` — git-tracked YAML carrying `session`, `goal`, `now` (extractor `session-start-continuity.ts:118-126` reads only `goal`+`now`); free-form prose body inside `now`, no structured `expected_actions[]` matcher |
 | Permanent semantic memory | — | — | — | — | ✓ PostgreSQL `archival_memory` table + pgvector 1024d embeddings; LLM-as-judge extraction on SessionEnd; cross-session RRF hybrid search via `recall_learnings.py` |
 | Recovery key disambiguator | ✓ `(step_started, step_completed)` | partial (DB row state) | — | — | n/a (no loop-spanning state) |
 | Pre-edit blob shas for narrow revert | ✓ `pre_step3_blob_shas` per file | partial (`ApplyRollbackPlan{ToRevert{path:{Content,Mode}}, ToRemove[]}`) | — | — | — |
@@ -59,8 +59,8 @@ Legend: **✓** = present, **partial** = weaker form, **—** = absent, **n/a** 
 | Structured halt handoff with actions | ✓ `halt_handoff{text, expected_actions[]}` | — | — | — | partial (handoff has free-form sections, no `expected_actions[]` matcher; consumer is `session-start-continuity.ts` not a drift-matcher) |
 | Drift detection on re-invocation | ✓ Step -1 step 4a commit-matcher | partial | partial (heuristic) | — | — (different problem — session restart, not loop drift) |
 | Cross-loop archive | ✓ JSON + Markdown | partial | n/a | — | n/a (cross-SESSION instead) |
-| Hooks layer | — (validation gates instead) | — | — | partial (SessionStart only) | ✓ 30 hooks across 7 trigger events (PreToolUse 9, PostToolUse 7+, SessionStart 6, UserPromptSubmit 5, Stop 3, SessionEnd 3, PreCompact 1) |
-| Critic / validator agents | partial (Reviewer subagent; CRITIC-INDEPENDENCE Gap A proposes split) | — | — | — | ✓ 6 dedicated agents: critic.md (review), judge.md (refactor), warden.md (security), validator.md (plan), arbiter.md (testing), atlas.md (E2E) — see CRITIC-INDEPENDENCE-GAP for full cross-link |
+| Hooks layer | — (validation gates instead) | — | — | partial (SessionStart only) | ✓ 30 hooks across 7 trigger events per `README.md:670-680`: PreToolUse / PostToolUse / SessionStart / PreCompact / UserPromptSubmit / **SubagentStop** / SessionEnd. Per-event counts removed (prior breakdown was unsourced). |
+| Critic / validator agents | partial (Reviewer subagent; CRITIC-INDEPENDENCE Gap A proposes split) | — | — | — | ✓ 5 critic-class `.md` agent files at `.claude/agents/`: `critic.md` (review), `judge.md` (refactor), `validate-agent.md` (plan; not `validator.md`), `arbiter.md` (testing), `atlas.md` (E2E). A `warden.json` config exists (security) but no companion `warden.md` — security role is config-only in this repo. See CRITIC-INDEPENDENCE-GAP for full cross-link. |
 | **Plan branching / experiment tree** | **—** | ✓ git-native, `ParentBranchId`, token inheritance | — | — | — |
 | **Worktree isolation per loop** | **—** (by design today) | partial (changes within plan dir) | — | ✓ `.worktrees/` project-local + legacy global | — |
 | **Cumulative diff sandbox with per-hunk reject** | partial (whole-loop accept/reject) | ✓ per-`Replacement` `RejectedAt` | — | — | — |
@@ -195,7 +195,7 @@ Today contest-refactor's `halt_handoff{text, expected_actions[]}` is LOOP-spanni
 - On HALT (any subtype): emit a second-tier session-spanning handoff file at `thoughts/contest-refactor/halt-<UTC-iso-timestamp>-<halt-state>-<halt-subtype>.md` with the same payload as `halt_handoff{text, expected_actions[]}` plus a `loop_local_pointer` field pointing back to the specific loop's `LOOP_STATE.json` / `REVIEW_HISTORY.json` files. Git-tracked (project-decide).
 - Optional companion SessionStart hook (shipped as `hooks/contest-refactor-resume.ts` for Claude Code users; equivalent for Codex / opencode): scans `thoughts/contest-refactor/halt-*.md` for unresumed handoffs, surfaces "you have an open contest-refactor halt from <timestamp> at state <halt-state>: <handoff-summary>. Run `/contest-refactor` to resume?" Default off; user opts in via `enable_session_spanning_handoff = true` in `.contest-refactor.toml`.
 
-**Schema additions** (additive, `schema_version: 5` since CROSS-MODEL-CRITIC Gap E also bumps to 5):
+**Schema additions** (additive, `schema_version: 5` — co-owned with CROSS-MODEL-CRITIC Gap E; the central v4→v5 default-fill table lives in [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5) and must merge **before** either gap ships in code):
 
 ```jsonc
 {
@@ -213,7 +213,7 @@ Today contest-refactor's `halt_handoff{text, expected_actions[]}` is LOOP-spanni
 
 **Honest caveat**: contest-refactor remains LOOP-scoped by design. Gap F is a thin export-on-HALT mechanism, NOT a redesign to session-scope. continuous-claude-v3's PostgreSQL+pgvector permanent memory is out of scope (adds runtime dependency we explicitly don't want per archgate-prereq directive 2026-05-25).
 
-**Cross-link to CRITIC-INDEPENDENCE-GAP**: continuous-claude-v3 ships six dedicated critic-class agents (critic.md / judge.md / warden.md / validator.md / arbiter.md / atlas.md). CRITIC-INDEPENDENCE-GAP Gap A proposes Critic+Actor split; continuous-claude-v3 demonstrates the further split into role-specialized critics (critic = code review, judge = refactor review, warden = security, validator = plan, arbiter = unit/integration testing, atlas = E2E). Consider as P2 extension to CRITIC-INDEPENDENCE-GAP Gap A: parallel critics by role.
+**Cross-link to CRITIC-INDEPENDENCE-GAP**: continuous-claude-v3 ships 5 critic-class agent files at `.claude/agents/` — `critic.md` (code review), `judge.md` (refactor review), `validate-agent.md` (plan; not the previously-cited `validator.md`), `arbiter.md` (unit/integration testing), `atlas.md` (E2E). A sixth role (`warden`, security) is declared via `warden.json` config only — there is no `warden.md` companion agent definition, so the role is structurally lighter than the other five. CRITIC-INDEPENDENCE-GAP Gap A proposes Critic+Actor split; continuous-claude-v3 demonstrates the further split into role-specialized critics. Consider as P2 extension to CRITIC-INDEPENDENCE-GAP Gap A: parallel critics by role, with the caveat that "5 + 1 config" is the accurate count, not "6 dedicated agents".
 
 ### Gap G (P2, NEW): Inter-phase `context: fork` isolation (per alirezarezvani, added 2026-05-25)
 
@@ -249,7 +249,7 @@ Today STATE-MACHINE-COMPOSITION-APPENDIX defines Phases 1.0 Critic → 1.1 Valid
 
 1. **Gap D (session_resume_class field)** — one new audit field. No behavioral change. Trivial schema bump.
 2. **Gap A (worktree opt-in mode)** — useful, but not self-contained: it needs a separate workspace-mode contract rather than a `spawn_isolation` enum change.
-3. **Gap F (session-spanning halt-handoff)** — opt-in export-on-HALT mechanism. Schema_version 5 (paired with CROSS-MODEL-CRITIC Gap E). Pairs with optional Claude Code SessionStart hook. **Adopted 2026-05-25 per CLAIM-DELTA-pt2 continuous-claude-v3 prior art.** Honest caveat: does NOT include PostgreSQL+pgvector permanent memory (out of scope per archgate-prereq directive).
+3. **Gap F (session-spanning halt-handoff)** — opt-in export-on-HALT mechanism. **Schema_version 5 — depends on the central v4→v5 migration table in `SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing`** (paired bump with [CROSS-MODEL-CRITIC-GAP.md § Gap E](CROSS-MODEL-CRITIC-GAP.md#gap-e); both gaps' default-fill entries land in that single table — this doc does NOT own the migration). Pairs with optional Claude Code SessionStart hook. **Adopted 2026-05-25 per CLAIM-DELTA-pt2 continuous-claude-v3 prior art.** Honest caveat: does NOT include PostgreSQL+pgvector permanent memory (out of scope per archgate-prereq directive).
 4. **Gap B (critic_unfounded subtype)** — defer until validator subagent ships and the validator/canon/handoff updates land together.
 5. **Gap G (`context: fork` inter-phase isolation)** — P2 opt-in for Phase 1.1 Validator only. Measure latency cost before committing. **Adopted 2026-05-25 per CLAIM-DELTA-pt2 alirezarezvani prior art.**
 6. **Gap C (per-hunk partial-accept)** — blocked on Traceability Gap A's canonical hunk layer plus exact patch-application mechanics.
@@ -257,7 +257,7 @@ Today STATE-MACHINE-COMPOSITION-APPENDIX defines Phases 1.0 Critic → 1.1 Valid
 
 ## Where contest-refactor is already strong (do not regress)
 
-Future schema bumps should preserve these properties that no competitor has:
+Future schema bumps should preserve these properties that **none of the inspected competitors in this bundle** carry (per `SOURCE-STATUS.md`; several T2/T3 clones remain partially inspected or deferred, so the "no competitor" framing is scoped to the sampled set, not a universal claim):
 
 1. **Atomic write-fsync-per-substep ordering** in `LOOP_STATE.json` lifecycle
 2. **`(step_started, step_completed)` recovery key** distinguishing clean boundary from mid-step interrupt

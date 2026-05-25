@@ -93,11 +93,11 @@
 |---|---|---|---|
 | `emaarco/agento-patronum` | external research | 404 NOT FOUND — confirmed via `gh search repos` | NOT FOUND |
 | `KevinPoorDeveloper/agent-skills` | ChatGPT 2026-05-25 | 404 NOT FOUND — confirmed via `gh api` | NOT FOUND |
-| Edison | external research | 404 NOT FOUND | NOT FOUND |
-| bug-detective | external research | 404 NOT FOUND | NOT FOUND |
-| Agento-Patronum | external research (distinct from emaarco) | 404 NOT FOUND | NOT FOUND |
+| Edison | external research (vendor name only; no owner/repo coords ever supplied) | `gh search repos "Edison" --owner=*` returns no claude-skills / claude-code-extension match; vendor never published owner/repo path; NOT-FOUND status NOT reproducible without coords — row retained for audit-trail; if external research re-surfaces the same name, demand owner/repo before re-checking | NOT-FOUND-UNREPRODUCIBLE |
+| bug-detective | external research (vendor name only; no owner/repo coords ever supplied) | `gh search repos "bug-detective"` returns multiple unrelated repos in other ecosystems (not claude-skills); no specific owner/repo was given; NOT-FOUND status NOT reproducible without coords — row retained for audit-trail | NOT-FOUND-UNREPRODUCIBLE |
+| Agento-Patronum (distinct from `emaarco/agento-patronum` row above) | external research mentioned the name without prefix/owner | Could not distinguish from the `emaarco/agento-patronum` candidate which IS confirmed 404 via `gh api repos/emaarco/agento-patronum`. Most likely a duplicate reference to the same fabrication; row retained because the original research log mentioned it as a separate candidate | NOT-FOUND-LIKELY-DUPLICATE |
 | `hardwood-hq/hardwood` | ChatGPT 2026-05-25 | repo exists (282★, Apache-2.0) but actual content is "fast minimal dependency Apache Parquet" (Java parquet library), NOT "Code Review Pyramid" tool as ChatGPT claimed | HALLUCINATED-DESC |
-| `affaan-m/everything-claude-code` → `affaan-m/ECC` | ChatGPT 2026-05-25 | reports 191,901 stars — implausibly high (Linux kernel ~165k for reference). Almost certainly star manipulation or fork-inflation artifact | STAR-ANOMALY |
+| `affaan-m/everything-claude-code` → `affaan-m/ECC` | ChatGPT 2026-05-25 | live count `gh api repos/affaan-m/ECC --jq '.stargazers_count'` returned **192,046** at re-verification 2026-05-25 (prior reading was 191,901; count continues to climb at unrealistic velocity — implausibly high vs Linux kernel ~165k for reference). Almost certainly star manipulation or fork-inflation artifact. Anomaly categorization stands regardless of exact count. | STAR-ANOMALY |
 | Jules (parcadei/Jules? google.dev/jules?) | research | Closed-source; cloud-VM mechanism inferred only via `jules-cli-ext` clone | CLOSED-SOURCE |
 
 ## Non-cloneable sources (track via vendor-self-published flagging)

@@ -226,6 +226,14 @@ For each new `lens-*.md` file, port rules verbatim from inspected competitors:
 - **GOVERNANCE-GAP Gap C (boundary_rules)**: feeds `trigger.layer_crossing_detected` for `architecture_boundary` lens
 - **SCHEMA-GAP Gap 3 (critic_source)**: `lens_source` is orthogonal but related; both populate finding provenance
 - **CRITIC-INDEPENDENCE Gap B (parallel critic mode)**: each parallel critic can be a triggered specialty lens
+
+## Adoption-signal augmentation: adaptive specialist gating (gstack, added 2026-05-25 per Codex Class 2 MC1)
+
+`refs/competitors/gstack/review/SKILL.md:1301-1313` ships an **adaptive specialist gating** layer that sits *after* scope-based trigger evaluation: each specialist is tagged `[GATE_CANDIDATE]` (0 findings in 10+ dispatches → auto-skip) or `[NEVER_GATE]` (insurance-lens like security/data-migration; always dispatch regardless of hit rate). Force flags (`--security`, `--all-specialists`) override gating.
+
+**Why interesting for contest-refactor**: contest-refactor's proposed `lens-registry.toml` trigger predicates are static (glob/regex/scoring threshold per Adoption-order Phase 2 above). gstack adds a **dynamic gating layer** based on per-lens hit-rate history. For lenses with provably low-yield on a given project, auto-suppression reduces token spend without losing safety: `[NEVER_GATE]` reserves the bypass for high-asymmetric-cost categories (security, data migration).
+
+**Adoption recommendation** (P2, not P1): defer until contest-refactor has shipped 6+ lenses AND has at least 10 cross-project hit-rate samples to draw on. Premature gating with sparse data would over-suppress. When added, store hit-rate metadata in `governance_context.lens_hit_history{lens_name: {dispatches: N, findings_emitted: M}}` and apply `[GATE_CANDIDATE]` only when `dispatches >= 10 AND findings_emitted == 0`. `[NEVER_GATE]` annotation lives in `lens-registry.toml` per-lens (`insurance_lens = true` field).
 - **LEVNIK-AUDIT-SUITE-GAP Gap A (two-layer detection)**: rule applies inside each specialty lens
 - **TWO-LAYER-DETECTION-GAP**: this lens-dispatch mechanism is the carrier; two-layer-detection is the rule applied within
 

@@ -21,10 +21,10 @@ Risk Score = Normalized Change Frequency × Normalized Complexity Factor
 Both factors normalized to 0-1 before multiplication. Cites Microsoft + Google research: files in top 10% of BOTH change frequency AND complexity show 4-9x higher defect rates.
 
 Inputs:
-- Change Frequency: `git log --pretty=format: --name-only | sort | uniq -c | sort -rn`
-- Complexity Factor: cyclomatic complexity OR LOC OR npath count
+- Change Frequency: `(commits in time period) / (file age in days)`, gathered via `git log --since=... --name-only --format=""`
+- Complexity Factor: `LOC + Indentation Depth + Function Count` (per source `:53` — composite of three deterministic shell-derivable metrics, not cyclomatic/npath which would require a parser)
 
-Output: ranked Mermaid table `Risk Score | Changes | LOC | File`.
+Output: shell `printf` table `Risk Score | Changes | LOC | File` produced by the source's reference `#!/bin/bash` block at `:132-140` (not Mermaid).
 
 ### ROI tiers (`forensic-refactoring-roi/SKILL.md:50-68`)
 
@@ -35,9 +35,9 @@ ROI = (Annual Savings / Investment Cost) × 100
 | Tier | ROI | Break-even |
 |---|---|---|
 | QUICK WINS | >500% | <3 months |
-| HIGH PRIORITY | 300-500% | <6 months |
-| STRATEGIC | 150-300% | <12 months |
-| LOW | <150% | n/a |
+| HIGH PRIORITY | >300% | <6 months |
+| STRATEGIC | >150% | <12 months |
+| LOW | <150% **OR** >12 months | (either condition demotes to LOW per source `:67`) |
 
 ### Effort formula (`forensic-refactoring-roi/SKILL.md:72-86`)
 

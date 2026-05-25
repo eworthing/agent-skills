@@ -146,9 +146,21 @@ The `layer2_verdict: "false_positive_excluded"` value is permitted only for find
 ## Pairing with other gap docs
 
 - **SPECIALTY-LENS-DISPATCH-GAP**: each `lens-*.md` ships its own Layer 2 verification rules; this gap formalizes the protocol all lenses follow
-- **SCHEMA-GAP `confidence` field**: Layer 1 alone = `confidence: low` (don't emit); Layer 2 weak = `confidence: medium`; Layer 2 with concrete verification = `confidence: high`
+- **SCHEMA-GAP `confidence` field** (canon: 2-value `high|medium`, per [SCHEMA-GAP-CONTEST-REFACTOR.md § Confidence enum canon](SCHEMA-GAP-CONTEST-REFACTOR.md#confidence-enum-canon-sc1-resolution)): Layer 1 alone = not emitted (Layer-1-only candidates go into `excluded_candidates[]`, not `findings[]`, so `confidence: low` is intentionally absent from the canon); Layer 2 weak verification (single evidence pointer) = `confidence: medium`; Layer 2 strong verification (multi-evidence or cross-checked) = `confidence: high`
 - **CRITIC-INDEPENDENCE Gap C (validator subagent)**: validator can refuse to confirm findings without Layer 2 evidence; pairs with G42
 - **Q4 + Q6 (quality passes)**: two-layer detection HARDENS these from quality-pass to validation-gate
+
+### Adjacent reasoning contract (logic-lens, added 2026-05-25 per Codex Class 2 MC2)
+
+`refs/competitors/logic-lens/AGENTS.md:25` defines an **Iron Law** for every emitted finding: must use `Premises → Trace → Divergence → Trigger → Remedy` (5-stage reasoning chain anchored in `skills/_shared/common.md`). This is a stricter pre-remedy reasoning contract than contest-refactor's `Claim → Source → Consequence → Remedy` (4-stage) at `references/method.md`.
+
+**Comparison**:
+- contest-refactor `Claim → Source → Consequence → Remedy` — anchors the assertion + cites evidence + ties to architectural impact + proposes fix
+- logic-lens `Premises → Trace → Divergence → Trigger → Remedy` — separates the premises (what assumptions the reasoning rests on) from the trace (the path of logic) from the divergence (where actual behavior departs) from the trigger (the executable case that proves it) from the remedy
+
+**Difference that matters**: logic-lens's `Trigger` field is an **executable case** — a specific input or condition that would reproduce the divergence. contest-refactor's chain has no analog; `evidence[]` is observational, not causal. Adopting `trigger:` as an optional finding-level field would harden the architecture findings most likely to be "subjectively obvious" into falsifiable claims.
+
+**Adoption recommendation** (P2 deferred): not a Layer-1/Layer-2 augmentation per se — it's a per-finding *reasoning contract* refinement that pairs more naturally with [SCHEMA-GAP-CONTEST-REFACTOR.md § Gap 2 (severity_rationale)](SCHEMA-GAP-CONTEST-REFACTOR.md). Defer until at least 3 finding categories where causal-trigger is meaningfully testable (e.g., the `seam_violation` family). Tracking here because logic-lens's contract was missed in prior research; the full Iron Law belongs in a future per-domain protocol doc, not in the schema canon.
 
 ## What contest-refactor wins vs levnik
 

@@ -179,3 +179,40 @@ Semantic rejection/downgrade logic does **not** belong in `validate-artifact.py`
 4. **Gap 5 (validator subagent)** — semantic rejection belongs here, not in Python structural validation.
 5. **Gap 3 + Gap 4 (critic_source + dedup metadata)** — reserve when parallel critics move from P1 idea to actual design work.
 6. **Gap 6 (SARIF)** — defer until a CI-integration consumer exists.
+
+## Schema-version sequencing (v4→v5)
+
+contest-refactor's `schema_version` history per `contest-refactor/references/output-format-json.md § Schema version 3 changelog`:
+
+| Version | Driver | Migration table location |
+|---|---|---|
+| v2 → v3 | `dry_run`, `discovery.test_*`, `implementation_review.retry_*` | `contest-refactor/references/output-format-json.md:27-31` |
+| v3 → v4 | Gap 1 (`confidence`) + Gap 2 (`severity_rationale`) + Gap 3/4 reserved keys, this doc § Schema delta line 130 | This doc, additive — no default-fill table needed (omit = `null` / Critic supplies) |
+| **v4 → v5** | [CROSS-MODEL-CRITIC-GAP Gap E](CROSS-MODEL-CRITIC-GAP.md#gap-e) + [HALT-STATE-GAP Gap F](HALT-STATE-GAP.md#gap-f-p1-new-session-spanning-halt-handoff-for-cross-session-resumability-per-continuous-claude-v3-added-2026-05-25) | **This section — single owner across both gap docs** |
+
+### v4 → v5 default-fill table (when reading a v4 artifact under v5 code)
+
+| Missing v5 field | Source gap | Default |
+|---|---|---|
+| `cross_model_scoring` (top-level on `CURRENT_REVIEW.json`) | CROSS-MODEL-CRITIC Gap E | `null` (feature off; legacy artifact had no Category-2 critic) |
+| `cross_model_scoring.invocation_status` (when block present but partial) | CROSS-MODEL-CRITIC Gap E | `"skipped"` |
+| `cross_model_scoring.halt_success_gate_result` (when block present but score missing) | CROSS-MODEL-CRITIC Gap E | `"skipped"` |
+| `session_spanning_handoff` (top-level on `CURRENT_REVIEW.json`) | HALT-STATE Gap F | `null` (feature off; legacy artifact had no cross-session export) |
+| `session_spanning_handoff.enabled` (when block present but flag missing) | HALT-STATE Gap F | `false` |
+
+### Adoption-order constraint (composability with AO1)
+
+Per Codex Class 4 [AO1] (2026-05-25): both Gap E and Gap F land on the same `schema_version: 5` bump. **Neither gap may ship in code until this single migration table is merged**, even if only one of the two features is being shipped. The other feature's defaults must still resolve cleanly when a v4 artifact is read by v5 validator code. G29 (schema_version invariant gate in `validation.md`) extends to read this table.
+
+### Confidence enum canon (SC1 resolution)
+
+contest-refactor's confidence canon is **2-value: `high | medium`** (per Gap 1 above, `canon/confidence-levels.toml:1`). The 3-value mapping at `TWO-LAYER-DETECTION-GAP.md:149` was a doc bug — Layer 1 alone never reaches `confidence: low` because such candidates are dropped (recorded in `excluded_candidates[]`, not in `findings[]`). The corrected mapping (now also reflected in TWO-LAYER-DETECTION-GAP §line 149):
+
+| Detection path | Emitted confidence | Audit-trail destination |
+|---|---|---|
+| Layer 1 candidate, Layer 2 not yet run | (not emitted) | nowhere — held in working memory |
+| Layer 1 + Layer 2 verification **failed** | (not emitted) | `excluded_candidates[]` |
+| Layer 1 + Layer 2 **weak verification** (single evidence pointer, no cross-check) | `medium` | `findings[].confidence = "medium"` |
+| Layer 1 + Layer 2 **strong verification** (multi-evidence or cross-checked) | `high` | `findings[].confidence = "high"` |
+
+`confidence: low` is intentionally absent from the canon — emitted findings carry actionable signal, not speculation.

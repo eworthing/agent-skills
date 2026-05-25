@@ -96,7 +96,7 @@ Legend: **✓** = present, **partial** = weaker form, **—** = absent, **n/a** 
 | Pre/post git-status verification | — | — | — | ✓ snapshots before/after; warns on file mutation | n/a (provider doesn't write) |
 | Hard constraints in prompt | partial (trust-model carry-forward) | — | — | ✓ explicit no-writes/no-git/no-installs | n/a (read-only file scoring) |
 | Timeout discipline | n/a | implicit | implicit | ✓ 600s upper bound | partial (default 60s SDK call) |
-| Output schema | structured (CURRENT_REVIEW.json) | MD `reviews/review-<id>.md` | markdown table | `VERDICT: APPROVED \| NEEDS_CHANGES` + severity-tagged | `SCORE: X/10` + ISSUES + `VERDICT: PASS \| FAIL` |
+| Output schema | structured (CURRENT_REVIEW.json) | MD `reviews/review-<id>.md` | markdown table | `VERDICT: APPROVED \| NEEDS_CHANGES` + severity-tagged | **Hook → Claude Code**: `{"decision": "approve"\|"block", "reason": ...}` JSON (`gemini-audit.py:421-426`). **Internal Gemini-response template** (parsed inside the hook): `SCORE: X/10` + ISSUES + `VERDICT: PASS \| FAIL` (`:297-302`). Don't conflate — the JSON is the integration surface; the SCORE/ISSUES/VERDICT text is only the model's intermediate emission that `parse_score()` consumes. |
 | Parallel critic count | — (1 Reviewer) | ✓ (up to 4 parallel inside Codex) | — (1) | — (1) | — (1; deep mode = agentic) |
 | Internal-to-provider dedup | n/a | ✓ (synthesis happens in Codex multi-agent) | n/a | n/a | n/a |
 | Mandatory vs optional | n/a | required for loop continuation | optional (npx fallback) | required (errors if Codex missing) | required (default 10/10) |
@@ -259,7 +259,7 @@ Cheaper than full-loop cross-model; mirrors OCR's Discourse phase gating from CR
    - Compare: score ≥ threshold (default 8/10; configurable; Bouncer default 10/10 too strict for autonomous loop) → HALT_SUCCESS proceeds; below → block, feed score+rationale to Critic Phase next loop
 6. Step 12 loop dispatch
 
-**Schema additions** (additive, `schema_version: 5`):
+**Schema additions** (additive, `schema_version: 5` — co-owned with HALT-STATE Gap F; the authoritative v4→v5 default-fill table lives in [SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5). This gap's defaults are listed there alongside HALT-STATE Gap F's. Neither gap owns the migration unilaterally; the table must merge before either ships in code):
 
 ```jsonc
 {
@@ -298,7 +298,7 @@ Cheaper than full-loop cross-model; mirrors OCR's Discourse phase gating from CR
 1. **Gap A (`--cross-model-critic` Category-1 flag + lifecycle phase 1.2)** — opt-in, no default change. Records adversarial verdicts in CURRENT_REVIEW.json schema_version 4. Codex via stdin (TimmyZinin pattern) only.
 2. **Gap C (provider-adapters.md external-critic table split by category)** — pairs with Gap A + Gap E; declares safe-flag defaults per provider per category. Adds TimmyZinin git-status verification + pauhu graceful-degradation recommendations.
 3. **Gap B (internal-to-external dedup)** — prompt-template work; lands with Gap A.
-4. **Gap E (Category-2 post-output scoring at HALT_SUCCESS gate + G48)** — opt-in, no default change. Records scoring verdict in CURRENT_REVIEW.json schema_version 5. Gemini Flash via SDK (Bouncer pattern) only. Schema bump 4→5 required.
+4. **Gap E (Category-2 post-output scoring at HALT_SUCCESS gate + G48)** — opt-in, no default change. Records scoring verdict in CURRENT_REVIEW.json schema_version 5. Gemini Flash via SDK (Bouncer pattern) only. **Schema bump 4→5 is co-owned with HALT-STATE Gap F**; the v4→v5 default-fill table (single source) lives in `SCHEMA-GAP-CONTEST-REFACTOR.md § Schema-version sequencing` and must land **before** either Gap E or HALT-STATE Gap F ships.
 5. **Gap D (HIGH-stakes-only mode)** — optimization on top of Gap A; only if Gap A is too expensive in practice. Orthogonal to Gap E.
 
 ## Pairing with other gap docs

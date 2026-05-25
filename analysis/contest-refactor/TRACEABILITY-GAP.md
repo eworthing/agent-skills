@@ -106,7 +106,7 @@ Pairs with HALT-STATE-GAP Gap C (per-hunk partial-accept) — both share the sam
 
 ### Gap A.1: Refactoring-pattern canonical vocabulary
 
-rohitg00's `refactoring-specialist.md:9` recommends "naming the specific refactoring pattern applied" in commit messages but doesn't formalize. Combined with arXiv:2511.04824's empirical finding (Change Variable Type 11.8% / Rename Parameter 10.4% / Rename Variable 8.5%), there's a clear case for a canonical Fowler-derived enum.
+rohitg00's `refactoring-specialist.md:20` (full path: `refs/competitors/rohitg00-toolkit/agents/developer-experience/refactoring-specialist.md`) recommends "naming the specific refactoring pattern applied" in commit messages but doesn't formalize. (Earlier draft cited `:9` — that line is part of the YAML frontmatter; the commit-pattern rule lives at line 20 in the numbered Process section.) Combined with arXiv:2511.04824's empirical finding (Change Variable Type 11.8% / Rename Parameter 10.4% / Rename Variable 8.5%), there's a clear case for a canonical Fowler-derived enum.
 
 **Adopt** new canon file `canon/refactoring-patterns.toml`:
 
