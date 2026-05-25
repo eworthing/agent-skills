@@ -1,6 +1,7 @@
 id = "halt-success-bad"
 purpose = "HALT_SUCCESS emitted while scorecard averages 8.9 with several dimensions at 9.0 and no residual_disposition='accepted'; protects G21 HALT_SUCCESS criteria (every dimension must be 10 or 9.5+ with an accepted, non-expired residual) and the 9.5-threshold residual rule."
 expected_result = "fail"
+aspirational = true
 notes = "PR3 resolution: validate-artifact.py now enforces G21-scorecard structurally — every HALT_SUCCESS dimension must satisfy score==10 OR (score>=9.5 AND residual_disposition=='accepted'). With the required artifact set in place (CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json), strict mode rejects on the G21-scorecard label for the four sub-9.5 dimensions (architecture_quality, data_flow, framework_idioms, simplicity, test_strategy at 9.0). The fixture fails for the canonical reason."
 
 [[tested_rules]]

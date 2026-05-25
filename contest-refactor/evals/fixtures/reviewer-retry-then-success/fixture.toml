@@ -1,6 +1,7 @@
 id = "reviewer-retry-then-success"
 purpose = "Implementation reviewer timed out on attempt 1 (90s) then succeeded on attempt 2 (retry_count=2, retry_cause=timeout, terminal verdict=approved); protects G27 retry envelope semantics for the recovered-success path."
 expected_result = "fail"
+aspirational = true
 notes = "Fixture ships only CURRENT_REVIEW.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. Original intent (G27 retry envelope on a recovered approval) is enforced at the Critic/Step-3 boundary rather than by validate-artifact.py today."
 
 [[tested_rules]]

@@ -1,0 +1,8 @@
+id = "v3-g27-bad-reason"
+purpose = "Synthetic negative fixture: complete v3 artifacts but implementation_review.reason contains forbidden infra-cause vocab ('timeout'); exercises validate-fixtures.py's rule-id cross-check (added in PR5b) end-to-end. Non-aspirational; G27 MUST fire."
+expected_result = "fail"
+notes = "Fixture ships full v3 artifact set so required-artifact passes. The reason text 'Approved after retry due to timeout on first attempt.' deliberately matches G27's forbidden-vocab regex (\btimeout\b). validate-artifact.py must emit a G27 issue; validate-fixtures.py rule-id cross-check must match cited gate G27 against fired rule G27 (regression-tests the wrong-gate-fired check). NOT aspirational."
+
+[[tested_rules]]
+kind = "gate"
+id = "G27"

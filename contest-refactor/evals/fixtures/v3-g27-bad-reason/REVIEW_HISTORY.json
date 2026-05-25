@@ -1,0 +1,177 @@
+{
+  "schema_version": 3,
+  "loops": [
+    {
+      "schema_version": 3,
+      "loop": 1,
+      "loop_cap": 10,
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff": null,
+      "halt_handoff_text": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-4-6",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "test_command": "swift test",
+        "test_scope": "full",
+        "test_filter": null
+      },
+      "verdict": "Promising, but architecturally immature",
+      "verdict_explanation": "Loop 1: deliberately invalid G27 envelope for cross-check regression test.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/AppEngine.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/AppState.swift:8",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Domain/Order.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/Effects.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "App/RootView.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Adapters/Spotify.swift:18",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/Reducer.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Tests/AppEngineTests.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "App/AppEngine.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [],
+      "strengths": [
+        "test"
+      ],
+      "findings": [],
+      "simplification_check": {
+        "structurally_necessary": "Continue with backlog work.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "should_not_be_done": "n/a",
+        "tests_after_fix": "Existing tests pass."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Test G27 cross-check fires",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Cross-check regression.",
+          "score_impact": "credibility +0.5"
+        }
+      ],
+      "deepening_candidates": [],
+      "builder_notes": [],
+      "narrative": "Synthetic loop 1 with deliberately invalid G27 reason text.",
+      "unresolved_reason": null,
+      "loop_result": {
+        "what_changed": "Test change.",
+        "evidence_change_is_honest": "swift test passed",
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "Core/Test.swift"
+        ]
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "Approved after retry due to timeout on first attempt.",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "rounds": 1,
+        "retry_count": 2,
+        "retry_cause": "timeout",
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "timeout",
+            "error": "no response after 90s",
+            "duration_ms": 90000
+          },
+          {
+            "attempt": 2,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": 12400
+          }
+        ]
+      }
+    }
+  ]
+}

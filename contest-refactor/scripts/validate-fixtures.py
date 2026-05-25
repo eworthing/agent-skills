@@ -33,9 +33,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 from typing import Any, List, Sequence
@@ -50,6 +52,7 @@ ARTIFACT_VALIDATOR = SCRIPT_DIR / "validate-artifact.py"
 
 REQUIRED_FIXTURE_FIELDS = ("id", "purpose", "tested_rules", "expected_result")
 EXPECTED_RESULT_VALUES = {"pass", "fail"}
+OPTIONAL_BOOL_FIELDS = ("aspirational",)
 
 RESIDUAL_RULES = {
     "9.5-threshold",
@@ -241,6 +244,19 @@ def _validate_one_fixture(
                 toml_path,
             )
         )
+    # Type-check optional boolean fields. Aspirational fixtures opt out of
+    # rule-id assertion in the cross-check (see _cross_check_expected_result).
+    # Reject string typos like "true"/"false" that would silently degrade
+    # the assertion.
+    for field in OPTIONAL_BOOL_FIELDS:
+        if field in data and not isinstance(data[field], bool):
+            violations.append(
+                Violation(
+                    "schema",
+                    f"{field} must be a boolean (true/false), got {type(data[field]).__name__}: {data[field]!r}",
+                    toml_path,
+                )
+            )
     tested = data.get("tested_rules") or []
     if not isinstance(tested, list):
         violations.append(
@@ -289,23 +305,75 @@ def _validate_one_fixture(
     return violations
 
 
-def _run_artifact_check(fixture_dir: Path) -> tuple[int, str]:
-    """Invoke validate-artifact.py --mode strict on a fixture; return (exit, combined output)."""
-    result = subprocess.run(
-        ["python3", str(ARTIFACT_VALIDATOR), str(fixture_dir), "--mode", "strict"],
-        capture_output=True,
-        text=True,
-    )
-    output = (result.stdout or "") + (result.stderr or "")
-    return result.returncode, output.strip()
+def _run_artifact_check(fixture_dir: Path) -> tuple[int, str, list[dict]]:
+    """Invoke validate-artifact.py --mode strict --json on a fixture.
+
+    Returns (exit_code, combined_text_output, issues_list). The issues list is
+    parsed from the --json sidecar payload; empty if the run produced no JSON
+    file or it failed to parse.
+    """
+    with tempfile.NamedTemporaryFile(
+        mode="r", suffix=".json", delete=False, encoding="utf-8"
+    ) as tf:
+        json_path = Path(tf.name)
+    try:
+        result = subprocess.run(
+            [
+                "python3",
+                str(ARTIFACT_VALIDATOR),
+                str(fixture_dir),
+                "--mode",
+                "strict",
+                "--json",
+                str(json_path),
+                "--quiet",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        output = (result.stdout or "") + (result.stderr or "")
+        issues: list[dict] = []
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+            raw_issues = payload.get("issues") if isinstance(payload, dict) else None
+            if isinstance(raw_issues, list):
+                issues = [i for i in raw_issues if isinstance(i, dict)]
+        except (json.JSONDecodeError, OSError):
+            pass
+    finally:
+        try:
+            json_path.unlink()
+        except OSError:
+            pass
+    return result.returncode, output.strip(), issues
+
+
+def _extract_cited_gates(fixture_data: dict) -> list[str]:
+    """Return the list of gate-kind tested_rules[].id entries."""
+    out: list[str] = []
+    for rule in fixture_data.get("tested_rules") or []:
+        if isinstance(rule, dict) and rule.get("kind") == "gate":
+            rid = rule.get("id")
+            if isinstance(rid, str) and rid:
+                out.append(rid)
+    return out
 
 
 def _cross_check_expected_result(
-    fixture_dir: Path, expected: str
+    fixture_dir: Path, fixture_data: dict
 ) -> List[Violation]:
-    """Run validate-artifact.py --mode strict and confirm exit code matches expected."""
+    """Run validate-artifact.py --mode strict, confirm exit code matches
+    expected_result, and (for non-aspirational fail fixtures with cited gates)
+    assert that at least one fired issue's rule matches a cited gate id.
+
+    The aspirational flag (top-level boolean, default false) exempts a fixture
+    from the rule-id assertion. Use it for fixtures whose cited gate is not yet
+    validator-implemented; the fixture continues to regression-test exit code
+    only until the gate is wired.
+    """
     violations: List[Violation] = []
-    exit_code, output = _run_artifact_check(fixture_dir)
+    expected = fixture_data.get("expected_result")
+    exit_code, output, issues = _run_artifact_check(fixture_dir)
     if expected == "pass" and exit_code != 0:
         violations.append(
             Violation(
@@ -316,12 +384,33 @@ def _cross_check_expected_result(
                 fixture_dir,
             )
         )
-    elif expected == "fail" and exit_code == 0:
+        return violations
+    if expected == "fail" and exit_code == 0:
         violations.append(
             Violation(
                 "expected-fail",
                 f"expected_result=fail but validate-artifact.py --mode strict "
                 f"exited 0 (passed); fixture cannot regression-test a failure case",
+                fixture_dir,
+            )
+        )
+        return violations
+    if expected != "fail":
+        return violations  # only fail-fixtures get the rule-id assertion
+    if fixture_data.get("aspirational") is True:
+        return violations  # aspirational fixtures skip the rule-id assertion
+    cited_gates = _extract_cited_gates(fixture_data)
+    if not cited_gates:
+        return violations  # nothing to assert against
+    fired_rules = {issue.get("rule") for issue in issues if issue.get("rule")}
+    if not (fired_rules & set(cited_gates)):
+        violations.append(
+            Violation(
+                "wrong-gate-fired",
+                f"expected_result=fail with cited gates {cited_gates} but none fired; "
+                f"actual fired rules: {sorted(r for r in fired_rules if r) or '(none)'}. "
+                "If this gate is not yet validator-implemented, set "
+                "`aspirational = true` in fixture.toml.",
                 fixture_dir,
             )
         )
@@ -379,7 +468,7 @@ def main(argv: list[str] | None = None) -> int:
             data = _load_toml(fixture_dir / "fixture.toml") or {}
             expected = data.get("expected_result")
             if expected in EXPECTED_RESULT_VALUES:
-                violations.extend(_cross_check_expected_result(fixture_dir, expected))
+                violations.extend(_cross_check_expected_result(fixture_dir, data))
 
     if violations:
         for v in violations:

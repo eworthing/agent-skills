@@ -1,0 +1,20 @@
+id = "v3-clean-loop"
+purpose = "Positive v3 CONTINUE fixture: vanilla loop 1, retry_count=1, all required artifacts present, all G18/G19/G22/G27/G28 pass. First v3 positive fixture; locks in PR4 + PR5a together as the canonical 'happy path' regression target."
+expected_result = "pass"
+notes = "Ships full v3 artifact set (CURRENT_REVIEW.json + CURRENT_REVIEW.md + REVIEW_HISTORY.json + REVIEW_HISTORY.md + findings_registry.json). All v3 invariants satisfied: G18 (loops count == 1 == loop, last entry verbatim), G19 (claude_code default model + sources), G22 (archive divider matches), G27 (retry_count=1, retry_attempts absent, no implementation_review), G28 (no LOOP_STATE.json = legal post-commit cleanup state). Strict mode must exit 0."
+
+[[tested_rules]]
+kind = "gate"
+id = "G18"
+
+[[tested_rules]]
+kind = "gate"
+id = "G19"
+
+[[tested_rules]]
+kind = "gate"
+id = "G22"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"
