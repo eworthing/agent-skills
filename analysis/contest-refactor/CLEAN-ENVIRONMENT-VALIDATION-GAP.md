@@ -70,7 +70,7 @@ Default off. When enabled, contest-refactor adds a Phase 1.3 between Step 1 (Cri
    - Cleanup: `git worktree remove .contest-refactor/revalidate-worktrees/<short_sha>`
 3. Step 2 only runs if Phase 1.3 confirmed clean state
 
-**Schema additions** (additive, `schema_version: 4`):
+**Schema additions** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {

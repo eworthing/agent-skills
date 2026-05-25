@@ -85,7 +85,7 @@ The arXiv falsifier (`ARXIV-AGENTIC-REFACTORING-GAP.md`) shows agents naturally 
 
 ### Gap A (P1): Add `roi_score` + `effort_estimate` + `roi_tier` to backlog entries
 
-**Schema additions** (additive, `schema_version: 4`):
+**Schema additions** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {

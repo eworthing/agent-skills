@@ -284,6 +284,8 @@ loop_phases = [
 
 ## Schema additions (additive, `schema_version: 4`)
 
+*Default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5) — heading text + anchor preserved for backward link compatibility.*
+
 Top-level CURRENT_REVIEW.json:
 
 ```jsonc

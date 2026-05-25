@@ -135,7 +135,7 @@ safe_flags = "--sandbox workspace-write"   # NEVER inherit hamelsmu's --dangerou
    - Update `CURRENT_REVIEW.json.findings[]` with `cross_model_verdict: agreed | disputed | added`
 3. Architect Phase reads updated backlog
 
-**Schema additions** (additive, `schema_version: 4`):
+**Schema additions** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5); this section is Gap A's v4 fields, Gap E's v5 fields are at §262):
 
 ```jsonc
 {

@@ -84,7 +84,7 @@ It also mitigates the metric-worship critique raised by earlier research: per-fi
 
 Per Codex round 1 N2 — original phrasing relied on "byte-range exceeds Layer 1 grep match" which a deterministic Python validator cannot prove without explicit structured fields. Strengthening the schema (preferred over weakening the gate):
 
-**New schema fields per finding** (additive, `schema_version: 4`):
+**New schema fields per finding** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {
@@ -118,7 +118,7 @@ Per Codex round 1 N2 — original phrasing relied on "byte-range exceeds Layer 1
 >
 > **Carve-out**: suspended for findings with `severity: "Cosmetic for contest"` AND `lens_source == "n/a"` (mechanical findings like trailing-whitespace where Layer 1 = Layer 2 by construction).
 
-**Schema addition** (additive, `schema_version: 4`):
+**Schema addition** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {

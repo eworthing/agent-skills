@@ -196,7 +196,7 @@ architecture-review-mcp builds NetworkX-backed dep + class graphs from AST. Broo
     - Failure mode: when no AST parser available for detected stack, fall back to grep-based shallow graph with `graph_fidelity: "shallow"` flag in discovery. Don't block the loop.
 ```
 
-**Schema additions** (additive, `schema_version: 4`):
+**Schema additions** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {
@@ -279,7 +279,7 @@ Today SKILL.md Step 0 sub-step 5 reads CONTEXT.md and docs/adr/; sub-step 6 dete
 
 Do **not** add a hard Python gate yet. First decide whether findings need an explicit `lint_rule_id` / `governance_rule_ref` field so the linkage is machine-checkable.
 
-Schema additions (additive, `schema_version: 4`):
+Schema additions (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {

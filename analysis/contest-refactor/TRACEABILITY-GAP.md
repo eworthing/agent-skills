@@ -72,7 +72,7 @@ Contest-refactor satisfies this **at file granularity** via `targeted_finding_id
 
 Closes the "every changed line maps to a finding ID" gap structurally.
 
-**Schema** (additive, `schema_version: 4`):
+**Schema** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 // CURRENT_REVIEW.json.loop_result
@@ -178,7 +178,7 @@ refactoring_patterns = [
 ]
 ```
 
-**Schema additions** (additive, `schema_version: 4`):
+**Schema additions** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {
@@ -251,7 +251,7 @@ Aider supports whole / diff / udiff / patch and picks per model (Claude prefers 
     - Cache: same incremental key scheme as GOVERNANCE Gap D import-graph (per Codex round 2 N1 — earlier "HEAD SHA + personalization-set hash" was stale wording). Key = sha256(source-root file content) + sha256(personalization-set: files referenced in CURRENT_REVIEW.json prior loop + working_tree_dirty_paths). Incremental recompute on changed_paths[]; full rebuild on --rebuild-repo-map flag. NO HEAD_SHA in key.
 ```
 
-**Schema additions** (additive, `schema_version: 4`):
+**Schema additions** (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {
@@ -321,7 +321,7 @@ Today SKILL.md Step 3 sub-step 6 populates `loop_result.changed_paths[]` from `g
 >
 > Reviewer's regression-check explicitly enumerates hunks with `tie_kind: unmapped`. G34 (new) enforces ≤ 5% of changed-line count as `unmapped` unless `unmapped_hunks_explanation` is present.
 
-Schema additions (additive, `schema_version: 4`):
+Schema additions (additive, `schema_version: 4` — default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5)):
 
 ```jsonc
 {

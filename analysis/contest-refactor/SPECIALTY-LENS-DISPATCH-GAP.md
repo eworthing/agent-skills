@@ -147,6 +147,8 @@ trigger.refactor_kind = "removal"        # set by Step 2 plan
 
 ### Schema additions (additive, `schema_version: 4`)
 
+*Default-fill row per [SCHEMA-GAP § Schema-version sequencing](SCHEMA-GAP-CONTEST-REFACTOR.md#schema-version-sequencing-v4v5) — heading text + anchor preserved for backward link compatibility.*
+
 ```jsonc
 {
   "discovery": {
