@@ -1,6 +1,6 @@
 # Research Delta — 8 missed-clone inspection vs existing gap docs
 
-After cloning 8 competitors flagged by external research (claude-review-loop, ralph-wiggum, awesome-code-review, cygnusfear-stuff, grill-for-claude, rohitg00-toolkit, forensic-skills, anthropic-security-review) + finally opening `mattpocock-skills/improve-codebase-architecture` (cloned but never inspected), four parallel agents extracted per-doc deltas. Below: verified findings, research overstatements, per-doc revisions, new gap topics.
+After cloning 8 competitors flagged by external research (claude-review-loop, ralph-wiggum, awesome-code-review, cygnusfear-stuff, grill-for-claude, rohitg00-toolkit, forensic-skills, anthropic-security-review) + finally opening `mattpocock-skills/skills/engineering/improve-codebase-architecture` (cloned but never inspected), four parallel agents extracted per-doc deltas. Below: verified findings, research overstatements, per-doc revisions, new gap topics.
 
 ## Research overstatements to flag
 

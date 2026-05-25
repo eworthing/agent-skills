@@ -87,7 +87,7 @@ Sorted by SKILL.md count descending. Original-batch + 4-added-morning + 13-added
 
 ### Synthesis + delta passes
 
-- [`RESEARCH-DELTA.md`](RESEARCH-DELTA.md) — Per-doc deltas after inspecting 8 missed competitors (claude-review-loop, ralph-wiggum, awesome-code-review, cygnusfear-stuff, grill-for-claude, rohitg00-toolkit, forensic-skills, anthropic-security-review) + finally opening mattpocock-skills/improve-codebase-architecture
+- [`RESEARCH-DELTA.md`](RESEARCH-DELTA.md) — Per-doc deltas after inspecting 8 missed competitors (claude-review-loop, ralph-wiggum, awesome-code-review, cygnusfear-stuff, grill-for-claude, rohitg00-toolkit, forensic-skills, anthropic-security-review) + finally opening `mattpocock-skills/skills/engineering/improve-codebase-architecture`
 - [`LEVNIK-AUDIT-SUITE-GAP.md`](LEVNIK-AUDIT-SUITE-GAP.md) — Deep probe of levnik's 35+ specialty worker audit-suite (orchestrator-worker-coordinator pattern)
 - [`STATE-MACHINE-COMPOSITION-APPENDIX.md`](STATE-MACHINE-COMPOSITION-APPENDIX.md) — Unified end-to-end state machine sequencing 4 new intercept points (Parallel Critics + Synthesis, Validator Subagent, Cross-Model Critic, Clean-Env Revalidation) per Gemini Pro peer review round 1 (B1). Resolves race conditions + token-budget concerns; adds G45+G46+G47 + `canon/loop-phases.toml`.
 - [`REVIEW-PROMPT.md`](REVIEW-PROMPT.md) — Copy-paste prompt for cross-LLM peer review of all gap docs

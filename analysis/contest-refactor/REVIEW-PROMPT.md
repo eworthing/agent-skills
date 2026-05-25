@@ -38,7 +38,7 @@ The analysis has been described in commit messages as having survived 7 rounds o
 - `GOVERNANCE-GAP.md` — Gap C reframed per archgate prior art; decision-fork C.1/C.2/C.3 with C.2 (TOML-only) as default per user prereq directive (don't adopt archgate runtime dep). Verify the doc CLEARLY drops C.1 and demotes C.3 to opt-in; flag ambiguous "we could go either way" framing.
 - `CROSS-MODEL-CRITIC-GAP.md` — two-tier categorization (Cat 1 pre-output via stdin / Cat 2 post-output via SDK); added Bouncer + pauhu + TimmyZinin comparators; Gap E (G48 Category-2 HALT_SUCCESS gate via Gemini Flash SDK); schema_version 4→5. Verify provider/pattern assignment to category is unambiguous + G48 gate definition is clear.
 - `HALT-STATE-GAP.md` — added continuous-claude-v3 comparator + temporal-scope framing (loop-spanning vs session-spanning vs permanent); added Gap F (session-spanning halt-handoff) + Gap G (context: fork Phase 1.1 Validator); cross-link to CRITIC-INDEPENDENCE-GAP. Verify "no competitor matches checkpoint mechanics" is consistently narrowed to LOOP-spanning scope (no remaining unscoped "gold standard" claims).
-- `INVENTORY.md` — count 26→39; skill-format table reordered (alirezarezvani 728 SKILLs = new largest); coverage map updated for new docs.
+- `INVENTORY.md` — count 26→47 (post-SM8 filesystem audit `ls -d refs/competitors/*/ | wc -l = 47`; pre-fix drafts said "39" which double-counted 22 initial with morning-batch attribution and missed the 8 RESEARCH-DELTA-round clones); skill-format table reordered (alirezarezvani 728 SKILLs = new largest); coverage map updated for new docs.
 
 **Newly authored 2026-05-25 p.m.** (verify methods extracted from sources actually exist):
 
@@ -140,7 +140,7 @@ For each "competitor X has feature Y" or "contest-refactor already has Z" claim:
 - **forensic-skills formulas**: ROI-PRIORITIZATION-GAP quotes `Risk Score = Normalized Change Frequency × Normalized Complexity Factor` and 4-tier ROI bands. Verify against `forensic-hotspot-finder/SKILL.md` + `forensic-refactoring-roi/SKILL.md`.
 - **rohitg00 refactoring-specialist**: TRACEABILITY-GAP quotes atomic-step + characterization-test + per-pattern-commit prose. Verify in `agents/developer-experience/refactoring-specialist.md`.
 - **grill-for-claude `[GOOD]` enum**: SCHEMA-GAP Gap 7 + GOVERNANCE-GAP cite specific lines + verbatim untrusted-content rule. Verify in `codex/skills/grill-core/SKILL.md`.
-- **anthropic-security-review** 12 hard exclusions: verify count + content against `.claude/commands/security-review.md`.
+- **anthropic-security-review** 17 enumerated exclusions (16 unique — source has a duplicated `16.` numbering typo, per Codex SM1 fix): verify count + content against `.claude/commands/security-review.md`. If a reviewer counts "12" today, that's pre-SM1 stale; the current count is 17 enumerated / 16 unique.
 - **opencode `--prompt-file` flag**: CROSS-MODEL-CRITIC-GAP marks NOT VERIFIED. Re-verify if a clone exists.
 - **pr-agent hunk regex**: TRACEABILITY-GAP cites `@@ -start,size +start,size @@` parser. Verify.
 - **prism**: gap docs frame it as post-mortem analyzer (read-only Python). Verify NOT runtime hook.
@@ -179,7 +179,7 @@ For each "competitor X has feature Y" or "contest-refactor already has Z" claim:
 
 ### Class 2: Missing competitors / under-inspected sources
 
-The gap docs cite 47 competitors (per filesystem count; INVENTORY may understate as 39). Some clones are present but never inspected per-doc:
+The gap docs cite 47 competitors (per filesystem count; INVENTORY.md preamble at line 5 now reads 47 after the SM8 accuracy fix — the earlier "39" understatement is no longer present in the canonical INVENTORY, but earlier reviewer notes may still reference it). Some clones are present but never inspected per-doc:
 
 **Pre-2026-05-25 light-inspection list** (sample 2-3):
 - `gstack/` (57 SKILL.md files; only mentioned in INVENTORY)

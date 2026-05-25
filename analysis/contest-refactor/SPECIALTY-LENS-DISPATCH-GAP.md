@@ -185,7 +185,7 @@ For each new `lens-*.md` file, port rules verbatim from inspected competitors:
 | Lens | Primary source | Key rules to port |
 |---|---|---|
 | `lens-concurrency.md` | levnik ln-628-concurrency-correctness-auditor + contest-refactor's existing G25 | async races, TOCTOU, deadlocks, blocking-in-async, resource contention, cross-process races, continuation-bridge audit |
-| `lens-security.md` | levnik ln-621-security-boundary-auditor + anthropic-security-review's 12 hard exclusions + claude-bouncer pattern list | hardcoded secrets (prod vs test), SQL injection with ORM context, XSS with framework auto-escape, sensitive env defaults, input validation, dangerous Bash patterns when shell-out detected |
+| `lens-security.md` | levnik ln-621-security-boundary-auditor + anthropic-security-review's 17 enumerated exclusions (16 unique; source has a duplicated `16.` numbering typo, per Codex SM1 fix) + claude-bouncer pattern list | hardcoded secrets (prod vs test), SQL injection with ORM context, XSS with framework auto-escape, sensitive env defaults, input validation, dangerous Bash patterns when shell-out detected |
 | `lens-persistence.md` | levnik ln-650 + ln-651 | N+1 detection, query plan analysis, transaction correctness, cartesian products, missing indexes |
 | `lens-test-quality.md` | levnik ln-635 + ln-638 + contest-refactor's existing G24 | test isolation (shared state detection), oracle effectiveness (assertion specificity), flakiness markers |
 | `lens-architecture-boundary.md` | levnik ln-642 + GOVERNANCE-GAP boundary rules (Gap C) | transaction-boundary ownership, session DI vs local, flat orchestration depth, layer-import violations |
