@@ -1,4 +1,77 @@
 {
   "schema_version": 2,
-  "loops": [{"schema_version": 2, "loop": 5, "state": "CONTINUE"}]
+  "loops": [
+    {
+      "schema_version": 2,
+      "loop": 1,
+      "state": "CONTINUE"
+    },
+    {
+      "schema_version": 2,
+      "loop": 2,
+      "state": "CONTINUE"
+    },
+    {
+      "schema_version": 2,
+      "loop": 3,
+      "state": "CONTINUE"
+    },
+    {
+      "schema_version": 2,
+      "loop": 4,
+      "state": "CONTINUE"
+    },
+    {
+      "schema_version": 2,
+      "loop": 5,
+      "loop_cap": 10,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-4-6",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff": null,
+      "findings_registry_path": "./findings_registry.json",
+      "verdict": "Promising, but architecturally immature",
+      "verdict_explanation": "Mid-loop CONTINUE; F-400 was retired prematurely.",
+      "scorecard": {
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Tests/Common/DateAssertions.swift:21",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [],
+      "strengths": [],
+      "findings": [],
+      "simplification_check": {
+        "structurally_necessary": "Continue with the next backlog item.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "should_not_be_done": "Skip TimeProvider injection.",
+        "tests_after_fix": "Date assertions stay deterministic."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Inject TimeProvider into test base class",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Deterministic test ordering.",
+          "score_impact": "test_strategy +0.5"
+        }
+      ],
+      "deepening_candidates": [],
+      "builder_notes": [],
+      "narrative": "Loop continues with a non-retired backlog; F-400 retirement is invalid.",
+      "unresolved_reason": null
+    }
+  ]
 }
