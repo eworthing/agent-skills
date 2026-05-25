@@ -119,7 +119,7 @@ Verbatim from `audit_worker_core_contract.md`: *"Verify Layer 1 candidates befor
 
 Contest-refactor's Critic implicitly does this (Method step 1 evidence-gathering before scoring) but doesn't formalize. **Adopt:** add to `references/method.md` as explicit rule: *"Two-layer detection: Layer 1 grep/glob candidate scan; Layer 2 context verification (read surrounding code/fixtures). No finding emitted from Layer 1 alone."*
 
-Pairs with SCHEMA-GAP's `confidence` field: Layer-1-only candidates that fail Layer 2 become `confidence: medium` or dropped, never emitted at `high`.
+Pairs with SCHEMA-GAP's `confidence` field per its 2-value canon (`high|medium`, see [SCHEMA-GAP § Confidence enum canon](SCHEMA-GAP-CONTEST-REFACTOR.md#confidence-enum-canon-sc1-resolution)): Layer 2 strong verification → `confidence: high`; Layer 2 weak verification → `confidence: medium`; Layer 2 failure or Layer 1 alone → dropped into `excluded_candidates[]`, never emitted as a finding. (Earlier draft of this line said "`confidence: medium` or dropped" for Layer-2-failure — that was inconsistent with the canon, which reserves `medium` for weak-passing Layer 2 only; `low` is intentionally absent because emitted findings carry actionable signal, not speculation.)
 
 ### Gap B (P0): Per-finding category + score band
 

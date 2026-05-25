@@ -17,7 +17,7 @@ Contest-refactor makes routing decisions at multiple points:
 What contest-refactor DOESN'T have:
 
 - A **routing-discipline framework** that systematizes routing decisions across all 5 routing points
-- A **forcing-question protocol** when routing confidence is low — currently the Critic just picks (silently)
+- A **forcing-question protocol** when routing signals are ambiguous — currently the Critic just picks (silently). (Phrasing chosen to avoid collision with SCHEMA-GAP's `confidence` enum canon, which reserves `low` as intentionally absent; this is routing-decision uncertainty, not finding-confidence emission.)
 - A **canon vocabulary** for routing signals (what counts as a "signal" to trigger which route?)
 - A **digest discipline** post-route (currently routes don't necessarily emit a structured rationale)
 
