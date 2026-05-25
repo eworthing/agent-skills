@@ -2,7 +2,7 @@
 
 **Location**: this inventory + all gap-analysis docs live under `analysis/contest-refactor/` (tracked by git). Competitor source clones live under `refs/competitors/` (gitignored, depth-1 git clones for source inspection). The two locations are paired but distinct: `analysis/` holds our derivative analysis; `refs/` holds upstream source.
 
-22 repos cloned `depth=1` into `refs/competitors/` (gitignored). NOTFOUND: Edison, bug-detective, Agento-Patronum, Jules (closed-source).
+**26 repos** cloned `depth=1` into `refs/competitors/` (gitignored) as of 2026-05-25 (22 original + 4 added 2026-05-25 after user surfaced missing-from-prior-research: archgate-cli, continuous-claude-v3, buildingopen-bouncer, jules-cli-ext). NOTFOUND: Edison, bug-detective, Agento-Patronum, emaarco/agento-patronum (separate fabrication, 2026-05-25), Jules (closed-source; jules-cli-ext is the CLI extension orchestrator only). See `CLAIM-DELTA-2026-05-25.md` for which gap docs are affected by the new clones.
 
 ## Skill-format competitors (have SKILL.md)
 
