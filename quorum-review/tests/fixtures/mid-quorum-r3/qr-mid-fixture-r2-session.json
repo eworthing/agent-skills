@@ -1,0 +1,11 @@
+{
+  "session_id": "0adb1ab3-8c14-4ba9-9c48-319b7be8a89d",
+  "reviewer": "gemini",
+  "model": "gemini-3.1-pro-preview",
+  "model_requested": "default",
+  "effort": "medium",
+  "effort_requested": "default",
+  "effort_source": "provider_default",
+  "round": 3,
+  "thinking_tokens": 5488
+}

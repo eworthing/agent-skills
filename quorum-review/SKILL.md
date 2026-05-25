@@ -1,48 +1,43 @@
 ---
 name: quorum-review
 description: >
-  Multi-provider consensus review system (v3). Orchestrates anonymous quorum
-  reviews for plans, specs, and code diffs across reviewers from different
-  providers (Claude, Gemini, Codex, Copilot), tracks canonical issue IDs in
-  a shared ledger, merges only semantically equivalent issues, and derives
-  the final verdict from surviving blockers — not raw vote counts — with an
-  independent external verifier. Use when a single reviewer's verdict feels
-  unreliable, when you need defensible blocker IDs for audit, when planning
-  high-stakes changes (security, migrations, architecture), or when the user
-  asks for "panel review", "consensus review", "multi-model review",
-  "quorum review", or a "second opinion across AI providers".
+  Multi-provider consensus review system (v3.1). Orchestrates anonymous
+  quorum reviews for plans, specs, and code diffs across reviewers from
+  different providers (Claude, Gemini, Codex, Copilot), tracks canonical
+  issue IDs in a shared ledger, merges only semantically equivalent
+  issues, and derives the final verdict from surviving blockers — not
+  raw vote counts — with an independent external verifier. Use when a
+  single reviewer's verdict feels unreliable, when you need defensible
+  blocker IDs for audit, when planning high-stakes changes (security,
+  migrations, architecture), or when the user asks for "panel review",
+  "consensus review", "multi-model review", "quorum review", or a
+  "second opinion across AI providers".
 ---
 
-# Quorum Review — Multi-Provider Consensus (v3)
+# Quorum Review — Multi-Provider Consensus (v3.1)
 
-## Contents
+## Bundled resources
 
-- What it does
-- Invocation (flags, defaults, thresholds with when to prefer each)
-- Modes (`plan`, `spec`, `code`)
-- Review contract (sections, anchors)
-- Round flow (Round 1 → Ledger → Merge → Rounds 2+ → Verification → Verdict)
-- Cross-critique syntax
-- Merge and verification rules
-- Role packs (`plan`/`spec` vs `code`)
-- Temp files
-- Examples (plan review, code review with external verifier)
-- Migration notes from v2.4
+Read on demand based on what you need:
 
-Use this skill when you need a panel of 3+ reviewers to review a plan, spec, or
-code diff and reach a ledger-derived verdict rather than a raw vote count.
+- [`references/protocol.md`](references/protocol.md) — **authoritative machine contracts**: ledger JSON schema, merge classification rules, verifier I/O contract, accepted anchor keys, v2 → v3 alias migration. Source of truth for what `run_quorum.py` accepts and emits.
+- [`references/output-format.md`](references/output-format.md) — reviewer output template (round 1 + round 2+ cross-critique), per-issue confidence requirements, code-anchor requirements, blind-mode formatting. Include in every reviewer prompt.
+- [`references/claude.md`](references/claude.md), [`references/codex.md`](references/codex.md), [`references/gemini.md`](references/gemini.md), [`references/copilot.md`](references/copilot.md) — per-provider CLI cheatsheets.
+- [`references/env.md`](references/env.md) — environment variables the orchestrator + adapter read (`CODEX_HOME`, `GEMINI_CONFIG_DIR`, `QUORUM_PARSE_FAILURES_LOG`, etc.).
+- [`scripts/run_quorum.py`](scripts/run_quorum.py) — the orchestrator (compatibility shim; implementation in [`scripts/quorum/`](scripts/quorum/)).
+- [`scripts/run_review.py`](scripts/run_review.py) — per-reviewer adapter (vendored `_common/` for provider dispatch).
+- [`scripts/_common/`](scripts/_common/) — vendored copy of the shared infrastructure in `/common/` at the repo root. **Do not edit** — re-sync via `python3 common/scripts/sync_common.py`.
 
 ## What it does
 
 - Launches multiple reviewer CLIs through `run_review.py`
-- Keeps reviewers anonymous in shared context
+- Keeps reviewer identities anonymous in shared context (`Reviewer A/B/C`)
 - Tracks canonical blocking and non-blocking issue IDs in a ledger
-- Merges only semantically equivalent issues
+- Merges only semantically equivalent issues; related/distinct and conflicts stay as relations only
 - Verifies surviving blockers with an external verifier outside the panel
 - Derives the final verdict from the ledger, not from reviewer tallies
 
-The host agent revises the artifact between rounds; the orchestrator does not
-edit the artifact itself.
+The host agent revises the artifact between rounds; the orchestrator does not edit the artifact itself.
 
 ## Invocation
 
@@ -63,26 +58,15 @@ python3 scripts/run_quorum.py \
 
 Notes:
 
-- `--plan-file` is the artifact input path. In `code` mode, point it at a code
-  diff or patch file.
+- `--plan-file` is the artifact input path. In `code` mode, point it at a code diff or patch file.
 - `--mode` defaults to `plan`; `spec` uses the same panel path as `plan`.
-- `--verifier` must be an external provider:model pair. If omitted, the
-  orchestrator auto-selects a verifier outside the panel.
-- `--threshold` controls how many supporters a blocker needs to survive.
-  Prefer:
-  - `unanimous` — when false-positive blockers are very expensive
-    (e.g., a release-gating review) and you want every reviewer to back
-    each blocker before it can REVISE the artifact.
-  - `super` (default) — for most reviews; tolerates one dissenting
-    reviewer (N-1 of N) so a single confused reviewer cannot suppress
-    a real blocker.
-  - `majority` — for fast-moving iterative drafting where you want
-    blockers to surface easily and the host agent will adjudicate.
-- `--max-rounds` has a hard cap of 5. At round 5 the orchestrator forces a
-  final verdict regardless of convergence.
-- `--skip-verification` bypasses the independent verifier stage. Use this when
-  you want faster turnaround and trust the panel's consensus without external
-  validation (e.g., during iterative drafting).
+- `--verifier` must be an external provider:model pair. If omitted, the orchestrator auto-selects a verifier outside the panel.
+- `--threshold` controls how many supporters a blocker needs to survive. Prefer:
+  - `unanimous` — when false-positive blockers are very expensive (e.g., a release-gating review) and you want every reviewer to back each blocker before it can REVISE the artifact.
+  - `super` (default) — for most reviews; tolerates one dissenting reviewer (N-1 of N) so a single confused reviewer cannot suppress a real blocker.
+  - `majority` — for fast-moving iterative drafting where you want blockers to surface easily and the host agent will adjudicate.
+- `--max-rounds` has a hard cap of 5. At round 5 the orchestrator forces a final verdict regardless of convergence.
+- `--skip-verification` bypasses the independent verifier stage. Use this when you want faster turnaround and trust the panel's consensus without external validation (e.g., during iterative drafting).
 
 ## Modes
 
@@ -92,86 +76,29 @@ Notes:
 | `spec` | Backward-compatible alias for plan-style review | Plan/spec contract |
 | `code` | Review a code diff/change | Code contract with file/line or hunk anchors |
 
-## Review contract
-
-First-round reviewer prompts always include:
-
-- `### Reasoning`
-- `### Blocking Issues`
-- `### Non-Blocking Issues`
-- `### Confidence`
-- `### Scope`
-- a final `VERDICT: APPROVED` or `VERDICT: REVISE` line
-
-For code reviews, each issue should include an anchor line naming a file path
-and either a line range or diff hunk. For plan/spec reviews, anchors can point
-to plan sections and line ranges. Anchor format examples:
-
-```
-Anchor: src/auth/admin.ts (lines 45-52)
-File: src/middleware/cors.ts Hunk: @@ -120,5 +125,8 @@
-Section: Phase 3 — Dual-write migration (lines 88-102)
-```
-
-If a `REVIEW.md` file is present, its contents are appended to the review
-contract as project-specific guidance.
-
 ## Round flow
 
 1. **Round 1** — independent parallel review.
 2. **Ledger build** — canonical IDs are assigned and issue metadata is stored.
-3. **Merge** — only equivalent issues merge; related/distinct and conflicts are
-   recorded as relations only.
-4. **Rounds 2+** — anonymous cross-critique with compressed later rounds and
-   blind mode.
+3. **Merge** — only equivalent issues merge; related/distinct and conflicts are recorded as relations only.
+4. **Rounds 2+** — anonymous cross-critique with compressed later rounds and blind mode.
 5. **Verification** — surviving blockers are checked by an external verifier.
 6. **Verdict** — APPROVED or REVISE is derived from surviving blocking issues.
 
-Round 1 verdicts are based on the raw independent ledger; merge results are
-persisted for later rounds.
+Round 1 verdicts are based on the raw independent ledger; merge results are persisted for later rounds.
 
-## Cross-critique
-
-In rounds 2+, reviewers respond to each open issue before their updated review:
-
-- `[AGREE BLK-001]`
-- `[DISAGREE BLK-001] reason`
-- `[REFINE BLK-001] revised text`
-- `[B-NEW] description`
-- `[N-NEW] description`
-
-Use anonymous labels (`Reviewer A/B/C`) when sharing prior-round reviews.
-Hidden role labels never appear in the shared deliberation context.
-
-## Merge and verification
-
-- Only `EQUIVALENT` pairs merge.
-- `RELATED_DISTINCT` and `CONFLICT` only add relations.
-- `UNCERTAIN` is logged and left alone.
-- `EQUIVALENT` is intentionally strict: matching location alone is not enough,
-  and broad lexical similarity alone is not enough. The concerns also need to
-  match.
-- Every merge decision is appended to `merge-log.jsonl`. Each line is a JSON
-  object with an `action` field (`merge_candidate`, `merge_applied`,
-  `relation_only`, or `log_only`) plus the relevant issue IDs,
-  classification, and reason.
-- Independent verification sees the artifact, blocker ID, anchor, and summary
-  only.
-- Invalidated blockers are excluded from the final verdict.
+For the full per-section reviewer output contract, see `references/output-format.md`. For the ledger JSON shape, merge classification rules, anchor key set, and verifier I/O contract, see `references/protocol.md`.
 
 ## Role packs
 
-- `plan` / `spec`: Skeptic, Constraint Guardian, User Advocate,
-  Integrator-minded reviewer
-- `code`: Correctness reviewer, Security reviewer, Maintainability reviewer,
-  Performance/operability reviewer
+Reviewer prompts inject hidden role labels to sharpen each reviewer's focus. Labels never appear in shared deliberation context (anonymity invariant).
+
+- `plan` / `spec`: Skeptic, Constraint Guardian, User Advocate, Integrator-minded reviewer
+- `code`: Correctness reviewer, Security reviewer, Maintainability reviewer, Performance/operability reviewer
 
 ## Temp files
 
-The orchestrator writes reviewer prompts, reviews, session metadata, the merged
-ledger, deliberation context, tally JSON, and merge logs under the configured
-`--tmpdir`. The ledger lives at `qr-${QUORUM_ID}-ledger.json` and the merge log
-at `qr-${QUORUM_ID}-merge-log.jsonl`.
+The orchestrator writes reviewer prompts, reviews, session metadata, the merged ledger, deliberation context, tally JSON, and merge logs under the configured `--tmpdir`. The ledger lives at `qr-${QUORUM_ID}-ledger.json` and the merge log at `qr-${QUORUM_ID}-merge-log.jsonl`. Parse-failure telemetry (when a reviewer's output cannot be parsed strictly) lives at `qr-${QUORUM_ID}-parse-failures.jsonl`.
 
 ## Examples
 
@@ -198,11 +125,19 @@ python3 scripts/run_quorum.py \
   --verifier copilot:gpt-5.4
 ```
 
+## What changed in v3.1
+
+Internal refactor; CLI, ledger schema, verdict semantics, and merge classifications are unchanged. See [`CHANGELOG.md`](CHANGELOG.md) for the full list.
+
+- `scripts/run_review.py` migrated to the vendored `scripts/_common/` package (provider/metadata/session/process/log helpers shared with peer-plan-review).
+- `scripts/run_quorum.py` is now a compatibility shim; the implementation lives in `scripts/quorum/` (cli, orchestrator, ledger, parsing, merge, verification, prompts).
+- Reviewer output parsing hardened: strict Tier-1 contract plus an explicit Tier-2 variant matcher (whitespace, case, trailing punctuation). No keyword-heuristic tier. Parse failures emit telemetry to `parse-failures.jsonl` for operator audit.
+- Provider allow-list (`ACCEPTED_REVIEWERS`) keeps opencode (present in the shared `PROVIDERS` registry) out of every quorum-review CLI surface.
+
 ## Migration notes from v2.4
 
 - Plan/spec review still works, but `spec` is now a first-class mode alias.
-- Code review is new and uses anchors for file/line or diff hunk references.
-- Verification is now independent from the review panel.
-- Merge handling is conservative: only equivalent issues merge; related issues
-  stay linked.
+- Code review uses anchors for file/line or diff hunk references.
+- Verification is independent from the review panel.
+- Merge handling is conservative: only equivalent issues merge; related issues stay linked.
 - Invalidated blockers no longer drive a REVISE verdict.

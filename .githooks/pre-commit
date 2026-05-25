@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — vendor-integrity + module-size gates.
+#
+# Install once per clone:
+#   git config core.hooksPath .githooks
+#
+# What this hook gates:
+# 1. common/ source must match every consumer skill's scripts/_common/ tree
+#    byte-for-byte. Direct edits to _common/, missed re-syncs, and stray
+#    files (e.g., orphan .pyc) all fail.
+# 2. Any quorum-review/scripts/quorum/ module exceeding the hard LoC cap
+#    without an explicit waiver fails.
+#
+# Both gates are reversible: just fix the underlying problem and re-stage.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# --- Gate 1: vendored _common/ trees must match source ---------------------
+if [[ -d common/common ]]; then
+  if ! python3 common/scripts/sync_common.py --check; then
+    echo
+    echo "pre-commit: vendor-integrity check failed."
+    echo "Run \`python3 common/scripts/sync_common.py\`, review the diff, and re-stage."
+    exit 1
+  fi
+fi
+
+# --- Gate 2: hard module-size cap on quorum-review/scripts/quorum/ ---------
+if [[ -d quorum-review/scripts/quorum ]]; then
+  if ! python3 common/scripts/check_module_size.py quorum-review/scripts/quorum/; then
+    echo
+    echo "pre-commit: module-size hard cap exceeded."
+    echo "Split the oversized module OR add an explicit waiver:"
+    echo "    # WAIVER: module-size <reason>"
+    echo "in the first 20 lines of the file."
+    exit 1
+  fi
+fi
+
+exit 0

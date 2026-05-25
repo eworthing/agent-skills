@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
-# Originally from peer-plan-review — now maintained independently
 """
 run_review.py — Deterministic CLI adapter for reviewer dispatch.
 
 Dispatches review requests to Codex, Gemini, Claude Code, or Copilot CLI
 with provider-specific flags for headless, read-only, no-hang operation.
 Supports exec, resume, session tracking, and self-check.
+
+Phase B (v3.1) migration: provider/metadata/session/process/log helpers
+live in the vendored ``_common/`` package (synced from /common/common/
+at the repo root). This file is now ~340 LoC instead of ~939; the rest
+moved to ``_common/`` and is shared with peer-plan-review (eventually).
+
+The allow-list ``ACCEPTED_REVIEWERS`` from ``accepted_reviewers.py``
+gates every provider-enumeration path so opencode (present in the shared
+PROVIDERS registry for other consumers) never leaks into quorum-review's
+CLI surface.
 """
 
 import argparse
-import contextlib
 import json
 import os
 import shutil
@@ -19,45 +27,51 @@ import sys
 import tempfile
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Effort mapping: portable level → provider-native value
-# ---------------------------------------------------------------------------
-EFFORT_MAP = {
-    "codex": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
-    "gemini": {"low": 2048, "medium": 8192, "high": 16384, "xhigh": 32768},
-    "claude": {"low": "low", "medium": "medium", "high": "high", "xhigh": "max"},
-    "copilot": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
-}
+# Make _common importable. _common/ is a sibling of this script, vendored
+# from /common/common/ via sync_common.py. Pre-commit + CI keep the two
+# byte-identical.
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Provider defaults when effort is not specified and not discoverable.
-_EFFORT_DEFAULTS = {
-    "codex": "medium",  # Codex default per reasoning level selector
-    "gemini": "medium",  # Gemini default thinkingBudget is 8192
-    "claude": "medium",  # Claude Code default
-    "copilot": "medium",  # Copilot default per GitHub docs
-}
+from _common.metadata import extract_session_id_copilot, extract_session_id_json
+from _common.metadata.extractors import (  # noqa: F401 — re-exported for tests
+    _codex_session_files,
+    _parse_codex_session_id,
+    extract_metadata,
+)
+from _common.process.tree import _kill_tree, _popen_session_kwargs
+from _common.providers import PROVIDERS, get_provider, read_prompt
+from _common.providers.registry import (  # noqa: F401 — re-exported for tests
+    build_claude_cmd,
+    build_codex_cmd,
+    build_copilot_cmd,
+    build_gemini_cmd,
+)
+from _common.session import (  # noqa: F401 — re-exported for tests
+    extract_text_from_output,
+    load_session,
+    save_session,
+)
+from accepted_reviewers import ACCEPTED_REVIEWERS, accepted_reviewers
 
 # ---------------------------------------------------------------------------
-# Model aliases: shorthand → canonical name (per provider)
+# Effort defaults derived from PROVIDERS so we have one source of truth.
 # ---------------------------------------------------------------------------
-MODEL_ALIASES = {
-    "claude": {"sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
-    "gemini": {"auto": "auto", "pro": "pro", "flash": "flash", "flash-lite": "flash-lite"},
-    "codex": {},
-    "copilot": {},
-}
+_EFFORT_DEFAULTS = {name: PROVIDERS[name]["effort_default"] for name in ACCEPTED_REVIEWERS}
 
-BINARIES = {
-    "codex": "codex",
-    "gemini": "gemini",
-    "claude": "claude",
-    "copilot": "copilot",
-}
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
 
 
 def parse_args():
     p = argparse.ArgumentParser(description="Reviewer dispatch CLI adapter")
-    p.add_argument("--reviewer", required=False, choices=BINARIES.keys(), help="Reviewer backend")
+    p.add_argument(
+        "--reviewer",
+        required=False,
+        choices=ACCEPTED_REVIEWERS,  # opencode is in PROVIDERS but NOT accepted here
+        help=f"Reviewer backend (one of: {', '.join(accepted_reviewers())})",
+    )
     p.add_argument("--plan-file", help="Path to plan markdown file")
     p.add_argument("--prompt-file", help="Path to review prompt file")
     p.add_argument("--output-file", help="Path to write reviewer response")
@@ -95,11 +109,14 @@ def parse_args():
 
 def self_check(reviewer):
     """Verify the reviewer CLI is installed and responsive."""
-    binary = BINARIES.get(reviewer)
-    if not binary:
-        print(f"Unknown reviewer: {reviewer}", file=sys.stderr)
+    if reviewer not in ACCEPTED_REVIEWERS:
+        print(
+            f"Unknown reviewer: {reviewer}; accepted: {', '.join(accepted_reviewers())}",
+            file=sys.stderr,
+        )
         return False
 
+    binary = PROVIDERS[reviewer]["binary"]
     path = shutil.which(binary)
     if not path:
         print(f"FAIL: {binary} not found in PATH", file=sys.stderr)
@@ -145,436 +162,9 @@ def self_check(reviewer):
 
 
 # ---------------------------------------------------------------------------
-# Session helpers
+# Signal handler — module-global because child process is held in module state.
 # ---------------------------------------------------------------------------
 
-
-def load_session(session_file):
-    """Load session metadata from JSON file."""
-    if not session_file or not Path(session_file).exists():
-        return {}
-    try:
-        with Path(session_file).open(encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
-
-
-def save_session(session_file, data):
-    """Save session metadata to JSON file."""
-    if not session_file:
-        return
-    try:
-        with Path(session_file).open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-    except OSError as e:
-        print(f"Warning: could not save session: {e}", file=sys.stderr)
-
-
-def _codex_session_files():
-    """Return set of all Codex session file paths."""
-    codex_home = os.environ.get("CODEX_HOME", str(Path("~/.codex").expanduser()))
-    sessions_dir = Path(codex_home) / "sessions"
-    if not sessions_dir.is_dir():
-        return set()
-    result = set()
-    for root, _, files in os.walk(sessions_dir):
-        for f in files:
-            if f.endswith(".jsonl"):
-                result.add(str(Path(root) / f))
-    return result
-
-
-def _parse_codex_session_id(session_file):
-    """Extract session UUID from first line of a Codex session file."""
-    try:
-        with Path(session_file).open(encoding="utf-8") as fh:
-            first = json.loads(fh.readline())
-            if first.get("type") == "session_meta":
-                sid = first.get("payload", {}).get("id")
-                # Validate cwd matches to avoid binding to a concurrent session
-                cwd = first.get("payload", {}).get("cwd", "")
-                if cwd and Path(cwd).resolve() != Path.cwd().resolve():
-                    return None
-                return sid
-    except (json.JSONDecodeError, KeyError, OSError):
-        pass
-    return None
-
-
-def extract_session_id_json(output_file, field="session_id"):
-    """Extract session_id from JSON output."""
-    if not output_file or not Path(output_file).exists():
-        return None
-    try:
-        with Path(output_file).open(encoding="utf-8") as f:
-            data = json.load(f)
-            return data.get(field)
-    except (json.JSONDecodeError, OSError):
-        pass
-    return None
-
-
-def extract_session_id_copilot(output_file):
-    """Parse sessionId from Copilot JSONL result event."""
-    if not output_file or not Path(output_file).exists():
-        return None
-    try:
-        with Path(output_file).open(encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    event = json.loads(line)
-                    if event.get("type") == "result":
-                        return event.get("sessionId")
-                except json.JSONDecodeError:
-                    continue
-    except OSError:
-        pass
-    return None
-
-
-def extract_metadata(output_file, events_file, reviewer, codex_session_file=None):
-    """Extract model/effort metadata from structured output before text rewrite.
-
-    Returns dict with 'model' and optionally 'effort' if discoverable.
-    Must be called BEFORE extract_text_from_output (which overwrites the file).
-    """
-    meta = {}
-
-    # Claude / Gemini: single JSON object
-    if reviewer in ("claude", "gemini") and output_file and Path(output_file).exists():
-        try:
-            with Path(output_file).open(encoding="utf-8") as f:
-                data = json.load(f)
-            if reviewer == "claude":
-                # Claude JSON: {"result": "...", "model": "claude-opus-4-6", ...}
-                if data.get("model"):
-                    meta["model"] = data["model"]
-            elif reviewer == "gemini":
-                # Gemini JSON: {"stats": {"models": {"gemini-3-pro-preview": {...}}}}
-                # The model name is the first key in stats.models.
-                stats = data.get("stats", {})
-                if isinstance(stats, dict):
-                    models = stats.get("models", {})
-                    if isinstance(models, dict) and models:
-                        model_name = next(iter(models))
-                        meta["model"] = model_name
-                        # Record thinking tokens as telemetry (not used
-                        # for effort — actual usage doesn't reflect the
-                        # configured budget reliably).
-                        model_stats = models[model_name]
-                        thoughts = model_stats.get("tokens", {}).get("thoughts", 0)
-                        if thoughts and isinstance(thoughts, (int, float)):
-                            meta["thinking_tokens"] = int(thoughts)
-                if not meta.get("model") and data.get("model"):
-                    meta["model"] = data["model"]
-        except (json.JSONDecodeError, OSError):
-            pass
-
-    # Copilot: JSONL — model is in session.tools_updated or
-    # tool.execution_complete events under data.model
-    if reviewer == "copilot" and output_file and Path(output_file).exists():
-        try:
-            with Path(output_file).open(encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        event = json.loads(line)
-                        data = event.get("data", {})
-                        if isinstance(data, dict) and data.get("model"):
-                            meta["model"] = data["model"]
-                            break
-                    except json.JSONDecodeError:
-                        continue
-        except OSError:
-            pass
-
-    # Codex: model/effort live in the on-disk session file (turn_context
-    # event), NOT in the stdout JSONL stream.  Fall back to the stdout
-    # events file if no on-disk session file was provided.
-    if reviewer == "codex":
-        sources = [s for s in (codex_session_file, events_file) if s and Path(s).exists()]
-        for source in sources:
-            try:
-                with Path(source).open(encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            event = json.loads(line)
-                            # turn_context has model + effort (on-disk only)
-                            if event.get("type") == "turn_context":
-                                payload = event.get("payload", {})
-                                if payload.get("model"):
-                                    meta["model"] = payload["model"]
-                                if payload.get("effort"):
-                                    meta["effort"] = payload["effort"]
-                                break
-                            # session_meta may have model in payload
-                            if event.get("type") == "session_meta":
-                                model = event.get("payload", {}).get("model")
-                                if model:
-                                    meta["model"] = model
-                        except json.JSONDecodeError:
-                            continue
-            except OSError:
-                pass
-            if meta.get("model"):
-                break
-
-    return meta
-
-
-def extract_text_from_output(output_file, reviewer):
-    """Extract review text from structured output and rewrite as plain text."""
-    if not output_file or not Path(output_file).exists():
-        return
-    try:
-        with Path(output_file).open(encoding="utf-8") as f:
-            content = f.read().strip()
-        if not content:
-            return
-
-        if reviewer == "copilot":
-            # JSONL: one JSON object per line
-            messages = []
-            for line in content.splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    event = json.loads(line)
-                    if event.get("type") == "assistant.message":
-                        msg = event.get("data", {}).get("content", "")
-                        if msg:
-                            messages.append(msg)
-                except json.JSONDecodeError:
-                    continue
-            text = "\n".join(messages) if messages else content
-        else:
-            # Single JSON object (Claude, Gemini)
-            data = json.loads(content)
-            if reviewer == "claude":
-                text = data.get("result", content)
-            elif reviewer == "gemini":
-                text = data.get("response", content)
-            else:
-                text = content
-
-        with Path(output_file).open("w", encoding="utf-8") as f:
-            f.write(text if isinstance(text, str) else json.dumps(text))
-    except (json.JSONDecodeError, OSError) as e:
-        print(
-            f"Warning: could not extract review text from {output_file} "
-            f"for {reviewer}: {e}. File left as raw output.",
-            file=sys.stderr,
-        )
-
-
-# ---------------------------------------------------------------------------
-# Provider command builders
-# ---------------------------------------------------------------------------
-
-
-def build_codex_cmd(args, session_id=None):
-    """Build Codex exec command. Prompt fed via stdin.
-
-    Web search/fetch works without flag changes — read-only sandbox +
-    approval_mode=never already permits web access."""
-    binary = BINARIES["codex"]
-    cmd = [binary, "exec"]
-
-    if args.resume and session_id:
-        cmd.extend(["--resume", str(session_id)])
-        # --sandbox is NOT available on resume; original session policy applies
-        cmd.extend(["-c", "approval_mode=never"])
-    else:
-        cmd.extend(["--sandbox", "read-only"])
-        cmd.extend(["-c", "approval_mode=never"])
-
-    cmd.append("--json")
-
-    if args.output_file:
-        cmd.extend(["--output-last-message", args.output_file])
-
-    if args.model:
-        cmd.extend(["-m", args.model])
-
-    if args.effort:
-        level = EFFORT_MAP["codex"].get(args.effort, args.effort)
-        cmd.extend(["-c", f"model_reasoning_effort={level}"])
-
-    # stdin marker — prompt is piped via stdin
-    cmd.append("-")
-    return cmd
-
-
-def build_gemini_cmd(args, session_id=None):
-    """Build Gemini CLI command."""
-    binary = BINARIES["gemini"]
-    cmd = [binary]
-
-    if args.resume and session_id:
-        cmd.extend(["--resume", str(session_id)])
-
-    cmd.append("--sandbox")
-    # yolo auto-approves URL fetch tools; --sandbox still prevents filesystem
-    # writes.  plan mode hangs on URL fetch permission prompts in headless.
-    cmd.extend(["--approval-mode", "yolo"])
-    cmd.extend(["--output-format", "json"])
-
-    if args.model:
-        cmd.extend(["-m", args.model])
-
-    # Prompt via -p flag (required for headless)
-    prompt_text = read_prompt(args.prompt_file)
-    if prompt_text:
-        cmd.extend(["-p", prompt_text])
-
-    return cmd
-
-
-def build_claude_cmd(args, session_id=None):
-    """Build Claude Code command."""
-    binary = BINARIES["claude"]
-
-    # Prompt via -p flag
-    prompt_text = read_prompt(args.prompt_file)
-    cmd = [binary, "-p", prompt_text or ""]
-
-    # Claude's -p mode is stateless — each round gets a self-contained
-    # prompt with all prior context compiled in, so resuming a prior
-    # session adds no value and wastes a round-trip when the ephemeral
-    # session no longer exists.
-    cmd.append("--no-session-persistence")
-
-    cmd.extend(["--permission-mode", "plan"])
-    cmd.extend(["--tools", "Read,Grep,Glob,WebSearch,WebFetch"])
-    cmd.extend(["--allowedTools", "WebSearch,WebFetch"])
-    cmd.extend(["--output-format", "json"])
-    cmd.extend(["--max-turns", "10"])
-    verification_mode = bool(
-        getattr(args, "verification_mode", False)
-        or (
-            prompt_text
-            and (
-                prompt_text.lstrip().startswith("## Verification Request")
-                or prompt_text.lstrip().startswith("## Verification Contract")
-            )
-        )
-    )
-    system_prompt = (
-        "You are an independent verifier outside the active panel. "
-        "Validate a single blocker using only the blocker ID, anchor, summary, "
-        "and current artifact/context provided. End with VERIFIED <ID> or "
-        "INVALIDATED <ID> on the last non-empty line."
-        if verification_mode
-        else "You are a code reviewer. Analyze the plan and provide feedback. "
-        "End with VERDICT: APPROVED or VERDICT: REVISE on the last line."
-    )
-    cmd.extend(
-        [
-            "--append-system-prompt",
-            system_prompt,
-        ]
-    )
-
-    if args.model:
-        cmd.extend(["--model", args.model])
-
-    if args.effort:
-        level = EFFORT_MAP["claude"].get(args.effort, args.effort)
-        cmd.extend(["--effort", level])
-
-    return cmd
-
-
-def build_copilot_cmd(args, session_id=None):
-    """Build Copilot CLI command."""
-    binary = BINARIES["copilot"]
-
-    prompt_text = read_prompt(args.prompt_file)
-    cmd = [binary, "-p", prompt_text or "", "-s"]
-
-    if args.resume and session_id:
-        cmd.extend([f"--resume={session_id}"])
-
-    cmd.append("--no-ask-user")
-    # Do NOT use --autopilot.  It enables built-in tools (report_intent,
-    # task_complete, skill, sql) that cause Copilot to encrypt response
-    # content (encryptedContent only, content empty) and skip producing
-    # visible review text.  Without --autopilot, Copilot outputs the
-    # review as regular text with populated content fields.
-    #
-    # --allow-tool=url alone hangs on URL fetch permission prompts in
-    # headless mode.  --yolo auto-approves all tools (including URL fetch)
-    # while --deny-tool still blocks write/shell/memory.  Intermediate
-    # messages may have encrypted content, but the final assistant.message
-    # has populated content fields — text extraction works because it
-    # filters empty-content messages.
-    cmd.append("--yolo")
-    cmd.append("--deny-tool=write,shell,memory")
-    cmd.append("--no-custom-instructions")
-    cmd.append("--no-auto-update")
-    cmd.extend(["--output-format", "json"])
-
-    if args.model:
-        cmd.extend(["--model", args.model])
-
-    if args.effort:
-        level = EFFORT_MAP["copilot"].get(args.effort, args.effort)
-        cmd.extend(["--reasoning-effort", level])
-
-    return cmd
-
-
-def read_prompt(prompt_file):
-    """Read prompt text from file."""
-    if not prompt_file or not Path(prompt_file).exists():
-        return None
-    try:
-        with Path(prompt_file).open(encoding="utf-8") as f:
-            return f.read()
-    except OSError:
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Process tree management
-# ---------------------------------------------------------------------------
-
-
-def _kill_tree(proc):
-    """Kill process and all descendants."""
-    if sys.platform == "win32":
-        subprocess.run(
-            ["taskkill", "/T", "/F", "/PID", str(proc.pid)],
-            capture_output=True,
-        )
-        proc.wait()
-    else:
-        try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            proc.wait(timeout=5)
-        except (subprocess.TimeoutExpired, ProcessLookupError):
-            with contextlib.suppress(ProcessLookupError):
-                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        proc.wait()
-
-
-def _popen_session_kwargs():
-    """Return Popen kwargs for process-group isolation, per platform."""
-    if sys.platform == "win32":
-        return {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
-    return {"start_new_session": True}
-
-
-# Module-level for signal handler access
 _active_proc = None
 
 
@@ -594,17 +184,12 @@ def run_review(args):
     global _active_proc
 
     reviewer = args.reviewer
+    spec = get_provider(reviewer, allowed=ACCEPTED_REVIEWERS)  # defense in depth
     session = load_session(args.session_file) if args.resume else {}
     session_id = session.get("session_id") if args.resume else None
 
-    # Build provider-specific command
-    builders = {
-        "codex": build_codex_cmd,
-        "gemini": build_gemini_cmd,
-        "claude": build_claude_cmd,
-        "copilot": build_copilot_cmd,
-    }
-    cmd = builders[reviewer](args, session_id)
+    # Build provider-specific command via the registry's build_cmd callable.
+    cmd = spec["build_cmd"](args, session_id)
 
     # Build environment
     env = os.environ.copy()
@@ -618,7 +203,7 @@ def run_review(args):
     # then overlay the effort-specific settings.json.
     gemini_config_dir = None
     if reviewer == "gemini" and args.effort:
-        budget = EFFORT_MAP["gemini"].get(args.effort)
+        budget = PROVIDERS["gemini"]["effort_map"].get(args.effort)
         if budget:
             gemini_config_dir = tempfile.mkdtemp(prefix="qr-gemini-")
             source_dir = os.environ.get(
@@ -645,9 +230,12 @@ def run_review(args):
             except OSError as e:
                 print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
 
-    # Prepare stdin for Codex (prompt via stdin)
+    # Prepare prompt for stdin-mode providers. The PROVIDERS caps dict
+    # declares each provider's prompt delivery mode; all four accepted
+    # reviewers use stdin (build_*_cmd emits a placeholder -p "" or "-"
+    # marker and expects the prompt body on stdin).
     stdin_data = None
-    if reviewer == "codex":
+    if spec["caps"].get("prompt_mode") == "stdin":
         stdin_data = read_prompt(args.prompt_file)
 
     # Snapshot Codex session files before exec for race-safe ID extraction
@@ -814,7 +402,7 @@ def run_review(args):
         return 0
 
     except FileNotFoundError:
-        print(f"Binary not found: {BINARIES[reviewer]}", file=sys.stderr)
+        print(f"Binary not found: {spec['binary']}", file=sys.stderr)
         return 1
     except OSError as e:
         print(f"Execution error: {e}", file=sys.stderr)
@@ -837,7 +425,7 @@ def _validate_model(args):
     """Normalize model alias or warn if unrecognized."""
     if not args.model or not args.reviewer:
         return
-    aliases = MODEL_ALIASES.get(args.reviewer, {})
+    aliases = PROVIDERS[args.reviewer].get("model_aliases", {})
     if not aliases:
         # Providers with no aliases (codex, copilot): pass through silently
         return
@@ -870,9 +458,9 @@ def main():
 
     if args.self_check:
         if not args.reviewer:
-            # Check all providers
+            # Check all accepted providers
             all_ok = True
-            for r in BINARIES:
+            for r in ACCEPTED_REVIEWERS:
                 if not self_check(r):
                     all_ok = False
             sys.exit(0 if all_ok else 1)
@@ -880,9 +468,9 @@ def main():
             sys.exit(0 if self_check(args.reviewer) else 1)
 
     if args.list_models:
-        providers = [args.reviewer] if args.reviewer else list(MODEL_ALIASES.keys())
+        providers = [args.reviewer] if args.reviewer else list(ACCEPTED_REVIEWERS)
         for provider in providers:
-            aliases = MODEL_ALIASES.get(provider, {})
+            aliases = PROVIDERS[provider].get("model_aliases", {})
             if aliases:
                 print(f"{provider}: {', '.join(sorted(aliases.keys()))}")
             else:
@@ -890,7 +478,10 @@ def main():
         sys.exit(0)
 
     if not args.reviewer:
-        print("--reviewer is required (codex, gemini, claude, copilot)", file=sys.stderr)
+        print(
+            f"--reviewer is required ({', '.join(accepted_reviewers())})",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     if not args.prompt_file:
@@ -926,7 +517,7 @@ def main():
                 sys.exit(1)
 
     # Verify binary is installed
-    binary = BINARIES[args.reviewer]
+    binary = PROVIDERS[args.reviewer]["binary"]
     if not shutil.which(binary):
         print(f"Error: {binary} not found in PATH. Install it first.", file=sys.stderr)
         sys.exit(1)

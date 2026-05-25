@@ -1,0 +1,72 @@
+{
+  "round": 3,
+  "threshold": "super",
+  "original_panel_size": 3,
+  "active_panel_size": 3,
+  "on_failure": "shrink-quorum",
+  "mode": "plan",
+  "advisory_threshold_met": false,
+  "derived_verdict": "REVISE",
+  "surviving_blockers": 37,
+  "dropped_blockers": 29,
+  "approved_count": 0,
+  "revise_count": 3,
+  "failed_count": 0,
+  "total": 3,
+  "all_unstructured": false,
+  "unstructured_count": 0,
+  "reviewers": [
+    {
+      "label": "Reviewer A",
+      "verdict": "REVISE",
+      "model": "default",
+      "effort": "medium"
+    },
+    {
+      "label": "Reviewer B",
+      "verdict": "REVISE",
+      "model": "gemini-3.1-pro-preview",
+      "effort": "medium"
+    },
+    {
+      "label": "Reviewer C",
+      "verdict": "REVISE",
+      "model": "gpt-5.4",
+      "effort": "xhigh"
+    }
+  ],
+  "reviewer_map": {
+    "Reviewer A": {
+      "provider": "claude",
+      "model": null,
+      "actual_model": "default",
+      "actual_effort": "medium",
+      "idx": 1
+    },
+    "Reviewer B": {
+      "provider": "gemini",
+      "model": null,
+      "actual_model": "gemini-3.1-pro-preview",
+      "actual_effort": "medium",
+      "idx": 2
+    },
+    "Reviewer C": {
+      "provider": "codex",
+      "model": null,
+      "actual_model": "gpt-5.4",
+      "actual_effort": "xhigh",
+      "idx": 3
+    }
+  },
+  "exit_codes": {
+    "1": 0,
+    "2": 0,
+    "3": 0
+  },
+  "early_exit": true,
+  "early_exit_reason": "all surviving blockers at maximum support \u2014 further rounds cannot change outcome",
+  "merge_log_path": "tests/fixtures/mid-quorum-r3/qr-mid-fixture-merge-log.jsonl",
+  "merged_count": 0,
+  "merge_candidate_count": 378,
+  "verifier": null
+}

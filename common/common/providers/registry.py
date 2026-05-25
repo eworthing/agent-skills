@@ -1,0 +1,348 @@
+"""
+registry.py — Provider registry and command builders.
+
+Ported from peer-plan-review/scripts/ppr_providers.py. Behavior preserved;
+the only API change is that get_provider() now accepts an optional
+`allowed` argument so consumers can declare a subset of providers their
+skill accepts at its CLI boundary (e.g., quorum-review excludes opencode).
+
+TO ADD A NEW PROVIDER:
+    1. Write a build_<name>_cmd(args, session_id) function above the
+       PROVIDERS dict.
+    2. Add one entry to the PROVIDERS dict at the bottom of this file.
+    3. Create references/<provider>.md in any consuming skill that
+       documents its CLI surface.
+    4. If session-ID extraction needs a custom path, add it to
+       common/metadata/extractors.py.
+"""
+
+from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Provider command builders
+# ---------------------------------------------------------------------------
+
+
+def build_codex_cmd(args, session_id=None):
+    """Build Codex exec command. Prompt fed via stdin.
+
+    Web search/fetch works without flag changes — read-only sandbox +
+    approval_mode=never already permits web access."""
+    cmd = ["codex", "exec"]
+
+    if args.resume and session_id:
+        cmd.extend(["resume", str(session_id)])
+        # --sandbox is NOT available on resume; original session policy applies
+        cmd.extend(["-c", "approval_mode=never"])
+    else:
+        cmd.extend(["--sandbox", "read-only"])
+        cmd.extend(["-c", "approval_mode=never"])
+
+    cmd.append("--json")
+
+    if args.output_file:
+        cmd.extend(["--output-last-message", args.output_file])
+
+    if args.model:
+        cmd.extend(["-m", args.model])
+
+    if args.effort:
+        level = PROVIDERS["codex"]["effort_map"].get(args.effort, args.effort)
+        cmd.extend(["-c", f"model_reasoning_effort={level}"])
+
+    # stdin marker — prompt is piped via stdin
+    cmd.append("-")
+    return cmd
+
+
+def build_gemini_cmd(args, session_id=None):
+    """Build Gemini CLI command."""
+    cmd = ["gemini"]
+
+    if args.resume and session_id:
+        cmd.extend(["--resume", str(session_id)])
+
+    cmd.append("--sandbox")
+    # yolo auto-approves URL fetch tools; --sandbox still prevents filesystem
+    # writes.  plan mode hangs on URL fetch permission prompts in headless.
+    cmd.extend(["--approval-mode", "yolo"])
+    cmd.extend(["--output-format", "json"])
+    # Review runs do not need user-installed Gemini extensions. Disabling them
+    # avoids startup failures from unrelated, locally broken extension files.
+    cmd.extend(["--extensions", ""])
+
+    if args.model:
+        cmd.extend(["-m", args.model])
+
+    # -p requires an argument; prompt text is piped via stdin
+    cmd.extend(["-p", ""])
+
+    return cmd
+
+
+def build_claude_cmd(args, session_id=None):
+    """Build Claude Code command.
+
+    When ``args.verification_mode`` is True OR the prompt file begins with
+    ``## Verification Request`` / ``## Verification Contract`` (sniffed
+    when ``args.prompt_file`` is set), uses the independent-verifier system
+    prompt instead of the default reviewer system prompt. This keeps the
+    quorum-review verifier role usable through the shared adapter without
+    affecting consumers (peer-plan-review) that never set the flag and
+    never write a verifier-style prompt.
+    """
+    # -p requires an argument; prompt text is piped via stdin
+    cmd = ["claude", "-p", ""]
+
+    if args.resume and session_id:
+        cmd.extend(["--resume", session_id])
+
+    cmd.extend(["--permission-mode", "plan"])
+    cmd.extend(["--tools", "Read,Grep,Glob,WebSearch,WebFetch"])
+    cmd.extend(["--allowedTools", "WebSearch,WebFetch"])
+    cmd.extend(["--output-format", "json"])
+    cmd.extend(["--max-turns", "10"])
+
+    verification_mode = bool(getattr(args, "verification_mode", False))
+    if not verification_mode and getattr(args, "prompt_file", None):
+        prompt_text = read_prompt(args.prompt_file) or ""
+        head = prompt_text.lstrip()
+        if head.startswith("## Verification Request") or head.startswith("## Verification Contract"):
+            verification_mode = True
+
+    system_prompt = (
+        "You are an independent verifier outside the active panel. "
+        "Validate a single blocker using only the blocker ID, anchor, summary, "
+        "and current artifact/context provided. End with VERIFIED <ID> or "
+        "INVALIDATED <ID> on the last non-empty line."
+        if verification_mode
+        else "You are a code reviewer. Analyze the plan and provide feedback. "
+        "End with VERDICT: APPROVED or VERDICT: REVISE on the last line."
+    )
+    cmd.extend(["--append-system-prompt", system_prompt])
+
+    if args.model:
+        cmd.extend(["--model", args.model])
+
+    if args.effort:
+        level = PROVIDERS["claude"]["effort_map"].get(args.effort, args.effort)
+        cmd.extend(["--effort", level])
+
+    return cmd
+
+
+def build_copilot_cmd(args, session_id=None):
+    """Build Copilot CLI command."""
+    # -p requires an argument; prompt text is piped via stdin
+    cmd = ["copilot", "-p", "", "-s"]
+
+    if args.resume and session_id:
+        cmd.extend([f"--resume={session_id}"])
+
+    cmd.append("--no-ask-user")
+    # Do NOT use --autopilot.  It enables built-in tools (report_intent,
+    # task_complete, skill, sql) that cause Copilot to encrypt response
+    # content (encryptedContent only, content empty) and skip producing
+    # visible review text.  Without --autopilot, Copilot outputs the
+    # review as regular text with populated content fields.
+    #
+    # --allow-tool=url alone hangs on URL fetch permission prompts in
+    # headless mode.  --yolo auto-approves all tools (including URL fetch)
+    # while --deny-tool still blocks write/shell/memory.  Intermediate
+    # messages may have encrypted content, but the final assistant.message
+    # has populated content fields — text extraction works because it
+    # filters empty-content messages.
+    cmd.append("--yolo")
+    cmd.append("--deny-tool=write,shell,memory")
+    cmd.append("--no-custom-instructions")
+    cmd.append("--no-auto-update")
+    cmd.extend(["--output-format", "json"])
+
+    if args.model:
+        cmd.extend(["--model", args.model])
+
+    if args.effort:
+        level = PROVIDERS["copilot"]["effort_map"].get(args.effort, args.effort)
+        cmd.extend(["--reasoning-effort", level])
+
+    return cmd
+
+
+def build_opencode_cmd(args, session_id=None):
+    """Build opencode run command."""
+    # Prompt text is piped via stdin; run still needs an empty string to avoid interactive mode
+    cmd = ["opencode", "run", ""]
+
+    cmd.extend(["--format", "json"])
+    cmd.append("--dangerously-skip-permissions")
+
+    if args.resume and session_id:
+        cmd.extend(["-s", session_id])
+
+    if args.model:
+        cmd.extend(["-m", args.model])
+
+    if args.effort:
+        level = PROVIDERS["opencode"]["effort_map"].get(args.effort, args.effort)
+        cmd.extend(["--variant", level])
+
+    return cmd
+
+
+def read_prompt(prompt_file):
+    """Read prompt text from file."""
+    if not prompt_file or not Path(prompt_file).exists():
+        return None
+    try:
+        with Path(prompt_file).open(encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Provider registry — single source of truth
+# ---------------------------------------------------------------------------
+# To add a provider: add one entry here. Every dict below is derived from this.
+#
+# Required keys:
+#   binary              str     — CLI name on $PATH
+#   effort_map          dict    — portable level → native value
+#   effort_default      str     — assumed when effort is unspecified and not
+#                                 discoverable from provider output
+#   model_aliases       dict    — shorthand → canonical (empty = raw IDs only)
+#   resume_supported    bool    — does the CLI accept a resume flag
+#   build_cmd           callable— (args, session_id) → argv list
+#   caps                dict    — capability descriptors used by callers that
+#                                 want to reason about the CLI shape without
+#                                 invoking build_cmd (sandbox/resume flavor).
+# ---------------------------------------------------------------------------
+
+PROVIDERS = {
+    "codex": {
+        "binary": "codex",
+        "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
+        "effort_default": "medium",
+        "model_aliases": {},
+        "resume_supported": True,
+        "build_cmd": build_codex_cmd,
+        "caps": {
+            "binary": "codex",
+            "prompt_mode": "stdin",
+            "output_mode": "file",
+            "model_flag": "-m",
+            "effort_flag": "-c model_reasoning_effort={level}",
+            "resume_flag_style": "subcommand",
+            "resume_supported": True,
+            "safety_flags": ["--sandbox", "read-only", "-c", "approval_mode=never"],
+        },
+    },
+    "gemini": {
+        "binary": "gemini",
+        "effort_map": {"low": 2048, "medium": 8192, "high": 16384, "xhigh": 32768},
+        "effort_default": "medium",
+        "model_aliases": {
+            "auto": "auto",
+            "pro": "pro",
+            "flash": "flash",
+            "flash-lite": "flash-lite",
+        },
+        "resume_supported": True,
+        "build_cmd": build_gemini_cmd,
+        "caps": {
+            "binary": "gemini",
+            "prompt_mode": "stdin",
+            "output_mode": "stdout",
+            "model_flag": "-m",
+            "effort_flag": "config_overlay",
+            "resume_flag_style": "flag",
+            "resume_supported": True,
+            "safety_flags": ["--sandbox", "--approval-mode", "yolo"],
+        },
+    },
+    "claude": {
+        "binary": "claude",
+        "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "max"},
+        "effort_default": "medium",
+        "model_aliases": {"sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
+        "resume_supported": True,
+        "build_cmd": build_claude_cmd,
+        "caps": {
+            "binary": "claude",
+            "prompt_mode": "stdin",
+            "output_mode": "stdout",
+            "model_flag": "--model",
+            "effort_flag": "--effort {level}",
+            "resume_flag_style": "flag",
+            "resume_supported": True,
+            "safety_flags": ["--permission-mode", "plan"],
+        },
+    },
+    "copilot": {
+        "binary": "copilot",
+        "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
+        "effort_default": "medium",
+        "model_aliases": {},
+        "resume_supported": True,
+        "build_cmd": build_copilot_cmd,
+        "caps": {
+            "binary": "copilot",
+            "prompt_mode": "stdin",
+            "output_mode": "stdout",
+            "model_flag": "--model",
+            "effort_flag": "--reasoning-effort {level}",
+            "resume_flag_style": "flag_eq",
+            "resume_supported": True,
+            "safety_flags": ["--no-ask-user", "--yolo", "--deny-tool=write,shell,memory"],
+        },
+    },
+    "opencode": {
+        "binary": "opencode",
+        "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "max"},
+        "effort_default": "medium",
+        "model_aliases": {
+            "deepseek": "opencode-go/deepseek-v4-pro",
+            "deepseek-flash": "opencode-go/deepseek-v4-flash",
+            "kimi": "opencode-go/kimi-k2.6",
+            "kimi-vision": "opencode-go/kimi-k2.5",
+            "mimo": "opencode-go/mimo-v2.5",
+            "mimo-pro": "opencode-go/mimo-v2.5-pro",
+            "mimo-omni": "opencode-go/mimo-v2-omni",
+            "qwen": "opencode-go/qwen3.6-plus",
+            "glm": "opencode-go/glm-5.1",
+            "minimax": "opencode-go/minimax-m2.7",
+        },
+        "resume_supported": True,
+        "build_cmd": build_opencode_cmd,
+        "caps": {
+            "binary": "opencode",
+            "prompt_mode": "stdin",
+            "output_mode": "stdout",
+            "model_flag": "-m",
+            "effort_flag": "--variant {level}",
+            "resume_flag_style": "flag",
+            "resume_supported": True,
+            "safety_flags": ["--dangerously-skip-permissions"],
+        },
+        # opencode-go model discovery command — used by --list-models
+        "list_models_cmd": ["opencode", "models", "opencode-go"],
+    },
+}
+
+
+def get_provider(name, allowed=None):
+    """Look up a provider by name.
+
+    If ``allowed`` is provided (an iterable of accepted provider names),
+    raise ValueError when ``name`` is not in that set. This lets a
+    consumer declare a subset of providers its CLI accepts without
+    having to re-implement provider lookup.
+
+    Raises KeyError for genuinely unknown providers (regardless of
+    ``allowed``).
+    """
+    if allowed is not None and name not in allowed:
+        accepted = ", ".join(sorted(allowed))
+        raise ValueError(f"unknown reviewer; accepted: {accepted}")
+    return PROVIDERS[name]
