@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 import tomllib
 from datetime import date, datetime, timezone
@@ -91,6 +92,21 @@ _G22_DIVIDER_RE = re.compile(
 # G28: orphan threshold per validation.md:115 (24 hours).
 _G28_ORPHAN_SECONDS = 24 * 3600
 
+# G22: commit subject regex per validation.md:92 (PR 1 origin).
+# Format: `loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) <status>
+# [registry: +<n> findings(, ~<n> occurrences)?]`. The `[registry: ...]` suffix
+# is required at schema_version >= 2.
+_G22_COMMIT_SUBJECT_RE = re.compile(
+    r"^loop \d+: .+?; finding F\d+ \(stable_id F-\d+\) "
+    r"(resolved|carried_forward|fixed_by_user|rejected_attempt)"
+    r" \[registry: \+\d+ findings(?:, ~\d+ occurrences)?\]$"
+)
+# G22: legacy v1 subject (no registry suffix) — used to detect v1 in v2+ artifact.
+_G22_COMMIT_SUBJECT_V1_RE = re.compile(
+    r"^loop \d+: .+?; finding F\d+ \(stable_id F-\d+\) "
+    r"(resolved|carried_forward|fixed_by_user|rejected_attempt)$"
+)
+
 
 class Issue:
     """A single rule failure in an artifact."""
@@ -134,6 +150,34 @@ def _parse_iso_date(value: Any) -> date | None:
         except ValueError:
             return None
     return None
+
+
+def _find_git_root(start: Path) -> Path | None:
+    """Walk up from `start` looking for a `.git` entry; return its parent or None."""
+    try:
+        resolved = start.resolve()
+    except OSError:
+        return None
+    for ancestor in [resolved, *resolved.parents]:
+        if (ancestor / ".git").exists():
+            return ancestor
+    return None
+
+
+def _git_command(repo_root: Path, *args: str) -> tuple[int | None, str]:
+    """Run `git <args...>` in `repo_root`. Returns (returncode, stdout) or
+    (None, "") if git binary missing or invocation failed entirely.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), *args],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError):
+        return None, ""
+    return result.returncode, (result.stdout or "")
 
 
 def _parse_iso_timestamp(value: Any) -> datetime | None:
@@ -732,34 +776,73 @@ def check_g19_provider_model(current_review: dict) -> List[Issue]:
 
 
 def check_g22_archive_divider(
-    artifact_dir: Path, current_review: dict
+    artifact_dir: Path, current_review: dict, project_config: dict | None = None
 ) -> List[Issue]:
-    """G22 (archive-divider half only): REVIEW_HISTORY.md `--- Loop ` dividers must
-    match the canonical format per output-format-markdown.md. Schema_version >= 2.
-    Commit-subject half deferred (requires runtime git context, out of scope here).
+    """G22 (both halves): REVIEW_HISTORY.md `--- Loop ` dividers must match
+    output-format-markdown.md format; recent commit subjects must match the
+    pattern from validation.md:92. Schema_version >= 2.
+
+    The commit-subject sub-check runs only when project_config is non-None
+    (i.e., a .contest-refactor.toml is findable in the artifact ancestor
+    chain — signal that we're in a loop-managed repo). Fixture dirs nested
+    inside the skills repo skip the git shell-out silently.
     """
     issues: List[Issue] = []
     if (current_review.get("schema_version") or 1) < 2:
         return issues
     md_path = artifact_dir / "REVIEW_HISTORY.md"
-    if not md_path.exists():
-        return issues
-    try:
-        text = md_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        issues.append(Issue("G22", f"REVIEW_HISTORY.md unreadable: {exc}"))
-        return issues
-    for lineno, line in enumerate(text.splitlines(), start=1):
-        if line.startswith("--- Loop "):
-            if not _G22_DIVIDER_RE.match(line):
-                issues.append(
-                    Issue(
-                        "G22",
-                        f"REVIEW_HISTORY.md line {lineno}: archive divider does not match "
-                        f"`--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
-                        context=line[:120],
+    if md_path.exists():
+        try:
+            text = md_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            issues.append(Issue("G22", f"REVIEW_HISTORY.md unreadable: {exc}"))
+            text = ""
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if line.startswith("--- Loop "):
+                if not _G22_DIVIDER_RE.match(line):
+                    issues.append(
+                        Issue(
+                            "G22",
+                            f"REVIEW_HISTORY.md line {lineno}: archive divider does not match "
+                            f"`--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+                            context=line[:120],
+                        )
                     )
+    # Commit-subject sub-check (requires git + loop-managed repo).
+    if project_config is None:
+        return issues
+    git_root = _find_git_root(artifact_dir)
+    if git_root is None:
+        return issues
+    loop_n = current_review.get("loop")
+    if not isinstance(loop_n, int) or loop_n < 1:
+        return issues
+    rc, out = _git_command(git_root, "log", f"-n{loop_n}", "--format=%s")
+    if rc != 0 or not out:
+        return issues
+    subjects = [s for s in out.splitlines() if s.strip()]
+    for subject in subjects:
+        if _G22_COMMIT_SUBJECT_RE.match(subject):
+            continue
+        if _G22_COMMIT_SUBJECT_V1_RE.match(subject):
+            issues.append(
+                Issue(
+                    "G22",
+                    f"commit subject missing required `[registry: ...]` suffix "
+                    f"(schema_version >= 2 requires it)",
+                    context=subject[:120],
                 )
+            )
+        else:
+            issues.append(
+                Issue(
+                    "G22",
+                    f"commit subject does not match loop-N pattern "
+                    f"`loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) "
+                    f"<status> [registry: +<n> findings(, ~<n> occurrences)?]`",
+                    context=subject[:120],
+                )
+            )
     return issues
 
 
@@ -876,19 +959,21 @@ def check_g27_retry_envelope(current_review: dict) -> List[Issue]:
 
 
 def check_g28_loop_state_freshness(
-    artifact_dir: Path, current_review: dict
+    artifact_dir: Path,
+    current_review: dict,
+    project_config: dict | None = None,
 ) -> List[Issue]:
-    """G28 (partial): LOOP_STATE.json invariants per validation.md:113-120.
+    """G28 (full): LOOP_STATE.json invariants per validation.md:113-120.
     Schema_version >= 3.
 
-    Implemented:
+    Sub-checks:
     - loop-number consistency (loop_state.loop == current_review.loop)
     - checkpoint freshness (last_checkpoint_at not >24h before now)
     - step range (step_started ∈ 1..11, step_completed ∈ 0..11)
     - step ordering (step_started >= step_completed)
-
-    Deferred: pre_step3_blob_shas cross-check (needs Step 2 plan context);
-    post-commit cleanup invariant (needs git HEAD comparison).
+    - pre_step3_blob_shas covers loop_result.changed_paths
+    - post-commit cleanup: LOOP_STATE.json must be absent when commit_attempted_sha
+      matches git HEAD (requires project_config + git available)
     """
     issues: List[Issue] = []
     if (current_review.get("schema_version") or 1) < 3:
@@ -967,6 +1052,58 @@ def check_g28_loop_state_freshness(
                     "routes to --reset recommendation per Resume Precedence Matrix row 2",
                 )
             )
+
+    # pre_step3_blob_shas cross-check (artifact-only, no git required).
+    # Per validation.md:118: empty pre_step3_blob_shas AND non-empty
+    # loop_result.changed_paths = G28 failure (no restore source recorded).
+    loop_result = current_review.get("loop_result") or {}
+    changed_paths = loop_result.get("changed_paths") or []
+    blob_shas = loop_state.get("pre_step3_blob_shas") or {}
+    if changed_paths and not blob_shas:
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.pre_step3_blob_shas is empty but loop_result.changed_paths "
+                f"has {len(changed_paths)} entries; no restore source recorded "
+                "(narrow revert would have no blob to checkout)",
+            )
+        )
+    elif changed_paths and isinstance(blob_shas, dict):
+        missing = [p for p in changed_paths if p not in blob_shas]
+        if missing:
+            issues.append(
+                Issue(
+                    "G28",
+                    f"loop_result.changed_paths has {len(missing)} entries missing from "
+                    f"LOOP_STATE.pre_step3_blob_shas: {missing[:3]}"
+                    f"{'…' if len(missing) > 3 else ''}",
+                )
+            )
+
+    # Post-commit cleanup invariant (requires project_config + git).
+    # Per validation.md:117: after Step 3 sub-step 11.f, LOOP_STATE.json must
+    # be absent. Presence after a successful commit (commit_attempted_sha
+    # matches git HEAD) is a violation.
+    if project_config is None:
+        return issues
+    commit_sha = loop_state.get("commit_attempted_sha")
+    if not isinstance(commit_sha, str) or not commit_sha:
+        return issues
+    git_root = _find_git_root(artifact_dir)
+    if git_root is None:
+        return issues
+    rc, head_sha = _git_command(git_root, "rev-parse", "HEAD")
+    if rc != 0 or not head_sha.strip():
+        return issues
+    head_sha = head_sha.strip()
+    if head_sha == commit_sha:
+        issues.append(
+            Issue(
+                "G28",
+                f"LOOP_STATE.json present after successful commit (commit_attempted_sha "
+                f"== HEAD {head_sha[:12]}); sub-step 11.f cleanup did not run",
+            )
+        )
     return issues
 
 
@@ -1163,10 +1300,10 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g31_fingerprint_integrity(registry))
     issues.extend(check_g18_review_history_append(current_review, history))
     issues.extend(check_g19_provider_model(current_review))
-    issues.extend(check_g22_archive_divider(artifact_dir, current_review))
-    issues.extend(check_g27_retry_envelope(current_review))
-    issues.extend(check_g28_loop_state_freshness(artifact_dir, current_review))
     project_config = _load_project_config(artifact_dir)
+    issues.extend(check_g22_archive_divider(artifact_dir, current_review, project_config))
+    issues.extend(check_g27_retry_envelope(current_review))
+    issues.extend(check_g28_loop_state_freshness(artifact_dir, current_review, project_config))
     issues.extend(check_halt_success_gating(current_review, project_config))
     issues.extend(check_g21_scorecard(current_review))
     issues.extend(check_continue_backlog(current_review))
