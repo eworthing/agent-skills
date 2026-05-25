@@ -9,7 +9,7 @@ Replaces the prior `SOURCE-VERIFICATION-PROMPT.md` (merged in 2026-05-25). Cover
 
 ---BEGIN PROMPT---
 
-You are reviewing a competitive gap analysis I produced for `contest-refactor`, an autonomous Actor-Critic refactoring loop skill. The analysis compares contest-refactor's existing mechanisms against 39 cloned competitor repos (PR review tools, agent skills, MCP servers, RGR frameworks, plugin marketplaces, cross-model critic patterns, post-output scoring SDKs). 25+ gap-analysis markdown files + 2 CLAIM-DELTAs + SOURCE-STATUS tracker live under `analysis/contest-refactor/`.
+You are reviewing a competitive gap analysis I produced for `contest-refactor`, an autonomous Actor-Critic refactoring loop skill. The analysis compares contest-refactor's existing mechanisms against 47 cloned competitor repos (PR review tools, agent skills, MCP servers, RGR frameworks, plugin marketplaces, cross-model critic patterns, post-output scoring SDKs). 29 markdown files (21 mechanism `*-GAP.md` + 3 meta + 2 CLAIM-DELTAs + SOURCE-STATUS + REVIEW-PROMPT + SOURCE-VERIFICATION-PROMPT stub) live under `analysis/contest-refactor/`.
 
 I want a HARD review. Not validation. Default skeptical. Quote file paths and line numbers for every criticism. If a claim seems plausible but unverified, mark it `UNVERIFIED:` and say what evidence would confirm or refute. Do not be polite. Brief praise only where I avoided a mistake an average reviewer would make.
 
@@ -19,7 +19,7 @@ The analysis has already survived 7 rounds of cross-LLM adversarial review (3 Ge
 
 ### Gap analysis docs (the artifacts under review)
 
-`/Users/Shared/git/agent-skills/analysis/contest-refactor/` — 25+ markdown files. Start with:
+`/Users/Shared/git/agent-skills/analysis/contest-refactor/` — **29 markdown files** (21 `*-GAP.md` mechanism-by-mechanism docs + 3 meta docs `INVENTORY.md`/`RESEARCH-DELTA.md`/`STATE-MACHINE-COMPOSITION-APPENDIX.md` + 2 CLAIM-DELTAs + `SOURCE-STATUS.md` + `REVIEW-PROMPT.md` (this file) + `SOURCE-VERIFICATION-PROMPT.md` (stub pointer to this file)). Start with:
 
 - `INVENTORY.md` — coverage map: mechanism → gap doc → competitor source; full clone catalog
 - `SOURCE-STATUS.md` — per-candidate matrix (cloned / README-inspected / claims-extracted / gap-docs-referencing / adoption-verified / license / status) + fabrication+hallucination+anomaly log + inversion log
@@ -70,7 +70,9 @@ The analysis has already survived 7 rounds of cross-LLM adversarial review (3 Ge
 
 ### Competitor source clones (truth set for "competitor X has feature Y" claims)
 
-`/Users/Shared/git/agent-skills/refs/competitors/` — 39 depth-1 git clones. See `refs/competitors/README.md` for the per-clone catalog with size + SKILL count + relevance, AND `analysis/contest-refactor/SOURCE-STATUS.md` for per-candidate inspection status.
+`/Users/Shared/git/agent-skills/refs/competitors/` — **47 depth-1 git clones** (verified 2026-05-25 via `ls -d refs/competitors/*/ | wc -l`). Breakdown: 30 originals (22 from initial landscape inspection + 8 added in RESEARCH-DELTA round: `claude-review-loop`, `ralph-wiggum`, `awesome-code-review`, `cygnusfear-stuff`, `grill-for-claude`, `rohitg00-toolkit`, `forensic-skills`, `anthropic-security-review`) + 4 added 2026-05-25 a.m. (`archgate-cli`, `continuous-claude-v3`, `buildingopen-bouncer`, `jules-cli-ext`) + 13 added 2026-05-25 p.m. (T1+T2+T3). See `refs/competitors/README.md` for the per-clone catalog with size + SKILL count + relevance, AND `analysis/contest-refactor/SOURCE-STATUS.md` for per-candidate inspection status.
+
+**Note**: `INVENTORY.md` preamble + CLAIM-DELTA-pt2 both state count "39" — this was off by 8 (the RESEARCH-DELTA round additions were not added to INVENTORY's comparator tables, only cited in RESEARCH-DELTA itself). Actual filesystem count is 47. If you find the 39 claim cited elsewhere, flag as Class 1 source mismatch.
 
 **Originals (cited heavily in pre-2026-05-25 docs)**:
 
@@ -160,23 +162,24 @@ For each "competitor X has feature Y" or "contest-refactor already has Z" claim:
 - **TimmyZinin Codex stdin invocation** (CRITICAL): revised CROSS-MODEL-CRITIC-GAP cites `codex exec ${CODEX_FLAGS} - < /tmp/codex-review-prompt-${TIMESTAMP}.md` at SKILL.md:138. This is the central claim that stdin transport is industry pattern (not contest-refactor invention). VERIFY the literal `- <` redirect is present at the cited line.
 - **TimmyZinin git-status verification**: cited at SKILL.md:49-151 with file-mutation warning. Verify.
 - **TimmyZinin hard prompt constraints**: cited at SKILL.md:62-69. Verify.
-- **TimmyZinin 600s timeout**: cited at SKILL.md:134. Verify.
-- **fastruby skunk formula**: cited at SKILL.md:255-258. Verify.
-- **fastruby coverage prerequisite**: cited at SKILL.md:157, 244. Verify.
-- **fastruby 5-category Health Score**: cited at SKILL.md:399-434. Verify the 5 buckets.
+- **TimmyZinin 600s timeout**: cited at SKILL.md:134. Verify (literal Russian text on line 134 says "Запуск Bash tool с **timeout 600000**" i.e. 600000ms = 600s). NOTE: TimmyZinin SKILL.md is partially bilingual (English + Russian); don't flag Russian sections as fabrication.
+- **fastruby skunk formula**: cited at `fastruby-tech-debt-skill/.claude/skills/tech-debt-audit/SKILL.md:255-258` (NOT `fastruby-tech-debt-skill/SKILL.md` — the SKILL.md lives in `.claude/skills/tech-debt-audit/`). Verify literal `SkunkScore = (Code Smells + Complexity) * Coverage Penalty`.
+- **fastruby coverage prerequisite**: cited at `.claude/skills/tech-debt-audit/SKILL.md:157, 244`. Verify.
+- **fastruby 5-category Health Score**: cited at `.claude/skills/tech-debt-audit/SKILL.md:399-434`. Verify the 5 buckets.
+- **fastruby SKILL.md path correction**: CLAIM-DELTA-pt2 + ROI-PRIORITIZATION-GAP cite simply `SKILL.md:NNN` — the actual location is one level deeper: `.claude/skills/tech-debt-audit/SKILL.md`. If any doc cites the root-level `SKILL.md` path, flag as Class 1 source mismatch.
 - **alirezarezvani `context: fork`** (CRITICAL): PHASE-CONTEXT-ISOLATION-GAP + ROUTING-DISCIPLINE-GAP cite YAML frontmatter `context: fork` pattern at `business-operations/skills/business-operations-skills/SKILL.md`. Verify the literal `context: fork` declaration exists.
 - **alirezarezvani signal-based router + Matt-Pocock-forcing-question**: ROUTING-DISCIPLINE-GAP cites 2-signal-confident + 1-signal-forcing-question pattern. Verify.
 - **alirezarezvani 4 sync scripts**: MULTI-HARNESS-ADAPTER-GAP cites `scripts/sync-{codex,gemini,hermes,vibe}-skills.py`. Verify all 4 exist and are stdlib-Python only.
 - **alirezarezvani 728 SKILL.md actual count**: README badge claims 329; INVENTORY says actual 728. Run `find /Users/Shared/git/agent-skills/refs/competitors/alirezarezvani-claude-skills -name SKILL.md | wc -l` to verify 728.
 - **wshobson adapter framework**: MULTI-HARNESS-ADAPTER-GAP cites `tools/adapters/{base,codex,cursor,opencode,gemini}.py` with HarnessAdapter ABC + per-harness subclasses. Verify all 5 files exist.
 - **wshobson plugin-eval 3 layers**: CONTINUOUS-SCORING-AUGMENTATION-GAP cites Layer 1 (7 weighted sub-checks with stated weights), Layer 2 (4 dimensions), Layer 3 (Wilson CI + Bootstrap CI + Clopper-Pearson CI). Verify in `docs/plugin-eval.md`.
-- **wshobson agent-teams file-ownership**: CLAIM-DELTA-pt2 + PARALLEL-CRITIC-ARTIFACT-CONTRACT-GAP cite file-ownership boundary model from `plugins/agent-teams/agents/team-lead.md:1-93`. Verify.
+- **wshobson agent-teams file-ownership**: CLAIM-DELTA-pt2 + PARALLEL-CRITIC-ARTIFACT-CONTRACT-GAP cite file-ownership boundary model from `plugins/agent-teams/agents/team-lead.md:1-93`. Actual file is 92 lines; cited range `:1-93` should be `:1-92` (off by one). Minor.
 - **VoltAgent codebase-orchestrator**: CLAIM-DELTA-pt2 + ROI-PRIORITIZATION-GAP cite `categories/09-meta-orchestration/codebase-orchestrator.md:1-80` for weighted-priority axis (security→bugs→arch→perf→style) + approval gates + diff previews + structured JSON. Verify.
-- **VoltAgent 154 agents under categories/{NN}/**: CLAIM-DELTA-pt2 cites 10 category dirs. Verify via `find categories -name '*.md' | wc -l`.
+- **VoltAgent 154 agents under categories/{NN}/**: CLAIM-DELTA-pt2 cites 10 category dirs. Verify via `find categories -name '*.md' -not -name README.md | wc -l` (returns 154 actual agents). NOTE: unfiltered `find categories -name '*.md'` returns 164 due to per-category README.md files; the 154 claim is correct when READMEs are excluded.
 
 ### Class 2: Missing competitors / under-inspected sources
 
-The gap docs cite 39 competitors. Some clones are present but never inspected per-doc:
+The gap docs cite 47 competitors (per filesystem count; INVENTORY may understate as 39). Some clones are present but never inspected per-doc:
 
 **Pre-2026-05-25 light-inspection list** (sample 2-3):
 - `gstack/` (57 SKILL.md files; only mentioned in INVENTORY)
