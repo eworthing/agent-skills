@@ -189,6 +189,8 @@ Records `gate_overrides: [{gate: "G24", rationale: "...", overridden_by: "user",
 
 This is a doc-hygiene win, not a behavior change — but it forces each gate to be defensible against "why does this gate exist?" cold-read questions. Pairs cleanly with [REVIEW-PROMPT.md § Class 2](REVIEW-PROMPT.md) reviewer's job of pressure-testing gate justifications. Defer if the doc-update cost is large; can land alongside G35/G36 addition.
 
+**Status: APPLIED 2026-05-25** — landed in [`contest-refactor/references/validation.md`](../../contest-refactor/references/validation.md) as per-gate `*Source:*` continuation lines (G1–G31), not the column-table shape sketched above. Rationale for the shape deviation: `validation.md` uses a checkbox list (not a table) and the gates carry long multi-paragraph bodies with embedded sub-bullets and tables of their own. Converting to a single Source column would have required a structural rewrite and lost the in-body cross-references each gate already carries; `*Source:*` continuation lines preserve every gate body byte-for-byte while delivering the same per-gate audit-trail value. Cold-read defensibility test ("where does this invariant come from?") now passes per-gate.
+
 ## What contest-refactor already wins (do not regress)
 
 1. **31 deterministic Python gates** > LLM-judgment hooks for schema/structural validation. Field-presence checks don't need an LLM.
