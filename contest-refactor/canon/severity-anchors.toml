@@ -1,8 +1,9 @@
 # Canonical severity anchors for findings.
 # Verbatim labels — do not normalize case or punctuation.
 # Cross-references: references/architecture-rubric.md § Severity Anchors.
-severity_anchors:
-  - "Cosmetic for contest"
-  - "Noticeable weakness"
-  - "Serious deduction"
-  - "Likely disqualifier"
+severity_anchors = [
+    "Cosmetic for contest",
+    "Noticeable weakness",
+    "Serious deduction",
+    "Likely disqualifier",
+]

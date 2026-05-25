@@ -1,0 +1,9 @@
+# Canonical fixture rule-kinds. Used by evals/fixtures/<id>/fixture.toml tested_rules[].kind.
+# Cross-references: scripts/validate-fixtures.py, references/method.md.
+fixture_rule_kinds = [
+    "gate",                 # references validation gate ID (e.g., G30)
+    "method-step",          # references method.md step (e.g., "1.6", "3")
+    "canon-enum",           # references a canon enum value (e.g., "unresolvable", "HALT_SUCCESS")
+    "scorecard-dimension",  # references architecture-rubric.md scorecard dimension
+    "residual-rule",        # references residual-accounting / 9.5-threshold rule
+]

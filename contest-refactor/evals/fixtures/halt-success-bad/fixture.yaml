@@ -1,9 +1,0 @@
-id: halt-success-bad
-purpose: HALT_SUCCESS emitted while scorecard averages 8.9 with several dimensions at 9.0 and no residual_disposition='accepted'; protects G21 HALT_SUCCESS criteria (every dimension must be 10 or 9.5+ with an accepted, non-expired residual) and the 9.5-threshold residual rule.
-tested_rules:
-  - kind: gate
-    id: G21
-  - kind: residual-rule
-    id: "9.5-threshold"
-expected_result: fail
-notes: "Fixture ships only CURRENT_REVIEW.json (schema_version 2). Strict mode rejects on missing required artifacts; the validate-artifact.py HALT_SUCCESS rule itself does not enforce score thresholds today (only unresolved-Serious + expired-residual checks), so the G21-score-violation intent is currently caught at the Critic/reviewer level rather than the structural validator. Original intent preserved via tested_rules."

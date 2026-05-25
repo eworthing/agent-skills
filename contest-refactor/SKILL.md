@@ -288,7 +288,7 @@ Stagnation is not failure when honestly emitted with a subtype — it's the loop
 - Lens registry: [references/lenses.md](references/lenses.md).
 - Apple/SwiftUI lens: [references/lens-apple.md](references/lens-apple.md).
 - Generic (Rust/Go/Python/Node/JVM) lens: [references/lens-generic.md](references/lens-generic.md).
-- Project config (`.contest-refactor.yaml` schema + accepted-residual expiry rule): [references/project-config.md](references/project-config.md).
+- Project config (`.contest-refactor.toml` schema + accepted-residual expiry rule): [references/project-config.md](references/project-config.md).
 - Worked example: [assets/example-review.md](assets/example-review.md).
 - Preflight script (read-only Step 0 dry-run): `scripts/dry-run.sh [path]`.
 - Repo validator (hard-blocking, checks Evidence Chain coverage + canon alignment + Step 1.6 adjacency): `scripts/validate-repo.py`.

@@ -1,0 +1,12 @@
+id = "continuation-post-commit"
+purpose = "CONTINUE artifact at loop 1 post-commit under spawn_isolation=inline; protects G20 continuation discipline (loop must re-enter Step 1 for loop N+1 within the same turn when state=CONTINUE and backlog is non-empty)."
+expected_result = "fail"
+notes = "Fixture ships only CURRENT_REVIEW.json (schema_version 2). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json plus evidence-chain failures on F2/F3 (which omit why_it_matters/what_is_wrong/evidence/why_weakens_submission — only the loop-state schema-v1 finding shape was filled). G20 is the original intent; current strict-mode failures are mostly artifact completeness, not G20 itself."
+
+[[tested_rules]]
+kind = "gate"
+id = "G20"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

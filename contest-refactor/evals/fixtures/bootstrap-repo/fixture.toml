@@ -1,0 +1,12 @@
+id = "bootstrap-repo"
+purpose = "Demonstrates a first-loop emit (Loop 1) with full Discovery and fresh registry bootstrap; protects Method Step 1.5's bootstrap branch (no prior findings_registry.json; every scorecard delta = SAME on loop 1; first-time registry setup happens in Step 3 step 8) and the CONTINUE state shape for a non-empty backlog."
+expected_result = "fail"
+notes = "Fixture ships only REVIEW_HISTORY.md (no CURRENT_REVIEW.json), so strict mode rejects on required-artifact. Tested rules cover Step 1.5 bootstrap (the only formally-labeled ordered-list step that owns first-loop / no-prior-registry behavior) and the CONTINUE canon-enum that loop 1 emits at the end of its Critic Phase. See REVIEW_HISTORY.md header 'Loop 1' for original context."
+
+[[tested_rules]]
+kind = "method-step"
+id = "1.5"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

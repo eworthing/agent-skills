@@ -17,7 +17,7 @@ This repo holds reusable skills for AI coding agents (Claude Code, Codex CLI, op
 - Shell scripts: write portable Bash targeting macOS 3.2 + Linux 4+. Use POSIX `while read` instead of `mapfile`; use BSD-compatible `sed`/`date` flags. Consult `bash-macos/SKILL.md` when writing.
 - Edits validate with: `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py <skill-dir>`. Aim for 100% on automated checks + ≥ 90 on the manual rubric.
 - Commit style: `feat(<skill-name>): <change> (<old-score>→<new-score> EVAL)` when an eval score shifts. Otherwise standard Conventional Commits.
-- `contest-refactor` ships Python validators in `scripts/`. Install dependencies with `pip install -r contest-refactor/scripts/requirements.txt` (PyYAML>=6.0) before running `validate-repo.py` or `validate-artifact.py`.
+- `contest-refactor` ships Python validators in `scripts/`. Stdlib-only on Python 3.11+ (uses `tomllib`). Run `validate-repo.py`, `validate-artifact.py`, and `validate-fixtures.py` directly.
 
 ## Installation (Symlink Pattern)
 

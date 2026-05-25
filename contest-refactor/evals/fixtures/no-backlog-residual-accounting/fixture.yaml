@@ -1,9 +1,0 @@
-id: no-backlog-residual-accounting
-purpose: HALT_STAGNATION subtype=no_backlog emitted when scorecard sits below 9.5 with three candidates rejected as cosmetic/SPT-failing/ADR-accepted but residual fields left null; protects G23 residual-accounting-before-no_backlog rule (each sub-9.5 dimension must either have an accepted-residual disposition or name a non-backlog blocker).
-tested_rules:
-  - kind: gate
-    id: G23
-  - kind: canon-enum
-    id: "no_backlog"
-expected_result: fail
-notes: "Fixture ships only CURRENT_REVIEW.json (schema_version 2). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. The G23 'rejected candidates still need terminal score disposition' rule lives in method.md / architecture-rubric.md and is checked at Critic-emit time; not yet enforced by validate-artifact.py. Original intent preserved via tested_rules."

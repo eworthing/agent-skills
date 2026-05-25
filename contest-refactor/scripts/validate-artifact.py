@@ -5,13 +5,15 @@ Default mode (PR2) is strict (exit non-zero on any failure). Advisory mode
 emits WARN to stderr and exits 0. Both modes apply the same rule set; the flag
 governs exit code only.
 
-Checks (every value resolves against canon/*.yaml):
+Checks (every value resolves against canon/*.toml):
 - Required artifact existence based on schema_version
 - Per-finding Evidence Chain field completeness
 - Mechanical retirement rule (Branch A 3-way / Branch B 2-way hash equality)
 - G30 disposition coverage at HALT_STAGNATION/oscillation
 - G31 fingerprint integrity (recomputed hashes match stored)
 - HALT_SUCCESS gating + expired-accepted-residual rejection
+- G21-scorecard: every HALT_SUCCESS dimension must satisfy score==10 OR
+  (score>=9.5 AND residual_disposition=="accepted")
 - CONTINUE backlog presence
 
 Usage:
@@ -25,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tomllib
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, List, Tuple
@@ -424,7 +427,7 @@ def check_g30_disposition_coverage(
             issues.append(
                 Issue(
                     "G30",
-                    f"finding {stable_id} disposition {disposition!r} not in canon/retirement-reasons.yaml",
+                    f"finding {stable_id} disposition {disposition!r} not in canon/retirement-reasons.toml",
                 )
             )
             continue
@@ -554,6 +557,88 @@ def check_halt_success_gating(
     return issues
 
 
+def check_g21_scorecard(current_review: dict) -> List[Issue]:
+    """G21-scorecard: HALT_SUCCESS requires every dimension to satisfy
+    score == 10 OR (score >= 9.5 AND residual_disposition == "accepted").
+
+    Promotes [validation.md G21] + [output-format-json.md rule #13] to a
+    structural check. Mirrors the rule text from references/validation.md:
+        - score == 10                                            → pass
+        - score >= 9.5 AND score < 10 AND disp == "accepted"     → pass
+        - anything else (including queued at any score)          → fail
+    """
+    issues: List[Issue] = []
+    if current_review.get("state") != "HALT_SUCCESS":
+        return issues
+    scorecard = current_review.get("scorecard") or {}
+    if not isinstance(scorecard, dict):
+        issues.append(
+            Issue(
+                "G21-scorecard",
+                "scorecard must be a mapping of dimension → entry",
+            )
+        )
+        return issues
+    for dim, entry in scorecard.items():
+        if not isinstance(entry, dict):
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"scorecard {dim!r} entry must be a mapping",
+                )
+            )
+            continue
+        score_raw = entry.get("score")
+        # Convert score to float for comparison; accept int and float
+        try:
+            score = float(score_raw)
+        except (TypeError, ValueError):
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"scorecard {dim!r} score={score_raw!r} is not a number",
+                )
+            )
+            continue
+        disposition = entry.get("residual_disposition")
+        if score == 10:
+            continue  # explicit pass
+        if 9.5 <= score < 10 and disposition == "accepted":
+            continue  # accepted residual pass
+        # Anything else fails. Build a precise diagnostic.
+        if score < 9.5:
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"HALT_SUCCESS dimension {dim!r} score={score} < 9.5 "
+                    f"(every scorecard dimension must satisfy score == 10 OR "
+                    f"(score >= 9.5 AND residual_disposition == 'accepted'))",
+                )
+            )
+        elif 9.5 <= score < 10 and disposition == "queued":
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"HALT_SUCCESS dimension {dim!r} score={score} has "
+                    f"residual_disposition='queued' "
+                    f"(queued residuals block HALT_SUCCESS; promote to "
+                    f"'accepted' with a rationale or keep state CONTINUE "
+                    f"until the backlog item is resolved)",
+                )
+            )
+        else:
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"HALT_SUCCESS dimension {dim!r} score={score} "
+                    f"residual_disposition={disposition!r} "
+                    f"(every scorecard dimension must satisfy score == 10 OR "
+                    f"(score >= 9.5 AND residual_disposition == 'accepted'))",
+                )
+            )
+    return issues
+
+
 def check_continue_backlog(current_review: dict) -> List[Issue]:
     """CONTINUE must carry next backlog work."""
     issues: List[Issue] = []
@@ -572,13 +657,13 @@ def check_continue_backlog(current_review: dict) -> List[Issue]:
 
 
 def _load_project_config(artifact_dir: Path) -> dict | None:
-    """Load `.contest-refactor.yaml` from the artifact dir or its repo root."""
+    """Load `.contest-refactor.toml` from the artifact dir or its repo root."""
     candidates: List[Path] = [
-        artifact_dir / ".contest-refactor.yaml",
+        artifact_dir / ".contest-refactor.toml",
     ]
     cur = artifact_dir.resolve()
     for ancestor in [cur, *cur.parents]:
-        candidates.append(ancestor / ".contest-refactor.yaml")
+        candidates.append(ancestor / ".contest-refactor.toml")
     seen: set[Path] = set()
     for path in candidates:
         if path in seen:
@@ -586,9 +671,8 @@ def _load_project_config(artifact_dir: Path) -> dict | None:
         seen.add(path)
         if path.exists():
             try:
-                import yaml
-
-                return yaml.safe_load(path.read_text(encoding="utf-8"))
+                with path.open("rb") as fh:
+                    return tomllib.load(fh)
             except Exception:
                 return None
     return None
@@ -617,6 +701,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g31_fingerprint_integrity(registry))
     project_config = _load_project_config(artifact_dir)
     issues.extend(check_halt_success_gating(current_review, project_config))
+    issues.extend(check_g21_scorecard(current_review))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

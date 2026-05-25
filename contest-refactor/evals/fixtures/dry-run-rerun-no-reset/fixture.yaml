@@ -1,9 +1,0 @@
-id: dry-run-rerun-no-reset
-purpose: Second --dry-run invocation must produce the same HALT_DRY_RUN artifacts as the first without resetting prior state; protects dry-run re-entry idempotency (Step -1 resume precedence matrix row for HALT_DRY_RUN).
-tested_rules:
-  - kind: gate
-    id: G29
-  - kind: canon-enum
-    id: "HALT_DRY_RUN"
-expected_result: fail
-notes: "Fixture's CURRENT_REVIEW.json is intentionally identical to dry-run-halt-after-step2 (re-run must be idempotent). Strict mode rejects on missing required artifacts at schema_version 3. Original intent is dry-run re-entry semantics; tested_rules best-fit-guess covers schema_version 3 invariants + the HALT_DRY_RUN canon-enum that gates this behavior."

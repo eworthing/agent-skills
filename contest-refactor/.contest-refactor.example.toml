@@ -1,0 +1,42 @@
+# .contest-refactor.toml — durable per-project config for the contest-refactor loop.
+# Copy this file to `.contest-refactor.toml` at the repo root to use it.
+#
+# Schema documented in references/project-config.md. The repo validator
+# (`scripts/validate-repo.py`) checks parse + required keys + accepted-residual
+# completeness + ignore-list shape + absence of obvious secrets.
+#
+# This config NEVER overrides Evidence Chain, validation gates, or safety checks.
+
+version = 1
+
+# `ignore` is a list of glob patterns excluded from finding-emission scope.
+# Findings whose primary_file matches any glob are downgraded to scope-limited.
+ignore = [
+    "**/*.generated.*",
+    "**/DerivedData/**",
+    "vendor/**",
+    "node_modules/**",
+]
+
+[defaults]
+# `lens` resolves the review lens used by Step 1. Allowed values: apple | generic.
+lens = "apple"
+
+# `loop_cap` is the default number of loops per invocation (overridable via --cap).
+loop_cap = 8
+
+# `test_command` is the discovery hint Step 0 uses when no Makefile / Package.swift
+# is detected. Prefer a project-local script that runs the unit suite quickly.
+test_command = "scripts/run_local_gate.sh --quick"
+
+# Accepted residuals — durable, scoped exceptions to the 9.5+ scoring rule.
+# EVERY accepted residual entry requires `id`, `pattern`, `reason`, `accepted_by`,
+# `accepted_on`, and `expires`. The `expires` date is MANDATORY; an expired
+# residual cannot satisfy HALT_SUCCESS until renewed.
+[[accepted_residuals]]
+id = "audio-session-lease-deinit-carve-out"
+pattern = "BenchHypeKit/Sources/Adapters/AudioSession/AudioSessionConfigurator+Lease.swift"
+reason = "Swift deinit cannot await; idempotent main-actor hop is microsecond-bounded; covered by AudioSessionConfiguratorLeaseDeinitTests."
+accepted_by = "Architecture Council"
+accepted_on = "2026-04-01"
+expires = "2026-10-01"

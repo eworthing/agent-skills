@@ -1,9 +1,0 @@
-id: loop-state-post-commit-pre-delete
-purpose: LOOP_STATE.json shows step_started=11 with non-null commit_attempted_sha and step_completed=10 (commit landed but step 11.f delete was interrupted); protects G28 post-commit cleanup so the resume path verifies HEAD subject and deletes the stale LOOP_STATE.json.
-tested_rules:
-  - kind: gate
-    id: G28
-  - kind: canon-enum
-    id: "CONTINUE"
-expected_result: fail
-notes: "Fixture ships CURRENT_REVIEW.json + LOOP_STATE.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. Original intent is the Case A (step_completed==11 + LOOP_STATE.json still present) resume branch from resume-detection.md; structural validator covers G28 freshness but not the delete-step idempotency, so tested_rules preserves the intent."

@@ -357,7 +357,7 @@ Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required whe
   "remaining_serious_findings_disposition": [
     // Required at schema_version >= 2 when state == HALT_STAGNATION AND halt_subtype == "oscillation".
     // Every Serious-or-worse finding with status ∈ {open, rejected_attempt} in the registry must appear here
-    // with a canonical `disposition` (from canon/retirement-reasons.yaml) plus the required sidecar.
+    // with a canonical `disposition` (from canon/retirement-reasons.toml) plus the required sidecar.
     // G30 enforces coverage; the validator rejects HALT_STAGNATION/oscillation when any eligible
     // Serious-or-worse finding is missing or its sidecar is missing.
     { "stable_id": "F-007", "disposition": "unresolvable" },
@@ -378,7 +378,7 @@ The loop subagent emits `halt_handoff.expected_actions[]` from the menu options 
 
 ### remaining_serious_findings_disposition[] sidecar rules (G30)
 
-Each entry has `stable_id` plus `disposition` (one of the canonical values from `canon/retirement-reasons.yaml`) plus a required sidecar field, depending on `disposition`:
+Each entry has `stable_id` plus `disposition` (one of the canonical values from `canon/retirement-reasons.toml`) plus a required sidecar field, depending on `disposition`:
 
 - `disposition == "unresolvable"` — no extra sidecar; the registry already carries the `retirement` block (`reason` + `rationale`).
 - `disposition == "user_decision"` — `user_decision_ref` non-empty (e.g., `"ADR-0042"`).

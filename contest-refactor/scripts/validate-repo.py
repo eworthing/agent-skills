@@ -9,8 +9,8 @@ Checks:
 - G30 + G31 list items in validation.md
 - G3 cross-reference to Evidence Chain section
 - Gate sequencing (unique, sequential, no gaps up to highest canon gate)
-- Canon alignment (enum tokens in references match canon/*.yaml)
-- `.contest-refactor.example.yaml` parses; required keys; accepted_residuals fields complete
+- Canon alignment (enum tokens in references match canon/*.toml)
+- `.contest-refactor.example.toml` parses; required keys; accepted_residuals fields complete
 - No obvious secrets in the example config
 
 Usage:
@@ -21,17 +21,10 @@ from __future__ import annotations
 
 import re
 import sys
+import tomllib
 from datetime import date
 from pathlib import Path
 from typing import List, Sequence, Tuple
-
-try:
-    import yaml
-except ImportError:
-    sys.stderr.write(
-        "error: PyYAML required. Install with: pip install -r scripts/requirements.txt\n"
-    )
-    sys.exit(2)
 
 # Local sibling imports
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -246,7 +239,7 @@ def check_g3_evidence_chain_cross_reference() -> List[Violation]:
 
 
 def check_gate_sequencing(canon: _canon.Canon) -> List[Violation]:
-    """Gates in canon/validation-gates.yaml are unique, sequential, no gaps."""
+    """Gates in canon/validation-gates.toml are unique, sequential, no gaps."""
     violations: List[Violation] = []
     gate_ids = list(canon.validation_gates.keys())
     # Expect IDs of the form G<n>
@@ -263,7 +256,7 @@ def check_gate_sequencing(canon: _canon.Canon) -> List[Violation]:
         return violations
     if len(parsed) != len(set(parsed)):
         violations.append(
-            Violation("gate-sequencing", "duplicate gate IDs in canon/validation-gates.yaml")
+            Violation("gate-sequencing", "duplicate gate IDs in canon/validation-gates.toml")
         )
     parsed_sorted = sorted(parsed)
     expected = list(range(1, parsed_sorted[-1] + 1))
@@ -340,13 +333,13 @@ def check_canon_alignment(canon: _canon.Canon) -> List[Violation]:
 
 
 def check_example_config() -> List[Violation]:
-    """`.contest-refactor.example.yaml` parse + required keys + accepted_residuals shape."""
+    """`.contest-refactor.example.toml` parse + required keys + accepted_residuals shape."""
     violations: List[Violation] = []
-    path = SKILL_ROOT / ".contest-refactor.example.yaml"
+    path = SKILL_ROOT / ".contest-refactor.example.toml"
     if not path.exists():
         return [
             Violation(
-                "example-config", ".contest-refactor.example.yaml missing", path
+                "example-config", ".contest-refactor.example.toml missing", path
             )
         ]
     raw = path.read_text(encoding="utf-8")
@@ -361,9 +354,10 @@ def check_example_config() -> List[Violation]:
                 )
             )
     try:
-        data = yaml.safe_load(raw)
-    except yaml.YAMLError as exc:
-        return [Violation("example-config", f"YAML parse failed: {exc}", path)]
+        with path.open("rb") as fh:
+            data = tomllib.load(fh)
+    except tomllib.TOMLDecodeError as exc:
+        return [Violation("example-config", f"TOML parse failed: {exc}", path)]
     if not isinstance(data, dict):
         return [Violation("example-config", "top-level must be a mapping", path)]
     # Recognize keys
@@ -443,7 +437,7 @@ def check_example_config() -> List[Violation]:
             if value is None:
                 continue
             if isinstance(value, date):
-                continue  # PyYAML coerces YYYY-MM-DD to date by default
+                continue  # tomllib parses YYYY-MM-DD as datetime.date
             if not isinstance(value, str) or not re.match(
                 r"^\d{4}-\d{2}-\d{2}$", value
             ):

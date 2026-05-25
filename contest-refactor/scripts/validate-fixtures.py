@@ -2,9 +2,9 @@
 """Fixture-discipline validator for the contest-refactor skill.
 
 Hard-blocking: exit 0 on success, non-zero on any violation. Imports
-`_canon.load_canon()` so enum ownership stays in canon/*.yaml.
+`_canon.load_canon()` so enum ownership stays in canon/*.toml.
 
-Checks every `<fixtures-dir>/<id>/fixture.yaml`:
+Checks every `<fixtures-dir>/<id>/fixture.toml`:
 - Required fields present + non-empty: `id`, `purpose`, `tested_rules[]`,
   `expected_result`. `notes` is optional.
 - `id` matches directory name.
@@ -36,16 +36,9 @@ import argparse
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any, List, Sequence
-
-try:
-    import yaml
-except ImportError:
-    sys.stderr.write(
-        "error: PyYAML required. Install with: pip install -r scripts/requirements.txt\n"
-    )
-    sys.exit(2)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -111,11 +104,12 @@ def _fixture_rule_kinds(canon: _canon.Canon) -> Sequence[str]:
     return extra.get("fixture_rule_kinds", ())
 
 
-def _load_yaml(path: Path) -> Any:
+def _load_toml(path: Path) -> Any:
     try:
-        return yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as exc:
-        raise SystemExit(f"error: {path}: YAML parse failed: {exc}")
+        with path.open("rb") as fh:
+            return tomllib.load(fh)
+    except tomllib.TOMLDecodeError as exc:
+        raise SystemExit(f"error: {path}: TOML parse failed: {exc}")
 
 
 _METHOD_STEPS_CACHE: set[str] | None = None
@@ -169,7 +163,7 @@ def _validate_tested_rule(
     if kind == "gate":
         if rid_str not in canon.validation_gates:
             errors.append(
-                f"unknown gate id {rid_str!r} (not in canon/validation-gates.yaml)"
+                f"unknown gate id {rid_str!r} (not in canon/validation-gates.toml)"
             )
     elif kind == "method-step":
         if rid_str not in _method_step_labels():
@@ -187,7 +181,7 @@ def _validate_tested_rule(
     elif kind == "scorecard-dimension":
         if rid_str not in canon.scorecard_dimensions:
             errors.append(
-                f"scorecard-dimension {rid_str!r} not in canon/scorecard-dimensions.yaml"
+                f"scorecard-dimension {rid_str!r} not in canon/scorecard-dimensions.toml"
             )
     elif kind == "residual-rule":
         if rid_str not in RESIDUAL_RULES:
@@ -200,22 +194,22 @@ def _validate_tested_rule(
 def _validate_one_fixture(
     fixture_dir: Path, canon: _canon.Canon, kinds: Sequence[str]
 ) -> List[Violation]:
-    """Schema + content checks on a single fixture's fixture.yaml."""
+    """Schema + content checks on a single fixture's fixture.toml."""
     violations: List[Violation] = []
-    yaml_path = fixture_dir / "fixture.yaml"
-    if not yaml_path.exists():
+    toml_path = fixture_dir / "fixture.toml"
+    if not toml_path.exists():
         violations.append(
             Violation(
                 "missing-sidecar",
-                f"fixture.yaml is required for every evals/fixtures/<id>/",
-                yaml_path,
+                f"fixture.toml is required for every evals/fixtures/<id>/",
+                toml_path,
             )
         )
         return violations
-    data = _load_yaml(yaml_path)
+    data = _load_toml(toml_path)
     if not isinstance(data, dict):
         violations.append(
-            Violation("schema", "fixture.yaml top-level must be a mapping", yaml_path)
+            Violation("schema", "fixture.toml top-level must be a mapping", toml_path)
         )
         return violations
     for field in REQUIRED_FIXTURE_FIELDS:
@@ -225,7 +219,7 @@ def _validate_one_fixture(
                 Violation(
                     "schema",
                     f"missing or empty required field {field!r}",
-                    yaml_path,
+                    toml_path,
                 )
             )
     declared_id = data.get("id")
@@ -233,9 +227,9 @@ def _validate_one_fixture(
         violations.append(
             Violation(
                 "id-mismatch",
-                f"fixture.yaml id={declared_id!r} does not match directory name "
+                f"fixture.toml id={declared_id!r} does not match directory name "
                 f"{fixture_dir.name!r}",
-                yaml_path,
+                toml_path,
             )
         )
     expected = data.get("expected_result")
@@ -244,13 +238,13 @@ def _validate_one_fixture(
             Violation(
                 "schema",
                 f"expected_result={expected!r} not in {sorted(EXPECTED_RESULT_VALUES)}",
-                yaml_path,
+                toml_path,
             )
         )
     tested = data.get("tested_rules") or []
     if not isinstance(tested, list):
         violations.append(
-            Violation("schema", "tested_rules must be a list", yaml_path)
+            Violation("schema", "tested_rules must be a list", toml_path)
         )
         tested = []
     for idx, rule in enumerate(tested):
@@ -259,18 +253,18 @@ def _validate_one_fixture(
                 Violation(
                     "tested-rules",
                     f"tested_rules[{idx}]: {err}",
-                    yaml_path,
+                    toml_path,
                 )
             )
-    # Cross-check: every artifact file the fixture references in fixture.yaml
+    # Cross-check: every artifact file the fixture references in fixture.toml
     # (a `files:` array, optional) actually exists. The plan's "Every file the
-    # fixture lists exists" bullet covers this. fixture.yaml doesn't have a
+    # fixture lists exists" bullet covers this. fixture.toml doesn't have a
     # mandatory files[] field today; if present, validate it.
     listed_files = data.get("files")
     if listed_files is not None:
         if not isinstance(listed_files, list):
             violations.append(
-                Violation("schema", "files must be a list of relative paths", yaml_path)
+                Violation("schema", "files must be a list of relative paths", toml_path)
             )
         else:
             for rel in listed_files:
@@ -279,7 +273,7 @@ def _validate_one_fixture(
                         Violation(
                             "schema",
                             f"files[] entry {rel!r} must be a string path",
-                            yaml_path,
+                            toml_path,
                         )
                     )
                     continue
@@ -289,7 +283,7 @@ def _validate_one_fixture(
                         Violation(
                             "files",
                             f"declared fixture file does not exist: {rel}",
-                            yaml_path,
+                            toml_path,
                         )
                     )
     return violations
@@ -360,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
     kinds = _fixture_rule_kinds(canon)
     if not kinds:
         sys.stderr.write(
-            "error: canon/fixture-rule-kinds.yaml missing or empty; "
+            "error: canon/fixture-rule-kinds.toml missing or empty; "
             "PR2 requires this canon file\n"
         )
         return 2
@@ -377,12 +371,12 @@ def main(argv: list[str] | None = None) -> int:
     for fixture_dir in fixture_subdirs:
         fixture_violations = _validate_one_fixture(fixture_dir, canon, kinds)
         violations.extend(fixture_violations)
-        # Only run the cross-check if the fixture.yaml's expected_result parses
+        # Only run the cross-check if the fixture.toml's expected_result parses
         # cleanly; otherwise the upstream schema error is sufficient.
         if args.run_artifact_check and not any(
             v.rule in {"missing-sidecar", "schema"} for v in fixture_violations
         ):
-            data = _load_yaml(fixture_dir / "fixture.yaml") or {}
+            data = _load_toml(fixture_dir / "fixture.toml") or {}
             expected = data.get("expected_result")
             if expected in EXPECTED_RESULT_VALUES:
                 violations.extend(_cross_check_expected_result(fixture_dir, expected))

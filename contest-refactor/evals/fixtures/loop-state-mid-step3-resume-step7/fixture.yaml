@@ -1,9 +1,0 @@
-id: loop-state-mid-step3-resume-step7
-purpose: LOOP_STATE.json shows step_started=7, step_completed=6 (loop interrupted mid-Step-3 between step 6 review and step 7 commit); protects G28 checkpoint freshness + resume-detection ability to pick up at step_started when checkpoint is recent.
-tested_rules:
-  - kind: gate
-    id: G28
-  - kind: canon-enum
-    id: "CONTINUE"
-expected_result: fail
-notes: "Fixture ships CURRENT_REVIEW.json + LOOP_STATE.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. G28 resume-detection logic is exercised by Step -1 resume code rather than validate-artifact.py, so original intent is preserved via tested_rules."

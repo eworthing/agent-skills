@@ -1,6 +1,6 @@
 """Shared canon loader.
 
-Reads every canon/*.yaml once into a frozen namespace. Both validate-repo.py
+Reads every canon/*.toml once into a frozen namespace. Both validate-repo.py
 and validate-artifact.py import from here so enum ownership lives in one place.
 
 No inline enum constants anywhere else in scripts/.
@@ -9,18 +9,11 @@ No inline enum constants anywhere else in scripts/.
 from __future__ import annotations
 
 import sys
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping, Tuple
-
-try:
-    import yaml
-except ImportError:
-    sys.stderr.write(
-        "error: PyYAML required. Install with: pip install -r scripts/requirements.txt\n"
-    )
-    sys.exit(2)
 
 
 CANON_DIR_NAME = "canon"
@@ -28,7 +21,7 @@ CANON_DIR_NAME = "canon"
 
 @dataclass(frozen=True)
 class Canon:
-    """Frozen snapshot of every canon/*.yaml file."""
+    """Frozen snapshot of every canon/*.toml file."""
 
     states: Tuple[str, ...]
     halt_subtypes: Tuple[str, ...]
@@ -39,21 +32,21 @@ class Canon:
     dependency_categories: Tuple[str, ...]
     retirement_reasons: Tuple[str, ...]
     validation_gates: Mapping[str, str]
-    # PR2 will add fixture_rule_kinds; lazy lookup via .extra
+    # PR2 added fixture_rule_kinds; lazy lookup via .extra
     extra: Mapping[str, Any]
 
 
-def _load_yaml(path: Path) -> Any:
+def _load_toml(path: Path) -> Any:
     if not path.exists():
         sys.stderr.write(f"error: canon file missing: {path}\n")
         sys.exit(2)
     try:
-        with path.open("r", encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-    except yaml.YAMLError as exc:
+        with path.open("rb") as fh:
+            data = tomllib.load(fh)
+    except tomllib.TOMLDecodeError as exc:
         sys.stderr.write(f"error: canon file malformed: {path}: {exc}\n")
         sys.exit(2)
-    if data is None:
+    if not data:
         sys.stderr.write(f"error: canon file empty: {path}\n")
         sys.exit(2)
     return data
@@ -71,7 +64,7 @@ def _require_list(data: Mapping[str, Any], key: str, path: Path) -> Tuple[str, .
 
 
 def load_canon(skill_root: Path | None = None) -> Canon:
-    """Load every canon/*.yaml file into a frozen Canon instance.
+    """Load every canon/*.toml file into a frozen Canon instance.
 
     `skill_root` defaults to the parent of this script's directory.
     """
@@ -82,64 +75,64 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         sys.stderr.write(f"error: canon directory missing: {canon_dir}\n")
         sys.exit(2)
 
-    states = _require_list(_load_yaml(canon_dir / "states.yaml"), "states", canon_dir / "states.yaml")
+    states = _require_list(_load_toml(canon_dir / "states.toml"), "states", canon_dir / "states.toml")
     halt_subtypes = _require_list(
-        _load_yaml(canon_dir / "halt-subtypes.yaml"), "halt_subtypes", canon_dir / "halt-subtypes.yaml"
+        _load_toml(canon_dir / "halt-subtypes.toml"), "halt_subtypes", canon_dir / "halt-subtypes.toml"
     )
     finding_statuses = _require_list(
-        _load_yaml(canon_dir / "finding-statuses.yaml"), "finding_statuses", canon_dir / "finding-statuses.yaml"
+        _load_toml(canon_dir / "finding-statuses.toml"), "finding_statuses", canon_dir / "finding-statuses.toml"
     )
-    verdicts = _require_list(_load_yaml(canon_dir / "verdicts.yaml"), "verdicts", canon_dir / "verdicts.yaml")
+    verdicts = _require_list(_load_toml(canon_dir / "verdicts.toml"), "verdicts", canon_dir / "verdicts.toml")
     severity_anchors = _require_list(
-        _load_yaml(canon_dir / "severity-anchors.yaml"), "severity_anchors", canon_dir / "severity-anchors.yaml"
+        _load_toml(canon_dir / "severity-anchors.toml"), "severity_anchors", canon_dir / "severity-anchors.toml"
     )
     scorecard_dimensions = _require_list(
-        _load_yaml(canon_dir / "scorecard-dimensions.yaml"),
+        _load_toml(canon_dir / "scorecard-dimensions.toml"),
         "scorecard_dimensions",
-        canon_dir / "scorecard-dimensions.yaml",
+        canon_dir / "scorecard-dimensions.toml",
     )
     dependency_categories = _require_list(
-        _load_yaml(canon_dir / "dependency-categories.yaml"),
+        _load_toml(canon_dir / "dependency-categories.toml"),
         "dependency_categories",
-        canon_dir / "dependency-categories.yaml",
+        canon_dir / "dependency-categories.toml",
     )
     retirement_reasons = _require_list(
-        _load_yaml(canon_dir / "retirement-reasons.yaml"),
+        _load_toml(canon_dir / "retirement-reasons.toml"),
         "retirement_reasons",
-        canon_dir / "retirement-reasons.yaml",
+        canon_dir / "retirement-reasons.toml",
     )
 
-    gates_data = _load_yaml(canon_dir / "validation-gates.yaml")
+    gates_data = _load_toml(canon_dir / "validation-gates.toml")
     if not isinstance(gates_data, dict) or "validation_gates" not in gates_data:
         sys.stderr.write(
-            f"error: canon file {canon_dir / 'validation-gates.yaml'}: missing 'validation_gates' key\n"
+            f"error: canon file {canon_dir / 'validation-gates.toml'}: missing 'validation_gates' key\n"
         )
         sys.exit(2)
     gates_list = gates_data["validation_gates"]
     if not isinstance(gates_list, list):
         sys.stderr.write(
-            f"error: canon file {canon_dir / 'validation-gates.yaml'}: 'validation_gates' must be a list\n"
+            f"error: canon file {canon_dir / 'validation-gates.toml'}: 'validation_gates' must be a list\n"
         )
         sys.exit(2)
     gates_map: dict[str, str] = {}
     for entry in gates_list:
         if not isinstance(entry, dict) or "id" not in entry or "title" not in entry:
             sys.stderr.write(
-                f"error: canon file {canon_dir / 'validation-gates.yaml'}: each entry needs 'id' and 'title'\n"
+                f"error: canon file {canon_dir / 'validation-gates.toml'}: each entry needs 'id' and 'title'\n"
             )
             sys.exit(2)
         gate_id = str(entry["id"])
         if gate_id in gates_map:
             sys.stderr.write(
-                f"error: canon file {canon_dir / 'validation-gates.yaml'}: duplicate gate id '{gate_id}'\n"
+                f"error: canon file {canon_dir / 'validation-gates.toml'}: duplicate gate id '{gate_id}'\n"
             )
             sys.exit(2)
         gates_map[gate_id] = str(entry["title"])
 
     extra: dict[str, Any] = {}
-    fixture_kinds_path = canon_dir / "fixture-rule-kinds.yaml"
+    fixture_kinds_path = canon_dir / "fixture-rule-kinds.toml"
     if fixture_kinds_path.exists():
-        kinds_data = _load_yaml(fixture_kinds_path)
+        kinds_data = _load_toml(fixture_kinds_path)
         extra["fixture_rule_kinds"] = _require_list(
             kinds_data, "fixture_rule_kinds", fixture_kinds_path
         )

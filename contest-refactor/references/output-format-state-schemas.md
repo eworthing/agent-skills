@@ -165,7 +165,7 @@ Every occurrence emitted at `schema_version >= 2` carries:
 
 When `status == "unresolvable"`, the occurrence also carries:
 
-- `retirement.reason` — value from `canon/retirement-reasons.yaml`.
+- `retirement.reason` — value from `canon/retirement-reasons.toml`.
 - `retirement.rationale` — non-empty free-text audit string (validator checks presence, not content).
 
 ### Fingerprint algorithm (canonical, owned by `scripts/_fingerprint.py`)

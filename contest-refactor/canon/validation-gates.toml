@@ -1,0 +1,127 @@
+# Canonical validation gate IDs and titles. Sequenced; no gaps.
+# Cross-references: references/validation.md (authoritative gate text).
+# Validators assert (a) IDs are unique and sequential, (b) every referenced gate ID resolves here.
+
+[[validation_gates]]
+id = "G1"
+title = "Output structure"
+
+[[validation_gates]]
+id = "G2"
+title = "JSON schema fidelity"
+
+[[validation_gates]]
+id = "G3"
+title = "Evidence chain"
+
+[[validation_gates]]
+id = "G4"
+title = "Score-proof requirement"
+
+[[validation_gates]]
+id = "G5"
+title = "9.5 residual"
+
+[[validation_gates]]
+id = "G6"
+title = "10 anchor justification"
+
+[[validation_gates]]
+id = "G7"
+title = "No stale findings"
+
+[[validation_gates]]
+id = "G8"
+title = "No score increase without structural proof"
+
+[[validation_gates]]
+id = "G9"
+title = "Backlog purity + per-state presence"
+
+[[validation_gates]]
+id = "G10"
+title = "Deepening Candidate purity"
+
+[[validation_gates]]
+id = "G11"
+title = "Builder Notes purity"
+
+[[validation_gates]]
+id = "G12"
+title = "Seam policy + friction proof"
+
+[[validation_gates]]
+id = "G13"
+title = "Vocabulary discipline (architectural-label use only)"
+
+[[validation_gates]]
+id = "G14"
+title = "Payload not instruction"
+
+[[validation_gates]]
+id = "G15"
+title = "Implementation review present"
+
+[[validation_gates]]
+id = "G16"
+title = "Registry consistency"
+
+[[validation_gates]]
+id = "G17"
+title = "Indirect coverage citation"
+
+[[validation_gates]]
+id = "G18"
+title = "REVIEW_HISTORY.json append"
+
+[[validation_gates]]
+id = "G19"
+title = "Provider+model recorded"
+
+[[validation_gates]]
+id = "G20"
+title = "Continuation discipline (post-commit, inline mode)"
+
+[[validation_gates]]
+id = "G21"
+title = "HALT_SUCCESS criteria (pre-emit)"
+
+[[validation_gates]]
+id = "G22"
+title = "Commit + archive divider format (pre-commit)"
+
+[[validation_gates]]
+id = "G23"
+title = "Residual accounting before no_backlog (pre-emit)"
+
+[[validation_gates]]
+id = "G24"
+title = "Authority Map test-surface cross-check (pre-emit, when test_strategy >= 9)"
+
+[[validation_gates]]
+id = "G25"
+title = "Continuation-bridge delegate audit (pre-emit, when concurrency >= 9)"
+
+[[validation_gates]]
+id = "G26"
+title = "Anchor-to-source check (pre-emit on every loop after loop 1)"
+
+[[validation_gates]]
+id = "G27"
+title = "Retry envelope (pre-emit when implementation_review present, schema_version >= 3)"
+
+[[validation_gates]]
+id = "G28"
+title = "Checkpoint freshness + post-commit cleanup (during Step 3, schema_version >= 3)"
+
+[[validation_gates]]
+id = "G29"
+title = "Schema version v3 invariants (pre-emit, schema_version >= 3)"
+
+[[validation_gates]]
+id = "G30"
+title = "Retirement Precedence"
+
+[[validation_gates]]
+id = "G31"
+title = "Fingerprint Integrity"

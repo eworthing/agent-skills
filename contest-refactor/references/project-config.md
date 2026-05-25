@@ -1,8 +1,8 @@
-# Project Config — `.contest-refactor.yaml`
+# Project Config — `.contest-refactor.toml`
 
 Durable per-project configuration for the contest-refactor loop. Lives at the repo root. Optional — the loop runs with sensible defaults when the file is absent.
 
-The example file at the skill root is [`.contest-refactor.example.yaml`](../.contest-refactor.example.yaml). Copy it to `.contest-refactor.yaml` in your target repo and edit values to taste.
+The example file at the skill root is [`.contest-refactor.example.toml`](../.contest-refactor.example.toml). Copy it to `.contest-refactor.toml` in your target repo and edit values to taste.
 
 This config NEVER overrides The Evidence Chain (see [method.md](method.md)), validation gates (see [validation.md](validation.md)), or safety checks (see [SKILL.md § Guardrails](../SKILL.md)).
 
@@ -15,39 +15,43 @@ This config NEVER overrides The Evidence Chain (see [method.md](method.md)), val
 
 ## Schema
 
-```yaml
-version: 1
+```toml
+version = 1
 
-defaults:
-  lens: apple | generic           # default lens for Step 0; CLI --force-lens overrides
-  loop_cap: <int>                 # default loop count; CLI --cap overrides
-  test_command: "<shell>"         # discovery hint when Step 0 cannot detect a test runner
+# Top-level keys (must precede any [table]) for TOML scope reasons.
+ignore = [
+    "<glob>",              # primary_file globs excluded from finding emission
+]
 
-ignore:
-  - "<glob>"                      # primary_file globs excluded from finding emission
+[defaults]
+lens = "apple"             # apple | generic — default lens for Step 0; CLI --force-lens overrides
+loop_cap = 10              # default loop count; CLI --cap overrides
+test_command = "<shell>"   # discovery hint when Step 0 cannot detect a test runner
 
-accepted_residuals:
-  - id: <unique-string>           # human-readable stable id
-    pattern: "<glob>"             # file pattern the residual applies to
-    reason: "<non-empty>"         # rationale text
-    accepted_by: "<name>"         # who approved the residual (person or council)
-    accepted_on: "YYYY-MM-DD"     # ISO-8601 date the residual was accepted
-    expires: "YYYY-MM-DD"         # MANDATORY ISO-8601 expiry date
+[[accepted_residuals]]
+id = "<unique-string>"     # human-readable stable id
+pattern = "<glob>"         # file pattern the residual applies to
+reason = "<non-empty>"     # rationale text
+accepted_by = "<name>"     # who approved the residual (person or council)
+accepted_on = "YYYY-MM-DD" # ISO-8601 date the residual was accepted
+expires = "YYYY-MM-DD"     # MANDATORY ISO-8601 expiry date
 ```
+
+Note: in TOML, anything after a `[table]` header belongs to that table until the next header. Place top-level scalars and arrays (`version`, `ignore`) before any `[defaults]` or `[[accepted_residuals]]` block.
 
 Top-level keys:
 
 - `version` — schema version. Currently `1`.
 - `defaults` — defaults for CLI-overridable flags. The full set of recognized keys is `lens`, `loop_cap`, `test_command`. Unknown keys are a validator error.
 - `ignore` — array of globs. Findings whose `primary_file` matches any glob are downgraded to scope-limited and excluded from oscillation/retirement counting. Useful for generated code (`*.pb.go`, codegen output) and vendored dependencies.
-- `accepted_residuals` — array of long-lived residual entries. Each entry is a structured exception to the 9.5+ rule. See § Accepted residuals below.
+- `accepted_residuals` — array of long-lived residual entries (TOML `[[accepted_residuals]]` array-of-tables). Each entry is a structured exception to the 9.5+ rule. See § Accepted residuals below.
 
 ## Resolution order
 
 When the loop reads CLI flags + config:
 
 1. Hard-coded skill defaults (`loop_cap: 10`, lens detection per `lenses.md`).
-2. `.contest-refactor.yaml` at the repo root (when present).
+2. `.contest-refactor.toml` at the repo root (when present).
 3. CLI flags (`--lens`, `--cap`, `--test-filter`, etc.) override config.
 4. Per-invocation flags (`--dry-run`) are invocation-scoped and not persisted.
 
@@ -75,9 +79,9 @@ The expiry rule is enforced by `scripts/validate-artifact.py`: a `HALT_SUCCESS` 
 
 ## Validator coverage
 
-`scripts/validate-repo.py` checks `.contest-refactor.example.yaml` (and `.contest-refactor.yaml` when present) for:
+`scripts/validate-repo.py` checks `.contest-refactor.example.toml` (and `.contest-refactor.toml` when present) for:
 
-- YAML parses without error.
+- TOML parses without error.
 - Every top-level key is recognized.
 - Every `accepted_residuals[]` entry carries all six required fields (`id`, `pattern`, `reason`, `accepted_by`, `accepted_on`, `expires`).
 - `ignore` is an array (not a scalar).
@@ -85,4 +89,4 @@ The expiry rule is enforced by `scripts/validate-artifact.py`: a `HALT_SUCCESS` 
 
 `scripts/validate-artifact.py` checks the live-run artifact for expired residuals cited at `HALT_SUCCESS`.
 
-See the skill root's [`.contest-refactor.example.yaml`](../.contest-refactor.example.yaml) for a realistic example.
+See the skill root's [`.contest-refactor.example.toml`](../.contest-refactor.example.toml) for a realistic example.

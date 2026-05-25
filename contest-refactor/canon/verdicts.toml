@@ -1,6 +1,7 @@
 # Canonical reviewer verdicts for implementation_review.
 # Cross-references: references/output-format-json.md (rule #25), references/implementation-reviewer.md.
-verdicts:
-  - approved
-  - rejected
-  - conditional        # mid-loop transient; final committed verdict must be approved or rejected (G15)
+verdicts = [
+    "approved",
+    "rejected",
+    "conditional",  # mid-loop transient; final committed verdict must be approved or rejected (G15)
+]

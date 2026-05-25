@@ -1,6 +1,6 @@
 # Artifact Smoke Corpus
 
-Seven minimal artifact directories exercising the load-bearing rules in
+Eight minimal artifact directories exercising the load-bearing rules in
 `scripts/validate-artifact.py`. Each fixture is the smallest possible artifact
 set that triggers exactly one expected result.
 
@@ -19,6 +19,7 @@ helper; not part of the loop runtime).
 |---|---|---|
 | `halt-success-clean/` | `pass` | `validate-artifact (strict): OK …` |
 | `halt-success-with-unresolved-serious/` | `fail` | `[HALT_SUCCESS] HALT_SUCCESS with unresolved Serious-or-worse finding F1` |
+| `halt-success-sub-95-score/` | `fail` | `[G21-scorecard] HALT_SUCCESS dimension 'data_flow' score=8.5 < 9.5 …` |
 | `halt-stagnation-eligible-remains/` | `fail` | `[G30] Serious-or-worse finding F-500 (status='rejected_attempt') missing from halt_handoff.remaining_serious_findings_disposition[]` |
 | `halt-stagnation-fully-retired/` | `pass` | `validate-artifact (strict): OK …` |
 | `unresolvable-insufficient-attempts/` | `fail` | `[retirement] registry F-400 occurrence[1]: mechanical retirement rule failed: neither Branch A nor Branch B is satisfied` |
@@ -34,6 +35,10 @@ Every scorecard dimension is 10 or 9.5+ with an accepted residual whose `expires
 ### `halt-success-with-unresolved-serious/`
 
 `state == HALT_SUCCESS` but `findings[]` contains an unresolved finding with `severity == "Serious deduction"`. The validator's HALT_SUCCESS gating rejects.
+
+### `halt-success-sub-95-score/`
+
+`state == HALT_SUCCESS` but the `data_flow` scorecard dimension scores 8.5 with `residual_disposition: null`. The validator's G21-scorecard rule rejects: every HALT_SUCCESS dimension must satisfy `score == 10` OR (`score >= 9.5` AND `residual_disposition == "accepted"`). Mirrors the production failure mode flagged by [validation.md § G21](../../references/validation.md).
 
 ### `halt-stagnation-eligible-remains/`
 
