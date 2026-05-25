@@ -1,13 +1,47 @@
-# Canonical scorecard dimension names. Nine dimensions; each documented in architecture-rubric.md.
-# Cross-references: references/architecture-rubric.md § Score Anchors.
-scorecard_dimensions = [
-    "Architecture quality",
-    "State management and runtime ownership",
-    "Concurrency and runtime safety",
-    "Test strategy and regression resistance",
-    "Overall implementation credibility",
-    "Domain modeling",
-    "Data flow and dependency design",
-    "Framework / platform best practices",
-    "Code simplicity and clarity",
-]
+# Canonical scorecard dimension entries. Nine dimensions; each documented in architecture-rubric.md.
+#
+# Two-field shape:
+#   id            machine identifier; used as the JSON key in CURRENT_REVIEW.json.scorecard.{id}.
+#                 validate-artifact.py rejects scorecard objects with unknown keys.
+#   display_label human-readable label that appears as the H3 heading in
+#                 architecture-rubric.md § Score Anchors. validate-repo.py asserts
+#                 every display_label appears verbatim in architecture-rubric.md.
+#
+# Cross-references: references/architecture-rubric.md § Score Anchors,
+# references/output-format-json.md § Scorecard.
+
+[[scorecard_dimensions]]
+id = "architecture_quality"
+display_label = "Architecture quality"
+
+[[scorecard_dimensions]]
+id = "state_management"
+display_label = "State management and runtime ownership"
+
+[[scorecard_dimensions]]
+id = "concurrency"
+display_label = "Concurrency and runtime safety"
+
+[[scorecard_dimensions]]
+id = "test_strategy"
+display_label = "Test strategy and regression resistance"
+
+[[scorecard_dimensions]]
+id = "credibility"
+display_label = "Overall implementation credibility"
+
+[[scorecard_dimensions]]
+id = "domain_modeling"
+display_label = "Domain modeling"
+
+[[scorecard_dimensions]]
+id = "data_flow"
+display_label = "Data flow and dependency design"
+
+[[scorecard_dimensions]]
+id = "framework_idioms"
+display_label = "Framework / platform best practices"
+
+[[scorecard_dimensions]]
+id = "simplicity"
+display_label = "Code simplicity and clarity"

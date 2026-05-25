@@ -251,6 +251,7 @@ Next step options:
 - **No --reset required to execute**: the dry-run flag is held in invocation memory only. The artifact's `dry_run: true` field is audit-only — it records the last loop's invocation flag but does not gate the next invocation. Re-invoking without `--dry-run` proceeds to Step 3 immediately.
 - **G9 backlog purity** still applies: the Step 2 plan must derive from the existing Improvement Backlog (Priority-1 finding); no new concerns introduced at the dry-run gate.
 - **G21 / G23 untouched**: HALT_SUCCESS criteria and residual accounting are not relevant to HALT_DRY_RUN (no scoring claim is made beyond carry-forward). [validation.md G23 § HALT_DRY_RUN bypass](validation.md) makes this explicit.
+- **Bootstrap sibling files required at HALT_DRY_RUN emit time** (`schema_version >= 2`): the validator's required-artifact check is state-agnostic, so `REVIEW_HISTORY.json`, `REVIEW_HISTORY.md`, and `findings_registry.json` must already exist on disk when HALT_DRY_RUN is emitted. Step -1 (Resume / Discovery) sub-step 0.6 covers this — empty/seed stubs are written before the first Critic emit. A loop that halts at HALT_DRY_RUN without those siblings will fail `validate-artifact.py --mode strict` on `[required-artifact]`, not on any HALT_DRY_RUN-specific rule.
 
 ---
 

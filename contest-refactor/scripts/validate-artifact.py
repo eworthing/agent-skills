@@ -211,6 +211,18 @@ def check_schema_enums(current_review: dict, canon: _canon.Canon) -> List[Issue]
                 context="implementation_review",
             )
         )
+    scorecard = current_review.get("scorecard") or {}
+    if isinstance(scorecard, dict):
+        allowed = set(canon.scorecard_dimensions)
+        for key in scorecard.keys():
+            if key not in allowed:
+                issues.append(
+                    Issue(
+                        "schema-enum",
+                        f"scorecard key {key!r} not in canon (allowed: {sorted(allowed)})",
+                        context="scorecard",
+                    )
+                )
     return issues
 
 

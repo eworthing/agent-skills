@@ -29,6 +29,7 @@ class Canon:
     verdicts: Tuple[str, ...]
     severity_anchors: Tuple[str, ...]
     scorecard_dimensions: Tuple[str, ...]
+    scorecard_dimension_labels: Mapping[str, str]
     dependency_categories: Tuple[str, ...]
     retirement_reasons: Tuple[str, ...]
     validation_gates: Mapping[str, str]
@@ -86,11 +87,35 @@ def load_canon(skill_root: Path | None = None) -> Canon:
     severity_anchors = _require_list(
         _load_toml(canon_dir / "severity-anchors.toml"), "severity_anchors", canon_dir / "severity-anchors.toml"
     )
-    scorecard_dimensions = _require_list(
-        _load_toml(canon_dir / "scorecard-dimensions.toml"),
-        "scorecard_dimensions",
-        canon_dir / "scorecard-dimensions.toml",
-    )
+    scorecard_data = _load_toml(canon_dir / "scorecard-dimensions.toml")
+    if not isinstance(scorecard_data, dict) or "scorecard_dimensions" not in scorecard_data:
+        sys.stderr.write(
+            f"error: canon file {canon_dir / 'scorecard-dimensions.toml'}: missing 'scorecard_dimensions' key\n"
+        )
+        sys.exit(2)
+    scorecard_list = scorecard_data["scorecard_dimensions"]
+    if not isinstance(scorecard_list, list):
+        sys.stderr.write(
+            f"error: canon file {canon_dir / 'scorecard-dimensions.toml'}: 'scorecard_dimensions' must be a list\n"
+        )
+        sys.exit(2)
+    scorecard_ids: list[str] = []
+    scorecard_labels: dict[str, str] = {}
+    for entry in scorecard_list:
+        if not isinstance(entry, dict) or "id" not in entry or "display_label" not in entry:
+            sys.stderr.write(
+                f"error: canon file {canon_dir / 'scorecard-dimensions.toml'}: each entry needs 'id' and 'display_label'\n"
+            )
+            sys.exit(2)
+        dim_id = str(entry["id"])
+        if dim_id in scorecard_labels:
+            sys.stderr.write(
+                f"error: canon file {canon_dir / 'scorecard-dimensions.toml'}: duplicate id '{dim_id}'\n"
+            )
+            sys.exit(2)
+        scorecard_ids.append(dim_id)
+        scorecard_labels[dim_id] = str(entry["display_label"])
+    scorecard_dimensions = tuple(scorecard_ids)
     dependency_categories = _require_list(
         _load_toml(canon_dir / "dependency-categories.toml"),
         "dependency_categories",
@@ -144,6 +169,7 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         verdicts=verdicts,
         severity_anchors=severity_anchors,
         scorecard_dimensions=scorecard_dimensions,
+        scorecard_dimension_labels=MappingProxyType(scorecard_labels),
         dependency_categories=dependency_categories,
         retirement_reasons=retirement_reasons,
         validation_gates=MappingProxyType(gates_map),
@@ -158,7 +184,7 @@ if __name__ == "__main__":
     print(f"finding_statuses ({len(canon.finding_statuses)}): {', '.join(canon.finding_statuses)}")
     print(f"verdicts ({len(canon.verdicts)}): {', '.join(canon.verdicts)}")
     print(f"severity_anchors ({len(canon.severity_anchors)}): {', '.join(canon.severity_anchors)}")
-    print(f"scorecard_dimensions ({len(canon.scorecard_dimensions)})")
+    print(f"scorecard_dimensions ({len(canon.scorecard_dimensions)}): {', '.join(canon.scorecard_dimensions)}")
     print(f"dependency_categories ({len(canon.dependency_categories)}): {', '.join(canon.dependency_categories)}")
     print(f"retirement_reasons ({len(canon.retirement_reasons)}): {', '.join(canon.retirement_reasons)}")
     print(f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}")
