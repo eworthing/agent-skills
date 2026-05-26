@@ -403,8 +403,21 @@ Recovery: the backup directory contains every moved file byte-for-byte.
 You may restore manually with `cp <backup>/* .` or delete the backup when
 no longer needed.
 
+<if CURRENT_REVIEW.json.state == "CONTINUE": warn user>
+WARNING: current loop state is CONTINUE, not a HALT_*. Executing
+--purge --confirm will discard the in-flight finding(s) targeted by
+the active loop plus all prior findings_registry oscillation history.
+This is usually NOT what you want mid-loop. Consider:
+  - Letting the loop reach its next halt before purging
+  - Using --reset (preserves findings_registry) if you only want a
+    clean restart from current source
+  - Proceeding with --purge --confirm only if you genuinely want
+    "first-time" critic behavior with no in-flight context
+
 Suggestion: add `.contest-refactor-backup-*` to .gitignore if not
 already present, so backup directories don't pollute commits.
+PURGE_LOG.jsonl is intentionally tracked in git as a team-visible
+audit trail of when purges happened.
 ```
 
 ## Purge Complete handoff

@@ -22,7 +22,7 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
   "step_started": 7,                            // int 1..11. Sub-step whose work has begun.
   "step_completed": 6,                          // int 0..11. Highest sub-step fully on disk. See § Idempotency for replay semantics.
   "started_at": "2026-05-12T14:30:22Z",         // ISO-8601 UTC. When the loop's Step 3 began.
-  "last_checkpoint_at": "2026-05-12T14:31:05Z", // ISO-8601 UTC. Updated on every checkpoint write. > 24h old at resume time = orphan (Resume Precedence Matrix row 2).
+  "last_checkpoint_at": "2026-05-12T14:31:05Z", // ISO-8601 UTC. Updated on every checkpoint write. > 24h old at resume time = orphan (Resume Precedence Matrix row 4).
   "artifacts_written": [                        // array of paths (relative to repo root) modified or created since loop's Step 3 began. Used to verify expected on-disk state during resume.
     "CURRENT_REVIEW.md",
     "CURRENT_REVIEW.json",
