@@ -256,7 +256,7 @@ State: SKILL.md 265 lines (was 285); 12 reference files (~2200 lines); 29 hard g
 | 8.2 | Progressive Disclosure | 4 | 4 | Reference Load Matrix gates per-step loads; 12 reference files; explicit pre-branching load directive in SKILL.md Step -1. |
 | 8.3 | Composability | 4 | 4 | LOOP_STATE.json + structured retry_attempts[] + structured halt_handoff + per-loop progress line format = full machine-parseable surface. |
 | 8.4 | Idempotency | 3 | 4 | Step 6 reviewer stateless; Step 9 archive uses divider+(loop, schema_version) dedup keys; Step 10 registry write uses idempotency_key per pending entry; Step 11 commit_attempted_sha distinguishes post-commit/pre-delete. |
-| 8.5 | Escape Hatches | 4 | 4 | 9 user flags (--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model/--dry-run/--test-filter) + 3 env vars + first-line directive + dry-run.sh preflight. (Updated 2026-05-26: now 10 flags including `--incidents <path>`.) |
+| 8.5 | Escape Hatches | 4 | 4 | 9 user flags (--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model/--dry-run/--test-filter) + 3 env vars + first-line directive + dry-run.sh preflight. (Updated 2026-05-26: now 12 flags — added `--incidents <path>` then `--purge` + `--confirm` for the destructive deep-reset escape hatch backed by tested `scripts/purge.sh` helper with atomic mv, JSONL audit log, --dry-run preview mode, --recover post-partial-failure mode.) |
 | | **TOTAL** | **92** | **96** | +4 points; deeper into Excellent band (90-100). |
 
 ## Revision History
