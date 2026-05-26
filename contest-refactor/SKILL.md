@@ -188,7 +188,7 @@ Meta-Rules + Evidence Discipline: [references/method.md](references/method.md). 
 Pre-condition: Step 1 emitted `[STATE: CONTINUE]` AND backlog has at least one item. Otherwise skipped per Step 1 Routing.
 
 1. Read Improvement Backlog from current `CURRENT_REVIEW.md`.
-2. Select single highest-priority finding.
+2. Select single highest-priority finding. **Tiebreak** when 2+ items share top priority, in order: (a) prefer subtractive fixes per Meta-Rule 5 in [references/method.md](references/method.md#meta-rules-apply-everywhere) — net deletion beats net addition; (b) smallest predicted blast radius (fewest paths in `minimal_correction_path`); (c) lowest `stable_id` as deterministic final tiebreak. Record the tiebreak rationale inline in the sub-step 5 plan.
 3. Apply **Simplify Pressure Test** ([references/method.md](references/method.md)) — does it fix real ambiguity / smallest honest fix / avoids duplicate layers / runtime stays honest / product improves / **deletion test** passes for any Module being removed / **Unified Seam Policy** ([references/architecture-rubric.md](references/architecture-rubric.md)) passes for any new Seam / **tests after refactor live at the new Interface**?
 4. Any "no" → downgrade to simpler truthful alternative or pick next backlog item.
 5. Write execution plan to terminal. Name exact files to change. Name files NOT to touch — blast radius bounded.
