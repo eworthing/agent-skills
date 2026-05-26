@@ -18,7 +18,7 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
 ```jsonc
 {
   "schema_version": 1,
-  "loop": 3,                                    // int. Must equal CURRENT_REVIEW.json.loop. Mismatch routes to --reset (Resume Precedence Matrix row 3).
+  "loop": 3,                                    // int. Must equal CURRENT_REVIEW.json.loop. Mismatch routes to --reset (Resume Precedence Matrix row 5).
   "step_started": 7,                            // int 1..11. Sub-step whose work has begun.
   "step_completed": 6,                          // int 0..11. Highest sub-step fully on disk. See § Idempotency for replay semantics.
   "started_at": "2026-05-12T14:30:22Z",         // ISO-8601 UTC. When the loop's Step 3 began.

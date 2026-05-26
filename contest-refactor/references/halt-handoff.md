@@ -79,6 +79,11 @@ Next step options:
       the cited source.
   (c) Reset and run again from current source — type "/contest-refactor --reset"
       (useful if the codebase has changed materially since this halt).
+  (d) Deep-reset (purge) — type "/contest-refactor --purge" for a preview, then
+      "/contest-refactor --purge --confirm" to execute. Wipes findings_registry
+      + REVIEW_HISTORY on top of --reset's scope, making the next loop run as
+      if first-installed. Backup created automatically; see Purge Preview
+      handoff for full semantics.
 ```
 
 ---
@@ -125,6 +130,10 @@ Next step options:
       only one module that may have winnable structural moves.
   (d) Reset and try a different angle — "/contest-refactor --reset" archives
       this halt and starts fresh from current source.
+  (e) Deep-reset (purge) — "/contest-refactor --purge --confirm" if you want to
+      additionally wipe findings_registry + REVIEW_HISTORY (no cross-loop
+      oscillation memory). Useful when prior findings are no longer relevant
+      and you want a truly first-time critic walk.
 ```
 
 ### Subtype: `oscillation`
@@ -150,6 +159,8 @@ Next step options:
   (b) Demote the finding — if you accept the residual, edit CURRENT_REVIEW.md
       to mark F<id> as accepted residual (per Score Anchors), then re-invoke.
   (c) Reset — "/contest-refactor --reset".
+  (d) Deep-reset (purge) — "/contest-refactor --purge --confirm" (additionally
+      wipes findings_registry + REVIEW_HISTORY).
 ```
 
 ### Subtype: `user_decision`
@@ -199,7 +210,9 @@ Next step options:
       flagged?" I'll re-check that specific area.
   (c) Switch lens — if the wrong lens was selected (e.g., Generic on a Swift
       codebase), re-invoke as "/contest-refactor --force-lens <name>".
-  (d) Reset.
+  (d) Reset — "/contest-refactor --reset".
+  (e) Deep-reset (purge) — "/contest-refactor --purge --confirm" if you want
+      to drop findings_registry + REVIEW_HISTORY too.
 ```
 
 ---
