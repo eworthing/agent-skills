@@ -141,6 +141,19 @@ A passing test count is not test strategy. Before scoring `test_strategy` ≥ 9,
 
 Aggregate count → test_strategy is a fake-clean reward. Surface coverage → test_strategy is honest evidence.
 
+## Accessibility audit
+
+User-facing iOS code without accessibility considerations is shipping with a deferred-cost class of bugs. Every contest-relevant Apple lens loop must run this audit once and surface gaps as findings (`framework_idioms` dimension hit; `test_strategy` ceiling at 9 if a11y surfaces have no test).
+
+1. **VoiceOver labels.** Every tappable view (`Button`, `.onTapGesture`, `Toggle`, `Picker`, custom gesture handlers) must have a non-empty `.accessibilityLabel(_:)`. Decorative `Image` views must declare `.accessibilityHidden(true)`. Smoke check: `grep -rn 'onTapGesture\|Button(action:\|gesture(' Sources/ | wc -l` should approximately equal `grep -rn 'accessibilityLabel(' Sources/ | wc -l` (within 2x); gross mismatch is a finding.
+2. **Dynamic state semantics.** Custom controls whose value changes (sliders, knobs, segmented selectors, custom toggles) need `.accessibilityValue(_:)` (current value as text) and `.accessibilityHint(_:)` (what happens on activation). VoiceOver users hear the value AND the action, not just the label.
+3. **Dynamic Type.** Hardcoded font sizes (`Font.system(size: 12)`) lock layout — fails Dynamic Type. Prefer `Font.system(.body)`, `Font.system(.headline)`, etc. (text-style family scales with user preference). Hits: `grep -rn 'Font\.system(size:\|\.font(\.system(size:' Sources/`. Each hit needs justification (icon font, tabular numerics, etc.) or is a finding.
+4. **Color-only state.** State communicated only through color (red = error, green = success) is invisible to color-blind users. Every color-conveyed state needs a non-color affordance: label text, SF Symbol, position, or shape change. Audit: locate every `.foregroundStyle(.red)` / `.foregroundStyle(.green)` / `.background(Color.X)` site; trace whether a non-color signal exists in the same view.
+5. **Focus order.** Custom containers (`HStack`/`VStack` with mixed interactive + decorative children, custom collection views) need deterministic focus order. Verify via the Accessibility Inspector in Xcode (Simulator → Hardware → Accessibility Inspector) — focus walks elements in a predictable order. Random / row-major-then-jump = a finding.
+6. **Reduce Motion / Reduce Transparency / Increase Contrast.** Animations gated on `accessibilityReduceMotion`; backdrop materials gated on `accessibilityReduceTransparency`; thin stroke weights gated on `accessibilityDifferentiateWithoutColor` where structural. Hits: `grep -rn '@Environment(\\.accessibility' Sources/` — count must be > 0 for any app shipping animations or backdrop materials.
+
+A11y findings are `framework_idioms` dimension (platform best practices); persistent gaps drop `test_strategy` ceiling at 9 (a11y surfaces are testable via `XCUIElement.staticTexts[<label>]` accessor patterns — no test = surface-coverage gap).
+
 ## Incremental Test Scoping
 
 Used when `--test-filter <pattern>` is set on the invocation. Step 0 records `test_scope: "incremental"` and `test_filter: "<pattern>"` in CURRENT_REVIEW.json discovery (first loop only). Per-stack patterns:
