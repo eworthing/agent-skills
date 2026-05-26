@@ -19,8 +19,8 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
 {
   "schema_version": 1,
   "loop": 3,                                    // int. Must equal CURRENT_REVIEW.json.loop. Mismatch routes to --reset (Resume Precedence Matrix row 3).
-  "step_started": 7,                            // int 1..11. The Step 3 sub-step whose work has begun but not yet completed.
-  "step_completed": 6,                          // int 0..11. The highest Step 3 sub-step whose work is fully on disk and idempotent-safe. step_started > step_completed = mid-step interrupt; replay required.
+  "step_started": 7,                            // int 1..11. Sub-step whose work has begun.
+  "step_completed": 6,                          // int 0..11. Highest sub-step fully on disk. See § Idempotency for replay semantics.
   "started_at": "2026-05-12T14:30:22Z",         // ISO-8601 UTC. When the loop's Step 3 began.
   "last_checkpoint_at": "2026-05-12T14:31:05Z", // ISO-8601 UTC. Updated on every checkpoint write. > 24h old at resume time = orphan (Resume Precedence Matrix row 2).
   "artifacts_written": [                        // array of paths (relative to repo root) modified or created since loop's Step 3 began. Used to verify expected on-disk state during resume.
@@ -31,7 +31,7 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
   "changed_paths": [                            // copy of loop_result.changed_paths once Step 3 step 4 has run (the diff is final at that point). Empty before step 4.
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"
   ],
-  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 BEFORE any edit. Maps path → blob sha (or null if path was untracked at sub-step 0). Restore source for narrow revert: `git checkout <blob-sha> -- <path>` per file with a recorded sha; `git rm --cached <path>` for null entries (untracked-then-created files). Guarantees revert restores the pre-loop state of those files even when the user's working tree had unstaged edits in them at loop start (though the dirty-tree precondition in Step 0 should prevent that case).
+  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 (pre-edit). path → blob sha; null = untracked. Narrow-revert source: `git checkout <sha> -- <path>` per recorded sha, `git rm --cached <path>` per null.
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift": "9b2a13c4...",
     "BenchHypeKit/Tests/AppReducerWorkflowTests.swift": null
   },
@@ -42,9 +42,9 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
       "idempotency_key": "loop3-F-007-resolved"
     }
   ],
-  "commit_message_draft": null,                 // populated at Step 3 sub-step 11.a; null before. The draft commit subject line that will be passed to `git commit`.
-  "implementation_review": null,                // verbatim copy of CURRENT_REVIEW.json.implementation_review once Step 3 step 6 completes; null before. Honored on resume (reviewer is stateless; re-spawning is wasteful when verdict already in hand).
-  "commit_attempted_sha": null                  // populated at Step 3 sub-step 11.d AFTER `git commit` succeeds and BEFORE LOOP_STATE.json delete in 11.f. Distinguishes "commit landed but cleanup interrupted" (Case B in resume-detection.md) from "commit interrupted before HEAD updated" (Case C).
+  "commit_message_draft": null,                 // populated at 11.a; subject line for `git commit`.
+  "implementation_review": null,                // verbatim copy of CURRENT_REVIEW.json.implementation_review after step 6. Honored on resume (reviewer stateless; do not re-spawn).
+  "commit_attempted_sha": null                  // populated at 11.d post-commit, pre-11.f-delete. Disambiguates Case B vs Case C in resume-detection.md.
 }
 ```
 

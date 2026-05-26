@@ -105,13 +105,7 @@ Execute in order. No skips. No permission asks (per Guardrails).
 1. **Parse user flags**: `--reset`, `--cap N`, `--scope <dir>`, `--force-lens <name>`, `--provider <name>`, `--loop-model <id>`, `--reviewer-model <id>`, `--dry-run`, `--test-filter <pattern>`. Record for later steps. The `--dry-run` flag is **invocation-scoped** (held in invocation memory only; the artifact's `dry_run: true` is audit-only and is NOT the source of truth on re-invocation).
 2. **Apply Resume Precedence Matrix** from [resume-detection.md § Resume Precedence Matrix](references/resume-detection.md). Top-down, first match wins. Routes to one of: `--reset` confirmation handoff, `--reset` recommendation handoff (orphan / inconsistent), § Resume from LOOP_STATE.json, § Drift handling, dispatch loop N+1, fresh run.
 
-Step -1 sub-steps (full spec in [references/resume-detection.md](references/resume-detection.md)):
-- **0.5** Provider detection → resolves `provider` + `loop_model` + `reviewer_model` (G19 enforces presence on every loop).
-- **0.6** Registry + REVIEW_HISTORY.json bootstrap (one-time per repo; lossy reverse-parse if needed).
-- **4**   Drift handling on prior `HALT_*` (git log <halt_sha>..HEAD).
-- **4a**  Match commits against `halt_handoff.expected_actions[]` (PR 4).
-- **4b**  Re-validate via fresh Step-1 critic; compose `why_halt_persists` (PR 4).
-- **5**   LOOP_STATE.json resume routing (5 cases A-E covering all Step 3 sub-step interrupts incl. post-commit/pre-delete).
+Step -1 sub-steps: **0.5** provider detection (G19), **0.6** registry + REVIEW_HISTORY.json bootstrap, **4 / 4a / 4b** drift handling on prior `HALT_*` (PR 4), **5** LOOP_STATE.json resume routing (Cases A-E). Full spec in [references/resume-detection.md § Resume Precedence Matrix](references/resume-detection.md#resume-precedence-matrix) (already loaded above).
 
 Branch order is determined by the Precedence Matrix; do not invent your own ordering.
 
