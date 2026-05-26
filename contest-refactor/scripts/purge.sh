@@ -71,9 +71,56 @@ present_targets() {
   done
 }
 
+# --- Helper: best-effort validate that present targets look like
+#     contest-refactor artifacts. Catches accidental purge in unrelated
+#     directories that happen to have files with the same names. Returns 0
+#     if at least one target file has a marker field; 1 if files present
+#     but none match. Empty input (no targets) → returns 0 (caller handles
+#     nothing-to-purge path separately).
+looks_like_contest_refactor_artifacts() {
+  local found_marker=0
+  for f in $TARGET_FILES; do
+    [ -f "$f" ] || continue
+    # JSON files should have schema_version or loop key; markdown files have
+    # known headings. Cheap grep is sufficient — false positives are tolerable
+    # (real artifacts have multiple markers); false negatives (skipping a
+    # legitimate purge) are bad, so be permissive.
+    case "$f" in
+      *.json)
+        if grep -qE '"schema_version"|"loop"|"state"|"findings"' "$f" 2>/dev/null; then
+          found_marker=1
+          break
+        fi
+        ;;
+      *.md)
+        if grep -qE '^### Loop Counter|^## Contest Verdict|^### Discovery|^### System Flag|HALT_SUCCESS|HALT_STAGNATION' "$f" 2>/dev/null; then
+          found_marker=1
+          break
+        fi
+        ;;
+    esac
+  done
+  # Special-case: LOOP_STATE.json[.deleting] alone is enough (they exist only
+  # if a loop ran). Detect by their distinct presence even without content match.
+  if [ "$found_marker" = "0" ]; then
+    if [ -f LOOP_STATE.json ] || [ -f LOOP_STATE.json.deleting ]; then
+      found_marker=1
+    fi
+  fi
+  [ "$found_marker" = "1" ]
+}
+
 # --- Helper: JSON-escape a string for embedding inside a JSON string literal ---
+# Strategy: drop control chars (U+0000..U+001F) defensively via `tr -d`, then
+# escape backslash + double-quote per RFC 8259. Real-world inputs to this
+# function (state enum from a closed set, git SHA hex, backup-dir path) never
+# legitimately contain control chars; dropping them prevents accidental JSONL
+# corruption if a malformed CURRENT_REVIEW.json somehow contains escaped
+# control sequences that get unescaped by jq -r.
 json_escape() {
-  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+  printf '%s' "$1" \
+    | tr -d '\000-\037' \
+    | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
 # --- Helper: build a JSON array literal from newline-separated stdin ---
@@ -91,10 +138,12 @@ prior_field() {
     if command -v jq >/dev/null 2>&1; then
       jq -r ".$1 // empty" CURRENT_REVIEW.json 2>/dev/null
     else
+      # Match field value; sed pattern stops at quote/comma/brace so a value
+      # containing legitimate internal whitespace is preserved verbatim.
+      # Do NOT pipe to `tr -d '[:space:]'` — would mangle multi-word values.
       grep -E "\"$1\"[[:space:]]*:" CURRENT_REVIEW.json 2>/dev/null \
         | head -1 \
-        | sed -E "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"?([^\",}]*)\"?.*/\1/" \
-        | tr -d '[:space:]'
+        | sed -E "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"?([^\",}]*)\"?.*/\1/"
     fi
   fi
 }
@@ -134,6 +183,24 @@ if [ "$MODE" = "recover" ]; then
     exit 1
   fi
 
+  # Safety check: backup dir must contain at least one expected target
+  # file. Catches "wrong backup dir" mistakes where the named path is
+  # technically a directory but holds unrelated content.
+  FOUND_TARGET=0
+  for f in $TARGET_FILES; do
+    if [ -f "$BACKUP_DIR/$f" ]; then
+      FOUND_TARGET=1
+      break
+    fi
+  done
+  if [ "$FOUND_TARGET" = "0" ]; then
+    echo "purge --recover: backup dir $BACKUP_DIR contains NO expected target files." >&2
+    echo "Expected at least one of:" >&2
+    for f in $TARGET_FILES; do echo "  - $f" >&2; done
+    echo "Verify the --backup-dir path matches the original purge's backup." >&2
+    exit 2
+  fi
+
   # Append purge_partial_recovery JSONL entry. Script owns the write.
   TS=$(iso_ts)
   ESC_BACKUP=$(json_escape "$BACKUP_DIR")
@@ -143,6 +210,7 @@ if [ "$MODE" = "recover" ]; then
 
   echo "# purge --recover"
   echo "Verified no target files remain in CWD."
+  echo "Verified backup dir contains expected target files."
   echo "Appended purge_partial_recovery entry to $LOG_FILE."
   exit 0
 fi
@@ -164,6 +232,21 @@ if [ -z "$TARGETS" ]; then
   exit 0
 fi
 
+# Safety check: refuse to purge if target files exist but don't look like
+# contest-refactor artifacts. Prevents accidental data loss in unrelated
+# directories that happen to have files with colliding names.
+if ! looks_like_contest_refactor_artifacts; then
+  echo "purge: target files present in CWD but do NOT look like contest-refactor artifacts." >&2
+  echo "Refusing to purge to prevent accidental data loss." >&2
+  echo "Present files (no contest-refactor markers found):" >&2
+  echo "$TARGETS" | sed 's/^/  - /' >&2
+  echo "" >&2
+  echo "If these ARE contest-refactor artifacts that lack expected markers" >&2
+  echo "(e.g., truncated/corrupted), invoke /contest-refactor first to repair" >&2
+  echo "state, OR manually delete the files outside this helper." >&2
+  exit 2
+fi
+
 # Create backup dir
 if ! mkdir -p "$BACKUP_DIR" 2>/dev/null; then
   echo "purge: mkdir failed: $BACKUP_DIR" >&2
@@ -171,10 +254,15 @@ if ! mkdir -p "$BACKUP_DIR" 2>/dev/null; then
   exit 1
 fi
 
-# Per-file atomic mv. Capture MOVED and FAILED lists.
+# Per-file atomic mv. Capture MOVED and FAILED lists via sidecar files (bash
+# 3.2 subshells lose variable mutations across pipes). Trap to clean up
+# sidecars if the script is killed mid-loop — without it, a leftover
+# .moved/.failed would make the backup-dir look corrupt + collide with the
+# duplicate-existence check on next invocation.
 MOVED=""
 FAILED=""
 ERR_LOG="$BACKUP_DIR/.purge-errors.log"
+trap 'rm -f "$BACKUP_DIR/.moved" "$BACKUP_DIR/.failed"' EXIT INT TERM HUP
 
 echo "$TARGETS" | while IFS= read -r f; do
   [ -z "$f" ] && continue
@@ -189,6 +277,7 @@ done
 [ -f "$BACKUP_DIR/.moved" ] && MOVED=$(cat "$BACKUP_DIR/.moved")
 [ -f "$BACKUP_DIR/.failed" ] && FAILED=$(cat "$BACKUP_DIR/.failed")
 rm -f "$BACKUP_DIR/.moved" "$BACKUP_DIR/.failed"
+trap - EXIT INT TERM HUP
 
 # Build JSON arrays
 MOVED_JSON=$(echo "$MOVED" | json_array_from_lines)
