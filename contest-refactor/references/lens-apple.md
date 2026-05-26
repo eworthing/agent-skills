@@ -11,6 +11,7 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 - [Hidden State Machines (Apple-flavored)](#hidden-state-machines-apple-flavored)
 - [Ownership (Apple-flavored)](#ownership-apple-flavored)
 - [Tests / Regression Resistance (Apple-flavored)](#tests--regression-resistance-apple-flavored)
+- [Accessibility audit](#accessibility-audit)
 - [Incremental Test Scoping](#incremental-test-scoping)
 - [Useful Metrics](#useful-metrics)
 - [Apple-specific Core Questions](#apple-specific-core-questions)
@@ -91,7 +92,16 @@ Asymmetric sheet binding for a contest-relevant feature = Serious deduction (sta
 
 ### Failure modes & observability (Apple-flavored)
 
-Apply [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) generic audit first; then layer these Apple-specific concerns:
+Apple repos load only `lens-apple.md` (plus always-included `lens-security.md`); `lens-generic.md` is **not** in the Apple load set. So this subsection inlines the five generic failure-mode categories alongside Apple-specific bullets. (Canonical detailed detection rules per language live in [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) for non-Apple stacks.)
+
+**Generic categories (always check on every loop)**:
+1. **Silent-swallow audit** — Swift hits: `try?`, `catch { }`, `_ = try`, `as? T` that drops the error. Each needs an inline rationale (comment, log, compensating return).
+2. **Retry/backoff policy** — every external-call path (network, disk, IPC, subprocess) needs an explicit retry policy or a documented "// no retry: <reason>" comment.
+3. **Error-context preservation** — catch blocks must wrap (`throw .wrapped(original: err, ...)`), log with breadcrumb (`logger.error("...", error: err, file: #file, line: #line)`), or re-throw verbatim. Strip-and-rethrow loses provenance.
+4. **Observability at adapter boundaries** — every port crossing network/disk/IPC emits telemetry on entry/success/failure. Missing telemetry on user-visible paths is a `credibility` finding.
+5. **Panic-recovery on executors** — background executors (effect pumps, job queues, task pools) must wrap unit-of-work execution with panic-recovery that logs and either restarts or marks-failed.
+
+**Then layer these Apple-specific concerns**:
 
 1. **URLSession background config.** Any `URLSession(configuration: .background(withIdentifier:))` requires `URLSessionDelegate.urlSession(_:task:didCompleteWithError:)` implementation. App suspended mid-transfer continues background; result lands at delegate, not the completion handler. Missing delegate = silent dropped results. Hits: `grep -rn 'URLSessionConfiguration.background' Sources/`.
 2. **AVAudioEngine start/stop pairing.** Every `engine.start()` must pair with `engine.stop()` in error-path AND happy-path AND `deinit`. Engine left running across a fatal node-graph error leaks the audio session and the engine resources. Hits: `grep -rn 'AVAudioEngine\(\)\|engine.start(' Sources/`. Watch for `try?` on `engine.start()` followed by no failure handling.
