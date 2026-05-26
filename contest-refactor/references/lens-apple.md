@@ -89,6 +89,16 @@ For every `Binding(get:` in scene/root/feature shell files:
 
 Asymmetric sheet binding for a contest-relevant feature = Serious deduction (state ownership credibility hit).
 
+### Failure modes & observability (Apple-flavored)
+
+Apply [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) generic audit first; then layer these Apple-specific concerns:
+
+1. **URLSession background config.** Any `URLSession(configuration: .background(withIdentifier:))` requires `URLSessionDelegate.urlSession(_:task:didCompleteWithError:)` implementation. App suspended mid-transfer continues background; result lands at delegate, not the completion handler. Missing delegate = silent dropped results. Hits: `grep -rn 'URLSessionConfiguration.background' Sources/`.
+2. **AVAudioEngine start/stop pairing.** Every `engine.start()` must pair with `engine.stop()` in error-path AND happy-path AND `deinit`. Engine left running across a fatal node-graph error leaks the audio session and the engine resources. Hits: `grep -rn 'AVAudioEngine\(\)\|engine.start(' Sources/`. Watch for `try?` on `engine.start()` followed by no failure handling.
+3. **MusicKit auth fail vs downgrade.** `MusicSubscription.subscriptionUpdates` can emit `.fetchFailed` (transient, retryable) or a confirmed-downgrade (`canPlayCatalogContent: false`). Treating these as the same path silently locks users out on transient failures. Pattern: separate `.fetchFailed` → retry-with-backoff vs `canPlayCatalogContent == false` → user-facing subscription prompt. Hits: `grep -rn 'MusicSubscription\|subscriptionUpdates\|canPlayCatalogContent' Sources/`.
+4. **`Task { @MainActor in }` in `deinit` (HR-9 carve-out).** Swift `deinit` cannot `await`; the standard pattern fires-and-forgets a cleanup Task on MainActor. Audit: every `deinit` containing `Task { @MainActor in ... }` must document why (resource that ONLY the deinitee can release; cancellation that ONLY MainActor can perform). Undocumented uses = HR-12 violation (mislabels compliance as carve-out).
+5. **`os_log` redaction.** `os_log("%@", userInput)` is public by default — user data appears in Console.app + sysdiagnose dumps. Sensitive interpolation must use `%{private}@` or `%{public}@` explicitly (the absence of the modifier is a violation). Hits: `grep -rn 'os_log\|Logger().' Sources/` — every `%@` site needs explicit privacy annotation.
+
 ## Hidden State Machines (Apple-flavored)
 
 - Multiple booleans/optionals jointly encoding one logical state.

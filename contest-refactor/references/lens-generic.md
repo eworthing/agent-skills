@@ -49,6 +49,24 @@ Used when `--test-filter <pattern>` is set on the invocation. Step 0 records `te
 
 Trade-off: incremental misses regressions outside `<pattern>`. G21 in [validation.md](validation.md) requires a full-suite reverify before HALT_SUCCESS when any prior loop in REVIEW_HISTORY ran incremental.
 
+## Failure modes & observability
+
+Existing Method steps audit ownership and concurrency on the success path. Failure paths are systematically under-reviewed: catch blocks that discard provenance, retry policies that don't exist, external calls without breadcrumbs, panic-recovery paths absent on critical executors. Run this audit once per loop and surface gaps as findings (typically `concurrency` or `framework_idioms` dimension; persistent error-context loss is `credibility`).
+
+1. **Silent-swallow audit.** Locate every error-discarding construct in production code:
+   - Swift: `try?`, `catch { }`, `_ = try`, `as? T` that drops the error.
+   - Go: `_, _ := f()`, `defer recover()` without re-raise/log, blank-ident return from `error`-returning calls.
+   - Rust: `let _ = result.ok()`, `result.unwrap_or_default()` in non-recovery paths, `if let Err(_) = ...` swallowing.
+   - TypeScript: `.catch(() => null)`, `try { ... } catch { }`, `Promise.allSettled` without inspecting failed entries.
+   - Python: `except: pass`, `except Exception: pass`, bare `except` followed by no re-raise.
+   Each hit must have a one-line rationale in the surrounding code (comment, log call, or compensating return that the caller can act on). No rationale → finding.
+2. **Retry/backoff policy.** Every external-call path (network, disk, IPC, subprocess, message queue) must have an explicit retry policy OR a documented choice not to retry. Hits without policy: `URLSession.shared.data`, `fetch(`, `http.Get`, `requests.get` — followed by a single `try`/`?`/`catch` with no `for attempt in 1...N` wrapping and no `// no retry: <reason>` comment.
+3. **Error-context preservation.** Catch blocks must preserve provenance. Wrap with context (`throw .wrapped(original: err, context: ...)`), log with breadcrumb (`logger.error("decode failed", error: err, file: #file, line: #line)`), or re-throw verbatim. Strip-and-rethrow (`throw GenericError.failed`) loses the trail.
+4. **Observability at adapter boundaries.** Adapter ports (every type that crosses a network/disk/IPC boundary) must emit a telemetry event on entry, success, and failure. Missing telemetry on a critical path (anything user-visible) is a finding; surface as `credibility` (no signal when prod debugging).
+5. **Panic-recovery on executors.** Background executors (effect pumps, job queues, task pools) must have a panic-recovery wrapper that logs the panic and either restarts the executor or marks the unit-of-work as failed. A panic-on-one-task that takes down an executor for all subsequent work is a Serious deduction.
+
+This section is stack-agnostic; Apple/Go/Rust/TypeScript/Python sub-bullets above keep grep targets concrete. Findings here are independent of `concurrency` dimension's success-path audit.
+
 ## Generic Core Questions
 
 1. Would experienced engineers in this language respect this as high-quality?
