@@ -97,6 +97,21 @@ candidates were not backlog-worthy. Rejected candidates still affect terminal
 scoring: either they are accepted residuals, they prove a real sub-9.5 blocker,
 or they are not residuals and the score moves to 10.
 
+## Adversarial Pass on Accepted Residuals
+
+Run this pass after Residual Accounting Pass completes, before choosing a HALT state, on every loop where at least one dimension scored 9.5 with `residual_disposition: "accepted"`. Purpose: re-test whether an accepted residual still earns its acceptance against current source, or whether a cheap structural fix now exists that the original disposition missed.
+
+For each `residual_disposition: "accepted"` entry:
+
+1. Propose the **smallest possible structural fix** for the residual. Default to subtractive (per Meta-Rule 5). If no subtractive fix exists, propose the smallest additive fix. Cite the proposed fix in concrete terms (delete `X`, inline `Y`, replace `Z` with the existing `W`).
+2. Run the proposed fix through the Simplify Pressure Test (5 questions + structural gate) below.
+3. **If SPT passes** (all 5 questions answer "yes" AND structural gate passes): the residual was incorrectly accepted. Re-open as a Noticeable-or-worse finding. Use the proposed fix as the evidence chain's remedy. Either move the dimension score below 9.5 OR keep at 9.5 and route the finding to the Improvement Backlog (per the Residual Accounting Pass branches above).
+4. **If SPT fails on any question**: the disposition still earned. Note the rejection in the residual rationale as `SPT-rejected on Qn: <one-line reason>`. Score holds.
+
+**Bar discipline**: the target set is bounded — accepted residuals only, not the whole codebase. This is bar-raising against `9.5 + accepted residual` complacency, not finding-fishing. The SPT itself is unchanged; the fake-clean anti-examples in [Simplify Pressure Test (Step 2 gate)](#simplify-pressure-test-step-2-gate) still reject ceremony fixes. A residual that resists a subtractive fix because every alternative adds a costume layer is correctly accepted; the rationale must say so.
+
+**Loop 1 exempt** when no prior `residual_disposition: "accepted"` exists in `findings_registry.json` or this loop's draft scorecard. Otherwise applies every loop.
+
 ## Friction Proof Before Seam Recommendation
 
 Friction proof required before any new Seam. See [architecture-rubric.md § Unified Seam Policy](architecture-rubric.md#unified-seam-policy) for the acceptable proof list and the policy's two paths (two-adapter rule OR single-Adapter policy/failure/platform isolation). Without one of these, recommendation is rejected. Default to merging or inlining.
