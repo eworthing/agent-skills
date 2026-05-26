@@ -117,6 +117,8 @@ For every proposed fix, answer:
 
 Plus the structural gate: Friction proven, Deletion test passes for any Module being removed, [Unified Seam Policy](architecture-rubric.md#unified-seam-policy) passes for any new Seam, Tests after the refactor live at the new Interface (per [Replace, don't layer](architecture-rubric.md#5-replace-dont-layer)).
 
+Any "no" → downgrade to simpler truthful alternative or pick next backlog item. If a clean-looking fix adds ceremony without fixing ownership, failure behavior, or Locality, reject it.
+
 **Fake-clean fix anti-examples** (each fails SPT; all observed in production loops):
 
 - "Extract repository protocol behind persistence" with 1 production conformer + 0 behavior-faithful fakes → fails Q3 (duplicate layer) + Unified Seam Policy. Repository theater. Downgrade to: the production conformer IS the seam.
@@ -124,8 +126,6 @@ Plus the structural gate: Friction proven, Deletion test passes for any Module b
 - "Rename `UserManager` → `UserService` for consistency" when both names are equally fuzzy and the underlying ownership ambiguity persists → fails Q1 (didn't fix the ambiguity). Fake simplification. Downgrade to: name the actual owner, then rename if needed.
 
 If a proposed fix matches one of these, downgrade to the underlying claim and re-test SPT on the simpler version. Do not commit the costume fix and re-discover it next loop.
-
-Any "no" → downgrade to simpler truthful alternative or pick next backlog item. If a clean-looking fix adds ceremony without fixing ownership, failure behavior, or Locality, reject it.
 
 ## State / Domain Guardrails
 
