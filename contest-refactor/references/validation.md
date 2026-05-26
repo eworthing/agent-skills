@@ -135,13 +135,15 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
 ## Quality Pass (improve if cheap; never block emit)
 
-- [ ] Q1 No filler.
-- [ ] Q2 No mediocre praise in Strengths That Matter.
-- [ ] Q3 No fake-clean reward (rewarding architecture names / folders / comments / previews / test counts without ownership/seam/test backing).
-- [ ] Q4 No metric-only finding (metric appears as supporting evidence only, mapped to source + behavior).
-- [ ] Q5 No weighted-score fake precision (e.g. 8.347).
-- [ ] Q6 No tool-output theater (raw lint dump without interpretation).
-- [ ] Q7 Every fix is the smallest honest fix; no ceremony added.
+Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.
+
+- [ ] **Q1 No filler.** Detection: sentence whose removal doesn't change the architectural claim ("It is worth noting...", "Generally speaking...", "In this codebase, we find that..."). Remediation: delete wrapper, keep substance.
+- [ ] **Q2 No mediocre praise in Strengths That Matter.** Detection: a Strength any competently-scaffolded codebase would earn ("uses MVVM", "has tests", "follows Swift naming"). Remediation: name a specific deep Interface or non-obvious authority decision with file:line; or drop the bullet.
+- [ ] **Q3 No fake-clean reward.** Detection: positive score note cites folder name, protocol existence, doc comment, Preview, naming scheme, or test count without an accompanying ownership / seam / test-at-Interface citation. Remediation: replace cosmetic citation with structural one, or downgrade the score.
+- [ ] **Q4 No metric-only finding.** Detection: a Finding whose `evidence[]` is solely tool output (lint count, coverage %, sanitizer hit count) with no source-mapped behavior. Remediation: trace metric → source symbol → behavioral consequence per [method.md § Meta-Rules](method.md#meta-rules-apply-everywhere) rule 1; trace fails → downgrade to scope-limited or omit.
+- [ ] **Q5 No weighted-score fake precision.** Detection: any score with second decimal (8.347, 9.25, 7.83). Remediation: round to rubric grid (0/1/3/5/7/8/9/9.5/10).
+- [ ] **Q6 No tool-output theater.** Detection: raw lint/test/coverage dump quoted in evidence with no per-line interpretation. Remediation: cite the specific output line(s) that matter, name the symbol they reference, state the consequence; collapse the rest.
+- [ ] **Q7 Every fix is the smallest honest fix; no ceremony added.** Detection: `minimal_correction_path` proposes new abstractions, folders, protocols, or test scaffolding beyond what removing the smell requires. Remediation: re-apply Simplify Pressure Test sub-step 2 ("smallest honest fix"); if proposal still adds ceremony, downgrade to "delete the offending construct" or queue as a deepening candidate.
 - [ ] Q8 (schema_version >= 3) Per-loop progress line emitted on every CONTINUE dispatch and every HALT_*; format matches [output-format-json.md § Per-Loop Progress Line Format](output-format-json.md#per-loop-progress-line-format-schema_version--3). Quality only — never block emit. (Note: Q8 was previously removed when friction-proof was promoted to G12; reused here for the unrelated emit-format check.)
 
 
