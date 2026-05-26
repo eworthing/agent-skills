@@ -24,33 +24,39 @@ if [ ! -d "$ROOT/.git" ] && ! git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1
   exit 2
 fi
 
-# Source-dir candidates — first match wins
-SOURCE_PATHS=""
+# Source-dir candidates — first match wins. Use indexed array so paths with
+# spaces survive (`set --` + "$@" pattern; portable to bash 3.2).
+set --
 for d in Sources src lib app pkg internal; do
   if [ -d "$ROOT/$d" ]; then
-    SOURCE_PATHS="$SOURCE_PATHS $d"
+    set -- "$@" "$d"
   fi
 done
 
-# Nested SPM (BenchHypeKit/Sources/, etc.)
-nested=$(find "$ROOT" -maxdepth 3 -type d -name 'Sources' 2>/dev/null | head -3)
-if [ -n "$nested" ]; then
-  for d in $nested; do
-    rel="${d#$ROOT/}"
-    case " $SOURCE_PATHS " in
-      *" $rel "*) ;;
-      *) SOURCE_PATHS="$SOURCE_PATHS $rel" ;;
-    esac
+# Nested SPM (BenchHypeKit/Sources/, etc.). NUL-delimited find -> while-read
+# keeps paths-with-spaces intact.
+while IFS= read -r d; do
+  [ -z "$d" ] && continue
+  rel="${d#"$ROOT"/}"
+  # Skip if already collected
+  already=0
+  for existing in "$@"; do
+    [ "$existing" = "$rel" ] && already=1 && break
   done
-fi
+  [ "$already" = "1" ] && continue
+  set -- "$@" "$rel"
+done <<EOF
+$(find "$ROOT" -maxdepth 3 -type d -name 'Sources' 2>/dev/null | head -3)
+EOF
 
-if [ -z "$SOURCE_PATHS" ]; then
+if [ "$#" -eq 0 ]; then
   echo "audit-churn: no source dirs (Sources/, src/, lib/, app/, pkg/, internal/) found under $ROOT" >&2
   exit 2
 fi
 
-# Gather churn — git log --name-only across source paths
-churn=$(git -C "$ROOT" log --since="$SINCE" --name-only --pretty=format: -- $SOURCE_PATHS 2>/dev/null \
+# Gather churn — git log --name-only across source paths. "$@" preserves
+# per-path quoting.
+churn=$(git -C "$ROOT" log --since="$SINCE" --name-only --pretty=format: -- "$@" 2>/dev/null \
   | grep -E '\.(swift|ts|tsx|js|jsx|py|rs|go|java|kt)$' \
   | sort \
   | uniq -c \
@@ -58,7 +64,7 @@ churn=$(git -C "$ROOT" log --since="$SINCE" --name-only --pretty=format: -- $SOU
   | head -"$TOP_N")
 
 if [ -z "$churn" ]; then
-  echo "audit-churn: no source-file edits since '$SINCE' in: $SOURCE_PATHS" >&2
+  echo "audit-churn: no source-file edits since '$SINCE' in source dirs: $*" >&2
   exit 0
 fi
 

@@ -69,6 +69,7 @@ echo "|---|---|---|---|"
 
 # Use a temp file for awk-driven cluster detection (bash 3.2 has no assoc arrays)
 TMPF=$(mktemp -t audit-naming.XXXXXX)
+trap 'rm -f "$TMPF"' EXIT INT TERM HUP
 echo "$all_hits" | while IFS= read -r line; do
   [ -z "$line" ] && continue
   file=$(echo "$line" | cut -d: -f1)
