@@ -121,7 +121,8 @@ Branch order is determined by the Precedence Matrix; do not invent your own orde
    - `docs/adr/` → enumerate ADR titles. Findings that contradict an ADR must say so explicitly and justify reopening; do not silently propose forbidden refactors.
    - If neither exists, proceed silently.
 6. **Detect stack** by consulting [references/lenses.md](references/lenses.md). Load the resolved stack lens AND every entry under [Always-included lenses](references/lenses.md#always-included-lenses). Record the full loaded list in Discovery (e.g., `["lens-apple.md", "lens-security.md"]`).
-7. Record commands, source roots, ADRs, domain terms, selected lens at top of `CURRENT_REVIEW.md`.
+6b. **Hot-file churn list** (discovery aid; optional but recommended on repos with >6 months of git history). Run `git log --since="6 months ago" --name-only -- Sources/ src/ lib/ 2>/dev/null | grep -E '\.(swift|ts|tsx|js|jsx|py|rs|go|java|kt)$' | sort | uniq -c | sort -rn | head -20` to get the top-20 most-churned source files. Record under Discovery as `churn_top20: [{path, edits}]`. Method Step 3 (architecture review) uses the list as a seam-quality indicator — high churn without proportionate abstraction value is a leaky-seam smell. Optional helper: `scripts/audit-churn.sh`.
+7. Record commands, source roots, ADRs, domain terms, selected lens, churn list at top of `CURRENT_REVIEW.md`.
 
 ### Step 1 — Critic Phase (Ground Truth & Evaluate)
 
