@@ -241,12 +241,16 @@ def generate_merge_candidates(ledger):
         right_summary = _issue_summary(right)
         similarity = _summary_similarity(left_summary, right_summary)
         anchor_related = _anchors_related(left, right)
+        # Candidate gate: with no shared anchor, two summaries must be at least
+        # ~45% similar before the pair is worth classifying at all.
         if not (anchor_related or similarity >= 0.45):
             continue
 
         basis = []
         if anchor_related:
             basis.append("anchor")
+        # Confidence tiers recorded on the candidate (for the merge log):
+        # >=0.85 reads as near-identical wording, >=0.55 as clearly close.
         if similarity >= 0.85:
             basis.append("summary_exact")
         elif similarity >= 0.55:
@@ -294,9 +298,13 @@ def classify_merge_candidate(left, right):
         if not left_has_location and not right_has_location:
             return "EQUIVALENT", "matching concern signature without anchors"
     if anchor_related:
+        # A shared anchor already signals overlap, so a lower ~35% bar is enough
+        # to call the pair "related but distinct" rather than "uncertain".
         if similarity >= 0.35:
             return "RELATED_DISTINCT", "same area but meaningfully different concerns"
         return "UNCERTAIN", "same area without enough evidence for equivalence"
+    # No shared anchor: require the higher ~45% lexical bar (matching the
+    # candidate gate above) before relating two issues on wording alone.
     if similarity >= 0.45:
         return "RELATED_DISTINCT", "lexically related but distinct"
     return "UNCERTAIN", "insufficient similarity"

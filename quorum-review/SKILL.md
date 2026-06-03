@@ -23,6 +23,19 @@ allowed-tools:
 
 # Quorum Review — Multi-Provider Consensus (v3.1)
 
+## Contents
+
+- [Bundled resources](#bundled-resources)
+- [What it does](#what-it-does)
+- [Invocation](#invocation)
+- [Modes](#modes)
+- [Round flow](#round-flow)
+- [Role packs](#role-packs)
+- [Temp files](#temp-files)
+- [Examples](#examples)
+- [What changed in v3.1](#what-changed-in-v31)
+- [Migration notes from v2.4](#migration-notes-from-v24)
+
 ## Bundled resources
 
 Read on demand based on what you need:
@@ -31,13 +44,13 @@ Read on demand based on what you need:
 - [`references/output-format.md`](references/output-format.md) — reviewer output template (round 1 + round 2+ cross-critique), per-issue confidence requirements, code-anchor requirements, blind-mode formatting. Include in every reviewer prompt.
 - [`references/claude.md`](references/claude.md), [`references/codex.md`](references/codex.md), [`references/gemini.md`](references/gemini.md), [`references/copilot.md`](references/copilot.md) — per-provider CLI cheatsheets.
 - [`references/env.md`](references/env.md) — environment variables the orchestrator + adapter read (`CODEX_HOME`, `GEMINI_CONFIG_DIR`, `QUORUM_PARSE_FAILURES_LOG`, etc.).
-- [`scripts/run_quorum.py`](scripts/run_quorum.py) — the orchestrator (compatibility shim; implementation in [`scripts/quorum/`](scripts/quorum/)).
-- [`scripts/run_review.py`](scripts/run_review.py) — per-reviewer adapter (vendored `_common/` for provider dispatch).
+- Run [`scripts/run_quorum.py`](scripts/run_quorum.py) — the orchestrator (compatibility shim; see [`scripts/quorum/`](scripts/quorum/) for the implementation).
+- See [`scripts/run_review.py`](scripts/run_review.py) — per-reviewer adapter invoked by the orchestrator (vendored `_common/` for provider dispatch).
 - [`scripts/_common/`](scripts/_common/) — vendored copy of the shared infrastructure in `/common/` at the repo root. **Do not edit** — re-sync via `python3 common/scripts/sync_common.py`.
 
 ## What it does
 
-- Launches multiple reviewer CLIs through `run_review.py`
+- Launches multiple reviewer CLIs via `run_review.py`
 - Keeps reviewer identities anonymous in shared context (`Reviewer A/B/C`)
 - Tracks canonical blocking and non-blocking issue IDs in a ledger
 - Merges only semantically equivalent issues; related/distinct and conflicts stay as relations only
