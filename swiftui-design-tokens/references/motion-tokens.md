@@ -5,6 +5,15 @@ across the app. Define them once in your `DesignTokens.swift` and reference
 the tokens from view code -- never inline raw `.spring(...)` or
 `.easeOut(duration:)` calls in views.
 
+## Contents
+
+- Timed Animations
+- Spring Animations
+  - Platform-Specific Focus Springs
+- Reduce Motion Alternatives
+- Motion Token Selection Guide
+- Anti-Patterns
+
 ## Timed Animations
 
 ```swift
