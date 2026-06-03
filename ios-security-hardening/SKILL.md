@@ -75,15 +75,21 @@ func writeFile(name: String, data: Data) throws {
     try data.write(to: path)
 }
 
-// CORRECT - validate path containment
+// CORRECT - allowlist-only sanitization, then containment check
 func writeFile(name: String, data: Data) throws {
-    let sanitizedName = name
-        .replacingOccurrences(of: "..", with: "")
-        .replacingOccurrences(of: "/", with: "_")
+    // Allowlist (keep alphanumerics + "-_.") rather than blocklist "..", "/",
+    // and path separators — blocklisting is easy to get wrong (e.g. the
+    // non-idempotent string replacement an earlier draft of this skill used).
+    let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
+    let sanitizedName = name.unicodeScalars
+        .filter { allowed.contains($0) }
+        .map(String.init)
+        .joined()
+    guard !sanitizedName.isEmpty else { throw SecurityError.pathTraversal }
 
     let path = documentsDirectory.appendingPathComponent(sanitizedName)
 
-    // Verify path is within allowed directory
+    // Defense in depth: confirm the resolved path stays inside the sandbox dir.
     guard path.standardizedFileURL.path.hasPrefix(documentsDirectory.path) else {
         throw SecurityError.pathTraversal
     }
@@ -113,9 +119,11 @@ func loadImage(from urlString: String) async throws -> Image {
 }
 
 private func isAllowedDomain(_ host: String?) -> Bool {
-    guard let host = host else { return false }
+    guard let host = host?.lowercased() else { return false }
     let allowedDomains = ["example.com", "cdn.example.com"]
-    return allowedDomains.contains { host.hasSuffix($0) }
+    // Exact match or dot-bounded subdomain. Plain hasSuffix("example.com")
+    // would also accept "notexample.com".
+    return allowedDomains.contains { host == $0 || host.hasSuffix("." + $0) }
 }
 ```
 
@@ -176,8 +184,8 @@ func imageSource(from reference: String, allowedDomains: [String]) -> ImageSourc
     }
 
     guard ["https", "http"].contains(scheme),
-          let host = url.host,
-          allowedDomains.contains(where: { host.hasSuffix($0) }) else {
+          let host = url.host?.lowercased(),
+          allowedDomains.contains(where: { host == $0 || host.hasSuffix("." + $0) }) else {
         return nil
     }
     return .remoteURL(url)
@@ -237,11 +245,14 @@ func importCSV(_ data: String) -> [Item] {
 }
 
 private func sanitizeCSVField(_ field: String) -> String {
-    field
+    let trimmed = field
         .trimmingCharacters(in: .whitespacesAndNewlines)
         .replacingOccurrences(of: "\"", with: "'")
-        .prefix(1000)  // Length limit
-        .description
+    // Neutralize formula injection: a leading = + - @ makes Excel/Sheets execute
+    // the cell as a formula on open. Prefix with ' to force literal text.
+    let triggers: Set<Character> = ["=", "+", "-", "@"]
+    let guarded = (trimmed.first.map { triggers.contains($0) } ?? false) ? "'" + trimmed : trimmed
+    return String(guarded.prefix(1000))  // cap field length; tune to your schema
 }
 ```
 
@@ -273,7 +284,7 @@ func generatePrompt(userInput: String) -> String {
 // BETTER - sanitize and constrain
 func generatePrompt(userInput: String) -> String {
     let sanitized = userInput
-        .prefix(500)
+        .prefix(500)  // cap prompt-fragment length; tune to your token budget
         .description
         .trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -291,7 +302,7 @@ func parseJSON(_ data: Data) throws -> Model {
 
 // CORRECT - enforce size limit
 func parseJSON(_ data: Data) throws -> Model {
-    let maxSize = 50 * 1024 * 1024  // 50MB
+    let maxSize = 50 * 1024 * 1024  // 50 MB ceiling — size to your largest legitimate payload
     guard data.count <= maxSize else {
         throw SecurityError.payloadTooLarge
     }
@@ -455,8 +466,11 @@ if let source = imageSource(from: item.imageRef,
 
 ## Constraints
 
-- Always sanitize user-provided paths
-- Always validate URLs before loading
-- Always use sandbox temp directories
-- Never log sensitive data
-- Size limits on all external data
+Non-negotiable invariants — the attacker controls the input, so each unchecked
+path is an exploit primitive:
+
+- Sanitize user-provided paths (allowlist) — prevents directory traversal
+- Validate URLs before loading (scheme + dot-bounded domain) — blocks scheme abuse / SSRF
+- Use sandbox temp directories — keeps writes inside the app container
+- Never log sensitive data — logs are an exfiltration surface
+- Enforce size limits on all external data — bounds memory / DoS
