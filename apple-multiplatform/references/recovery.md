@@ -7,6 +7,18 @@ checklist that confirms scope), **Fix** (code change).
 For the source pattern table in summary form, see `SKILL.md`. For per-platform
 gotcha detail, see `references/{tvos,macos,catalyst}.md`.
 
+## Contents
+
+- [E1. `Cannot find 'X' in scope` — one platform only](#e1-cannot-find-x-in-scope--one-platform-only)
+- [E2. `Value of type 'X' has no member 'Y'` — one platform](#e2-value-of-type-x-has-no-member-y--one-platform)
+- [E3. `'private' modifier cannot be used in an extension` — after file split](#e3-private-modifier-cannot-be-used-in-an-extension--after-file-split)
+- [E4. Runtime crash on tvOS after `canImport(UIKit)` guard](#e4-runtime-crash-on-tvos-after-canimportuikit-guard)
+- [E5. `Ambiguous use of '...'` — platform-specific overloads](#e5-ambiguous-use-of---platform-specific-overloads)
+- [E6. macOS-only `Static method 'page' requires ...`](#e6-macos-only-static-method-page-requires-)
+- [E7. Catalyst window collapses on launch](#e7-catalyst-window-collapses-on-launch)
+- [E8. `.fullScreenCover` not found on macOS](#e8-fullscreencover-not-found-on-macos)
+- [Standardized Error Output Format](#standardized-error-output-format)
+
 ---
 
 ## E1. `Cannot find 'X' in scope` — one platform only

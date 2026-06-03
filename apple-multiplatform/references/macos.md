@@ -3,6 +3,18 @@
 macOS SwiftUI is AppKit-backed; many iOS-shaped APIs are unavailable or behave
 differently.
 
+## Contents
+
+- [TabView](#tabview)
+- [Modal Presentation](#modal-presentation)
+- [Toolbar Placement](#toolbar-placement)
+- [`@CommandsBuilder` — `ForEach` Composition](#commandsbuilder--foreach-composition)
+- [`NavigationSplitView` Defaults](#navigationsplitview-defaults)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Window Resize-Down Stability](#window-resize-down-stability)
+- [Settings Form Style](#settings-form-style)
+- [Related Skills](#related-skills)
+
 ## TabView
 
 `.page` style is **unavailable on macOS**. Use `.automatic` (sidebar tabs) or
