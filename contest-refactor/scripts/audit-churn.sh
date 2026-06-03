@@ -33,8 +33,8 @@ for d in Sources src lib app pkg internal; do
   fi
 done
 
-# Nested SPM (BenchHypeKit/Sources/, etc.). NUL-delimited find -> while-read
-# keeps paths-with-spaces intact.
+# Nested SPM (BenchHypeKit/Sources/, etc.). Newline-delimited find -> while-read
+# keeps ordinary paths-with-spaces intact.
 while IFS= read -r d; do
   [ -z "$d" ] && continue
   rel="${d#"$ROOT"/}"

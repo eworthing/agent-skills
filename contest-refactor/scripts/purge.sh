@@ -7,7 +7,7 @@
 # Works from any CWD — operates on files in the current directory.
 #
 # Usage:
-#   purge.sh --backup-dir <path>              # full purge (mv + log)
+#   purge.sh --confirm --backup-dir <path>    # full purge (mv + log)
 #   purge.sh --dry-run                        # list targets; no acting
 #   purge.sh --recover --backup-dir <path>    # post-manual-recovery audit
 #   purge.sh -h | --help
@@ -29,6 +29,7 @@ LOG_FILE="PURGE_LOG.jsonl"
 # --- Args ---
 MODE="purge"
 BACKUP_DIR=""
+CONFIRM=0
 
 usage() {
   sed -n '2,15p' "$0" | sed 's/^# //;s/^#//'
@@ -46,6 +47,9 @@ while [ $# -gt 0 ]; do
       ;;
     --recover)
       MODE="recover"
+      ;;
+    --confirm)
+      CONFIRM=1
       ;;
     -h|--help)
       usage
@@ -130,6 +134,13 @@ json_array_from_lines() {
        END{printf "]"}'
 }
 
+indent_lines() {
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    printf '  - %s\n' "$line"
+  done
+}
+
 # --- Helper: get current loop + state from CURRENT_REVIEW.json if present (best-effort) ---
 prior_field() {
   # $1 = field name (e.g., "loop", "state")
@@ -204,7 +215,14 @@ if [ "$MODE" = "recover" ]; then
   # Append purge_partial_recovery JSONL entry. Script owns the write.
   TS=$(iso_ts)
   ESC_BACKUP=$(json_escape "$BACKUP_DIR")
-  RECOVERED=$(ls -1 "$BACKUP_DIR" 2>/dev/null | grep -v '^\.purge-errors\.log$' | json_array_from_lines)
+  RECOVERED=$(
+    for path in "$BACKUP_DIR"/*; do
+      [ -e "$path" ] || continue
+      name=$(basename "$path")
+      [ "$name" = ".purge-errors.log" ] && continue
+      printf '%s\n' "$name"
+    done | json_array_from_lines
+  )
   printf '{"event":"purge_partial_recovery","ts":"%s","backup_path":"%s","files_recovered":%s}\n' \
     "$TS" "$ESC_BACKUP" "$RECOVERED" >> "$LOG_FILE"
 
@@ -216,6 +234,7 @@ if [ "$MODE" = "recover" ]; then
 fi
 
 # --- Default mode: full purge ---
+[ "$CONFIRM" = "1" ] || { echo "purge: --confirm required for destructive purge" >&2; exit 2; }
 [ -n "$BACKUP_DIR" ] || { echo "purge: --backup-dir <path> required (or --dry-run, --recover)" >&2; exit 2; }
 if [ -e "$BACKUP_DIR" ]; then
   echo "purge: backup-dir already exists: $BACKUP_DIR" >&2
@@ -239,7 +258,7 @@ if ! looks_like_contest_refactor_artifacts; then
   echo "purge: target files present in CWD but do NOT look like contest-refactor artifacts." >&2
   echo "Refusing to purge to prevent accidental data loss." >&2
   echo "Present files (no contest-refactor markers found):" >&2
-  echo "$TARGETS" | sed 's/^/  - /' >&2
+  echo "$TARGETS" | indent_lines >&2
   echo "" >&2
   echo "If these ARE contest-refactor artifacts that lack expected markers" >&2
   echo "(e.g., truncated/corrupted), invoke /contest-refactor first to repair" >&2
@@ -311,10 +330,10 @@ printf '{"event":"purge","ts":"%s","backup_path":"%s","files_moved":%s,"files_fa
 echo "# purge"
 echo "Backup: $BACKUP_DIR/"
 echo "Moved:"
-echo "$MOVED" | sed 's/^/  - /'
+echo "$MOVED" | indent_lines
 if [ -n "$FAILED" ]; then
   echo "Failed:"
-  echo "$FAILED" | sed 's/^/  - /'
+  echo "$FAILED" | indent_lines
   echo "Errors: $ERR_LOG"
   echo "State partial. See halt-handoff.md § Purge Partial-Failure handoff."
   exit 3

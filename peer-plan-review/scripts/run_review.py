@@ -270,9 +270,11 @@ def run_review(args, logger=None):
 
             print(f"Running: {reviewer} review...", file=sys.stderr)
 
-            # Truncate output file so stale data doesn't persist
+            # Truncate output artifacts so stale data doesn't persist.
             if args.output_file and Path(args.output_file).exists():
                 Path(args.output_file).write_text("")
+            if args.events_file and Path(args.events_file).exists():
+                Path(args.events_file).write_text("")
 
             if stdin_data is not None:
                 proc = subprocess.Popen(
@@ -324,17 +326,20 @@ def run_review(args, logger=None):
             # branch (or caller) sees it instead of producing a phantom success.
             if returncode == 0:
                 if reviewer == "codex":
-                    check_path = Path(args.events_file) if args.events_file else None
+                    check_paths = [
+                        Path(path) for path in (args.events_file, args.output_file)
+                        if path
+                    ]
                 else:
-                    check_path = Path(args.output_file) if args.output_file else None
-                has_output = (
-                    check_path is not None
-                    and check_path.exists()
-                    and check_path.stat().st_size > 0
+                    check_paths = [Path(args.output_file)] if args.output_file else []
+                has_output = any(
+                    path.exists() and path.stat().st_size > 0
+                    for path in check_paths
                 )
-                if check_path is not None and not has_output:
+                if check_paths and not has_output:
+                    check_label = ", ".join(str(path) for path in check_paths)
                     print(
-                        f"Reviewer exited 0 but produced no output ({check_path})",
+                        f"Reviewer exited 0 but produced no output ({check_label})",
                         file=sys.stderr,
                     )
                     if stderr:

@@ -16,21 +16,25 @@ set -u
 ROOT="${1:-.}"
 
 # Resolve source dir candidates
-SOURCE_BASES=""
+set --
 for d in Sources src lib app pkg internal; do
   if [ -d "$ROOT/$d" ]; then
-    SOURCE_BASES="$SOURCE_BASES $ROOT/$d"
+    set -- "$@" "$ROOT/$d"
   fi
 done
-nested=$(find "$ROOT" -maxdepth 3 -type d -name 'Sources' 2>/dev/null | head -3)
-for d in $nested; do
-  case " $SOURCE_BASES " in
-    *" $d "*) ;;
-    *) SOURCE_BASES="$SOURCE_BASES $d" ;;
-  esac
-done
+while IFS= read -r d; do
+  [ -z "$d" ] && continue
+  already=0
+  for existing in "$@"; do
+    [ "$existing" = "$d" ] && already=1 && break
+  done
+  [ "$already" = "1" ] && continue
+  set -- "$@" "$d"
+done <<EOF
+$(find "$ROOT" -maxdepth 3 -type d -name 'Sources' 2>/dev/null | head -3)
+EOF
 
-if [ -z "$SOURCE_BASES" ]; then
+if [ "$#" -eq 0 ]; then
   echo "audit-naming: no source dirs found under $ROOT" >&2
   exit 2
 fi
@@ -41,7 +45,7 @@ SUFFIXES='(Service|Manager|Helper|Util|Utility|Handler|Provider|Wrapper)'
 # Grep for type declarations (Swift: class/struct/enum/actor/protocol)
 # matching the fuzzy suffix. Extract (file, type-name).
 all_hits=""
-for base in $SOURCE_BASES; do
+for base in "$@"; do
   hits=$(grep -rnE "^[[:space:]]*(public|internal|fileprivate|private)?[[:space:]]*(final[[:space:]]+)?(class|struct|enum|actor|protocol)[[:space:]]+[A-Z][A-Za-z0-9_]*${SUFFIXES}\b" \
     "$base" 2>/dev/null \
     | grep -v '/\.build/' \
@@ -53,7 +57,7 @@ $hits"
 done
 
 if [ -z "$all_hits" ]; then
-  echo "audit-naming: no fuzzy-named types found in $SOURCE_BASES" >&2
+  echo "audit-naming: no fuzzy-named types found in $*" >&2
   exit 0
 fi
 
@@ -92,7 +96,7 @@ echo "$all_hits" | while IFS= read -r line; do
   # Prefix = type without suffix
   prefix=$(echo "$type_name" | sed -E "s/${SUFFIXES}\$//")
 
-  rel="${file#$ROOT/}"
+  rel="${file#"$ROOT"/}"
   echo "${module}|${prefix}|${type_name}|${rel}:${lineno}" >> "$TMPF"
 done
 

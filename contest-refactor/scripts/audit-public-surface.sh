@@ -26,9 +26,12 @@ if [ ! -d "$SOURCES_DIR" ]; then
   fi
 fi
 
+TMP_MODULES=$(mktemp -t audit-public-surface-modules.XXXXXX)
+trap 'rm -f "$TMP_MODULES"' EXIT INT TERM HUP
+
 # Enumerate module directories
-modules=$(find "$SOURCES_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
-if [ -z "$modules" ]; then
+find "$SOURCES_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort > "$TMP_MODULES"
+if [ ! -s "$TMP_MODULES" ]; then
   echo "audit-public-surface: no modules under $SOURCES_DIR" >&2
   exit 2
 fi
@@ -39,7 +42,8 @@ echo "|---|---|---|---|"
 flagged_count=0
 
 # Iterate modules
-echo "$modules" | while IFS= read -r module_dir; do
+while IFS= read -r module_dir; do
+  [ -z "$module_dir" ] && continue
   module=$(basename "$module_dir")
 
   # Find public decls — match common public keyword positions:
@@ -73,19 +77,20 @@ echo "$modules" | while IFS= read -r module_dir; do
 
     # Count cross-module callers: grep symbol in OTHER module dirs
     cross_uses=0
-    for other_module_dir in $modules; do
+    while IFS= read -r other_module_dir; do
+      [ -z "$other_module_dir" ] && continue
       [ "$other_module_dir" = "$module_dir" ] && continue
-      hits=$(grep -rn "\b${symbol}\b" "$other_module_dir" 2>/dev/null | grep -v '/\.build/' | wc -l | tr -d ' ')
+      hits=$(grep -rn "\b${symbol}\b" "$other_module_dir" 2>/dev/null | grep -vc '/\.build/')
       cross_uses=$((cross_uses + hits))
-    done
+    done < "$TMP_MODULES"
 
     if [ "$cross_uses" -eq 0 ]; then
-      rel_file="${decl_file#$ROOT/}"
+      rel_file="${decl_file#"$ROOT"/}"
       echo "| $module | $symbol | $rel_file:$decl_lineno | 0 |"
       flagged_count=$((flagged_count + 1))
     fi
   done
-done
+done < "$TMP_MODULES"
 
 # Note: flagged_count is local to the subshell (pipe) on bash 3.2; the table
 # above is the authoritative output. Exit 0 always — this is an audit helper,

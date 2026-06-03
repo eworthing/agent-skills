@@ -1191,6 +1191,61 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertIn("round1-sess", round2_cmd)
         self.assertNotIn("--no-session-persistence", round2_cmd)
 
+    def test_run_review_codex_stale_events_do_not_mask_empty_current_output(self):
+        """A stale Codex events file must not satisfy the current-run output guard."""
+        self.events_file.write_text('{"type":"old"}\n', encoding="utf-8")
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        with (
+            mock.patch("run_review._codex_session_files", return_value=set()),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 124)
+        self.assertEqual(self.events_file.read_text(encoding="utf-8"), "")
+
+    def test_run_review_codex_accepts_last_message_file_without_json_stdout(self):
+        """Codex may produce only --output-last-message output and no JSON stdout."""
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        def communicate(input=None, timeout=None):
+            self.output_file.write_text("Review text\n", encoding="utf-8")
+            return "", ""
+
+        proc.communicate.side_effect = communicate
+
+        with (
+            mock.patch("run_review._codex_session_files", return_value=set()),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(self.output_file.read_text(encoding="utf-8"), "Review text\n")
+
 
 # ---------------------------------------------------------------------------
 # Phase 1b+ new test classes
