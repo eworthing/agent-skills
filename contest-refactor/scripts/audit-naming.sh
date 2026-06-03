@@ -72,7 +72,7 @@ echo "|---|---|---|---|"
 # Prefix = type with suffix stripped
 
 # Use a temp file for awk-driven cluster detection (bash 3.2 has no assoc arrays)
-TMPF=$(mktemp -t audit-naming.XXXXXX)
+TMPF=$(mktemp -t audit-naming.XXXXXX) || exit 2
 trap 'rm -f "$TMPF"' EXIT INT TERM HUP
 echo "$all_hits" | while IFS= read -r line; do
   [ -z "$line" ] && continue
