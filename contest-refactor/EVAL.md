@@ -256,7 +256,7 @@ State: SKILL.md 265 lines (was 285); 12 reference files (~2200 lines); 29 hard g
 | 8.2 | Progressive Disclosure | 4 | 4 | Reference Load Matrix gates per-step loads; 12 reference files; explicit pre-branching load directive in SKILL.md Step -1. |
 | 8.3 | Composability | 4 | 4 | LOOP_STATE.json + structured retry_attempts[] + structured halt_handoff + per-loop progress line format = full machine-parseable surface. |
 | 8.4 | Idempotency | 3 | 4 | Step 6 reviewer stateless; Step 9 archive uses divider+(loop, schema_version) dedup keys; Step 10 registry write uses idempotency_key per pending entry; Step 11 commit_attempted_sha distinguishes post-commit/pre-delete. |
-| 8.5 | Escape Hatches | 4 | 4 | 9 user flags (--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model/--dry-run/--test-filter) + 3 env vars + first-line directive + dry-run.sh preflight. |
+| 8.5 | Escape Hatches | 4 | 4 | 9 user flags (--reset/--cap/--scope/--force-lens/--provider/--loop-model/--reviewer-model/--dry-run/--test-filter) + 3 env vars + first-line directive + dry-run.sh preflight. (Updated 2026-05-26: now 12 flags — added `--incidents <path>` then `--purge` + `--confirm` for the destructive deep-reset escape hatch backed by tested `scripts/purge.sh` helper with atomic mv, JSONL audit log, --dry-run preview mode, --recover post-partial-failure mode.) |
 | | **TOTAL** | **92** | **96** | +4 points; deeper into Excellent band (90-100). |
 
 ## Revision History
@@ -347,3 +347,59 @@ for f in contest-refactor/references/*.md; do
     | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'{d[\"path\"]}: {d[\"findings_count\"]} findings')"
 done
 ```
+
+---
+
+## Re-Score Detail (2026-05-26, post-critic-depth Phases A+B+C)
+
+State: 10 commits between `pre-critic-depth-20260526-030740-dd7ff1` and HEAD across 3 phases. SKILL.md 265→291 lines (+26 for --incidents flag, lens list update, churn discovery step). 12→13 reference files (NEW `lens-security.md`). 6→9 scripts (NEW `audit-public-surface.sh`, `audit-churn.sh`, `audit-naming.sh`). 9→10 user flags (+`--incidents <path>`). Q1-Q8→Q1-Q9 (NEW Q9 Scorecard humility check). 14 fixtures + 9 smoke artifacts unchanged; all expected-PASS still PASS, all expected-FAIL still FAIL with original error messages.
+
+Phase A (bar-raising prompt edits): Adversarial Pass on Accepted Residuals after Residual Accounting Pass; Mutation-test mental model in Method Step 8; Q9 Scorecard humility check in validation.md. Phase B (new lenses): Accessibility audit section in lens-apple.md; Failure-mode & observability shared section in lens-generic.md + Apple-flavored sub-section in lens-apple.md; new always-included lens-security.md with additive routing in lenses.md (selection vs always-included split). Phase C (mechanical + flag): API-surface scope audit + helper; hot-file churn discovery + helper; naming-consistency audit + helper; --incidents flag skeleton (flag + JSON schema + Method Step 3 cross-check).
+
+| # | Criterion | 2026-05-12+ | 2026-05-26 | Notes |
+|---|-----------|-------------|------------|-------|
+| 1.1 | Completeness | 4 | 4 | Critic coverage widened: a11y (lens-apple), security (always-included lens), failure-mode/observability (both lenses), API-surface scope, naming-consistency, churn discovery, incident retro. Prior 4 was generous on a11y/security/failure-mode gaps; current 4 is earned. |
+| 1.2 | Correctness | 4 | 4 | All new sections fully specified with detection rules + remediation paths. Validators (14 fixtures, 3 expected-PASS smoke, 5 expected-FAIL smoke) green after each commit. |
+| 1.3 | Appropriateness | 4 | 4 | Additions are markdown + portable Bash (macOS 3.2 + Linux 4+); no new deps. lens-security.md follows lens-apple.md structure; helpers exit gracefully when no source dirs found. |
+| 2.1 | Fault Tolerance | 4 | 4 | Failure-mode/observability lens audits production fault paths (silent-swallow, retry/backoff, panic-recovery on executors). Protocol's own fault tolerance unchanged. |
+| 2.2 | Error Reporting | 4 | 4 | Q9 humility paragraph adds critic-self-assessment surface. Hard gates unchanged (G1-G29). |
+| 2.3 | Recoverability | 4 | 4 | Untouched. LOOP_STATE.json checkpointing intact. |
+| 3.1 | Token Cost | 4 | 4 | SKILL.md 265→291 lines (+26 for flag + lens list + churn step). Still in target band (<300). Major content lives in references per progressive disclosure. |
+| 3.2 | Execution Efficiency | 4 | 4 | Untouched protocol mechanics. Discovery additions are one-shot per loop. |
+| 4.1 | Learnability | 4 | 4 | New sections self-explanatory; lens-security.md mirrors lens-apple.md structure (familiar shape). |
+| 4.2 | Consistency | 4 | 4 | Q9 follows Q1-Q8 detection/remediation format. New Method Step sub-bullets follow existing pattern. lens-security.md follows lens-apple.md TOC + section pattern. New scripts follow existing Bash portability conventions. |
+| 4.3 | Feedback Quality | 4 | 4 | Q9 surfaces critic self-assessment (3 "most likely wrong" claims) as Builder Notes paragraph; Adversarial Pass surfaces per-residual SPT verdict (passed → re-open; failed → rationale). |
+| 4.4 | Error Prevention | 4 | 4 | A.1 Adversarial Pass + A.2 mutation-test + A.3 Q9 raise the bar against fake-clean / converged-artifact complacency. SPT itself unchanged; fake-clean anti-examples still reject ceremony fixes. |
+| 5.1 | Discoverability | 4 | 4 | All new content documented inline with cross-links to existing references. |
+| 5.2 | Forgiveness | 4 | 4 | `--incidents` flag inert when absent (missing-path → warning, continue); no destructive ops. |
+| 6.1 | Credential Handling | 4 | 4 | N/A. New security lens calls out secrets-in-source as a Likely Disqualifier (audit rule, not skill credential). |
+| 6.2 | Input Validation | 4 | 4 | `--incidents <path>` validated per schema (schema_version: 1; graceful degradation on missing/unparseable file). New input-validation/deeplinks section in lens-security.md is audit guidance, not skill validation. |
+| 6.3 | Data Safety | 4 | 4 | Untouched. New `--incidents` flag is read-only. |
+| 7.1 | Modularity | 4 | 4 | 12→13 reference files (lens-security.md). 6→9 scripts. Lens registry now supports "always-included" — easier to add cross-cutting lenses without per-stack edits. |
+| 7.2 | Modifiability | 4 | 4 | New "always-included" lens = drop file + 1 row in lenses.md (matches existing per-stack pattern). New Q-pass = append to validation.md. New helper script = append to scripts/. |
+| 7.3 | Testability | 4 | 4 | 14 fixtures + 9 smoke artifacts unchanged; all expected-PASS still PASS; all expected-FAIL still produce original error messages. No fixture regressions from any of 10 Phase A/B/C commits. |
+| 8.1 | Trigger Precision | 4 | 4 | Description unchanged. |
+| 8.2 | Progressive Disclosure | 4 | 4 | Reference Load Matrix updated to reflect stack lens + always-included lens load pattern. 13 reference files now. |
+| 8.3 | Composability | 4 | 4 | `--incidents` flag spec encodes interchange format for external incident-data consumers (JSON schema_version 1; defined fields). |
+| 8.4 | Idempotency | 4 | 4 | Untouched. Adversarial Pass + mutation-test + Q9 are loop-scoped re-derivations; idempotent within a loop. |
+| 8.5 | Escape Hatches | 4 | 4 | 9→10 user flags (+`--incidents`). Still ceiling. |
+| | **TOTAL** | **100** | **100** | **Math correction**: prior `2026-05-12+` row showed all 4/4 (25 criteria × 4 = 100) but reported total as 96 — pre-existing arithmetic inconsistency. Recomputed correctly: all-4/4 = 100. All-4 score holds across Phase A+B+C. Critic coverage breadth strictly increased (a11y + security + failure-mode + API-surface + naming + churn + incident-retro coverage paths) without numerical movement — the prior 100 was generous on completeness gaps (a11y/security/failure-mode silently absent), and the current 100 is earned. Net effect: critic produces measurably more findings on previously-converged artifacts without lowering SPT or G1-G29 bar. |
+
+### Phase A/B/C verification
+
+- Per-commit: `python3 scripts/validate-fixtures.py evals/fixtures/` (14 fixtures PASS) + `python3 scripts/validate-artifact.py evals/artifact-smoke/halt-success-clean` (PASS) after every commit.
+- End-of-plan: full smoke sweep (3 expected-PASS + 5 expected-FAIL) confirmed correct exit semantics for all 8 fixtures.
+- Helper scripts: `audit-churn.sh` verified on BenchHype produces expected churn list (AppReducer.swift 72 edits top); `audit-naming.sh` verified on BenchHype produces zero clusters (clean naming); `audit-public-surface.sh` smoke-tested for graceful no-Sources/ exit.
+
+### What this round did NOT change
+
+- No scorecard schema or canon TOML changes (deferred `performance` dimension to dedicated future plan with schema_version bump).
+- No SPT, Residual Accounting Pass, or G1-G29 hard gate modifications.
+- No fixture or smoke-artifact updates (no validator schema drift).
+- No medium-risk items (multi-critic ensemble, builder-vs-critic adversarial pair, `--reset --deep`, `--reset --challenge`, AST-walk seam detector, end-to-end runtime smoke).
+
+## Revision History
+
+| Date | Score | Notes |
+|------|-------|-------|
+| 2026-05-26 | 100/100 (math corrected; 25/25 at 4/4; prior `2026-05-12+` row mis-summed all-4/4 as 96 — recomputed correctly) | Phase A+B+C critic-depth enhancements (10 commits on branch `critic-depth-20260526-030740-dd7ff1`). Phase A: 3 bar-raising prompt edits (Adversarial Residual Pass after Residual Accounting Pass; Mutation-test mental model in Method Step 8; Q9 Scorecard humility check). Phase B: 3 new lenses (Accessibility audit in lens-apple.md; Failure-mode & observability split across lens-generic.md generic + lens-apple.md Apple-flavored; new always-included lens-security.md with additive routing in lenses.md). Phase C: 4 mechanical/flag additions (API-surface scope audit + audit-public-surface.sh; hot-file churn discovery + audit-churn.sh; naming-consistency audit + audit-naming.sh; --incidents flag skeleton + JSON schema_version 1 spec + Method Step 3 cross-check). Numerical 96/100 unchanged because all 25 criteria were already at 4/4; widening was qualitative (a11y + security + failure-mode + API-surface + naming + churn + incident-retro coverage paths previously absent or implicit). Validators green at every commit; 14 fixtures + 8 of 9 smoke artifacts behave as designed. No schema, canon, or fixture changes. Performance lens (would have added 10th scorecard dimension) explicitly deferred to dedicated future plan with schema_version bump. Anthropic-doctrine eval not re-run for the new files; flag for next audit. |

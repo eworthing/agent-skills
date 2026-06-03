@@ -79,6 +79,11 @@ Next step options:
       the cited source.
   (c) Reset and run again from current source — type "/contest-refactor --reset"
       (useful if the codebase has changed materially since this halt).
+  (d) Deep-reset (purge) — type "/contest-refactor --purge" for a preview, then
+      "/contest-refactor --purge --confirm" to execute. Wipes findings_registry
+      + REVIEW_HISTORY on top of --reset's scope, making the next loop run as
+      if first-installed. Backup created automatically; see Purge Preview
+      handoff for full semantics.
 ```
 
 ---
@@ -125,6 +130,10 @@ Next step options:
       only one module that may have winnable structural moves.
   (d) Reset and try a different angle — "/contest-refactor --reset" archives
       this halt and starts fresh from current source.
+  (e) Deep-reset (purge) — "/contest-refactor --purge --confirm" if you want to
+      additionally wipe findings_registry + REVIEW_HISTORY (no cross-loop
+      oscillation memory). Useful when prior findings are no longer relevant
+      and you want a truly first-time critic walk.
 ```
 
 ### Subtype: `oscillation`
@@ -150,6 +159,8 @@ Next step options:
   (b) Demote the finding — if you accept the residual, edit CURRENT_REVIEW.md
       to mark F<id> as accepted residual (per Score Anchors), then re-invoke.
   (c) Reset — "/contest-refactor --reset".
+  (d) Deep-reset (purge) — "/contest-refactor --purge --confirm" (additionally
+      wipes findings_registry + REVIEW_HISTORY).
 ```
 
 ### Subtype: `user_decision`
@@ -199,7 +210,9 @@ Next step options:
       flagged?" I'll re-check that specific area.
   (c) Switch lens — if the wrong lens was selected (e.g., Generic on a Swift
       codebase), re-invoke as "/contest-refactor --force-lens <name>".
-  (d) Reset.
+  (d) Reset — "/contest-refactor --reset".
+  (e) Deep-reset (purge) — "/contest-refactor --purge --confirm" if you want
+      to drop findings_registry + REVIEW_HISTORY too.
 ```
 
 ---
@@ -348,4 +361,187 @@ Preserved across reset: findings_registry.json + REVIEW_HISTORY.json
 (cross-loop oscillation detection survives the reset).
 
 Starting fresh from current source. Running Step 0 Discovery now.
+```
+
+For a destructive deep-reset that ALSO wipes `findings_registry.json` + `REVIEW_HISTORY.{md,json}` (run-as-if-first-time-ever), see [Purge Preview handoff](#purge-preview-handoff) and the `--purge` flag.
+
+## Purge Preview handoff
+
+When user invokes `/contest-refactor --purge` (without `--confirm`), main agent emits this preview handoff. **No files are modified.** Purpose: let the user see exactly what would be deleted + the backup path before committing to the destructive action.
+
+```
+Purge preview (NO FILES CHANGED).
+
+Re-invoke with /contest-refactor --purge --confirm to execute. The
+following files would be moved from this working directory into a
+timestamped backup directory and then removed from the working tree:
+
+<list each present file from the target set>
+  - CURRENT_REVIEW.json
+  - CURRENT_REVIEW.md
+  - REVIEW_HISTORY.json
+  - REVIEW_HISTORY.md
+  - findings_registry.json
+  <if LOOP_STATE.json present: also LOOP_STATE.json>
+  <if LOOP_STATE.json.deleting present: also LOOP_STATE.json.deleting>
+
+Backup destination (computed at confirmation time):
+  .contest-refactor-backup-<UTC-timestamp>/
+
+Audit ledger:
+  PURGE_LOG.jsonl  (one JSON Lines entry appended per purge)
+
+Differences vs --reset:
+  - --reset archives CURRENT_REVIEW.md to REVIEW_HISTORY.md and KEEPS
+    findings_registry.json + REVIEW_HISTORY.json (cross-loop oscillation
+    detection survives).
+  - --purge MOVES findings_registry.json + REVIEW_HISTORY.{md,json} into
+    the backup dir, making the next loop run as if the skill were
+    first-installed.
+
+Recovery: the backup directory contains every moved file byte-for-byte.
+You may restore manually with `cp <backup>/* .` or delete the backup when
+no longer needed.
+
+<if CURRENT_REVIEW.json.state == "CONTINUE": warn user>
+WARNING: current loop state is CONTINUE, not a HALT_*. Executing
+--purge --confirm will discard the in-flight finding(s) targeted by
+the active loop plus all prior findings_registry oscillation history.
+This is usually NOT what you want mid-loop. Consider:
+  - Letting the loop reach its next halt before purging
+  - Using --reset (preserves findings_registry) if you only want a
+    clean restart from current source
+  - Proceeding with --purge --confirm only if you genuinely want
+    "first-time" critic behavior with no in-flight context
+
+Suggestion: add `.contest-refactor-backup-*` to .gitignore if not
+already present, so backup directories don't pollute commits.
+PURGE_LOG.jsonl is intentionally tracked in git as a team-visible
+audit trail of when purges happened.
+```
+
+## Purge Complete handoff
+
+When `scripts/purge.sh` exits 0 (success), main agent emits this confirmation and proceeds to Step 0.5 (Provider detection) as a fresh Loop 1.
+
+```
+Purge complete.
+
+Backup: <path>
+Files moved:
+  <enumerate moved files>
+
+Audit entry appended to PURGE_LOG.jsonl:
+  <tail -1 of the file, pretty-printed>
+
+Loop counter reset to 1. findings_registry.json + REVIEW_HISTORY.json
+absent — Step 1.5 will bootstrap a fresh registry; Step 1.7 anchor-check
+is Loop-1-exempt.
+
+Suggestion: add `.contest-refactor-backup-*` to .gitignore if not
+already present.
+
+Starting fresh from current source. Running Step 0 Discovery now.
+```
+
+## Purge Partial-Failure handoff
+
+When `scripts/purge.sh` exits 3 (partial failure: some files moved, some failed), main agent emits this handoff and **does NOT proceed to Step 0.5**. The user must complete reconciliation before the next loop runs.
+
+```
+Purge PARTIAL FAILURE — workspace in inconsistent state.
+
+Backup: <path>
+Successfully moved into backup:
+  <enumerate MOVED list>
+
+Failed to move (still in CWD):
+  <enumerate FAILED list>
+
+Error log (per-file OS error):
+  <backup>/.purge-errors.log
+
+Deterministic 5-step reconciliation (no manual JSON editing — the script
+owns the audit log):
+
+1. Inspect <backup>/.purge-errors.log to identify the OS error per
+   failed file (permission denied, disk full, file busy, etc.).
+
+2. Fix the underlying error:
+   - chmod for permission errors
+   - free disk space for disk-full
+   - close processes for file-busy
+   - etc.
+
+3. Manually move each failed file into the backup dir:
+     mv -v ./CURRENT_REVIEW.json "$BACKUP_DIR/"
+     mv -v ./LOOP_STATE.json    "$BACKUP_DIR/"
+     <one command per FAILED entry>
+
+4. Run the helper script in recovery mode. It verifies no target files
+   remain in CWD and appends a valid `purge_partial_recovery` JSONL
+   entry to PURGE_LOG.jsonl:
+     bash "$SKILL_DIR/scripts/purge.sh" --recover --backup-dir "<path>"
+   Exit 0 → reconciled. Exit 1 → script names the offending file still
+   in CWD; repeat steps 3-4 for that file.
+
+5. Re-invoke /contest-refactor (no --purge needed; workspace is now
+   equivalent to a successful purge).
+```
+
+## Purge Total-Failure handoff
+
+When `scripts/purge.sh` exits 1 (total failure: mkdir backup-dir failed before any mv fired), main agent emits this handoff. **No files were moved; state is untouched.**
+
+```
+Purge TOTAL FAILURE — state untouched.
+
+Could not create backup directory:
+  <path>
+
+Underlying error (from script stderr):
+  <error message>
+
+Common causes:
+  - Insufficient permissions on the current working directory.
+  - Disk full.
+  - Read-only filesystem.
+  - Path collision with an existing file (not directory) at the
+    intended backup name.
+
+Fix the root cause, then re-invoke:
+  /contest-refactor --purge --confirm
+
+Same flags, same intent — safe to retry.
+```
+
+## Purge Precondition-Error handoff
+
+When `scripts/purge.sh` exits 2 (precondition error: bad args, backup-dir already exists, etc.), or when the agent itself cannot resolve `$SKILL_DIR`, main agent emits this handoff.
+
+```
+Purge PRECONDITION ERROR.
+
+<one of:>
+
+  - Backup directory already exists: <path>
+    The path collided (theoretically impossible at second-resolution but
+    can happen on rapid repeat invocations). Re-invoke with --confirm;
+    the agent will compute a fresh timestamped path.
+
+  - SKILL_DIR could not be resolved.
+    Searched: ~/.claude/skills/contest-refactor, ~/.codex/skills/...,
+    ~/.config/opencode/skills/..., ~/.agents/skills/..., and
+    ~/.gemini/antigravity-cli/skills/contest-refactor — none found.
+    Set SKILL_DIR explicitly in your environment to the directory
+    containing the contest-refactor SKILL.md, then re-invoke.
+
+  - scripts/purge.sh not found at $SKILL_DIR/scripts/purge.sh.
+    The skill installation may be incomplete. Re-install or pull latest.
+
+  - Unknown flag passed to scripts/purge.sh: <flag>
+    This indicates an internal version mismatch between SKILL.md and
+    scripts/purge.sh. Re-install or pull latest.
+
+State untouched. Fix the precondition and re-invoke.
 ```

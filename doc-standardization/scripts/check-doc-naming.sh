@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# check-doc-naming.sh — doc-standardization drift verifier.
+# check-doc-naming.sh — doc-standardization audit script.
 #
 # Audits a docs tree for naming convention violations, broken markdown
 # links, orphan files, index drift, case violations, and H1/filename
@@ -164,7 +164,7 @@ find "$DOCS_ROOT" -name "README.md" -type f -print | while IFS= read -r idx; do
           *)  resolved="${idx_dir}/${target}" ;;
         esac
         if [ ! -e "$resolved" ]; then
-          printf 'INDEX-DRIFT: %s -> %s\n' "$idx" "$target"
+          printf 'INDEX-DRIFT: %s references missing %s\n' "$idx" "$target"
         fi
       done
 done >"${tmp_list}.idx" 2>/dev/null || true
@@ -179,10 +179,34 @@ else
   failed_classes=$((failed_classes + 1))
 fi
 
+# --- 6. H1 / filename mismatch (advisory) ---
+h1_violations=""
+while IFS= read -r f; do
+  base="${f##*/}"
+  if is_allowlisted_base "$base"; then continue; fi
+  h1=$(grep -m1 -E '^# ' "$f" 2>/dev/null | sed 's/^# //' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9 ')
+  slug="${base%.md}"
+  mid=$(printf '%s' "$slug" | awk -F- '{print $2}')
+  if [ -n "$mid" ] && [ -n "$h1" ]; then
+    if ! printf '%s' "$h1" | grep -q "$mid"; then
+      h1_violations="${h1_violations}H1-DRIFT: ${f} -> H1 \"${h1}\" missing slug token \"${mid}\"
+"
+      h1_fail=$((h1_fail + 1))
+    fi
+  fi
+done <"$tmp_list"
+if [ "$h1_fail" -eq 0 ]; then
+  printf '[OK] H1 drift: 0\n'
+else
+  printf '[WARN] H1 drift: %d (advisory)\n' "$h1_fail"
+  printf '%s' "$h1_violations" | sed 's/^/  /'
+  # Advisory — do not increment failed_classes.
+fi
+
 # --- Summary ---
 printf '== summary: '
 if [ "$failed_classes" -eq 0 ]; then
-  printf 'CLEAN (%d advisory orphans) ==\n' "$orphan_fail"
+  printf 'CLEAN (%d orphan + %d H1 advisory) ==\n' "$orphan_fail" "$h1_fail"
   exit 0
 else
   printf '%d error class(es) failed ==\n' "$failed_classes"

@@ -8,7 +8,7 @@ of these in one pass.
 
 | Error class | Detector recipe | Symptom (output line) | Canonical fix |
 |---|---|---|---|
-| **Broken link** | Recipe 4 (Validate links exist) | `BROKEN: <src> -> <target>` | Either restore the missing target or update the reference to its renamed path. Re-run the validator after every batch of renames. |
+| **Broken link** | Recipe 4 (Validate links exist) | `BROKEN: <src>:<line> -> <target>` | Either restore the missing target or update the reference to its renamed path. Re-run the validator after every batch of renames. |
 | **Orphan file** | Recipe 5 (Find orphan markdown files) | `ORPHAN: <path>` | Add the file to the nearest `README.md` index; or move it to `docs/archive/` with a note in `docs/archive/README.md`; or, if the file is referenced from code only, accept the report. |
 | **Index drift** | Recipe 6 (Find index drift) | `INDEX-DRIFT: <index> references missing <target>` | Remove the dead entry from the index, or restore the target if the deletion was accidental. |
 | **Case violation** | Recipe 7 (Find case violations) | `CASE: <path>` | `git mv` to lowercase-hyphenated form, then re-run Recipe 4 to catch references to the old casing. |

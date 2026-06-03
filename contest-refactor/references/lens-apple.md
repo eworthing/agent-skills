@@ -11,6 +11,7 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 - [Hidden State Machines (Apple-flavored)](#hidden-state-machines-apple-flavored)
 - [Ownership (Apple-flavored)](#ownership-apple-flavored)
 - [Tests / Regression Resistance (Apple-flavored)](#tests--regression-resistance-apple-flavored)
+- [Accessibility audit](#accessibility-audit)
 - [Incremental Test Scoping](#incremental-test-scoping)
 - [Useful Metrics](#useful-metrics)
 - [Apple-specific Core Questions](#apple-specific-core-questions)
@@ -89,6 +90,25 @@ For every `Binding(get:` in scene/root/feature shell files:
 
 Asymmetric sheet binding for a contest-relevant feature = Serious deduction (state ownership credibility hit).
 
+### Failure modes & observability (Apple-flavored)
+
+Apple repos load only `lens-apple.md` (plus always-included `lens-security.md`); `lens-generic.md` is **not** in the Apple load set. So this subsection inlines the five generic failure-mode categories alongside Apple-specific bullets. (Canonical detailed detection rules per language live in [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) for non-Apple stacks.)
+
+**Generic categories (always check on every loop)**:
+1. **Silent-swallow audit** — Swift hits: `try?`, `catch { }`, `_ = try`, `as? T` that drops the error. Each needs an inline rationale (comment, log, compensating return).
+2. **Retry/backoff policy** — every external-call path (network, disk, IPC, subprocess) needs an explicit retry policy or a documented "// no retry: <reason>" comment.
+3. **Error-context preservation** — catch blocks must wrap (`throw .wrapped(original: err, ...)`), log with breadcrumb (`logger.error("...", error: err, file: #file, line: #line)`), or re-throw verbatim. Strip-and-rethrow loses provenance.
+4. **Observability at adapter boundaries** — every port crossing network/disk/IPC emits telemetry on entry/success/failure. Missing telemetry on user-visible paths is a `credibility` finding.
+5. **Panic-recovery on executors** — background executors (effect pumps, job queues, task pools) must wrap unit-of-work execution with panic-recovery that logs and either restarts or marks-failed.
+
+**Then layer these Apple-specific concerns**:
+
+1. **URLSession background config.** Any `URLSession(configuration: .background(withIdentifier:))` requires `URLSessionDelegate.urlSession(_:task:didCompleteWithError:)` implementation. App suspended mid-transfer continues background; result lands at delegate, not the completion handler. Missing delegate = silent dropped results. Hits: `grep -rn 'URLSessionConfiguration.background' Sources/`.
+2. **AVAudioEngine start/stop pairing.** Every `engine.start()` must pair with `engine.stop()` in error-path AND happy-path AND `deinit`. Engine left running across a fatal node-graph error leaks the audio session and the engine resources. Hits: `grep -rn 'AVAudioEngine\(\)\|engine.start(' Sources/`. Watch for `try?` on `engine.start()` followed by no failure handling.
+3. **MusicKit auth fail vs downgrade.** `MusicSubscription.subscriptionUpdates` can emit `.fetchFailed` (transient, retryable) or a confirmed-downgrade (`canPlayCatalogContent: false`). Treating these as the same path silently locks users out on transient failures. Pattern: separate `.fetchFailed` → retry-with-backoff vs `canPlayCatalogContent == false` → user-facing subscription prompt. Hits: `grep -rn 'MusicSubscription\|subscriptionUpdates\|canPlayCatalogContent' Sources/`.
+4. **`Task { @MainActor in }` in `deinit` (HR-9 carve-out).** Swift `deinit` cannot `await`; the standard pattern fires-and-forgets a cleanup Task on MainActor. Audit: every `deinit` containing `Task { @MainActor in ... }` must document why (resource that ONLY the deinitee can release; cancellation that ONLY MainActor can perform). Undocumented uses = HR-12 violation (mislabels compliance as carve-out).
+5. **`os_log` redaction.** `os_log("%@", userInput)` is public by default — user data appears in Console.app + sysdiagnose dumps. Sensitive interpolation must use `%{private}@` or `%{public}@` explicitly (the absence of the modifier is a violation). Hits: `grep -rn 'os_log\|Logger().' Sources/` — every `%@` site needs explicit privacy annotation.
+
 ## Hidden State Machines (Apple-flavored)
 
 - Multiple booleans/optionals jointly encoding one logical state.
@@ -140,6 +160,19 @@ A passing test count is not test strategy. Before scoring `test_strategy` ≥ 9,
 4. For every contest-relevant feature flow flagged in the Feature-flow choreography audit above, verify a feature-surface test exists (sheet present/dismiss, bulk-import cancel, source-choice branch). Missing = test_strategy ceiling at 8.
 
 Aggregate count → test_strategy is a fake-clean reward. Surface coverage → test_strategy is honest evidence.
+
+## Accessibility audit
+
+User-facing iOS code without accessibility considerations is shipping with a deferred-cost class of bugs. Every contest-relevant Apple lens loop must run this audit once and surface gaps as findings (`framework_idioms` dimension hit; `test_strategy` ceiling at 9 if a11y surfaces have no test).
+
+1. **VoiceOver labels.** Every tappable view (`Button`, `.onTapGesture`, `Toggle`, `Picker`, custom gesture handlers) must have a non-empty `.accessibilityLabel(_:)`. Decorative `Image` views must declare `.accessibilityHidden(true)`. Smoke check: `grep -rn 'onTapGesture\|Button(action:\|gesture(' Sources/ | wc -l` should approximately equal `grep -rn 'accessibilityLabel(' Sources/ | wc -l` (within 2x); gross mismatch is a finding.
+2. **Dynamic state semantics.** Custom controls whose value changes (sliders, knobs, segmented selectors, custom toggles) need `.accessibilityValue(_:)` (current value as text) and `.accessibilityHint(_:)` (what happens on activation). VoiceOver users hear the value AND the action, not just the label.
+3. **Dynamic Type.** Hardcoded font sizes (`Font.system(size: 12)`) lock layout — fails Dynamic Type. Prefer `Font.system(.body)`, `Font.system(.headline)`, etc. (text-style family scales with user preference). Hits: `grep -rn 'Font\.system(size:\|\.font(\.system(size:' Sources/`. Each hit needs justification (icon font, tabular numerics, etc.) or is a finding.
+4. **Color-only state.** State communicated only through color (red = error, green = success) is invisible to color-blind users. Every color-conveyed state needs a non-color affordance: label text, SF Symbol, position, or shape change. Audit: locate every `.foregroundStyle(.red)` / `.foregroundStyle(.green)` / `.background(Color.X)` site; trace whether a non-color signal exists in the same view.
+5. **Focus order.** Custom containers (`HStack`/`VStack` with mixed interactive + decorative children, custom collection views) need deterministic focus order. Verify via the Accessibility Inspector in Xcode (Simulator → Hardware → Accessibility Inspector) — focus walks elements in a predictable order. Random / row-major-then-jump = a finding.
+6. **Reduce Motion / Reduce Transparency / Increase Contrast.** Animations gated on `accessibilityReduceMotion`; backdrop materials gated on `accessibilityReduceTransparency`; thin stroke weights gated on `accessibilityDifferentiateWithoutColor` where structural. Hits: `grep -rn '@Environment(\\.accessibility' Sources/` — count must be > 0 for any app shipping animations or backdrop materials.
+
+A11y findings are `framework_idioms` dimension (platform best practices); persistent gaps drop `test_strategy` ceiling at 9 (a11y surfaces are testable via `XCUIElement.staticTexts[<label>]` accessor patterns — no test = surface-coverage gap).
 
 ## Incremental Test Scoping
 

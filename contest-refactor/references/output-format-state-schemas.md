@@ -18,11 +18,11 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
 ```jsonc
 {
   "schema_version": 1,
-  "loop": 3,                                    // int. Must equal CURRENT_REVIEW.json.loop. Mismatch routes to --reset (Resume Precedence Matrix row 3).
+  "loop": 3,                                    // int. Must equal CURRENT_REVIEW.json.loop. Mismatch routes to --reset (Resume Precedence Matrix row 5).
   "step_started": 7,                            // int 1..11. Sub-step whose work has begun.
   "step_completed": 6,                          // int 0..11. Highest sub-step fully on disk. See § Idempotency for replay semantics.
   "started_at": "2026-05-12T14:30:22Z",         // ISO-8601 UTC. When the loop's Step 3 began.
-  "last_checkpoint_at": "2026-05-12T14:31:05Z", // ISO-8601 UTC. Updated on every checkpoint write. > 24h old at resume time = orphan (Resume Precedence Matrix row 2).
+  "last_checkpoint_at": "2026-05-12T14:31:05Z", // ISO-8601 UTC. Updated on every checkpoint write. > 24h old at resume time = orphan (Resume Precedence Matrix row 4).
   "artifacts_written": [                        // array of paths (relative to repo root) modified or created since loop's Step 3 began. Used to verify expected on-disk state during resume.
     "CURRENT_REVIEW.md",
     "CURRENT_REVIEW.json",
@@ -221,5 +221,46 @@ Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_
 ```
 
 Compression rules for the markdown archive live in [output-format-markdown.md § Per-loop archive format](output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2); they apply only to REVIEW_HISTORY.md. REVIEW_HISTORY.json keeps full per-loop fidelity for downstream tooling.
+
+## Incident retro feed (--incidents flag)
+
+When the user invokes `/contest-refactor --incidents <path>`, Step 0 reads the file at `<path>` and surfaces its contents to Method Step 3 (architecture review). Purpose: codify hindsight as foresight — past incidents become evidence the current architecture either prevents, mitigates, or still permits.
+
+**Schema (JSON, schema_version 1)**:
+
+```jsonc
+{
+  "schema_version": 1,
+  "incidents": [
+    {
+      "id": "INC-001",                          // string, unique per file
+      "date": "2026-04-15",                     // ISO-8601 date (UTC)
+      "summary": "string",                      // 1-2 sentence what-happened
+      "severity": "Cosmetic|Noticeable|Serious|Likely Disqualifier",  // optional; same canon as findings
+      "affected_paths": ["Sources/Foo/Bar.swift", "..."],  // source files involved
+      "root_cause": "string|null",              // post-mortem conclusion, if known
+      "preventable_by": "string|null",          // architectural pattern that would have prevented it
+      "incident_url": "string|null",            // optional link to bug tracker / postmortem doc
+      "user_impact": "string|null"              // optional 1-line user-visible consequence
+    }
+  ]
+}
+```
+
+**Loading**:
+- Path is resolved relative to CWD if not absolute.
+- File must parse as JSON with `schema_version: 1`. Other versions → emit warning, treat as absent.
+- Empty `incidents[]` is legal (warns "no incidents to cross-reference").
+- File missing or unreadable → emit warning ("--incidents path not found: <path>; proceeding without incident context"), continue Step 0 normally.
+
+**Usage in Method Step 3**:
+For each incident, cross-reference `affected_paths` against the current source tree:
+- Does the file still exist? If renamed/moved, update the trail.
+- If `preventable_by` is set, does the codebase now embody that pattern? Or does the anti-pattern persist?
+- If the same architectural shape that allowed the incident is still present, surface as a Noticeable-or-worse finding citing the incident id + date + summary.
+
+This is a **discovery aid**, not a hard gate. Incidents that have been architecturally addressed produce no finding; incidents whose enabling pattern persists become high-confidence findings (real-world precedent beats theoretical concern).
+
+**Skeleton implementation**: the flag, the schema, and the Step 3 sub-bullet are wired; production parsing logic + per-stack incident-pattern matching is deferred until a user supplies an incident corpus to test against.
 
 If REVIEW_HISTORY.md exists at first invocation but REVIEW_HISTORY.json does not, Step -1 step 0.6 reverse-parses to a best-effort .json with each entry marked `schema_version: 1`. Lossy; some fields may be null.

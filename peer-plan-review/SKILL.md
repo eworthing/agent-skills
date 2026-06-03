@@ -8,6 +8,13 @@ description: >
   mentions 'codex review', 'gemini review', 'claude review', 'copilot review',
   or 'opencode review', wants to validate a plan before executing it, or asks
   for peer review.
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
 ---
 
 # Peer Plan Review
@@ -60,12 +67,12 @@ Normalize to:
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 
-Parsing rule: first token after reviewer is `effort` iff one of those four literals; otherwise treat as `model`, read next token as optional `effort`. If `model` omitted, tell user once provider default used. If `effort` omitted, no effort flag is injected — each provider uses its own persisted config or built-in default.
+Parsing rule: accepted forms are `reviewer`, `reviewer <effort>`, `reviewer <model>`, or `reviewer <model> <effort>`. The first token after `reviewer` is `effort` iff it is one of those four literals (then `model` uses the provider default); otherwise it is `model`, and the next token, if present, is `effort`. If `model` omitted, tell user once provider default used. If `effort` omitted, no effort flag is injected — each provider uses its own persisted config or built-in default.
 
 ## Review stance
 
-- **Standard** (default): cooperative, iterative loop (up to 5 rounds).
-- **Adversarial**: deliberately skeptical single-round review — see
+- **Standard** (default): cooperative, iterative loop (up to 5 rounds) — refine a plan toward approval.
+- **Adversarial**: deliberately skeptical single-round review — surface major flaws fast, no revise loop. See
   `references/adversarial.md`. Trigger on *pressure-test*, *break the plan*,
   *adversarial review*, *find holes in*.
 

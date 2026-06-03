@@ -94,6 +94,6 @@ contributor knows it is intentional.
 
 - Maximum 600 lines per documentation file
 - GitHub-flavored Markdown
-- Paths under 100 characters
+- Paths under 100 characters — keeps relative links readable and portable across filesystems
 - No spaces in filenames — use hyphens
 - Lowercase only (excepting allowlisted bases above)

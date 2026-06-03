@@ -162,6 +162,25 @@ The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, d
 
 The reviewer subagent rarely needs upgrading — verifying a small diff against three checks is well within the small-tier models.
 
+## Skill-directory resolution
+
+Helper scripts under `scripts/` (`dry-run.sh`, `purge.sh`, `audit-*.sh`) are invoked from the target repo's CWD via `bash "$SKILL_DIR/scripts/<name>.sh"`. The agent must resolve `$SKILL_DIR` once on first action of every invocation. Per-host mechanics:
+
+| Provider | Resolution path | Notes |
+|---|---|---|
+| `claude_code` | The agent's skill-loader exports the absolute path of the loaded skill as session-scoped state. Read it directly. Falls back to `$HOME/.claude/skills/contest-refactor`. | Default install per agent-skills/CLAUDE.md is a symlink at `~/.claude/skills/contest-refactor` → repo. |
+| `codex` | Skills under `$CODEX_HOME/skills/`. Compute `$SKILL_DIR="$CODEX_HOME/skills/contest-refactor"` if `$CODEX_HOME` set; else fall back to `$HOME/.codex/skills/contest-refactor`. | |
+| `opencode` | Skills under `$HOME/.config/opencode/skills/`. Compute `$SKILL_DIR="$HOME/.config/opencode/skills/contest-refactor"`. `$OPENCODE_SESSION` does not encode the install path; rely on the standard installation directory. | |
+| `gemini` / `gemini-antigravity` | Skills under `$HOME/.agents/skills/` (shared community location) or `$HOME/.gemini/antigravity-cli/skills/` (Antigravity CLI). `$GEMINI_CONFIG_DIR` does not encode the install path; rely on standard directories. | |
+| `copilot` | Skills under `$HOME/.agents/skills/` (shared community location) — same as Gemini CLI. | |
+| `unknown` | Last-resort fallback chain in [resume-detection.md § Skill-script path resolution](resume-detection.md#skill-script-path-resolution). | |
+
+The 5-path fallback chain (in order: `~/.claude` → `~/.codex` → `~/.config/opencode` → `~/.agents` → `~/.gemini/antigravity-cli`) is the universal escape hatch when provider-specific resolution fails. First existing path wins.
+
+Per `agent-skills/CLAUDE.md` Installation section, every install path is a symlink back to the same repo (`/Users/Shared/git/agent-skills/contest-refactor/`), so whichever path resolves first points to the same `scripts/`.
+
+If all 5 fallback paths fail, also try `./contest-refactor/scripts/<name>.sh` relative to CWD (covers repo-local checkouts). If that also fails, emit Purge Precondition-Error handoff per [halt-handoff.md § Purge Precondition-Error handoff](halt-handoff.md#purge-precondition-error-handoff) (the handoff covers any `scripts/*` invocation failure, not just purge).
+
 ## Token cost
 
 This file (~150 lines, ~5K tokens) is loaded **once per main-agent invocation** (Pre-Step-0 in the Reference Load Matrix), not per loop. Per-loop overhead is negligible.

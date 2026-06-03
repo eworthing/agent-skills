@@ -318,6 +318,35 @@ def run_review(args, logger=None):
                 with Path(args.events_file).open("w", encoding="utf-8") as f:
                     f.write(stdout)
 
+            # Guard: returncode=0 with empty output is silent failure.
+            # Gemini/Claude/etc. can exit 0 emitting nothing when model/auth/
+            # sandbox rejects quietly. Surface as failure so the resume-fallback
+            # branch (or caller) sees it instead of producing a phantom success.
+            if returncode == 0:
+                if reviewer == "codex":
+                    check_path = Path(args.events_file) if args.events_file else None
+                else:
+                    check_path = Path(args.output_file) if args.output_file else None
+                has_output = (
+                    check_path is not None
+                    and check_path.exists()
+                    and check_path.stat().st_size > 0
+                )
+                if check_path is not None and not has_output:
+                    print(
+                        f"Reviewer exited 0 but produced no output ({check_path})",
+                        file=sys.stderr,
+                    )
+                    if stderr:
+                        print(stderr, file=sys.stderr)
+                    logger.log(
+                        "empty_output",
+                        provider=reviewer,
+                        error="returncode=0 with empty output file",
+                        context={"stderr": (stderr or "")[:2000]},
+                    )
+                    returncode = 124  # trips resume_fallback if eligible
+
             # Check for resume fallback condition
             if returncode != 0:
                 print(f"Reviewer exited with code {returncode}", file=sys.stderr)

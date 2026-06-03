@@ -23,7 +23,7 @@
     ✅ Description length adequate (55 words)
     ✅ Description includes trigger contexts ("use when")
   [DOCUMENTATION]
-    ✅ SKILL.md body length (137 lines)
+    ✅ SKILL.md body length (147 lines)
     ✅ References are linked from SKILL.md
   [SCRIPTS]
     ✅ Python scripts parse without errors (no Python)
@@ -40,14 +40,14 @@
 
 ```
 doc-standardization/
-  SKILL.md                          156 lines (137 body)
+  SKILL.md                          165 lines (147 body)
   EVAL.md                           this file
   references/
-    regex-recipes.md                213 lines — hardened bash recipes per error class
+    regex-recipes.md                214 lines — hardened bash recipes per error class
     error-taxonomy.md                25 lines — error class → detector → fix
     conventions.md                   99 lines — naming, status suffixes, tree, alignment, exceptions
   scripts/
-    check-doc-naming.sh             190 lines, executable — one-shot drift verifier
+    check-doc-naming.sh             214 lines, executable — one-shot audit script
 ```
 
 ## Manual Assessment
@@ -58,9 +58,9 @@ doc-standardization/
 | 1.2 | Correctness | 4/4 | Hardened link validator (skips `http(s)://`, `mailto:`, anchors-only; URL-decodes `%20`; resolves relative to source file's directory). Smoke-tested on a planted-fault fixture and a clean fixture — both behave correctly (exit 1 + per-class FAILs / exit 0 + CLEAN). |
 | 1.3 | Appropriateness | 4/4 | Pure Markdown + portable Bash 3.2 / BSD-userland-safe. Zero external dependencies. |
 | 2.1 | Fault Tolerance | 4/4 | Script exits 0/1/2 cleanly. Missing-directory path returns 2 with stderr message. Orphan-class is correctly separated as advisory (does not fail the run). |
-| 2.2 | Error Reporting | 4/4 | Structured taxonomy (`references/error-taxonomy.md`) maps every output prefix (`BROKEN:` / `ORPHAN:` / `INDEX-DRIFT:` / `CASE:` / `NAMING:`) to a canonical fix. Per-class FAIL summary lines plus indented detail lines. |
+| 2.2 | Error Reporting | 4/4 | Structured taxonomy (`references/error-taxonomy.md`) maps every output prefix (`BROKEN:` / `ORPHAN:` / `INDEX-DRIFT:` / `CASE:` / `NAMING:` / `H1-DRIFT:`) to a canonical fix. Per-class FAIL summary lines plus indented detail lines. |
 | 2.3 | Recoverability | 4/4 | All ops `git mv`-based → fully reversible. Audit script is idempotent. |
-| 3.1 | Token Cost | 4/4 | SKILL.md body 137 lines (<150 = top tier). Progressive disclosure via `references/` (3 files, scoped). Every section in SKILL.md is workflow-relevant. |
+| 3.1 | Token Cost | 4/4 | SKILL.md body 147 lines (<150 = top tier). Progressive disclosure via `references/` (3 files, scoped). Every section in SKILL.md is workflow-relevant. |
 | 3.2 | Execution Efficiency | 4/4 | Single-pass `find` produces the file list once; each check reads from a temp file. Linear in doc count. |
 | 4.1 | Learnability | 4/4 | Two end-to-end worked examples. Expected outputs shown for clean and failure cases. Run command is one line. |
 | 4.2 | Consistency | 4/4 | Uniform numbered steps, code fence usage, `[OK]` / `[FAIL]` / `[WARN]` output prefixes, link style across SKILL.md and references. |
@@ -75,7 +75,7 @@ doc-standardization/
 | 7.2 | Modifiability | 4/4 | New status suffix = one row in `conventions.md`. New error class = one recipe + one taxonomy row + one script block. Patterns are explicit. |
 | 7.3 | Testability | **3/4** | Script ships with documented exit codes (0/1/2) and structured output making fixture-based testing trivial; smoke tests in this eval validate the happy and unhappy paths. No bundled automated test suite. |
 | 8.1 | Trigger Precision | 4/4 | Description names specific operations: renames, link fixes, index updates, doc-tree audits. "Do NOT use when" carves out single-file edits + non-doc files. |
-| 8.2 | Progressive Disclosure | 4/4 | 3 levels: description → SKILL.md (137 lines) → references/ (4 files) + scripts/. Agent loads only what it needs. |
+| 8.2 | Progressive Disclosure | 4/4 | 3 levels: description → SKILL.md (147 lines) → references/ (4 files) + scripts/. Agent loads only what it needs. |
 | 8.3 | Composability | 4/4 | Script exits with conventional codes (0/1/2). Structured output prefixes (`[OK]` / `[FAIL]` / `BROKEN:` / etc.) are pipe-friendly. Sibling skills cross-linked: `bash-macos`, `swift-file-splitting`. CommonMark + GFM cited. |
 | 8.4 | Idempotency | 4/4 | Audit re-runs produce identical output for identical state. `git mv` idempotent. |
 | 8.5 | Escape Hatches | 4/4 | "When to break the convention" subsection covers vendor docs, legacy specs, top-level files. Allowlist hardcoded into the script + documented in `conventions.md`. |
@@ -115,3 +115,4 @@ None.
 | 2026-05-12 (import) | 91 | Phase 1 MOVE-AS-IS from Tiercade. Dropped frontmatter metadata + `applyTo` + `evidence_commits`. Genericized Code-Doc Alignment table. Stripped Tiercade-specific paths. |
 | 2026-05-12 (re-eval) | 89 | Independent fresh eval. Surfaced bash validator fragility (1.2 = 4 → 3): no `http(s)://` filter, no URL-decode, paths anchored to `docs/` root instead of source file dir. Same verdict bucket as import. |
 | 2026-05-12 (post-fix) | **99** | Applied all 7 P2 fixes from the re-eval. New layout: `references/regex-recipes.md` + `references/error-taxonomy.md` + `references/conventions.md` + `scripts/check-doc-naming.sh`. SKILL.md slimmed 252 → 137 body lines. Hardened link validator (HTTP/mailto/anchor skip, URL-decode, source-dir resolution). Structured `[OK]`/`[FAIL]`/`BROKEN:` output with exit codes 0/1/2. Sibling cross-links to `bash-macos` + `swift-file-splitting`. CommonMark + GFM citations. "When to break the convention" section. Smoke-tested on clean and planted-fault fixtures — both pass. Only remaining gap: no bundled automated test harness (7.3 = 3/4). |
+| 2026-06-03 (anthropic-grade) | 99 | Applied 5 anthropic-grade self-consistency fixes (86→100 on the Anthropic-doctrine rubric — separate from this skill-evaluator score): ported Recipe 8 into the audit script as an advisory **H1-DRIFT** check, wiring the previously-dead `h1_fail`; standardized every script invocation to `<skill-path>/`; aligned `BROKEN` (`:<line>`) and `INDEX-DRIFT` (`references missing`) output strings across script/taxonomy/recipe; canonicalized script terminology to "audit script"; justified the 100-char path limit; switched `tr` to POSIX `[:upper:]`/`[:lower:]`. Fixture-verified (clean / H1 / broken-link / index-drift). Structural eval re-confirmed 13/13. Line counts in the layout + checks above refreshed to current post-edit values. |
