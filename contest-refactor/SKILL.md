@@ -1,6 +1,9 @@
 ---
 name: contest-refactor
 description: Triggers an autonomous Actor-Critic refactoring loop against the current codebase. Aggressively refactors the current workspace to a 9.5+ standard using a strict ICA-grounded architectural rubric (deletion test, two-adapter rule, depth-as-leverage). Use when the user invokes /contest-refactor, says "contest refactor", asks for an autonomous refactor loop, wants to elevate code quality against a strict rubric, or requests Actor-Critic style iterative refactoring of the current project.
+allowed-tools:
+  - Read
+  - Write
 ---
 
 # 9.5 Contest Refactor Protocol
@@ -76,6 +79,8 @@ Each loop after Step 0 runs in a fresh `Agent` subagent (`subagent_type: general
 
 Step 0 always runs in main agent (durable handoff).
 
+The **role** vocabulary (Critic = Step 1, Actor = Steps 2–3, Judge = Step-3 wrap-up) is independent of the **infrastructure** that runs it: a role may execute in the main agent or a spawned subagent depending on provider and mode.
+
 **Inline mode is the failure path.** When no subagent is available (provider == `unknown`, or the host blocks nested spawns — see [provider-adapters.md](references/provider-adapters.md)), the same agent both finishes loop N and starts loop N+1. The temptation to summarize and yield turn after a successful commit is highest here. Continuation Discipline below + hard gate G20 exist to fight that instinct.
 
 Full subagent prompt template, HALT routing, when to skip subagents: [references/trust-model.md](references/trust-model.md) Loop Isolation section.
@@ -107,7 +112,7 @@ Execute in order. No skips. No permission asks (per Guardrails).
 1. **Parse user flags**: `--reset`, `--cap N`, `--scope <dir>`, `--force-lens <name>`, `--provider <name>`, `--loop-model <id>`, `--reviewer-model <id>`, `--dry-run`, `--test-filter <pattern>`, `--incidents <path>`, `--purge`, `--confirm`. Record for later steps. The `--dry-run` flag is **invocation-scoped** (held in invocation memory only; the artifact's `dry_run: true` is audit-only and is NOT the source of truth on re-invocation). The `--incidents <path>` flag points to a JSON file of past production incidents (bug reports, crash logs, user complaints) — schema documented in [output-format-state-schemas.md § Incident retro feed (--incidents flag)](references/output-format-state-schemas.md#incident-retro-feed---incidents-flag). Read in Step 0; cross-referenced during Method Step 3 (architecture review). The `--purge` flag is the **destructive deep-reset** counterpart to `--reset`: it wipes `findings_registry.json` + `REVIEW_HISTORY.{md,json}` on top of what `--reset` wipes, making the next loop run as if the skill were first-installed. Two-step confirmation: `--purge` alone emits a Preview handoff naming the files + backup path; `--purge --confirm` executes via `bash "$SKILL_DIR/scripts/purge.sh"`. The `--confirm` flag alone (without `--purge`) is reserved for future confirmation gates and is a no-op today. See Resume Precedence Matrix rows 1-2 for routing.
 2. **Apply Resume Precedence Matrix** from [resume-detection.md § Resume Precedence Matrix](references/resume-detection.md). Top-down, first match wins. Routes to one of: `--purge` Preview handoff (no `--confirm`), `--purge --confirm` execution via `scripts/purge.sh`, `--reset` confirmation handoff, `--reset` recommendation handoff (orphan / inconsistent), § Resume from LOOP_STATE.json, § Drift handling, dispatch loop N+1, fresh run.
 
-Step -1 sub-steps: **0.5** provider detection (G19), **0.6** registry + REVIEW_HISTORY.json bootstrap, **4 / 4a / 4b** drift handling on prior `HALT_*` (PR 4), **5** LOOP_STATE.json resume routing (Cases A-E). Full spec in [references/resume-detection.md § Resume Precedence Matrix](references/resume-detection.md#resume-precedence-matrix) (already loaded above).
+Step -1 sub-steps: **0.5** provider detection (G19), **0.6** registry + REVIEW_HISTORY.json bootstrap, **4 / 4a / 4b** drift handling on prior `HALT_*`, **5** LOOP_STATE.json resume routing (Cases A-E). Full spec in [references/resume-detection.md § Resume Precedence Matrix](references/resume-detection.md#resume-precedence-matrix) (already loaded above).
 
 Branch order is determined by the Precedence Matrix; do not invent your own ordering.
 
@@ -216,10 +221,10 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
    - `conditional` → apply each item in `conditions[]`; re-spawn reviewer once. 2nd `conditional` or `rejected` → treat as rejected.
    - `rejected` → **narrow revert** (schema_version >= 3): for each path in `loop_result.changed_paths[]`, look up its blob sha in `LOOP_STATE.pre_step3_blob_shas`; restore via `git checkout <blob-sha> -- <path>` per file. Paths with `null` recorded sha (untracked at sub-step 0): `git rm --cached <path>` and delete the working-tree file. Do NOT use the broad `git checkout -- <changed-paths>` (could overwrite pre-existing unstaged user edits in those files). Update `loop_result`: `targeted_finding_status: "carried_forward"`, `unintended_regression: "<reviewer.reason>"`. Append reviewer's verdict + regressions to `CURRENT_REVIEW.md` as `## Loop N Implementation Review`. Write `implementation_review` field to JSON. Skip to step 7 (commit review artifacts only — no code change).
    - **Reviewer transient failure** (timeout / spawn error / malformed JSON) → retry envelope per [implementation-reviewer.md § Failure modes](references/implementation-reviewer.md): retry once with timeout doubled. Record `retry_count: 2` + `retry_cause: <transient>` + full `retry_attempts[]`. Both attempts fail → treat as `rejected` with `reason: "reviewer unavailable; manual verification required"` exactly. Surface `open_question_for_user` in loop dispatch only when 2nd attempt's failure differs from 1st.
-7. **Reject path registry update (PR 1, schema_version >= 2)**: if reviewer rejected, append occurrence `{loop: N, loop_local_id, status: "rejected_attempt", sha: <pending>, reviewer_reason}` to the in-memory registry for each finding's stable_id (do not drop — audit chain needs the attempt).
+7. **Reject path registry update (schema_version >= 2)**: if reviewer rejected, append occurrence `{loop: N, loop_local_id, status: "rejected_attempt", sha: <pending>, reviewer_reason}` to the in-memory registry for each finding's stable_id (do not drop — audit chain needs the attempt).
 8. Run hard gates G15 (implementation_review present) + G16 + G18 + G19 + G22 (when schema_version >= 2) + G27 (retry envelope) + G28 (checkpoint freshness) + G29 (schema v3 invariants) (when schema_version >= 3) before commit. Failure → fix and re-run.
-9. **Archive review history**: append the now-complete `CURRENT_REVIEW.md` (preceded by `--- Loop N (UTC timestamp) ---`) to `REVIEW_HISTORY.md`. **At schema_version >= 2 (PR 5), apply per-loop archive compression per [output-format-markdown.md § Per-loop archive format](references/output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2)** — compress Discovery / Builder Notes / Simplification Check; keep Findings / Loop Result / Implementation Review / Scorecard / Authority Map / Strengths / Final Judge Narrative verbatim. Append `CURRENT_REVIEW.json` to `REVIEW_HISTORY.json.loops[]` at full fidelity (no compression in JSON archive). Do **not** delete `CURRENT_REVIEW.md` — overwrite next loop. Preserves cross-loop deltas.
-10. **Write registry to disk (PR 1, schema_version >= 2)**: write the in-memory `findings_registry.json` to disk. Run G16 again on the now-written registry.
+9. **Archive review history**: append the now-complete `CURRENT_REVIEW.md` (preceded by `--- Loop N (UTC timestamp) ---`) to `REVIEW_HISTORY.md`. **At schema_version >= 2, apply per-loop archive compression per [output-format-markdown.md § Per-loop archive format](references/output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2)** — compress Discovery / Builder Notes / Simplification Check; keep Findings / Loop Result / Implementation Review / Scorecard / Authority Map / Strengths / Final Judge Narrative verbatim. Append `CURRENT_REVIEW.json` to `REVIEW_HISTORY.json.loops[]` at full fidelity (no compression in JSON archive). Do **not** delete `CURRENT_REVIEW.md` — overwrite next loop. Preserves cross-loop deltas.
+10. **Write registry to disk (schema_version >= 2)**: write the in-memory `findings_registry.json` to disk. Run G16 again on the now-written registry.
 11. Commit code (if reviewer approved) + `CURRENT_REVIEW.md` + `CURRENT_REVIEW.json` + `REVIEW_HISTORY.md` + `REVIEW_HISTORY.json` (when schema_version >= 2) + `findings_registry.json` (when schema_version >= 2) with subject matching the G22 pattern: `loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) <status> [registry: +<n> findings, ~<n> occurrences?]`. Examples:
 
     <example>
@@ -249,7 +254,7 @@ Set by Step 1 (HALT_SUCCESS / HALT_STAGNATION / HALT_LOOP_CAP) or by Step 2 sub-
 
 - `[STATE: HALT_SUCCESS]` — every scorecard category ≥ 9.5 with concrete proof, build green. `halt_subtype: null`. Cited accepted residuals must not be expired (see [architecture-rubric.md § 9.5+ Threshold](references/architecture-rubric.md#95-threshold-the-contest-target)).
 - `[STATE: HALT_STAGNATION]` — loop cannot make further progress under the rubric. **Subtype required** in `halt_subtype`:
-  - `no_progress` — 3 consecutive loops with no scorecard category UP AND remaining backlog items don't pass Simplify Pressure Test (structural wall).
+  - `no_progress` — 3 consecutive loops (heuristic) with no scorecard category UP AND remaining backlog items don't pass Simplify Pressure Test (structural wall).
   - `oscillation` — same `stable_id` reappears as Priority 1 in two non-consecutive loops with at least one intervening occurrence whose `status: "resolved"` for that `stable_id`. Skip occurrences with `status: "rejected_attempt"` when scanning. (Pre-PR-1 / schema_version 1: legacy heuristic = same `loop_local_id` Priority 1 string match across two loops after a "fix".) Registry's `occurrences[]` is the audit trail. **G30** requires that every remaining Serious-or-worse finding appears in `halt_handoff.remaining_serious_findings_disposition[]` with a canonical disposition + sidecar before this subtype is legal.
   - `user_decision` — ambiguity requires product/ownership decision the loop cannot make. `open_question_for_user` non-null.
   - `no_backlog` — `[STATE: CONTINUE]` with empty Improvement Backlog while not at 9.5+ after Residual Accounting Pass/G23 (remaining sub-9.5 scores name blockers that cannot be accepted residuals and cannot become valid backlog items).
@@ -262,11 +267,12 @@ Stagnation is not failure when honestly emitted with a subtype — it's the loop
 ## Guardrails
 
 - **No destructive git ops** without user confirmation (no `reset --hard`, no force-push, no branch deletion).
+- **Destructive resets are gated**: `--purge` (deep-reset of `findings_registry.json` + `REVIEW_HISTORY.{md,json}`) requires two steps — `--purge` previews the file list + backup path, `--purge --confirm` executes. Both flags are required before any state is deleted; a backup is written first.
 - **No dependency bumps or framework swaps** as part of refactor loop; separate task.
 - **Commit per loop**: stage and commit code + review artifacts. No squash across loops — loop history is the audit trail.
 - **Stop on ambiguity**: Top Structural Finding requires product/ownership decision code cannot resolve → Step 1 emits `[STATE: HALT_STAGNATION]` with open question, hand back to user.
-- **No stale findings**: do not carry forward a finding from a previous loop unless current code still shows it.
-- **No false escalation**: local issue is local issue until evidence supports broader claim.
+- **Current-source findings only**: carry a finding forward only if current code still shows it.
+- **Escalate only with evidence**: treat a concern as local unless evidence proves broader scope.
 - **Seam policy**: see Unified Seam Policy in [references/architecture-rubric.md](references/architecture-rubric.md). Protocol/port with one production impl + zero behavior-faithful fakes + no policy/failure/platform-isolation justification fails the policy. Reject the refactor or downgrade.
 
 ## See Also
@@ -289,5 +295,5 @@ Stagnation is not failure when honestly emitted with a subtype — it's the loop
 - Worked example: [assets/example-review.md](assets/example-review.md).
 - Preflight script (read-only Step 0 dry-run): `scripts/dry-run.sh [path]`.
 - Repo validator (hard-blocking, checks Evidence Chain coverage + canon alignment + Step 1.6 adjacency): `scripts/validate-repo.py`.
-- Artifact validator (live-run; advisory in PR1 / strict in PR2; G30 + G31 enforcement): `scripts/validate-artifact.py`.
+- Artifact validator (live-run; strict by default, `--mode advisory` available; G30 + G31 enforcement): `scripts/validate-artifact.py`.
 - For deepening-only work without the rubric loop, invoke `/improve-codebase-architecture` directly.
