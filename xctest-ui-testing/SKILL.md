@@ -114,14 +114,14 @@ and the UI test target. Renaming an identifier is an API migration, not
 a refactor:
 
 1. Update the test code (and any testability documentation) to reference
-   the new identifier value FIRST.
+   the new identifier value first.
 2. Update the view's `.accessibilityIdentifier(...)` to the new value
-   SECOND.
+   second.
 
 Reversing this order produces a test-suite outage between the two
 commits. Use a typed enum (e.g. `enum TestIdentifiers` / `enum ActionID`)
 as the single source of truth — both the view and the test target import
-the same enum. Never inline raw identifier strings in tests OR views;
+the same enum. Never inline raw identifier strings in tests or views;
 inline strings drift the moment one side renames and the other side
 doesn't. See [references/new-component-checklist.md](references/new-component-checklist.md)
 for the `TestIdentifiers` enum pattern.

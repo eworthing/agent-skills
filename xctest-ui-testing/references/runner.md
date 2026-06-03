@@ -1,5 +1,13 @@
 # XCTest Selection + `.xctestrun` Execution
 
+## Contents
+
+- When to Use This Skill
+- Workflow (Steps 1–6: `.xctestrun` model, test selection, file discovery, guardrails, simulator destinations, runner flag surface)
+- Common Mistakes to Avoid
+- Examples
+- Constraints
+
 > Reference for the parent `xctest-ui-testing` skill. Folded in 2026-05-13 from the eliminated `xctest-runner` skill.
 
 Run *only the tests you care about* while keeping selection,

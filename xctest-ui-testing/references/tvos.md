@@ -1,5 +1,18 @@
 # tvOS UI Testing Patterns
 
+## Contents
+
+- Siri Remote API
+- Focus Assertions
+- Focus Navigation Pattern
+- Modal Focus Containment
+- Focus Settle Delay
+- Focus Reachability Audit Pattern
+- Layout Caveats
+- Determining tvOS Window / Scene
+- Test Class Naming Convention
+- Focus Audit Registries (FocusInventory, FocusContainmentRules, Coverage Validation Gate, Sweep-Based Reachability Helper)
+
 XCUITest patterns specific to tvOS. tvOS is focus-driven (no touch, no
 direct tap), so test interaction goes through `XCUIRemote` and focus
 assertions rather than coordinate tapping.
@@ -24,7 +37,7 @@ XCUIRemote.shared.press(.playPause)
 ```
 
 `.menu` is the canonical dismissal — tvOS modals close with the back press,
-NOT with a close button tap.
+not with a close button tap.
 
 ## Focus Assertions
 
