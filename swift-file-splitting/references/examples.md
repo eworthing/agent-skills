@@ -1,5 +1,14 @@
 # Examples & Patterns
 
+## Contents
+
+- Example 1: Extracting Helper Views
+- Example 2: Extracting State-Adjacent Members
+- Example 3: The Visibility Fix Pattern
+- File Naming Conventions
+- Split Decision Tree
+- Good Split Candidates
+
 Concrete before/after pairs and naming/decision aids for the split workflow.
 
 ## Example 1: Extracting Helper Views

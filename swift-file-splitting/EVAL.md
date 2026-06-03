@@ -44,14 +44,14 @@
 
 ```
 swift-file-splitting/
-├── SKILL.md                       (143 lines — core workflow)
+├── SKILL.md                       (153 lines — core workflow)
 ├── EVAL.md                        (this file)
 ├── references/
-│   ├── examples.md                (105 lines — before/after, naming, decision tree)
+│   ├── examples.md                (114 lines — before/after, naming, decision tree, TOC)
 │   ├── xcodeproj.md               (75 lines  — XcodeGen / xcodeproj gem / Xcode UI)
-│   └── troubleshooting.md         (61 lines  — error matrix + swiftlint:disable escape)
+│   └── troubleshooting.md         (62 lines  — error matrix + swiftlint:disable escape)
 └── scripts/
-    └── pre-split-check.sh         (87 lines  — pre-flight inspector, portable bash)
+    └── pre-split-check.sh         (88 lines  — pre-flight inspector, portable bash)
 ```
 
 ## Manual Assessment
@@ -115,3 +115,4 @@ These are the only deductions in the current score, and none affect publishing.
 | 2026-05-12 | 89/100 | Post-P1 fixes: trigger phrase, threshold sourcing, pbxproj guidance, commit-first step, SPM note |
 | 2026-05-12 | 96/100 | Post-P2 fixes: extracted examples/xcodeproj/troubleshooting to references/, added `pre-split-check.sh` helper, added `swiftlint:disable file_length` escape hatch |
 | 2026-05-12 (post-merge) | 96/100 | Phase 2 MERGE from Tiercade `file-splitting`. Added cross-platform visibility trap row to troubleshooting matrix (tvOS passes / macOS fails on `private` accessed from extension) + multi-platform build emphasis in Step 7. Rejected Tiercade-coupled content: metadata block, evidence_commits, applyTo, `./build_install_launch.sh`, `Tiercade/Views/` paths, f662d34 commit citation, AGENTS.md reference. agent-skills version remained substantially richer (Step 0 commit-first, Step 6 pbxproj, escape hatch, 8-row error matrix) — only the cross-platform trap was net-new content from Tiercade source. |
+| 2026-06-03 | 96/100 | anthropic-grade-optimizer audit (doctrine 92→proj.100, Grade A; manual rubric unchanged). Fixed AR-CC-S16: `pre-split-check.sh` cap detection was keyed on the Tiercade-leftover `*Overlay*` filename pattern, so `Base+Feature.swift` extension files wrongly received the 600 (main) cap instead of 400. Now detects the skill's real `*+*.swift` convention via `basename`; constant `OVERLAY_CAP`→`EXT_CAP`, label "overlay"→"extension". Added AR-CC-S21 Contents TOC to `examples.md` (>100 lines). |
