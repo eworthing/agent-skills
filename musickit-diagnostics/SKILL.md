@@ -17,7 +17,6 @@ description: >-
   to `apple-multiplatform` and `apple-tvos`.
 allowed-tools:
   - Read
-  - Bash
   - Glob
   - Grep
 ---
@@ -259,7 +258,7 @@ registered with MusicKit capability — see
 
 ## Post-fix verification checklist
 
-After any fix, walk this list end-to-end on a real device:
+After any fix, walk these six preconditions end-to-end on a real device:
 
 1. **Real device, not Simulator.** Use Run on iPhone / iPad.
 2. **Authorization** — App calls `MusicAuthorization.request()` on screen appear (`.onAppear` or `.task`). User taps **Allow** when the system prompt appears.
@@ -267,11 +266,14 @@ After any fix, walk this list end-to-end on a real device:
 4. **Apple Music subscription active** — Settings → Music shows an active Apple Music subscription (or trial). Required for catalog access.
 5. **Network reachable** — Wi-Fi or cellular.
 6. **Bundle ID registered with MusicKit capability** — see [references/bundle-id-setup.md](references/bundle-id-setup.md).
-7. **No stale diagnostic code left in catch blocks** — the diagnostic from the protocol above is for debugging; remove it before merging.
 
 If any one of these is red, the call will fail in a predictable way
 covered above. If all six are green and the call still fails, re-add the
 diagnostic and capture a new `domain` + `code`.
+
+**Before merging:** remove any stale diagnostic code left in catch blocks —
+the diagnostic from the protocol above is for debugging, not production
+telemetry.
 
 ## Skip this skill when
 
