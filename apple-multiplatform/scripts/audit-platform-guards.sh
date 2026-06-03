@@ -90,7 +90,7 @@ check_t2() {
     [ -f "$f" ] || continue
     if grep -qE '#if[[:space:]]+!os\(tvOS\)([[:space:]]|$)' "$f" 2>/dev/null; then
       if ! grep -qE 'os\(macOS\)|os\(iOS\)' "$f" 2>/dev/null; then
-        ln=$(grep -nE '@Environment\(\\\.editMode\)' "$f" | head -n 1 | awk -F: '{print $1}')
+        ln=$(grep -m1 -nE '@Environment\(\\\.editMode\)' "$f" | awk -F: '{print $1}')
         emit macOS T2-editmode-tvos-only-guard "$f:${ln:-1}" \
           "editMode wrapped by bare #if !os(tvOS) — macOS also lacks editMode, use #if os(iOS)"
       fi
@@ -104,7 +104,7 @@ check_t3() {
   for f in $files; do
     [ -f "$f" ] || continue
     if ! grep -qE 'os\(macOS\)' "$f" 2>/dev/null; then
-      ln=$(grep -nE 'tabViewStyle\(\.page' "$f" | head -n 1 | awk -F: '{print $1}')
+      ln=$(grep -m1 -nE 'tabViewStyle\(\.page' "$f" | awk -F: '{print $1}')
       emit macOS T3-tabview-page-unguarded "$f:${ln:-1}" \
         ".tabViewStyle(.page) without os(macOS) branch — unavailable on macOS"
     fi
@@ -117,7 +117,7 @@ check_t4() {
   for f in $files; do
     [ -f "$f" ] || continue
     if ! grep -qE 'os\(macOS\)' "$f" 2>/dev/null; then
-      ln=$(grep -nE '\.topBar(Leading|Trailing)' "$f" | head -n 1 | awk -F: '{print $1}')
+      ln=$(grep -m1 -nE '\.topBar(Leading|Trailing)' "$f" | awk -F: '{print $1}')
       emit macOS T4-topbar-placement-unguarded "$f:${ln:-1}" \
         ".topBarLeading/.topBarTrailing without os(macOS) branch — placements unavailable on macOS"
     fi
@@ -130,7 +130,7 @@ check_t5() {
   for f in $files; do
     [ -f "$f" ] || continue
     if ! grep -qE 'os\(macOS\)' "$f" 2>/dev/null; then
-      ln=$(grep -nE 'fullScreenCover' "$f" | head -n 1 | awk -F: '{print $1}')
+      ln=$(grep -m1 -nE 'fullScreenCover' "$f" | awk -F: '{print $1}')
       emit macOS T5-fullscreencover-unguarded "$f:${ln:-1}" \
         ".fullScreenCover without os(macOS) branch — modifier unavailable on macOS"
     fi

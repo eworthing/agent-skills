@@ -26,7 +26,7 @@ if [ ! -d "$SOURCES_DIR" ]; then
   fi
 fi
 
-TMP_MODULES=$(mktemp -t audit-public-surface-modules.XXXXXX)
+TMP_MODULES=$(mktemp -t audit-public-surface-modules.XXXXXX) || exit 2
 trap 'rm -f "$TMP_MODULES"' EXIT INT TERM HUP
 
 # Enumerate module directories
