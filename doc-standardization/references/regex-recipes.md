@@ -77,6 +77,7 @@ total=0
 while IFS= read -r line; do
   src="${line%%:*}"
   rest="${line#*:}"
+  lineno="${rest%%:*}"
   link="${rest#*:}"
   # Extract the path inside ](...)
   target="$(printf '%s' "$link" | sed -nE 's/.*\]\(([^)]+)\).*/\1/p')"
@@ -96,7 +97,7 @@ while IFS= read -r line; do
   esac
   total=$((total + 1))
   if [ ! -e "$resolved" ]; then
-    printf 'BROKEN: %s -> %s\n' "$src" "$target"
+    printf 'BROKEN: %s:%s -> %s\n' "$src" "$lineno" "$target"
     broken=$((broken + 1))
   fi
 done < <(grep -rEn '\]\([^)]*\.md(#[^)]*)?\)' docs/ --include="*.md")
@@ -106,7 +107,7 @@ fi
 ```
 
 - **Clean output:** `OK: 0 broken links (NN checked)`
-- **Failure output:** `BROKEN: docs/specs/foo.md -> ../missing.md` (one line per)
+- **Failure output:** `BROKEN: docs/specs/foo.md:42 -> ../missing.md` (one line per)
 - **Known false positives:** None for the documented anchor / external /
   mailto cases. Templated links using shell-style placeholders
   (`{{var}}.md`) will register as broken — those should live in code-fenced
@@ -184,7 +185,7 @@ H1 wording may legitimately differ from the slug.
 
 ```bash
 find docs -type f -name "*.md" -print | while IFS= read -r f; do
-  h1=$(grep -m1 -E '^# ' "$f" 2>/dev/null | sed 's/^# //' | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9 ')
+  h1=$(grep -m1 -E '^# ' "$f" 2>/dev/null | sed 's/^# //' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9 ')
   base="${f##*/}"
   base="${base%.md}"
   # Compare a "main keyword" — middle segment of the slug

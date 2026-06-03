@@ -52,7 +52,7 @@ Do NOT use when:
 
 ### 1. Audit current state
 
-Ships with a one-shot drift verifier:
+Ships with a one-shot audit script:
 
 ```bash
 bash <skill-path>/scripts/check-doc-naming.sh docs
@@ -85,21 +85,22 @@ Then update:
 ### 4. Re-audit
 
 ```bash
-bash scripts/check-doc-naming.sh docs
+bash <skill-path>/scripts/check-doc-naming.sh docs
 ```
 
 Exit codes: `0` clean, `1` violations found, `2` invocation error.
 
-Each output class — `BROKEN`, `ORPHAN`, `INDEX-DRIFT`, `CASE`, `NAMING` —
+Each output class — `BROKEN`, `ORPHAN`, `INDEX-DRIFT`, `CASE`, `NAMING`, `H1-DRIFT` —
 maps to a canonical fix in
 [`references/error-taxonomy.md`](references/error-taxonomy.md).
 
 ### 5. Wire optional project validators
 
 ```bash
-# Pre-commit gate
-bash scripts/check-doc-naming.sh docs || exit 1
-./scripts/validate_naming_consistency.sh   # project-specific cross-checks
+# Pre-commit gate (in CI/hooks, vendor check-doc-naming.sh into the repo or pin
+# an absolute path — <skill-path> is resolved by the agent, not the shell)
+bash <skill-path>/scripts/check-doc-naming.sh docs || exit 1
+./scripts/validate_naming_consistency.sh   # project-local cross-checks (you provide)
 ```
 
 Project-specific validators typically cross-check doc filenames against
@@ -126,7 +127,7 @@ grep -rn "toolbar-spec.md" .
 git mv docs/specs/toolbar-spec.md docs/specs/ui-toolbar-unification-spec-implemented.md
 # Edit H1 in the renamed file: "# UI Toolbar Unification Spec"
 # Edit every file from the grep output
-bash scripts/check-doc-naming.sh docs   # expect: CLEAN
+bash <skill-path>/scripts/check-doc-naming.sh docs   # expect: CLEAN
 ```
 
 **Organize research docs:**
@@ -135,7 +136,7 @@ bash scripts/check-doc-naming.sh docs   # expect: CLEAN
 mkdir -p docs/research
 git mv docs/toolbar-research.md docs/research/ui-toolbar-architecture-research.md
 git mv docs/focus-research.md   docs/research/ui-focus-management-research.md
-bash scripts/check-doc-naming.sh docs
+bash <skill-path>/scripts/check-doc-naming.sh docs
 ```
 
 ## Related Skills
@@ -157,7 +158,7 @@ bash scripts/check-doc-naming.sh docs
   components, status suffixes, directory tree, code↔doc alignment,
   exceptions
 - [`scripts/check-doc-naming.sh`](scripts/check-doc-naming.sh) — one-shot
-  audit runner; exit 0/1/2
+  audit script; exit 0/1/2
 - CommonMark Spec — <https://spec.commonmark.org/> — link syntax,
   reference-style links, parser semantics
 - GitHub Flavored Markdown Spec — <https://github.github.com/gfm/> —
