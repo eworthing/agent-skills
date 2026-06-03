@@ -113,12 +113,17 @@ def build_claude_cmd(args, session_id=None):
 
     system_prompt = (
         "You are an independent verifier outside the active panel. "
-        "Validate a single blocker using only the blocker ID, anchor, summary, "
-        "and current artifact/context provided. End with VERIFIED <ID> or "
-        "INVALIDATED <ID> on the last non-empty line."
+        "Validate a single blocker using only the blocker ID, anchor, summary, and "
+        "current artifact/context provided — do not investigate beyond what is given. "
+        "Decide VERIFIED if the blocker is real and unresolved, or INVALIDATED if it is "
+        "resolved, inapplicable, or unsupported by the provided context. "
+        "Put VERIFIED <ID> or INVALIDATED <ID> on the first non-empty line, then give "
+        "one concise rationale."
         if verification_mode
-        else "You are a code reviewer. Analyze the plan and provide feedback. "
-        "End with VERDICT: APPROVED or VERDICT: REVISE on the last line."
+        else "You are a code reviewer. Read the files the plan references before "
+        "judging it — do not rely on the plan text alone. Assess the plan for "
+        "correctness, completeness, missing edge cases, and risks. "
+        "End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
     )
     cmd.extend(["--append-system-prompt", system_prompt])
 

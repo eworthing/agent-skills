@@ -24,7 +24,7 @@ claude -p "PROMPT" \
   --output-format json \
   --max-turns 10 \
   --no-session-persistence \
-  --append-system-prompt "You are a code reviewer. Analyze the plan and provide feedback. End with VERDICT: APPROVED or VERDICT: REVISE on the last line."
+  --append-system-prompt "You are a code reviewer. Read the files the plan references before judging it — do not rely on the plan text alone. Assess the plan for correctness, completeness, missing edge cases, and risks. End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
 ```
 
 - `-p "prompt"` / `--print "prompt"`: runs once and exits (no interactive TUI)
