@@ -12,6 +12,13 @@ description: >
   migrations, architecture), or when the user asks for "panel review",
   "consensus review", "multi-model review", "quorum review", or a
   "second opinion across AI providers".
+allowed-tools:
+  - Read
+  - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
 ---
 
 # Quorum Review — Multi-Provider Consensus (v3.1)
