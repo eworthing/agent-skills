@@ -10,10 +10,11 @@ description: >-
   SwiftFormat output with hand-formatted code. Targets the
   repo-prescriptive lint config. For concurrency-specific lints like
   `async_without_await` see the authoritative community
-  `swift-concurrency` (`references/linting.md`).
+  `swift-concurrency` skill's own `references/linting.md`.
 allowed-tools:
   - Read
   - Write
+  - Edit
   - Bash
   - Glob
 ---
@@ -53,6 +54,7 @@ Load the relevant reference when working on a specific subtopic. Each is focused
 
 ## Constraints
 
+- Requires the `swiftformat` and `swiftlint` CLIs on PATH — e.g. `brew install swiftformat swiftlint`, or the repo's pinned SwiftPM/Mint setup
 - Never disable SwiftLint safety rules without good reason
 - Keep files under 600 lines (extension files under 400) — split early
 - Use `// swiftformat:disable` sparingly (mainly for Logger `@autoclosure`)
