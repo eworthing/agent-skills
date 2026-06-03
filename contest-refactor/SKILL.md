@@ -4,6 +4,11 @@ description: Triggers an autonomous Actor-Critic refactoring loop against the cu
 allowed-tools:
   - Read
   - Write
+  - Edit
+  - Glob
+  - Grep
+  - Bash
+  - Agent
 ---
 
 # 9.5 Contest Refactor Protocol
