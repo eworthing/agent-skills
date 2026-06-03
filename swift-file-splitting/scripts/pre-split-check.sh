@@ -28,11 +28,12 @@ LINES=$(wc -l < "$FILE" | tr -d ' ')
 
 # Default caps mirror swift-linting/SKILL.md and `.swiftlint.yml` `file_length`.
 MAIN_CAP=600
-OVERLAY_CAP=400
+EXT_CAP=400   # extension files: OriginalFile+Feature.swift
 
-case "$FILE" in
-  *Overlay*|*overlay*) CAP="$OVERLAY_CAP" ; KIND="overlay" ;;
-  *)                   CAP="$MAIN_CAP"    ; KIND="main"    ;;
+# Extension files follow the `Base+Feature.swift` naming convention.
+case "$(basename "$FILE")" in
+  *+*.swift) CAP="$EXT_CAP"  ; KIND="extension" ;;
+  *)         CAP="$MAIN_CAP" ; KIND="main"      ;;
 esac
 
 echo "=== pre-split-check: $FILE ==="

@@ -20,7 +20,7 @@
     ✅ Description length adequate (61 words)
     ✅ Description includes trigger contexts (Use when…)
   [DOCUMENTATION]
-    ✅ SKILL.md body length (445 lines)
+    ✅ SKILL.md body length (458 lines)
     ✅ References are linked from SKILL.md (no references/)
   [SCRIPTS]
     ✅ No scripts/
@@ -58,7 +58,7 @@ Also fixed while editing:
 | 2.1 | Fault Tolerance | 3/4 | Anti-pattern + audit checklist sections preempt common failures. No retry semantics (N/A doc). |
 | 2.2 | Error Reporting | 4/4 | New "three classes of mistake" callout explicitly enumerates silent-failure modes the branching prevents. |
 | 2.3 | Recoverability | 4/4 | Read-only artifact. |
-| 3.1 | Token Cost | 3/4 | 445 lines SKILL.md — over the 150-line target but no references/ split would help. Single-file skill is acceptable for security checklists (need to read end-to-end). |
+| 3.1 | Token Cost | 3/4 | 458 lines SKILL.md — over the 150-line target but no references/ split would help. Single-file skill is acceptable for security checklists (need to read end-to-end). |
 | 3.2 | Execution Efficiency | 4/4 | No scripts. |
 | 4.1 | Learnability | 4/4 | GOOD/BAD/WRONG/CORRECT pairs throughout; complete `ImageSource` enum example with caller branching. |
 | 4.2 | Consistency | 4/4 | Uniform code-fence style, uniform anti-pattern callouts, audit checklist at end. |
@@ -97,3 +97,4 @@ None. Description + multi-source pattern landed.
 |------|-------|-------|
 | 2026-05-12 (baseline) | 85% structural / ~86 manual | Pre-merge. 2 description warnings. |
 | 2026-05-12 (post-merge) | 100% structural / 92 manual | URL Source Resolution pattern merged from Tiercade. Description warnings fixed. |
+| 2026-06-03 (security-correctness pass) | 100% structural / 92 manual | anthropic-grade-optimizer Pass-2 audit. **Fixed a domain-allowlist bypass** the prior 1.2/4.4 Correctness/Error-Prevention scores missed: `host.hasSuffix(domain)` accepted `notexample.com` against `example.com` — corrected to exact-or-dot-bounded match (`isAllowedDomain` + `imageSource`), case-folded. Switched Step 2 path-traversal example from blocklist to the allowlist idiom (consistency with Example 1, AR-CC-S16). Annotated voodoo constants 1000/500/50MB (AR-CC-S18). Added CSV formula-injection guard (leading `= + - @`). Reframed rigid Constraints list with threat rationale (AR-CC-S09). Structural unchanged; manual score held at 92 (a real correctness fix, not a feature add — score not inflated). |

@@ -43,6 +43,18 @@ skill. The following were generalized or removed:
   swiftui-file-export/SKILL.md` → no matches
 - SKILL.md body length: 318 lines (within target band)
 
+## Model Coverage
+
+This skill is API-reference guidance — it ships no executable code, so "testing"
+means verifying the description triggers and the patterns apply correctly per
+model, not running scripts.
+
+- **Authored / validated under:** Claude Opus 4.7 (see `Evaluator` above).
+- **Target models:** Opus 4.x and Sonnet 4.x Claude Code sessions — the tiers
+  that typically apply SwiftUI export patterns.
+- **Haiku 4.5:** supported (triggers and patterns are model-agnostic) but not
+  separately validated; spot-check before relying on it there.
+
 ---
 
 ## Automated Checks
@@ -130,3 +142,4 @@ Path: /Users/Shared/git/agent-skills/swiftui-file-export
 | Date       | Score   | Notes |
 |------------|---------|-------|
 | 2026-05-12 | 92/100  | Baseline — initial extraction from Tiercade `file-export` skill. |
+| 2026-06-03 | 92/100  | Declared model coverage (closes AR-CC-S12); SKILL.md body unchanged. |

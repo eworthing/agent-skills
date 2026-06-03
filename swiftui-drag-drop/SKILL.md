@@ -26,7 +26,7 @@ allowed-tools:
 
 - Purpose
 - When to Use
-- Do NOT Use For
+- When Not to Use
 - Architecture: DropDelegate vs `.onDrop`
 - Drop Priority (Winner-Take-All)
 - DropDelegate Skeleton
@@ -59,7 +59,7 @@ API — all receiving code must be platform-gated.
 - Adding a new payload type (image data, file URL, plain URL, HTML).
 - Auditing whether `.onDrop` is attached to the right view.
 
-## Do NOT Use For
+## When Not to Use
 
 - tvOS — no drop receiving exists; skip the feature.
 - `Transferable` / `.dropDestination(for:)` model-typed drops where you
@@ -194,10 +194,11 @@ These are Apple requirements, not stylistic choices:
 
 ```swift
 provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
-    guard let data else { return }
-    Task { @MainActor in
-        model.apply(imageData: data)
+    guard let data else {
+        Task { @MainActor in model.dropDidFail() }   // surface, don't swallow
+        return
     }
+    Task { @MainActor in model.apply(imageData: data) }
 }
 ```
 

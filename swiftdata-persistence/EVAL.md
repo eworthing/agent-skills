@@ -142,3 +142,4 @@ None. All structural checks pass; description meets trigger-precision requiremen
 | Date | Score | Notes |
 |------|-------|-------|
 | 2026-05-12 | 91/100 | Baseline — extracted portable patterns from Tiercade-coupled skill. Auto-eval 100%. Forbidden-token grep clean. |
+| 2026-06-03 | ~92/100 | Anthropic-grade pass: typed-error referent + `deleteItem` do/catch (resolves typed-error self-contradiction), terminology anchor, example-imports note, dropped trivial "Basic" fetch. F-005 eval-harness deferred (repo-wide). |

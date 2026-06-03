@@ -3,6 +3,16 @@
 This template shows how to structure a design token reference file for your app.
 Replace placeholder values with your actual design system values.
 
+## Contents
+
+- Color Palette
+  - Semantic Colors
+  - Category Colors (if applicable)
+- Metrics (Spacing Values)
+- TypeScale (Typography)
+- Modal Sizing
+- Motion Tokens
+
 ---
 
 ## Color Palette

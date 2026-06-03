@@ -353,7 +353,7 @@ When visual issues surface, use this table to identify likely token misuse:
 
 ## Auditing for Hardcoded Values
 
-Find hardcoded colors in view files:
+Run these ripgrep searches to find hardcoded colors in view files:
 
 ```bash
 rg 'Color\.(black|white|gray|red|blue|green|orange|yellow|pink|purple)\.opacity\(' --glob '*.swift' YourApp/Views/

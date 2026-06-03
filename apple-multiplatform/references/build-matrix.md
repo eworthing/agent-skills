@@ -4,6 +4,14 @@ Build every supported destination before merging. macOS and Catalyst
 frequently surface compatibility issues that tvOS and iOS-simulator builds
 miss; do not skip them.
 
+## Contents
+
+- [Canonical Destinations](#canonical-destinations)
+- [Expected Pass Output](#expected-pass-output)
+- [Expected Failure Output — Common Patterns](#expected-failure-output--common-patterns)
+- [CI Wrapper](#ci-wrapper)
+- [Related Skills](#related-skills)
+
 ## Canonical Destinations
 
 ```bash

@@ -31,6 +31,7 @@ allowed-tools:
 - Auto-Save Pattern
 - Entity Relationships and Cascade Delete
 - Debugging Stale Entities
+- Typed Persistence Errors
 - Constraints
 
 ## Purpose
@@ -40,6 +41,9 @@ SwiftData stores `@Model` entities in a persistent store managed by
 in source change, the existing on-disk entities **do not** automatically
 update. This skill documents that gotcha plus the supporting patterns
 needed to ship and debug SwiftData-backed features safely.
+
+> Code examples assume `import SwiftData`; view examples add `import SwiftUI`,
+> and `Logger` needs `import os`.
 
 ## When to Use
 
@@ -82,6 +86,10 @@ on every launch (or guarded by version/hash — see below). Never assume
 ---
 
 ## Seed-Data Migration Patterns
+
+Throughout this skill, *bundled data* means the read-only template/seed
+content shipped inside the app binary (the entities
+`prefillBundledItemsIfNeeded` manages) — distinct from user-created content.
 
 Pick one. All three assume the bundled data is read-only template content
 (<100 entities) — none are safe for user-created data.
@@ -213,13 +221,6 @@ struct LibraryView: View {
 
 ## FetchDescriptor Patterns
 
-### Basic
-
-```swift
-let descriptor = FetchDescriptor<BundledItemEntity>()
-let all = try modelContext.fetch(descriptor)
-```
-
 ### Filtered with `#Predicate`
 
 ```swift
@@ -291,7 +292,11 @@ still references it via a non-optional relationship.
 @MainActor
 func deleteItem(_ entity: BundledItemEntity, in modelContext: ModelContext) {
     modelContext.delete(entity)   // children removed via cascade rule
-    try? modelContext.save()
+    do {
+        try modelContext.save()
+    } catch {
+        Logger().error("Delete failed: \(error)")
+    }
 }
 ```
 
@@ -322,6 +327,30 @@ rm -rf ~/Library/Containers/<your.bundle.id>/Data/Documents/*
 
 Prefer `simctl uninstall` over the broad `rm -rf` — the broad form deletes
 every other simulator app's data on the machine.
+
+---
+
+## Typed Persistence Errors
+
+Wrap persistence failures in a custom error type so callers branch on the
+failure instead of catching opaque `Error`. The migration and auto-save
+examples log-and-continue for brevity; production save paths should surface a
+typed error.
+
+```swift
+enum PersistenceError: Error {
+    case saveFailed(underlying: Error)
+    case prefillFailed(underlying: Error)
+}
+
+func save(_ modelContext: ModelContext) throws {
+    do {
+        try modelContext.save()
+    } catch {
+        throw PersistenceError.saveFailed(underlying: error)
+    }
+}
+```
 
 ---
 

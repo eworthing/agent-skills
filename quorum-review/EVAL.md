@@ -8,6 +8,23 @@ Tracked via `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py 
 |---|---|---|
 | 2026-05-24 (pre-refactor baseline) | **77 %** (10 / 13) | Initial measurement at the start of the v3 → v3.1 refactor |
 | 2026-05-24 (after v3.1 refactor) | **85 %** (11 / 13) | +8 pp |
+| 2026-06-03 (anthropic-grade polish) | **85 %** (11 / 13) | No change — doc/comment-only polish (AR-CC-S21/S22/S18); the 2 remaining warnings are intentional (below) |
+
+> **Score column = repo `eval-skill.py` structural rubric.** For the separate
+> Anthropic-grade doctrine audit, see the next section — different rubric, do not
+> conflate the two numbers.
+
+## Anthropic-grade audit (separate rubric)
+
+Tracked via the `anthropic-grade-optimizer` skill
+(`run.py SKILL.md --target opus-4-7 --mode audit`), scored against 189 cited
+Anthropic rules across 11 dimensions. **This is a distinct scoring system from
+the `eval-skill.py` percentage above.**
+
+| Date | Score | Notes |
+|---|---|---|
+| 2026-06-03 (pre-polish) | **95 / 100** (grade A) | Ship-it; only D-CC below 100 (75), from 2 soft 🟢 findings |
+| 2026-06-03 (post-polish) | **100 / 100** | D-CC 75 → 100 after AR-CC-S22 exec-intent framing, AR-CC-S21 TOCs (`references/protocol.md` + body), AR-CC-S18 merge-threshold comments. 0 critical, voice fully preserved |
 
 ## Improvements (v3 → v3.1)
 

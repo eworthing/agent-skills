@@ -1,5 +1,16 @@
 # New Component Testability Checklist
 
+## Contents
+
+1. Cross-Check Presentations vs Root Markers
+2. Create a TestIdentifiers Enum
+3. Add Direct Launch Support
+4. Update Testability Documentation
+5. Add Confirmation Dialog Tests
+6. Add Sheet Detent Tests
+7. Add Test Files to Xcode Project
+8. Run the Full Cross-Platform Test Pass
+
 When adding a new modal, sheet, overlay, or screen, follow this checklist to
 ensure it's testable from the start. Skipping any step typically results in
 flaky or unreachable tests that pass locally but fail in CI.

@@ -7,6 +7,22 @@ flags, mode table, and examples, see [SKILL.md](../SKILL.md). For the
 reviewer output template (round 1 + round 2+ cross-critique syntax), see
 [output-format.md](output-format.md).
 
+## Contents
+
+- [Modes](#modes)
+- [Issue ledger](#issue-ledger)
+  - [Core shape](#core-shape)
+  - [Ledger rules](#ledger-rules)
+- [Anchor keys](#anchor-keys)
+- [Merge pipeline](#merge-pipeline)
+  - [Candidate generation](#candidate-generation)
+  - [Classification](#classification)
+  - [Application](#application)
+- [Verification I/O contract](#verification-io-contract)
+- [Parser hardening (v3.1)](#parser-hardening-v31)
+- [Round flow](#round-flow)
+- [Compatibility notes](#compatibility-notes)
+
 ## Modes
 
 - `plan` and `spec` share the same tribunal path.

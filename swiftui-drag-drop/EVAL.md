@@ -178,3 +178,4 @@ Result: 100% (13/13 pass, 0 warn, 0 fail).
 | Date | Score | Notes |
 |------|-------|-------|
 | 2026-05-12 | 92/100 | Baseline — extracted from `Tiercade/skills/drag-drop/SKILL.md`, generalized for the agent-skills repo. |
+| 2026-06-03 | 92/100 | anthropic-grade-optimizer audit (v1.2, 189 rules): 95→100. Loader example now surfaces drop failures via UI state instead of silently returning (AR-EVAL-004); renamed "Do NOT Use For" → "When Not to Use" to soften the one caps heading (AR-CC-S09). Structural score unchanged. |

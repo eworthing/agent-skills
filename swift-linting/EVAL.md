@@ -23,13 +23,13 @@ Path: /Users/Shared/git/agent-skills/swift-linting
 
   [TRIGGER]
     ✅ Description length adequate
-       33 words
+       70 words
     ✅ Description includes trigger contexts
        Found: use when
 
   [DOCUMENTATION]
     ✅ SKILL.md body length
-       40 lines
+       41 lines
     ✅ References are linked from SKILL.md
 
   [SCRIPTS]
@@ -49,7 +49,7 @@ Path: /Users/Shared/git/agent-skills/swift-linting
 ```
 
 File layout (post-split):
-- `SKILL.md` — 54 lines (overview, when-to-use, links, constraints)
+- `SKILL.md` — 61 lines (overview, when-to-use, links, constraints)
 - `references/swiftformat.md` — 82 lines
 - `references/swiftlint.md` — 48 lines
 - `references/disable-comments.md` — 73 lines
@@ -108,3 +108,4 @@ All resolved this revision:
 |------|-------|-------|
 | 2026-05-12 | 85/100 | Baseline |
 | 2026-05-12 | 91/100 | P1 split into references/, desc reworded to "Use when…", scope cross-link to swift-file-splitting added. Auto-eval 92% → 100%. |
+| 2026-06-03 | 91/100 | anthropic-grade-optimizer pass (separate Anthropic-doctrine rubric, 90 → 100 / A): declared swiftformat/swiftlint dependency (AR-CC-S20), disambiguated the swift-concurrency cross-ref path (AR-CLAR-001), added `Edit` to allowed-tools. skill-evaluator auto-checks remain 13/13; manual rubric unchanged at 91. |
