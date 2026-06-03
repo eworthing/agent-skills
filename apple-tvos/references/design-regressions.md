@@ -7,6 +7,16 @@ collisions, macOS window-resize stability, cross-platform parity),
 review work belongs in the consuming project's PR template or
 `AGENTS.md`. This file covers only tvOS-specific design regressions.
 
+## Contents
+
+- [tvOS-D01 — Modal Focus Containment](#tvos-d01--modal-focus-containment)
+- [tvOS-D02 — Glass-on-Glass Anti-Pattern](#tvos-d02--glass-on-glass-anti-pattern)
+- [tvOS-D03 — Why Not `.plain` With Custom Styling On tvOS](#tvos-d03--why-not-plain-with-custom-styling-on-tvos)
+- [Anti-Pattern: Manual Focus Reassertion (tvOS-A03)](#anti-pattern-manual-focus-reassertion-tvos-a03)
+- [tvOS-D04 — tvOS Focus Traversal QA Checklist](#tvos-d04--tvos-focus-traversal-qa-checklist)
+- [Severity](#severity)
+- [Cross-References](#cross-references)
+
 ## tvOS-D01 — Modal Focus Containment
 
 On tvOS, focus must be **trapped** inside an open modal until it

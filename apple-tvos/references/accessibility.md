@@ -6,6 +6,14 @@ iOS/macOS. For generic VoiceOver, traits, Dynamic Type, and Reduce Motion,
 defer to the authoritative community `swiftui-expert-skill`
 (`references/accessibility-patterns.md`).
 
+## Contents
+
+- [tvOS-A01 — Modal Dismissal: Menu Button, Not Close Button](#tvos-a01--modal-dismissal-menu-button-not-close-button)
+- [Cross-Platform Dismiss Pattern](#cross-platform-dismiss-pattern)
+- [tvOS-A02 — Destructive Confirmation Dialog Default Focus (Severity-1)](#tvos-a02--destructive-confirmation-dialog-default-focus-severity-1)
+- [VoiceOver on tvOS](#voiceover-on-tvos)
+- [Cross-References](#cross-references)
+
 ## tvOS-A01 — Modal Dismissal: Menu Button, Not Close Button
 
 On iOS and macOS, modals usually carry an explicit Close / Cancel button.

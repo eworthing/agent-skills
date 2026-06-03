@@ -12,6 +12,12 @@ Severity:
 
 Machine-readable variant: [evals/rules.json](../evals/rules.json).
 
+## Contents
+
+- [Focus Engine](#focus-engine--focus-enginemd)
+- [Accessibility](#accessibility--accessibilitymd)
+- [Design Regressions](#design-regressions--design-regressionsmd)
+
 ## Focus Engine — [focus-engine.md](focus-engine.md)
 
 | ID | Rule | Severity |
