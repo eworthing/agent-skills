@@ -127,6 +127,18 @@ Run adapter (see `references/adapter-cli.md` for full flag list). Omit `--resume
 
 ## Read the result
 
+Dump both files with `cat` — never with `read`, and never with inline Python
+that prints a dict. `read VAR` treats a leaked quote/space as a variable name
+and fails with `read: '': not a valid identifier`; printing parsed JSON as a
+Python dict corrupts it into single-quoted non-JSON. `SESSION_FILE` is already
+JSON; emit it verbatim.
+
+```bash
+# paths must already be exported via ppr_paths.py --format shell
+echo "=== SESSION ==="; cat "$SESSION_FILE"
+echo "=== REVIEW ==="; cat "$OUTPUT_FILE"
+```
+
 1. Read session file; extract actual `model`, `effort`, `effort_source`
    (and Gemini `thinking_tokens`).
 2. Read review output file.
