@@ -1,8 +1,9 @@
 """
-ppr_metadata.py — Metadata and session ID extraction for peer-plan-review.
+extractors.py — Metadata and session-ID extraction.
 
-Extracted from run_review.py. Contains extract_metadata, session ID
-extractors, and Codex session file helpers.
+Ported verbatim from peer-plan-review/scripts/ppr_metadata.py. Contains
+extract_metadata, session-ID extractors per provider, opencode export
+helper, and plan-file metadata.
 """
 
 import contextlib
@@ -10,7 +11,7 @@ import hashlib
 import json
 import os
 import subprocess
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 _REVERSE_EFFORT_OPENCODE = {
@@ -271,7 +272,7 @@ def compute_plan_metadata(plan_file):
             "plan_name": p.name,
             "plan_bytes": stat.st_size,
             "plan_sha256": sha,
-            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat(),
+            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
         }
     except OSError:
         return {}

@@ -22,7 +22,7 @@ from pathlib import Path
 
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 sys.path.insert(0, SCRIPT_DIR)
-from ppr_process import _kill_tree, _popen_session_kwargs  # noqa: E402
+from _common.process.tree import _kill_tree, _popen_session_kwargs  # noqa: E402
 
 TIMEOUT = 180  # seconds — URL fetch can be slow (Gemini/Copilot take 50-70s)
 

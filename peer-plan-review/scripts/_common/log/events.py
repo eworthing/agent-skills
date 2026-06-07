@@ -1,7 +1,8 @@
 """
-ppr_log.py — Append-only JSONL event logger for peer-plan-review.
+events.py — Append-only JSONL event logger.
 
-Best-effort, append-only logging. A logging failure never crashes the review.
+Ported verbatim from peer-plan-review/scripts/ppr_log.py. Best-effort,
+append-only logging. A logging failure never crashes the review.
 """
 
 import json

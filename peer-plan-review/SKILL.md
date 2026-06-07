@@ -19,7 +19,7 @@ allowed-tools:
 
 # Peer Plan Review
 
-Pressure-test plan before execution. Host agent own plan, revise between rounds. Reviewer critique only; never edit files or run host workflow.
+Pressure-test a plan before execution. The host agent owns the plan and revises it between rounds. The reviewer critiques only; it never edits files or runs the host workflow.
 
 ## Contents
 
@@ -38,7 +38,7 @@ Pressure-test plan before execution. Host agent own plan, revise between rounds.
 
 ## Bundled resources
 
-- `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. No reimplement.
+- `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. Do not reimplement it.
 - Provider references — read exactly one after reviewer chosen:
   [`references/codex.md`](references/codex.md),
   [`references/gemini.md`](references/gemini.md),
@@ -57,7 +57,7 @@ For available models prefer:
 
 ## Require a plan source
 
-Before start, confirm one of: plan already in session, plan pasted by user, or file path. If none, ask.
+Before starting, confirm one of: a plan already in the session, a plan pasted by the user, or a file path. If none, ask.
 
 ## Parse reviewer arguments
 
@@ -112,7 +112,7 @@ environment before they have been exported.
 Example for a persisted id file:
 `python3 <skill-dir>/scripts/ppr_paths.py --review-id-file /tmp/ppr-current-id.txt --format shell`
 
-Snapshot plan into `plan.md` before each round. Treat snapshot immutable for round. Number every line (`cat -n` style) so reviewer cite specific lines — include **numbered** plan in prompt.
+Snapshot the plan into `plan.md` before each round. Treat the snapshot as immutable for that round. Number every line (`cat -n` style) so the reviewer can cite specific lines — include the **numbered** plan in the prompt.
 
 ## Round 1
 
@@ -143,7 +143,9 @@ echo "=== REVIEW ==="; cat "$OUTPUT_FILE"
    (and Gemini `thinking_tokens`).
 2. Read review output file.
 3. Parse verdict from last non-empty line, search upward.
-4. Call `parse_structured_review()` from `ppr_io.py`. Scopes to `### Blocking Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags with confidence, section/line refs, recommendations. On success, present findings in severity-ordered summary table before full review text. On empty result, present raw review — graceful degradation.
+4. Call `parse_structured_review()` from the vendored `_common.session` module
+   (`from _common.session import parse_structured_review`, with `scripts/` on
+   `sys.path`). Scopes to `### Blocking Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags with confidence, section/line refs, recommendations. On success, present findings in severity-ordered summary table before full review text. On empty result, present raw review — graceful degradation.
 5. Header:
    `## Peer Review - Round N (reviewer: <provider>, model: <actual>, effort: <actual>)`
 
@@ -167,9 +169,9 @@ Stop after approval or five rounds, whichever first.
 
 ## Handle failures
 
-- `--resume` is request, not guarantee. Runner auto-fall-back to fresh execution once if resume fails with no usable output.
+- `--resume` is a request, not a guarantee. The runner auto-falls back to a fresh execution once if resume fails with no usable output.
   `resume_requested`, `resume_attempted`, `resume_fallback_used` record this.
-  No submit second manual retry on top of automatic fallback.
+  Do not submit a second manual retry on top of the automatic fallback.
 - Runner non-zero + no output: report, ask user to retry, switch reviewers, or stop.
 - Runner non-zero + some output: try extract review anyway.
 - Binary missing: fail fast, quote install command from provider reference.
@@ -179,14 +181,14 @@ Stop after approval or five rounds, whichever first.
 - Approved → present final revised plan; note reviewer approval.
 - Round limit (standard) → present latest plan + unresolved concerns.
 - Adversarial round ended `REVISE` → present findings as-is.
-- **In all cases, STOP.** No begin implementing changes, editing code, or modifying files. Ask user which findings, if any, they want addressed.
+- **In all cases, STOP.** Do not begin implementing changes, editing code, or modifying files. Ask the user which findings, if any, they want addressed.
 - Remove five session temp files (plan, prompt, review, session, events).
   No globs. Error log intentionally retained for post-mortem.
 
 ## Rules
 
-- Keep reviewer read-only. Never ask it to modify files or execute host workflow.
-- Capture full output each round. No tail-scraping.
+- Keep the reviewer read-only. Never ask it to modify files or execute the host workflow.
+- Capture the full output each round; no tail-scraping.
 - Never use transcript-sharing flags (`--share`, `--share-gist`).
-- Treat prompt/review/session/events files as sensitive (contain plan text).
-- Show actual model/effort from session file, not guessed values.
+- Treat the prompt/review/session/events files as sensitive (they contain plan text).
+- Show the actual model/effort from the session file, not guessed values.

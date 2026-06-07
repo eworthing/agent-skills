@@ -31,13 +31,12 @@ references/
   env.md              env vars read by the runner
 scripts/
   run_review.py       adapter CLI entrypoint
-  ppr_paths.py        canonical temp-path helper for review sessions
-  ppr_io.py           session I/O, output parsing, summaries
-  ppr_providers.py    PROVIDERS registry + command builders
-  ppr_metadata.py     model/effort/session extraction
-  ppr_log.py          structured JSONL event logger
-  ppr_process.py      process-tree kill + Popen session kwargs
-  test_run_review.py  pytest suite (115 tests)
+  ppr_paths.py        thin CLI wrapper over _common/session/paths.py
+  _common/            shared modules vendored from /common/common/ via
+                      sync_common.py (session I/O, output parsing, summaries,
+                      PROVIDERS registry + command builders, model/effort/
+                      session extraction, JSONL event logger, process-tree kill)
+  test_run_review.py  pytest suite (116 tests)
   test_web_search.py  web-search adapter pytest suite
   fixtures/           provider output samples for tests
 agents/openai.yaml    OpenAI subagent wiring

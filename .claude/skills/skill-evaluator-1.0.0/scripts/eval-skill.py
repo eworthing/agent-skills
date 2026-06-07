@@ -330,11 +330,16 @@ def check_no_ext_deps(skill_path):
     }
 
     # Sibling-module names that live in scripts/ — those are intra-skill imports,
-    # not external deps.
+    # not external deps. Includes both top-level .py files and local package
+    # directories (e.g. a vendored `_common/` tree synced from common/).
     siblings = {
         os.path.splitext(f)[0]
         for f in os.listdir(scripts_dir)
         if f.endswith(".py") and not f.startswith(".")
+    }
+    siblings |= {
+        d for d in os.listdir(scripts_dir)
+        if os.path.isdir(os.path.join(scripts_dir, d)) and not d.startswith(".")
     }
 
     ext_deps = []
