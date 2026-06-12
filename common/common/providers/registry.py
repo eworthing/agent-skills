@@ -270,7 +270,7 @@ PROVIDERS = {
         "binary": "claude",
         "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "max"},
         "effort_default": "medium",
-        "model_aliases": {"sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
+        "model_aliases": {"fable": "fable", "sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
         "resume_supported": True,
         "build_cmd": build_claude_cmd,
         "caps": {

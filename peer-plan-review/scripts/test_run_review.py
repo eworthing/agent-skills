@@ -100,7 +100,8 @@ class TestListModels(unittest.TestCase):
             self.assertIn(
                 provider, stdout, f"Provider {provider} missing from --list-models output"
             )
-        # Claude should have sonnet, opus, haiku
+        # Claude should have fable, sonnet, opus, haiku
+        self.assertIn("fable", stdout)
         self.assertIn("sonnet", stdout)
         self.assertIn("opus", stdout)
         self.assertIn("haiku", stdout)
