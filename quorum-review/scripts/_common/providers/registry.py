@@ -366,13 +366,16 @@ PROVIDERS = {
     "antigravity": {
         "binary": "agy",
         # No headless effort/thinking control exposed (May 2026); the
-        # runner warns and drops --effort for providers with an empty map.
+        # runner warns and drops --effort when caps.effort_flag is None.
+        # agy appears to fold effort into model display-name variants
+        # instead (e.g. "Gemini 3.5 Flash (Low)").
         "effort_map": {},
         "effort_default": "default",
-        "model_aliases": {
-            "flash": "gemini-3.5-flash",
-            "pro": "gemini-3.1-pro",
-        },
+        # Sources conflict on accepted model-name forms (slug
+        # "gemini-3.1-pro" vs display name "Gemini 3.5 Flash (Low)"), so
+        # no shorthand map — pass raw names through unchanged. See
+        # references/antigravity.md in consuming skills.
+        "model_aliases": {},
         "resume_supported": False,
         "build_cmd": build_antigravity_cmd,
         "caps": {

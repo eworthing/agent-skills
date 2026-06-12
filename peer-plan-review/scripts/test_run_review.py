@@ -107,8 +107,6 @@ class TestListModels(unittest.TestCase):
         self.assertIn("sonnet", stdout)
         self.assertIn("opus", stdout)
         self.assertIn("haiku", stdout)
-        # Antigravity should map flash/pro shorthands to full model IDs
-        self.assertIn("gemini-3.5-flash", stdout)
         # Gemini should have auto, pro, flash, flash-lite
         self.assertIn("flash", stdout)
         self.assertIn("pro", stdout)
@@ -754,13 +752,13 @@ class TestBuildAntigravityCmd(unittest.TestCase):
     """Antigravity (agy) command construction and unsupported-flag handling."""
 
     def test_fresh_exec_shape(self):
-        args = make_args(reviewer="antigravity", model="gemini-3.5-flash", timeout=600)
+        args = make_args(reviewer="antigravity", model="Gemini 3.5 Flash", timeout=600)
         cmd = run_review.build_antigravity_cmd(args)
         self.assertEqual(cmd[0], "agy")
         self.assertIn("--sandbox", cmd)
         self.assertIn("--dangerously-skip-permissions", cmd)
         self.assertIn("-m", cmd)
-        self.assertIn("gemini-3.5-flash", cmd)
+        self.assertIn("Gemini 3.5 Flash", cmd)
         # agy's internal print timeout must track the runner timeout,
         # otherwise its 5m default cuts long reviews short.
         self.assertIn("--print-timeout", cmd)

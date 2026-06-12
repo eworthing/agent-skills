@@ -18,5 +18,6 @@ levels — no tokens.
 
 Both adapters inherit the full parent environment (`os.environ.copy()`), so
 anything your reviewer CLI normally reads — e.g. `ANTHROPIC_API_KEY`,
-`OPENAI_API_KEY`, `GEMINI_API_KEY`, auth cache paths — continues to work
+`OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTIGRAVITY_API_KEY`, auth cache
+paths — continues to work
 unchanged.

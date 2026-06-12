@@ -41,16 +41,22 @@ agy --sandbox --dangerously-skip-permissions \
 
 ## Model
 
-`-m MODEL` (aliases the skill maps: `flash` → `gemini-3.5-flash`,
-`pro` → `gemini-3.1-pro`)
+`-m MODEL` / `--model MODEL`, passed through raw — the skill defines no
+shorthand aliases because public sources conflict on the accepted name form:
 
-Antigravity also serves third-party models (Claude Sonnet/Opus, GPT-OSS);
-pass their native IDs through raw.
+- Google's codelab shows display names: `agy --model "Gemini 3.5 Flash (Low)"`
+- Hands-on guides show slugs in the TUI: `/model gemini-3.1-pro`
+
+Run `agy --help` (or try one round) locally to confirm which form your build
+accepts. Antigravity serves Gemini 3.5 Flash / 3.1 Pro plus third-party
+models (Claude Sonnet/Opus, GPT-OSS).
 
 ## Reasoning effort
 
-No headless effort/thinking control exposed (May 2026). The runner warns and
-ignores `--effort` for this provider.
+No headless effort flag exposed (May 2026) — effort appears to be folded
+into model display-name variants instead (e.g. `"Gemini 3.5 Flash (Low)"`).
+The runner warns and ignores `--effort` for this provider; pick an effort
+variant via `--model` if your build uses display names.
 
 ## Resume
 

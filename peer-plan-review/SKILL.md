@@ -69,7 +69,7 @@ Normalize to:
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 
-Parsing rule: accepted forms are `reviewer`, `reviewer <effort>`, `reviewer <model>`, or `reviewer <model> <effort>`. The first token after `reviewer` is `effort` iff it is one of those four literals (then `model` uses the provider default); otherwise it is `model`, and the next token, if present, is `effort`. If `model` omitted, tell user once provider default used. If `effort` omitted, no effort flag is injected — each provider uses its own persisted config or built-in default.
+Parsing rule: accepted forms are `reviewer`, `reviewer <effort>`, `reviewer <model>`, or `reviewer <model> <effort>`. The first token after `reviewer` is `effort` iff it is one of those four literals (then `model` uses the provider default); otherwise it is `model`, and the next token, if present, is `effort`. If `model` omitted, tell user once provider default used. If `effort` omitted, no effort flag is injected — each provider uses its own persisted config or built-in default. `antigravity` has no effort control; the adapter warns and ignores `effort`.
 
 ## Review stance
 

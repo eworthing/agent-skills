@@ -38,7 +38,7 @@ scripts/
                       (providers registry, session I/O + paths, metadata
                       extraction, JSONL event log, process-tree kill);
                       regenerate with: python3 common/scripts/sync_common.py
-  test_run_review.py  pytest suite (122 tests)
+  test_run_review.py  pytest suite (120 tests)
   check_web_search.py manual web-search diagnostic (invokes real CLIs; not pytest)
   fixtures/           provider output samples for tests
 agents/openai.yaml    OpenAI subagent wiring
