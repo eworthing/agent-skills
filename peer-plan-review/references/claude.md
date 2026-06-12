@@ -42,7 +42,7 @@ claude -p "PROMPT" \
 
 ## Model
 
-`--model sonnet|opus|haiku|<full-id>` (e.g., `claude-opus-4-6`). `--fallback-model` for overload fallback.
+`--model fable|sonnet|opus|haiku|<full-id>` (e.g., `claude-fable-5`, `claude-opus-4-7`). `--fallback-model` for overload fallback.
 
 **Default (no `--model`):** `Opus 4.7 (1M context)` (verified April 2026).
 

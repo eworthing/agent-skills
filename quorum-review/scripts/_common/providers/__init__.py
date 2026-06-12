@@ -2,6 +2,7 @@
 
 from .registry import (
     PROVIDERS,
+    build_antigravity_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -13,6 +14,7 @@ from .registry import (
 
 __all__ = [
     "PROVIDERS",
+    "build_antigravity_cmd",
     "build_claude_cmd",
     "build_codex_cmd",
     "build_copilot_cmd",

@@ -19,32 +19,32 @@ import sys
 import tempfile
 from pathlib import Path
 
-from ppr_io import (
-    extract_text_from_output,
-    load_session,
-    probe_writable,
-    save_session,
-    validate_prompt_file,
-    write_summary,
-)
-from ppr_log import EventLogger
-from ppr_metadata import (
-    _codex_session_files,
-    _extract_opencode_metadata_via_export,
-    _parse_codex_session_id,
+# Make _common importable. _common/ is a sibling of this script, vendored
+# from /common/common/ via sync_common.py. Pre-commit keeps the two
+# byte-identical.
+sys.path.insert(0, str(Path(__file__).parent))
+
+from _common.log import EventLogger
+from _common.metadata import (
     compute_plan_metadata,
     extract_metadata,
     extract_session_id_copilot,
     extract_session_id_json,
     extract_session_id_opencode,
 )
-from ppr_process import _kill_tree, _popen_session_kwargs
+from _common.metadata.extractors import (
+    _codex_session_files,
+    _extract_opencode_metadata_via_export,
+    _parse_codex_session_id,
+)
+from _common.process.tree import _kill_tree, _popen_session_kwargs
 
 # ---------------------------------------------------------------------------
 # Re-exports from submodules (preserves mock.patch("run_review.X") paths)
 # ---------------------------------------------------------------------------
-from ppr_providers import (  # noqa: F401
+from _common.providers import (  # noqa: F401
     PROVIDERS,
+    build_antigravity_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -52,6 +52,14 @@ from ppr_providers import (  # noqa: F401
     build_opencode_cmd,
     get_provider,
     read_prompt,
+)
+from _common.session import (
+    extract_text_from_output,
+    load_session,
+    probe_writable,
+    save_session,
+    validate_prompt_file,
+    write_summary,
 )
 
 
@@ -556,10 +564,37 @@ def _validate_model(args):
         )
 
 
+def _warn_unsupported_flags(args):
+    """Warn and drop flags the selected provider cannot honor.
+
+    Driven by the registry caps so session metadata stays honest:
+    antigravity (agy) has no headless effort control and cannot resume
+    headless sessions (conversation IDs are never surfaced to callers).
+    """
+    if not args.reviewer:
+        return
+    caps = PROVIDERS.get(args.reviewer, {}).get("caps", {})
+    if args.effort and not caps.get("effort_flag"):
+        print(
+            f"Warning: {args.reviewer} has no effort control; "
+            f"ignoring --effort {args.effort}.",
+            file=sys.stderr,
+        )
+        args.effort = None
+    if args.resume and not caps.get("resume_supported"):
+        print(
+            f"Warning: {args.reviewer} cannot resume headless sessions; "
+            "running fresh instead.",
+            file=sys.stderr,
+        )
+        args.resume = False
+
+
 def main():
     args = parse_args()
 
     _validate_model(args)
+    _warn_unsupported_flags(args)
 
     if args.self_check:
         if not args.reviewer:

@@ -1,14 +1,19 @@
 """
-ppr_providers.py — Provider registry and command builders.
+registry.py — Provider registry and command builders.
+
+Ported from peer-plan-review/scripts/ppr_providers.py. Behavior preserved;
+the only API change is that get_provider() now accepts an optional
+`allowed` argument so consumers can declare a subset of providers their
+skill accepts at its CLI boundary (e.g., quorum-review excludes opencode).
 
 TO ADD A NEW PROVIDER:
     1. Write a build_<name>_cmd(args, session_id) function above the
        PROVIDERS dict.
     2. Add one entry to the PROVIDERS dict at the bottom of this file.
-    3. Create references/<provider>.md with install/auth/CLI notes.
-    4. If session-ID extraction needs a custom path, add it to ppr_metadata.py.
-
-All call sites consume PROVIDERS directly (or via get_provider()).
+    3. Create references/<provider>.md in any consuming skill that
+       documents its CLI surface.
+    4. If session-ID extraction needs a custom path, add it to
+       common/metadata/extractors.py.
 """
 
 from pathlib import Path
@@ -77,7 +82,16 @@ def build_gemini_cmd(args, session_id=None):
 
 
 def build_claude_cmd(args, session_id=None):
-    """Build Claude Code command."""
+    """Build Claude Code command.
+
+    When ``args.verification_mode`` is True OR the prompt file begins with
+    ``## Verification Request`` / ``## Verification Contract`` (sniffed
+    when ``args.prompt_file`` is set), uses the independent-verifier system
+    prompt instead of the default reviewer system prompt. This keeps the
+    quorum-review verifier role usable through the shared adapter without
+    affecting consumers (peer-plan-review) that never set the flag and
+    never write a verifier-style prompt.
+    """
     # -p requires an argument; prompt text is piped via stdin
     cmd = ["claude", "-p", ""]
 
@@ -89,13 +103,29 @@ def build_claude_cmd(args, session_id=None):
     cmd.extend(["--allowedTools", "WebSearch,WebFetch"])
     cmd.extend(["--output-format", "json"])
     cmd.extend(["--max-turns", "10"])
-    cmd.extend(
-        [
-            "--append-system-prompt",
-            "You are a code reviewer. Analyze the plan and provide feedback. "
-            "End with VERDICT: APPROVED or VERDICT: REVISE on the last line.",
-        ]
+
+    verification_mode = bool(getattr(args, "verification_mode", False))
+    if not verification_mode and getattr(args, "prompt_file", None):
+        prompt_text = read_prompt(args.prompt_file) or ""
+        head = prompt_text.lstrip()
+        if head.startswith("## Verification Request") or head.startswith("## Verification Contract"):
+            verification_mode = True
+
+    system_prompt = (
+        "You are an independent verifier outside the active panel. "
+        "Validate a single blocker using only the blocker ID, anchor, summary, and "
+        "current artifact/context provided — do not investigate beyond what is given. "
+        "Decide VERIFIED if the blocker is real and unresolved, or INVALIDATED if it is "
+        "resolved, inapplicable, or unsupported by the provided context. "
+        "Put VERIFIED <ID> or INVALIDATED <ID> on the first non-empty line, then give "
+        "one concise rationale."
+        if verification_mode
+        else "You are a code reviewer. Read the files the plan references before "
+        "judging it — do not rely on the plan text alone. Assess the plan for "
+        "correctness, completeness, missing edge cases, and risks. "
+        "End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
     )
+    cmd.extend(["--append-system-prompt", system_prompt])
 
     if args.model:
         cmd.extend(["--model", args.model])
@@ -162,6 +192,36 @@ def build_opencode_cmd(args, session_id=None):
         level = PROVIDERS["opencode"]["effort_map"].get(args.effort, args.effort)
         cmd.extend(["--variant", level])
 
+    return cmd
+
+
+def build_antigravity_cmd(args, session_id=None):
+    """Build Antigravity CLI (agy) command. Prompt fed via stdin.
+
+    agy (Gemini CLI's successor) emits plain text only — there is no
+    --output-format flag — and never surfaces conversation IDs to headless
+    callers (google-antigravity/antigravity-cli#7), so resume is
+    unsupported: every round runs fresh. No headless effort/thinking
+    control is exposed either; the runner warns and drops --effort.
+    """
+    cmd = ["agy"]
+    # --sandbox restricts terminal access; --dangerously-skip-permissions
+    # prevents headless hangs on tool-permission prompts. The reviewer
+    # stays read-only by prompt contract, as with opencode.
+    cmd.append("--sandbox")
+    cmd.append("--dangerously-skip-permissions")
+
+    if args.model:
+        cmd.extend(["-m", args.model])
+
+    # agy aborts print mode after 5m by default; align with the runner's
+    # timeout so long reviews aren't cut short underneath it.
+    timeout = getattr(args, "timeout", None)
+    if timeout:
+        cmd.extend(["--print-timeout", f"{int(timeout)}s"])
+
+    # -p requires an argument; prompt text is piped via stdin
+    cmd.extend(["-p", ""])
     return cmd
 
 
@@ -240,7 +300,7 @@ PROVIDERS = {
         "binary": "claude",
         "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "max"},
         "effort_default": "medium",
-        "model_aliases": {"sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
+        "model_aliases": {"fable": "fable", "sonnet": "sonnet", "opus": "opus", "haiku": "haiku"},
         "resume_supported": True,
         "build_cmd": build_claude_cmd,
         "caps": {
@@ -303,10 +363,44 @@ PROVIDERS = {
         # opencode-go model discovery command — used by --list-models
         "list_models_cmd": ["opencode", "models", "opencode-go"],
     },
+    "antigravity": {
+        "binary": "agy",
+        # No headless effort/thinking control exposed (May 2026); the
+        # runner warns and drops --effort for providers with an empty map.
+        "effort_map": {},
+        "effort_default": "default",
+        "model_aliases": {
+            "flash": "gemini-3.5-flash",
+            "pro": "gemini-3.1-pro",
+        },
+        "resume_supported": False,
+        "build_cmd": build_antigravity_cmd,
+        "caps": {
+            "binary": "agy",
+            "prompt_mode": "stdin",
+            "output_mode": "stdout",
+            "model_flag": "-m",
+            "effort_flag": None,
+            "resume_flag_style": None,
+            "resume_supported": False,
+            "safety_flags": ["--sandbox", "--dangerously-skip-permissions"],
+        },
+    },
 }
 
 
-def get_provider(name):
-    """Look up a provider by name. Raises KeyError on unknown provider."""
-    return PROVIDERS[name]
+def get_provider(name, allowed=None):
+    """Look up a provider by name.
 
+    If ``allowed`` is provided (an iterable of accepted provider names),
+    raise ValueError when ``name`` is not in that set. This lets a
+    consumer declare a subset of providers its CLI accepts without
+    having to re-implement provider lookup.
+
+    Raises KeyError for genuinely unknown providers (regardless of
+    ``allowed``).
+    """
+    if allowed is not None and name not in allowed:
+        accepted = ", ".join(sorted(allowed))
+        raise ValueError(f"unknown reviewer; accepted: {accepted}")
+    return PROVIDERS[name]

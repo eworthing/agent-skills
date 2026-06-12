@@ -1,8 +1,11 @@
 """
-ppr_process.py — Process tree management helpers for peer-plan-review.
+tree.py — Process tree management helpers.
 
-Extracted from run_review.py so both run_review.py and test_web_search.py
-share a single source of truth for process lifecycle management.
+Ported verbatim from peer-plan-review/scripts/ppr_process.py. Provides:
+- _kill_tree(proc): kill a process and all descendants, with SIGTERM
+  then SIGKILL escalation.
+- _popen_session_kwargs(): platform-correct Popen kwargs for
+  process-group isolation, so _kill_tree can reach descendants.
 """
 
 import contextlib

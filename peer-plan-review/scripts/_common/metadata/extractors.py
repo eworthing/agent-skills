@@ -1,8 +1,9 @@
 """
-ppr_metadata.py — Metadata and session ID extraction for peer-plan-review.
+extractors.py — Metadata and session-ID extraction.
 
-Extracted from run_review.py. Contains extract_metadata, session ID
-extractors, and Codex session file helpers.
+Ported verbatim from peer-plan-review/scripts/ppr_metadata.py. Contains
+extract_metadata, session-ID extractors per provider, opencode export
+helper, and plan-file metadata.
 """
 
 import contextlib
