@@ -6,6 +6,7 @@ import pytest
 
 from common.providers import PROVIDERS, get_provider, read_prompt
 from common.providers.registry import (
+    build_antigravity_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -27,8 +28,10 @@ def _args(**overrides):
 
 
 class TestRegistry:
-    def test_all_five_providers_present(self):
-        assert set(PROVIDERS.keys()) == {"claude", "gemini", "codex", "copilot", "opencode"}
+    def test_all_six_providers_present(self):
+        assert set(PROVIDERS.keys()) == {
+            "claude", "gemini", "codex", "copilot", "opencode", "antigravity",
+        }
 
     def test_required_keys(self):
         required = {"binary", "effort_map", "effort_default", "model_aliases",
@@ -39,6 +42,13 @@ class TestRegistry:
 
     def test_effort_map_covers_portable_levels(self):
         for name, spec in PROVIDERS.items():
+            if not spec["caps"].get("effort_flag"):
+                # No effort control (antigravity): the runner warns and
+                # drops --effort, so no portable-level mapping exists.
+                assert spec["effort_map"] == {}, (
+                    f"{name} has no effort_flag but a non-empty effort_map"
+                )
+                continue
             for level in ("low", "medium", "high", "xhigh"):
                 assert level in spec["effort_map"], (
                     f"{name} effort_map missing portable level {level!r}"
@@ -70,6 +80,21 @@ class TestBuildCmd:
     """Each build_*_cmd produces a non-empty argv list with the binary first
     and safety flags applied. Exact flag matching is intentionally light to
     keep the test resilient to harmless flag-ordering changes."""
+
+    def test_antigravity_basic(self):
+        cmd = build_antigravity_cmd(_args(timeout=600))
+        assert cmd[0] == "agy"
+        assert "--sandbox" in cmd
+        assert "--dangerously-skip-permissions" in cmd
+        # Prompt is piped via stdin; -p needs an empty placeholder argument.
+        assert cmd[-2:] == ["-p", ""]
+        # agy's internal print timeout must track the runner's timeout.
+        assert "--print-timeout" in cmd
+        assert "600s" in cmd
+        # No resume flags ever — agy can't resume headless sessions.
+        cmd = build_antigravity_cmd(_args(resume=True), session_id="abc")
+        assert "--conversation" not in cmd
+        assert "--continue" not in cmd
 
     def test_codex_basic(self):
         cmd = build_codex_cmd(_args())

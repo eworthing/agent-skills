@@ -9,6 +9,8 @@ Run:  python3 scripts/test_run_review.py
 """
 
 import argparse
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -93,10 +95,10 @@ class TestListModels(unittest.TestCase):
     """Tests 1-2: --list-models output."""
 
     def test_list_models_all_providers(self):
-        """Test 1: --list-models prints all 5 providers with correct aliases."""
+        """Test 1: --list-models prints all 6 providers with correct aliases."""
         rc, stdout, stderr = run_script("--list-models")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
-        for provider in ("claude", "gemini", "codex", "copilot", "opencode"):
+        for provider in ("claude", "gemini", "codex", "copilot", "opencode", "antigravity"):
             self.assertIn(
                 provider, stdout, f"Provider {provider} missing from --list-models output"
             )
@@ -105,6 +107,8 @@ class TestListModels(unittest.TestCase):
         self.assertIn("sonnet", stdout)
         self.assertIn("opus", stdout)
         self.assertIn("haiku", stdout)
+        # Antigravity should map flash/pro shorthands to full model IDs
+        self.assertIn("gemini-3.5-flash", stdout)
         # Gemini should have auto, pro, flash, flash-lite
         self.assertIn("flash", stdout)
         self.assertIn("pro", stdout)
@@ -744,6 +748,52 @@ class TestCommandBuilders(unittest.TestCase):
 
         self.assertNotIn("-s", cmd)
         self.assertIn("--dangerously-skip-permissions", cmd)
+
+
+class TestBuildAntigravityCmd(unittest.TestCase):
+    """Antigravity (agy) command construction and unsupported-flag handling."""
+
+    def test_fresh_exec_shape(self):
+        args = make_args(reviewer="antigravity", model="gemini-3.5-flash", timeout=600)
+        cmd = run_review.build_antigravity_cmd(args)
+        self.assertEqual(cmd[0], "agy")
+        self.assertIn("--sandbox", cmd)
+        self.assertIn("--dangerously-skip-permissions", cmd)
+        self.assertIn("-m", cmd)
+        self.assertIn("gemini-3.5-flash", cmd)
+        # agy's internal print timeout must track the runner timeout,
+        # otherwise its 5m default cuts long reviews short.
+        self.assertIn("--print-timeout", cmd)
+        self.assertIn("600s", cmd)
+        # Prompt is piped via stdin; -p needs an empty placeholder argument.
+        self.assertEqual(cmd[-2:], ["-p", ""])
+
+    def test_resume_never_emits_resume_flags(self):
+        args = make_args(reviewer="antigravity", resume=True)
+        cmd = run_review.build_antigravity_cmd(args, session_id="abc123")
+        self.assertNotIn("--conversation", cmd)
+        self.assertNotIn("--continue", cmd)
+        self.assertNotIn("-c", cmd)
+
+    def test_warn_unsupported_drops_effort_and_resume(self):
+        args = make_args(reviewer="antigravity", effort="high", resume=True)
+        captured = io.StringIO()
+        with contextlib.redirect_stderr(captured):
+            run_review._warn_unsupported_flags(args)
+        self.assertIsNone(args.effort)
+        self.assertFalse(args.resume)
+        err = captured.getvalue()
+        self.assertIn("no effort control", err)
+        self.assertIn("cannot resume", err)
+
+    def test_warn_unsupported_keeps_flags_for_capable_providers(self):
+        args = make_args(reviewer="claude", effort="high", resume=True)
+        captured = io.StringIO()
+        with contextlib.redirect_stderr(captured):
+            run_review._warn_unsupported_flags(args)
+        self.assertEqual(args.effort, "high")
+        self.assertTrue(args.resume)
+        self.assertEqual(captured.getvalue(), "")
 
 
 class TestSelfCheckUnit(unittest.TestCase):

@@ -195,6 +195,36 @@ def build_opencode_cmd(args, session_id=None):
     return cmd
 
 
+def build_antigravity_cmd(args, session_id=None):
+    """Build Antigravity CLI (agy) command. Prompt fed via stdin.
+
+    agy (Gemini CLI's successor) emits plain text only — there is no
+    --output-format flag — and never surfaces conversation IDs to headless
+    callers (google-antigravity/antigravity-cli#7), so resume is
+    unsupported: every round runs fresh. No headless effort/thinking
+    control is exposed either; the runner warns and drops --effort.
+    """
+    cmd = ["agy"]
+    # --sandbox restricts terminal access; --dangerously-skip-permissions
+    # prevents headless hangs on tool-permission prompts. The reviewer
+    # stays read-only by prompt contract, as with opencode.
+    cmd.append("--sandbox")
+    cmd.append("--dangerously-skip-permissions")
+
+    if args.model:
+        cmd.extend(["-m", args.model])
+
+    # agy aborts print mode after 5m by default; align with the runner's
+    # timeout so long reviews aren't cut short underneath it.
+    timeout = getattr(args, "timeout", None)
+    if timeout:
+        cmd.extend(["--print-timeout", f"{int(timeout)}s"])
+
+    # -p requires an argument; prompt text is piped via stdin
+    cmd.extend(["-p", ""])
+    return cmd
+
+
 def read_prompt(prompt_file):
     """Read prompt text from file."""
     if not prompt_file or not Path(prompt_file).exists():
@@ -332,6 +362,29 @@ PROVIDERS = {
         },
         # opencode-go model discovery command — used by --list-models
         "list_models_cmd": ["opencode", "models", "opencode-go"],
+    },
+    "antigravity": {
+        "binary": "agy",
+        # No headless effort/thinking control exposed (May 2026); the
+        # runner warns and drops --effort for providers with an empty map.
+        "effort_map": {},
+        "effort_default": "default",
+        "model_aliases": {
+            "flash": "gemini-3.5-flash",
+            "pro": "gemini-3.1-pro",
+        },
+        "resume_supported": False,
+        "build_cmd": build_antigravity_cmd,
+        "caps": {
+            "binary": "agy",
+            "prompt_mode": "stdin",
+            "output_mode": "stdout",
+            "model_flag": "-m",
+            "effort_flag": None,
+            "resume_flag_style": None,
+            "resume_supported": False,
+            "safety_flags": ["--sandbox", "--dangerously-skip-permissions"],
+        },
     },
 }
 

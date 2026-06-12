@@ -44,6 +44,7 @@ from _common.process.tree import _kill_tree, _popen_session_kwargs
 # ---------------------------------------------------------------------------
 from _common.providers import (  # noqa: F401
     PROVIDERS,
+    build_antigravity_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -563,10 +564,37 @@ def _validate_model(args):
         )
 
 
+def _warn_unsupported_flags(args):
+    """Warn and drop flags the selected provider cannot honor.
+
+    Driven by the registry caps so session metadata stays honest:
+    antigravity (agy) has no headless effort control and cannot resume
+    headless sessions (conversation IDs are never surfaced to callers).
+    """
+    if not args.reviewer:
+        return
+    caps = PROVIDERS.get(args.reviewer, {}).get("caps", {})
+    if args.effort and not caps.get("effort_flag"):
+        print(
+            f"Warning: {args.reviewer} has no effort control; "
+            f"ignoring --effort {args.effort}.",
+            file=sys.stderr,
+        )
+        args.effort = None
+    if args.resume and not caps.get("resume_supported"):
+        print(
+            f"Warning: {args.reviewer} cannot resume headless sessions; "
+            "running fresh instead.",
+            file=sys.stderr,
+        )
+        args.resume = False
+
+
 def main():
     args = parse_args()
 
     _validate_model(args)
+    _warn_unsupported_flags(args)
 
     if args.self_check:
         if not args.reviewer:

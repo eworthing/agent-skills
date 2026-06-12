@@ -2,12 +2,13 @@
 name: peer-plan-review
 description: >
   Send an implementation plan to another AI agent such as Codex, Gemini CLI,
-  Claude Code, Copilot, or opencode for iterative review, then revise and
-  re-submit until the reviewer approves or the round limit is reached. Use when
-  the user wants a second opinion on a plan, asks for cross-agent review,
-  mentions 'codex review', 'gemini review', 'claude review', 'copilot review',
-  or 'opencode review', wants to validate a plan before executing it, or asks
-  for peer review.
+  Claude Code, Copilot, opencode, or Antigravity (agy) for iterative review,
+  then revise and re-submit until the reviewer approves or the round limit is
+  reached. Use when the user wants a second opinion on a plan, asks for
+  cross-agent review, mentions 'codex review', 'gemini review', 'claude
+  review', 'copilot review', 'opencode review', 'antigravity review', or 'agy
+  review', wants to validate a plan before executing it, or asks for peer
+  review.
 allowed-tools:
   - Read
   - Write
@@ -44,7 +45,8 @@ Pressure-test plan before execution. Host agent own plan, revise between rounds.
   [`references/gemini.md`](references/gemini.md),
   [`references/claude.md`](references/claude.md),
   [`references/copilot.md`](references/copilot.md),
-  [`references/opencode.md`](references/opencode.md).
+  [`references/opencode.md`](references/opencode.md),
+  [`references/antigravity.md`](references/antigravity.md).
 - [`references/output-format.md`](references/output-format.md) — structured output template. Include in every prompt.
 - [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract.
 - [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
@@ -63,7 +65,7 @@ Before start, confirm one of: plan already in session, plan pasted by user, or f
 
 Normalize to:
 
-- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`. (The `--reviewer <provider>` CLI flag uses the same five values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.)
+- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`, `antigravity`. (The `--reviewer <provider>` CLI flag uses the same six values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.)
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 

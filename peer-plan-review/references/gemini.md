@@ -2,6 +2,10 @@
 
 Source: TS source `packages/cli/src/config/config.ts` (v0.33.1), verified March 2026.
 
+> **EOL notice:** Gemini CLI stops serving Pro/Ultra and free users on
+> **2026-06-18**. Its successor is Antigravity (`agy`) — use the
+> `antigravity` reviewer (see [antigravity.md](antigravity.md)).
+
 ## Install
 
 ```bash
