@@ -131,7 +131,7 @@ Run adapter (see `references/adapter-cli.md` for full flag list). Omit `--resume
    (and Gemini `thinking_tokens`).
 2. Read review output file.
 3. Parse verdict from last non-empty line, search upward.
-4. Call `parse_structured_review()` from `ppr_io.py`. Scopes to `### Blocking Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags with confidence, section/line refs, recommendations. On success, present findings in severity-ordered summary table before full review text. On empty result, present raw review — graceful degradation.
+4. Call `parse_structured_review()` from the vendored `_common.session` package (`scripts/_common/session/io.py`). Scopes to `### Blocking Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags with confidence, section/line refs, recommendations. On success, present findings in severity-ordered summary table before full review text. On empty result, present raw review — graceful degradation.
 5. Header:
    `## Peer Review - Round N (reviewer: <provider>, model: <actual>, effort: <actual>)`
 

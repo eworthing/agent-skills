@@ -19,31 +19,30 @@ import sys
 import tempfile
 from pathlib import Path
 
-from ppr_io import (
-    extract_text_from_output,
-    load_session,
-    probe_writable,
-    save_session,
-    validate_prompt_file,
-    write_summary,
-)
-from ppr_log import EventLogger
-from ppr_metadata import (
-    _codex_session_files,
-    _extract_opencode_metadata_via_export,
-    _parse_codex_session_id,
+# Make _common importable. _common/ is a sibling of this script, vendored
+# from /common/common/ via sync_common.py. Pre-commit keeps the two
+# byte-identical.
+sys.path.insert(0, str(Path(__file__).parent))
+
+from _common.log import EventLogger
+from _common.metadata import (
     compute_plan_metadata,
     extract_metadata,
     extract_session_id_copilot,
     extract_session_id_json,
     extract_session_id_opencode,
 )
-from ppr_process import _kill_tree, _popen_session_kwargs
+from _common.metadata.extractors import (
+    _codex_session_files,
+    _extract_opencode_metadata_via_export,
+    _parse_codex_session_id,
+)
+from _common.process.tree import _kill_tree, _popen_session_kwargs
 
 # ---------------------------------------------------------------------------
 # Re-exports from submodules (preserves mock.patch("run_review.X") paths)
 # ---------------------------------------------------------------------------
-from ppr_providers import (  # noqa: F401
+from _common.providers import (  # noqa: F401
     PROVIDERS,
     build_claude_cmd,
     build_codex_cmd,
@@ -52,6 +51,14 @@ from ppr_providers import (  # noqa: F401
     build_opencode_cmd,
     get_provider,
     read_prompt,
+)
+from _common.session import (
+    extract_text_from_output,
+    load_session,
+    probe_writable,
+    save_session,
+    validate_prompt_file,
+    write_summary,
 )
 
 

@@ -31,14 +31,13 @@ references/
   env.md              env vars read by the runner
 scripts/
   run_review.py       adapter CLI entrypoint
-  ppr_paths.py        canonical temp-path helper for review sessions
-  ppr_io.py           session I/O, output parsing, summaries
-  ppr_providers.py    PROVIDERS registry + command builders
-  ppr_metadata.py     model/effort/session extraction
-  ppr_log.py          structured JSONL event logger
-  ppr_process.py      process-tree kill + Popen session kwargs
-  test_run_review.py  pytest suite (115 tests)
-  test_web_search.py  web-search adapter pytest suite
+  ppr_paths.py        canonical temp-path helper (thin CLI over _common.session.paths)
+  _common/            shared infrastructure vendored from /common/common/
+                      (providers registry, session I/O + paths, metadata
+                      extraction, JSONL event log, process-tree kill);
+                      regenerate with: python3 common/scripts/sync_common.py
+  test_run_review.py  pytest suite (116 tests)
+  check_web_search.py manual web-search diagnostic (invokes real CLIs; not pytest)
   fixtures/           provider output samples for tests
 agents/openai.yaml    OpenAI subagent wiring
 ```
@@ -48,7 +47,7 @@ agents/openai.yaml    OpenAI subagent wiring
 ```bash
 python3 scripts/run_review.py --self-check                # verify all 5 CLIs
 python3 scripts/run_review.py --list-models               # print known aliases
-cd scripts && python3 -m pytest test_run_review.py test_web_search.py
+cd scripts && python3 -m pytest test_run_review.py
 ```
 
 ## Requirements

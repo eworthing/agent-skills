@@ -1,0 +1,3 @@
+source: common/common (in /home/user/agent-skills)
+synced by: common/scripts/sync_common.py
+do not edit this tree directly — edit common/common/ and re-run sync_common.py

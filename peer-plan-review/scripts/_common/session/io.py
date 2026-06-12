@@ -1,8 +1,12 @@
 """
-ppr_io.py — File I/O helpers for peer-plan-review.
+io.py — Session I/O, output text extraction, structured-review parsing.
 
-Extracted from run_review.py. Contains session load/save and output text
-extraction.
+Ported verbatim from peer-plan-review/scripts/ppr_io.py. Covers:
+- atomic load_session / save_session
+- write_summary (machine-readable per-round JSON)
+- extract_text_from_output (provider-aware plain-text extraction)
+- parse_structured_review ([B<n>] / [N<n>] tags scoped to ### sections)
+- validate_prompt_file / probe_writable (fs-boundary safety checks)
 """
 
 import contextlib

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-test_web_search.py — Test web search capability per provider.
+check_web_search.py — Manual diagnostic: web-search capability per provider.
 
-Tests whether each provider can perform web searches in headless mode
+Checks whether each provider can perform web searches in headless mode
 without hanging on permission prompts. Uses a short timeout to detect hangs.
+Not a pytest suite — it invokes real provider CLIs; run it by hand.
 
 Usage:
-    python3 test_web_search.py                    # test all providers
-    python3 test_web_search.py --provider claude   # test one provider
+    python3 check_web_search.py                    # check all providers
+    python3 check_web_search.py --provider claude  # check one provider
 """
 
 import argparse
@@ -22,7 +23,7 @@ from pathlib import Path
 
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 sys.path.insert(0, SCRIPT_DIR)
-from ppr_process import _kill_tree, _popen_session_kwargs  # noqa: E402
+from _common.process.tree import _kill_tree, _popen_session_kwargs  # noqa: E402
 
 TIMEOUT = 180  # seconds — URL fetch can be slow (Gemini/Copilot take 50-70s)
 
@@ -35,7 +36,7 @@ PROMPT = (
 )
 
 
-def test_claude_web(output_file):
+def case_claude_web(output_file):
     """Claude: plan mode + WebSearch,WebFetch whitelisted + allowedTools."""
     cmd = [
         "claude",
@@ -58,7 +59,7 @@ def test_claude_web(output_file):
     return cmd, env, None
 
 
-def test_codex_web(output_file):
+def case_codex_web(output_file):
     """Codex: read-only sandbox + approval_mode=never (web works by default)."""
     cmd = [
         "codex",
@@ -75,7 +76,7 @@ def test_codex_web(output_file):
     return cmd, os.environ.copy(), PROMPT
 
 
-def test_gemini_web(output_file):
+def case_gemini_web(output_file):
     """Gemini: yolo mode (required for URL fetch) + sandbox (prevents writes)."""
     cmd = [
         "gemini",
@@ -90,7 +91,7 @@ def test_gemini_web(output_file):
     return cmd, os.environ.copy(), None
 
 
-def test_copilot_web(output_file):
+def case_copilot_web(output_file):
     """Copilot: --yolo + deny write/shell/memory (--allow-tool=url hangs)."""
     cmd = [
         "copilot",
@@ -110,10 +111,10 @@ def test_copilot_web(output_file):
 
 # Production configs — matches run_review.py --web flags per provider
 TEST_CASES = [
-    ("claude:web", test_claude_web),
-    ("codex:web", test_codex_web),
-    ("gemini:web", test_gemini_web),
-    ("copilot:web", test_copilot_web),
+    ("claude:web", case_claude_web),
+    ("codex:web", case_codex_web),
+    ("gemini:web", case_gemini_web),
+    ("copilot:web", case_copilot_web),
 ]
 
 

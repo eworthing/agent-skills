@@ -1,7 +1,7 @@
 # Reviewer Output Format
 
 All provider prompts request the same structured output so `parse_structured_review()`
-in `ppr_io.py` can extract findings uniformly. Include this template verbatim
+in the vendored `_common/session/io.py` can extract findings uniformly. Include this template verbatim
 in every prompt.
 
 ## Template

@@ -25,12 +25,17 @@ from unittest import mock
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 SCRIPT = str(Path(SCRIPT_DIR) / "run_review.py")
 PATHS_SCRIPT = str(Path(SCRIPT_DIR) / "ppr_paths.py")
+
+# Root ignores POSIX permission bits, so tests that rely on chmod-denied
+# access must be skipped when running as uid 0 (e.g. CI containers).
+_IS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0
+
 FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
 import run_review  # noqa: E402
-from ppr_io import parse_structured_review  # noqa: E402
+from _common.session import parse_structured_review  # noqa: E402
 from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
 
 
@@ -213,6 +218,7 @@ class TestFileValidation(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX directory permissions not supported on Windows"
     )
+    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_nonwritable_output_dir(self):
         """Test 11: Non-writable output directory exits non-zero."""
         tmpdir = tempfile.mkdtemp(prefix="ppr-test-")
@@ -375,7 +381,7 @@ class TestOutputParsing(unittest.TestCase):
 
     def test_extract_session_id_opencode(self):
         """Test 8f: opencode session ID extracted from first JSONL line."""
-        from ppr_metadata import extract_session_id_opencode
+        from _common.metadata import extract_session_id_opencode
         fixture = Path(FIXTURES_DIR) / "opencode_output.jsonl"
         sid = extract_session_id_opencode(str(fixture))
         self.assertEqual(sid, "ses_fixture12345abcdef")
@@ -570,8 +576,10 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("--max-turns", cmd)
         self.assertIn("--append-system-prompt", cmd)
         self.assertIn(
-            "You are a code reviewer. Analyze the plan and provide feedback. "
-            "End with VERDICT: APPROVED or VERDICT: REVISE on the last line.",
+            "You are a code reviewer. Read the files the plan references before "
+            "judging it — do not rely on the plan text alone. Assess the plan for "
+            "correctness, completeness, missing edge cases, and risks. "
+            "End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line.",
             cmd,
         )
         self.assertIn("--model", cmd)
@@ -805,28 +813,28 @@ _CREATE_NEW_PROCESS_GROUP = 0x00000200  # Windows constant sentinel for testing
 class TestPlatformHelpers(unittest.TestCase):
     """Tests for cross-platform process helpers."""
 
-    @mock.patch("ppr_process.sys")
+    @mock.patch("_common.process.tree.sys")
     def test_popen_session_kwargs_posix(self, mock_sys):
         mock_sys.platform = "linux"
         result = run_review._popen_session_kwargs()
         self.assertEqual(result, {"start_new_session": True})
 
     @mock.patch(
-        "ppr_process.subprocess.CREATE_NEW_PROCESS_GROUP", _CREATE_NEW_PROCESS_GROUP, create=True
+        "_common.process.tree.subprocess.CREATE_NEW_PROCESS_GROUP", _CREATE_NEW_PROCESS_GROUP, create=True
     )
-    @mock.patch("ppr_process.sys")
+    @mock.patch("_common.process.tree.sys")
     def test_popen_session_kwargs_windows(self, mock_sys):
         mock_sys.platform = "win32"
         result = run_review._popen_session_kwargs()
         self.assertIn("creationflags", result)
         self.assertEqual(result["creationflags"], _CREATE_NEW_PROCESS_GROUP)
 
-    @mock.patch("ppr_process.sys")
+    @mock.patch("_common.process.tree.sys")
     def test_kill_tree_windows_uses_taskkill(self, mock_sys):
         mock_sys.platform = "win32"
         mock_proc = mock.MagicMock()
         mock_proc.pid = 12345
-        with mock.patch("ppr_process.subprocess.run") as mock_run:
+        with mock.patch("_common.process.tree.subprocess.run") as mock_run:
             run_review._kill_tree(mock_proc)
             mock_run.assert_called_once_with(
                 ["taskkill", "/T", "/F", "/PID", "12345"],
@@ -834,14 +842,14 @@ class TestPlatformHelpers(unittest.TestCase):
             )
             mock_proc.wait.assert_called_once()
 
-    @mock.patch("ppr_process.sys")
+    @mock.patch("_common.process.tree.sys")
     def test_kill_tree_posix_uses_killpg(self, mock_sys):
         mock_sys.platform = "linux"
         mock_proc = mock.MagicMock()
         mock_proc.pid = 12345
         with (
-            mock.patch("ppr_process.os.getpgid", return_value=12345),
-            mock.patch("ppr_process.os.killpg"),
+            mock.patch("_common.process.tree.os.getpgid", return_value=12345),
+            mock.patch("_common.process.tree.os.killpg"),
         ):
             run_review._kill_tree(mock_proc)
             mock_proc.wait.assert_called()
@@ -850,10 +858,10 @@ class TestPlatformHelpers(unittest.TestCase):
 class TestOpencodeMetadataExport(unittest.TestCase):
     """Tests for _extract_opencode_metadata_via_export (Finding #3)."""
 
-    @mock.patch("ppr_metadata.subprocess.run")
+    @mock.patch("_common.metadata.extractors.subprocess.run")
     def test_extracts_model_and_effort_from_export(self, mock_run):
         """Valid export JSON returns model (providerID/modelID) and effort (max→xhigh)."""
-        from ppr_metadata import _extract_opencode_metadata_via_export
+        from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
         export_json = json.dumps({
             "messages": [
@@ -875,10 +883,10 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         self.assertEqual(meta["model"], "opencode-go/deepseek-v4-pro")
         self.assertEqual(meta["effort"], "xhigh")
 
-    @mock.patch("ppr_metadata.subprocess.run")
+    @mock.patch("_common.metadata.extractors.subprocess.run")
     def test_nonzero_returncode_returns_empty(self, mock_run):
         """Non-zero exit code from opencode export returns empty dict."""
-        from ppr_metadata import _extract_opencode_metadata_via_export
+        from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
         mock_run.return_value = subprocess.CompletedProcess(
             ["opencode", "export", "ses_1"], 1, stdout="", stderr="not found"
@@ -886,10 +894,10 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         meta = _extract_opencode_metadata_via_export("ses_1")
         self.assertEqual(meta, {})
 
-    @mock.patch("ppr_metadata.subprocess.run")
+    @mock.patch("_common.metadata.extractors.subprocess.run")
     def test_timeout_returns_empty(self, mock_run):
         """TimeoutExpired returns empty dict."""
-        from ppr_metadata import _extract_opencode_metadata_via_export
+        from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
         mock_run.side_effect = subprocess.TimeoutExpired(
             ["opencode", "export", "ses_1"], 15
@@ -897,10 +905,10 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         meta = _extract_opencode_metadata_via_export("ses_1")
         self.assertEqual(meta, {})
 
-    @mock.patch("ppr_metadata.subprocess.run")
+    @mock.patch("_common.metadata.extractors.subprocess.run")
     def test_malformed_export_json_returns_empty(self, mock_run):
         """Malformed JSON in export stdout returns empty dict."""
-        from ppr_metadata import _extract_opencode_metadata_via_export
+        from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
         mock_run.return_value = subprocess.CompletedProcess(
             ["opencode", "export", "ses_1"], 0, stdout="{not json", stderr=""
@@ -908,10 +916,10 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         meta = _extract_opencode_metadata_via_export("ses_1")
         self.assertEqual(meta, {})
 
-    @mock.patch("ppr_metadata.subprocess.run")
+    @mock.patch("_common.metadata.extractors.subprocess.run")
     def test_variant_fallback_passthrough(self, mock_run):
         """Unrecognized variant is passed through unchanged."""
-        from ppr_metadata import _extract_opencode_metadata_via_export
+        from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
         export_json = json.dumps({
             "messages": [
@@ -1251,10 +1259,10 @@ class TestRunReviewExecution(unittest.TestCase):
 # Phase 1b+ new test classes
 # ---------------------------------------------------------------------------
 
-from ppr_io import probe_writable, validate_prompt_file  # noqa: E402
-from ppr_log import EventLogger  # noqa: E402
-from ppr_metadata import compute_plan_metadata  # noqa: E402
-from ppr_providers import PROVIDERS  # noqa: E402
+from _common.log import EventLogger  # noqa: E402
+from _common.metadata import compute_plan_metadata  # noqa: E402
+from _common.providers import PROVIDERS  # noqa: E402
+from _common.session import probe_writable, validate_prompt_file  # noqa: E402
 
 
 class TestEventLogger(unittest.TestCase):
@@ -1361,6 +1369,7 @@ class TestPromptValidation(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX file permissions not supported on Windows"
     )
+    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_unreadable_prompt_rejected(self):
         f = Path(self.tmpdir.name) / "unreadable.md"
         f.write_text("content", encoding="utf-8")
@@ -1392,6 +1401,7 @@ class TestWriteProbes(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX file permissions not supported on Windows"
     )
+    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_existing_readonly_file(self):
         f = Path(self.tmpdir.name) / "readonly.json"
         f.write_text("{}", encoding="utf-8")
@@ -1411,6 +1421,7 @@ class TestWriteProbes(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX directory permissions not supported on Windows"
     )
+    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_new_file_in_readonly_dir(self):
         readonly = Path(self.tmpdir.name) / "readonly"
         readonly.mkdir()
@@ -1600,7 +1611,7 @@ class TestCorruption(unittest.TestCase):
             f.write("")
             tmp_path = f.name
         try:
-            from ppr_io import extract_text_from_output
+            from _common.session import extract_text_from_output
             extract_text_from_output(tmp_path, "claude")  # should not raise
             self.assertEqual(Path(tmp_path).read_text(), "")
         finally:
@@ -1611,7 +1622,7 @@ class TestCorruption(unittest.TestCase):
             f.write("{corrupt json")
             tmp_path = f.name
         try:
-            from ppr_io import load_session
+            from _common.session import load_session
             result = load_session(tmp_path)
             self.assertEqual(result, {})
         finally:
@@ -1770,7 +1781,7 @@ class TestMockPathCompatibility(unittest.TestCase):
     def test_build_cmd_intercepted(self):
         sentinel_cmd = ["echo", "test"]
         mock_build = mock.Mock(return_value=sentinel_cmd)
-        from ppr_providers import PROVIDERS as _PROVIDERS
+        from _common.providers import PROVIDERS as _PROVIDERS
         with (
             mock.patch.dict(_PROVIDERS["claude"], {"build_cmd": mock_build}),
             mock.patch("run_review.subprocess.Popen", return_value=self._proc()),
@@ -1950,7 +1961,7 @@ class TestProviderRegistry(unittest.TestCase):
     """PROVIDERS is the single source of truth for all provider plumbing."""
 
     def test_get_provider_returns_entry(self):
-        from ppr_providers import get_provider
+        from _common.providers import get_provider
         codex = get_provider("codex")
         self.assertEqual(codex["binary"], "codex")
         self.assertTrue(codex["resume_supported"])
@@ -1958,7 +1969,7 @@ class TestProviderRegistry(unittest.TestCase):
             get_provider("nonexistent")
 
     def test_all_providers_have_required_keys(self):
-        from ppr_providers import PROVIDERS
+        from _common.providers import PROVIDERS
         required = {
             "binary", "effort_map", "effort_default", "model_aliases",
             "resume_supported", "build_cmd", "caps",
@@ -1972,7 +1983,7 @@ class TestSessionDurability(unittest.TestCase):
     """save_session must be atomic — partial writes must not clobber the target."""
 
     def test_save_session_atomic_rename(self):
-        from ppr_io import save_session
+        from _common.session import save_session
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir) / "session.json"
             target.write_text(json.dumps({"round": 1, "session_id": "abc"}))
@@ -1981,11 +1992,11 @@ class TestSessionDurability(unittest.TestCase):
             self.assertFalse((Path(tmpdir) / "session.json.tmp").exists())
 
     def test_save_session_failure_preserves_target(self):
-        from ppr_io import save_session
+        from _common.session import save_session
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir) / "session.json"
             target.write_text(json.dumps({"round": 1}))
-            with mock.patch("ppr_io.json.dump", side_effect=OSError("disk full")):
+            with mock.patch("_common.session.io.json.dump", side_effect=OSError("disk full")):
                 save_session(str(target), {"round": 2})
             self.assertEqual(json.loads(target.read_text())["round"], 1)
             self.assertFalse((Path(tmpdir) / "session.json.tmp").exists())
@@ -1995,7 +2006,7 @@ class TestSummaryFile(unittest.TestCase):
     """write_summary emits machine-readable per-round summary JSON."""
 
     def test_summary_with_findings(self):
-        from ppr_io import write_summary
+        from _common.session import write_summary
         with tempfile.TemporaryDirectory() as tmpdir:
             review = Path(tmpdir) / "review.md"
             review.write_text(
@@ -2019,7 +2030,7 @@ class TestSummaryFile(unittest.TestCase):
             self.assertEqual(data["blocking_count"], 2)
 
     def test_summary_missing_output_file(self):
-        from ppr_io import write_summary
+        from _common.session import write_summary
         with tempfile.TemporaryDirectory() as tmpdir:
             summary = Path(tmpdir) / "summary.json"
             write_summary(str(summary), str(Path(tmpdir) / "nope.md"), {"reviewer": "claude"})
@@ -2028,7 +2039,7 @@ class TestSummaryFile(unittest.TestCase):
             self.assertEqual(data["finding_count"], 0)
 
     def test_summary_none_path_is_noop(self):
-        from ppr_io import write_summary
+        from _common.session import write_summary
         write_summary(None, None, {})  # must not raise
 
 
