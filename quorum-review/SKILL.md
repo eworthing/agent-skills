@@ -148,7 +148,7 @@ python3 scripts/run_quorum.py \
 
 ## What changed in v3.1
 
-Internal refactor; CLI, ledger schema, verdict semantics, and merge classifications are unchanged. See [`CHANGELOG.md`](CHANGELOG.md) for the full list.
+Internal refactor; CLI, ledger schema, verdict semantics, and merge classifications are unchanged. Highlights below; full detail in git history.
 
 - `scripts/run_review.py` migrated to the vendored `scripts/_common/` package (provider/metadata/session/process/log helpers shared with peer-plan-review).
 - `scripts/run_quorum.py` is now a compatibility shim; the implementation lives in `scripts/quorum/` (cli, orchestrator, ledger, parsing, merge, verification, prompts).

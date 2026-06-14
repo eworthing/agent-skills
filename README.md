@@ -32,7 +32,7 @@ Single source of truth lives here; agent CLIs consume each skill through a symli
 
 ### Experimental (not symlinked by default)
 
-- **[quorum-review](quorum-review/)** — Multi-provider consensus review system (v3.1). Anonymous quorum reviews for plans/specs/diffs with canonical issue IDs, conservative merges, independent verifier. Reviewers: claude, codex, copilot, agy (Antigravity, experimental), gemini. v3.1 refactor split the orchestrator into a `quorum/` package and vendored shared infrastructure from `/common/` (see [quorum-review/CHANGELOG.md](quorum-review/CHANGELOG.md)). Source in-repo only — install manually if you want to try it.
+- **[quorum-review](quorum-review/)** — Multi-provider consensus review system (v3.1). Anonymous quorum reviews for plans/specs/diffs with canonical issue IDs, conservative merges, independent verifier. Reviewers: claude, codex, copilot, agy (Antigravity, experimental), gemini. v3.1 refactor split the orchestrator into a `quorum/` package and vendored shared infrastructure from `/common/`. Source in-repo only — install manually if you want to try it.
 
 ## Deployment
 
