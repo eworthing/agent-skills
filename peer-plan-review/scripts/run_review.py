@@ -20,7 +20,7 @@ import tempfile
 from pathlib import Path
 
 # Make _common importable. _common/ is a sibling of this script, vendored
-# from /common/common/ via sync_common.py. Pre-commit keeps the two
+# from /common/common/ via sync_common.py. Pre-commit + CI keep the two
 # byte-identical.
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -28,31 +28,17 @@ from _common.log import EventLogger
 from _common.metadata import (
     compute_plan_metadata,
     extract_metadata,
+    extract_session_id_agy,
     extract_session_id_copilot,
     extract_session_id_json,
     extract_session_id_opencode,
 )
-from _common.metadata.extractors import (
+from _common.metadata.extractors import (  # noqa: F401 — re-exported for tests
     _codex_session_files,
     _extract_opencode_metadata_via_export,
     _parse_codex_session_id,
 )
 from _common.process.tree import _kill_tree, _popen_session_kwargs
-
-# ---------------------------------------------------------------------------
-# Re-exports from submodules (preserves mock.patch("run_review.X") paths)
-# ---------------------------------------------------------------------------
-from _common.providers import (  # noqa: F401
-    PROVIDERS,
-    build_antigravity_cmd,
-    build_claude_cmd,
-    build_codex_cmd,
-    build_copilot_cmd,
-    build_gemini_cmd,
-    build_opencode_cmd,
-    get_provider,
-    read_prompt,
-)
 from _common.session import (
     extract_text_from_output,
     load_session,
@@ -62,10 +48,35 @@ from _common.session import (
     write_summary,
 )
 
+# ---------------------------------------------------------------------------
+# Re-exports from submodules (preserves mock.patch("run_review.X") paths)
+# ---------------------------------------------------------------------------
+from _common.providers import (  # noqa: F401
+    AGY_READONLY_PREAMBLE,
+    PROVIDERS,
+    build_agy_cmd,
+    build_claude_cmd,
+    build_codex_cmd,
+    build_copilot_cmd,
+    build_gemini_cmd,
+    build_opencode_cmd,
+    get_provider,
+    read_prompt,
+)
+
+# Friendly reviewer aliases normalized to canonical provider keys at the CLI
+# boundary (the registry key stays `agy`; `antigravity` is accepted too).
+REVIEWER_ALIASES = {"antigravity": "agy"}
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Peer plan review CLI adapter")
-    p.add_argument("--reviewer", required=False, choices=PROVIDERS.keys(), help="Reviewer backend")
+    p.add_argument(
+        "--reviewer",
+        required=False,
+        choices=list(PROVIDERS.keys()) + list(REVIEWER_ALIASES),
+        help="Reviewer backend",
+    )
     p.add_argument("--plan-file", help="Path to plan markdown file")
     p.add_argument("--prompt-file", help="Path to review prompt file")
     p.add_argument("--output-file", help="Path to write reviewer response")
@@ -95,7 +106,10 @@ def parse_args():
         default=None,
         help="Path to write machine-readable per-round summary JSON",
     )
-    return p.parse_args()
+    args = p.parse_args()
+    if args.reviewer:
+        args.reviewer = REVIEWER_ALIASES.get(args.reviewer, args.reviewer)
+    return args
 
 
 # ---------------------------------------------------------------------------
@@ -246,10 +260,24 @@ def run_review(args, logger=None):
             shutil.rmtree(gemini_config_dir, ignore_errors=True)
             gemini_config_dir = None
 
+    # agy (Antigravity) runs through a dedicated per-run --log-file so the
+    # conversation id can be recovered from the CLI log: agy prints it nowhere
+    # on stdout, and history.jsonl logs interactive sessions only. A per-run
+    # log keeps id capture race-free even under concurrent runs.
+    agy_log_path = None
+    if reviewer == "agy":
+        fd, agy_log_path = tempfile.mkstemp(prefix="ppr-agy-", suffix=".log")
+        os.close(fd)
+
     # Prepare prompt stdin for providers configured for stdin prompting.
     stdin_data = None
     if PROVIDERS[reviewer]["caps"].get("prompt_mode") == "stdin":
         stdin_data = read_prompt(args.prompt_file)
+        # agy has no system-prompt flag and auto-approves tools in print mode;
+        # prepend a best-effort read-only directive. agy is EXPERIMENTAL — not a
+        # guaranteed-read-only reviewer (see references/antigravity.md).
+        if reviewer == "agy" and stdin_data:
+            stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
 
     # Snapshot Codex session files before exec
     codex_sessions_before = None
@@ -275,6 +303,10 @@ def run_review(args, logger=None):
             build_args = copy.copy(args)
             build_args.resume = use_resume
             cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id)
+            # Per-run log for agy conversation-id capture (equals form — agy
+            # ignores the space form in print mode).
+            if reviewer == "agy" and agy_log_path:
+                cmd.append(f"--log-file={agy_log_path}")
 
             print(f"Running: {reviewer} review...", file=sys.stderr)
 
@@ -428,6 +460,8 @@ def run_review(args, logger=None):
             new_session_id = extract_session_id_copilot(args.output_file)
         elif reviewer == "opencode":
             new_session_id = extract_session_id_opencode(args.output_file)
+        elif reviewer == "agy":
+            new_session_id = extract_session_id_agy(agy_log_path)
         elif reviewer in ("gemini", "claude"):
             new_session_id = extract_session_id_json(args.output_file)
 
@@ -527,6 +561,9 @@ def run_review(args, logger=None):
         signal.signal(signal.SIGINT, prev_sigint)
         if gemini_config_dir:
             shutil.rmtree(gemini_config_dir, ignore_errors=True)
+        if agy_log_path:
+            with contextlib.suppress(OSError):
+                os.unlink(agy_log_path)
 
 
 # ---------------------------------------------------------------------------
@@ -564,37 +601,10 @@ def _validate_model(args):
         )
 
 
-def _warn_unsupported_flags(args):
-    """Warn and drop flags the selected provider cannot honor.
-
-    Driven by the registry caps so session metadata stays honest:
-    antigravity (agy) has no headless effort control and cannot resume
-    headless sessions (conversation IDs are never surfaced to callers).
-    """
-    if not args.reviewer:
-        return
-    caps = PROVIDERS.get(args.reviewer, {}).get("caps", {})
-    if args.effort and not caps.get("effort_flag"):
-        print(
-            f"Warning: {args.reviewer} has no effort control; "
-            f"ignoring --effort {args.effort}.",
-            file=sys.stderr,
-        )
-        args.effort = None
-    if args.resume and not caps.get("resume_supported"):
-        print(
-            f"Warning: {args.reviewer} cannot resume headless sessions; "
-            "running fresh instead.",
-            file=sys.stderr,
-        )
-        args.resume = False
-
-
 def main():
     args = parse_args()
 
     _validate_model(args)
-    _warn_unsupported_flags(args)
 
     if args.self_check:
         if not args.reviewer:
@@ -644,7 +654,10 @@ def main():
         sys.exit(0)
 
     if not args.reviewer:
-        print("--reviewer is required (codex, gemini, claude, copilot, opencode)", file=sys.stderr)
+        print(
+            "--reviewer is required (codex, gemini, claude, copilot, opencode, agy)",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     if not args.prompt_file:

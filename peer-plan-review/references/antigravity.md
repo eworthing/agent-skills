@@ -1,20 +1,21 @@
-# Antigravity CLI Reference — peer-plan-review
+# Antigravity CLI (`agy`) Reference — peer-plan-review
 
-Source: official docs (antigravity.google/docs/cli-using), public hands-on
-guides, and google-antigravity/antigravity-cli issue tracker, May 2026.
-Flags derived from documentation, not yet verified against a local binary —
-run `--self-check --reviewer antigravity` plus one round before relying on it.
+Source: binary help + live `--print` probing of `agy` v1.0.7, verified 2026-06-14.
 
-Antigravity (`agy`) is Google's successor to Gemini CLI. **Gemini CLI stops
-serving Pro/Ultra and free users on 2026-06-18** — prefer this provider over
-`gemini` after that date.
+Antigravity is Google's successor to the Gemini CLI (which is EOL 2026-06-18 — see [`gemini.md`](gemini.md)). It is a Go binary invoked as `agy`; its home is `~/.gemini/antigravity-cli/`.
+
+> ⚠️ **EXPERIMENTAL — NOT a guaranteed read-only reviewer.** Unlike every other
+> provider (claude `--permission-mode plan`, codex `--sandbox read-only`,
+> copilot `--deny-tool=write,shell`), `agy --print` **auto-approves all tools
+> and can create/modify files and run shell commands**. `--sandbox` only
+> contains terminal commands; the workspace stays writable. There is no
+> read-only flag. The adapter mitigates with `--sandbox` plus a read-only
+> directive prepended to every prompt, but this is best-effort. **Run agy only
+> on trusted plans, and commit or stash your working tree first.**
 
 ## Install
 
-```bash
-agy install        # self-managed binary; agy is NOT npm-distributed
-agy update         # update to latest
-```
+Ships with Google Antigravity. Verify with `agy --version`; update with `agy update`. (`agy install` configures PATH/shell.)
 
 ## Binary
 
@@ -23,46 +24,42 @@ agy update         # update to latest
 ## Headless exec
 
 ```bash
-agy --sandbox --dangerously-skip-permissions \
+printf 'PROMPT' | agy \
+  --print \
+  --sandbox \
   --print-timeout 600s \
-  -p "PROMPT"
+  --model "Gemini 3.5 Flash (High)" \
+  --log-file=/tmp/agy-run.log
 ```
 
-- `-p` / `--print` / `--prompt`: run one prompt non-interactively, response
-  on stdout as **plain text** — there is NO `--output-format` flag
-- `--sandbox`: terminal restrictions
-- `--dangerously-skip-permissions`: auto-approve tool permission requests —
-  required headless, otherwise permission prompts hang. The reviewer stays
-  read-only by prompt contract (same model as opencode)
-- `--print-timeout DURATION` (Go-style, e.g. `600s`; default `5m0s`): agy's
-  internal print-mode timeout. The adapter pins it to the runner timeout so
-  long reviews aren't cut short underneath the runner
-- `--add-dir PATH`: add directories to the workspace (repeatable)
+- `--print` / `-p` / `--prompt`: run a single prompt non-interactively. **Prompt is read from stdin** (the flag takes no inline value).
+- **stdout is plain text** — there is no JSON output mode. The response is written verbatim; the skill parses the structured review / `VERDICT:` line from it directly (no unwrap).
+- `--print-timeout <dur>`: Go duration (default `5m`). The adapter sets it to its own `--timeout` so the adapter's process-tree kill stays the single source of truth.
+- `--sandbox`: runs terminal commands in a sandbox (`proceed-in-sandbox`). Does **not** make the workspace read-only.
+- `--add-dir <path>`: add a directory to the workspace (repeatable).
 
-## Model
+## Models
 
-`-m MODEL` (aliases the skill maps: `flash` → `gemini-3.5-flash`,
-`pro` → `gemini-3.1-pro`)
+`agy models` lists: `Gemini 3.5 Flash (Low|Medium|High)`, `Gemini 3.1 Pro (Low|High)`, `Gemini 3 Flash`.
 
-Antigravity also serves third-party models (Claude Sonnet/Opus, GPT-OSS);
-pass their native IDs through raw.
+**Only the `Gemini 3.5 Flash` family returns output in headless `--print`** (verified 2026-06-14). The Pro variants and bare `Gemini 3 Flash` exit 0 with **empty** output on the tested enterprise/Vertex account (entitlement-dependent). The adapter therefore defaults to the Flash family and maps effort to its variant.
 
-## Reasoning effort
-
-No headless effort/thinking control exposed (May 2026). The runner warns and
-ignores `--effort` for this provider.
+- `--model "<exact string>"`: pass one of the `agy models` strings verbatim.
+- Effort is **encoded in the model name** — there is no `--effort` flag. The skill maps portable effort → variant: `low`→`(Low)`, `medium`→`(Medium)`, `high`→`(High)`, `xhigh`→`(High)` (agy's highest).
+- Alias: `flash` → `Gemini 3.5 Flash` (combined with `--effort`). Raw model IDs pass through unchanged.
+- **Default (no `--model`):** `Gemini 3.5 Flash (High)`.
 
 ## Resume
 
-Not supported headless. `--conversation <id>` and `-c`/`--continue` exist,
-but print mode never surfaces the conversation ID to callers
-(google-antigravity/antigravity-cli#7), and `--continue` resumes the
-machine-global most-recent conversation — cross-contamination risk for
-concurrent runs. The adapter always runs fresh rounds; prior feedback is
-carried in the prompt instead.
+`--conversation <uuid>`: resume a specific conversation. `--continue` / `-c`: most recent.
 
-## Auth
+The conversation UUID is **not** printed to stdout and **not** recorded in `history.jsonl` (that logs interactive sessions only). It appears in the CLI log as `Print mode: conversation=<uuid>` (also `Created conversation <uuid>`). The adapter hands agy a dedicated per-run `--log-file=<path>` (the **equals form** — the space form is ignored in print mode) and parses the id from it, which is race-free under parallel fan-out.
 
-`export ANTIGRAVITY_API_KEY=...` or interactive login. Headless API-key auth
-for unattended environments is still being tracked upstream
-(antigravity-cli#78); verify auth with `--self-check` before a review run.
+## Auth, footprint, cost
+
+- Auth uses the local Google/GCP (Vertex) credentials; runs consume Vertex quota.
+- Every run persists the prompt+response as a SQLite conversation under `~/.gemini/antigravity-cli/conversations/*.db` plus a log — these are **not** auto-cleaned (unlike the skill's temp files).
+
+## Empty-output behavior
+
+An unentitled/unavailable model exits 0 with empty stdout. The adapter's empty-output guard converts that to a non-zero result so it surfaces as a failure rather than a phantom success.

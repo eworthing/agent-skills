@@ -1,10 +1,14 @@
 # Gemini CLI Reference — peer-plan-review
 
-Source: TS source `packages/cli/src/config/config.ts` (v0.33.1), verified March 2026.
+> ⚠️ **EOL 2026-06-18.** Google retires the legacy Gemini CLI on June 18, 2026.
+> **Free/individual users lose access** (the CLI stops responding after that
+> date). **Enterprise users keep it** — accounts with Gemini Code Assist
+> Standard/Enterprise licenses or paid Gemini/Vertex API keys retain
+> uninterrupted access. The successor is the **Antigravity CLI (`agy`)** — see
+> [`antigravity.md`](antigravity.md). Prefer `agy` unless you depend on
+> enterprise Gemini access; this provider is retained for enterprise users.
 
-> **EOL notice:** Gemini CLI stops serving Pro/Ultra and free users on
-> **2026-06-18**. Its successor is Antigravity (`agy`) — use the
-> `antigravity` reviewer (see [antigravity.md](antigravity.md)).
+Source: TS source `packages/cli/src/config/config.ts` (v0.33.1, March 2026). Local binary observed: v0.43.0 — flag docs below are from the v0.33.1 verification.
 
 ## Install
 

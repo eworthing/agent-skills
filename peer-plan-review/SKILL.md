@@ -1,14 +1,13 @@
 ---
 name: peer-plan-review
 description: >
-  Send an implementation plan to another AI agent such as Codex, Gemini CLI,
-  Claude Code, Copilot, opencode, or Antigravity (agy) for iterative review,
-  then revise and re-submit until the reviewer approves or the round limit is
-  reached. Use when the user wants a second opinion on a plan, asks for
-  cross-agent review, mentions 'codex review', 'gemini review', 'claude
-  review', 'copilot review', 'opencode review', 'antigravity review', or 'agy
-  review', wants to validate a plan before executing it, or asks for peer
-  review.
+  Send an implementation plan to another AI agent such as Codex, Claude Code,
+  Copilot, opencode, Antigravity (agy), or Gemini CLI for iterative review, then
+  revise and re-submit until the reviewer approves or the round limit is reached.
+  Use when the user wants a second opinion on a plan, asks for cross-agent
+  review, mentions 'codex review', 'agy review', 'antigravity review', 'claude
+  review', 'copilot review', 'opencode review', or 'gemini review', wants to
+  validate a plan before executing it, or asks for peer review.
 allowed-tools:
   - Read
   - Write
@@ -20,7 +19,7 @@ allowed-tools:
 
 # Peer Plan Review
 
-Pressure-test plan before execution. Host agent own plan, revise between rounds. Reviewer critique only; never edit files or run host workflow.
+Pressure-test a plan before execution. The host agent owns the plan and revises it between rounds. The reviewer critiques only; it never edits files or runs the host workflow.
 
 ## Contents
 
@@ -39,14 +38,14 @@ Pressure-test plan before execution. Host agent own plan, revise between rounds.
 
 ## Bundled resources
 
-- `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. No reimplement.
+- `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. Do not reimplement it.
 - Provider references — read exactly one after reviewer chosen:
   [`references/codex.md`](references/codex.md),
-  [`references/gemini.md`](references/gemini.md),
   [`references/claude.md`](references/claude.md),
   [`references/copilot.md`](references/copilot.md),
   [`references/opencode.md`](references/opencode.md),
-  [`references/antigravity.md`](references/antigravity.md).
+  [`references/antigravity.md`](references/antigravity.md) (`agy` — experimental, not read-only),
+  [`references/gemini.md`](references/gemini.md) (EOL 2026-06-18; enterprise-only successor is `agy`).
 - [`references/output-format.md`](references/output-format.md) — structured output template. Include in every prompt.
 - [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract.
 - [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
@@ -59,13 +58,13 @@ For available models prefer:
 
 ## Require a plan source
 
-Before start, confirm one of: plan already in session, plan pasted by user, or file path. If none, ask.
+Before starting, confirm one of: a plan already in the session, a plan pasted by the user, or a file path. If none, ask.
 
 ## Parse reviewer arguments
 
 Normalize to:
 
-- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`, `antigravity`. (The `--reviewer <provider>` CLI flag uses the same six values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.)
+- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`, `agy` (Antigravity — `antigravity` is accepted and normalized to `agy`). (The `--reviewer <provider>` CLI flag uses the same values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.) **`agy` is experimental and NOT guaranteed read-only** — see [`references/antigravity.md`](references/antigravity.md); run it only on trusted plans with a clean/committed tree.
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 
@@ -114,7 +113,7 @@ environment before they have been exported.
 Example for a persisted id file:
 `python3 <skill-dir>/scripts/ppr_paths.py --review-id-file /tmp/ppr-current-id.txt --format shell`
 
-Snapshot plan into `plan.md` before each round. Treat snapshot immutable for round. Number every line (`cat -n` style) so reviewer cite specific lines — include **numbered** plan in prompt.
+Snapshot the plan into `plan.md` before each round. Treat the snapshot as immutable for that round. Number every line (`cat -n` style) so the reviewer can cite specific lines — include the **numbered** plan in the prompt.
 
 ## Round 1
 
@@ -129,11 +128,25 @@ Run adapter (see `references/adapter-cli.md` for full flag list). Omit `--resume
 
 ## Read the result
 
+Dump both files with `cat` — never with `read`, and never with inline Python
+that prints a dict. `read VAR` treats a leaked quote/space as a variable name
+and fails with `read: '': not a valid identifier`; printing parsed JSON as a
+Python dict corrupts it into single-quoted non-JSON. `SESSION_FILE` is already
+JSON; emit it verbatim.
+
+```bash
+# paths must already be exported via ppr_paths.py --format shell
+echo "=== SESSION ==="; cat "$SESSION_FILE"
+echo "=== REVIEW ==="; cat "$OUTPUT_FILE"
+```
+
 1. Read session file; extract actual `model`, `effort`, `effort_source`
    (and Gemini `thinking_tokens`).
 2. Read review output file.
 3. Parse verdict from last non-empty line, search upward.
-4. Call `parse_structured_review()` from the vendored `_common.session` package (`scripts/_common/session/io.py`). Scopes to `### Blocking Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags with confidence, section/line refs, recommendations. On success, present findings in severity-ordered summary table before full review text. On empty result, present raw review — graceful degradation.
+4. Call `parse_structured_review()` from the vendored `_common.session` module
+   (`from _common.session import parse_structured_review`, with `scripts/` on
+   `sys.path`). Scopes to `### Blocking Issues` / `### Non-Blocking Issues` only; extracts `[B<n>]`/`[N<n>]` tags with confidence, section/line refs, recommendations. On success, present findings in severity-ordered summary table before full review text. On empty result, present raw review — graceful degradation.
 5. Header:
    `## Peer Review - Round N (reviewer: <provider>, model: <actual>, effort: <actual>)`
 
@@ -157,9 +170,9 @@ Stop after approval or five rounds, whichever first.
 
 ## Handle failures
 
-- `--resume` is request, not guarantee. Runner auto-fall-back to fresh execution once if resume fails with no usable output.
+- `--resume` is a request, not a guarantee. The runner auto-falls back to a fresh execution once if resume fails with no usable output.
   `resume_requested`, `resume_attempted`, `resume_fallback_used` record this.
-  No submit second manual retry on top of automatic fallback.
+  Do not submit a second manual retry on top of the automatic fallback.
 - Runner non-zero + no output: report, ask user to retry, switch reviewers, or stop.
 - Runner non-zero + some output: try extract review anyway.
 - Binary missing: fail fast, quote install command from provider reference.
@@ -169,14 +182,14 @@ Stop after approval or five rounds, whichever first.
 - Approved → present final revised plan; note reviewer approval.
 - Round limit (standard) → present latest plan + unresolved concerns.
 - Adversarial round ended `REVISE` → present findings as-is.
-- **In all cases, STOP.** No begin implementing changes, editing code, or modifying files. Ask user which findings, if any, they want addressed.
+- **In all cases, STOP.** Do not begin implementing changes, editing code, or modifying files. Ask the user which findings, if any, they want addressed.
 - Remove five session temp files (plan, prompt, review, session, events).
   No globs. Error log intentionally retained for post-mortem.
 
 ## Rules
 
-- Keep reviewer read-only. Never ask it to modify files or execute host workflow.
-- Capture full output each round. No tail-scraping.
+- Keep the reviewer read-only. Never ask it to modify files or execute the host workflow. (Exception: `agy`/Antigravity has no read-only mode and auto-approves tools — the runner sandboxes it and prepends a read-only directive, but it can still write. Treat it as experimental; run only on trusted plans with a clean/committed tree.)
+- Capture the full output each round; no tail-scraping.
 - Never use transcript-sharing flags (`--share`, `--share-gist`).
-- Treat prompt/review/session/events files as sensitive (contain plan text).
-- Show actual model/effort from session file, not guessed values.
+- Treat the prompt/review/session/events files as sensitive (they contain plan text).
+- Show the actual model/effort from the session file, not guessed values.

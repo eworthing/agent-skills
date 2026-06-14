@@ -9,8 +9,6 @@ Run:  python3 scripts/test_run_review.py
 """
 
 import argparse
-import contextlib
-import io
 import json
 import os
 import shutil
@@ -27,11 +25,6 @@ from unittest import mock
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 SCRIPT = str(Path(SCRIPT_DIR) / "run_review.py")
 PATHS_SCRIPT = str(Path(SCRIPT_DIR) / "ppr_paths.py")
-
-# Root ignores POSIX permission bits, so tests that rely on chmod-denied
-# access must be skipped when running as uid 0 (e.g. CI containers).
-_IS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0
-
 FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 
 # Import functions from run_review for direct unit tests
@@ -95,10 +88,10 @@ class TestListModels(unittest.TestCase):
     """Tests 1-2: --list-models output."""
 
     def test_list_models_all_providers(self):
-        """Test 1: --list-models prints all 6 providers with correct aliases."""
+        """Test 1: --list-models prints all 5 providers with correct aliases."""
         rc, stdout, stderr = run_script("--list-models")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
-        for provider in ("claude", "gemini", "codex", "copilot", "opencode", "antigravity"):
+        for provider in ("claude", "gemini", "codex", "copilot", "opencode"):
             self.assertIn(
                 provider, stdout, f"Provider {provider} missing from --list-models output"
             )
@@ -107,8 +100,6 @@ class TestListModels(unittest.TestCase):
         self.assertIn("sonnet", stdout)
         self.assertIn("opus", stdout)
         self.assertIn("haiku", stdout)
-        # Antigravity should map flash/pro shorthands to full model IDs
-        self.assertIn("gemini-3.5-flash", stdout)
         # Gemini should have auto, pro, flash, flash-lite
         self.assertIn("flash", stdout)
         self.assertIn("pro", stdout)
@@ -223,7 +214,6 @@ class TestFileValidation(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX directory permissions not supported on Windows"
     )
-    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_nonwritable_output_dir(self):
         """Test 11: Non-writable output directory exits non-zero."""
         tmpdir = tempfile.mkdtemp(prefix="ppr-test-")
@@ -386,7 +376,7 @@ class TestOutputParsing(unittest.TestCase):
 
     def test_extract_session_id_opencode(self):
         """Test 8f: opencode session ID extracted from first JSONL line."""
-        from _common.metadata import extract_session_id_opencode
+        from _common.metadata.extractors import extract_session_id_opencode
         fixture = Path(FIXTURES_DIR) / "opencode_output.jsonl"
         sid = extract_session_id_opencode(str(fixture))
         self.assertEqual(sid, "ses_fixture12345abcdef")
@@ -748,52 +738,6 @@ class TestCommandBuilders(unittest.TestCase):
 
         self.assertNotIn("-s", cmd)
         self.assertIn("--dangerously-skip-permissions", cmd)
-
-
-class TestBuildAntigravityCmd(unittest.TestCase):
-    """Antigravity (agy) command construction and unsupported-flag handling."""
-
-    def test_fresh_exec_shape(self):
-        args = make_args(reviewer="antigravity", model="gemini-3.5-flash", timeout=600)
-        cmd = run_review.build_antigravity_cmd(args)
-        self.assertEqual(cmd[0], "agy")
-        self.assertIn("--sandbox", cmd)
-        self.assertIn("--dangerously-skip-permissions", cmd)
-        self.assertIn("-m", cmd)
-        self.assertIn("gemini-3.5-flash", cmd)
-        # agy's internal print timeout must track the runner timeout,
-        # otherwise its 5m default cuts long reviews short.
-        self.assertIn("--print-timeout", cmd)
-        self.assertIn("600s", cmd)
-        # Prompt is piped via stdin; -p needs an empty placeholder argument.
-        self.assertEqual(cmd[-2:], ["-p", ""])
-
-    def test_resume_never_emits_resume_flags(self):
-        args = make_args(reviewer="antigravity", resume=True)
-        cmd = run_review.build_antigravity_cmd(args, session_id="abc123")
-        self.assertNotIn("--conversation", cmd)
-        self.assertNotIn("--continue", cmd)
-        self.assertNotIn("-c", cmd)
-
-    def test_warn_unsupported_drops_effort_and_resume(self):
-        args = make_args(reviewer="antigravity", effort="high", resume=True)
-        captured = io.StringIO()
-        with contextlib.redirect_stderr(captured):
-            run_review._warn_unsupported_flags(args)
-        self.assertIsNone(args.effort)
-        self.assertFalse(args.resume)
-        err = captured.getvalue()
-        self.assertIn("no effort control", err)
-        self.assertIn("cannot resume", err)
-
-    def test_warn_unsupported_keeps_flags_for_capable_providers(self):
-        args = make_args(reviewer="claude", effort="high", resume=True)
-        captured = io.StringIO()
-        with contextlib.redirect_stderr(captured):
-            run_review._warn_unsupported_flags(args)
-        self.assertEqual(args.effort, "high")
-        self.assertTrue(args.resume)
-        self.assertEqual(captured.getvalue(), "")
 
 
 class TestSelfCheckUnit(unittest.TestCase):
@@ -1310,10 +1254,101 @@ class TestRunReviewExecution(unittest.TestCase):
 # Phase 1b+ new test classes
 # ---------------------------------------------------------------------------
 
-from _common.log import EventLogger  # noqa: E402
-from _common.metadata import compute_plan_metadata  # noqa: E402
-from _common.providers import PROVIDERS  # noqa: E402
 from _common.session import probe_writable, validate_prompt_file  # noqa: E402
+from _common.log import EventLogger  # noqa: E402
+from _common.metadata.extractors import compute_plan_metadata  # noqa: E402
+from _common.providers import PROVIDERS  # noqa: E402
+
+
+class TestRunReviewAgy(unittest.TestCase):
+    """agy (Antigravity) execution path: plain-text stdout, conversation-id
+    capture from a per-run --log-file, and the read-only prompt preamble."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory(prefix="ppr-agy-")
+        self.prompt_file = Path(self.tmpdir.name) / "prompt.md"
+        self.prompt_file.write_text("Review this plan.\n", encoding="utf-8")
+        self.output_file = Path(self.tmpdir.name) / "review.txt"
+        self.session_file = Path(self.tmpdir.name) / "session.json"
+
+    def tearDown(self):
+        self.tmpdir.cleanup()
+
+    def test_agy_captures_conversation_id_and_passes_text_through(self):
+        review_text = "### Blocking Issues\nNone.\n\nVERDICT: APPROVED\n"
+        captured = {}
+
+        def fake_popen(cmd, **kwargs):
+            captured["cmd"] = cmd
+            # agy logs the conversation id to its --log-file (not stdout).
+            for tok in cmd:
+                if tok.startswith("--log-file="):
+                    Path(tok.split("=", 1)[1]).write_text(
+                        "I0614 printmode.go:155] Print mode: conversation="
+                        "abc12345-1111-2222-3333-444455556666, sending message\n",
+                        encoding="utf-8",
+                    )
+            proc = mock.MagicMock()
+            proc.communicate.return_value = (review_text, "")
+            proc.returncode = 0
+            proc.poll.return_value = 0
+            return proc
+
+        args = make_args(
+            reviewer="agy",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+        )
+        with (
+            mock.patch("run_review.subprocess.Popen", side_effect=fake_popen),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        # Plain text is written through verbatim (no JSON unwrap for agy).
+        self.assertEqual(self.output_file.read_text(encoding="utf-8"), review_text)
+        self.assertIn("--print", captured["cmd"])
+        self.assertIn("--sandbox", captured["cmd"])
+        self.assertNotIn("--dangerously-skip-permissions", captured["cmd"])
+        self.assertTrue(any(t.startswith("--log-file=") for t in captured["cmd"]))
+        session = json.loads(self.session_file.read_text(encoding="utf-8"))
+        self.assertEqual(session["session_id"], "abc12345-1111-2222-3333-444455556666")
+        self.assertEqual(session["reviewer"], "agy")
+
+    def test_agy_prepends_readonly_preamble_to_prompt(self):
+        captured = {}
+
+        def fake_popen(cmd, **kwargs):
+            proc = mock.MagicMock()
+
+            def communicate(input=None, timeout=None):
+                captured["input"] = input
+                return ("VERDICT: APPROVED\n", "")
+
+            proc.communicate.side_effect = communicate
+            proc.returncode = 0
+            proc.poll.return_value = 0
+            return proc
+
+        args = make_args(
+            reviewer="agy",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+        )
+        with (
+            mock.patch("run_review.subprocess.Popen", side_effect=fake_popen),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            run_review.run_review(args)
+
+        self.assertIsNotNone(captured.get("input"))
+        self.assertTrue(captured["input"].startswith(run_review.AGY_READONLY_PREAMBLE))
+        self.assertIn("Review this plan.", captured["input"])
 
 
 class TestEventLogger(unittest.TestCase):
@@ -1420,7 +1455,6 @@ class TestPromptValidation(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX file permissions not supported on Windows"
     )
-    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_unreadable_prompt_rejected(self):
         f = Path(self.tmpdir.name) / "unreadable.md"
         f.write_text("content", encoding="utf-8")
@@ -1452,7 +1486,6 @@ class TestWriteProbes(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX file permissions not supported on Windows"
     )
-    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_existing_readonly_file(self):
         f = Path(self.tmpdir.name) / "readonly.json"
         f.write_text("{}", encoding="utf-8")
@@ -1472,7 +1505,6 @@ class TestWriteProbes(unittest.TestCase):
     @unittest.skipIf(
         sys.platform == "win32", "POSIX directory permissions not supported on Windows"
     )
-    @unittest.skipIf(_IS_ROOT, "root bypasses POSIX permission checks")
     def test_new_file_in_readonly_dir(self):
         readonly = Path(self.tmpdir.name) / "readonly"
         readonly.mkdir()

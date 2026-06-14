@@ -1,4 +1,4 @@
 interface:
   display_name: "Peer Plan Review"
   short_description: "Cross-agent implementation plan review"
-  default_prompt: "Use $peer-plan-review to pressure-test this implementation plan with Codex, Gemini, Claude Code, or Copilot before execution."
+  default_prompt: "Use $peer-plan-review to pressure-test this implementation plan with Codex, Claude Code, Copilot, opencode, or Antigravity (agy) before execution."
