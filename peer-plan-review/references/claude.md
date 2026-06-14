@@ -48,7 +48,7 @@ claude -p "PROMPT" \
 
 ## Reasoning effort
 
-`--effort <level>`: `low`, `medium`, `high`, `max` (default `medium` for Opus 4.6).
+`--effort <level>`: `low`, `medium`, `high`, `max` (default `medium`).
 
 `xhigh` maps to `max` (Claude's highest level).
 
