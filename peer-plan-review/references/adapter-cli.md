@@ -22,14 +22,18 @@ python3 <skill-dir>/scripts/run_review.py \
 
 ## Flags
 
-- `--reviewer`: `codex`, `gemini`, `claude`, `copilot`, `opencode`, or `agy` (alias `antigravity`). Required.
+- `--reviewer`: `codex`, `gemini`, `claude`, `copilot`, `opencode`, or `agy`
+  (alias `antigravity`; experimental — not guaranteed read-only, see
+  [`antigravity.md`](antigravity.md)). Required.
 - `--resume`: include on rounds 2+ only. The runner falls back to a fresh
   execution once if resume fails with no usable output.
 - `--model`: provider-specific model ID or known alias. `--list-models
   --reviewer <provider>` prints the known aliases.
 - `--effort`: portable `low | medium | high | xhigh`. The adapter maps this to
   each provider's native flag or setting internally. Pass *only* this; do not
-  pass provider-native effort flags.
+  pass provider-native effort flags. For `agy` there is no native effort flag —
+  effort is encoded as a model-name variant (e.g. `Gemini 3.5 Flash (High)`);
+  `xhigh` maps to `High` (agy's max).
 - `--timeout`: seconds. Default 600. Raise for large plans or slower reviewers.
 - `--summary-file`: optional machine-readable JSON with verdict, model, effort,
   round, finding count, and blocking count. Useful for non-Claude hosts.

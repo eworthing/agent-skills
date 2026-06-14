@@ -57,7 +57,7 @@ The conversation UUID is **not** printed to stdout and **not** recorded in `hist
 
 ## Auth, footprint, cost
 
-- Auth uses the local Google/GCP (Vertex) credentials; runs consume Vertex quota.
+- Auth uses the local cached Google/GCP (Vertex) login under `~/.gemini/antigravity-cli/` (set up by the Antigravity app) — there is **no `--api-key` flag or API-key env var**. Runs consume Vertex quota.
 - Every run persists the prompt+response as a SQLite conversation under `~/.gemini/antigravity-cli/conversations/*.db` plus a log — these are **not** auto-cleaned (unlike the skill's temp files).
 
 ## Empty-output behavior

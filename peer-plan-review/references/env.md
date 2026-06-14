@@ -20,3 +20,9 @@ Both adapters inherit the full parent environment (`os.environ.copy()`), so
 anything your reviewer CLI normally reads — e.g. `ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, `GEMINI_API_KEY`, auth cache paths — continues to work
 unchanged.
+
+`agy` (Antigravity) reads **no API-key env var** — there is no
+`ANTIGRAVITY_API_KEY`. It authenticates from its cached Google/GCP (Vertex)
+login under `~/.gemini/antigravity-cli/` (established by the Antigravity app),
+which is inherited like any other reviewer's auth cache. See
+[`antigravity.md`](antigravity.md).
