@@ -10,8 +10,9 @@ import contextlib
 import hashlib
 import json
 import os
+import re
 import subprocess
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 _REVERSE_EFFORT_OPENCODE = {
@@ -95,6 +96,36 @@ def extract_session_id_opencode(output_file):
             return first.get("sessionID")
     except (json.JSONDecodeError, OSError):
         return None
+
+
+_AGY_CONVERSATION_RE = re.compile(
+    r"(?:Print mode: conversation=|Created conversation )"
+    r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
+)
+
+
+def extract_session_id_agy(log_file):
+    """Extract the Antigravity conversation UUID from a per-run agy --log-file.
+
+    agy print mode logs ``Print mode: conversation=<uuid>`` (and earlier
+    ``Created conversation <uuid>``) to its CLI log. The id is NOT on stdout
+    and NOT in history.jsonl (which records interactive sessions only), so the
+    caller hands agy a dedicated ``--log-file=`` and we scan it here. A per-run
+    log keeps this race-free under quorum-review's parallel fan-out. Returns
+    the last UUID seen, or None.
+    """
+    if not log_file or not Path(log_file).exists():
+        return None
+    sid = None
+    try:
+        with Path(log_file).open(encoding="utf-8", errors="replace") as f:
+            for line in f:
+                m = _AGY_CONVERSATION_RE.search(line)
+                if m:
+                    sid = m.group(1)
+    except OSError:
+        return None
+    return sid
 
 
 def extract_metadata(output_file, events_file, reviewer, codex_session_file=None,
@@ -272,7 +303,7 @@ def compute_plan_metadata(plan_file):
             "plan_name": p.name,
             "plan_bytes": stat.st_size,
             "plan_sha256": sha,
-            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat(),
+            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
         }
     except OSError:
         return {}

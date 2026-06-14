@@ -7,6 +7,7 @@ import pytest
 from common.metadata import (
     compute_plan_metadata,
     extract_metadata,
+    extract_session_id_agy,
     extract_session_id_copilot,
     extract_session_id_json,
     extract_session_id_opencode,
@@ -68,6 +69,35 @@ class TestSessionIdOpencode:
             encoding="utf-8",
         )
         assert extract_session_id_opencode(str(p)) == "oc-1"
+
+
+class TestSessionIdAgy:
+    def test_extracts_print_mode_conversation(self, tmp_path):
+        log = tmp_path / "agy.log"
+        log.write_text(
+            "I0614 10:58:18 printmode.go:85] Print mode: starting\n"
+            "I0614 10:58:19 printmode.go:155] Print mode: conversation="
+            "0a6d2ba7-222f-469a-b49d-2c7d8f10fbff, sending message\n",
+            encoding="utf-8",
+        )
+        assert extract_session_id_agy(str(log)) == "0a6d2ba7-222f-469a-b49d-2c7d8f10fbff"
+
+    def test_extracts_created_conversation(self, tmp_path):
+        log = tmp_path / "agy.log"
+        log.write_text(
+            "I0614 server.go:753] Created conversation "
+            "f014e69c-55a3-40a1-a89e-1df03b6ba6e9\n",
+            encoding="utf-8",
+        )
+        assert extract_session_id_agy(str(log)) == "f014e69c-55a3-40a1-a89e-1df03b6ba6e9"
+
+    def test_no_conversation_returns_none(self, tmp_path):
+        log = tmp_path / "agy.log"
+        log.write_text("just some unrelated log noise\n", encoding="utf-8")
+        assert extract_session_id_agy(str(log)) is None
+
+    def test_missing_file_returns_none(self, tmp_path):
+        assert extract_session_id_agy(str(tmp_path / "nope.log")) is None
 
 
 class TestExtractMetadata:

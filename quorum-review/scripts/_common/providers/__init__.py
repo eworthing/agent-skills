@@ -1,8 +1,9 @@
 """Provider registry and CLI command builders."""
 
 from .registry import (
+    AGY_READONLY_PREAMBLE,
     PROVIDERS,
-    build_antigravity_cmd,
+    build_agy_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -13,8 +14,9 @@ from .registry import (
 )
 
 __all__ = [
+    "AGY_READONLY_PREAMBLE",
     "PROVIDERS",
-    "build_antigravity_cmd",
+    "build_agy_cmd",
     "build_claude_cmd",
     "build_codex_cmd",
     "build_copilot_cmd",

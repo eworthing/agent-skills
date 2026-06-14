@@ -6,7 +6,7 @@ import pytest
 
 from common.providers import PROVIDERS, get_provider, read_prompt
 from common.providers.registry import (
-    build_antigravity_cmd,
+    build_agy_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -28,9 +28,9 @@ def _args(**overrides):
 
 
 class TestRegistry:
-    def test_all_six_providers_present(self):
+    def test_all_providers_present(self):
         assert set(PROVIDERS.keys()) == {
-            "claude", "gemini", "codex", "copilot", "opencode", "antigravity",
+            "claude", "gemini", "codex", "copilot", "opencode", "agy",
         }
 
     def test_required_keys(self):
@@ -42,13 +42,6 @@ class TestRegistry:
 
     def test_effort_map_covers_portable_levels(self):
         for name, spec in PROVIDERS.items():
-            if not spec["caps"].get("effort_flag"):
-                # No effort control (antigravity): the runner warns and
-                # drops --effort, so no portable-level mapping exists.
-                assert spec["effort_map"] == {}, (
-                    f"{name} has no effort_flag but a non-empty effort_map"
-                )
-                continue
             for level in ("low", "medium", "high", "xhigh"):
                 assert level in spec["effort_map"], (
                     f"{name} effort_map missing portable level {level!r}"
@@ -80,21 +73,6 @@ class TestBuildCmd:
     """Each build_*_cmd produces a non-empty argv list with the binary first
     and safety flags applied. Exact flag matching is intentionally light to
     keep the test resilient to harmless flag-ordering changes."""
-
-    def test_antigravity_basic(self):
-        cmd = build_antigravity_cmd(_args(timeout=600))
-        assert cmd[0] == "agy"
-        assert "--sandbox" in cmd
-        assert "--dangerously-skip-permissions" in cmd
-        # Prompt is piped via stdin; -p needs an empty placeholder argument.
-        assert cmd[-2:] == ["-p", ""]
-        # agy's internal print timeout must track the runner's timeout.
-        assert "--print-timeout" in cmd
-        assert "600s" in cmd
-        # No resume flags ever — agy can't resume headless sessions.
-        cmd = build_antigravity_cmd(_args(resume=True), session_id="abc")
-        assert "--conversation" not in cmd
-        assert "--continue" not in cmd
 
     def test_codex_basic(self):
         cmd = build_codex_cmd(_args())
@@ -144,6 +122,45 @@ class TestBuildCmd:
         assert cmd[0] == "opencode"
         assert "run" in cmd
         assert "--dangerously-skip-permissions" in cmd
+
+    def test_agy_basic(self):
+        cmd = build_agy_cmd(_args())
+        assert cmd[0] == "agy"
+        assert "--print" in cmd
+        assert "--sandbox" in cmd
+        # agy is the experimental, not-guaranteed-read-only reviewer; never
+        # request blanket auto-approve.
+        assert "--dangerously-skip-permissions" not in cmd
+
+    def test_agy_resume(self):
+        cmd = build_agy_cmd(_args(resume=True), session_id="conv-uuid")
+        assert "--conversation" in cmd
+        assert "conv-uuid" in cmd
+
+    def test_agy_effort_composes_into_model_name(self):
+        # Effort lives in the model name; "Gemini 3.5 Flash" + high → "(High)".
+        cmd = build_agy_cmd(_args(model="Gemini 3.5 Flash", effort="high"))
+        idx = cmd.index("--model")
+        assert cmd[idx + 1] == "Gemini 3.5 Flash (High)"
+
+    def test_agy_defaults_to_flash_when_no_model(self):
+        # No model → inject the only family verified to return output in
+        # --print mode, at the default effort (high).
+        cmd = build_agy_cmd(_args())
+        idx = cmd.index("--model")
+        assert cmd[idx + 1] == "Gemini 3.5 Flash (High)"
+
+    def test_agy_full_model_string_passes_through(self):
+        cmd = build_agy_cmd(_args(model="Gemini 3.5 Flash (Low)"))
+        idx = cmd.index("--model")
+        assert cmd[idx + 1] == "Gemini 3.5 Flash (Low)"
+
+    def test_agy_unknown_model_passes_through_raw(self):
+        # Non-Flash models aren't a known family — pass through untouched so a
+        # caller with different entitlements can still try them.
+        cmd = build_agy_cmd(_args(model="Gemini 3.1 Pro (High)"))
+        idx = cmd.index("--model")
+        assert cmd[idx + 1] == "Gemini 3.1 Pro (High)"
 
 
 class TestReadPrompt:

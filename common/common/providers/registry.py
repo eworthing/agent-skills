@@ -195,33 +195,78 @@ def build_opencode_cmd(args, session_id=None):
     return cmd
 
 
-def build_antigravity_cmd(args, session_id=None):
-    """Build Antigravity CLI (agy) command. Prompt fed via stdin.
+# ---------------------------------------------------------------------------
+# Antigravity (agy) — model/effort matrix + read-only preamble
+# ---------------------------------------------------------------------------
+# `agy models` encodes reasoning effort INSIDE the model name; there is no
+# --effort flag. Verified 2026-06-14: only the "Gemini 3.5 Flash" family
+# actually returns output in headless --print mode — the Pro variants and bare
+# "Gemini 3 Flash" exit 0 with EMPTY output on the tested (enterprise/Vertex)
+# account, so every effort level maps to a Flash 3.5 variant. xhigh → High
+# (agy's highest). Raw model IDs still pass through for callers whose
+# entitlements differ.
+_AGY_FAMILIES = {
+    "Gemini 3.5 Flash": {"low": "Low", "medium": "Medium", "high": "High", "xhigh": "High"},
+}
 
-    agy (Gemini CLI's successor) emits plain text only — there is no
-    --output-format flag — and never surfaces conversation IDs to headless
-    callers (google-antigravity/antigravity-cli#7), so resume is
-    unsupported: every round runs fresh. No headless effort/thinking
-    control is exposed either; the runner warns and drops --effort.
+# agy print mode auto-approves tools and exposes no read-only / system-prompt
+# flag (verified: it will write files and run shell). This preamble is prepended
+# to every agy review prompt as a best-effort read-only guard. agy is shipped
+# EXPERIMENTAL — NOT a guaranteed-read-only reviewer. See references/antigravity.md.
+AGY_READONLY_PREAMBLE = (
+    "IMPORTANT — READ-ONLY REVIEW. You are reviewing a plan, not editing code. "
+    "Do NOT create, modify, move, or delete any files. Do NOT run shell commands "
+    "that change state (no writes, installs, git mutations, or network calls). "
+    "You may READ files to inform the review. Output only your written review."
+)
+
+
+def build_agy_cmd(args, session_id=None):
+    """Build an Antigravity CLI (`agy`) print-mode command.
+
+    agy emits plain-text stdout (no JSON mode) and reads the prompt on stdin.
+    Effort is encoded in the model name (see _AGY_FAMILIES); there is no
+    --effort flag. The conversation id is recovered from the CLI log by the
+    caller via a per-run --log-file (added in run_review.py, not here, so this
+    builder stays pure and unit-testable).
+
+    SAFETY: agy print mode auto-approves tools and is NOT guaranteed read-only.
+    --sandbox contains terminal commands but the workspace stays writable; the
+    caller prepends AGY_READONLY_PREAMBLE to the prompt as a best-effort guard.
     """
-    cmd = ["agy"]
-    # --sandbox restricts terminal access; --dangerously-skip-permissions
-    # prevents headless hangs on tool-permission prompts. The reviewer
-    # stays read-only by prompt contract, as with opencode.
-    cmd.append("--sandbox")
-    cmd.append("--dangerously-skip-permissions")
+    cmd = ["agy", "--print", "--sandbox"]
 
-    if args.model:
-        cmd.extend(["-m", args.model])
-
-    # agy aborts print mode after 5m by default; align with the runner's
-    # timeout so long reviews aren't cut short underneath it.
+    # Keep agy's own print-mode timeout >= the adapter timeout so the adapter's
+    # process-tree kill stays the single source of truth for cancellation.
     timeout = getattr(args, "timeout", None)
     if timeout:
-        cmd.extend(["--print-timeout", f"{int(timeout)}s"])
+        cmd.extend(["--print-timeout", f"{timeout}s"])
 
-    # -p requires an argument; prompt text is piped via stdin
-    cmd.extend(["-p", ""])
+    if args.resume and session_id:
+        cmd.extend(["--conversation", str(session_id)])
+
+    model = args.model
+    effort = getattr(args, "effort", None)
+    if not model:
+        # Default to the only family verified to return output in --print mode
+        # (Pro / bare "Gemini 3 Flash" come back empty on tested accounts).
+        # Effort then selects the variant; with no effort, effort_default.
+        model = "Gemini 3.5 Flash"
+    if model:
+        stripped = model.rstrip()
+        if stripped.endswith(")") and "(" in stripped:
+            chosen = model  # already a full "Family (Level)" string — pass through
+        elif model in _AGY_FAMILIES:
+            variants = _AGY_FAMILIES[model]
+            if variants:
+                eff = effort or PROVIDERS["agy"]["effort_default"]
+                chosen = f"{model} ({variants.get(eff, variants['high'])})"
+            else:
+                chosen = model  # single-variant family (Gemini 3 Flash)
+        else:
+            chosen = model  # raw model ID — pass through
+        cmd.extend(["--model", chosen])
+
     return cmd
 
 
@@ -363,28 +408,33 @@ PROVIDERS = {
         # opencode-go model discovery command — used by --list-models
         "list_models_cmd": ["opencode", "models", "opencode-go"],
     },
-    "antigravity": {
+    "agy": {
         "binary": "agy",
-        # No headless effort/thinking control exposed (May 2026); the
-        # runner warns and drops --effort for providers with an empty map.
-        "effort_map": {},
-        "effort_default": "default",
+        "effort_map": {"low": "Low", "medium": "Medium", "high": "High", "xhigh": "High"},
+        "effort_default": "high",
         "model_aliases": {
-            "flash": "gemini-3.5-flash",
-            "pro": "gemini-3.1-pro",
+            # Only Gemini 3.5 Flash returns output in headless --print (verified
+            # 2026-06-14); effort picks the Low/Medium/High variant.
+            "flash": "Gemini 3.5 Flash",
         },
-        "resume_supported": False,
-        "build_cmd": build_antigravity_cmd,
+        "resume_supported": True,
+        "build_cmd": build_agy_cmd,
         "caps": {
             "binary": "agy",
             "prompt_mode": "stdin",
             "output_mode": "stdout",
-            "model_flag": "-m",
-            "effort_flag": None,
-            "resume_flag_style": None,
-            "resume_supported": False,
-            "safety_flags": ["--sandbox", "--dangerously-skip-permissions"],
+            "model_flag": "--model",
+            # Effort is part of the model name, not a flag (see _AGY_FAMILIES).
+            "effort_flag": "model_variant",
+            "resume_flag_style": "flag",
+            "resume_supported": True,
+            # EXPERIMENTAL: agy print mode auto-approves tools; --sandbox only
+            # contains terminal commands. NOT guaranteed read-only like the rest.
+            "safety_flags": ["--sandbox"],
+            "read_only": False,
         },
+        # agy exposes effort via the model name; surface the real model list.
+        "list_models_cmd": ["agy", "models"],
     },
 }
 
