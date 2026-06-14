@@ -3269,5 +3269,66 @@ class TestVerifierPromptBlindness(unittest.TestCase):
         self.assertIn("Code diff", prompt_text)
 
 
+class TestRunReviewAgy(unittest.TestCase):
+    """quorum's run_review.py agy path: per-run --log-file conversation-id
+    capture (race-free under parallel fan-out) and the read-only preamble."""
+
+    def _agy_args(self, tmp):
+        prompt = Path(tmp) / "prompt.md"
+        prompt.write_text("Review this plan.\n", encoding="utf-8")
+        return argparse.Namespace(
+            reviewer="agy", plan_file=None, prompt_file=str(prompt),
+            output_file=str(Path(tmp) / "out.txt"),
+            session_file=str(Path(tmp) / "session.json"),
+            events_file=None, model=None, effort=None, resume=False,
+            timeout=600, self_check=False, list_models=False,
+            verification_mode=False,
+        )
+
+    def test_agy_captures_id_and_prepends_preamble(self):
+        from unittest import mock
+        import signal
+        with tempfile.TemporaryDirectory(prefix="qr-agy-test-") as tmp:
+            args = self._agy_args(tmp)
+            captured = {}
+
+            def fake_popen(cmd, **kwargs):
+                captured["cmd"] = cmd
+                for tok in cmd:
+                    if tok.startswith("--log-file="):
+                        Path(tok.split("=", 1)[1]).write_text(
+                            "I0614 printmode.go:155] Print mode: conversation="
+                            "dd11dd22-1111-2222-3333-444455556666, sending message\n",
+                            encoding="utf-8",
+                        )
+                proc = mock.MagicMock()
+
+                def communicate(input=None, timeout=None):
+                    captured["input"] = input
+                    return ("### Blocking Issues\nNone.\n\nVERDICT: APPROVED\n", "")
+
+                proc.communicate.side_effect = communicate
+                proc.returncode = 0
+                proc.poll.return_value = 0
+                return proc
+
+            with (
+                mock.patch("run_review.subprocess.Popen", side_effect=fake_popen),
+                mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+                mock.patch("run_review.signal.signal"),
+            ):
+                rc = run_review.run_review(args)
+
+            self.assertEqual(rc, 0)
+            self.assertIn("--print", captured["cmd"])
+            self.assertIn("--sandbox", captured["cmd"])
+            self.assertNotIn("--dangerously-skip-permissions", captured["cmd"])
+            self.assertTrue(any(t.startswith("--log-file=") for t in captured["cmd"]))
+            self.assertTrue(captured["input"].startswith(run_review.AGY_READONLY_PREAMBLE))
+            session = json.loads(Path(args.session_file).read_text(encoding="utf-8"))
+            self.assertEqual(session["session_id"], "dd11dd22-1111-2222-3333-444455556666")
+            self.assertEqual(session["reviewer"], "agy")
+
+
 if __name__ == "__main__":
     unittest.main()

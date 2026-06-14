@@ -32,15 +32,20 @@ from pathlib import Path
 # byte-identical.
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _common.metadata import extract_session_id_copilot, extract_session_id_json
+from _common.metadata import (
+    extract_session_id_agy,
+    extract_session_id_copilot,
+    extract_session_id_json,
+)
 from _common.metadata.extractors import (  # noqa: F401 — re-exported for tests
     _codex_session_files,
     _parse_codex_session_id,
     extract_metadata,
 )
 from _common.process.tree import _kill_tree, _popen_session_kwargs
-from _common.providers import PROVIDERS, get_provider, read_prompt
+from _common.providers import AGY_READONLY_PREAMBLE, PROVIDERS, get_provider, read_prompt
 from _common.providers.registry import (  # noqa: F401 — re-exported for tests
+    build_agy_cmd,
     build_claude_cmd,
     build_codex_cmd,
     build_copilot_cmd,
@@ -191,6 +196,15 @@ def run_review(args):
     # Build provider-specific command via the registry's build_cmd callable.
     cmd = spec["build_cmd"](args, session_id)
 
+    # agy: dedicated per-run --log-file for race-free conversation-id capture
+    # under quorum's parallel fan-out (the id is in the CLI log, not stdout;
+    # history.jsonl logs interactive sessions only).
+    agy_log_path = None
+    if reviewer == "agy":
+        fd, agy_log_path = tempfile.mkstemp(prefix="qr-agy-", suffix=".log")
+        os.close(fd)
+        cmd.append(f"--log-file={agy_log_path}")
+
     # Build environment
     env = os.environ.copy()
 
@@ -237,6 +251,11 @@ def run_review(args):
     stdin_data = None
     if spec["caps"].get("prompt_mode") == "stdin":
         stdin_data = read_prompt(args.prompt_file)
+        # agy has no system-prompt flag and auto-approves tools; prepend a
+        # best-effort read-only directive (agy is EXPERIMENTAL — not guaranteed
+        # read-only). See references/antigravity.md.
+        if reviewer == "agy" and stdin_data:
+            stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
 
     # Snapshot Codex session files before exec for race-safe ID extraction
     codex_sessions_before = None
@@ -336,6 +355,8 @@ def run_review(args):
                         break
         elif reviewer == "copilot":
             new_session_id = extract_session_id_copilot(args.output_file)
+        elif reviewer == "agy":
+            new_session_id = extract_session_id_agy(agy_log_path)
         elif reviewer in ("gemini", "claude"):
             new_session_id = extract_session_id_json(args.output_file)
 
@@ -414,6 +435,12 @@ def run_review(args):
         # Clean up Gemini temp config
         if gemini_config_dir:
             shutil.rmtree(gemini_config_dir, ignore_errors=True)
+        # Clean up agy per-run log
+        if agy_log_path:
+            try:
+                os.unlink(agy_log_path)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------

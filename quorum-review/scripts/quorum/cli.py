@@ -25,6 +25,10 @@ THRESHOLDS = {
 MIN_QUORUM_SIZE = 3
 MAX_ROUNDS_LIMIT = 5
 
+# Friendly reviewer aliases normalized to canonical provider keys (the registry
+# key stays `agy`; `antigravity` is accepted as a synonym).
+REVIEWER_ALIASES = {"antigravity": "agy"}
+
 
 def parse_reviewer_spec(spec):
     """Parse 'provider[:model]' into (provider, model_or_None).
@@ -36,11 +40,12 @@ def parse_reviewer_spec(spec):
     """
     parts = spec.split(":", 1)
     provider = parts[0].lower()
+    provider = REVIEWER_ALIASES.get(provider, provider)
     model = parts[1] if len(parts) > 1 else None
     return provider, model
 
 
-VALID_PROVIDERS = {"claude", "gemini", "codex", "copilot"}
+VALID_PROVIDERS = {"claude", "gemini", "codex", "copilot", "agy"}
 
 VERIFIER_CANDIDATE_SPECS = [
     ("copilot", "gpt-5.4"),
@@ -57,6 +62,8 @@ VERIFIER_CANDIDATE_SPECS = [
     ("claude", None),
     ("gemini", None),
     ("codex", None),
+    ("agy", "pro"),
+    ("agy", None),
 ]
 
 

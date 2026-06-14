@@ -3,7 +3,8 @@ name: quorum-review
 description: >
   Multi-provider consensus review system (v3.1). Orchestrates anonymous
   quorum reviews for plans, specs, and code diffs across reviewers from
-  different providers (Claude, Gemini, Codex, Copilot), tracks canonical
+  different providers (Claude, Codex, Copilot, Antigravity/agy, Gemini),
+  tracks canonical
   issue IDs in a shared ledger, merges only semantically equivalent
   issues, and derives the final verdict from surviving blockers — not
   raw vote counts — with an independent external verifier. Use when a
@@ -42,7 +43,7 @@ Read on demand based on what you need:
 
 - [`references/protocol.md`](references/protocol.md) — **authoritative machine contracts**: ledger JSON schema, merge classification rules, verifier I/O contract, accepted anchor keys, v2 → v3 alias migration. Source of truth for what `run_quorum.py` accepts and emits.
 - [`references/output-format.md`](references/output-format.md) — reviewer output template (round 1 + round 2+ cross-critique), per-issue confidence requirements, code-anchor requirements, blind-mode formatting. Include in every reviewer prompt.
-- [`references/claude.md`](references/claude.md), [`references/codex.md`](references/codex.md), [`references/gemini.md`](references/gemini.md), [`references/copilot.md`](references/copilot.md) — per-provider CLI cheatsheets.
+- [`references/claude.md`](references/claude.md), [`references/codex.md`](references/codex.md), [`references/copilot.md`](references/copilot.md), [`references/antigravity.md`](references/antigravity.md) (`agy` — experimental, not read-only), [`references/gemini.md`](references/gemini.md) (EOL 2026-06-18; enterprise-only, successor is `agy`) — per-provider CLI cheatsheets.
 - [`references/env.md`](references/env.md) — environment variables the orchestrator + adapter read (`CODEX_HOME`, `GEMINI_CONFIG_DIR`, `QUORUM_PARSE_FAILURES_LOG`, etc.).
 - Run [`scripts/run_quorum.py`](scripts/run_quorum.py) — the orchestrator (compatibility shim; see [`scripts/quorum/`](scripts/quorum/) for the implementation).
 - See [`scripts/run_review.py`](scripts/run_review.py) — per-reviewer adapter invoked by the orchestrator (vendored `_common/` for provider dispatch).
