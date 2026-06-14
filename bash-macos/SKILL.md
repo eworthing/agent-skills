@@ -204,6 +204,35 @@ x="$(failing_cmd)"
 
 Same trap with `declare`, `readonly`, `export`.
 
+### When NOT to use `set -e`
+
+`-e` aborts on **any** command that exits non-zero — including commands that do
+so by design: `grep` with no match, `diff`/`cmp` finding differences, a bare
+`[ ... ]` used as data. Scripts whose control flow *reads* these exit codes
+(scanners, audits, linters) break under a blanket `-e` — the no-match case is
+usually the healthy one, yet `-e` treats it as fatal.
+
+```bash
+# WRONG under set -e — aborts when grep finds nothing (the common, healthy case)
+hits=$(grep -nE "$pat" "$f")
+[ -n "$hits" ] || continue          # never reached; script already exited
+
+# CORRECT A — guard each intentional-nonzero command, then test the result
+hits=$(grep -nE "$pat" "$f" || true)
+[ -n "$hits" ] || continue
+
+# CORRECT B — omit -e; keep set -uo pipefail; branch explicitly
+set -uo pipefail                    # header note: grep no-match is expected
+if hits=$(grep -nE "$pat" "$f"); then handle "$hits"; fi
+```
+
+Either is correct. What's wrong is adding `-e` without auditing every command
+that may legitimately exit non-zero. When you choose B, say so in the header
+(`# set -u only: grep no-match is expected`) so the next reader doesn't "fix" it
+back to `-e` and silently break the scanner. See
+[references/output-modes.md](references/output-modes.md) for the `|| true` guard
+applied inside a logging gate.
+
 ### `pipefail` + SIGPIPE
 
 Under `set -o pipefail`, `producer | head -n1` exits non-zero: `head` closes
@@ -271,7 +300,9 @@ trap cleanup EXIT INT TERM
 
 Before marking a script complete:
 
-- [ ] `#!/bin/bash` + `set -euo pipefail` (add `-E` if using `trap ERR`)
+- [ ] `#!/bin/bash` + `set -euo pipefail` — or a documented `set -uo pipefail`
+  for scanner/audit scripts that branch on non-zero exits (see [When NOT to use
+  `set -e`](#when-not-to-use-set--e)); add `-E` if using `trap ERR`
 - [ ] No Bash 4+ features ([forbidden-features.md](references/forbidden-features.md))
 - [ ] `sed -E` not `sed -r`; `grep -E` not `grep -P`
 - [ ] BSD `date` uses `-v` or `-j -f`, not `-d`

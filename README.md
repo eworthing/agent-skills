@@ -28,11 +28,11 @@ Single source of truth lives here; agent CLIs consume each skill through a symli
 ### Workflow / meta
 
 - **[contest-refactor](contest-refactor/)** — Autonomous Actor-Critic refactoring loop. Aggressively refactors the workspace to a 9.5+ standard using a strict ICA-grounded architectural rubric (deletion test, two-adapter rule, depth-as-leverage). Invoke via `/contest-refactor`.
-- **[peer-plan-review](peer-plan-review/)** — Sends an implementation plan to another AI agent (Codex, Gemini CLI, Claude Code, Copilot, opencode) for iterative review, revises, and re-submits until approval or round limit. Provider adapters, session resume, process-tree timeout kill. Usage: `/peer-plan-review <codex|gemini|claude|copilot|opencode> [model] [effort]`.
+- **[peer-plan-review](peer-plan-review/)** — Sends an implementation plan to another AI agent (Codex, Claude Code, Copilot, opencode, Antigravity `agy`, or Gemini CLI) for iterative review, revises, and re-submits until approval or round limit. Provider adapters, session resume, process-tree timeout kill. Usage: `/peer-plan-review <codex|claude|copilot|opencode|agy|gemini> [model] [effort]`. (`agy` is experimental — not guaranteed read-only; Gemini CLI is EOL 2026-06-18, enterprise-only.)
 
 ### Experimental (not symlinked by default)
 
-- **[quorum-review](quorum-review/)** — Multi-provider consensus review system (v3.1). Anonymous quorum reviews for plans/specs/diffs with canonical issue IDs, conservative merges, independent verifier. v3.1 refactor split the orchestrator into a `quorum/` package and vendored shared infrastructure from `/common/` (see [quorum-review/CHANGELOG.md](quorum-review/CHANGELOG.md)). Source in-repo only — install manually if you want to try it.
+- **[quorum-review](quorum-review/)** — Multi-provider consensus review system (v3.1). Anonymous quorum reviews for plans/specs/diffs with canonical issue IDs, conservative merges, independent verifier. Reviewers: claude, codex, copilot, agy (Antigravity, experimental), gemini. v3.1 refactor split the orchestrator into a `quorum/` package and vendored shared infrastructure from `/common/` (see [quorum-review/CHANGELOG.md](quorum-review/CHANGELOG.md)). Source in-repo only — install manually if you want to try it.
 
 ## Deployment
 
