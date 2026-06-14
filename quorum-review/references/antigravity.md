@@ -37,4 +37,4 @@ printf 'PROMPT' | agy --print --sandbox --print-timeout 600s \
 
 ## Auth, footprint, cost
 
-Auth via local Google/GCP (Vertex) credentials; runs consume Vertex quota. Each run persists a SQLite conversation + log under `~/.gemini/antigravity-cli/` (not auto-cleaned). Unentitled models exit 0 empty; the adapter's empty-output handling surfaces that as a failure.
+Auth via the local cached Google/GCP (Vertex) login under `~/.gemini/antigravity-cli/` (no `--api-key` flag or API-key env var); runs consume Vertex quota. Each run persists a SQLite conversation + log under `~/.gemini/antigravity-cli/` (not auto-cleaned). Unentitled models exit 0 empty; the adapter's empty-output handling surfaces that as a failure.
