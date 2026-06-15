@@ -27,16 +27,23 @@ if [[ -d common/common ]]; then
   fi
 fi
 
-# --- Gate 2: hard module-size cap on quorum-review/scripts/quorum/ ---------
-if [[ -d quorum-review/scripts/quorum ]]; then
-  if ! python3 common/scripts/check_module_size.py quorum-review/scripts/quorum/; then
-    echo
-    echo "pre-commit: module-size hard cap exceeded."
-    echo "Split the oversized module OR add an explicit waiver:"
-    echo "    # WAIVER: module-size <reason>"
-    echo "in the first 20 lines of the file."
-    exit 1
-  fi
+# --- Gate 2: hard module-size cap across both skills' scripts/ trees ----------
+# check_module_size.py recurses (rglob), so each dir covers its top-level scripts,
+# the vendored _common/ tree, the quorum/ package, and the split tests/ modules.
+# Accumulate status across dirs — never `|| true`, which would discard the
+# hard-cap exit code and let a violation pass silently.
+size_rc=0
+for d in quorum-review/scripts peer-plan-review/scripts; do
+  [[ -d $d ]] || continue
+  python3 common/scripts/check_module_size.py "$d" || size_rc=1
+done
+if [[ $size_rc -ne 0 ]]; then
+  echo
+  echo "pre-commit: module-size hard cap exceeded."
+  echo "Split the oversized module OR add an explicit waiver:"
+  echo "    # WAIVER: module-size <reason>"
+  echo "in the first 20 lines of the file."
+  exit 1
 fi
 
 exit 0

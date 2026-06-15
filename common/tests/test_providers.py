@@ -123,14 +123,22 @@ class TestBuildCmd:
         assert "run" in cmd
         assert "--dangerously-skip-permissions" in cmd
 
-    def test_agy_basic(self):
+    def test_agy_safety_flag_contract(self):
+        # Full safety-flag contract for the EXPERIMENTAL, not-guaranteed-read-only
+        # agy reviewer. Pinned here (the source of truth vendored into both skills)
+        # so a future edit can't silently weaken the posture:
+        #   - --print + --sandbox present (headless + terminal containment)
+        #   - --dangerously-skip-permissions ABSENT (never blanket auto-approve)
+        #   - --effort ABSENT (effort is folded into the model name, not a flag)
+        #   - --model present with a non-empty value (defaults to the Flash family)
         cmd = build_agy_cmd(_args())
         assert cmd[0] == "agy"
         assert "--print" in cmd
         assert "--sandbox" in cmd
-        # agy is the experimental, not-guaranteed-read-only reviewer; never
-        # request blanket auto-approve.
         assert "--dangerously-skip-permissions" not in cmd
+        assert "--effort" not in cmd
+        assert "--model" in cmd
+        assert cmd[cmd.index("--model") + 1]  # non-empty model value
 
     def test_agy_resume(self):
         cmd = build_agy_cmd(_args(resume=True), session_id="conv-uuid")
