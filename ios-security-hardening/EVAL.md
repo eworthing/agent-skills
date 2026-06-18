@@ -15,13 +15,13 @@
     ✅ SKILL.md has valid frontmatter
     ✅ Skill name matches directory
     ✅ No extraneous files
-    ✅ Resource directories are non-empty (no references/ — OK for single-file skill)
+    ✅ Resource directories are non-empty (references/build-hardening-xcode27.md)
   [TRIGGER]
-    ✅ Description length adequate (61 words)
+    ✅ Description length adequate (84 words)
     ✅ Description includes trigger contexts (Use when…)
   [DOCUMENTATION]
-    ✅ SKILL.md body length (458 lines)
-    ✅ References are linked from SKILL.md (no references/)
+    ✅ SKILL.md body length (476 lines)
+    ✅ References are linked from SKILL.md
   [SCRIPTS]
     ✅ No scripts/
   [SECURITY]
@@ -98,3 +98,4 @@ None. Description + multi-source pattern landed.
 | 2026-05-12 (baseline) | 85% structural / ~86 manual | Pre-merge. 2 description warnings. |
 | 2026-05-12 (post-merge) | 100% structural / 92 manual | URL Source Resolution pattern merged from Tiercade. Description warnings fixed. |
 | 2026-06-03 (security-correctness pass) | 100% structural / 92 manual | anthropic-grade-optimizer Pass-2 audit. **Fixed a domain-allowlist bypass** the prior 1.2/4.4 Correctness/Error-Prevention scores missed: `host.hasSuffix(domain)` accepted `notexample.com` against `example.com` — corrected to exact-or-dot-bounded match (`isAllowedDomain` + `imageSource`), case-folded. Switched Step 2 path-traversal example from blocklist to the allowlist idiom (consistency with Example 1, AR-CC-S16). Annotated voodoo constants 1000/500/50MB (AR-CC-S18). Added CSV formula-injection guard (leading `= + - @`). Reframed rigid Constraints list with threat rationale (AR-CC-S09). Structural unchanged; manual score held at 92 (a real correctness fix, not a feature add — score not inflated). |
+| 2026-06-18 (Xcode 27 build hardening) | 100% structural / 92 manual | Added `references/build-hardening-xcode27.md` (Enhanced Security capability, pointer authentication/arm64e + SPM caveats, stack zero-init, hardened allocators, MTE soft-mode, `ENABLE_C_BOUNDS_SAFETY` / `ENABLE_CPLUSPLUS_BOUNDS_SAFE_BUFFERS`, analyzer security checkers, adoption order) — harvested + verified against Xcode 27.0 (27A5194q). Description extended with build-time-security triggers (722 chars / 84 words, in range). First real `references/` file → progressive disclosure now genuine. Manual score held at 92: net-additive depth, no rubric criterion crosses a band (re-score on next full rubric pass). |

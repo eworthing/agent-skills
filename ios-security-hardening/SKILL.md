@@ -1,12 +1,16 @@
 ---
 name: ios-security-hardening
 description: >-
-  Applies input-validation and file-handling safeguards for untrusted data including
-  path-traversal prevention, URL scheme/domain allowlisting, multi-source image
+  Applies input-validation and file-handling safeguards for untrusted data
+  (path-traversal prevention, URL scheme/domain allowlisting, multi-source image
   reference resolution, CSV/JSON sanitization, AI prompt sanitization, sandbox
-  directory usage, and iOS Data Protection levels. Use when importing files,
-  restoring backups, handling URLs or user-provided paths, processing CSV/JSON
-  from external sources, or reviewing features that accept external input.
+  directories, iOS Data Protection) and Xcode 27 build-time hardening (Enhanced
+  Security capability, pointer authentication / arm64e, stack zero-init, hardened
+  allocators, hardware memory tagging, C/C++ bounds safety). Use when importing
+  files, restoring backups, handling URLs or user-provided paths, processing
+  CSV/JSON from external sources, reviewing features that accept external input,
+  or configuring Xcode build security settings / Enhanced Security / pointer
+  authentication entitlements.
 allowed-tools:
   - Read
   - Write
@@ -25,6 +29,7 @@ allowed-tools:
 - Workflow (identify attack surfaces, apply mitigations, verify)
 - Common Mistakes to Avoid
 - Examples (export file write, multi-source image refs, CSV import, AI prompts, secrets)
+- Build-Time Hardening (Xcode 27)
 - References
 - Constraints
 
@@ -459,8 +464,31 @@ if let source = imageSource(from: item.imageRef,
 }
 ```
 
+## Build-Time Hardening (Xcode 27)
+
+Runtime input validation (above) defends against attacker-controlled *data*. Xcode 27's
+**Enhanced Security** capability adds the complementary *compile-time and process-level*
+hardening — control-flow integrity (pointer authentication / arm64e), stack zero-init,
+hardened allocators, hardware memory tagging (MTE), C/C++ bounds safety, and security
+diagnostics. The master switch cascades most of it:
+
+```
+ENABLE_ENHANCED_SECURITY = YES          # cascades warnings, stack zero-init,
+                                        # typed allocators, hardened libc++
+ENABLE_POINTER_AUTHENTICATION = YES     # arm64e; override to NO on non-arm64e targets
+```
+
+…plus the `com.apple.security.hardened-process` entitlement family per target. Applies to
+iOS/macOS/visionOS/DriverKit; clang code settings matter only for targets with C/C++/ObjC.
+
+See [references/build-hardening-xcode27.md](references/build-hardening-xcode27.md) for the
+full setting + entitlement catalog, arm64e SPM/binary-dependency caveats, MTE soft-mode
+rollout, the `ENABLE_C_BOUNDS_SAFETY` / `ENABLE_CPLUSPLUS_BOUNDS_SAFE_BUFFERS` opt-ins,
+static-analyzer security checkers, and lowest-risk-first adoption order.
+
 ## References
 
+- [Build-time hardening (Xcode 27 Enhanced Security)](references/build-hardening-xcode27.md)
 - OWASP Mobile Security Testing Guide
 - Apple App Sandbox documentation
 
