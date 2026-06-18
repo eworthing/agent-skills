@@ -28,6 +28,7 @@ allowed-tools:
 - When to Use
 - When Not to Use
 - Architecture: DropDelegate vs `.onDrop`
+- Internal Reorder (SDK 27): `reorderable()` vs DropDelegate
 - Drop Priority (Winner-Take-All)
 - DropDelegate Skeleton
 - NSItemProvider Lifecycle Rules
@@ -66,6 +67,9 @@ API — all receiving code must be platform-gated.
   already control both source and destination — that API is simpler and
   doesn't need this skill. Use this skill when you must accept *external*
   pasteboard payloads (browser drags, Finder, Photos).
+- Same-app drag-to-**reorder** on SDK 27 targets — use `reorderable()` /
+  `reorderContainer(for:)` (see *Internal Reorder* below), not a hand-rolled
+  `DropDelegate` reorder chain.
 - macOS `NSPasteboard` paste shortcuts — different surface.
 
 ## Architecture: DropDelegate vs `.onDrop`
@@ -80,6 +84,68 @@ API — all receiving code must be platform-gated.
 Once any target on screen needs priority routing, **all** participating
 targets must be `DropDelegate`. Mixing `.onDrop` callbacks with
 `DropDelegate` makes priority undefined.
+
+## Internal Reorder (SDK 27): `reorderable()` vs DropDelegate
+
+SDK 27 adds first-class drag-to-reorder for **any** container (`List`,
+`LazyVStack`, `LazyVGrid`, stacks, custom layouts) — no longer `List`-only.
+For *same-app* reorder, use these instead of a hand-rolled `DropDelegate`
+chain. The rest of this skill (priority routing, payload extraction) remains
+for *external* pasteboard payloads.
+
+**Availability:** iOS / macOS / watchOS / visionOS 27; **tvOS unavailable**.
+The examples reference SDK-27-only symbols, so they require the **Xcode 27 SDK
+to compile**; use `if #available(iOS 27, *)` to support older deployment
+targets, and keep the existing `#if !os(tvOS)` gate.
+
+Two modifiers cooperate — `.reorderable()` on the `ForEach` (it's declared on
+`DynamicViewContent`), `.reorderContainer(for:move:)` on the container. The
+`move` closure receives a `ReorderDifference` you apply to your own data:
+
+```swift
+ScrollView {
+    LazyVGrid(columns: columns) {
+        ForEach(stickers) { StickerView($0) }
+            .reorderable()
+    }
+    .reorderContainer(for: Sticker.self) { difference in
+        difference.apply(to: &stickers)   // mutate your @State collection
+    }
+}
+```
+
+`apply(to:)` is **your** helper, not SDK-provided: switch on
+`difference.destination.position` (`.before(id)` inserts ahead of that item,
+`.end` appends) and move `difference.sources` within your collection.
+
+- `Item` must be `Identifiable` for the `for:` overload (keys on `\.id`);
+  otherwise use `reorderContainer(for:itemID:)` with a key path.
+- **Sections / multiple collections:** tag each `ForEach` with
+  `.reorderable(collectionID:)` and declare the id type on the container with
+  `reorderContainer(for:in:)`; route via `difference.destination.collectionID`.
+
+`reorderContainer(for:)` **already acts as a drag container and drop
+destination**, so plain reorder works with no extra drop code. Customize only
+when needed:
+
+| Need | Add |
+|---|---|
+| Same-app reorder | `reorderable()` + `reorderContainer(for:)` (nothing else) |
+| Custom drag payload / drag-out to other apps | `.dragContainer(for:)` on the container (a bare `.draggable` does **not** customize it) |
+| Drop one item onto another (combine) | `.dropDestination(for:isEnabled:)` on each child |
+| Accept a drop at the reorder position | `.dropDestination(for:)` on container + `session.reorderDestination(for:)` |
+| Accept **external** pasteboard payloads | this skill's `DropDelegate` priority architecture (below) |
+
+**Critical overload pitfall.** For drop-to-combine use the void overload
+`dropDestination(for:isEnabled:) { items, session in … }`, and put the
+per-item predicate in `isEnabled:` (SwiftUI calls the closure only when it's
+true; it draws the target/gap for you). Do **not** use the legacy
+`dropDestination(for:) { … } isTargeted: { … }` overload — it reports hover
+state for custom feedback, returns `Bool`, and does **not** gate combining.
+Picking it is the common mistake.
+
+When reorder coexists with external drop handlers, the priority rules below
+still govern the external targets.
 
 ## Drop Priority (Winner-Take-All)
 
