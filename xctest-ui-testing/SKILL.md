@@ -443,6 +443,52 @@ Common causes:
 3. Keyboard blocking elements — dismiss keyboard first: `app.keyboards.buttons["Return"].tap()`
 4. Stale element references — re-query after navigation changes
 
+### Settle Before Asserting
+
+A test that asserts immediately after `launch()` or a navigation can fail on the
+launch screen or a half-built hierarchy — the scripted equivalent of acting on an
+empty UI. Gate the first interaction on a known "screen is ready" element, never a
+`sleep`:
+
+```swift
+let app = XCUIApplication()
+app.launch()
+// Wait for real content, not the launch screen, before touching anything:
+XCTAssertTrue(app.otherElements["Home_Root"].waitForExistence(timeout: 10))
+```
+
+Use a root marker (see *Root Markers for Modals*) as the readiness signal. After a
+tap that kicks off async work, `waitForExistence` on the *result* element before
+asserting — don't assert against the control you just tapped.
+
+### Retry: Diagnose, Don't Mask
+
+`-retry-tests-on-failure` (see [references/runner.md](references/runner.md)) re-runs
+failed tests. Treat a pass-only-on-retry as a **flake signal to investigate**, not a
+green check — a test that needs a retry is still a bug in the test or the app. Keep
+the first-attempt failure visible (attach a screenshot / `debugDescription` on
+failure) so the retry can't erase it:
+
+```swift
+add(XCTAttachment(screenshot: app.screenshot()))   // in teardown / on failure
+```
+
+Never wrap a known-flaky assertion in a silent local retry loop to turn CI green —
+fix the wait condition or the underlying app behavior instead.
+
+### Judging Failures: Real Bug vs Transient
+
+When a UI test (or an agent verifying the app live) sees something off, classify it
+before reacting — most "flaky failures" are really one of these:
+
+| Category | Examples | Action |
+|---|---|---|
+| **Functional bug** | element never appears (`waitForExistence` false), tap is a no-op, navigation lands on the wrong screen, expected data missing | Fail / report |
+| **Visual–layout bug** | overlapping or truncated labels, element off-screen, wrong state shown | Fail / report — XCUITest sees structure not pixels, so assert on `frame` / `isHittable` or attach a screenshot for review |
+| **Transient state** | spinner, in-flight animation, keyboard appearing or dismissing | Not a failure — `waitForExistence` past it; don't assert mid-transition |
+| **Unexpected exit** | app crash or termination | Always a failure — assert `app.state == .runningForeground` after a flow; a crash is never "flaky" |
+| **Expected behavior** | empty-state placeholder, disabled button on an incomplete form, a system permission dialog | Not a bug — assert the *expected* empty/disabled state; handle system dialogs with `addUIInterruptionMonitor` |
+
 ## New Component Checklist
 
 When adding a new modal, sheet, overlay, or screen, follow the 8-step
