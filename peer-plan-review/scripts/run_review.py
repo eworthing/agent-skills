@@ -40,10 +40,14 @@ from _common.metadata.extractors import (  # noqa: F401 — re-exported for test
 )
 from _common.process.tree import _kill_tree, _popen_session_kwargs
 from _common.session import (
+    default_manifest,
     extract_text_from_output,
     load_session,
     probe_writable,
+    reuse_codex_home,
     save_session,
+    setup_codex_home,
+    teardown_codex_home,
     validate_prompt_file,
     write_summary,
 )
@@ -101,6 +105,13 @@ def parse_args():
     )
     p.add_argument("--error-log", default=None, help="Path to append-only JSONL error/event log")
     p.add_argument("--review-id", default=None, help="Review ID for log correlation across rounds")
+    p.add_argument(
+        "--codex-home-manifest",
+        default=None,
+        help="Review-scoped manifest path tracking per-run Codex homes for "
+        "concurrency-safe isolation + terminal cleanup (defaults to a path "
+        "derived from --session-file).",
+    )
     p.add_argument(
         "--summary-file",
         default=None,
@@ -279,10 +290,33 @@ def run_review(args, logger=None):
         if reviewer == "agy" and stdin_data:
             stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
 
-    # Snapshot Codex session files before exec
+    # Codex: isolate per-run CODEX_HOME so concurrent runs don't share
+    # ~/.codex/sessions/, where the before/after diff can't tell two same-cwd
+    # runs apart. Resolved BEFORE the attempt loop builds the command, so a
+    # setup failure clears session_id/use_resume and yields a fresh exec, never
+    # a resume into a home that doesn't exist (fail closed).
+    codex_home = None
+    codex_capture_enabled = False
     codex_sessions_before = None
     if reviewer == "codex":
-        codex_sessions_before = _codex_session_files()
+        recorded = load_session(args.session_file).get("codex_home")
+        if recorded and reuse_codex_home(recorded):
+            codex_home = recorded
+        else:
+            manifest = args.codex_home_manifest or default_manifest(args.session_file)
+            new_home, ok = setup_codex_home(manifest)
+            if ok:
+                codex_home = new_home
+                if recorded:  # replaced a stale home: drop its dead session id
+                    teardown_codex_home(recorded)
+                    session_id = None
+            else:  # fail closed — never fall back to shared-home capture
+                session_id = None
+                use_resume = False
+        if codex_home:
+            env["CODEX_HOME"] = codex_home
+            codex_capture_enabled = True
+            codex_sessions_before = _codex_session_files(codex_home)
 
     # Set up signal handlers
     prev_sigterm = signal.getsignal(signal.SIGTERM)
@@ -433,8 +467,8 @@ def run_review(args, logger=None):
         # Extract session ID
         new_session_id = None
         codex_session_path = None
-        if reviewer == "codex":
-            after = _codex_session_files()
+        if reviewer == "codex" and codex_capture_enabled:
+            after = _codex_session_files(codex_home)
             new_files = after - (codex_sessions_before or set())
             valid_files = [p for p in new_files if Path(p).is_file()]
             cwd_matches = []
@@ -536,6 +570,11 @@ def run_review(args, logger=None):
         plan_meta = compute_plan_metadata(args.plan_file)
         if plan_meta:
             session_data.update(plan_meta)
+
+        # Persist the per-run Codex home so the next round reuses it and terminal
+        # cleanup can reclaim it (the manifest is the crash-safe backstop).
+        if codex_home:
+            session_data["codex_home"] = codex_home
 
         save_session(args.session_file, session_data)
 

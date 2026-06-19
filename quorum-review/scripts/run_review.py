@@ -52,9 +52,13 @@ from _common.providers.registry import (  # noqa: F401 — re-exported for tests
     build_gemini_cmd,
 )
 from _common.session import (  # noqa: F401 — re-exported for tests
+    default_manifest,
     extract_text_from_output,
     load_session,
+    reuse_codex_home,
     save_session,
+    setup_codex_home,
+    teardown_codex_home,
 )
 from accepted_reviewers import ACCEPTED_REVIEWERS, accepted_reviewers
 
@@ -82,6 +86,13 @@ def parse_args():
     p.add_argument("--output-file", help="Path to write reviewer response")
     p.add_argument("--session-file", help="Path to session metadata JSON")
     p.add_argument("--events-file", help="Path to event stream log")
+    p.add_argument(
+        "--codex-home-manifest",
+        default=None,
+        help="Review-scoped manifest path tracking per-run Codex homes for "
+        "concurrency-safe isolation + terminal cleanup (defaults to a path "
+        "derived from --session-file).",
+    )
     p.add_argument("--model", default=None, help="Model override")
     p.add_argument(
         "--effort",
@@ -193,6 +204,32 @@ def run_review(args):
     session = load_session(args.session_file) if args.resume else {}
     session_id = session.get("session_id") if args.resume else None
 
+    # Codex: isolate per-run CODEX_HOME so concurrent panel reviewers (quorum
+    # fans out via a thread pool, each a run_review subprocess) don't share
+    # ~/.codex/sessions/, where the before/after diff can't tell two same-cwd
+    # runs apart. Resolved BEFORE build_cmd so a setup failure clears
+    # session_id/args.resume and yields a fresh exec, never a resume into a home
+    # that no longer exists (fail closed). The recursive resume-fallback below
+    # re-enters here and reuses this home via the recorded session.json.
+    codex_home = None
+    codex_capture_enabled = False
+    if reviewer == "codex":
+        recorded = load_session(args.session_file).get("codex_home")
+        if recorded and reuse_codex_home(recorded):
+            codex_home = recorded
+        else:
+            manifest = args.codex_home_manifest or default_manifest(args.session_file)
+            new_home, ok = setup_codex_home(manifest)
+            if ok:
+                codex_home = new_home
+                if recorded:  # replaced a stale home: drop its dead session id
+                    teardown_codex_home(recorded)
+                    session_id = None
+            else:  # fail closed — never fall back to shared-home capture
+                session_id = None
+                args.resume = False
+        codex_capture_enabled = codex_home is not None
+
     # Build provider-specific command via the registry's build_cmd callable.
     cmd = spec["build_cmd"](args, session_id)
 
@@ -207,6 +244,10 @@ def run_review(args):
 
     # Build environment
     env = os.environ.copy()
+
+    # Point Codex at the per-run isolated home resolved above.
+    if codex_home:
+        env["CODEX_HOME"] = codex_home
 
     # Claude-specific env vars
     if reviewer == "claude":
@@ -259,8 +300,8 @@ def run_review(args):
 
     # Snapshot Codex session files before exec for race-safe ID extraction
     codex_sessions_before = None
-    if reviewer == "codex":
-        codex_sessions_before = _codex_session_files()
+    if reviewer == "codex" and codex_capture_enabled:
+        codex_sessions_before = _codex_session_files(codex_home)
 
     # Set up signal handlers for cleanup
     prev_sigterm = signal.getsignal(signal.SIGTERM)
@@ -324,8 +365,8 @@ def run_review(args):
         # Extract session ID
         new_session_id = None
         codex_session_path = None
-        if reviewer == "codex":
-            after = _codex_session_files()
+        if reviewer == "codex" and codex_capture_enabled:
+            after = _codex_session_files(codex_home)
             new_files = after - (codex_sessions_before or set())
             # Scan all new files for ones whose cwd matches ours.
             # If multiple match, same-cwd concurrency is ambiguous —
@@ -399,6 +440,10 @@ def run_review(args):
         }
         if meta.get("thinking_tokens") is not None:
             session_data["thinking_tokens"] = meta["thinking_tokens"]
+        # Persist the per-run Codex home so the next round (and the recursive
+        # resume-fallback) reuses it and terminal cleanup can reclaim it.
+        if codex_home:
+            session_data["codex_home"] = codex_home
         save_session(args.session_file, session_data)
 
         if returncode != 0:

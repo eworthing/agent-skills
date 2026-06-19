@@ -13,6 +13,7 @@ python3 <skill-dir>/scripts/run_review.py \
   --events-file <events.jsonl> \
   --error-log <errors.jsonl> \
   --review-id <REVIEW_ID> \
+  [--codex-home-manifest <homes.list>] \
   [--resume] \
   [--model MODEL] \
   [--effort LEVEL] \
@@ -35,6 +36,10 @@ python3 <skill-dir>/scripts/run_review.py \
   effort is encoded as a model-name variant (e.g. `Gemini 3.5 Flash (High)`);
   `xhigh` maps to `High` (agy's max).
 - `--timeout`: seconds. Default 600. Raise for large plans or slower reviewers.
+- `--codex-home-manifest`: review-scoped list of per-run Codex homes for
+  concurrency-safe isolation + terminal cleanup. Codex only; defaults to a path
+  derived from `--session-file` if omitted. The `ppr_paths.py --format shell`
+  output exports it as `$CODEX_HOME_MANIFEST`.
 - `--summary-file`: optional machine-readable JSON with verdict, model, effort,
   round, finding count, and blocking count. Useful for non-Claude hosts.
 

@@ -71,6 +71,16 @@ The `thread_id` from `thread.started` JSONL events is an API thread ID, **not** 
 
 `CODEX_HOME` env var overrides `~/.codex`.
 
+**Concurrency isolation.** Because session files live in a single shared
+directory keyed only by cwd, two reviews running against the same repo at once
+can't be told apart from `~/.codex/sessions/`. The adapter therefore points each
+run at its own randomized `CODEX_HOME` (auth + config copied in, isolated
+`sessions/`), recorded in the run's `session.json` and a review-scoped manifest.
+Resume reuses that home; the home is reclaimed at Finalize (`ppr_paths.py
+--cleanup`). On setup failure the adapter fails closed — it disables capture and
+runs a fresh `exec` against the inherited home rather than risk a cross-run
+binding.
+
 ## Additional flags
 
 - `--color never`: machine-friendly output

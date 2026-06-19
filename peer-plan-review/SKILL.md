@@ -104,14 +104,19 @@ Canonical temp files:
 - `${TMPDIR}/ppr-${REVIEW_ID}-session.json`
 - `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl`
 - `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` *(retained after cleanup)*
+- `${TMPDIR}/ppr-${REVIEW_ID}-codex-homes.list` *(Codex isolation manifest; reclaimed at Finalize)*
 
-If you persist the current review for later rounds, persist the `REVIEW_ID`
-only, then reconstruct all file paths with `ppr_paths.py`. Do not use ad hoc
-inline Python that reads `PROMPT_FILE` or related path vars from the
-environment before they have been exported.
+Keep the `REVIEW_ID` in your own working context across rounds and reconstruct
+every path with `ppr_paths.py` (the `eval` above also exports
+`$CODEX_HOME_MANIFEST`). Do not use ad hoc inline Python that reads `PROMPT_FILE`
+or related path vars from the environment before they have been exported.
 
-Example for a persisted id file:
-`python3 <skill-dir>/scripts/ppr_paths.py --review-id-file /tmp/ppr-current-id.txt --format shell`
+**Concurrency:** several peer reviews can run side by side against one codebase.
+Each generates its own random `REVIEW_ID`, so their temp files never collide, and
+the Codex adapter now isolates each run's session storage (a per-run `CODEX_HOME`
+tracked in the manifest) so concurrent Codex reviews can't capture each other's
+session. Never share one id-file path between concurrent reviews — a shared
+pointer is the one thing that *would* make them step on each other.
 
 Snapshot the plan into `plan.md` before each round. Treat the snapshot as immutable for that round. Number every line (`cat -n` style) so the reviewer can cite specific lines — include the **numbered** plan in the prompt.
 
@@ -183,6 +188,9 @@ Stop after approval or five rounds, whichever first.
 - Round limit (standard) → present latest plan + unresolved concerns.
 - Adversarial round ended `REVISE` → present findings as-is.
 - **In all cases, STOP.** Do not begin implementing changes, editing code, or modifying files. Ask the user which findings, if any, they want addressed.
+- Reclaim any per-run Codex homes (no-op for other reviewers):
+  `python3 <skill-dir>/scripts/ppr_paths.py --cleanup --review-id "$REVIEW_ID"`.
+  It validates each recorded home before removing it and is safe to re-run.
 - Remove five session temp files (plan, prompt, review, session, events).
   No globs. Error log intentionally retained for post-mortem.
 

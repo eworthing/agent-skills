@@ -121,6 +121,14 @@ Reviewer prompts inject hidden role labels to sharpen each reviewer's focus. Lab
 
 The orchestrator writes reviewer prompts, reviews, session metadata, the merged ledger, deliberation context, tally JSON, and merge logs under the configured `--tmpdir`. The ledger lives at `qr-${QUORUM_ID}-ledger.json` and the merge log at `qr-${QUORUM_ID}-merge-log.jsonl`. Parse-failure telemetry (when a reviewer's output cannot be parsed strictly) lives at `qr-${QUORUM_ID}-parse-failures.jsonl`.
 
+**Codex isolation + cleanup.** The panel fans out reviewers in parallel, so each Codex reviewer (and the verifier) runs in its own isolated `CODEX_HOME` — otherwise concurrent Codex runs would share `~/.codex/sessions/` and capture each other's sessions. Each per-run home is recorded in `qr-${QUORUM_ID}-codex-homes.list`. After the **final** round of a review (approved, indeterminate, or round-limit), reclaim them:
+
+```bash
+python3 scripts/qr_paths.py --cleanup --id-prefix "qr-${QUORUM_ID}"
+```
+
+It validates every recorded home before removing it and is safe to re-run. Do **not** run it between rounds — round 2+ resumes the homes created in round 1.
+
 ## Examples
 
 Plan review:

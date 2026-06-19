@@ -12,7 +12,8 @@ class TestMainOrchestration(unittest.TestCase):
         def mock_fn(
             run_review_py, provider, model, plan_file_arg,
             prompt_file, output_file, session_file, events_file,
-            effort="high", resume=False, timeout=300,
+            effort="high", resume=False, timeout=300, verification_mode=False,
+            codex_home_manifest=None,
         ):
             Path(output_file).write_text(review_text, encoding="utf-8")
             Path(session_file).write_text(

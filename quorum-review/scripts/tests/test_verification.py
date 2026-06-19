@@ -207,6 +207,7 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
                 run_review_py, provider, model, plan_file_arg,
                 prompt_file, output_file, session_file, events_file,
                 effort="high", resume=False, timeout=300, verification_mode=False,
+                codex_home_manifest=None,
             ):
                 # Write a canned VERIFIED response
                 Path(output_file).write_text(

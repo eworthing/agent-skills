@@ -115,6 +115,7 @@ def run_single_reviewer(
     resume=False,
     timeout=600,
     verification_mode=False,
+    codex_home_manifest=None,
 ):
     """Run a single reviewer via run_review.py. Returns exit code."""
     cmd = [
@@ -128,6 +129,10 @@ def run_single_reviewer(
         "--events-file", events_file,
         "--timeout", str(timeout),
     ]
+    # Review-scoped manifest of per-run Codex homes (concurrency isolation +
+    # terminal cleanup). Every reviewer + verifier in a review shares one path.
+    if codex_home_manifest:
+        cmd.extend(["--codex-home-manifest", codex_home_manifest])
     if model:
         cmd.extend(["--model", model])
     if effort:
@@ -813,6 +818,7 @@ def main():
             effort=args.effort,
             resume=resume,
             timeout=args.timeout,
+            codex_home_manifest=str(Path(tmpdir) / f"qr-{quorum_id}-codex-homes.list"),
         )
         return idx, rc
 
@@ -943,6 +949,7 @@ def main():
                         resume=False,
                         timeout=args.timeout,
                         verification_mode=True,
+                        codex_home_manifest=str(Path(tmpdir) / f"qr-{quorum_id}-codex-homes.list"),
                     )
                     if v_rc == 0:
                         v_results = parse_verification_response(v_output_file)
