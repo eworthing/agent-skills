@@ -67,6 +67,15 @@ The `thread_id` from `thread.started` JSONL events is an API thread ID, **not** 
 
 `CODEX_HOME` env var overrides `~/.codex`.
 
+**Concurrency isolation.** The panel fans out reviewers in parallel, so multiple
+Codex runs would otherwise share `~/.codex/sessions/` and the cwd-keyed capture
+couldn't tell them apart. The adapter gives each run (every panel reviewer and
+the verifier) its own randomized `CODEX_HOME` — auth + config copied in,
+isolated `sessions/` — recorded in `session.json` and the review-scoped
+`qr-<quorum_id>-codex-homes.list` manifest. Reclaim them after the final round
+with `qr_paths.py --cleanup --id-prefix qr-<quorum_id>`. Setup failure fails
+closed: capture is disabled and a fresh `exec` runs against the inherited home.
+
 ## Additional flags
 
 - `--color never`: machine-friendly output

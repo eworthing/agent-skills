@@ -26,7 +26,9 @@ _REVIEW_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Emit canonical peer-plan-review temp paths")
-    source = parser.add_mutually_exclusive_group(required=True)
+    # Not required at the argparse layer: --cleanup accepts --id-prefix instead
+    # of a review id. main() validates the right combination per mode.
+    source = parser.add_mutually_exclusive_group(required=False)
     source.add_argument("--review-id", help="Review id to build temp paths for")
     source.add_argument(
         "--review-id-file",
@@ -42,6 +44,17 @@ def parse_args():
         choices=("json", "shell"),
         default="json",
         help="Output format: JSON object or shell export statements",
+    )
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        help="Reclaim this review's per-run Codex homes (manifest + session files) and exit",
+    )
+    parser.add_argument(
+        "--id-prefix",
+        default=None,
+        help="With --cleanup: the literal review prefix (e.g. 'qr-<quorum_id>'). "
+        "Defaults to 'ppr-<review-id>' when --review-id is given instead.",
     )
     return parser.parse_args()
 
@@ -77,6 +90,7 @@ def build_paths(review_id, tmpdir=None):
         "session_file": str(base / f"{prefix}-session.json"),
         "events_file": str(base / f"{prefix}-events.jsonl"),
         "error_log": str(base / f"{prefix}-errors.jsonl"),
+        "codex_home_manifest": str(base / f"{prefix}-codex-homes.list"),
     }
 
 
@@ -90,6 +104,7 @@ def render_shell(paths):
         "SESSION_FILE": paths["session_file"],
         "EVENTS_FILE": paths["events_file"],
         "ERROR_LOG": paths["error_log"],
+        "CODEX_HOME_MANIFEST": paths["codex_home_manifest"],
     }
     return "\n".join(
         f"export {name}={shlex.quote(value)}" for name, value in env_map.items()
@@ -98,6 +113,31 @@ def render_shell(paths):
 
 def main():
     args = parse_args()
+
+    if args.cleanup:
+        # Relative import: this module is always imported as part of the package
+        # (_common.session.paths in skills, common.session.paths in tests), so a
+        # sibling import resolves; it is never run as a bare script.
+        from .codex_home import cleanup_review_homes
+
+        if args.id_prefix:
+            prefix = args.id_prefix
+        else:
+            try:
+                prefix = f"ppr-{load_review_id(args)}"
+            except ValueError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                sys.exit(1)
+        tmpdir = args.tmpdir or tempfile.gettempdir()
+        remaining = cleanup_review_homes(tmpdir, prefix)
+        if remaining:
+            print(f"Warning: {remaining} Codex home(s) could not be removed", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
+
+    if not (args.review_id or args.review_id_file):
+        print("Error: one of --review-id or --review-id-file is required", file=sys.stderr)
+        sys.exit(1)
     try:
         paths = build_paths(load_review_id(args), tmpdir=args.tmpdir)
     except ValueError as exc:

@@ -21,9 +21,15 @@ _REVERSE_EFFORT_OPENCODE = {
 }
 
 
-def _codex_session_files():
-    """Return set of all Codex session file paths."""
-    codex_home = os.environ.get("CODEX_HOME", str(Path("~/.codex").expanduser()))
+def _codex_session_files(codex_home=None):
+    """Return set of all Codex session file paths under the given CODEX_HOME.
+
+    ``codex_home`` defaults to ``$CODEX_HOME``/``~/.codex`` (legacy behavior);
+    the adapter passes an explicit per-run home so concurrent runs each scan
+    only their own isolated ``sessions/`` directory.
+    """
+    if codex_home is None:
+        codex_home = os.environ.get("CODEX_HOME", str(Path("~/.codex").expanduser()))
     sessions_dir = Path(codex_home) / "sessions"
     if not sessions_dir.is_dir():
         return set()
