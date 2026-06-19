@@ -8,6 +8,7 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 
 - [SwiftUI Discipline](#swiftui-discipline)
 - [Concurrency & Runtime Safety](#concurrency--runtime-safety)
+- [Cross-platform compile correctness](#cross-platform-compile-correctness)
 - [Hidden State Machines (Apple-flavored)](#hidden-state-machines-apple-flavored)
 - [Ownership (Apple-flavored)](#ownership-apple-flavored)
 - [Tests / Regression Resistance (Apple-flavored)](#tests--regression-resistance-apple-flavored)
@@ -28,6 +29,9 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 - Lifecycle seams explicit.
 - Previews and fixtures supported by design but not used as proof of quality.
 - Do not reward MVVM, repositories, coordinators, or protocol abstraction unless they reduce ambiguity or coupling per the architectural tests in `architecture-rubric.md`.
+- **Collection identity (correctness, not perf).** `ForEach` / `List` over **dynamic or reorderable** data needs identity that is stable, outlives the view, and is not derived from mutable content. (`.indices` / offset is acceptable for genuinely static content — not a blanket ban.) Unstable identity on dynamic data is a `state_management` finding, not a style nit.
+- **Passed-value ownership.** Declaring a parent-passed value as `@State` / `@StateObject` captures the initial value and ignores later parent updates — a bug **only when continued parent synchronization is expected**. Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent. (`state_management`.)
+- **Invalidation problems need evidence.** Surface an over-invalidation finding only from a **demonstrated** source — Instruments, `Self._printChanges()`, a measured hot path — not from heuristics. Do not assert that passing an `@Observable` object broadens invalidation (the Observation framework tracks only the properties a view actually reads), and do not turn `AnyView`, non-unary rows, or missing `Equatable` into blanket findings. Map a demonstrated case to `framework_idioms`.
 
 ## Concurrency & Runtime Safety
 
@@ -108,6 +112,26 @@ Apple repos load only `lens-apple.md` (plus always-included `lens-security.md`);
 3. **MusicKit auth fail vs downgrade.** `MusicSubscription.subscriptionUpdates` can emit `.fetchFailed` (transient, retryable) or a confirmed-downgrade (`canPlayCatalogContent: false`). Treating these as the same path silently locks users out on transient failures. Pattern: separate `.fetchFailed` → retry-with-backoff vs `canPlayCatalogContent == false` → user-facing subscription prompt. Hits: `grep -rn 'MusicSubscription\|subscriptionUpdates\|canPlayCatalogContent' Sources/`.
 4. **`Task { @MainActor in }` in `deinit` (HR-9 carve-out).** Swift `deinit` cannot `await`; the standard pattern fires-and-forgets a cleanup Task on MainActor. Audit: every `deinit` containing `Task { @MainActor in ... }` must document why (resource that ONLY the deinitee can release; cancellation that ONLY MainActor can perform). Undocumented uses = HR-12 violation (mislabels compliance as carve-out).
 5. **`os_log` redaction.** `os_log("%@", userInput)` is public by default — user data appears in Console.app + sysdiagnose dumps. Sensitive interpolation must use `%{private}@` or `%{public}@` explicitly (the absence of the modifier is a violation). Hits: `grep -rn 'os_log\|Logger().' Sources/` — every `%@` site needs explicit privacy annotation.
+
+## Cross-platform compile correctness
+
+contest-refactor moves and splits code (Replace-don't-layer; inlining). On Apple multi-platform targets that is the exact trigger for a refactor that compiles on one platform and breaks another — and a single-platform test run (e.g. iOS Simulator) will not catch it. (Provenance / deeper recipes: the `apple-multiplatform` skill.)
+
+**Three distinct gating mechanisms — do not conflate:**
+
+- `#if canImport(UIKit)` answers *module importability*. It is **true on tvOS and Mac Catalyst too**, so it does not prove a given symbol exists.
+- `#if os(iOS)` answers *which target OS compiles the code* — i.e. per-OS SDK symbol presence. A UIKit symbol the tvOS SDK lacks (e.g. `UIImpactFeedbackGenerator`) is gated here, not by `canImport`.
+- `#available` / `@available` answers *API-version availability within an OS* (deployment-target gating).
+
+Using `canImport(UIKit)` to gate a symbol the tvOS SDK lacks is a correctness bug — the guard passes on tvOS and the build breaks at the symbol. The correct guard is `#if os(...)`; runtime version differences use `#available`.
+
+**File-split visibility hazard (a direct refactor risk).** `fileprivate` members are file-scoped; `private` members are reachable from same-file extensions of the same type (Swift 4+). Moving a type or extension into a new file can therefore lose access to either — a plain compile break, platform-independent in mechanism. It often *appears* on only one platform because the moved code sits behind `#if os()`, has different target membership, or only some targets are built in CI. When a refactor splits or relocates Swift code, confirm visibility holds across the affected targets.
+
+**Discover the declared target matrix first.** "All platforms" means the project's **affected declared targets** — read the schemes, `Package.swift` `platforms:`, and project target list. Audit and verify only what the project ships, not every theoretical Apple OS or OS version.
+
+**Illustrative, non-exhaustive divergence traps** (verify against the project's current SDK + deployment targets — these shift between SDK releases, so treat them as smoke, not fixed rules): toolbar placements `.topBarLeading` / `.topBarTrailing` (absent on macOS), `.tabViewStyle(.page)` (absent on macOS), `.fullScreenCover` (absent on macOS), `@Environment(\.editMode)` (iOS-family only), haptics and drag-receiving (absent on tvOS).
+
+**Scoring — via existing Severity Anchors, no new gate.** A confirmed compile failure on a supported target is a **Likely disqualifier** (a core property — "it builds" — is broken on a primary flow) and blocks 9.5 acceptance until fixed. A refactor that touches multi-platform or `#if`-gated code but leaves an applicable target **unverified** is a **Serious deduction** (unresolved risk) until the Actor produces the compile evidence required by [method.md Meta-Rule 4](method.md#meta-rules-apply-everywhere). Do not invent a gate on the *presence of a "cross-platform note"* — a documentation proxy is gameable and is itself a fake-clean reward.
 
 ## Hidden State Machines (Apple-flavored)
 

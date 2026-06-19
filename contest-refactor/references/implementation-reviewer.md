@@ -106,6 +106,14 @@ Did the diff pass Simplify Pressure Test on the actual code (not the plan)?
   authority? That's an architecture costume layer — reject.
 - **Fake-clean reward scan**: surface polished (renamed, reformatted, comment
   added) while the structural smell persists? Reject.
+- **Suppression-as-fix scan**: did the diff "resolve" the targeted finding by
+  adding a safety-affecting suppression (`@unchecked Sendable`,
+  `nonisolated(unsafe)`, `# type: ignore`, `#[allow(...)]`) instead of fixing the
+  structure, without narrow scope + concrete justification + the compensating
+  invariant that makes it safe? That's fake-clean reward via suppression
+  ([architecture-rubric.md § Smells](architecture-rubric.md#vocabulary--smells-use-only-in-this-exact-sense))
+  — reject. A style/tooling suppression (`// swiftlint:disable line_length`,
+  formatter ignore) is not by itself a reject.
 
 If any honesty failure → reject (or conditional if the fix is small and obvious;
 see Conditional below).
@@ -121,6 +129,16 @@ targeted one?
   stable ID tie-breaker.
 - Apply the selected lens (Apple / Generic) to the changed hunks only. Stack-
   specific regressions count.
+- **Invariant preservation (risk-bearing diffs).** Treat these as review cues,
+  not automatic regressions: changed isolation (`@MainActor` → `nonisolated`),
+  removed `final`/`Sendable`, added/narrowed `#if os()`/`canImport` gates, a type
+  or extension moved to another file (can drop `private`/`fileprivate` access),
+  a removed `guard`/lock. For each, confirm the Actor recorded the invariant
+  evidence required by [method.md Meta-Rule 4](method.md#meta-rules-apply-everywhere)
+  (affected-target compile / focused test / TSAN, or a recorded reason it is not
+  mechanically testable). You cannot certify a compile or race-freedom result by
+  reading the diff — you validate that adequate evidence exists. Missing or
+  inadequate evidence on a risk-bearing diff → reject.
 - A regression at lower severity is acceptable — note it in `regressions[]` but
   don't reject for it. The next loop's Critic phase will pick it up.
 

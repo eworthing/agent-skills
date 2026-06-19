@@ -96,6 +96,35 @@
       "expected_output": "resume-action.md routing via Resume Precedence Matrix row 2 (LOOP_STATE.json present AND last_checkpoint_at > 24h ago) → orphan: emit --reset recommendation handoff, do NOT auto-resume. Tell user: 'found mid-loop checkpoint older than 24h — likely orphaned. Re-invoke with --reset to discard, or commit/stash any in-flight work first.' Note: row 2 wins over row 7 (which would have routed to drift handling) because the matrix is first-match-wins top-down. G28 orphan detection invariant cited.",
       "files": ["fixtures/stale-loop-state-with-halt/CURRENT_REVIEW.json", "fixtures/stale-loop-state-with-halt/LOOP_STATE.json"],
       "assertions": []
+    },
+    {
+      "id": 12,
+      "name": "suppression-as-fake-fix",
+      "prompt": "A /contest-refactor loop targeted this finding: 'Data race on `ImageCache.storage` — two Tasks write it concurrently with no synchronization.' The Actor's diff 'resolved' it by changing `final class ImageCache` to `final class ImageCache: @unchecked Sendable` and adding no lock, actor, or isolation. The single-threaded test suite passes. You are the implementation reviewer (Step 3). Give your verdict (approved / conditional / rejected) and the reasoning, then save it to ./review-verdict.md.",
+      "expected_output": "review-verdict.md returns rejected: the diff is fake-clean reward via suppression (architecture-rubric.md Smells, suppression-as-fix sub-pattern; implementation-reviewer Check 2 suppression-as-fix scan; Simplify Pressure Test Q4). `@unchecked Sendable` silences the Sendable diagnostic but the data race is intact — there is no compensating invariant (no lock, no actor, no value semantics). A passing single-threaded run does not prove the race is fixed (Meta-Rule 4). Correct fix: move the state behind an actor, make the type an immutable value, or keep `@unchecked Sendable` only with narrow scope + concrete justification + the compensating lock invariant that makes it safe.",
+      "files": [],
+      "assertions": [
+        "Verdict is rejected (not approved or conditional)",
+        "Names suppression-as-fix / fake-clean reward via suppression",
+        "States the data race is still present and @unchecked Sendable only silences the diagnostic",
+        "Notes the absence of a compensating invariant (lock / actor / value semantics)",
+        "Does not treat the passing single-threaded test run as proof the race is fixed",
+        "Recommends real isolation (actor), value semantics, or a justified + compensated suppression"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "cross-platform-compile-canimport",
+      "prompt": "A /contest-refactor loop runs on a SwiftUI app whose Package.swift declares iOS, macOS, and tvOS. A refactor moved the haptics helper (which calls `UIImpactFeedbackGenerator`) into its own file and gated it with `#if canImport(UIKit)`. The iOS Simulator test suite passes. As the Critic, may this refactor be accepted with concurrency / framework_idioms at 9.5? Identify the risk and the correct conditional-compilation guard, then save your answer to ./review-verdict.md.",
+      "expected_output": "review-verdict.md says it may NOT be accepted at 9.5 as-is. `#if canImport(UIKit)` is true on tvOS (UIKit is importable there), but `UIImpactFeedbackGenerator` is absent from the tvOS SDK, so the tvOS build breaks at the symbol — and the iOS-only test run cannot catch it (lens-apple.md Cross-platform compile correctness; the three gating mechanisms). The correct guard is `#if os(iOS)` (per-OS SDK symbol presence), not `canImport`. Per method.md Meta-Rule 4, the Actor must compile the affected declared targets (incl. tvOS); until then it is a Serious deduction (unverified target), and a confirmed tvOS compile failure is a Likely disqualifier that blocks 9.5.",
+      "files": [],
+      "assertions": [
+        "Identifies that canImport(UIKit) is true on tvOS and therefore does not gate the tvOS-unavailable symbol",
+        "Names #if os(iOS) (os-based gating) as the correct guard rather than canImport",
+        "States the iOS-only test run cannot catch the tvOS build break",
+        "Treats the unverified tvOS target as a Serious risk until an affected-target compile is produced (Meta-Rule 4), and a confirmed tvOS compile failure as a Likely disqualifier blocking 9.5",
+        "Does not accept the dimension at 9.5 on the strength of the passing iOS suite alone"
+      ]
     }
   ]
 }
