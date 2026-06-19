@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -305,7 +306,9 @@ def _validate_one_fixture(
     return violations
 
 
-def _run_artifact_check(fixture_dir: Path) -> tuple[int, str, list[dict]]:
+def _run_artifact_check(
+    fixture_dir: Path, reference_now: str | None = None
+) -> tuple[int, str, list[dict]]:
     """Invoke validate-artifact.py --mode strict --json on a fixture.
 
     Returns (exit_code, combined_text_output, issues_list). The issues list is
@@ -317,6 +320,9 @@ def _run_artifact_check(fixture_dir: Path) -> tuple[int, str, list[dict]]:
     ) as tf:
         json_path = Path(tf.name)
     try:
+        env = os.environ.copy()
+        if reference_now:
+            env["CONTEST_REFACTOR_NOW"] = reference_now
         result = subprocess.run(
             [
                 "python3",
@@ -330,6 +336,7 @@ def _run_artifact_check(fixture_dir: Path) -> tuple[int, str, list[dict]]:
             ],
             capture_output=True,
             text=True,
+            env=env,
         )
         output = (result.stdout or "") + (result.stderr or "")
         issues: list[dict] = []
@@ -373,7 +380,10 @@ def _cross_check_expected_result(
     """
     violations: List[Violation] = []
     expected = fixture_data.get("expected_result")
-    exit_code, output, issues = _run_artifact_check(fixture_dir)
+    reference_now = fixture_data.get("reference_now")
+    if not isinstance(reference_now, str) or not reference_now.strip():
+        reference_now = None
+    exit_code, output, issues = _run_artifact_check(fixture_dir, reference_now)
     if expected == "pass" and exit_code != 0:
         violations.append(
             Violation(

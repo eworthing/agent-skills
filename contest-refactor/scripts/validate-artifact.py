@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -195,6 +196,20 @@ def _parse_iso_timestamp(value: Any) -> datetime | None:
         except ValueError:
             return None
     return None
+
+
+def _reference_now() -> datetime:
+    """Current UTC time, overridable via the CONTEST_REFACTOR_NOW env var
+    (ISO-8601) for deterministic fixture testing of time-relative gates such as
+    G28's 24h orphan threshold. Unset in production (the default), so real runs
+    are unchanged. A set-but-unparseable value falls back to the wall clock
+    rather than crashing a live validation."""
+    override = os.environ.get("CONTEST_REFACTOR_NOW")
+    if override:
+        parsed = _parse_iso_timestamp(override)
+        if parsed is not None:
+            return parsed
+    return datetime.now(timezone.utc)
 
 
 def check_required_artifacts(
@@ -1041,7 +1056,7 @@ def check_g28_loop_state_freshness(
             )
         )
     else:
-        now = datetime.now(timezone.utc)
+        now = _reference_now()
         age_seconds = (now - last_checkpoint).total_seconds()
         if age_seconds > _G28_ORPHAN_SECONDS:
             issues.append(

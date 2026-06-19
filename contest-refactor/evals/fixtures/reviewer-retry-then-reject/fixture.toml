@@ -2,6 +2,10 @@ id = "reviewer-retry-then-reject"
 purpose = "Implementation reviewer subagent failed to spawn on both retry attempts (retry_count=2, retry_cause=spawn_error), final verdict=rejected, narrow revert taken; protects G27 retry envelope schema (retry_count, retry_cause, retry_attempts[]) at schema_version 3 and the terminal-reject path."
 expected_result = "pass"
 aspirational = false
+# Pin the G28 orphan-check reference time near last_checkpoint_at so this
+# "recent checkpoint" fixture stays inside the 24h window no matter when the
+# suite runs (validate-fixtures.py exports it as CONTEST_REFACTOR_NOW).
+reference_now = "2026-05-25T14:00:00Z"
 notes = "Complete v3 artifact set (PR5c). Ships full required artifacts + recent LOOP_STATE.json (refreshed timestamp). G27 retry envelope is valid for the terminal-reject path: retry_count=2, retry_cause=spawn_error, both attempts outcome=spawn_error, verdict=rejected, reason exactly equals the canonical phrase \"reviewer unavailable; manual verification required\". Validator must exit 0; G27 passes silently."
 
 [[tested_rules]]

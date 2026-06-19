@@ -2,6 +2,10 @@ id = "loop-state-mid-step3-resume-step7"
 purpose = "LOOP_STATE.json shows step_started=7, step_completed=6 (loop interrupted mid-Step-3 between step 6 review and step 7 commit); protects G28 checkpoint freshness + resume-detection ability to pick up at step_started when checkpoint is recent."
 expected_result = "pass"
 aspirational = false
+# Pin the G28 orphan-check reference time near last_checkpoint_at so this
+# "recent checkpoint" fixture stays inside the 24h window no matter when the
+# suite runs (validate-fixtures.py exports it as CONTEST_REFACTOR_NOW).
+reference_now = "2026-05-25T14:00:00Z"
 notes = "Complete v3 artifact set (PR5c). Ships full required artifacts + recent LOOP_STATE.json (refreshed timestamp, loop=3 matches CURRENT_REVIEW.loop). G28 partial-implementation passes: step_started=7 >= step_completed=6, loop matches, last_checkpoint_at within 24h. Mid-Step-3 resume routing (Case D per resume-detection.md) is exercised by Step -1 code, not validate-artifact.py; G28 freshness/range/loop-num invariants ARE checked. Validator must exit 0."
 
 [[tested_rules]]
