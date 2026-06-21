@@ -125,3 +125,7 @@ title = "Retirement Precedence"
 [[validation_gates]]
 id = "G31"
 title = "Fingerprint Integrity"
+
+[[validation_gates]]
+id = "G32"
+title = "HALT_SUCCESS independent challenge (terminal, v4+)"

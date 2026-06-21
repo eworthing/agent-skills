@@ -1,0 +1,8 @@
+id = "halt-terminal-no-challenge"
+purpose = "Terminal HALT_SUCCESS with halt_success_challenge missing — the self-certification failure G32 catches. Must FAIL on G32."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G32"

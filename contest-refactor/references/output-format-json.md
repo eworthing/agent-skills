@@ -6,6 +6,7 @@ Persistent cross-loop state schemas (`LOOP_STATE.json`, `findings_registry.json`
 
 ## Contents
 
+- [Schema version 4 changelog](#schema-version-4-changelog)
 - [Schema version 3 changelog](#schema-version-3-changelog)
 - [CURRENT_REVIEW.json Schema](#current_reviewjson-schema)
 - [Per-Loop Progress Line Format (schema_version >= 3)](#per-loop-progress-line-format-schema_version--3)
@@ -15,6 +16,45 @@ Persistent cross-loop state schemas (`LOOP_STATE.json`, `findings_registry.json`
 - [Schema validation rules (enforced by the validation hard gates)](#schema-validation-rules-enforced-by-the-validation-hard-gates)
 
 Persistent state file schemas (`LOOP_STATE.json`, `findings_registry.json`, `REVIEW_HISTORY.json`, Fuzzy-match rules) → see [output-format-state-schemas.md](output-format-state-schemas.md).
+
+## Schema version 4 changelog
+
+`CURRENT_REVIEW.json` and `REVIEW_HISTORY.json` move to `schema_version: 4`, which adds the candidate/challenge fields below. G32 in [validation.md](validation.md) enforces the terminal-challenge invariant at `schema_version >= 4`; a loop running at v4 simply writes v4. (Solo beta — no prior-version artifacts are in play, so no migration path or default-fill is defined.)
+
+### v4 changes
+
+- New state `HALT_SUCCESS_candidate` (non-terminal): the loop emits this instead of terminal `HALT_SUCCESS`; the main agent promotes it to `HALT_SUCCESS` after an independent challenge passes.
+- New halt_subtype value `verification_blocked` (applies when `state == "HALT_STAGNATION"` and challenge infrastructure is unavailable).
+- New top-level field `run_id` (string, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. Identifies the loop run that produced the candidate.
+- New top-level field `source_rev` (string sha, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. HEAD sha of the analyzed source tree at emit time.
+- New top-level field `candidate_fingerprint` (string, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. Canonical hash of the architecture-relevant payload (scorecard scores + dispositions, findings evidence, residual rationales, lens, source-tree identity), EXCLUDING volatile metadata (commit sha, run_id, loop counter, timestamps, schema_version, state). This is the oscillation equivalence key — two candidates with identical architecture-relevant payload share a fingerprint even when commit/run/loop/timestamp metadata differs.
+- New top-level field `halt_success_challenge` (object|null, v4+): required non-null **only** when `state == "HALT_SUCCESS"` (terminal); must be `null` for `HALT_SUCCESS_candidate` and all other states. See schema below.
+- New gate G32 (HALT_SUCCESS independent challenge); new quality-pass behaviour on candidate state.
+
+### halt_success_challenge object schema (v4+, required when state == "HALT_SUCCESS")
+
+```jsonc
+"halt_success_challenge": {
+  "challenger_model": "claude-opus-4-8",  // non-empty string; model that ran the challenge
+  "outcome": "held",                       // enum: "held" | "broke". "broke" with state=="HALT_SUCCESS" is ILLEGAL — downgrade first.
+  "binding": {
+    "candidate_commit_sha": "abc1234",    // non-empty string; commit sha of the candidate artifact being challenged
+    "run_id": "run-2026-06-21-001",       // must equal top-level run_id
+    "source_rev": "def5678"               // must equal top-level source_rev
+  },
+  "attempts": [                            // non-empty list; each attempt the challenger made
+    {
+      "arm": "new_finding",                // enum: "new_finding" | "residual_refutation"
+      "target": "architecture_quality",   // finding title or scorecard dimension targeted
+      "what_tried": "...",                 // what the challenger attempted
+      "why_failed": "..."                  // why the challenge arm failed to break the candidate
+    }
+  ],
+  "reason": "..."                          // one-sentence summary of why the candidate held
+}
+```
+
+`outcome == "broke"` with `state == "HALT_SUCCESS"` is illegal: the main agent must downgrade to `HALT_SUCCESS_candidate` or `CONTINUE` before re-emitting. The challenger's job is to attempt to break the claim; if it succeeds, the candidate is demoted, not promoted.
 
 ## Schema version 3 changelog
 
@@ -61,16 +101,22 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   // (PR 4, v2+) = first introduced in PR 4 at schema_version >= 2.
 
   // Loop bookkeeping (required)
-  "schema_version": 3,                          // int, required. Pre-2026-05-09 = 1; PR 1-5 = 2; this revision = 3.
+  "schema_version": 4,                          // int, required. Pre-2026-05-09 = 1; PR 1-5 = 2; v3 revision = 3; v4 revision = 4.
   "loop": 3,                                    // int, 1-based
   "loop_cap": 10,                               // int
-  "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_STAGNATION | HALT_LOOP_CAP | HALT_DRY_RUN (HALT_DRY_RUN v3+ only)
+  "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_SUCCESS_candidate | HALT_STAGNATION | HALT_LOOP_CAP | HALT_DRY_RUN (HALT_DRY_RUN v3+; HALT_SUCCESS_candidate v4+ only)
   "halt_subtype": null,                         // enum (required when state == HALT_STAGNATION; null otherwise): no_progress | oscillation | user_decision | no_backlog
   "halt_handoff_text": null,                    // legacy v1 field. v2+ uses `halt_handoff` object below instead.
   "halt_handoff": null,                         // (PR 4, v2+) required when state ∈ {HALT_*}; null on CONTINUE. Object schema below.
   "re_validated_at_sha": null,                  // string sha; populated by Resume Detection when drift was checked and same halt persists.
   "re_validation_context": null,                // (PR 4, v2+) required when re_validated_at_sha non-null. Object schema below.
   "dry_run": false,                             // (v3+) boolean. Audit trail of last invocation flag. NOT read on re-invocation (CLI flag is authoritative). true ⇒ state == "HALT_DRY_RUN".
+
+  // v4+ challenge fields (required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS})
+  "run_id": null,                               // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Identifies the loop run that produced the candidate.
+  "source_rev": null,                           // (v4+) string sha | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. HEAD sha of analyzed source tree at emit time.
+  "candidate_fingerprint": null,                // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Canonical hash of architecture-relevant payload excluding volatile metadata. Oscillation equivalence key.
+  "halt_success_challenge": null,               // (v4+) object | null. Required non-null ONLY when state == "HALT_SUCCESS" (terminal). Null for HALT_SUCCESS_candidate and all other states. Schema: see § Schema version 4 changelog.
 
   // Provider/model state (v2+; required on every loop, not first-loop-only)
   "provider": "claude_code",                    // enum: claude_code | codex | opencode | unknown. Detected per references/provider-adapters.md § Detection.
@@ -463,5 +509,12 @@ When `loop_result.what_changed` contains any of these keywords (case-insensitive
 26. **changed_paths populated (v3+)**: when `loop_result` present, `loop_result.changed_paths[]` non-empty (empty diff = nothing changed and `loop_result` should be absent per rule #8).
 
 27. **test_scope coherence (v3+)**: `discovery.test_scope ∈ {"full", "incremental"}`. `"incremental"` → `discovery.test_filter` non-null non-empty. `"full"` → `discovery.test_filter` null. Per [validation.md G21 extension](validation.md), `state == "HALT_SUCCESS"` requires `discovery.test_scope == "full"` if any prior loop in REVIEW_HISTORY.json had incremental scope.
+
+28. **HALT_SUCCESS challenge (v4+)**: enforced by G32 in [validation.md](validation.md). Rules differ by state and schema_version:
+    - **`state == "HALT_SUCCESS"` at schema_version >= 4**: `halt_success_challenge` required non-null; `halt_success_challenge.outcome == "held"`; `halt_success_challenge.challenger_model` non-empty; `halt_success_challenge.attempts` a non-empty list; `halt_success_challenge.binding.run_id` equals top-level `run_id`; `halt_success_challenge.binding.source_rev` equals top-level `source_rev`; `halt_success_challenge.binding.candidate_commit_sha` non-empty. Any miss is a G32 failure.
+    - **`state == "HALT_SUCCESS_candidate"` at schema_version >= 4**: `halt_success_challenge` must be `null`; `run_id`, `source_rev`, `candidate_fingerprint` must all be non-null. The candidate is EXEMPT from the challenge requirement — it awaits promotion by the main agent.
+    - **schema_version < 4**: G32 does not fire. Legacy v3 `HALT_SUCCESS` without a challenge remains valid.
+    - **`state == "HALT_SUCCESS_candidate"`**: obeys the same scorecard / backlog / findings rules as `HALT_SUCCESS` (every dim 10 or 9.5-accepted; empty backlog; empty findings). It is a success claim awaiting challenge, not a downgrade.
+    - **`outcome == "broke"` + `state == "HALT_SUCCESS"`**: illegal. Main agent must demote the candidate before emitting terminal `HALT_SUCCESS` (the challenger breaks → demote, not promote).
 
 Both CURRENT_REVIEW.md / .json AND `findings_registry.json` AND `REVIEW_HISTORY.json` (v2+) are committed at end of each loop alongside the code change.

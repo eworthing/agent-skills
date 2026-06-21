@@ -4,6 +4,7 @@
 states = [
     "CONTINUE",
     "HALT_SUCCESS",
+    "HALT_SUCCESS_candidate",
     "HALT_STAGNATION",
     "HALT_LOOP_CAP",
     "HALT_DRY_RUN",

@@ -139,6 +139,10 @@ opencode run --model deepseek-v4-flash --read-only '<prompt>'
 
 No subagent. Reviewer logic runs inline in the main agent context with whatever tools the host provides. Main agent must vet the reviewer's verdict before accepting (the prompt-only contract is weaker without isolation). Document at top of `CURRENT_REVIEW.md` Implementation Review section: "reviewer ran inline; verdict requires manual confirmation".
 
+## Challenger-spawn profile (Step-1 HALT_SUCCESS challenge)
+
+The HALT_SUCCESS challenger ([references/halt-verifier.md](halt-verifier.md)) is **read-only with identical enforcement to the Reviewer-spawn profile above** — only the prompt differs (`halt-verifier.md`, not `implementation-reviewer.md`). Reuse each provider's reviewer-spawn flags, read-only allow-list, and the same model tier as the loop subagent (fresh eyes need equal capability). The one structural difference: the challenger is spawned by the **main orchestrator**, not the loop subagent, so the verdict is independent of the Critic that produced the scorecard. On `unknown` provider the challenger runs inline and main must vet it ("challenger ran inline; verdict requires manual confirmation") — but a terminal `HALT_SUCCESS` still requires the recorded held challenge (G32); an inline-unavailable challenger fails closed to `verification_blocked`.
+
 ## Model overrides
 
 Two override paths, applied in this precedence (higher wins):

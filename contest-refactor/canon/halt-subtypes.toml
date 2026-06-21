@@ -6,4 +6,5 @@ halt_subtypes = [
     "oscillation",
     "user_decision",
     "no_backlog",
+    "verification_blocked",
 ]

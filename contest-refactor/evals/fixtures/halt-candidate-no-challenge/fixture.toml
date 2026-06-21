@@ -1,0 +1,8 @@
+id = "halt-candidate-no-challenge"
+purpose = "Valid HALT_SUCCESS_candidate (all-9.5-accepted; run_id/source_rev/candidate_fingerprint present; halt_success_challenge null). G32 exempts the non-terminal candidate; must PASS."
+expected_result = "pass"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G32"

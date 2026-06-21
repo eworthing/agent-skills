@@ -133,6 +133,27 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 - [ ] **G31 Fingerprint Integrity** — `fingerprint.claim_consequence_hash`, `fingerprint.evidence_paths_hash`, and `attempted_remedy_hash` stored on each occurrence must equal the values recomputed from the finding's current fields. Drift indicates a finding was edited after emission without rehashing.
   *Source:* [`output-format-state-schemas.md § Fingerprint + retirement occurrence fields (PR 1)`](output-format-state-schemas.md#fingerprint--retirement-occurrence-fields-pr-1) + [`output-format-state-schemas.md § Fingerprint algorithm (canonical, owned by scripts/_fingerprint.py)`](output-format-state-schemas.md#fingerprint-algorithm-canonical-owned-by-scripts_fingerprintpy) — algorithm owner is `scripts/_fingerprint.py`; G31 enforces stored == recomputed.
 
+- [ ] **G32 HALT_SUCCESS independent challenge (terminal, v4+)** — *Applies when schema_version >= 4.* Ensures that a terminal `HALT_SUCCESS` has been independently challenged before the run closes. The loop emits `HALT_SUCCESS_candidate` (non-terminal); the main agent runs a challenger model and promotes to `HALT_SUCCESS` only when the challenge outcome is `"held"`. `HALT_SUCCESS_candidate` is **exempt** from this gate — it is a success claim awaiting promotion.
+
+  When `state == "HALT_SUCCESS"` and `schema_version >= 4`:
+  - `halt_success_challenge` must be non-null.
+  - `halt_success_challenge.outcome == "held"` (outcome `"broke"` with terminal `HALT_SUCCESS` is illegal — the main agent must demote before re-emitting).
+  - `halt_success_challenge.challenger_model` non-empty string.
+  - `halt_success_challenge.attempts` is a non-empty list (the challenger made at least one arm attempt).
+  - `halt_success_challenge.binding.run_id` equals top-level `run_id`.
+  - `halt_success_challenge.binding.source_rev` equals top-level `source_rev`.
+  - `halt_success_challenge.binding.candidate_commit_sha` non-empty string.
+
+  When `state == "HALT_SUCCESS_candidate"` and `schema_version >= 4`:
+  - `halt_success_challenge` must be `null` (candidate has not been challenged yet).
+  - `run_id`, `source_rev`, and `candidate_fingerprint` must all be non-null.
+
+  When `schema_version < 4`: G32 does not fire. Legacy v3 `HALT_SUCCESS` without a challenge remains valid.
+
+  Run G32 at Step 1 emit whenever state is `HALT_SUCCESS` or `HALT_SUCCESS_candidate` and `schema_version >= 4`. Failure → ensure `halt_success_challenge` is present and binding matches, or downgrade to `HALT_SUCCESS_candidate` and await independent challenge.
+
+  *Source:* [`halt-verifier.md`](halt-verifier.md) (challenge protocol and challenger invocation procedure) — production failure: Step-1 HALT_SUCCESS skips the only independent check, allowing a false-success claim to close the run without adversarial verification. [`output-format-json.md § Schema validation rules`](output-format-json.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #28.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

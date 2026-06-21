@@ -1,0 +1,8 @@
+id = "halt-terminal-held"
+purpose = "Terminal HALT_SUCCESS with a valid held challenge and matching binding. Positive case: G32 passes."
+expected_result = "pass"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G32"

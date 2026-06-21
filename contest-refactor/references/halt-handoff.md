@@ -65,7 +65,12 @@ Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` resi
 
 ```
 Loop N ended at HALT_SUCCESS — every scorecard category is at 10 or 9.5+ with an
-accepted residual. The codebase meets the contest target.
+accepted residual, and an independent challenger held the verdict (G32). The
+codebase meets the contest target — meaning architecture-clean by this rubric
+(ownership, seams, depth, simplicity, test strategy), NOT bug-free, secure,
+performant, or feature-complete. A green architecture score can coexist with
+correctness, security, or runtime bugs; run your own test, security, and coverage
+audits before shipping. This is an architecture milestone, not a release gate.
 
 Final scorecard: <list dimensions and scores from CURRENT_REVIEW.json>
 

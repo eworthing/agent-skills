@@ -1127,7 +1127,7 @@ def check_halt_success_gating(
 ) -> List[Issue]:
     """HALT_SUCCESS: no unresolved Serious-or-worse, no expired accepted residuals."""
     issues: List[Issue] = []
-    if current_review.get("state") != "HALT_SUCCESS":
+    if current_review.get("state") not in ("HALT_SUCCESS", "HALT_SUCCESS_candidate"):
         return issues
     findings = current_review.get("findings") or []
     for finding in findings:
@@ -1182,7 +1182,7 @@ def check_g21_scorecard(current_review: dict) -> List[Issue]:
         - anything else (including queued at any score)          → fail
     """
     issues: List[Issue] = []
-    if current_review.get("state") != "HALT_SUCCESS":
+    if current_review.get("state") not in ("HALT_SUCCESS", "HALT_SUCCESS_candidate"):
         return issues
     scorecard = current_review.get("scorecard") or {}
     if not isinstance(scorecard, dict):
@@ -1250,6 +1250,168 @@ def check_g21_scorecard(current_review: dict) -> List[Issue]:
                     f"(score >= 9.5 AND residual_disposition == 'accepted'))",
                 )
             )
+    return issues
+
+
+def check_g32_halt_success_challenge(current_review: dict) -> List[Issue]:
+    """G32: HALT_SUCCESS terminal state (v4+) requires an independent challenge.
+
+    When state == "HALT_SUCCESS" and schema_version >= 4:
+    - halt_success_challenge must be non-null.
+    - .outcome must be "held" (outcome "broke" with terminal HALT_SUCCESS is illegal).
+    - .challenger_model must be non-empty.
+    - .attempts must be a non-empty list.
+    - .binding.run_id must equal top-level run_id.
+    - .binding.source_rev must equal top-level source_rev.
+    - .binding.candidate_commit_sha must be non-empty.
+
+    When state == "HALT_SUCCESS_candidate" and schema_version >= 4:
+    - halt_success_challenge must be null.
+    - run_id, source_rev, candidate_fingerprint must all be non-null.
+
+    When schema_version < 4: G32 does not fire.
+    """
+    issues: List[Issue] = []
+    schema_version = current_review.get("schema_version") or 1
+    if schema_version < 4:
+        return issues  # legacy v3 HALT_SUCCESS without a challenge stays valid
+
+    state = current_review.get("state")
+    if state not in ("HALT_SUCCESS", "HALT_SUCCESS_candidate"):
+        return issues
+
+    top_run_id = current_review.get("run_id")
+    top_source_rev = current_review.get("source_rev")
+    top_fingerprint = current_review.get("candidate_fingerprint")
+    challenge = current_review.get("halt_success_challenge")
+
+    if state == "HALT_SUCCESS_candidate":
+        # Candidate is exempt from challenge but must carry identity fields.
+        if challenge is not None:
+            issues.append(
+                Issue(
+                    "G32",
+                    "state=HALT_SUCCESS_candidate must have halt_success_challenge=null "
+                    "(candidate is not yet promoted to terminal; challenge belongs on HALT_SUCCESS)",
+                )
+            )
+        if not top_run_id:
+            issues.append(
+                Issue(
+                    "G32",
+                    "state=HALT_SUCCESS_candidate requires run_id non-null (v4+)",
+                )
+            )
+        if not top_source_rev:
+            issues.append(
+                Issue(
+                    "G32",
+                    "state=HALT_SUCCESS_candidate requires source_rev non-null (v4+)",
+                )
+            )
+        if not top_fingerprint:
+            issues.append(
+                Issue(
+                    "G32",
+                    "state=HALT_SUCCESS_candidate requires candidate_fingerprint non-null (v4+)",
+                )
+            )
+        return issues
+
+    # state == "HALT_SUCCESS" (terminal)
+    if challenge is None:
+        issues.append(
+            Issue(
+                "G32",
+                "state=HALT_SUCCESS at schema_version >= 4 requires halt_success_challenge "
+                "non-null (independent challenge must be run before terminal success)",
+            )
+        )
+        return issues
+
+    if not isinstance(challenge, dict):
+        issues.append(
+            Issue(
+                "G32",
+                f"halt_success_challenge must be an object, got {type(challenge).__name__}",
+            )
+        )
+        return issues
+
+    outcome = challenge.get("outcome")
+    if outcome == "broke":
+        issues.append(
+            Issue(
+                "G32",
+                "halt_success_challenge.outcome='broke' with state=HALT_SUCCESS is illegal; "
+                "main agent must demote candidate before emitting terminal HALT_SUCCESS",
+            )
+        )
+    elif outcome != "held":
+        issues.append(
+            Issue(
+                "G32",
+                f"halt_success_challenge.outcome={outcome!r} must be 'held' "
+                "(terminal HALT_SUCCESS requires a passing challenge)",
+            )
+        )
+
+    challenger_model = challenge.get("challenger_model")
+    if not isinstance(challenger_model, str) or not challenger_model.strip():
+        issues.append(
+            Issue(
+                "G32",
+                "halt_success_challenge.challenger_model must be a non-empty string",
+            )
+        )
+
+    attempts = challenge.get("attempts")
+    if not isinstance(attempts, list) or len(attempts) == 0:
+        issues.append(
+            Issue(
+                "G32",
+                "halt_success_challenge.attempts must be a non-empty list "
+                "(challenger must make at least one arm attempt)",
+            )
+        )
+
+    binding = challenge.get("binding")
+    if not isinstance(binding, dict):
+        issues.append(
+            Issue(
+                "G32",
+                "halt_success_challenge.binding must be an object with "
+                "candidate_commit_sha, run_id, source_rev",
+            )
+        )
+    else:
+        candidate_commit_sha = binding.get("candidate_commit_sha")
+        if not isinstance(candidate_commit_sha, str) or not candidate_commit_sha.strip():
+            issues.append(
+                Issue(
+                    "G32",
+                    "halt_success_challenge.binding.candidate_commit_sha must be a non-empty string",
+                )
+            )
+        binding_run_id = binding.get("run_id")
+        if binding_run_id != top_run_id:
+            issues.append(
+                Issue(
+                    "G32",
+                    f"halt_success_challenge.binding.run_id={binding_run_id!r} must equal "
+                    f"top-level run_id={top_run_id!r}",
+                )
+            )
+        binding_source_rev = binding.get("source_rev")
+        if binding_source_rev != top_source_rev:
+            issues.append(
+                Issue(
+                    "G32",
+                    f"halt_success_challenge.binding.source_rev={binding_source_rev!r} must equal "
+                    f"top-level source_rev={top_source_rev!r}",
+                )
+            )
+
     return issues
 
 
@@ -1321,6 +1483,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g28_loop_state_freshness(artifact_dir, current_review, project_config))
     issues.extend(check_halt_success_gating(current_review, project_config))
     issues.extend(check_g21_scorecard(current_review))
+    issues.extend(check_g32_halt_success_challenge(current_review))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

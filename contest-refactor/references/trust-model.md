@@ -59,20 +59,19 @@ Each loop reads many files (gate stdout, refactor diffs, source under inspection
 You are loop N of an autonomous /contest-refactor run.
 
 CWD: <repo root>
-Read these in order before doing anything:
-  1. <skill-dir>/SKILL.md (the protocol; main agent passes the resolved skill directory here)
-  2. ./CURRENT_REVIEW.md (prior loop's review = your starting context)
-  3. ./REVIEW_HISTORY.md tail (last 2 loops, for delta basis)
-  4. Selected lens recorded in CURRENT_REVIEW.md Discovery section
-  5. CONTEXT.md and docs/adr/ if present
+Read first: 1. <skill-dir>/SKILL.md (the protocol). 2. the lens + Discovery section in CURRENT_REVIEW.md (Discovery only — NOT the prior verdict/scorecard). 3. CONTEXT.md and docs/adr/ if present.
+
+Blind-critic ordering: on a fresh / --purge / --reset run, write your independent per-dimension scorecard from current source FIRST (there is no prior verdict to read). On a CONTINUE loop (N>1), AFTER writing your independent scores, read ./CURRENT_REVIEW.md (prior backlog/delta) and ./REVIEW_HISTORY.md tail (last 2 loops) for delta basis + oscillation memory — never to anchor your scores (method.md:48 Anchor-to-source).
+
+You are the loop's SOLE writer. You MAY spawn read-only helper sub-agents for analysis, but YOU synthesize their results and run the loop to completion yourself — helpers must not write artifacts, commit, or be handed loop completion. Pass every helper this rule too: a finding whose only evidence is "the code obeys project rule HR-X" is not Serious-or-worse and is not a strength — rule compliance is the expected state, inert. Do not go idle or yield until CURRENT_REVIEW.{md,json} are written, the commit has landed, and your FINAL message is the routing JSON below. A child sub-agent returning is not loop completion.
 
 Execute Step 1 (Critic) → Step 2 (Architect) → Step 3 (Execution) per the protocol.
-Commit per loop discipline.
+Commit per loop discipline. On a HALT_SUCCESS claim, emit `system_flag: "HALT_SUCCESS_candidate"` (never terminal HALT_SUCCESS — main runs the independent challenge and promotes).
 
 Return JSON only:
 {
   "loop": <int>,
-  "system_flag": "CONTINUE|HALT_SUCCESS|HALT_STAGNATION|HALT_LOOP_CAP",
+  "system_flag": "CONTINUE|HALT_SUCCESS_candidate|HALT_STAGNATION|HALT_LOOP_CAP",  // loop emits HALT_SUCCESS_candidate, never terminal HALT_SUCCESS (main promotes after the challenge)
   "halt_subtype": "no_progress|oscillation|user_decision|no_backlog" or null,
   "halt_handoff": {                       // PR 4, schema_version >= 2 — replaces flat halt_handoff_text
     "text": "<full user-facing message per halt-handoff.md template, placeholders resolved>",
@@ -96,9 +95,11 @@ Main reads `review_artifact_path` for full detail when reporting HALT states or 
 
 ### HALT routing across the boundary
 
-- Subagent returns `HALT_*` → main terminates the run; **reads `halt_handoff.text` aloud to the user verbatim** (PR 4, schema_version >= 2; legacy schema_version 1 reads `halt_handoff_text`). Do not paraphrase or summarize — the text contains the menu the user picks from. Persist `halt_handoff.expected_actions[]` to `CURRENT_REVIEW.json` for the next invocation's Step -1 step 4a drift matcher. Do not call this "the result" or summarize further; the handoff text is the result.
+- Subagent returns a terminal `HALT_STAGNATION` / `HALT_LOOP_CAP` (or `HALT_DRY_RUN`) → main terminates the run; **reads `halt_handoff.text` aloud to the user verbatim** (PR 4, schema_version >= 2; legacy schema_version 1 reads `halt_handoff_text`). Do not paraphrase or summarize — the text contains the menu the user picks from. Persist `halt_handoff.expected_actions[]` to `CURRENT_REVIEW.json` for the next invocation's Step -1 step 4a drift matcher. Do not call this "the result" or summarize further; the handoff text is the result.
+- Subagent returns `HALT_SUCCESS_candidate` → main runs the HALT_SUCCESS Challenge ([halt-verifier.md](halt-verifier.md)): spawn the independent read-only challenger bound to the candidate. **held** → record `halt_success_challenge`, promote to terminal `HALT_SUCCESS`, commit, terminate (G32 gates the emit). **broke** → commit a CONTINUE transition with the challenger's finding as Priority 1; re-dispatch loop N+1. **unavailable** (after the retry envelope) → fail closed to `HALT_STAGNATION` subtype `verification_blocked`. The Critic never writes terminal `HALT_SUCCESS` itself.
 - Subagent returns `CONTINUE` → main dispatches the next loop's subagent (until `loop_cap`).
 - Subagent returns `open_question_for_user` non-null (only when `halt_subtype == "user_decision"`) → main pauses, asks user, optionally re-dispatches with the answer in the next subagent's prompt.
+- Subagent goes idle / returns no valid routing JSON → **the on-disk artifact is canonical**. Main reads `CURRENT_REVIEW.json.state` and routes from it, validating artifact identity (`run_id`, loop, `source_rev`, completion marker, expected commit) — not `.state` alone — plus the `executor_generation` / `executor_id` in `LOOP_STATE.json`. If it cannot confirm the original executor is terminated, it does NOT re-dispatch (single-writer lease; surface to the user); a revoked generation's writes/commits are rejected. Never re-dispatch while the original executor may still be writing, and never accept an idle subagent as a completed loop.
 
 ### When NOT to use subagents
 

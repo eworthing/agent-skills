@@ -13,7 +13,7 @@ allowed-tools:
 
 # 9.5 Contest Refactor Protocol
 
-Autonomous Actor-Critic loop on codebase in CWD. Target: 9.5+ in every scorecard category.
+Autonomous Actor-Critic loop on codebase in CWD. Target: 9.5+ in every scorecard category. The rubric scores **architecture** (ownership, seams, depth, simplicity, test strategy) — not correctness, security, performance, or feature-completeness. A 9.5 is a structural verdict, not a ship-readiness certificate; run your own test/security/coverage audits before shipping.
 
 ## Contents
 
@@ -151,14 +151,14 @@ Branch order is determined by the Precedence Matrix; do not invent your own orde
    - System flag: `[STATE: CONTINUE]`.
    - Run hard gates G1, G2, G3, G7, G9. **Skip** G4 + G8 for entries with the flag (carry-forward + flag substitutes for fresh structural evidence). **Skip G5 + G6 only for entries with the flag**; for any carried-forward score still at 9.5+ (no flag, or where you choose to keep prior disposition), G2 + rule #12 still enforce `residual_blocking_10` + `residual_disposition` + `residual_rationale_or_backlog_ref`. Emit. Route to Step 2.
 3. Build passes → execute the 10-step Method in [references/method.md](references/method.md), apply selected lens, score against [architecture-rubric.md](references/architecture-rubric.md) Score Anchors.
-4. Run [references/validation.md](references/validation.md) **hard gates** (full G1–G31 as applicable per loop type) before emitting output. If any hard gate fails, revise and re-run gates.
+4. Run [references/validation.md](references/validation.md) **hard gates** (full G1–G32 as applicable per loop type) before emitting output. If any hard gate fails, revise and re-run gates.
 5. Write review per [references/output-format.md](references/output-format.md) to `CURRENT_REVIEW.md` AND `CURRENT_REVIEW.json`. Decide system flag.
 
 #### Step 1 Routing (mandatory)
 
 Branch on the system flag after Step 1 writes the review:
 
-- `[STATE: HALT_SUCCESS]` → archive, commit review artifacts only, **terminate**. Skip Step 2 + Step 3. Inline mode → summarize to user; Loop Isolation mode → return JSON to main.
+- `[STATE: HALT_SUCCESS_candidate]` (schema_version >= 4 — the loop **never** emits terminal `HALT_SUCCESS` itself) → archive + commit the candidate review (so the verdict survives restart) carrying `run_id`, `source_rev`, `candidate_fingerprint`, `halt_success_challenge: null`; return JSON to main. **Main then runs the HALT_SUCCESS Challenge** ([references/halt-verifier.md](references/halt-verifier.md)): spawn an independent read-only challenger bound to the candidate. **held** → record `halt_success_challenge`, promote to terminal `[STATE: HALT_SUCCESS]`, commit, terminate (G32 gates the emit). **broke** → commit a CONTINUE transition with the challenger's finding as Priority 1; re-dispatch loop N+1 (or `HALT_STAGNATION`/`user_decision` if a Stop/Ask gate blocks the fix). **challenger unavailable** (after the bounded retry envelope) → fail closed: commit `HALT_STAGNATION` subtype `verification_blocked`; never auto-promote, never CONTINUE-without-a-finding.
 - `[STATE: HALT_STAGNATION]` → archive, commit review artifacts only, **terminate**. Skip Step 2 + Step 3. Inline → report unresolved blocker; Loop Isolation → return JSON with `unresolved_reason`.
 - `[STATE: HALT_LOOP_CAP]` → archive, commit review artifacts only, **terminate**. Skip Step 2 + Step 3. Inline → summarize; Loop Isolation → return JSON with `unresolved_reason`.
 - `[STATE: HALT_DRY_RUN]` (schema_version >= 3) → emitted from Step 2 dry-run gate, NOT from Step 1. See Step 2 sub-step 6 below.
@@ -170,7 +170,8 @@ Branch on the system flag after Step 1 writes the review:
 | flag | backlog | extra fields |
 |---|---|---|
 | `CONTINUE` | non-empty (1-3 items) | — |
-| `HALT_SUCCESS` | empty | — |
+| `HALT_SUCCESS_candidate` (schema_version >= 4; what the loop emits) | empty | `run_id`/`source_rev`/`candidate_fingerprint` set; `halt_success_challenge` null |
+| `HALT_SUCCESS` (terminal; main-promoted after challenge) | empty | `halt_success_challenge.outcome == "held"` |
 | `HALT_STAGNATION` | optional (may be non-empty if findings unresolved by user-decision dependency) | `unresolved_reason` non-null |
 | `HALT_LOOP_CAP` | optional (carries best next move forward) | `unresolved_reason` non-null |
 | `HALT_DRY_RUN` (schema_version >= 3) | non-empty (1-3 items) | `dry_run == true`; `## Loop N Plan (dry-run)` section in CURRENT_REVIEW.md required |
@@ -253,16 +254,18 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
 
 ## Halting Conditions
 
-Set by Step 1 (HALT_SUCCESS / HALT_STAGNATION / HALT_LOOP_CAP) or by Step 2 sub-step 6 (HALT_DRY_RUN at schema_version >= 3); enforced by Step 1 Routing for the Step 1-set states. Hard gates **G1–G31** in [references/validation.md](references/validation.md) apply across all halt paths. When emitting any HALT, the loop subagent MUST also write a user-facing handoff per [references/halt-handoff.md](references/halt-handoff.md). The main agent reads the handoff aloud when reporting the halt to the user — a halt without handoff text leaves the user staring at a flag with no path forward.
+Set by Step 1 (HALT_SUCCESS_candidate / HALT_STAGNATION / HALT_LOOP_CAP) or by Step 2 sub-step 6 (HALT_DRY_RUN at schema_version >= 3); terminal `HALT_SUCCESS` is set by **main** on promotion of a candidate whose challenge held. Enforced by Step 1 Routing for the Step 1-set states. Hard gates **G1–G32** in [references/validation.md](references/validation.md) apply across all halt paths. When emitting any HALT, the loop subagent MUST also write a user-facing handoff per [references/halt-handoff.md](references/halt-handoff.md). The main agent reads the handoff aloud when reporting the halt to the user — a halt without handoff text leaves the user staring at a flag with no path forward.
 
 **Per-finding retirement fires before whole-loop stagnation** (per [method.md § Step 1.6](references/method.md) and G30). Per-loop output surfaces "Retired finding:" lines for any `status == unresolvable` transitions in that loop (see [output-format-markdown.md](references/output-format-markdown.md) and [halt-handoff.md § Retirement precedence](references/halt-handoff.md)). The occurrence status enum is: `open` | `resolved` | `fixed_by_user` | `rejected_attempt` | `unresolvable`.
 
-- `[STATE: HALT_SUCCESS]` — every scorecard category ≥ 9.5 with concrete proof, build green. `halt_subtype: null`. Cited accepted residuals must not be expired (see [architecture-rubric.md § 9.5+ Threshold](references/architecture-rubric.md#95-threshold-the-contest-target)).
+- `[STATE: HALT_SUCCESS_candidate]` (schema_version >= 4) — the loop's success claim, awaiting the independent challenge. Every scorecard category ≥ 9.5 with concrete proof, build green, `run_id`/`source_rev`/`candidate_fingerprint` recorded, `halt_success_challenge: null`. Non-terminal — main promotes or demotes it.
+- `[STATE: HALT_SUCCESS]` — terminal. Promoted by **main** from a candidate **only after the independent challenge held** (G32, schema_version >= 4): `halt_success_challenge.outcome == "held"` with binding matching the candidate. `halt_subtype: null`. Cited accepted residuals must not be expired (see [architecture-rubric.md § 9.5+ Threshold](references/architecture-rubric.md#95-threshold-the-contest-target)).
 - `[STATE: HALT_STAGNATION]` — loop cannot make further progress under the rubric. **Subtype required** in `halt_subtype`:
   - `no_progress` — 3 consecutive loops (heuristic) with no scorecard category UP AND remaining backlog items don't pass Simplify Pressure Test (structural wall).
   - `oscillation` — same `stable_id` reappears as Priority 1 in two non-consecutive loops with at least one intervening occurrence whose `status: "resolved"` for that `stable_id`. Skip occurrences with `status: "rejected_attempt"` when scanning. (Pre-PR-1 / schema_version 1: legacy heuristic = same `loop_local_id` Priority 1 string match across two loops after a "fix".) Registry's `occurrences[]` is the audit trail. **G30** requires that every remaining Serious-or-worse finding appears in `halt_handoff.remaining_serious_findings_disposition[]` with a canonical disposition + sidecar before this subtype is legal.
   - `user_decision` — ambiguity requires product/ownership decision the loop cannot make. `open_question_for_user` non-null.
   - `no_backlog` — `[STATE: CONTINUE]` with empty Improvement Backlog while not at 9.5+ after Residual Accounting Pass/G23 (remaining sub-9.5 scores name blockers that cannot be accepted residuals and cannot become valid backlog items).
+  - `verification_blocked` (schema_version >= 4) — the HALT_SUCCESS challenger was unavailable (timed out after the retry envelope). Fail-closed terminal for a success candidate: a terminal success is never blessed by silence. `unresolved_reason` names the unavailability; re-invoke to retry the challenge.
 - `[STATE: HALT_LOOP_CAP]` — loop counter reached cap (default 10; override via `CONTEST_REFACTOR_LOOP_CAP` env var, first-line directive `<!-- loop_cap: N -->` in `CURRENT_REVIEW.md`, or user flag `--cap N`). `halt_subtype: null`.
 - `[STATE: HALT_DRY_RUN]` (schema_version >= 3) — `--dry-run` set on this invocation; loop halted at Step 2 dry-run gate after emitting plan. `halt_subtype: null`. Plan visible in CURRENT_REVIEW.md `## Loop N Plan (dry-run)` section. Re-invoke without `--dry-run` to execute; no `--reset` needed (the flag is invocation-scoped).
 - `[STATE: CONTINUE]` — otherwise.
