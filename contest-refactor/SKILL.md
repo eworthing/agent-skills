@@ -300,5 +300,5 @@ Stagnation is not failure when honestly emitted with a subtype — it's the loop
 - Worked example: [assets/example-review.md](assets/example-review.md).
 - Preflight script (read-only Step 0 dry-run): `scripts/dry-run.sh [path]`.
 - Repo validator (hard-blocking, checks Evidence Chain coverage + canon alignment + Step 1.6 adjacency): `scripts/validate-repo.py`.
-- Artifact validator (live-run; strict by default, `--mode advisory` available; G30 + G31 enforcement): `scripts/validate-artifact.py`.
+- Artifact validator (live-run; strict by default, `--mode advisory` available; G30 + G31 enforcement): `scripts/validate-artifact.py`. Test-only env var `CONTEST_REFACTOR_NOW` (RFC3339) pins the G28 orphan-check reference time so time-sensitive fixtures stay deterministic; unset in production, where the wall clock is used.
 - For deepening-only work without the rubric loop, invoke `/improve-codebase-architecture` directly.

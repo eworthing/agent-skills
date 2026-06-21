@@ -99,31 +99,130 @@
     },
     {
       "id": 12,
-      "name": "suppression-as-fake-fix",
-      "prompt": "A /contest-refactor loop targeted this finding: 'Data race on `ImageCache.storage` — two Tasks write it concurrently with no synchronization.' The Actor's diff 'resolved' it by changing `final class ImageCache` to `final class ImageCache: @unchecked Sendable` and adding no lock, actor, or isolation. The single-threaded test suite passes. You are the implementation reviewer (Step 3). Give your verdict (approved / conditional / rejected) and the reasoning, then save it to ./review-verdict.md.",
-      "expected_output": "review-verdict.md returns rejected: the diff is fake-clean reward via suppression (architecture-rubric.md Smells, suppression-as-fix sub-pattern; implementation-reviewer Check 2 suppression-as-fix scan; Simplify Pressure Test Q4). `@unchecked Sendable` silences the Sendable diagnostic but the data race is intact — there is no compensating invariant (no lock, no actor, no value semantics). A passing single-threaded run does not prove the race is fixed (Meta-Rule 4). Correct fix: move the state behind an actor, make the type an immutable value, or keep `@unchecked Sendable` only with narrow scope + concrete justification + the compensating lock invariant that makes it safe.",
-      "files": [],
+      "name": "suppression-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects. The buried `@unchecked Sendable` on `ImageCache` is suppression-as-fix (architecture-rubric.md Smells → fake-clean reward → suppression-as-fix; method.md Simplify Pressure Test Q4): it silences the Sendable diagnostic while the data race is intact — `storage` is a plain dictionary written concurrently from `prefetch` and `warmThumbnails` (both `Task.detached`, same screen) with no lock, actor, or value semantics. concurrency cannot reach 9.5 (the 10-anchor requires 'strict concurrency checking passes without suppression'); score <= 7. The green single-config suite is not proof (Meta-Rule 4). evidence_demanded names a TSAN run or a focused concurrent-insert test; blocking_severity is Serious deduction or Likely disqualifier (racing async writes to user-visible cache state).",
+      "files": ["scenarios/suppression-flag/scenario.md"],
       "assertions": [
-        "Verdict is rejected (not approved or conditional)",
-        "Names suppression-as-fix / fake-clean reward via suppression",
-        "States the data race is still present and @unchecked Sendable only silences the diagnostic",
-        "Notes the absence of a compensating invariant (lock / actor / value semantics)",
-        "Does not treat the passing single-threaded test run as proof the race is fixed",
-        "Recommends real isolation (actor), value semantics, or a justified + compensated suppression"
+        "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
+        "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
+        "[discriminating] evidence_demanded names a TSAN run or a focused concurrent/parallel test (Meta-Rule 4)",
+        "[discriminating] States the data race persists — @unchecked Sendable only silences the Sendable diagnostic; no lock/actor/value semantics added",
+        "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+        "[validity] verdict is \"rejected\"",
+        "[validity] Does not treat the green single-config suite as proof the race is fixed"
       ]
     },
     {
       "id": 13,
-      "name": "cross-platform-compile-canimport",
-      "prompt": "A /contest-refactor loop runs on a SwiftUI app whose Package.swift declares iOS, macOS, and tvOS. A refactor moved the haptics helper (which calls `UIImpactFeedbackGenerator`) into its own file and gated it with `#if canImport(UIKit)`. The iOS Simulator test suite passes. As the Critic, may this refactor be accepted with concurrency / framework_idioms at 9.5? Identify the risk and the correct conditional-compilation guard, then save your answer to ./review-verdict.md.",
-      "expected_output": "review-verdict.md says it may NOT be accepted at 9.5 as-is. `#if canImport(UIKit)` is true on tvOS (UIKit is importable there), but `UIImpactFeedbackGenerator` is absent from the tvOS SDK, so the tvOS build breaks at the symbol — and the iOS-only test run cannot catch it (lens-apple.md Cross-platform compile correctness; the three gating mechanisms). The correct guard is `#if os(iOS)` (per-OS SDK symbol presence), not `canImport`. Per method.md Meta-Rule 4, the Actor must compile the affected declared targets (incl. tvOS); until then it is a Serious deduction (unverified target), and a confirmed tvOS compile failure is a Likely disqualifier that blocks 9.5.",
-      "files": [],
+      "name": "crossplat-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does not accept framework_idioms at 9.5. `#if canImport(UIKit)` is true on tvOS (and Mac Catalyst), so it does not gate `UIImpactFeedbackGenerator`, which the tvOS SDK lacks — the tvOS target (declared in Package.swift) breaks at the symbol, and the iOS-Simulator-only run cannot catch it (lens-apple.md Cross-platform compile correctness; the three gating mechanisms). The correct guard is `#if os(iOS)` (per-OS SDK symbol presence), optionally `|| targetEnvironment(macCatalyst)`. Per method.md Meta-Rule 4 the Actor must compile the affected declared targets (incl. tvOS): unverified target = Serious deduction; a confirmed tvOS break = Likely disqualifier blocking 9.5. evidence_demanded: a tvOS (and macOS) compile.",
+      "files": ["scenarios/crossplat-flag/scenario.md"],
       "assertions": [
-        "Identifies that canImport(UIKit) is true on tvOS and therefore does not gate the tvOS-unavailable symbol",
-        "Names #if os(iOS) (os-based gating) as the correct guard rather than canImport",
-        "States the iOS-only test run cannot catch the tvOS build break",
-        "Treats the unverified tvOS target as a Serious risk until an affected-target compile is produced (Meta-Rule 4), and a confirmed tvOS compile failure as a Likely disqualifier blocking 9.5",
-        "Does not accept the dimension at 9.5 on the strength of the passing iOS suite alone"
+        "[discriminating] Identifies canImport(UIKit) is true on tvOS, so it does not gate the tvOS-absent symbol",
+        "[discriminating] Names #if os(iOS) (os-based gating) as the correct guard rather than canImport",
+        "[discriminating] evidence_demanded names compiling the affected declared targets (tvOS / the non-iOS targets) per Meta-Rule 4",
+        "[discriminating] blocks_95 is true; framework_idioms < 9.5; blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+        "[discriminating] States the iOS-Simulator-only run cannot catch the tvOS build break",
+        "[validity] Does not accept the dimension at 9.5 on the strength of the passing iOS suite alone"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "suppression-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag suppression-as-fix. Here `@unchecked Sendable` carries the compensating invariant the rubric requires (architecture-rubric.md suppression-as-fix: safety suppressions are acceptable with narrow scope + concrete justification + the compensating invariant): every `storage` access is serialized behind `NSLock.withLock`, the conformance has a concrete justification comment, and a TSAN-covered concurrency test exists. SPT Q4 holds (the race is actually gone). concurrency may be 9.5. A reviewer that rejects this for the mere presence of `@unchecked Sendable` is over-flagging.",
+      "files": ["scenarios/suppression-restraint/scenario.md"],
+      "assertions": [
+        "[restraint] flagged_smells does NOT contain suppression-as-fix (the suppression is compensated)",
+        "[restraint] verdict is not \"rejected\" on account of the @unchecked Sendable conformance",
+        "[restraint] Does not cap concurrency below 9.5 solely for the presence of @unchecked Sendable",
+        "[restraint] Recognizes the NSLock serialization + justification + TSAN test as satisfying the safety-suppression carve-out"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "crossplat-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag a cross-platform problem. The haptics call is gated `#if os(iOS)` — the correct guard for an iOS-only UIKit symbol — and the Actor recorded compile evidence for every declared target (iOS/macOS/tvOS builds green, Meta-Rule 4 satisfied). No tvOS break exists; framework_idioms may be 9.5. A reviewer that demands a guard change or flags tvOS here is over-flagging.",
+      "files": ["scenarios/crossplat-restraint/scenario.md"],
+      "assertions": [
+        "[restraint] Does not flag a cross-platform / tvOS compile problem (the guard is #if os(iOS), which is correct)",
+        "[restraint] Recognizes the recorded per-target compile evidence satisfies Meta-Rule 4",
+        "[restraint] verdict is not \"rejected\" for cross-platform reasons; does not demand changing #if os(iOS) to canImport",
+        "[restraint] framework_idioms not capped below 9.5 for a cross-platform reason"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "identity-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Flags unstable collection identity. `ForEach(playbackQueue.indices, id: \\.self)` over a dynamic, reorderable, deletable queue derives identity from array position, not the element — on move/delete SwiftUI mis-associates row state and animations (lens-apple.md SwiftUI Discipline → Collection identity). `Track` is Identifiable, so `ForEach(playbackQueue)` (or `id: \\.id`) is the fix. This is a state_management finding, not a style nit; score < 9.5. Severity Noticeable weakness or Serious deduction (visible wrong-row behavior on a primary flow).",
+      "files": ["scenarios/identity-flag/scenario.md"],
+      "assertions": [
+        "[discriminating] Flags index-based identity (.indices / id: \\.self) on a dynamic/reorderable collection as the problem",
+        "[discriminating] Maps it to state_management with a score < 9.5 (not a style nit)",
+        "[discriminating] Recommends stable element identity (ForEach over Identifiable Track / id: \\.id)",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "identity-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag identity. `.indices` / `id: \\.self` over `SettingsTab.allCases` — a static, never-mutated CaseIterable list — is acceptable (lens-apple.md SwiftUI Discipline: '.indices / offset is acceptable for genuinely static content — not a blanket ban'). No reorder/insert/delete exists. state_management may be 9.5. A reviewer that flags `.indices` here is applying a blanket ban the lens explicitly rejects.",
+      "files": ["scenarios/identity-restraint/scenario.md"],
+      "assertions": [
+        "[restraint] Does not flag the .indices / id: \\.self usage (content is genuinely static)",
+        "[restraint] verdict is not \"rejected\" for collection-identity reasons",
+        "[restraint] Does not cap state_management below 9.5 for the .indices usage on static content"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "ownership-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Flags passed-value ownership. `VolumeBadge` stores a parent-passed `volume` as `@State` (seeded once via `State(initialValue:)`); since the parent's `outputVolume` updates continuously and the child is expected to track it, `@State` captures the initial value and ignores later parent updates → the badge goes stale (lens-apple.md SwiftUI Discipline → Passed-value ownership). Fix: a plain `let volume: Double` (or `@Binding`), not `@State`. state_management < 9.5; Noticeable weakness or Serious deduction.",
+      "files": ["scenarios/ownership-flag/scenario.md"],
+      "assertions": [
+        "[discriminating] Flags @State seeded from a parent-passed value where continued parent sync is expected (stale value)",
+        "[discriminating] Maps to state_management with a score < 9.5",
+        "[discriminating] Recommends a non-owning declaration (let / @Binding) instead of @State",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "ownership-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag ownership. `RenamePlaylistSheet` seeds a local editable `draftName` from the passed `currentName` as `@State` — a legitimate edit-draft pattern: the sheet owns the in-progress edit, no continued parent sync is expected, and commit happens via `onCommit` on Save (lens-apple.md SwiftUI Discipline: 'Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent'). state_management may be 9.5. A reviewer that flags this `@State` is over-flagging the carve-out.",
+      "files": ["scenarios/ownership-restraint/scenario.md"],
+      "assertions": [
+        "[restraint] Does not flag the @State-from-passed-value as a bug (legitimate local edit draft)",
+        "[restraint] verdict is not \"rejected\" for passed-value-ownership reasons",
+        "[restraint] Does not cap state_management below 9.5 for the draft @State"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "style-suppression-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT treat the suppression as fake-clean reward. `// swiftlint:disable:next line_length` on a single inlined URL literal is a style/tooling suppression, not a safety one (architecture-rubric.md suppression-as-fix: style/tooling suppressions are lower risk, needing only narrow scope + justification; method.md SPT note: a style suppression does not by itself fail Q4). It is narrowly scoped (`:next`, one line) with a stated readability rationale, and runtime behavior is unaffected. simplicity may be 9.5. A reviewer that rejects this as suppression-as-fix is conflating style with safety.",
+      "files": ["scenarios/style-suppression-restraint/scenario.md"],
+      "assertions": [
+        "[restraint] Classifies swiftlint:disable line_length as a style/tooling suppression, not a safety-affecting one",
+        "[restraint] Does not fail SPT Q4 / does not call it fake-clean reward via suppression",
+        "[restraint] verdict is not \"rejected\" for the line-length suppression; simplicity not capped below 9.5 for it"
       ]
     }
   ]
