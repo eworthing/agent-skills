@@ -69,6 +69,16 @@ Serious-or-worse and does **not** break the verdict. Project-rule compliance is 
 expected state, inert as a break. The 9-anchor is earned by structure surviving
 source inspection, not by compliance proof.
 
+**The inverse trap is just as fatal — do not let a compliance rationale stop you.**
+When an accepted residual is *justified by* rule-compliance ("`state_management`
+9.5 — follows HR-1, single owner"), **verify the claim against the actual
+structure** before accepting it. A hollow compliance claim is *itself* the break:
+if the residual says "single owner per HR-1" while three sites write the field, the
+compliance rationale is fake-clean reward and you have a Serious ownership finding.
+Never accept a residual's compliance rationale at face value — re-derive it from
+source. The clause above forbids *manufacturing* a compliance-only finding; it does
+**not** license rubber-stamping a compliance-rationalized residual.
+
 ## Outcome routing (main applies)
 
 Every outcome is **durably committed before** the loop acts on it — so a crash

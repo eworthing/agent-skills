@@ -6,7 +6,9 @@
       "name": "bootstrap-registry",
       "prompt": "I inherited this Swift project. There's a REVIEW_HISTORY.md at the repo root from a prior /contest-refactor run (7 loops), but no findings_registry.json. Please run the contest-refactor bootstrap pass to generate findings_registry.json from the REVIEW_HISTORY.md. Use stable IDs that group recurring findings across loops. Save the registry to ./findings_registry.json and write a one-page summary to ./summary.md explaining what stable IDs were assigned and why.",
       "expected_output": "findings_registry.json with consolidated stable IDs (file-length finding across 5 loops under one ID; duplication finding across 4 loops under one ID); summary.md explaining stable ID grouping",
-      "files": ["fixtures/bootstrap-repo/REVIEW_HISTORY.md"],
+      "files": [
+        "fixtures/bootstrap-repo/REVIEW_HISTORY.md"
+      ],
       "assertions": []
     },
     {
@@ -14,7 +16,9 @@
       "name": "halt-success-g21",
       "prompt": "Please validate this CURRENT_REVIEW.json artifact from a contest-refactor run. State your verdict: are all required validation rules satisfied? List any violations you find with their rule number or gate ID. If violations exist, recommend the correct system_flag and halt_subtype the artifact should have instead. Save your full verdict + reasoning to ./validation-report.md.",
       "expected_output": "validation-report.md identifying G21 (HALT_SUCCESS criteria) violation due to sub-9.5 scores, G5/rule#12 violation due to null residuals on 9.5 scores, recommending HALT_STAGNATION subtype no_backlog",
-      "files": ["fixtures/halt-success-bad/CURRENT_REVIEW.json"],
+      "files": [
+        "fixtures/halt-success-bad/CURRENT_REVIEW.json"
+      ],
       "assertions": []
     },
     {
@@ -22,7 +26,9 @@
       "name": "continuation-g20",
       "prompt": "I just committed loop 1 of an autonomous /contest-refactor run on a Python codebase. Here's the CURRENT_REVIEW.json that was emitted. The run is in inline mode (no subagent isolation; spawn_isolation == 'inline'). The commit was clean: tests passed, the targeted finding was resolved, and the implementation reviewer approved. What is the next correct action I should take as the agent running this loop? Be specific and explain why. Save your answer to ./next-action.md.",
       "expected_output": "next-action.md stating re-entry into Step 1 for loop 2 is mandatory in the same turn, citing G20 + Continuation Discipline section, NOT proposing a user-facing summary or yielding the turn",
-      "files": ["fixtures/continuation-post-commit/CURRENT_REVIEW.json"],
+      "files": [
+        "fixtures/continuation-post-commit/CURRENT_REVIEW.json"
+      ],
       "assertions": []
     },
     {
@@ -30,7 +36,9 @@
       "name": "no-backlog-residual-accounting",
       "prompt": "Please validate this CURRENT_REVIEW.json artifact from a contest-refactor run. State your verdict: are all required validation rules satisfied? List any violations you find with their rule number or gate ID. If violations exist, recommend the correct system_flag and halt_subtype the artifact should have instead. Save your full verdict + reasoning to ./validation-report.md.",
       "expected_output": "validation-report.md identifying G23 and output-format rule #19 violation because HALT_STAGNATION/no_backlog has sub-9.5 scores but only rejected cosmetic, ADR-carved-out, or SPT-failing candidates. It should recommend promoting those dimensions to 9.5 accepted residuals or 10, or switching to CONTINUE only if a Noticeable-or-worse candidate passes SPT.",
-      "files": ["fixtures/no-backlog-residual-accounting/CURRENT_REVIEW.json"],
+      "files": [
+        "fixtures/no-backlog-residual-accounting/CURRENT_REVIEW.json"
+      ],
       "assertions": []
     },
     {
@@ -38,31 +46,41 @@
       "name": "dry-run-halt-after-step2",
       "prompt": "Please validate this CURRENT_REVIEW.json artifact from a contest-refactor --dry-run invocation. The user asked me to verify the dry-run halt is well-formed. State your verdict: are all required validation rules satisfied for HALT_DRY_RUN at schema_version 3? List any violations with rule number or gate ID. Save the full verdict to ./validation-report.md.",
       "expected_output": "validation-report.md confirming G9 row (HALT_DRY_RUN requires non-empty backlog and dry_run==true), G1 confirms `## Loop N Plan (dry-run)` section present, halt_handoff matches HALT_DRY_RUN template per halt-handoff.md, G21 and G23 untouched (HALT_DRY_RUN bypasses both), output-format rule #24 (HALT_DRY_RUN coherence) satisfied: state==HALT_DRY_RUN AND dry_run==true AND halt_subtype==null AND loop_result/implementation_review absent.",
-      "files": ["fixtures/dry-run-halt-after-step2/CURRENT_REVIEW.json"],
+      "files": [
+        "fixtures/dry-run-halt-after-step2/CURRENT_REVIEW.json"
+      ],
       "assertions": []
     },
     {
       "id": 5,
       "name": "dry-run-rerun-no-reset",
       "prompt": "I had a prior /contest-refactor --dry-run invocation that emitted HALT_DRY_RUN with this CURRENT_REVIEW.json (dry_run: true on disk). I'm about to re-invoke /contest-refactor WITHOUT --dry-run. What is the correct behavior? Does the loop need a --reset first? Should it execute the planned Step 3, or re-plan from scratch? Save your answer to ./next-action.md citing the relevant skill sections.",
-      "expected_output": "next-action.md stating: re-invoke without --dry-run executes Step 3 immediately. NO --reset needed (the --dry-run flag is invocation-scoped per Step 3 sub-step 2 of the plan and per halt-handoff.md HALT_DRY_RUN section). The artifact's dry_run: true is audit-only — the user's CLI flag is authoritative. Loop continues with the same Priority-1 finding from the existing Improvement Backlog; the Step 2 plan in `## Loop N Plan (dry-run)` section is the plan that will execute.",
-      "files": ["fixtures/dry-run-rerun-no-reset/CURRENT_REVIEW.json"],
+      "expected_output": "next-action.md stating: re-invoke without --dry-run executes Step 3 immediately. NO --reset needed (the --dry-run flag is invocation-scoped per Step 3 sub-step 2 of the plan and per halt-handoff.md HALT_DRY_RUN section). The artifact's dry_run: true is audit-only \u2014 the user's CLI flag is authoritative. Loop continues with the same Priority-1 finding from the existing Improvement Backlog; the Step 2 plan in `## Loop N Plan (dry-run)` section is the plan that will execute.",
+      "files": [
+        "fixtures/dry-run-rerun-no-reset/CURRENT_REVIEW.json"
+      ],
       "assertions": []
     },
     {
       "id": 6,
       "name": "loop-state-mid-step3-resume-step7",
       "prompt": "I'm resuming a /contest-refactor run that was interrupted mid-Step-3. Here are the on-disk artifacts. The LOOP_STATE.json says step_started: 7 and step_completed: 6 (so step 7 was interrupted mid-execution). implementation_review is already populated. What is the correct resume action? Cite the resume-detection.md case routing. Save your answer to ./resume-action.md.",
-      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 5 (LOOP_STATE.json present AND state == 'CONTINUE') → § Resume from LOOP_STATE.json Case D (step_started > step_completed). Replay step 7 (PR 1 reject-path registry update). Honor existing implementation_review verdict (reviewer is stateless on resume; do not re-spawn). Idempotency rules in SKILL.md Step 3 sub-step 4 guarantee no duplication.",
-      "files": ["fixtures/loop-state-mid-step3-resume-step7/CURRENT_REVIEW.json", "fixtures/loop-state-mid-step3-resume-step7/LOOP_STATE.json"],
+      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 5 (LOOP_STATE.json present AND state == 'CONTINUE') \u2192 \u00a7 Resume from LOOP_STATE.json Case D (step_started > step_completed). Replay step 7 (PR 1 reject-path registry update). Honor existing implementation_review verdict (reviewer is stateless on resume; do not re-spawn). Idempotency rules in SKILL.md Step 3 sub-step 4 guarantee no duplication.",
+      "files": [
+        "fixtures/loop-state-mid-step3-resume-step7/CURRENT_REVIEW.json",
+        "fixtures/loop-state-mid-step3-resume-step7/LOOP_STATE.json"
+      ],
       "assertions": []
     },
     {
       "id": 7,
       "name": "loop-state-post-commit-pre-delete",
       "prompt": "I'm resuming a /contest-refactor run that was interrupted between commit and LOOP_STATE.json delete. The LOOP_STATE.json has step_started: 11, step_completed: 10, commit_attempted_sha set to the current HEAD sha. What is the correct resume action? Cite the case in resume-detection.md. Save your answer to ./resume-action.md.",
-      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 5 → § Resume from LOOP_STATE.json Case B (step_started == 11 AND commit_attempted_sha non-null AND step_completed < 11 AND HEAD == commit_attempted_sha). Action: write step_completed: 11 (bookkeeping), then delete LOOP_STATE.json. Proceed to loop N+1 dispatch via Continuation Discipline. The commit already landed; replaying it would create a duplicate.",
-      "files": ["fixtures/loop-state-post-commit-pre-delete/CURRENT_REVIEW.json", "fixtures/loop-state-post-commit-pre-delete/LOOP_STATE.json"],
+      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 5 \u2192 \u00a7 Resume from LOOP_STATE.json Case B (step_started == 11 AND commit_attempted_sha non-null AND step_completed < 11 AND HEAD == commit_attempted_sha). Action: write step_completed: 11 (bookkeeping), then delete LOOP_STATE.json. Proceed to loop N+1 dispatch via Continuation Discipline. The commit already landed; replaying it would create a duplicate.",
+      "files": [
+        "fixtures/loop-state-post-commit-pre-delete/CURRENT_REVIEW.json",
+        "fixtures/loop-state-post-commit-pre-delete/LOOP_STATE.json"
+      ],
       "assertions": []
     },
     {
@@ -70,15 +88,20 @@
       "name": "reviewer-retry-then-success",
       "prompt": "Please validate this CURRENT_REVIEW.json artifact. The implementation_review records a reviewer that timed out on attempt 1 and succeeded on attempt 2. State your verdict: is G27 satisfied? Is the reason field correctly scoped to the substantive verdict (not the transient cause)? Save the full verdict to ./validation-report.md.",
       "expected_output": "validation-report.md confirming G27 satisfied: retry_count == 2, retry_cause == 'timeout', retry_attempts[] has 2 entries with first.outcome == 'timeout' matching retry_cause, second.outcome == 'ok'. reason field text contains substantive diff verdict only (e.g., 'All three checks passed; targeted finding F1 no longer present in current source.') with no mention of 'after 2 attempts' or transient causes. Code is NOT reverted; loop proceeds to commit. output-format rule #25 (Retry envelope shape) also satisfied.",
-      "files": ["fixtures/reviewer-retry-then-success/CURRENT_REVIEW.json"],
+      "files": [
+        "fixtures/reviewer-retry-then-success/CURRENT_REVIEW.json"
+      ],
       "assertions": []
     },
     {
       "id": 9,
       "name": "reviewer-retry-then-reject",
       "prompt": "Please validate this CURRENT_REVIEW.json artifact. The implementation_review records a reviewer that hit spawn_error on both attempts. What is the correct routing? Is the reason field's text canonical? Should the loop revert code, and via what mechanism? Save the full verdict to ./validation-report.md.",
-      "expected_output": "validation-report.md confirming G27 satisfied: retry_count == 2, retry_cause == 'spawn_error', retry_attempts[] has 2 entries both with outcome 'spawn_error', verdict == 'rejected', reason == 'reviewer unavailable; manual verification required' EXACTLY (canonical phrase per implementation-reviewer.md § Failure modes). loop_result.targeted_finding_status == 'carried_forward' and loop_result.unintended_regression == implementation_review.reason (G15 reject↔loop_result coherence, output-format rule #16). Narrow revert path per implementation-reviewer.md § Routing rejected: for each path in loop_result.changed_paths[], git checkout <blob-sha> -- <path> using LOOP_STATE.pre_step3_blob_shas. Commit review artifacts only (no code).",
-      "files": ["fixtures/reviewer-retry-then-reject/CURRENT_REVIEW.json", "fixtures/reviewer-retry-then-reject/LOOP_STATE.json"],
+      "expected_output": "validation-report.md confirming G27 satisfied: retry_count == 2, retry_cause == 'spawn_error', retry_attempts[] has 2 entries both with outcome 'spawn_error', verdict == 'rejected', reason == 'reviewer unavailable; manual verification required' EXACTLY (canonical phrase per implementation-reviewer.md \u00a7 Failure modes). loop_result.targeted_finding_status == 'carried_forward' and loop_result.unintended_regression == implementation_review.reason (G15 reject\u2194loop_result coherence, output-format rule #16). Narrow revert path per implementation-reviewer.md \u00a7 Routing rejected: for each path in loop_result.changed_paths[], git checkout <blob-sha> -- <path> using LOOP_STATE.pre_step3_blob_shas. Commit review artifacts only (no code).",
+      "files": [
+        "fixtures/reviewer-retry-then-reject/CURRENT_REVIEW.json",
+        "fixtures/reviewer-retry-then-reject/LOOP_STATE.json"
+      ],
       "assertions": []
     },
     {
@@ -86,29 +109,37 @@
       "name": "incremental-then-halt-success",
       "prompt": "Please validate this CURRENT_REVIEW.json artifact. The current loop is attempting HALT_SUCCESS. The REVIEW_HISTORY.json shows 3 prior loops with discovery.test_scope == 'incremental'. The current loop also has discovery.test_scope == 'incremental'. State your verdict and recommend the correct routing if there's a violation. Save the full verdict to ./validation-report.md.",
       "expected_output": "validation-report.md identifying G21 violation: at HALT_SUCCESS, when any prior loop in REVIEW_HISTORY.json had test_scope == 'incremental', the current (HALT_SUCCESS-emitting) loop must have test_scope == 'full' with a passing full-suite run cited as evidence. Recommendation: re-run with full suite (override --test-filter), record test_scope: 'full', cite the full-suite run as HALT_SUCCESS evidence. Until then, downgrade state to CONTINUE pending reverify.",
-      "files": ["fixtures/incremental-then-halt-success/CURRENT_REVIEW.json", "fixtures/incremental-then-halt-success/REVIEW_HISTORY.json"],
+      "files": [
+        "fixtures/incremental-then-halt-success/CURRENT_REVIEW.json",
+        "fixtures/incremental-then-halt-success/REVIEW_HISTORY.json"
+      ],
       "assertions": []
     },
     {
       "id": 11,
       "name": "stale-loop-state-with-halt",
       "prompt": "I'm re-invoking /contest-refactor and find both LOOP_STATE.json (last_checkpoint_at 25 hours ago) AND CURRENT_REVIEW.json with state == HALT_STAGNATION. What is the correct routing per Resume Precedence Matrix? Should the loop auto-resume? Save your answer to ./resume-action.md.",
-      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 2 (LOOP_STATE.json present AND last_checkpoint_at > 24h ago) → orphan: emit --reset recommendation handoff, do NOT auto-resume. Tell user: 'found mid-loop checkpoint older than 24h — likely orphaned. Re-invoke with --reset to discard, or commit/stash any in-flight work first.' Note: row 2 wins over row 7 (which would have routed to drift handling) because the matrix is first-match-wins top-down. G28 orphan detection invariant cited.",
-      "files": ["fixtures/stale-loop-state-with-halt/CURRENT_REVIEW.json", "fixtures/stale-loop-state-with-halt/LOOP_STATE.json"],
+      "expected_output": "resume-action.md routing via Resume Precedence Matrix row 2 (LOOP_STATE.json present AND last_checkpoint_at > 24h ago) \u2192 orphan: emit --reset recommendation handoff, do NOT auto-resume. Tell user: 'found mid-loop checkpoint older than 24h \u2014 likely orphaned. Re-invoke with --reset to discard, or commit/stash any in-flight work first.' Note: row 2 wins over row 7 (which would have routed to drift handling) because the matrix is first-match-wins top-down. G28 orphan detection invariant cited.",
+      "files": [
+        "fixtures/stale-loop-state-with-halt/CURRENT_REVIEW.json",
+        "fixtures/stale-loop-state-with-halt/LOOP_STATE.json"
+      ],
       "assertions": []
     },
     {
       "id": 12,
       "name": "suppression-flag",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Rejects. The buried `@unchecked Sendable` on `ImageCache` is suppression-as-fix (architecture-rubric.md Smells → fake-clean reward → suppression-as-fix; method.md Simplify Pressure Test Q4): it silences the Sendable diagnostic while the data race is intact — `storage` is a plain dictionary written concurrently from `prefetch` and `warmThumbnails` (both `Task.detached`, same screen) with no lock, actor, or value semantics. concurrency cannot reach 9.5 (the 10-anchor requires 'strict concurrency checking passes without suppression'); score <= 7. The green single-config suite is not proof (Meta-Rule 4). evidence_demanded names a TSAN run or a focused concurrent-insert test; blocking_severity is Serious deduction or Likely disqualifier (racing async writes to user-visible cache state).",
-      "files": ["scenarios/suppression-flag/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects. The buried `@unchecked Sendable` on `ImageCache` is suppression-as-fix (architecture-rubric.md Smells \u2192 fake-clean reward \u2192 suppression-as-fix; method.md Simplify Pressure Test Q4): it silences the Sendable diagnostic while the data race is intact \u2014 `storage` is a plain dictionary written concurrently from `prefetch` and `warmThumbnails` (both `Task.detached`, same screen) with no lock, actor, or value semantics. concurrency cannot reach 9.5 (the 10-anchor requires 'strict concurrency checking passes without suppression'); score <= 7. The green single-config suite is not proof (Meta-Rule 4). evidence_demanded names a TSAN run or a focused concurrent-insert test; blocking_severity is Serious deduction or Likely disqualifier (racing async writes to user-visible cache state).",
+      "files": [
+        "scenarios/suppression-flag/scenario.md"
+      ],
       "assertions": [
         "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
         "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
         "[discriminating] evidence_demanded names a TSAN run or a focused concurrent/parallel test (Meta-Rule 4)",
-        "[discriminating] States the data race persists — @unchecked Sendable only silences the Sendable diagnostic; no lock/actor/value semantics added",
+        "[discriminating] States the data race persists \u2014 @unchecked Sendable only silences the Sendable diagnostic; no lock/actor/value semantics added",
         "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
         "[validity] verdict is \"rejected\"",
         "[validity] Does not treat the green single-config suite as proof the race is fixed"
@@ -118,9 +149,11 @@
       "id": 13,
       "name": "crossplat-flag",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does not accept framework_idioms at 9.5. `#if canImport(UIKit)` is true on tvOS (and Mac Catalyst), so it does not gate `UIImpactFeedbackGenerator`, which the tvOS SDK lacks — the tvOS target (declared in Package.swift) breaks at the symbol, and the iOS-Simulator-only run cannot catch it (lens-apple.md Cross-platform compile correctness; the three gating mechanisms). The correct guard is `#if os(iOS)` (per-OS SDK symbol presence), optionally `|| targetEnvironment(macCatalyst)`. Per method.md Meta-Rule 4 the Actor must compile the affected declared targets (incl. tvOS): unverified target = Serious deduction; a confirmed tvOS break = Likely disqualifier blocking 9.5. evidence_demanded: a tvOS (and macOS) compile.",
-      "files": ["scenarios/crossplat-flag/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does not accept framework_idioms at 9.5. `#if canImport(UIKit)` is true on tvOS (and Mac Catalyst), so it does not gate `UIImpactFeedbackGenerator`, which the tvOS SDK lacks \u2014 the tvOS target (declared in Package.swift) breaks at the symbol, and the iOS-Simulator-only run cannot catch it (lens-apple.md Cross-platform compile correctness; the three gating mechanisms). The correct guard is `#if os(iOS)` (per-OS SDK symbol presence), optionally `|| targetEnvironment(macCatalyst)`. Per method.md Meta-Rule 4 the Actor must compile the affected declared targets (incl. tvOS): unverified target = Serious deduction; a confirmed tvOS break = Likely disqualifier blocking 9.5. evidence_demanded: a tvOS (and macOS) compile.",
+      "files": [
+        "scenarios/crossplat-flag/scenario.md"
+      ],
       "assertions": [
         "[discriminating] Identifies canImport(UIKit) is true on tvOS, so it does not gate the tvOS-absent symbol",
         "[discriminating] Names #if os(iOS) (os-based gating) as the correct guard rather than canImport",
@@ -134,9 +167,11 @@
       "id": 14,
       "name": "suppression-restraint",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
       "expected_output": "Does NOT flag suppression-as-fix. Here `@unchecked Sendable` carries the compensating invariant the rubric requires (architecture-rubric.md suppression-as-fix: safety suppressions are acceptable with narrow scope + concrete justification + the compensating invariant): every `storage` access is serialized behind `NSLock.withLock`, the conformance has a concrete justification comment, and a TSAN-covered concurrency test exists. SPT Q4 holds (the race is actually gone). concurrency may be 9.5. A reviewer that rejects this for the mere presence of `@unchecked Sendable` is over-flagging.",
-      "files": ["scenarios/suppression-restraint/scenario.md"],
+      "files": [
+        "scenarios/suppression-restraint/scenario.md"
+      ],
       "assertions": [
         "[restraint] flagged_smells does NOT contain suppression-as-fix (the suppression is compensated)",
         "[restraint] verdict is not \"rejected\" on account of the @unchecked Sendable conformance",
@@ -148,9 +183,11 @@
       "id": 15,
       "name": "crossplat-restraint",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag a cross-platform problem. The haptics call is gated `#if os(iOS)` — the correct guard for an iOS-only UIKit symbol — and the Actor recorded compile evidence for every declared target (iOS/macOS/tvOS builds green, Meta-Rule 4 satisfied). No tvOS break exists; framework_idioms may be 9.5. A reviewer that demands a guard change or flags tvOS here is over-flagging.",
-      "files": ["scenarios/crossplat-restraint/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag a cross-platform problem. The haptics call is gated `#if os(iOS)` \u2014 the correct guard for an iOS-only UIKit symbol \u2014 and the Actor recorded compile evidence for every declared target (iOS/macOS/tvOS builds green, Meta-Rule 4 satisfied). No tvOS break exists; framework_idioms may be 9.5. A reviewer that demands a guard change or flags tvOS here is over-flagging.",
+      "files": [
+        "scenarios/crossplat-restraint/scenario.md"
+      ],
       "assertions": [
         "[restraint] Does not flag a cross-platform / tvOS compile problem (the guard is #if os(iOS), which is correct)",
         "[restraint] Recognizes the recorded per-target compile evidence satisfies Meta-Rule 4",
@@ -162,9 +199,11 @@
       "id": 16,
       "name": "identity-flag",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Flags unstable collection identity. `ForEach(playbackQueue.indices, id: \\.self)` over a dynamic, reorderable, deletable queue derives identity from array position, not the element — on move/delete SwiftUI mis-associates row state and animations (lens-apple.md SwiftUI Discipline → Collection identity). `Track` is Identifiable, so `ForEach(playbackQueue)` (or `id: \\.id`) is the fix. This is a state_management finding, not a style nit; score < 9.5. Severity Noticeable weakness or Serious deduction (visible wrong-row behavior on a primary flow).",
-      "files": ["scenarios/identity-flag/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Flags unstable collection identity. `ForEach(playbackQueue.indices, id: \\.self)` over a dynamic, reorderable, deletable queue derives identity from array position, not the element \u2014 on move/delete SwiftUI mis-associates row state and animations (lens-apple.md SwiftUI Discipline \u2192 Collection identity). `Track` is Identifiable, so `ForEach(playbackQueue)` (or `id: \\.id`) is the fix. This is a state_management finding, not a style nit; score < 9.5. Severity Noticeable weakness or Serious deduction (visible wrong-row behavior on a primary flow).",
+      "files": [
+        "scenarios/identity-flag/scenario.md"
+      ],
       "assertions": [
         "[discriminating] Flags index-based identity (.indices / id: \\.self) on a dynamic/reorderable collection as the problem",
         "[discriminating] Maps it to state_management with a score < 9.5 (not a style nit)",
@@ -176,13 +215,15 @@
       "id": 17,
       "name": "identity-restraint",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag identity. `.indices` / `id: \\.self` over `SettingsTab.allCases` — a static, never-mutated CaseIterable list — is acceptable (lens-apple.md SwiftUI Discipline: '.indices / offset is acceptable for genuinely static content — not a blanket ban'). No reorder/insert/delete exists, so the carve-out applies and state_management takes no deduction for the .indices usage. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule, architecture-rubric.md) — score-honesty, not a flag on the carve-out, and not over-flagging. A reviewer that flags `.indices` here, names a collection-identity smell, or demands ForEach(tabs) is applying a blanket ban the lens explicitly rejects.",
-      "files": ["scenarios/identity-restraint/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag identity. `.indices` / `id: \\.self` over `SettingsTab.allCases` \u2014 a static, never-mutated CaseIterable list \u2014 is acceptable (lens-apple.md SwiftUI Discipline: '.indices / offset is acceptable for genuinely static content \u2014 not a blanket ban'). No reorder/insert/delete exists, so the carve-out applies and state_management takes no deduction for the .indices usage. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule, architecture-rubric.md) \u2014 score-honesty, not a flag on the carve-out, and not over-flagging. A reviewer that flags `.indices` here, names a collection-identity smell, or demands ForEach(tabs) is applying a blanket ban the lens explicitly rejects.",
+      "files": [
+        "scenarios/identity-restraint/scenario.md"
+      ],
       "assertions": [
         "[restraint] Does not flag the .indices / id: \\.self usage as unstable collection identity (the content is a static CaseIterable, so the lens carve-out applies)",
         "[restraint] Does not name a collection-identity smell or demand ForEach(tabs) / id: \\.id for this static list",
-        "[restraint] verdict is not \"rejected\" for collection-identity reasons (a score-honesty pushback on the Actor's unearned 9.5 — no named residual per the 9.5+ Threshold rule — is not a carve-out flag)",
+        "[restraint] verdict is not \"rejected\" for collection-identity reasons (a score-honesty pushback on the Actor's unearned 9.5 \u2014 no named residual per the 9.5+ Threshold rule \u2014 is not a carve-out flag)",
         "[restraint] Attributes no state_management deduction to the .indices usage; any sub-9.5 score rests on the missing-residual rule, not on the static-content .indices"
       ]
     },
@@ -190,9 +231,11 @@
       "id": 18,
       "name": "ownership-flag",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Flags passed-value ownership. `VolumeBadge` stores a parent-passed `volume` as `@State` (seeded once via `State(initialValue:)`); since the parent's `outputVolume` updates continuously and the child is expected to track it, `@State` captures the initial value and ignores later parent updates → the badge goes stale (lens-apple.md SwiftUI Discipline → Passed-value ownership). Fix: a plain `let volume: Double` (or `@Binding`), not `@State`. state_management < 9.5; Noticeable weakness or Serious deduction.",
-      "files": ["scenarios/ownership-flag/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Flags passed-value ownership. `VolumeBadge` stores a parent-passed `volume` as `@State` (seeded once via `State(initialValue:)`); since the parent's `outputVolume` updates continuously and the child is expected to track it, `@State` captures the initial value and ignores later parent updates \u2192 the badge goes stale (lens-apple.md SwiftUI Discipline \u2192 Passed-value ownership). Fix: a plain `let volume: Double` (or `@Binding`), not `@State`. state_management < 9.5; Noticeable weakness or Serious deduction.",
+      "files": [
+        "scenarios/ownership-flag/scenario.md"
+      ],
       "assertions": [
         "[discriminating] Flags @State seeded from a parent-passed value where continued parent sync is expected (stale value)",
         "[discriminating] Maps to state_management with a score < 9.5",
@@ -204,11 +247,13 @@
       "id": 19,
       "name": "ownership-restraint",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag ownership. `RenamePlaylistSheet` seeds a local editable `draftName` from the passed `currentName` as `@State` — a legitimate edit-draft pattern: the sheet owns the in-progress edit, no continued parent sync is expected, and commit happens via `onCommit` on Save (lens-apple.md SwiftUI Discipline: 'Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent'). The carve-out applies and state_management takes no deduction for the draft @State. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) — score-honesty, not a flag on the carve-out. A reviewer that flags this `@State`, names a passed-value-ownership smell, or demands let / @Binding is over-flagging the carve-out.",
-      "files": ["scenarios/ownership-restraint/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag ownership. `RenamePlaylistSheet` seeds a local editable `draftName` from the passed `currentName` as `@State` \u2014 a legitimate edit-draft pattern: the sheet owns the in-progress edit, no continued parent sync is expected, and commit happens via `onCommit` on Save (lens-apple.md SwiftUI Discipline: 'Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent'). The carve-out applies and state_management takes no deduction for the draft @State. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) \u2014 score-honesty, not a flag on the carve-out. A reviewer that flags this `@State`, names a passed-value-ownership smell, or demands let / @Binding is over-flagging the carve-out.",
+      "files": [
+        "scenarios/ownership-restraint/scenario.md"
+      ],
       "assertions": [
-        "[restraint] Does not flag the @State seeded from currentName as a bug (legitimate local edit draft — the sheet owns the in-progress edit, no parent sync expected)",
+        "[restraint] Does not flag the @State seeded from currentName as a bug (legitimate local edit draft \u2014 the sheet owns the in-progress edit, no parent sync expected)",
         "[restraint] Does not name a passed-value-ownership / stale-state smell or demand let / @Binding for draftName",
         "[restraint] verdict is not \"rejected\" for passed-value-ownership reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
         "[restraint] Attributes no state_management deduction to the draft @State; any sub-9.5 score rests on the missing-residual rule, not on the edit-draft pattern"
@@ -218,14 +263,61 @@
       "id": 20,
       "name": "style-suppression-restraint",
       "layer": "refactoring-judgment",
-      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT treat the suppression as fake-clean reward. `// swiftlint:disable:next line_length` on a single inlined URL literal is a style/tooling suppression, not a safety one (architecture-rubric.md suppression-as-fix: style/tooling suppressions are lower risk, needing only narrow scope + justification; method.md SPT note: a style suppression does not by itself fail Q4). It is narrowly scoped (`:next`, one line) with a stated readability rationale, and runtime behavior is unaffected, so simplicity takes no deduction for the suppression. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) — score-honesty, not a flag on the carve-out. A reviewer that rejects this as suppression-as-fix, or caps simplicity for the lint disable, is conflating style with safety.",
-      "files": ["scenarios/style-suppression-restraint/scenario.md"],
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT treat the suppression as fake-clean reward. `// swiftlint:disable:next line_length` on a single inlined URL literal is a style/tooling suppression, not a safety one (architecture-rubric.md suppression-as-fix: style/tooling suppressions are lower risk, needing only narrow scope + justification; method.md SPT note: a style suppression does not by itself fail Q4). It is narrowly scoped (`:next`, one line) with a stated readability rationale, and runtime behavior is unaffected, so simplicity takes no deduction for the suppression. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) \u2014 score-honesty, not a flag on the carve-out. A reviewer that rejects this as suppression-as-fix, or caps simplicity for the lint disable, is conflating style with safety.",
+      "files": [
+        "scenarios/style-suppression-restraint/scenario.md"
+      ],
       "assertions": [
         "[restraint] Classifies swiftlint:disable line_length as a style/tooling suppression, not a safety-affecting one",
         "[restraint] Does not name suppression-as-fix / fake-clean reward or fail SPT Q4 on the lint disable",
         "[restraint] verdict is not \"rejected\" for the line-length suppression (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
         "[restraint] Attributes no simplicity deduction to the lint suppression; any sub-9.5 score rests on the missing-residual rule, not on the style suppression"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "halt-challenge-flag",
+      "prompt": "You are an independent reviewer challenging a contest-refactor HALT_SUCCESS verdict. Read scenarios/halt-challenge-flag/scenario.md. The loop claims this codebase is a terminal success (every scorecard dimension 9.5, build green) and wants to promote it to terminal HALT_SUCCESS. Your job is to TRY TO BREAK that claim: is there a Serious-or-worse structural problem the all-9.5 self-audit missed, or does the verdict genuinely hold? Save ./review-verdict.md ending with a JSON verdict block with these fields: verdict, blocks_95, blocking_severity, dimension_scores, flagged_smells, evidence_demanded. verdict 'rejected' = you broke the claim (a real blocking finding exists); 'approved' = the verdict holds and the candidate may be promoted.",
+      "expected_output": "verdict rejected: three independent writers to selectedTab contradict the 'single owner per HR-1' accepted residual; rule-compliance was scored as cleanliness (fake-clean reward). blocks_95 true, Serious deduction.",
+      "files": [
+        "scenarios/halt-challenge-flag/scenario.md"
+      ],
+      "assertions": [
+        {
+          "text": "[discriminating] verdict is 'rejected' \u2014 the HALT_SUCCESS claim is broken",
+          "severity": "Serious deduction"
+        },
+        {
+          "text": "[discriminating] flagged_smells / finding names the split ownership of selectedTab (three writers: TabView binding, DeepLinkRouter, LoginViewModel), not the 'follows HR-1' compliance text"
+        },
+        {
+          "text": "[discriminating] does not accept project-rule (HR-1) compliance as evidence the dimension is clean; treats the residual rationale as fake-clean reward"
+        },
+        {
+          "text": "[discriminating] blocks_95 true with blocking_severity 'Serious deduction' or 'Likely disqualifier'"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "name": "halt-challenge-restraint",
+      "prompt": "You are an independent reviewer challenging a contest-refactor HALT_SUCCESS verdict. Read scenarios/halt-challenge-restraint/scenario.md. The loop claims this codebase is a terminal success (every scorecard dimension 9.5, build green) and wants to promote it to terminal HALT_SUCCESS. Your job is to TRY TO BREAK that claim: is there a Serious-or-worse structural problem the all-9.5 self-audit missed, or does the verdict genuinely hold? Save ./review-verdict.md ending with a JSON verdict block with these fields: verdict, blocks_95, blocking_severity, dimension_scores, flagged_smells, evidence_demanded. verdict 'rejected' = you broke the claim (a real blocking finding exists); 'approved' = the verdict holds and the candidate may be promoted.",
+      "expected_output": "verdict approved/conditional: the 979-LOC true-external adapter residual is correctly SPT-rejected; no Serious finding. The challenger must hold, not manufacture a finding on file length alone.",
+      "files": [
+        "scenarios/halt-challenge-restraint/scenario.md"
+      ],
+      "assertions": [
+        {
+          "text": "[restraint] verdict is 'approved' or 'conditional' \u2014 the candidate holds",
+          "severity": null
+        },
+        {
+          "text": "[restraint] does NOT raise a blocking finding on the 979-LOC LiveMusicKitClient file length"
+        },
+        {
+          "text": "[restraint] if it proposes a file-split, it runs the Simplify Pressure Test and finds the split fails (no manufactured finding)"
+        }
       ]
     }
   ]
