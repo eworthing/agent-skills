@@ -44,7 +44,9 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
   ],
   "commit_message_draft": null,                 // populated at 11.a; subject line for `git commit`.
   "implementation_review": null,                // verbatim copy of CURRENT_REVIEW.json.implementation_review after step 6. Honored on resume (reviewer stateless; do not re-spawn).
-  "commit_attempted_sha": null                  // populated at 11.d post-commit, pre-11.f-delete. Disambiguates Case B vs Case C in resume-detection.md.
+  "commit_attempted_sha": null,                 // populated at 11.d post-commit, pre-11.f-delete. Disambiguates Case B vs Case C in resume-detection.md.
+  "executor_id": "loop3-exec-01",               // stable id of the loop executor that owns this checkpoint. Set at Step 3 sub-step 0.
+  "executor_generation": 1                       // monotonic single-writer lease token (trust-model.md HALT routing recovery). On idle/no-JSON recovery, main fences the prior generation: it confirms the original executor is terminated (or bumps the generation) before re-dispatch, and any write/commit carrying a stale generation is rejected. Never re-dispatch while the original generation may still be writing.
 }
 ```
 
