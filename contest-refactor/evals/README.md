@@ -102,7 +102,14 @@ Each assertion is tagged:
 - **`[restraint]`** — the skill must **not** over-flag a legitimate twin. Track these two-sided:
   the skill must improve flag-detection **without regressing restraint**. A restraint regression
   (skill rejects a valid twin the baseline accepted) is a real defect in the lens content, not a
-  win.
+  win. **Score-honesty is not over-flagging.** Each restraint twin's Actor proposes `→ 9.5`
+  without naming a residual — kept symmetric with its flag twin so the carve-out is the only
+  variable between the pair. The 9.5+ Threshold rule (`architecture-rubric.md`) correctly holds a
+  no-residual 9.5 at 9.0, so mid-loop a rubric-faithful reviewer may land `conditional` /
+  `blocks_95: true` on the *score* while fully clearing the carve-out. Grade `[restraint]` on the
+  carve-out alone: does the review name the twin's smell, reject *for* the carve-out, or demand
+  the legitimate code change? A sub-9.5 score justified solely by the missing residual is
+  score-honesty, not a restraint miss — do not count it against the skill.
 - **`[validity]`** — passes across all arms by design (scenario realism). **Not** skill value;
   excluded from the lift headline.
 

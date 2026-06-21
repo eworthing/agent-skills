@@ -177,12 +177,13 @@
       "name": "identity-restraint",
       "layer": "refactoring-judgment",
       "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag identity. `.indices` / `id: \\.self` over `SettingsTab.allCases` — a static, never-mutated CaseIterable list — is acceptable (lens-apple.md SwiftUI Discipline: '.indices / offset is acceptable for genuinely static content — not a blanket ban'). No reorder/insert/delete exists. state_management may be 9.5. A reviewer that flags `.indices` here is applying a blanket ban the lens explicitly rejects.",
+      "expected_output": "Does NOT flag identity. `.indices` / `id: \\.self` over `SettingsTab.allCases` — a static, never-mutated CaseIterable list — is acceptable (lens-apple.md SwiftUI Discipline: '.indices / offset is acceptable for genuinely static content — not a blanket ban'). No reorder/insert/delete exists, so the carve-out applies and state_management takes no deduction for the .indices usage. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule, architecture-rubric.md) — score-honesty, not a flag on the carve-out, and not over-flagging. A reviewer that flags `.indices` here, names a collection-identity smell, or demands ForEach(tabs) is applying a blanket ban the lens explicitly rejects.",
       "files": ["scenarios/identity-restraint/scenario.md"],
       "assertions": [
-        "[restraint] Does not flag the .indices / id: \\.self usage (content is genuinely static)",
-        "[restraint] verdict is not \"rejected\" for collection-identity reasons",
-        "[restraint] Does not cap state_management below 9.5 for the .indices usage on static content"
+        "[restraint] Does not flag the .indices / id: \\.self usage as unstable collection identity (the content is a static CaseIterable, so the lens carve-out applies)",
+        "[restraint] Does not name a collection-identity smell or demand ForEach(tabs) / id: \\.id for this static list",
+        "[restraint] verdict is not \"rejected\" for collection-identity reasons (a score-honesty pushback on the Actor's unearned 9.5 — no named residual per the 9.5+ Threshold rule — is not a carve-out flag)",
+        "[restraint] Attributes no state_management deduction to the .indices usage; any sub-9.5 score rests on the missing-residual rule, not on the static-content .indices"
       ]
     },
     {
@@ -204,12 +205,13 @@
       "name": "ownership-restraint",
       "layer": "refactoring-judgment",
       "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag ownership. `RenamePlaylistSheet` seeds a local editable `draftName` from the passed `currentName` as `@State` — a legitimate edit-draft pattern: the sheet owns the in-progress edit, no continued parent sync is expected, and commit happens via `onCommit` on Save (lens-apple.md SwiftUI Discipline: 'Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent'). state_management may be 9.5. A reviewer that flags this `@State` is over-flagging the carve-out.",
+      "expected_output": "Does NOT flag ownership. `RenamePlaylistSheet` seeds a local editable `draftName` from the passed `currentName` as `@State` — a legitimate edit-draft pattern: the sheet owns the in-progress edit, no continued parent sync is expected, and commit happens via `onCommit` on Save (lens-apple.md SwiftUI Discipline: 'Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent'). The carve-out applies and state_management takes no deduction for the draft @State. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) — score-honesty, not a flag on the carve-out. A reviewer that flags this `@State`, names a passed-value-ownership smell, or demands let / @Binding is over-flagging the carve-out.",
       "files": ["scenarios/ownership-restraint/scenario.md"],
       "assertions": [
-        "[restraint] Does not flag the @State-from-passed-value as a bug (legitimate local edit draft)",
-        "[restraint] verdict is not \"rejected\" for passed-value-ownership reasons",
-        "[restraint] Does not cap state_management below 9.5 for the draft @State"
+        "[restraint] Does not flag the @State seeded from currentName as a bug (legitimate local edit draft — the sheet owns the in-progress edit, no parent sync expected)",
+        "[restraint] Does not name a passed-value-ownership / stale-state smell or demand let / @Binding for draftName",
+        "[restraint] verdict is not \"rejected\" for passed-value-ownership reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+        "[restraint] Attributes no state_management deduction to the draft @State; any sub-9.5 score rests on the missing-residual rule, not on the edit-draft pattern"
       ]
     },
     {
@@ -217,12 +219,13 @@
       "name": "style-suppression-restraint",
       "layer": "refactoring-judgment",
       "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT treat the suppression as fake-clean reward. `// swiftlint:disable:next line_length` on a single inlined URL literal is a style/tooling suppression, not a safety one (architecture-rubric.md suppression-as-fix: style/tooling suppressions are lower risk, needing only narrow scope + justification; method.md SPT note: a style suppression does not by itself fail Q4). It is narrowly scoped (`:next`, one line) with a stated readability rationale, and runtime behavior is unaffected. simplicity may be 9.5. A reviewer that rejects this as suppression-as-fix is conflating style with safety.",
+      "expected_output": "Does NOT treat the suppression as fake-clean reward. `// swiftlint:disable:next line_length` on a single inlined URL literal is a style/tooling suppression, not a safety one (architecture-rubric.md suppression-as-fix: style/tooling suppressions are lower risk, needing only narrow scope + justification; method.md SPT note: a style suppression does not by itself fail Q4). It is narrowly scoped (`:next`, one line) with a stated readability rationale, and runtime behavior is unaffected, so simplicity takes no deduction for the suppression. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) — score-honesty, not a flag on the carve-out. A reviewer that rejects this as suppression-as-fix, or caps simplicity for the lint disable, is conflating style with safety.",
       "files": ["scenarios/style-suppression-restraint/scenario.md"],
       "assertions": [
         "[restraint] Classifies swiftlint:disable line_length as a style/tooling suppression, not a safety-affecting one",
-        "[restraint] Does not fail SPT Q4 / does not call it fake-clean reward via suppression",
-        "[restraint] verdict is not \"rejected\" for the line-length suppression; simplicity not capped below 9.5 for it"
+        "[restraint] Does not name suppression-as-fix / fake-clean reward or fail SPT Q4 on the lint disable",
+        "[restraint] verdict is not \"rejected\" for the line-length suppression (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+        "[restraint] Attributes no simplicity deduction to the lint suppression; any sub-9.5 score rests on the missing-residual rule, not on the style suppression"
       ]
     }
   ]
