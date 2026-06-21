@@ -7,3 +7,9 @@ bash-macos-workspace/
 swiftui-native-ux-workspace/
 temp/
 refs/
+
+# Per-agent skill install dirs (local symlinks / npx-skills artifacts, not repo content).
+# Keep skill-evaluator-1.0.0 — it is tracked and referenced by CLAUDE.md.
+.agents/
+.claude/skills/*
+!.claude/skills/skill-evaluator-1.0.0/
