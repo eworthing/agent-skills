@@ -33,24 +33,12 @@ from _common.metadata import (
     extract_session_id_json,
     extract_session_id_opencode,
 )
-from _common.metadata.extractors import (  # noqa: F401 — re-exported for tests
+from _common.metadata.extractors import (
     _codex_session_files,
     _extract_opencode_metadata_via_export,
     _parse_codex_session_id,
 )
 from _common.process.tree import _kill_tree, _popen_session_kwargs
-from _common.session import (
-    default_manifest,
-    extract_text_from_output,
-    load_session,
-    probe_writable,
-    reuse_codex_home,
-    save_session,
-    setup_codex_home,
-    teardown_codex_home,
-    validate_prompt_file,
-    write_summary,
-)
 
 # ---------------------------------------------------------------------------
 # Re-exports from submodules (preserves mock.patch("run_review.X") paths)
@@ -66,6 +54,18 @@ from _common.providers import (  # noqa: F401
     build_opencode_cmd,
     get_provider,
     read_prompt,
+)
+from _common.session import (
+    default_manifest,
+    extract_text_from_output,
+    load_session,
+    probe_writable,
+    reuse_codex_home,
+    save_session,
+    setup_codex_home,
+    teardown_codex_home,
+    validate_prompt_file,
+    write_summary,
 )
 
 # Friendly reviewer aliases normalized to canonical provider keys at the CLI
@@ -602,7 +602,7 @@ def run_review(args, logger=None):
             shutil.rmtree(gemini_config_dir, ignore_errors=True)
         if agy_log_path:
             with contextlib.suppress(OSError):
-                os.unlink(agy_log_path)
+                Path(agy_log_path).unlink()
 
 
 # ---------------------------------------------------------------------------

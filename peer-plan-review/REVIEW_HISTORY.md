@@ -247,3 +247,85 @@ Added `TestArgContract.test_make_args_keys_match_parse_args_dests` to `scripts/t
 ## Loop 3 Implementation Review
 
 Verdict: **approved**. The diff adds a purely additive 23-line test class that derives canonical arg keys from `parse_args()` directly, closing the F-003 drift class with no ceremony, no new seam, and no regression.
+
+--- Loop 4 (UTC 2026-06-22T08:05:00Z) ---
+
+### Discovery
+- [See loop 1 Discovery for full details — unchanged]
+- Ground-truth state at Step 0: GREEN — 119 passed, 0 failed (loop 3 left green)
+- Provider: `claude_code`. loop_model: `claude-sonnet-4-6` (default). spawn_isolation: subagent.
+
+### Loop Counter
+Loop 4 of 10 (cap)
+
+### System Flag
+[STATE: CONTINUE]
+
+---
+
+## Contest Verdict
+Good app, but not top-tier yet
+
+Tests are green (119 passed). Production lint is clean: `ruff check scripts/run_review.py` now exits 0 (was 3 violations: PTH108 + I001 + RUF100). Loop 4 resolved F-004 via a minimal 3-item fix. The remaining contest-grade drag is `run_review()` at ~405 LoC with no sub-function structure.
+
+## Scorecard (1-10)
+
+- **Architecture quality:** 7 | SAME | `run_review.py:339` (registry dispatch); clean import DAG; `run_review()` at ~405 LoC without sub-module boundaries is primary drag
+- **State management and runtime ownership:** 8 | SAME | `_active_proc` at `run_review.py:187` single-writer; `run_review.py:209` resume_requested snapshot; local state machine
+- **Domain modeling:** 7 | SAME | `REVIEWER_ALIASES` at `run_review.py:73`; normalization at CLI boundary `:121-122`; PROVIDERS registry from `_common`; thin-by-design residual accepted
+- **Data flow and dependency design:** 8 | SAME | Clean DAG; temporal coupling documented at `run_review.py:501-510`; `_common.metadata.extractors` names correctly imported without noqa (used in-module)
+- **Framework / platform best practices:** 6.5 | UP | `python3 -m ruff check scripts/run_review.py` → `All checks passed!` (was: exit 1, 3 violations). Residual: test-file violations (E401/I001/RUF100/F405) accepted as infrastructure debt.
+- **Concurrency and runtime safety:** 8 | SAME | Signal handler save/restore in try/finally; `Path(agy_log_path).unlink()` inside `contextlib.suppress(OSError)` is behaviorally identical to prior `os.unlink(agy_log_path)`
+- **Code simplicity and clarity:** 6 | SAME | `run_review()` ~405 LoC, ~67 AST nodes, no named sub-functions; loop 4 change is purely cosmetic
+- **Test strategy and regression resistance:** 7.5 | SAME | `TestArgContract.test_make_args_keys_match_parse_args_dests` guards arg contract; 119 tests green; `make_args()` still manually maintained (guarded)
+- **Overall implementation credibility:** 8 | UP | F-004 resolved: production module passes ruff with zero violations; orchestrator-registry pattern, signal safety, session isolation well-tested
+
+## Authority Map
+
+- **Concern:** CLI arg contract | **Owner:** `run_review.py:parse_args()` | **Verdict:** Split and ambiguous (drift detected mechanically by sync test)
+- **Concern:** Active subprocess handle | **Owner:** `_active_proc at run_review.py:187` | **Verdict:** Single and clear
+- **Concern:** Session state | **Owner:** JSON file at `args.session_file` | **Verdict:** Single and clear
+
+## Strengths That Matter
+
+- `run_review.py:339` — provider dispatch fully registry-driven; orchestrator never branches on provider internals
+- Gemini config-overlay isolation tested behaviorally
+- Resume/fallback state tracked via locals; args never mutated (snapshot at :209)
+- CLI arg contract guarded by `TestArgContract.test_make_args_keys_match_parse_args_dests`
+- Production module now passes ruff with zero violations: `os.unlink` replaced with `Path.unlink`, import block sorted, stale noqa removed
+
+## Findings
+
+### Finding #1 (F-005): run_review() 405-LoC flat function body with no sub-function structure
+
+**Severity** — Noticeable weakness | **Status this loop** — open (loop 5 Priority 1)
+
+`run_review.py:201-612` — single flat function body (~411 LoC, ~67 AST control-flow nodes). No named sub-functions for the four concerns: env setup, subprocess dispatch, result extraction, session persistence. Shallow module test fails (depth without navigable internal structure). Primary drag on `architecture_quality` (7) and `simplicity` (6).
+
+## Simplification Check
+- Structurally necessary: noqa removal, PTH108 fix, and import sort pass SPT Q1+Q2 (fix real technical debt, smallest honest fix). No ceremony added.
+- new_seam_justified: false
+- Should NOT be done: Do not refactor run_review() structure this loop (F-005, next loop). Do not touch test files.
+- Tests after fix: 119 tests pass (unchanged). No tests added or deleted.
+
+## Improvement Backlog
+1. **Decompose `run_review()` 405-LoC flat body** (stable_id F-005 / structural / needed for contest target)
+2. **Derive `make_args()` from `parse_args([])` directly** (stable_id F-006 / simplification / helpful)
+
+## Builder Notes
+- [See REVIEW_HISTORY.json loops[3].builder_notes for full notes]
+- Pattern: RUF100 on noqa:F401 means noqa is unused — names are used in module body; remove noqa, verify F401 doesn't reappear
+- Pattern: ruff --fix --select I001 restricts fix to import sorting only; inspect git diff to confirm scope
+- Humility: framework_idioms:6.5 — test violations remain; credibility:8 — flat body is still undecomposed; architecture:7 — SAME
+
+## Final Judge Narrative
+
+Loop 4 is the lint-cleanup loop. F-004 (PTH108 + I001 + RUF100 in `run_review.py`) is resolved with three minimal changes: import sort via `ruff --fix`, PTH108 → `Path.unlink()`, and removal of the now-stale `noqa:F401` annotation (names are actively used in module body). The production module now passes ruff with zero violations. `framework_idioms` moves from 6 to 6.5 and `credibility` from 7.5 to 8. The suite stays at 119 green. The critical remaining lever is F-005: decomposing `run_review()`'s 405-LoC flat body into named sub-functions, which targets both `architecture_quality` (7→7.5+) and `simplicity` (6→6.5+). F-006 (derive `make_args()` from `parse_args([])`) is the test-helper deepening candidate.
+
+## Loop 4 Result
+
+Resolved F-004 in `scripts/run_review.py` via 3 minimal changes: (1) removed stale `# noqa: F401 — re-exported for tests` annotation from `_common.metadata.extractors` import at :36 (RUF100 — noqa was unused because names are actively used in module body); (2) applied `ruff --fix --select I001` to sort import block (moved `_common.session` after `_common.providers`, the correct isort order); (3) replaced `os.unlink(agy_log_path)` with `Path(agy_log_path).unlink()` at :605 inside `contextlib.suppress(OSError)` (PTH108 — behaviorally identical). Post-change: `python3 -m ruff check scripts/run_review.py` → `All checks passed!`; `python3 -m pytest scripts/tests/` → **119 passed, 0 failed** (unchanged). Finding F4 (stable_id F-004) **resolved**. `framework_idioms` 6 → 6.5; `credibility` 7.5 → 8.
+
+## Loop 4 Implementation Review
+
+Verdict: **approved** (inline, `ran_inline: true`). All three checks passed: Reality (ruff exits 0 post-diff; PTH108/I001/RUF100 violations gone); Honesty (no new seam, `Path.unlink()` is behaviorally identical to `os.unlink()` in `suppress(OSError)` context, noqa removal correct — F401 does not reappear); Regression (import reorder is cosmetic, 119 tests green, no new findings at same or higher severity).

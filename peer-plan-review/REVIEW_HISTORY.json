@@ -34,7 +34,25 @@
         "build_command": "n/a (pure Python, stdlib-only)",
         "lens": "Generic",
         "adrs": [],
-        "domain_terms": ["reviewer", "provider", "codex", "gemini", "claude", "copilot", "opencode", "agy", "Antigravity", "review round", "resume", "session-file", "CODEX_HOME", "PROVIDERS", "adversarial stance", "model normalization", "web-search probe"],
+        "domain_terms": [
+          "reviewer",
+          "provider",
+          "codex",
+          "gemini",
+          "claude",
+          "copilot",
+          "opencode",
+          "agy",
+          "Antigravity",
+          "review round",
+          "resume",
+          "session-file",
+          "CODEX_HOME",
+          "PROVIDERS",
+          "adversarial stance",
+          "model normalization",
+          "web-search probe"
+        ],
         "test_scope": "full",
         "test_filter": null,
         "working_tree_dirty_paths": []
@@ -128,8 +146,13 @@
         {
           "concern": "CLI arg contract",
           "owner": "run_review.py parse_args()",
-          "allowed_writers": ["run_review.py parse_args()"],
-          "readers": ["run_review.run_review()", "scripts/tests/_helpers.py make_args()"],
+          "allowed_writers": [
+            "run_review.py parse_args()"
+          ],
+          "readers": [
+            "run_review.run_review()",
+            "scripts/tests/_helpers.py make_args()"
+          ],
           "persistence_seam": null,
           "async_mutation_entry_points": [],
           "verdict": "Split and ambiguous"
@@ -146,7 +169,7 @@
           "id": "F1",
           "title": "Test suite red blocks structural review",
           "why_it_matters": "Two codex test paths fail with AttributeError, making the suite red and preventing any structural scoring under the contest rubric.",
-          "what_is_wrong": "scripts/tests/_helpers.py make_args() (lines 66-82) hard-codes a parallel copy of the CLI arg names without codex_home_manifest. run_review.py:306 reads args.codex_home_manifest; the Namespace from make_args() omits it — AttributeError on both codex test paths.",
+          "what_is_wrong": "scripts/tests/_helpers.py make_args() (lines 66-82) hard-codes a parallel copy of the CLI arg names without codex_home_manifest. run_review.py:306 reads args.codex_home_manifest; the Namespace from make_args() omits it \u2014 AttributeError on both codex test paths.",
           "evidence": [
             "scripts/tests/test_execution_paths.py::TestRunReviewExecution::test_run_review_codex_accepts_last_message_file_without_json_stdout",
             "scripts/tests/test_execution_paths.py::TestRunReviewExecution::test_run_review_codex_stale_events_do_not_mask_empty_current_output",
@@ -163,17 +186,24 @@
           "adr_reopen_justification": null,
           "minimal_correction_path": "Add codex_home_manifest: None to the defaults dict in scripts/tests/_helpers.py make_args() after review_id.",
           "blast_radius": {
-            "change": ["scripts/tests/_helpers.py"],
-            "avoid": ["scripts/run_review.py", "scripts/check_web_search.py", "scripts/ppr_paths.py", "scripts/_common/"]
+            "change": [
+              "scripts/tests/_helpers.py"
+            ],
+            "avoid": [
+              "scripts/run_review.py",
+              "scripts/check_web_search.py",
+              "scripts/ppr_paths.py",
+              "scripts/_common/"
+            ]
           }
         }
       ],
       "simplification_check": {
-        "structurally_necessary": "Restores green suite — minimum change for loop 2 to run structural scoring honestly.",
+        "structurally_necessary": "Restores green suite \u2014 minimum change for loop 2 to run structural scoring honestly.",
         "new_seam_justified": false,
         "new_seam_adapters": [],
         "helpful_simplification": "none this loop",
-        "should_not_be_done": "Do not refactor parse_args(), clean pre-existing ruff violations, or add ceremony — all fail SPT for the build-failure restoration loop.",
+        "should_not_be_done": "Do not refactor parse_args(), clean pre-existing ruff violations, or add ceremony \u2014 all fail SPT for the build-failure restoration loop.",
         "tests_after_fix": "Existing tests run against the fixed helper; no tests deleted or added."
       },
       "backlog": [
@@ -190,21 +220,21 @@
       "deepening_candidates": [
         {
           "candidate_module": "make_args() test helper",
-          "source_friction_proven": "F1 — duplicated arg contract drifted from parse_args(); AttributeError on new arg.",
+          "source_friction_proven": "F1 \u2014 duplicated arg contract drifted from parse_args(); AttributeError on new arg.",
           "why_shallow_or_misplaced": "make_args() is a hand-rolled dict that duplicates run_review.parse_args() authority; it cannot stay in sync automatically.",
           "behavior_to_move_behind_interface": "Derive the Namespace from parse_args([]) with controlled overrides, eliminating the separate dict.",
           "dependency_category": "in-process",
           "test_surface_after_change": "Tests would construct args via parse_args() + override; helper cannot drift.",
           "smallest_first_step": "Replace make_args() dict with: base = vars(parse_args([])); base.update(overrides); return argparse.Namespace(**base).",
-          "what_not_to_do": "Do not keep the dict and derive from parse_args() as a parallel check — that doubles the authority, not removes it."
+          "what_not_to_do": "Do not keep the dict and derive from parse_args() as a parallel check \u2014 that doubles the authority, not removes it."
         }
       ],
       "builder_notes": [
         {
           "pattern": "Duplicated arg contract in test helper",
-          "how_to_recognize": "grep for argparse.Namespace(** or manually-constructed Namespace in test helpers — each is a stale-arg bomb.",
+          "how_to_recognize": "grep for argparse.Namespace(** or manually-constructed Namespace in test helpers \u2014 each is a stale-arg bomb.",
           "smallest_coding_rule": "Have the test helper call the actual parse_args([]) with a controlled arg list; no manual dict, no drift risk.",
-          "stack_example": "Python: args = parse_args([]); args.reviewer = 'claude'; args.plan_file = tmp — no dict, no drift."
+          "stack_example": "Python: args = parse_args([]); args.reviewer = 'claude'; args.plan_file = tmp \u2014 no dict, no drift."
         },
         {
           "pattern": "Build-failure restoration scope discipline",
@@ -214,23 +244,25 @@
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Build-failure scores are all 1 with unverifiable_due_to_build_failure: true — uncertainty is resolved when loop 2 scores real structure.",
+          "how_to_recognize": "Build-failure scores are all 1 with unverifiable_due_to_build_failure: true \u2014 uncertainty is resolved when loop 2 scores real structure.",
           "smallest_coding_rule": "The key unknown for loop 2: will test_strategy clear 7? The make_args() drift pattern suggests test helper fragility.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 1 is a build-failure restoration loop. Scorecard floors at 1 across all dimensions — not because the code is weak but because a red suite makes all structural claims unverifiable. The fix is one dict entry. Once loop 2 runs green tests, real scoring begins. The make_args() drift pattern will surface as a credibility or test-strategy finding in loop 2.",
+      "narrative": "Loop 1 is a build-failure restoration loop. Scorecard floors at 1 across all dimensions \u2014 not because the code is weak but because a red suite makes all structural claims unverifiable. The fix is one dict entry. Once loop 2 runs green tests, real scoring begins. The make_args() drift pattern will surface as a credibility or test-strategy finding in loop 2.",
       "loop_result": {
         "what_changed": "Added codex_home_manifest: None to the defaults dict in scripts/tests/_helpers.py make_args() (after review_id).",
-        "evidence_change_is_honest": "python3 -m pytest scripts/tests/ → 118 passed, 0 failed (green). python3 -m ruff check scripts/tests/_helpers.py → 19 pre-existing violations, 0 new violations introduced.",
+        "evidence_change_is_honest": "python3 -m pytest scripts/tests/ \u2192 118 passed, 0 failed (green). python3 -m ruff check scripts/tests/_helpers.py \u2192 19 pre-existing violations, 0 new violations introduced.",
         "targeted_finding_status": "resolved",
         "unintended_regression": null,
-        "changed_paths": ["peer-plan-review/scripts/tests/_helpers.py"],
+        "changed_paths": [
+          "peer-plan-review/scripts/tests/_helpers.py"
+        ],
         "interface_test_coverage_path": null
       },
       "implementation_review": {
         "verdict": "approved",
-        "reason": "All three checks passed: the targeted AttributeError is no longer reachable (Reality); the one-line dict entry is the smallest honest fix with no new seam or costume layer (Honesty); the diff introduces no regression — the changed line is additive and inert in non-codex test paths (Regression).",
+        "reason": "All three checks passed: the targeted AttributeError is no longer reachable (Reality); the one-line dict entry is the smallest honest fix with no new seam or costume layer (Honesty); the diff introduces no regression \u2014 the changed line is additive and inert in non-codex test paths (Regression).",
         "checks": {
           "reality": "passed",
           "honesty": "passed",
@@ -242,7 +274,12 @@
         "retry_count": 1,
         "retry_cause": null,
         "retry_attempts": [
-          {"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
         ]
       }
     },
@@ -269,12 +306,32 @@
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",
       "discovery": {
-        "source_roots": ["scripts/run_review.py", "scripts/check_web_search.py", "scripts/ppr_paths.py", "scripts/tests/*.py"],
+        "source_roots": [
+          "scripts/run_review.py",
+          "scripts/check_web_search.py",
+          "scripts/ppr_paths.py",
+          "scripts/tests/*.py"
+        ],
         "test_command": "cd /Users/Shared/git/agent-skills/peer-plan-review && python3 -m pytest scripts/tests/",
         "build_command": "n/a",
         "lens": "Generic",
         "adrs": [],
-        "domain_terms": ["reviewer", "provider", "codex", "gemini", "claude", "copilot", "opencode", "agy", "review round", "resume", "session-file", "CODEX_HOME", "PROVIDERS", "metadata extraction"],
+        "domain_terms": [
+          "reviewer",
+          "provider",
+          "codex",
+          "gemini",
+          "claude",
+          "copilot",
+          "opencode",
+          "agy",
+          "review round",
+          "resume",
+          "session-file",
+          "CODEX_HOME",
+          "PROVIDERS",
+          "metadata extraction"
+        ],
         "test_scope": "full",
         "test_filter": null,
         "working_tree_dirty_paths": []
@@ -285,7 +342,7 @@
         "architecture_quality": {
           "score": 7,
           "delta": "UP",
-          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) — registry dispatch); run_review.py:25-69 (clean import DAG: run_review -> _common.*); no costume layers identified in full source walk",
+          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) \u2014 registry dispatch); run_review.py:25-69 (clean import DAG: run_review -> _common.*); no costume layers identified in full source walk",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -321,7 +378,7 @@
         "framework_idioms": {
           "score": 6,
           "delta": "UP",
-          "proof": "scripts/tests/_helpers.py:12-22 (9 unused stdlib imports — F401 per ruff); run_review.py:605 (PTH108: os.unlink instead of Path.unlink); run_review.py:27 (I001: unsorted imports)",
+          "proof": "scripts/tests/_helpers.py:12-22 (9 unused stdlib imports \u2014 F401 per ruff); run_review.py:605 (PTH108: os.unlink instead of Path.unlink); run_review.py:27 (I001: unsorted imports)",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -368,8 +425,13 @@
         {
           "concern": "CLI arg contract",
           "owner": "run_review.py:parse_args()",
-          "allowed_writers": ["run_review.py:parse_args()"],
-          "readers": ["run_review.run_review()", "scripts/tests/_helpers.py:make_args()"],
+          "allowed_writers": [
+            "run_review.py:parse_args()"
+          ],
+          "readers": [
+            "run_review.run_review()",
+            "scripts/tests/_helpers.py:make_args()"
+          ],
           "persistence_seam": null,
           "async_mutation_entry_points": [],
           "verdict": "Split and ambiguous"
@@ -377,24 +439,36 @@
         {
           "concern": "Active subprocess handle",
           "owner": "_active_proc at run_review.py:187",
-          "allowed_writers": ["run_review.run_review() at :375 and :598"],
-          "readers": ["_signal_handler() at :192"],
+          "allowed_writers": [
+            "run_review.run_review() at :375 and :598"
+          ],
+          "readers": [
+            "_signal_handler() at :192"
+          ],
           "persistence_seam": null,
-          "async_mutation_entry_points": ["SIGTERM", "SIGINT"],
+          "async_mutation_entry_points": [
+            "SIGTERM",
+            "SIGINT"
+          ],
           "verdict": "Single and clear"
         },
         {
           "concern": "Session state",
           "owner": "JSON file at args.session_file",
-          "allowed_writers": ["run_review.run_review() via save_session() at :579"],
-          "readers": ["run_review.run_review() via load_session() at :213", "test files post-run"],
+          "allowed_writers": [
+            "run_review.run_review() via save_session() at :579"
+          ],
+          "readers": [
+            "run_review.run_review() via load_session() at :213",
+            "test files post-run"
+          ],
           "persistence_seam": "JSON file at args.session_file",
           "async_mutation_entry_points": [],
           "verdict": "Single and clear"
         }
       ],
       "strengths": [
-        "run_review.py:339 — provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
+        "run_review.py:339 \u2014 provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
         "Gemini config-overlay isolation tested behaviorally: temp dir excludes auto-saved policy files (test_execution_paths.py:178-214); settings preserved (test_execution_paths.py:138-175)",
         "Resume/fallback state tracked via locals (use_resume, fallback_used at run_review.py:210-211); args never mutated (snapshot at :209)"
       ],
@@ -407,7 +481,7 @@
           "what_is_wrong": "scripts/tests/_helpers.py:12-22 imports 9 stdlib modules (json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest/mock) that _helpers.py does not itself use. Test files already import these directly on their own line 2. Removing them from _helpers.py breaks nothing and eliminates pervasive lint suppression.",
           "evidence": [
             "scripts/tests/_helpers.py:12-22 (F401 unused imports: json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest, mock)",
-            "scripts/tests/test_execution_paths.py:2 (imports same stdlib directly — duplicate path)",
+            "scripts/tests/test_execution_paths.py:2 (imports same stdlib directly \u2014 duplicate path)",
             "ruff F405 at test_execution_paths.py:18,31,39 (self_check may be undefined or from star imports)",
             "ruff F405 at test_execution_paths.py:47,52,57 (run_script may be undefined or from star imports)"
           ],
@@ -422,18 +496,26 @@
           "adr_reopen_justification": null,
           "minimal_correction_path": "Remove unused stdlib imports from scripts/tests/_helpers.py:12-22 (json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest, mock). Keep: import argparse (used at :85), from run_review import ... (used at :32-34), from _common.* imports (used at :35-37). Each test file's direct imports on line 2 already cover stdlib needs.",
           "blast_radius": {
-            "change": ["scripts/tests/_helpers.py"],
-            "avoid": ["scripts/run_review.py", "scripts/check_web_search.py", "scripts/ppr_paths.py", "scripts/_common/**", "all markdown files"]
+            "change": [
+              "scripts/tests/_helpers.py"
+            ],
+            "avoid": [
+              "scripts/run_review.py",
+              "scripts/check_web_search.py",
+              "scripts/ppr_paths.py",
+              "scripts/_common/**",
+              "all markdown files"
+            ]
           }
         },
         {
           "loop_local_id": "F2",
           "stable_id": "F-003",
-          "title": "make_args() has no contract-sync test — will drift again on next arg addition",
+          "title": "make_args() has no contract-sync test \u2014 will drift again on next arg addition",
           "why_it_matters": "Loop 1 was entirely consumed by make_args() drifting from parse_args(). The fix was one dict entry; the structural cause is unchanged. Next parse_args() addition will silently break codex tests again.",
-          "what_is_wrong": "scripts/tests/_helpers.py:64-85 builds a Namespace by hand from a hard-coded dict. No test asserts that make_args().keys() == parse_args([]).keys(). Authority Map: Split and ambiguous — two sources of truth with no mechanical enforcement.",
+          "what_is_wrong": "scripts/tests/_helpers.py:64-85 builds a Namespace by hand from a hard-coded dict. No test asserts that make_args().keys() == parse_args([]).keys(). Authority Map: Split and ambiguous \u2014 two sources of truth with no mechanical enforcement.",
           "evidence": [
-            "scripts/tests/_helpers.py:64-85 (manual dict — 16 keys today; parse_args/make_args key sets verified to match via Python introspection but no automated enforcement)",
+            "scripts/tests/_helpers.py:64-85 (manual dict \u2014 16 keys today; parse_args/make_args key sets verified to match via Python introspection but no automated enforcement)",
             "run_review.py:76-123 (parse_args() authoritative definition)",
             "Loop 1 finding F-001 resolved by one-line dict patch with no structural prevention"
           ],
@@ -448,8 +530,14 @@
           "adr_reopen_justification": null,
           "minimal_correction_path": "Add a test (~5 lines) in scripts/tests/test_file_io_validation.py: patch sys.argv to ['run_review.py'], call run_review.parse_args(), assert set(vars(args).keys()) == set(vars(make_args()).keys()). This prevents future drift without changing make_args() itself.",
           "blast_radius": {
-            "change": ["scripts/tests/test_file_io_validation.py"],
-            "avoid": ["scripts/run_review.py", "scripts/tests/_helpers.py", "scripts/_common/**"]
+            "change": [
+              "scripts/tests/test_file_io_validation.py"
+            ],
+            "avoid": [
+              "scripts/run_review.py",
+              "scripts/tests/_helpers.py",
+              "scripts/_common/**"
+            ]
           }
         },
         {
@@ -474,8 +562,15 @@
           "adr_reopen_justification": null,
           "minimal_correction_path": "run_review.py:605: replace os.unlink(agy_log_path) with Path(agy_log_path).unlink(). Run ruff --fix scripts/run_review.py for I001 auto-fix. For RUF100 at :36: remove the # noqa: F401.",
           "blast_radius": {
-            "change": ["scripts/run_review.py"],
-            "avoid": ["scripts/tests/_helpers.py", "scripts/check_web_search.py", "scripts/ppr_paths.py", "scripts/_common/**"]
+            "change": [
+              "scripts/run_review.py"
+            ],
+            "avoid": [
+              "scripts/tests/_helpers.py",
+              "scripts/check_web_search.py",
+              "scripts/ppr_paths.py",
+              "scripts/_common/**"
+            ]
           }
         }
       ],
@@ -513,7 +608,7 @@
       "deepening_candidates": [
         {
           "candidate_module": "scripts/tests/_helpers.py:make_args()",
-          "source_friction_proven": "Finding F2 — make_args() manually copies arg names from parse_args() and drifted in loop 1",
+          "source_friction_proven": "Finding F2 \u2014 make_args() manually copies arg names from parse_args() and drifted in loop 1",
           "why_shallow_or_misplaced": "make_args() provides no behavior beyond argparse defaults; equivalent to calling parse_args([]) with overrides",
           "behavior_to_move_behind_interface": "arg-name set derivation; default-value derivation from argparse",
           "dependency_category": "in-process",
@@ -525,32 +620,37 @@
       "builder_notes": [
         {
           "pattern": "Bulk stdlib re-export via star import as shared test namespace",
-          "how_to_recognize": "grep _helpers.py for imports X where X appears in ruff F401 output AND appears in line 2 of every test file — both channels exist, star re-export is redundant",
-          "smallest_coding_rule": "A helper module should import only what it needs. Export only shared symbols (functions, constants, fixtures) — not stdlib pass-throughs.",
+          "how_to_recognize": "grep _helpers.py for imports X where X appears in ruff F401 output AND appears in line 2 of every test file \u2014 both channels exist, star re-export is redundant",
+          "smallest_coding_rule": "A helper module should import only what it needs. Export only shared symbols (functions, constants, fixtures) \u2014 not stdlib pass-throughs.",
           "stack_example": "Python: _helpers.py should define make_args, run_script, SCRIPT_DIR, FIXTURES_DIR, _CREATE_NEW_PROCESS_GROUP only. Each test file imports stdlib directly (line 2 already does this)."
         },
         {
           "pattern": "Manually-maintained arg contract mirror in test helper",
-          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) or dict-based Namespace construction — each is a drift bomb when parse_args() adds new args",
+          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) or dict-based Namespace construction \u2014 each is a drift bomb when parse_args() adds new args",
           "smallest_coding_rule": "Derive the Namespace from parse_args([]) with a controlled arg list, then override fields. One call; can't drift.",
           "stack_example": "Python: def make_args(**overrides): with mock.patch('sys.argv', ['run_review.py']): args = run_review.parse_args(); vars(args).update(overrides); return args"
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Three borderline claims: (1) concurrency:8 — uncertain about _active_proc thread-safety under hypothetical multithreading not present in current usage; (2) framework_idioms:6 — uncertain whether star-export pattern is documented-intentional vs accumulated drift; (3) test_strategy:7 — may have missed 1-2 additional Authority Map gaps",
+          "how_to_recognize": "Three borderline claims: (1) concurrency:8 \u2014 uncertain about _active_proc thread-safety under hypothetical multithreading not present in current usage; (2) framework_idioms:6 \u2014 uncertain whether star-export pattern is documented-intentional vs accumulated drift; (3) test_strategy:7 \u2014 may have missed 1-2 additional Authority Map gaps",
           "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 2 is the first real structural critic pass. Production code earns 7-8 across most dimensions: the _common seam is honest, provider dispatch is registry-driven, signal handling is idiomatic. The drag is in test infrastructure: _helpers.py re-exports stdlib it doesn't use, generating F401/F405 lint noise across all 7 test files. The directly corrective fix is purely subtractive. The secondary risk is make_args() manual dict — loop 1 was entirely consumed by one drift instance; without a sync test, the same failure class recurs. Neither issue is a disqualifier but both suppress scores below contest-grade.",
+      "narrative": "Loop 2 is the first real structural critic pass. Production code earns 7-8 across most dimensions: the _common seam is honest, provider dispatch is registry-driven, signal handling is idiomatic. The drag is in test infrastructure: _helpers.py re-exports stdlib it doesn't use, generating F401/F405 lint noise across all 7 test files. The directly corrective fix is purely subtractive. The secondary risk is make_args() manual dict \u2014 loop 1 was entirely consumed by one drift instance; without a sync test, the same failure class recurs. Neither issue is a disqualifier but both suppress scores below contest-grade.",
       "loop_result": {
         "finding_addressed": "F1 (stable_id F-002)",
         "status": "resolved",
         "change_summary": "Removed 8 unused stdlib imports from scripts/tests/_helpers.py:11-22 (json, os, shutil, signal, stat, tempfile, unittest, from unittest import mock). Added noqa E402,F401 comments to intentional star-export anchors (lines 24-26, 83-86). Applied ruff --fix for I001 import sort. After change: ruff check on _helpers.py = 0 errors; full test suite = 118 passed, 0 failed.",
-        "files_changed": ["scripts/tests/_helpers.py"],
+        "files_changed": [
+          "scripts/tests/_helpers.py"
+        ],
         "test_result": "118 passed, 0 failed",
         "lint_result_after": "0 errors in _helpers.py; 3 pre-existing errors in run_review.py (F-004, not targeted this loop)",
-        "findings_carried_forward": ["F2 (F-003)", "F3 (F-004)"]
+        "findings_carried_forward": [
+          "F2 (F-003)",
+          "F3 (F-004)"
+        ]
       },
       "implementation_review": {
         "verdict": "approved",
@@ -566,7 +666,12 @@
         "retry_count": 1,
         "retry_cause": null,
         "retry_attempts": [
-          {"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
         ]
       }
     },
@@ -599,7 +704,7 @@
         "architecture_quality": {
           "score": 7,
           "delta": "SAME",
-          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) — registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at 405 LoC without sub-module boundaries is primary drag",
+          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) \u2014 registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at 405 LoC without sub-module boundaries is primary drag",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -662,7 +767,7 @@
         "test_strategy": {
           "score": 7.5,
           "delta": "UP",
-          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) — derives canonical key set from run_review.parse_args() via sys.argv patch; asserts equality with make_args() keys; 119 tests green; loop-1-class recurrence now caught immediately",
+          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) \u2014 derives canonical key set from run_review.parse_args() via sys.argv patch; asserts equality with make_args() keys; 119 tests green; loop-1-class recurrence now caught immediately",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -671,7 +776,7 @@
         "credibility": {
           "score": 7.5,
           "delta": "UP",
-          "proof": "F-003 resolved — contract-sync test closes recurrence risk that caused loop 1 build failure; production code earns its architecture at _common boundary; remaining drag: F-004 open (production lint) and make_args() dict still manually maintained (guarded by new test)",
+          "proof": "F-003 resolved \u2014 contract-sync test closes recurrence risk that caused loop 1 build failure; production code earns its architecture at _common boundary; remaining drag: F-004 open (production lint) and make_args() dict still manually maintained (guarded by new test)",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -682,8 +787,13 @@
         {
           "concern": "CLI arg contract",
           "owner": "run_review.py:parse_args()",
-          "allowed_writers": ["run_review.py:parse_args()"],
-          "readers": ["run_review.run_review()", "scripts/tests/_helpers.py:make_args()"],
+          "allowed_writers": [
+            "run_review.py:parse_args()"
+          ],
+          "readers": [
+            "run_review.run_review()",
+            "scripts/tests/_helpers.py:make_args()"
+          ],
           "persistence_seam": null,
           "async_mutation_entry_points": [],
           "verdict": "Split and ambiguous"
@@ -691,27 +801,39 @@
         {
           "concern": "Active subprocess handle",
           "owner": "_active_proc at run_review.py:187",
-          "allowed_writers": ["run_review.run_review() at :375 and :598"],
-          "readers": ["_signal_handler() at :192"],
+          "allowed_writers": [
+            "run_review.run_review() at :375 and :598"
+          ],
+          "readers": [
+            "_signal_handler() at :192"
+          ],
           "persistence_seam": null,
-          "async_mutation_entry_points": ["SIGTERM", "SIGINT"],
+          "async_mutation_entry_points": [
+            "SIGTERM",
+            "SIGINT"
+          ],
           "verdict": "Single and clear"
         },
         {
           "concern": "Session state",
           "owner": "JSON file at args.session_file",
-          "allowed_writers": ["run_review.run_review() via save_session() at :579"],
-          "readers": ["run_review.run_review() via load_session() at :213", "test files post-run"],
+          "allowed_writers": [
+            "run_review.run_review() via save_session() at :579"
+          ],
+          "readers": [
+            "run_review.run_review() via load_session() at :213",
+            "test files post-run"
+          ],
           "persistence_seam": "JSON file at args.session_file",
           "async_mutation_entry_points": [],
           "verdict": "Single and clear"
         }
       ],
       "strengths": [
-        "run_review.py:339 — provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
+        "run_review.py:339 \u2014 provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
         "Gemini config-overlay isolation tested behaviorally: temp dir excludes auto-saved policy files; settings preserved (test_execution_paths.py:138-214)",
         "Resume/fallback state tracked via locals (use_resume, fallback_used at run_review.py:210-211); args never mutated (snapshot at :209)",
-        "CLI arg contract now guarded by TestArgContract.test_make_args_keys_match_parse_args_dests — next arg addition to parse_args() surfaces immediately, preventing loop-1-class failures"
+        "CLI arg contract now guarded by TestArgContract.test_make_args_keys_match_parse_args_dests \u2014 next arg addition to parse_args() surfaces immediately, preventing loop-1-class failures"
       ],
       "findings": [
         {
@@ -722,9 +844,9 @@
           "why_it_matters": "ruff check exits 1 on the primary production module; PTH108, I001, and RUF100 are all auto-fixable but unaddressed, reducing credibility of production code.",
           "what_is_wrong": "run_review.py:605: os.unlink(agy_log_path) should be Path(agy_log_path).unlink() per PTH108. run_review.py:27: import block is unsorted per I001. run_review.py:36: noqa F401 directive is now unused per RUF100.",
           "evidence": [
-            "run_review.py:605 (PTH108: os.unlink — auto-fixable)",
-            "run_review.py:27 (I001: unsorted import block — auto-fixable)",
-            "run_review.py:36 (RUF100: unused noqa directive — auto-fixable)",
+            "run_review.py:605 (PTH108: os.unlink \u2014 auto-fixable)",
+            "run_review.py:27 (I001: unsorted import block \u2014 auto-fixable)",
+            "run_review.py:36 (RUF100: unused noqa directive \u2014 auto-fixable)",
             "python3 -m ruff check scripts/run_review.py -> exit code 1, 3 violations"
           ],
           "test_failed": "n/a",
@@ -738,13 +860,20 @@
           "adr_reopen_justification": null,
           "minimal_correction_path": "Fix run_review.py:605: replace os.unlink(agy_log_path) with Path(agy_log_path).unlink(). Remove the # noqa: F401 at :36. Run ruff check --fix scripts/run_review.py for I001 auto-fix.",
           "blast_radius": {
-            "change": ["scripts/run_review.py"],
-            "avoid": ["scripts/tests/_helpers.py", "scripts/check_web_search.py", "scripts/ppr_paths.py", "scripts/_common/**"]
+            "change": [
+              "scripts/run_review.py"
+            ],
+            "avoid": [
+              "scripts/tests/_helpers.py",
+              "scripts/check_web_search.py",
+              "scripts/ppr_paths.py",
+              "scripts/_common/**"
+            ]
           }
         }
       ],
       "simplification_check": {
-        "structurally_necessary": "Adding a contract-sync test passes SPT Q1 (fixes real ambiguity proved by loop 1 failure) and Q2 (smallest honest fix — 7-line test class). No ceremony added.",
+        "structurally_necessary": "Adding a contract-sync test passes SPT Q1 (fixes real ambiguity proved by loop 1 failure) and Q2 (smallest honest fix \u2014 7-line test class). No ceremony added.",
         "new_seam_justified": false,
         "new_seam_adapters": [],
         "helpful_simplification": "The sync test removes the drift hazard without changing any production code or test helper structure.",
@@ -767,7 +896,7 @@
       "deepening_candidates": [
         {
           "candidate_module": "scripts/tests/_helpers.py:make_args()",
-          "source_friction_proven": "F-003 (now resolved) — make_args() manually copies arg names from parse_args() and drifted once (loop 1). Sync test detects drift but does not eliminate two-step edit requirement.",
+          "source_friction_proven": "F-003 (now resolved) \u2014 make_args() manually copies arg names from parse_args() and drifted once (loop 1). Sync test detects drift but does not eliminate two-step edit requirement.",
           "why_shallow_or_misplaced": "make_args() provides no behavior beyond argparse defaults; equivalent to calling parse_args([]) with overrides",
           "behavior_to_move_behind_interface": "arg-name set derivation; default-value derivation from argparse",
           "dependency_category": "in-process",
@@ -779,9 +908,9 @@
       "builder_notes": [
         {
           "pattern": "Manually-maintained arg contract mirror in test helper",
-          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) — each is a drift bomb when parse_args() adds new args",
+          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) \u2014 each is a drift bomb when parse_args() adds new args",
           "smallest_coding_rule": "Add a contract-sync test: patch sys.argv, call parse_args(), assert set(vars(args).keys()) == set(vars(make_args()).keys()). If the dict drifts, the test fails immediately.",
-          "stack_example": "Python: TestArgContract.test_make_args_keys_match_parse_args_dests in test_file_io_validation.py — one mock.patch context, one set comparison, informative diff message."
+          "stack_example": "Python: TestArgContract.test_make_args_keys_match_parse_args_dests in test_file_io_validation.py \u2014 one mock.patch context, one set comparison, informative diff message."
         },
         {
           "pattern": "Introspection test over manual contract mirror",
@@ -791,18 +920,20 @@
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Three borderline claims: (1) test_strategy:7.5 — rated UP based on contract-sync test; may have missed 1-2 authority-map gaps in check_web_search.py tests; (2) credibility:7.5 — remaining manual dict is guarded but still two-step; could defend 7; (3) framework_idioms:6 — all production violations are auto-fixable cosmetics; could argue 6.5.",
+          "how_to_recognize": "Three borderline claims: (1) test_strategy:7.5 \u2014 rated UP based on contract-sync test; may have missed 1-2 authority-map gaps in check_web_search.py tests; (2) credibility:7.5 \u2014 remaining manual dict is guarded but still two-step; could defend 7; (3) framework_idioms:6 \u2014 all production violations are auto-fixable cosmetics; could argue 6.5.",
           "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 3 is the authority-split resolution loop. The contract-sync test (TestArgContract.test_make_args_keys_match_parse_args_dests) closes the recurrence class that consumed loop 1: any future arg addition to parse_args() surfaces immediately in the suite. The change is purely additive (7 lines), passes SPT cleanly, and the 119-test suite is green. Test strategy moves to 7.5 and overall credibility to 7.5. The remaining backlog is F-004 (production lint — PTH108 + I001 + RUF100 in run_review.py).",
+      "narrative": "Loop 3 is the authority-split resolution loop. The contract-sync test (TestArgContract.test_make_args_keys_match_parse_args_dests) closes the recurrence class that consumed loop 1: any future arg addition to parse_args() surfaces immediately in the suite. The change is purely additive (7 lines), passes SPT cleanly, and the 119-test suite is green. Test strategy moves to 7.5 and overall credibility to 7.5. The remaining backlog is F-004 (production lint \u2014 PTH108 + I001 + RUF100 in run_review.py).",
       "loop_result": {
         "what_changed": "Added TestArgContract.test_make_args_keys_match_parse_args_dests to scripts/tests/test_file_io_validation.py. Test patches sys.argv to ['run_review.py'], calls run_review.parse_args(), asserts set(vars(args).keys()) == set(vars(make_args()).keys()). Derives canonical truth from argparse definition directly.",
         "evidence_change_is_honest": "python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (green, up from 118). No production code changed.",
         "targeted_finding_status": "resolved",
         "unintended_regression": null,
-        "changed_paths": ["scripts/tests/test_file_io_validation.py"],
+        "changed_paths": [
+          "scripts/tests/test_file_io_validation.py"
+        ],
         "interface_test_coverage_path": null
       },
       "implementation_review": {
@@ -819,7 +950,297 @@
         "retry_count": 1,
         "retry_cause": null,
         "retry_attempts": [
-          {"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 4,
+      "loop": 4,
+      "loop_cap": 10,
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff_text": null,
+      "halt_handoff": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": null,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-4-6",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": null,
+      "verdict": "Good app, but not top-tier yet",
+      "verdict_explanation": "Tests are green (119 passed). Production lint is clean: ruff check scripts/run_review.py now exits 0 (was 3 violations: PTH108 + I001 + RUF100). Loop 4 resolved F-004 via a minimal 3-item fix. The remaining contest-grade drag is run_review() at ~405 LoC with no sub-function structure.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7,
+          "delta": "SAME",
+          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) \u2014 registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at ~405 LoC without sub-module boundaries is primary drag",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "F-005 (decompose run_review() flat body)",
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 8,
+          "delta": "SAME",
+          "proof": "run_review.py:187 (_active_proc module-level single writer at :375,:598); run_review.py:209 (resume_requested snapshot prevents arg mutation); run_review.py:451-453 (local state machine use_resume/fallback_used/session_id)",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 7,
+          "delta": "SAME",
+          "proof": "run_review.py:73 (REVIEWER_ALIASES dict); run_review.py:121-122 (normalization at CLI boundary); PROVIDERS registry from _common is the core model",
+          "residual_blocking_10": null,
+          "residual_disposition": "accepted_residual",
+          "residual_rationale_or_backlog_ref": "CLI adapter domain is thin by design; no discriminated type for provider-specific output is an accepted residual (thin-by-design pattern)",
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 8,
+          "delta": "SAME",
+          "proof": "run_review.py:27-69 (clean DAG: all imports from _common or stdlib; no cycles); run_review.py:501-510 (temporal coupling mitigated: pre-read output_content before extract_text_from_output overwrites file; documented inline)",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 6.5,
+          "delta": "UP",
+          "proof": "python3 -m ruff check scripts/run_review.py -> All checks passed! (was: exit 1 with PTH108 at :605, I001 at :27, RUF100 at :36). Production module now has zero ruff violations. Path(agy_log_path).unlink() at :605 uses already-imported Path type idiomatically.",
+          "residual_blocking_10": "test-file violations (E401, I001, RUF100 on stdlib import lines; F405 from star imports in _helpers.py) remain as pre-existing infrastructure debt",
+          "residual_disposition": "accepted_residual",
+          "residual_rationale_or_backlog_ref": "Test file violations are pre-existing infrastructure debt not in production code; accepted residual at 6.5",
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 8,
+          "delta": "SAME",
+          "proof": "run_review.py:322-325 (SIGTERM/SIGINT handlers saved/restored in try/finally); run_review.py:598-602 (finally block: clear _active_proc, restore signals, rmtree gemini_config_dir, unlink agy_log_path). Path(agy_log_path).unlink() inside contextlib.suppress(OSError) is behaviorally identical to os.unlink(agy_log_path) in the same context.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 6,
+          "delta": "SAME",
+          "proof": "run_review.py:201-612 (~411 LoC, ~67 AST control-flow nodes, no named sub-functions). Loop 4 change is purely cosmetic (import order, noqa removal, os->Path); simplicity score unchanged.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "F-005 (decompose run_review() flat body)",
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 7.5,
+          "delta": "SAME",
+          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) \u2014 derives canonical key set from parse_args() directly; 119 tests green. No structural change to test strategy this loop.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "F-006 (derive make_args() from parse_args([]) directly \u2014 eliminates two-step edit requirement)",
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8,
+          "delta": "UP",
+          "proof": "F-004 resolved: python3 -m ruff check scripts/run_review.py -> All checks passed!; 119 tests green. Production module passes ruff with zero violations. Orchestrator-registry pattern, signal safety, and session isolation are well-tested.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "F-005 (run_review() flat body) is primary remaining credibility drag",
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [
+        {
+          "concern": "CLI arg contract",
+          "owner": "run_review.py:parse_args()",
+          "allowed_writers": [
+            "run_review.py:parse_args()"
+          ],
+          "observers": [
+            "run_review.run_review()",
+            "scripts/tests/_helpers.py:make_args()"
+          ],
+          "persistence_seam": null,
+          "async_mutation_entry_points": null,
+          "verdict": "Split and ambiguous \u2014 two sources of truth for arg-name set; make_args() can still drift (requires two-step edit), though drift is detected immediately by TestArgContract.test_make_args_keys_match_parse_args_dests"
+        },
+        {
+          "concern": "Active subprocess handle",
+          "owner": "run_review.py:187 (_active_proc)",
+          "allowed_writers": [
+            "run_review.run_review() (sets at :375, clears at :598)"
+          ],
+          "observers": [
+            "_signal_handler() (reads at :192)"
+          ],
+          "persistence_seam": null,
+          "async_mutation_entry_points": [
+            "SIGTERM",
+            "SIGINT via signal handler"
+          ],
+          "verdict": "Single and clear \u2014 one writer, one reader, idiomatic Python signal-handler pattern"
+        },
+        {
+          "concern": "Session state",
+          "owner": "session JSON file (written by save_session() from _common.session)",
+          "allowed_writers": [
+            "run_review.run_review() via save_session() at :579"
+          ],
+          "observers": [
+            "run_review.run_review() via load_session() at :213",
+            "tests read file post-run"
+          ],
+          "persistence_seam": "JSON file at args.session_file",
+          "async_mutation_entry_points": null,
+          "verdict": "Single and clear \u2014 serialized via file; run_review() is the sole writer per execution"
+        }
+      ],
+      "strengths": [
+        "run_review.py delegates all provider-specific logic to _common.providers.PROVIDERS: command construction, cap flags, effort maps, session ID extraction. Orchestrator dispatches through registry (run_review.py:339).",
+        "Gemini config-overlay isolation is behavioral and tested: temp dir excludes auto-saved policy files, preserves existing settings.",
+        "Resume/fallback state tracked via local variables (use_resume, fallback_used), never by mutating args. Snapshot at run_review.py:209 prevents cross-attempt contamination.",
+        "CLI arg contract guarded by TestArgContract.test_make_args_keys_match_parse_args_dests \u2014 next arg addition surfaces immediately in suite.",
+        "Production module now passes ruff with zero violations: os.unlink replaced with Path.unlink, import block sorted, stale noqa removed."
+      ],
+      "findings": [
+        {
+          "id": "F1",
+          "stable_id": "F-005",
+          "title": "run_review() 405-LoC flat function body with no sub-function structure",
+          "severity": "Noticeable weakness",
+          "architectural_test_failed": "Shallow module (function-level depth without navigable internal structure)",
+          "dependency_category": "in-process",
+          "primary_file": "scripts/run_review.py",
+          "primary_evidence_lines": [
+            201,
+            612
+          ],
+          "why_it_matters": "run_review() interleaves provider-specific environment setup, subprocess dispatch and retry, metadata/output extraction, and session persistence as a single flat function body (~411 LoC, ~67 AST control-flow nodes). Maintainers cannot navigate concerns independently.",
+          "what_is_wrong": "No named sub-functions or extracted module-level helpers decomposing the four concerns: env setup, subprocess dispatch, result extraction, session persistence.",
+          "evidence": [
+            "run_review.py:201-612 \u2014 single function body, no helpers. Estimated ~67+ AST control-flow nodes.",
+            "Four distinct concerns interleaved: env setup (~:227-340), subprocess dispatch (~:340-465), output extraction (~:465-530), session persistence (~:530-580)."
+          ],
+          "leverage_impact": "Low (callers invoke run_review() cleanly; internal complexity is hidden)",
+          "locality_impact": "Moderate (a change to agy cleanup at ~line 603 requires reading past subprocess dispatch ~340-440 and output extraction ~470-530)",
+          "why_weakens_submission": "A 9.5-grade function at this scale has extractable concerns named by sub-functions. Primary drag on architecture_quality and simplicity dimensions.",
+          "minimal_correction_path": "Extract _run_attempt(args, session_id, codex_home, gemini_config_dir, agy_log_path, logger) (subprocess setup + dispatch + capture); optionally _build_attempt_env(args, reviewer, codex_home) (env dict construction). Keep run_review() as coordinator: setup -> loop(attempt) -> extract -> persist.",
+          "blast_radius": "scripts/run_review.py (function body reorganization only). Avoid: all other files, _common/**.",
+          "test_failed": "Shallow module test"
+        }
+      ],
+      "simplification_check": {
+        "structurally_necessary": "Removing stale noqa, fixing PTH108, and sorting imports passes SPT Q1 (fixes real technical debt) and Q2 (smallest honest fix). No structural ceremony added.",
+        "new_seam_justified": false,
+        "helpful_simplification": "noqa removal removes misleading documentation; PTH108 fix uses already-imported Path type; I001 fix is automatically correct.",
+        "should_not_be_done": "Do not refactor run_review() structure this loop (that is F-005, next loop). Do not touch test files.",
+        "tests_after_fix": "119 tests pass (same count). No tests added or deleted."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "finding_id": "F1",
+          "stable_id": "F-005",
+          "title": "Decompose run_review() 405-LoC flat body",
+          "kind": "structural",
+          "rank": "needed for contest target",
+          "why_it_matters": "Monolith interleaves env setup, subprocess dispatch, output extraction, session persistence with no named sub-function structure. Primary lever for architecture_quality (7->7.5+) and simplicity (6->6.5+).",
+          "score_impact": "architecture_quality +0.5 (7->7.5); simplicity +0.5 (6->6.5); credibility +0.5 (8->8.5)"
+        },
+        {
+          "priority": 2,
+          "finding_id": null,
+          "stable_id": "F-006",
+          "title": "Derive make_args() from parse_args([]) directly",
+          "kind": "simplification",
+          "rank": "helpful",
+          "why_it_matters": "Eliminates two-step edit requirement; sync test becomes redundant or belt-and-suspenders.",
+          "score_impact": "test_strategy +0.5 (7.5->8); simplicity minor"
+        }
+      ],
+      "unresolved_reason": null,
+      "deepening_candidates": [
+        {
+          "candidate_module": "scripts/tests/_helpers.py:make_args()",
+          "source_friction_proven": "F-003 (resolved loop 3) \u2014 make_args() manually copies arg names from parse_args() and drifted once. Sync test detects drift but does not eliminate two-step edit requirement.",
+          "why_shallow_or_misplaced": "make_args() provides no behavior beyond argparse defaults; equivalent to calling parse_args([]) with overrides",
+          "behavior_to_move_behind_interface": "arg-name set derivation; default-value derivation from argparse",
+          "dependency_category": "in-process",
+          "test_surface_after_change": "same test files; make_args() call sites unchanged in signature; sync test becomes redundant",
+          "smallest_first_step": "def make_args(**overrides): with mock.patch('sys.argv', ['run_review.py']): args = run_review.parse_args(); vars(args).update(overrides); return args",
+          "what_not_to_do": "Do not add a new seam or ArgFactory class; do not change test call sites"
+        }
+      ],
+      "builder_notes": [
+        {
+          "pattern": "RUF100 vs F401 interplay",
+          "how_to_recognize": "RUF100 on a noqa:F401 means the noqa is unused \u2014 the names are used in the module body. Remove the noqa and verify F401 does not reappear with ruff check --select F401.",
+          "smallest_coding_rule": "If names imported for re-export grow to also be used in-module, remove the noqa. If F401 reappears, the names drifted back to re-export-only and the noqa is still needed.",
+          "stack_example": "_common.metadata.extractors names (_codex_session_files, _parse_codex_session_id, _extract_opencode_metadata_via_export) are used at run_review.py:319,471,476,490,514 \u2014 noqa correctly removed."
+        },
+        {
+          "pattern": "I001 fix scope discipline",
+          "how_to_recognize": "After ruff --fix --select I001, inspect git diff to confirm only import block lines changed.",
+          "smallest_coding_rule": "Use --select I001 to restrict ruff --fix to import sorting only; verify diff is import-block-only.",
+          "stack_example": "ruff moved _common.session block after _common.providers (alphabetical within _common.* group). No logic changed."
+        },
+        {
+          "pattern": "Scorecard humility check (Q9)",
+          "how_to_recognize": "Three borderline claims: (1) framework_idioms:6.5 \u2014 test file violations remain; could argue 6; (2) credibility:8 \u2014 flat run_review() body is still undecomposed; 7.5 defensible; (3) architecture:7 \u2014 SAME.",
+          "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score.",
+          "stack_example": null
+        }
+      ],
+      "narrative": "Loop 4 is the lint-cleanup loop. F-004 (PTH108 + I001 + RUF100 in run_review.py) is resolved with three minimal changes: import sort via ruff --fix, PTH108 -> Path.unlink(), and removal of the now-stale noqa:F401 annotation (names are actively used in module body). The production module now passes ruff with zero violations. framework_idioms moves from 6 to 6.5 and credibility from 7.5 to 8. The suite stays at 119 green. The critical remaining lever is F-005: decomposing run_review()'s 405-LoC flat body into named sub-functions.",
+      "loop_result": {
+        "what_changed": "Resolved F-004 in scripts/run_review.py: (1) removed stale # noqa: F401 annotation from _common.metadata.extractors import at :36 (RUF100); (2) applied ruff --fix --select I001 to sort import block (moved _common.session after _common.providers); (3) replaced os.unlink(agy_log_path) with Path(agy_log_path).unlink() at :605 inside contextlib.suppress(OSError) (PTH108).",
+        "evidence_change_is_honest": "python3 -m ruff check scripts/run_review.py -> All checks passed! (was: exit 1, 3 violations). python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (unchanged count).",
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "peer-plan-review/scripts/run_review.py"
+        ],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "All three checks passed: Reality (ruff exits 0 post-diff; PTH108/I001/RUF100 violations gone); Honesty (no new seam, Path.unlink() is behaviorally identical to os.unlink() in suppress(OSError) context, noqa removal is correct \u2014 F401 does not reappear); Regression (import reorder is cosmetic, 119 tests green, no new findings at same or higher severity).",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "ran_inline": true,
+        "rounds": 1,
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
         ]
       }
     }

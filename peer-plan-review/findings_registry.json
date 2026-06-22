@@ -1,6 +1,6 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 5,
+  "next_serial": 7,
   "entries": [
     {
       "stable_id": "F-001",
@@ -102,7 +102,7 @@
       "severity": "Cosmetic for contest",
       "first_seen_loop": 2,
       "first_seen_sha": "28e06bc89c82cd5c17d94d0037c2758687c69d4f",
-      "last_seen_loop": 3,
+      "last_seen_loop": 4,
       "occurrences": [
         {
           "loop": 2,
@@ -127,6 +127,70 @@
           },
           "attempted_remedy_hash": null,
           "idempotency_key": "loop3-F-004-open"
+        },
+        {
+          "loop": 4,
+          "loop_local_id": "F4",
+          "status": "resolved",
+          "sha": null,
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop4-F-004-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-005",
+      "title": "run_review() 405-LoC flat function body with no sub-function structure",
+      "category_hint": "architecture_quality",
+      "primary_file": "scripts/run_review.py",
+      "primary_evidence_lines": [201, 612],
+      "test_failed": "Shallow module",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 4,
+      "first_seen_sha": null,
+      "last_seen_loop": 4,
+      "occurrences": [
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": null,
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop4-F-005-open"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-006",
+      "title": "make_args() dict still manually maintained — two-step edit requirement persists",
+      "category_hint": "test_strategy",
+      "primary_file": "scripts/tests/_helpers.py",
+      "primary_evidence_lines": [64, 95],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Helpful simplification",
+      "first_seen_loop": 4,
+      "first_seen_sha": null,
+      "last_seen_loop": 4,
+      "occurrences": [
+        {
+          "loop": 4,
+          "loop_local_id": "F6",
+          "status": "open",
+          "sha": null,
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop4-F-006-open"
         }
       ]
     }
