@@ -1,0 +1,32 @@
+{
+  "registry_schema_version": 3,
+  "next_serial": 2,
+  "entries": [
+    {
+      "stable_id": "F-001",
+      "title": "Test suite red blocks structural review",
+      "category_hint": "build-failure",
+      "primary_file": "scripts/tests/_helpers.py",
+      "primary_evidence_lines": [66, 82],
+      "test_failed": "n/a",
+      "severity": "Likely disqualifier",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3f4fdc70d264e12ac52ef4f189a3e5c3eea94234",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": null,
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d4129d0b693f14a330be261719ed34f8ecd8baa33e4cc0269156f7e5983f2cd4",
+            "evidence_paths_hash": "sha256:4149f918795a37066e5d997b2596cc8f0cfd79fbf7e925110be99d9c93922031"
+          },
+          "attempted_remedy_hash": "sha256:0ddd44e10ff19cc6fad9bd73f714858dc35309141c3a2af70e24bdde266a53a9",
+          "idempotency_key": "loop1-F-001-resolved"
+        }
+      ]
+    }
+  ]
+}

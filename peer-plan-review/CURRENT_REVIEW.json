@@ -1,0 +1,245 @@
+{
+  "schema_version": 4,
+  "loop": 1,
+  "loop_cap": 10,
+  "state": "CONTINUE",
+  "halt_subtype": null,
+  "halt_handoff_text": null,
+  "halt_handoff": null,
+  "re_validated_at_sha": null,
+  "re_validation_context": null,
+  "dry_run": false,
+  "run_id": null,
+  "source_rev": null,
+  "candidate_fingerprint": null,
+  "halt_success_challenge": null,
+  "provider": "claude_code",
+  "loop_model": "claude-sonnet-4-6",
+  "loop_model_source": "default",
+  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model_source": "default",
+  "spawn_isolation": "subagent",
+  "findings_registry_path": "./findings_registry.json",
+  "discovery": {
+    "source_roots": [
+      "scripts/run_review.py",
+      "scripts/check_web_search.py",
+      "scripts/ppr_paths.py",
+      "scripts/tests/"
+    ],
+    "test_command": "cd /Users/Shared/git/agent-skills/peer-plan-review && python3 -m pytest scripts/tests/",
+    "build_command": "n/a (pure Python, stdlib-only)",
+    "lens": "Generic",
+    "adrs": [],
+    "domain_terms": ["reviewer", "provider", "codex", "gemini", "claude", "copilot", "opencode", "agy", "Antigravity", "review round", "resume", "session-file", "CODEX_HOME", "PROVIDERS", "adversarial stance", "model normalization", "web-search probe"],
+    "test_scope": "full",
+    "test_filter": null,
+    "working_tree_dirty_paths": []
+  },
+  "verdict": "Functionally solid, but structurally compromised",
+  "verdict_explanation": "Test suite is red (2 deterministic failures) due to a stale test helper that duplicates the CLI arg contract without codex_home_manifest. Production CLI is unaffected. All structural scoring is unverifiable while the suite is red; loop 1 restores green before loop 2 can score architecture honestly.",
+  "scorecard": {
+    "architecture_quality": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "state_management": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "domain_modeling": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "data_flow": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "framework_idioms": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "concurrency": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "simplicity": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "test_strategy": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "loop 1 build failure; baseline unmeasurable",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    },
+    "credibility": {
+      "score": 1,
+      "delta": "SAME",
+      "proof": "scripts/tests/_helpers.py:66-82 omits codex_home_manifest; AttributeError at run_review.py:306",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": true
+    }
+  },
+  "authority_map": [
+    {
+      "concern": "CLI arg contract",
+      "owner": "run_review.py parse_args()",
+      "allowed_writers": ["run_review.py parse_args()"],
+      "readers": ["run_review.run_review()", "scripts/tests/_helpers.py make_args()"],
+      "persistence_seam": null,
+      "async_mutation_entry_points": [],
+      "verdict": "Split and ambiguous"
+    }
+  ],
+  "strengths": [
+    "Production CLI unaffected: argparse supplies None default for --codex-home-manifest; only the test helper's manually-constructed Namespace is stale.",
+    "Root cause is localized to a single dict in scripts/tests/_helpers.py (lines 66-82); minimal blast radius."
+  ],
+  "findings": [
+    {
+      "loop_local_id": "F1",
+      "stable_id": "F-001",
+      "id": "F1",
+      "title": "Test suite red blocks structural review",
+      "why_it_matters": "Two codex test paths fail with AttributeError, making the suite red and preventing any structural scoring under the contest rubric.",
+      "what_is_wrong": "scripts/tests/_helpers.py make_args() (lines 66-82) hard-codes a parallel copy of the CLI arg names without codex_home_manifest. run_review.py:306 reads args.codex_home_manifest; the Namespace from make_args() omits it — AttributeError on both codex test paths.",
+      "evidence": [
+        "scripts/tests/test_execution_paths.py::TestRunReviewExecution::test_run_review_codex_accepts_last_message_file_without_json_stdout",
+        "scripts/tests/test_execution_paths.py::TestRunReviewExecution::test_run_review_codex_stale_events_do_not_mask_empty_current_output",
+        "scripts/run_review.py:306"
+      ],
+      "test_failed": "n/a",
+      "dependency_category": null,
+      "leverage_impact": "Test helper's duplicated arg contract provides no leverage; it is a maintenance liability that drifts silently on every new arg addition.",
+      "locality_impact": "Changes to run_review.py's arg contract must be reflected in two places; no single-file update is complete.",
+      "metric_signal": "2 of 118 tests fail deterministically; re-run confirms (not a flake).",
+      "why_weakens_submission": "A red test suite makes implementation credibility unverifiable and blocks all structural scoring; no dimension above 1 can be grounded while tests fail.",
+      "severity": "Likely disqualifier",
+      "adr_conflicts": [],
+      "adr_reopen_justification": null,
+      "minimal_correction_path": "Add codex_home_manifest: None to the defaults dict in scripts/tests/_helpers.py make_args() after review_id.",
+      "blast_radius": {
+        "change": ["scripts/tests/_helpers.py"],
+        "avoid": ["scripts/run_review.py", "scripts/check_web_search.py", "scripts/ppr_paths.py", "scripts/_common/"]
+      }
+    }
+  ],
+  "simplification_check": {
+    "structurally_necessary": "Restores green suite — minimum change for loop 2 to run structural scoring honestly.",
+    "new_seam_justified": false,
+    "new_seam_adapters": [],
+    "helpful_simplification": "none this loop",
+    "should_not_be_done": "Do not refactor parse_args(), clean pre-existing ruff violations, or add ceremony — all fail SPT for the build-failure restoration loop.",
+    "tests_after_fix": "Existing tests run against the fixed helper; no tests deleted or added."
+  },
+  "backlog": [
+    {
+      "priority": 1,
+      "title": "Restore green test suite",
+      "kind": "structural",
+      "rank": "needed for winning",
+      "why_it_matters": "All structural scoring blocked while suite is red; loop 2 cannot honestly evaluate architecture until tests run green.",
+      "score_impact": "Unlocks all 9 dimensions for real scoring in loop 2."
+    }
+  ],
+  "unresolved_reason": null,
+  "deepening_candidates": [
+    {
+      "candidate_module": "make_args() test helper",
+      "source_friction_proven": "F1 — duplicated arg contract drifted from parse_args(); AttributeError on new arg.",
+      "why_shallow_or_misplaced": "make_args() is a hand-rolled dict that duplicates run_review.parse_args() authority; it cannot stay in sync automatically.",
+      "behavior_to_move_behind_interface": "Derive the Namespace from parse_args([]) with controlled overrides, eliminating the separate dict.",
+      "dependency_category": "in-process",
+      "test_surface_after_change": "Tests would construct args via parse_args() + override; helper cannot drift.",
+      "smallest_first_step": "Replace make_args() dict with: base = vars(parse_args([])); base.update(overrides); return argparse.Namespace(**base).",
+      "what_not_to_do": "Do not keep the dict and derive from parse_args() as a parallel check — that doubles the authority, not removes it."
+    }
+  ],
+  "builder_notes": [
+    {
+      "pattern": "Duplicated arg contract in test helper",
+      "how_to_recognize": "grep for argparse.Namespace(** or manually-constructed Namespace in test helpers — each is a stale-arg bomb.",
+      "smallest_coding_rule": "Have the test helper call the actual parse_args([]) with a controlled arg list; no manual dict, no drift risk.",
+      "stack_example": "Python: args = parse_args([]); args.reviewer = 'claude'; args.plan_file = tmp — no dict, no drift."
+    },
+    {
+      "pattern": "Build-failure restoration scope discipline",
+      "how_to_recognize": "When the failing test names a single AttributeError with a single missing attribute, the fix is one line.",
+      "smallest_coding_rule": "Add only the missing entry; commit only the changed file; defer adjacent ruff violations to a later credibility finding.",
+      "stack_example": null
+    },
+    {
+      "pattern": "Scorecard humility check (Q9)",
+      "how_to_recognize": "Build-failure scores are all 1 with unverifiable_due_to_build_failure: true — uncertainty is resolved when loop 2 scores real structure.",
+      "smallest_coding_rule": "The key unknown for loop 2: will test_strategy clear 7? The make_args() drift pattern suggests test helper fragility.",
+      "stack_example": null
+    }
+  ],
+  "narrative": "Loop 1 is a build-failure restoration loop. Scorecard floors at 1 across all dimensions — not because the code is weak but because a red suite makes all structural claims unverifiable. The fix is one dict entry. Once loop 2 runs green tests, real scoring begins. The make_args() drift pattern will surface as a credibility or test-strategy finding in loop 2.",
+  "loop_result": {
+    "what_changed": "Added codex_home_manifest: None to the defaults dict in scripts/tests/_helpers.py make_args() (after review_id).",
+    "evidence_change_is_honest": "python3 -m pytest scripts/tests/ → 118 passed, 0 failed (green). python3 -m ruff check scripts/tests/_helpers.py → 19 pre-existing violations, 0 new violations introduced.",
+    "targeted_finding_status": "resolved",
+    "unintended_regression": null,
+    "changed_paths": ["peer-plan-review/scripts/tests/_helpers.py"],
+    "interface_test_coverage_path": null
+  },
+  "implementation_review": {
+    "verdict": "approved",
+    "reason": "All three checks passed: the targeted AttributeError is no longer reachable (Reality); the one-line dict entry is the smallest honest fix with no new seam or costume layer (Honesty); the diff introduces no regression — the changed line is additive and inert in non-codex test paths (Regression).",
+    "checks": {
+      "reality": "passed",
+      "honesty": "passed",
+      "regression": "passed"
+    },
+    "regressions": [],
+    "conditions": [],
+    "rounds": 1,
+    "retry_count": 1,
+    "retry_cause": null,
+    "retry_attempts": [
+      {"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}
+    ]
+  }
+}

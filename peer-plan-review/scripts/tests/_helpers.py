@@ -78,6 +78,7 @@ def make_args(**overrides):
         "list_models": False,
         "error_log": None,
         "review_id": None,
+        "codex_home_manifest": None,
         "summary_file": None,
     }
     data.update(overrides)
