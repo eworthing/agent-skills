@@ -82,7 +82,7 @@
           "loop": 3,
           "loop_local_id": "F3",
           "status": "resolved",
-          "sha": "pending",
+          "sha": "5ce1ebc",
           "fingerprint": {
             "claim_consequence_hash": null,
             "evidence_paths_hash": null
