@@ -1,13 +1,16 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 8,
+  "next_serial": 9,
   "entries": [
     {
       "stable_id": "F-001",
       "title": "Test suite red blocks structural review",
       "category_hint": "build-failure",
       "primary_file": "scripts/tests/_helpers.py",
-      "primary_evidence_lines": [66, 82],
+      "primary_evidence_lines": [
+        66,
+        82
+      ],
       "test_failed": "n/a",
       "severity": "Likely disqualifier",
       "first_seen_loop": 1,
@@ -33,7 +36,10 @@
       "title": "Test helper re-exports stdlib it does not use, generating pervasive lint noise",
       "category_hint": "framework_idioms",
       "primary_file": "scripts/tests/_helpers.py",
-      "primary_evidence_lines": [12, 22],
+      "primary_evidence_lines": [
+        12,
+        22
+      ],
       "test_failed": "Shallow module",
       "severity": "Noticeable weakness",
       "first_seen_loop": 2,
@@ -56,10 +62,13 @@
     },
     {
       "stable_id": "F-003",
-      "title": "make_args() has no contract-sync test — will drift again on next arg addition",
+      "title": "make_args() has no contract-sync test \u2014 will drift again on next arg addition",
       "category_hint": "test_strategy",
       "primary_file": "scripts/tests/_helpers.py",
-      "primary_evidence_lines": [64, 85],
+      "primary_evidence_lines": [
+        64,
+        85
+      ],
       "test_failed": "Interface-as-test-surface",
       "severity": "Noticeable weakness",
       "first_seen_loop": 2,
@@ -97,7 +106,11 @@
       "title": "PTH108 + I001 lint violations in run_review.py (pre-existing)",
       "category_hint": "framework_idioms",
       "primary_file": "scripts/run_review.py",
-      "primary_evidence_lines": [27, 36, 605],
+      "primary_evidence_lines": [
+        27,
+        36,
+        605
+      ],
       "test_failed": "n/a",
       "severity": "Cosmetic for contest",
       "first_seen_loop": 2,
@@ -147,12 +160,15 @@
       "title": "run_review() 405-LoC flat function body with no sub-function structure",
       "category_hint": "architecture_quality",
       "primary_file": "scripts/run_review.py",
-      "primary_evidence_lines": [201, 612],
+      "primary_evidence_lines": [
+        201,
+        612
+      ],
       "test_failed": "Shallow module",
       "severity": "Noticeable weakness",
       "first_seen_loop": 4,
       "first_seen_sha": null,
-      "last_seen_loop": 6,
+      "last_seen_loop": 7,
       "occurrences": [
         {
           "loop": 4,
@@ -188,7 +204,9 @@
             "why_it_matters": "run_review() is a large coordinating function; the two-attempt loop + codex-setup phases remain inline.",
             "what_is_wrong": "The remaining phases thread use_resume/session_id/fallback_used/returncode in+out, so extracting them adds ceremony.",
             "why_weakens_submission": "A 9-anchor structure would have every cohesive phase behind a named helper; the residual flat region holds simplicity below the anchor.",
-            "evidence": ["scripts/run_review.py:318-647 (run_review body)"],
+            "evidence": [
+              "scripts/run_review.py:318-647 (run_review body)"
+            ],
             "minimal_correction_path": "Accept the inline phases as irreducible, OR pursue the marginal CodexCapture value-return."
           },
           "fingerprint": {
@@ -197,15 +215,40 @@
           },
           "attempted_remedy_hash": "sha256:0347b34798f1887ec23711b18313f7b110779a592d3e116d6fc228805a1601fd",
           "idempotency_key": "loop6-F-005-demoted-open"
+        },
+        {
+          "loop": 7,
+          "loop_local_id": null,
+          "status": "open",
+          "sha": null,
+          "finding_snapshot": {
+            "title": "run_review() flat body \u2014 residual phases (irreducible without ceremony)",
+            "why_it_matters": "After loop 5's three extractions, run_review() is 330 LoC. The two-attempt loop and codex-setup phases thread use_resume/session_id/fallback_used/returncode in+out and reads them post-loop, making extraction add ceremony.",
+            "what_is_wrong": "Four inout locals thread through any candidate helper at run_review.py:397-533 + :386-389.",
+            "why_weakens_submission": "simplicity (6.5) and arch (7) cannot honestly reach 9.5 accepted residual; 9-anchor not met.",
+            "evidence": [
+              "scripts/run_review.py:318-647 (run_review body, 330 LoC)"
+            ],
+            "minimal_correction_path": "CodexCapture namedtuple deepening candidate (removes one inout pair from codex-setup phase, marginal improvement)."
+          },
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop7-F-005-accepted-irreducible"
         }
       ]
     },
     {
       "stable_id": "F-006",
-      "title": "make_args() dict still manually maintained — two-step edit requirement persists",
+      "title": "make_args() dict still manually maintained \u2014 two-step edit requirement persists",
       "category_hint": "test_strategy",
       "primary_file": "scripts/tests/_helpers.py",
-      "primary_evidence_lines": [64, 95],
+      "primary_evidence_lines": [
+        64,
+        95
+      ],
       "test_failed": "Interface-as-test-surface",
       "severity": "Helpful simplification",
       "first_seen_loop": 4,
@@ -230,11 +273,13 @@
           "status": "resolved",
           "sha": null,
           "finding_snapshot": {
-            "title": "make_args() dict still manually maintained — two-step edit requirement persists",
+            "title": "make_args() dict still manually maintained \u2014 two-step edit requirement persists",
             "why_it_matters": "make_args() restated the run_review.py CLI arg contract and defaults in a hand-maintained 17-key dict; the next arg addition required a two-step edit and caused the loop-1 build failure.",
             "what_is_wrong": "scripts/tests/_helpers.py:make_args() carried a parallel dict of arg names + defaults instead of deriving them from parse_args().",
             "why_weakens_submission": "Duplicated authority over the arg-name set is a drift hazard that already produced a real build failure.",
-            "evidence": ["scripts/tests/_helpers.py:60-82 (the 17-key make_args dict)"],
+            "evidence": [
+              "scripts/tests/_helpers.py:60-82 (the 17-key make_args dict)"
+            ],
             "minimal_correction_path": "Derive make_args() defaults from run_review.parse_args() under a saved/restored sys.argv; delete the dict and the now-unused argparse import."
           },
           "fingerprint": {
@@ -251,12 +296,15 @@
       "title": "README documents a test command that collects zero tests + a stale test count",
       "category_hint": "credibility",
       "primary_file": "README.md",
-      "primary_evidence_lines": [41, 52],
+      "primary_evidence_lines": [
+        41,
+        52
+      ],
       "test_failed": "n/a",
       "severity": "Noticeable weakness",
       "first_seen_loop": 6,
       "first_seen_sha": null,
-      "last_seen_loop": 6,
+      "last_seen_loop": 7,
       "occurrences": [
         {
           "loop": 6,
@@ -265,23 +313,88 @@
           "sha": null,
           "finding_snapshot": {
             "title": "README documents a test command that collects zero tests + a stale test count",
-            "why_it_matters": "A new contributor (or an AI agent) following README.md to run the suite is told to run 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' (README.md:52) against files described as the pytest suite (README.md:41-42). One of those files does not exist and the other is a unittest discovery shim, so the documented command collects zero tests — the reader would conclude the project is untested. This undermines the credibility of an otherwise well-tested adapter (119 real tests live under scripts/tests/).",
-            "what_is_wrong": "README.md:42 references scripts/test_web_search.py which does not exist (web-search tests were not split into a pytest module). README.md:41 claims 'test_run_review.py pytest suite (118 tests)' — stale count (the suite is 119) and mislabeled (test_run_review.py is a 16-LoC unittest.TestLoader().discover shim, not a pytest test module). The canonical command is 'python3 -m pytest scripts/tests/'.",
-            "why_weakens_submission": "A documented entrypoint that silently collects zero tests is a doc-vs-code credibility leak per method.md Step 6: a reviewer trusting the README would believe the suite is empty or broken. It is the kind of small honesty gap the rubric penalizes when it would mislead a reader about regression resistance.",
+            "why_it_matters": "A new contributor (or an AI agent) following README.md to run the suite is told to run 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' (README.md:52) against files described as the pytest suite (README.md:41-42). One of those files does not exist and the other is a unittest discovery shim, so the documented command collects zero tests.",
+            "what_is_wrong": "README.md:42 references scripts/test_web_search.py which does not exist. README.md:41 claims 'test_run_review.py pytest suite (118 tests)' \u2014 stale count (actual 119) and mislabeled. The canonical command is 'python3 -m pytest scripts/tests/'.",
+            "why_weakens_submission": "A documented entrypoint that silently collects zero tests is a doc-vs-code credibility leak per method.md Step 6.",
             "evidence": [
-              "README.md:41 'test_run_review.py  pytest suite (118 tests)' — stale count (actual 119) + mislabel (shim, not pytest module)",
-              "README.md:42 'test_web_search.py  web-search adapter pytest suite' — file does not exist (ls scripts/test_web_search.py -> No such file)",
-              "README.md:52 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' — verified to print 'no tests ran' (zero collected) because test_web_search.py is missing and test_run_review.py exposes no pytest-discoverable test functions",
-              "scripts/test_run_review.py is a unittest.TestLoader().discover(str(here / 'tests'), ...) shim (16 LoC), not a pytest test module"
+              "README.md:41 'test_run_review.py  pytest suite (118 tests)' \u2014 stale count (actual 119) + mislabel",
+              "README.md:42 'test_web_search.py  web-search adapter pytest suite' \u2014 file does not exist",
+              "README.md:52 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' \u2014 collects zero tests"
             ],
-            "minimal_correction_path": "Update README.md to document the canonical command 'python3 -m pytest scripts/tests/'; correct the test count to 119; drop or correct the test_web_search.py reference (point at the actual web-search tests or remove the stale line). Subtractive where possible (delete the dead reference)."
+            "minimal_correction_path": "Update README.md to document the canonical command 'python3 -m pytest scripts/tests/'; correct the test count to 119; drop the test_web_search.py reference."
           },
           "fingerprint": {
-            "claim_consequence_hash": "sha256:a673bdac31de06041286743e3df298cb62a49d23224abeb534e02690ed8cae2b",
-            "evidence_paths_hash": "sha256:9491463d6402792a6fa43579b591bb003d7a26f6e59fc5fd1f689af7170221c7"
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
           },
-          "attempted_remedy_hash": "sha256:6e644f4a89027f412936b19f89aec2c2e00beda41be75562d1f14d0086f85f0c",
+          "attempted_remedy_hash": null,
           "idempotency_key": "loop6-F-007-open"
+        },
+        {
+          "loop": 7,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": null,
+          "finding_snapshot": {
+            "title": "README documents a test command that collects zero tests + a stale test count",
+            "why_it_matters": "README.md documented 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' \u2014 test_web_search.py absent; test_run_review.py is a unittest shim; command collected zero tests.",
+            "what_is_wrong": "README.md:42 referenced non-existent test_web_search.py; README.md:41 claimed 118 tests (actual 119); README.md:52 had the stale/broken command.",
+            "why_weakens_submission": "Doc-vs-code credibility leak: new contributors would conclude the project is untested.",
+            "evidence": [
+              "README.md:41 corrected: 'tests/  pytest suite (119 tests)'",
+              "README.md:42 deleted (test_web_search.py line removed)",
+              "README.md:52 corrected: 'python3 -m pytest scripts/tests/'"
+            ],
+            "minimal_correction_path": "Applied: dropped test_web_search.py reference, relabeled tests/, corrected count and command."
+          },
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop7-F-007-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-008",
+      "title": "Test-lint star-import pattern: 187 violations in scripts/tests/ (F405/RUF100/I001/E401)",
+      "category_hint": "framework_idioms",
+      "primary_file": "scripts/tests/",
+      "primary_evidence_lines": [
+        1,
+        1
+      ],
+      "test_failed": "n/a",
+      "severity": "Accepted residual (SPT Q2 rejected)",
+      "first_seen_loop": 7,
+      "first_seen_sha": null,
+      "last_seen_loop": 7,
+      "occurrences": [
+        {
+          "loop": 7,
+          "loop_local_id": null,
+          "status": "accepted_residual",
+          "sha": null,
+          "finding_snapshot": {
+            "title": "Test-lint star-import pattern: 187 violations in scripts/tests/",
+            "why_it_matters": "python3 -m ruff check scripts/tests/ -> 187 errors: F405 x154 / RUF100 x19 / I001 x7 / E401 x7 from 'from ._helpers import *' in test_*.py files. Caps framework_idioms at 6.5.",
+            "what_is_wrong": "All 7 test files use 'from ._helpers import *' for test ergonomics. Ruff flags F405 (undefined names from star import) and related violations pervasively.",
+            "why_weakens_submission": "framework_idioms cannot honestly score above 6.5 with 187 standing lint violations in the test scope.",
+            "evidence": [
+              "python3 -m ruff check scripts/tests/ -> Found 187 errors (verified loop 7)"
+            ],
+            "minimal_correction_path": "Replace 'from ._helpers import *' with explicit imports across 7 test files. SPT Q2 fails: ceremony, no behavior change, no contest-architecture gain.",
+            "spt_disposition": "SPT Q2 rejected (ceremony with no behavior/architecture gain). Accepted as deliberate ergonomic pattern. Expires 2026-12-22."
+          },
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop7-F-008-accepted-residual",
+          "accepted_on": "2026-06-22",
+          "expires": "2026-12-22"
         }
       ]
     }

@@ -169,7 +169,7 @@
           "id": "F1",
           "title": "Test suite red blocks structural review",
           "why_it_matters": "Two codex test paths fail with AttributeError, making the suite red and preventing any structural scoring under the contest rubric.",
-          "what_is_wrong": "scripts/tests/_helpers.py make_args() (lines 66-82) hard-codes a parallel copy of the CLI arg names without codex_home_manifest. run_review.py:306 reads args.codex_home_manifest; the Namespace from make_args() omits it — AttributeError on both codex test paths.",
+          "what_is_wrong": "scripts/tests/_helpers.py make_args() (lines 66-82) hard-codes a parallel copy of the CLI arg names without codex_home_manifest. run_review.py:306 reads args.codex_home_manifest; the Namespace from make_args() omits it \u2014 AttributeError on both codex test paths.",
           "evidence": [
             "scripts/tests/test_execution_paths.py::TestRunReviewExecution::test_run_review_codex_accepts_last_message_file_without_json_stdout",
             "scripts/tests/test_execution_paths.py::TestRunReviewExecution::test_run_review_codex_stale_events_do_not_mask_empty_current_output",
@@ -199,11 +199,11 @@
         }
       ],
       "simplification_check": {
-        "structurally_necessary": "Restores green suite — minimum change for loop 2 to run structural scoring honestly.",
+        "structurally_necessary": "Restores green suite \u2014 minimum change for loop 2 to run structural scoring honestly.",
         "new_seam_justified": false,
         "new_seam_adapters": [],
         "helpful_simplification": "none this loop",
-        "should_not_be_done": "Do not refactor parse_args(), clean pre-existing ruff violations, or add ceremony — all fail SPT for the build-failure restoration loop.",
+        "should_not_be_done": "Do not refactor parse_args(), clean pre-existing ruff violations, or add ceremony \u2014 all fail SPT for the build-failure restoration loop.",
         "tests_after_fix": "Existing tests run against the fixed helper; no tests deleted or added."
       },
       "backlog": [
@@ -220,21 +220,21 @@
       "deepening_candidates": [
         {
           "candidate_module": "make_args() test helper",
-          "source_friction_proven": "F1 — duplicated arg contract drifted from parse_args(); AttributeError on new arg.",
+          "source_friction_proven": "F1 \u2014 duplicated arg contract drifted from parse_args(); AttributeError on new arg.",
           "why_shallow_or_misplaced": "make_args() is a hand-rolled dict that duplicates run_review.parse_args() authority; it cannot stay in sync automatically.",
           "behavior_to_move_behind_interface": "Derive the Namespace from parse_args([]) with controlled overrides, eliminating the separate dict.",
           "dependency_category": "in-process",
           "test_surface_after_change": "Tests would construct args via parse_args() + override; helper cannot drift.",
           "smallest_first_step": "Replace make_args() dict with: base = vars(parse_args([])); base.update(overrides); return argparse.Namespace(**base).",
-          "what_not_to_do": "Do not keep the dict and derive from parse_args() as a parallel check — that doubles the authority, not removes it."
+          "what_not_to_do": "Do not keep the dict and derive from parse_args() as a parallel check \u2014 that doubles the authority, not removes it."
         }
       ],
       "builder_notes": [
         {
           "pattern": "Duplicated arg contract in test helper",
-          "how_to_recognize": "grep for argparse.Namespace(** or manually-constructed Namespace in test helpers — each is a stale-arg bomb.",
+          "how_to_recognize": "grep for argparse.Namespace(** or manually-constructed Namespace in test helpers \u2014 each is a stale-arg bomb.",
           "smallest_coding_rule": "Have the test helper call the actual parse_args([]) with a controlled arg list; no manual dict, no drift risk.",
-          "stack_example": "Python: args = parse_args([]); args.reviewer = 'claude'; args.plan_file = tmp — no dict, no drift."
+          "stack_example": "Python: args = parse_args([]); args.reviewer = 'claude'; args.plan_file = tmp \u2014 no dict, no drift."
         },
         {
           "pattern": "Build-failure restoration scope discipline",
@@ -244,15 +244,15 @@
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Build-failure scores are all 1 with unverifiable_due_to_build_failure: true — uncertainty is resolved when loop 2 scores real structure.",
+          "how_to_recognize": "Build-failure scores are all 1 with unverifiable_due_to_build_failure: true \u2014 uncertainty is resolved when loop 2 scores real structure.",
           "smallest_coding_rule": "The key unknown for loop 2: will test_strategy clear 7? The make_args() drift pattern suggests test helper fragility.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 1 is a build-failure restoration loop. Scorecard floors at 1 across all dimensions — not because the code is weak but because a red suite makes all structural claims unverifiable. The fix is one dict entry. Once loop 2 runs green tests, real scoring begins. The make_args() drift pattern will surface as a credibility or test-strategy finding in loop 2.",
+      "narrative": "Loop 1 is a build-failure restoration loop. Scorecard floors at 1 across all dimensions \u2014 not because the code is weak but because a red suite makes all structural claims unverifiable. The fix is one dict entry. Once loop 2 runs green tests, real scoring begins. The make_args() drift pattern will surface as a credibility or test-strategy finding in loop 2.",
       "loop_result": {
         "what_changed": "Added codex_home_manifest: None to the defaults dict in scripts/tests/_helpers.py make_args() (after review_id).",
-        "evidence_change_is_honest": "python3 -m pytest scripts/tests/ → 118 passed, 0 failed (green). python3 -m ruff check scripts/tests/_helpers.py → 19 pre-existing violations, 0 new violations introduced.",
+        "evidence_change_is_honest": "python3 -m pytest scripts/tests/ \u2192 118 passed, 0 failed (green). python3 -m ruff check scripts/tests/_helpers.py \u2192 19 pre-existing violations, 0 new violations introduced.",
         "targeted_finding_status": "resolved",
         "unintended_regression": null,
         "changed_paths": [
@@ -262,7 +262,7 @@
       },
       "implementation_review": {
         "verdict": "approved",
-        "reason": "All three checks passed: the targeted AttributeError is no longer reachable (Reality); the one-line dict entry is the smallest honest fix with no new seam or costume layer (Honesty); the diff introduces no regression — the changed line is additive and inert in non-codex test paths (Regression).",
+        "reason": "All three checks passed: the targeted AttributeError is no longer reachable (Reality); the one-line dict entry is the smallest honest fix with no new seam or costume layer (Honesty); the diff introduces no regression \u2014 the changed line is additive and inert in non-codex test paths (Regression).",
         "checks": {
           "reality": "passed",
           "honesty": "passed",
@@ -342,7 +342,7 @@
         "architecture_quality": {
           "score": 7,
           "delta": "UP",
-          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) — registry dispatch); run_review.py:25-69 (clean import DAG: run_review -> _common.*); no costume layers identified in full source walk",
+          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) \u2014 registry dispatch); run_review.py:25-69 (clean import DAG: run_review -> _common.*); no costume layers identified in full source walk",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -378,7 +378,7 @@
         "framework_idioms": {
           "score": 6,
           "delta": "UP",
-          "proof": "scripts/tests/_helpers.py:12-22 (9 unused stdlib imports — F401 per ruff); run_review.py:605 (PTH108: os.unlink instead of Path.unlink); run_review.py:27 (I001: unsorted imports)",
+          "proof": "scripts/tests/_helpers.py:12-22 (9 unused stdlib imports \u2014 F401 per ruff); run_review.py:605 (PTH108: os.unlink instead of Path.unlink); run_review.py:27 (I001: unsorted imports)",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -468,7 +468,7 @@
         }
       ],
       "strengths": [
-        "run_review.py:339 — provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
+        "run_review.py:339 \u2014 provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
         "Gemini config-overlay isolation tested behaviorally: temp dir excludes auto-saved policy files (test_execution_paths.py:178-214); settings preserved (test_execution_paths.py:138-175)",
         "Resume/fallback state tracked via locals (use_resume, fallback_used at run_review.py:210-211); args never mutated (snapshot at :209)"
       ],
@@ -481,7 +481,7 @@
           "what_is_wrong": "scripts/tests/_helpers.py:12-22 imports 9 stdlib modules (json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest/mock) that _helpers.py does not itself use. Test files already import these directly on their own line 2. Removing them from _helpers.py breaks nothing and eliminates pervasive lint suppression.",
           "evidence": [
             "scripts/tests/_helpers.py:12-22 (F401 unused imports: json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest, mock)",
-            "scripts/tests/test_execution_paths.py:2 (imports same stdlib directly — duplicate path)",
+            "scripts/tests/test_execution_paths.py:2 (imports same stdlib directly \u2014 duplicate path)",
             "ruff F405 at test_execution_paths.py:18,31,39 (self_check may be undefined or from star imports)",
             "ruff F405 at test_execution_paths.py:47,52,57 (run_script may be undefined or from star imports)"
           ],
@@ -511,11 +511,11 @@
         {
           "loop_local_id": "F2",
           "stable_id": "F-003",
-          "title": "make_args() has no contract-sync test — will drift again on next arg addition",
+          "title": "make_args() has no contract-sync test \u2014 will drift again on next arg addition",
           "why_it_matters": "Loop 1 was entirely consumed by make_args() drifting from parse_args(). The fix was one dict entry; the structural cause is unchanged. Next parse_args() addition will silently break codex tests again.",
-          "what_is_wrong": "scripts/tests/_helpers.py:64-85 builds a Namespace by hand from a hard-coded dict. No test asserts that make_args().keys() == parse_args([]).keys(). Authority Map: Split and ambiguous — two sources of truth with no mechanical enforcement.",
+          "what_is_wrong": "scripts/tests/_helpers.py:64-85 builds a Namespace by hand from a hard-coded dict. No test asserts that make_args().keys() == parse_args([]).keys(). Authority Map: Split and ambiguous \u2014 two sources of truth with no mechanical enforcement.",
           "evidence": [
-            "scripts/tests/_helpers.py:64-85 (manual dict — 16 keys today; parse_args/make_args key sets verified to match via Python introspection but no automated enforcement)",
+            "scripts/tests/_helpers.py:64-85 (manual dict \u2014 16 keys today; parse_args/make_args key sets verified to match via Python introspection but no automated enforcement)",
             "run_review.py:76-123 (parse_args() authoritative definition)",
             "Loop 1 finding F-001 resolved by one-line dict patch with no structural prevention"
           ],
@@ -608,7 +608,7 @@
       "deepening_candidates": [
         {
           "candidate_module": "scripts/tests/_helpers.py:make_args()",
-          "source_friction_proven": "Finding F2 — make_args() manually copies arg names from parse_args() and drifted in loop 1",
+          "source_friction_proven": "Finding F2 \u2014 make_args() manually copies arg names from parse_args() and drifted in loop 1",
           "why_shallow_or_misplaced": "make_args() provides no behavior beyond argparse defaults; equivalent to calling parse_args([]) with overrides",
           "behavior_to_move_behind_interface": "arg-name set derivation; default-value derivation from argparse",
           "dependency_category": "in-process",
@@ -620,24 +620,24 @@
       "builder_notes": [
         {
           "pattern": "Bulk stdlib re-export via star import as shared test namespace",
-          "how_to_recognize": "grep _helpers.py for imports X where X appears in ruff F401 output AND appears in line 2 of every test file — both channels exist, star re-export is redundant",
-          "smallest_coding_rule": "A helper module should import only what it needs. Export only shared symbols (functions, constants, fixtures) — not stdlib pass-throughs.",
+          "how_to_recognize": "grep _helpers.py for imports X where X appears in ruff F401 output AND appears in line 2 of every test file \u2014 both channels exist, star re-export is redundant",
+          "smallest_coding_rule": "A helper module should import only what it needs. Export only shared symbols (functions, constants, fixtures) \u2014 not stdlib pass-throughs.",
           "stack_example": "Python: _helpers.py should define make_args, run_script, SCRIPT_DIR, FIXTURES_DIR, _CREATE_NEW_PROCESS_GROUP only. Each test file imports stdlib directly (line 2 already does this)."
         },
         {
           "pattern": "Manually-maintained arg contract mirror in test helper",
-          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) or dict-based Namespace construction — each is a drift bomb when parse_args() adds new args",
+          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) or dict-based Namespace construction \u2014 each is a drift bomb when parse_args() adds new args",
           "smallest_coding_rule": "Derive the Namespace from parse_args([]) with a controlled arg list, then override fields. One call; can't drift.",
           "stack_example": "Python: def make_args(**overrides): with mock.patch('sys.argv', ['run_review.py']): args = run_review.parse_args(); vars(args).update(overrides); return args"
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Three borderline claims: (1) concurrency:8 — uncertain about _active_proc thread-safety under hypothetical multithreading not present in current usage; (2) framework_idioms:6 — uncertain whether star-export pattern is documented-intentional vs accumulated drift; (3) test_strategy:7 — may have missed 1-2 additional Authority Map gaps",
+          "how_to_recognize": "Three borderline claims: (1) concurrency:8 \u2014 uncertain about _active_proc thread-safety under hypothetical multithreading not present in current usage; (2) framework_idioms:6 \u2014 uncertain whether star-export pattern is documented-intentional vs accumulated drift; (3) test_strategy:7 \u2014 may have missed 1-2 additional Authority Map gaps",
           "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 2 is the first real structural critic pass. Production code earns 7-8 across most dimensions: the _common seam is honest, provider dispatch is registry-driven, signal handling is idiomatic. The drag is in test infrastructure: _helpers.py re-exports stdlib it doesn't use, generating F401/F405 lint noise across all 7 test files. The directly corrective fix is purely subtractive. The secondary risk is make_args() manual dict — loop 1 was entirely consumed by one drift instance; without a sync test, the same failure class recurs. Neither issue is a disqualifier but both suppress scores below contest-grade.",
+      "narrative": "Loop 2 is the first real structural critic pass. Production code earns 7-8 across most dimensions: the _common seam is honest, provider dispatch is registry-driven, signal handling is idiomatic. The drag is in test infrastructure: _helpers.py re-exports stdlib it doesn't use, generating F401/F405 lint noise across all 7 test files. The directly corrective fix is purely subtractive. The secondary risk is make_args() manual dict \u2014 loop 1 was entirely consumed by one drift instance; without a sync test, the same failure class recurs. Neither issue is a disqualifier but both suppress scores below contest-grade.",
       "loop_result": {
         "finding_addressed": "F1 (stable_id F-002)",
         "status": "resolved",
@@ -704,7 +704,7 @@
         "architecture_quality": {
           "score": 7,
           "delta": "SAME",
-          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) — registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at 405 LoC without sub-module boundaries is primary drag",
+          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) \u2014 registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at 405 LoC without sub-module boundaries is primary drag",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -767,7 +767,7 @@
         "test_strategy": {
           "score": 7.5,
           "delta": "UP",
-          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) — derives canonical key set from run_review.parse_args() via sys.argv patch; asserts equality with make_args() keys; 119 tests green; loop-1-class recurrence now caught immediately",
+          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) \u2014 derives canonical key set from run_review.parse_args() via sys.argv patch; asserts equality with make_args() keys; 119 tests green; loop-1-class recurrence now caught immediately",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -776,7 +776,7 @@
         "credibility": {
           "score": 7.5,
           "delta": "UP",
-          "proof": "F-003 resolved — contract-sync test closes recurrence risk that caused loop 1 build failure; production code earns its architecture at _common boundary; remaining drag: F-004 open (production lint) and make_args() dict still manually maintained (guarded by new test)",
+          "proof": "F-003 resolved \u2014 contract-sync test closes recurrence risk that caused loop 1 build failure; production code earns its architecture at _common boundary; remaining drag: F-004 open (production lint) and make_args() dict still manually maintained (guarded by new test)",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -830,10 +830,10 @@
         }
       ],
       "strengths": [
-        "run_review.py:339 — provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
+        "run_review.py:339 \u2014 provider dispatch is fully registry-driven (PROVIDERS[reviewer]['build_cmd']); orchestrator never branches on provider internals",
         "Gemini config-overlay isolation tested behaviorally: temp dir excludes auto-saved policy files; settings preserved (test_execution_paths.py:138-214)",
         "Resume/fallback state tracked via locals (use_resume, fallback_used at run_review.py:210-211); args never mutated (snapshot at :209)",
-        "CLI arg contract now guarded by TestArgContract.test_make_args_keys_match_parse_args_dests — next arg addition to parse_args() surfaces immediately, preventing loop-1-class failures"
+        "CLI arg contract now guarded by TestArgContract.test_make_args_keys_match_parse_args_dests \u2014 next arg addition to parse_args() surfaces immediately, preventing loop-1-class failures"
       ],
       "findings": [
         {
@@ -844,9 +844,9 @@
           "why_it_matters": "ruff check exits 1 on the primary production module; PTH108, I001, and RUF100 are all auto-fixable but unaddressed, reducing credibility of production code.",
           "what_is_wrong": "run_review.py:605: os.unlink(agy_log_path) should be Path(agy_log_path).unlink() per PTH108. run_review.py:27: import block is unsorted per I001. run_review.py:36: noqa F401 directive is now unused per RUF100.",
           "evidence": [
-            "run_review.py:605 (PTH108: os.unlink — auto-fixable)",
-            "run_review.py:27 (I001: unsorted import block — auto-fixable)",
-            "run_review.py:36 (RUF100: unused noqa directive — auto-fixable)",
+            "run_review.py:605 (PTH108: os.unlink \u2014 auto-fixable)",
+            "run_review.py:27 (I001: unsorted import block \u2014 auto-fixable)",
+            "run_review.py:36 (RUF100: unused noqa directive \u2014 auto-fixable)",
             "python3 -m ruff check scripts/run_review.py -> exit code 1, 3 violations"
           ],
           "test_failed": "n/a",
@@ -873,7 +873,7 @@
         }
       ],
       "simplification_check": {
-        "structurally_necessary": "Adding a contract-sync test passes SPT Q1 (fixes real ambiguity proved by loop 1 failure) and Q2 (smallest honest fix — 7-line test class). No ceremony added.",
+        "structurally_necessary": "Adding a contract-sync test passes SPT Q1 (fixes real ambiguity proved by loop 1 failure) and Q2 (smallest honest fix \u2014 7-line test class). No ceremony added.",
         "new_seam_justified": false,
         "new_seam_adapters": [],
         "helpful_simplification": "The sync test removes the drift hazard without changing any production code or test helper structure.",
@@ -896,7 +896,7 @@
       "deepening_candidates": [
         {
           "candidate_module": "scripts/tests/_helpers.py:make_args()",
-          "source_friction_proven": "F-003 (now resolved) — make_args() manually copies arg names from parse_args() and drifted once (loop 1). Sync test detects drift but does not eliminate two-step edit requirement.",
+          "source_friction_proven": "F-003 (now resolved) \u2014 make_args() manually copies arg names from parse_args() and drifted once (loop 1). Sync test detects drift but does not eliminate two-step edit requirement.",
           "why_shallow_or_misplaced": "make_args() provides no behavior beyond argparse defaults; equivalent to calling parse_args([]) with overrides",
           "behavior_to_move_behind_interface": "arg-name set derivation; default-value derivation from argparse",
           "dependency_category": "in-process",
@@ -908,9 +908,9 @@
       "builder_notes": [
         {
           "pattern": "Manually-maintained arg contract mirror in test helper",
-          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) — each is a drift bomb when parse_args() adds new args",
+          "how_to_recognize": "grep test helpers for argparse.Namespace(**{...}) \u2014 each is a drift bomb when parse_args() adds new args",
           "smallest_coding_rule": "Add a contract-sync test: patch sys.argv, call parse_args(), assert set(vars(args).keys()) == set(vars(make_args()).keys()). If the dict drifts, the test fails immediately.",
-          "stack_example": "Python: TestArgContract.test_make_args_keys_match_parse_args_dests in test_file_io_validation.py — one mock.patch context, one set comparison, informative diff message."
+          "stack_example": "Python: TestArgContract.test_make_args_keys_match_parse_args_dests in test_file_io_validation.py \u2014 one mock.patch context, one set comparison, informative diff message."
         },
         {
           "pattern": "Introspection test over manual contract mirror",
@@ -920,12 +920,12 @@
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Three borderline claims: (1) test_strategy:7.5 — rated UP based on contract-sync test; may have missed 1-2 authority-map gaps in check_web_search.py tests; (2) credibility:7.5 — remaining manual dict is guarded but still two-step; could defend 7; (3) framework_idioms:6 — all production violations are auto-fixable cosmetics; could argue 6.5.",
+          "how_to_recognize": "Three borderline claims: (1) test_strategy:7.5 \u2014 rated UP based on contract-sync test; may have missed 1-2 authority-map gaps in check_web_search.py tests; (2) credibility:7.5 \u2014 remaining manual dict is guarded but still two-step; could defend 7; (3) framework_idioms:6 \u2014 all production violations are auto-fixable cosmetics; could argue 6.5.",
           "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 3 is the authority-split resolution loop. The contract-sync test (TestArgContract.test_make_args_keys_match_parse_args_dests) closes the recurrence class that consumed loop 1: any future arg addition to parse_args() surfaces immediately in the suite. The change is purely additive (7 lines), passes SPT cleanly, and the 119-test suite is green. Test strategy moves to 7.5 and overall credibility to 7.5. The remaining backlog is F-004 (production lint — PTH108 + I001 + RUF100 in run_review.py).",
+      "narrative": "Loop 3 is the authority-split resolution loop. The contract-sync test (TestArgContract.test_make_args_keys_match_parse_args_dests) closes the recurrence class that consumed loop 1: any future arg addition to parse_args() surfaces immediately in the suite. The change is purely additive (7 lines), passes SPT cleanly, and the 119-test suite is green. Test strategy moves to 7.5 and overall credibility to 7.5. The remaining backlog is F-004 (production lint \u2014 PTH108 + I001 + RUF100 in run_review.py).",
       "loop_result": {
         "what_changed": "Added TestArgContract.test_make_args_keys_match_parse_args_dests to scripts/tests/test_file_io_validation.py. Test patches sys.argv to ['run_review.py'], calls run_review.parse_args(), asserts set(vars(args).keys()) == set(vars(make_args()).keys()). Derives canonical truth from argparse definition directly.",
         "evidence_change_is_honest": "python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (green, up from 118). No production code changed.",
@@ -988,7 +988,7 @@
         "architecture_quality": {
           "score": 7,
           "delta": "SAME",
-          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) — registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at ~405 LoC without sub-module boundaries is primary drag",
+          "proof": "run_review.py:339 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id) \u2014 registry dispatch); run_review.py:25-69 (clean import DAG); no costume layers; run_review() at ~405 LoC without sub-module boundaries is primary drag",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": "F-005 (decompose run_review() flat body)",
@@ -1051,10 +1051,10 @@
         "test_strategy": {
           "score": 7.5,
           "delta": "SAME",
-          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) — derives canonical key set from parse_args() directly; 119 tests green. No structural change to test strategy this loop.",
+          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests (added loop 3) \u2014 derives canonical key set from parse_args() directly; 119 tests green. No structural change to test strategy this loop.",
           "residual_blocking_10": null,
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": "F-006 (derive make_args() from parse_args([]) directly — eliminates two-step edit requirement)",
+          "residual_rationale_or_backlog_ref": "F-006 (derive make_args() from parse_args([]) directly \u2014 eliminates two-step edit requirement)",
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
@@ -1080,7 +1080,7 @@
           ],
           "persistence_seam": null,
           "async_mutation_entry_points": null,
-          "verdict": "Split and ambiguous — two sources of truth for arg-name set; make_args() can still drift (requires two-step edit), though drift is detected immediately by TestArgContract.test_make_args_keys_match_parse_args_dests"
+          "verdict": "Split and ambiguous \u2014 two sources of truth for arg-name set; make_args() can still drift (requires two-step edit), though drift is detected immediately by TestArgContract.test_make_args_keys_match_parse_args_dests"
         },
         {
           "concern": "Active subprocess handle",
@@ -1096,7 +1096,7 @@
             "SIGTERM",
             "SIGINT via signal handler"
           ],
-          "verdict": "Single and clear — one writer, one reader, idiomatic Python signal-handler pattern"
+          "verdict": "Single and clear \u2014 one writer, one reader, idiomatic Python signal-handler pattern"
         },
         {
           "concern": "Session state",
@@ -1110,14 +1110,14 @@
           ],
           "persistence_seam": "JSON file at args.session_file",
           "async_mutation_entry_points": null,
-          "verdict": "Single and clear — serialized via file; run_review() is the sole writer per execution"
+          "verdict": "Single and clear \u2014 serialized via file; run_review() is the sole writer per execution"
         }
       ],
       "strengths": [
         "run_review.py delegates all provider-specific logic to _common.providers.PROVIDERS: command construction, cap flags, effort maps, session ID extraction. Orchestrator dispatches through registry (run_review.py:339).",
         "Gemini config-overlay isolation is behavioral and tested: temp dir excludes auto-saved policy files, preserves existing settings.",
         "Resume/fallback state tracked via local variables (use_resume, fallback_used), never by mutating args. Snapshot at run_review.py:209 prevents cross-attempt contamination.",
-        "CLI arg contract guarded by TestArgContract.test_make_args_keys_match_parse_args_dests — next arg addition surfaces immediately in suite.",
+        "CLI arg contract guarded by TestArgContract.test_make_args_keys_match_parse_args_dests \u2014 next arg addition surfaces immediately in suite.",
         "Production module now passes ruff with zero violations: os.unlink replaced with Path.unlink, import block sorted, stale noqa removed."
       ],
       "findings": [
@@ -1136,7 +1136,7 @@
           "why_it_matters": "run_review() interleaves provider-specific environment setup, subprocess dispatch and retry, metadata/output extraction, and session persistence as a single flat function body (~411 LoC, ~67 AST control-flow nodes). Maintainers cannot navigate concerns independently.",
           "what_is_wrong": "No named sub-functions or extracted module-level helpers decomposing the four concerns: env setup, subprocess dispatch, result extraction, session persistence.",
           "evidence": [
-            "run_review.py:201-612 — single function body, no helpers. Estimated ~67+ AST control-flow nodes.",
+            "run_review.py:201-612 \u2014 single function body, no helpers. Estimated ~67+ AST control-flow nodes.",
             "Four distinct concerns interleaved: env setup (~:227-340), subprocess dispatch (~:340-465), output extraction (~:465-530), session persistence (~:530-580)."
           ],
           "leverage_impact": "Low (callers invoke run_review() cleanly; internal complexity is hidden)",
@@ -1180,7 +1180,7 @@
       "deepening_candidates": [
         {
           "candidate_module": "scripts/tests/_helpers.py:make_args()",
-          "source_friction_proven": "F-003 (resolved loop 3) — make_args() manually copies arg names from parse_args() and drifted once. Sync test detects drift but does not eliminate two-step edit requirement.",
+          "source_friction_proven": "F-003 (resolved loop 3) \u2014 make_args() manually copies arg names from parse_args() and drifted once. Sync test detects drift but does not eliminate two-step edit requirement.",
           "why_shallow_or_misplaced": "make_args() provides no behavior beyond argparse defaults; equivalent to calling parse_args([]) with overrides",
           "behavior_to_move_behind_interface": "arg-name set derivation; default-value derivation from argparse",
           "dependency_category": "in-process",
@@ -1192,9 +1192,9 @@
       "builder_notes": [
         {
           "pattern": "RUF100 vs F401 interplay",
-          "how_to_recognize": "RUF100 on a noqa:F401 means the noqa is unused — the names are used in the module body. Remove the noqa and verify F401 does not reappear with ruff check --select F401.",
+          "how_to_recognize": "RUF100 on a noqa:F401 means the noqa is unused \u2014 the names are used in the module body. Remove the noqa and verify F401 does not reappear with ruff check --select F401.",
           "smallest_coding_rule": "If names imported for re-export grow to also be used in-module, remove the noqa. If F401 reappears, the names drifted back to re-export-only and the noqa is still needed.",
-          "stack_example": "_common.metadata.extractors names (_codex_session_files, _parse_codex_session_id, _extract_opencode_metadata_via_export) are used at run_review.py:319,471,476,490,514 — noqa correctly removed."
+          "stack_example": "_common.metadata.extractors names (_codex_session_files, _parse_codex_session_id, _extract_opencode_metadata_via_export) are used at run_review.py:319,471,476,490,514 \u2014 noqa correctly removed."
         },
         {
           "pattern": "I001 fix scope discipline",
@@ -1204,7 +1204,7 @@
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Three borderline claims: (1) framework_idioms:6.5 — test file violations remain; could argue 6; (2) credibility:8 — flat run_review() body is still undecomposed; 7.5 defensible; (3) architecture:7 — SAME.",
+          "how_to_recognize": "Three borderline claims: (1) framework_idioms:6.5 \u2014 test file violations remain; could argue 6; (2) credibility:8 \u2014 flat run_review() body is still undecomposed; 7.5 defensible; (3) architecture:7 \u2014 SAME.",
           "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score.",
           "stack_example": null
         }
@@ -1222,7 +1222,7 @@
       },
       "implementation_review": {
         "verdict": "approved",
-        "reason": "All three checks passed: Reality (ruff exits 0 post-diff; PTH108/I001/RUF100 violations gone); Honesty (no new seam, Path.unlink() is behaviorally identical to os.unlink() in suppress(OSError) context, noqa removal is correct — F401 does not reappear); Regression (import reorder is cosmetic, 119 tests green, no new findings at same or higher severity).",
+        "reason": "All three checks passed: Reality (ruff exits 0 post-diff; PTH108/I001/RUF100 violations gone); Honesty (no new seam, Path.unlink() is behaviorally identical to os.unlink() in suppress(OSError) context, noqa removal is correct \u2014 F401 does not reappear); Regression (import reorder is cosmetic, 119 tests green, no new findings at same or higher severity).",
         "checks": {
           "reality": "passed",
           "honesty": "passed",
@@ -1276,7 +1276,7 @@
           "proof": "run_review.py:202 (_setup_gemini_config), :249 (_build_stdin), :265 (_build_session_data) improve Locality without new interfaces; run_review.py:457 (PROVIDERS[reviewer]['build_cmd'] registry dispatch); run_review.py:25-69 (clean import DAG). The attempt-loop phase remains inline (Finding #1: cannot extract honestly), so the coordinating function is still larger than a 9-anchor structure.",
           "residual_blocking_10": "attempt-loop + codex-setup phases remain inline in run_review()",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": "F-005 (carried — residual phases at honesty ceiling)",
+          "residual_rationale_or_backlog_ref": "F-005 (carried \u2014 residual phases at honesty ceiling)",
           "unverifiable_due_to_build_failure": false
         },
         "state_management": {
@@ -1318,7 +1318,7 @@
         "concurrency": {
           "score": 8,
           "delta": "SAME",
-          "proof": "Signal SIGTERM/SIGINT save/restore in try/finally and the _active_proc set/clear ordering were untouched by the extractions — the attempt loop was left inline precisely to preserve them; subprocess.Popen with communicate() blocks correctly; gemini + agy temp cleanup in finally.",
+          "proof": "Signal SIGTERM/SIGINT save/restore in try/finally and the _active_proc set/clear ordering were untouched by the extractions \u2014 the attempt loop was left inline precisely to preserve them; subprocess.Popen with communicate() blocks correctly; gemini + agy temp cleanup in finally.",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
@@ -1327,19 +1327,19 @@
         "simplicity": {
           "score": 6.5,
           "delta": "UP",
-          "proof": "run_review() body dropped from ~405 LoC (loop 4 commit d1bdfb4) to 328 LoC this loop; three cohesive phases now read as named helpers at run_review.py:202 (_setup_gemini_config), :249 (_build_stdin), :265 (_build_session_data). A reader understands each extracted phase from its name+signature without reading the whole body. Residual: attempt-loop + codex-setup phases stay inline (honest SPT downgrade — extracting threads 4-5 mutable locals in+out, adding ceremony).",
+          "proof": "run_review() body dropped from ~405 LoC (loop 4 commit d1bdfb4) to 328 LoC this loop; three cohesive phases now read as named helpers at run_review.py:202 (_setup_gemini_config), :249 (_build_stdin), :265 (_build_session_data). A reader understands each extracted phase from its name+signature without reading the whole body. Residual: attempt-loop + codex-setup phases stay inline (honest SPT downgrade \u2014 extracting threads 4-5 mutable locals in+out, adding ceremony).",
           "residual_blocking_10": "attempt-loop + codex-setup phases inline (irreducible without ceremony per Finding #1)",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": "F-005 (carried — residual phases at honesty ceiling)",
+          "residual_rationale_or_backlog_ref": "F-005 (carried \u2014 residual phases at honesty ceiling)",
           "unverifiable_due_to_build_failure": false
         },
         "test_strategy": {
           "score": 7.5,
           "delta": "SAME",
-          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests guards the arg contract; 119 tests green. The three extracted helpers are reached transitively through existing end-to-end tests in test_execution_paths.py (Indirect Interface coverage carve-out) — no new test files needed, no tests deleted.",
+          "proof": "scripts/tests/test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests guards the arg contract; 119 tests green. The three extracted helpers are reached transitively through existing end-to-end tests in test_execution_paths.py (Indirect Interface coverage carve-out) \u2014 no new test files needed, no tests deleted.",
           "residual_blocking_10": "make_args() dict still manually maintained (guarded by sync test, two-step edit)",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": "F-006 (carried — derive make_args() from parse_args([]); not pure-subtractive)",
+          "residual_rationale_or_backlog_ref": "F-006 (carried \u2014 derive make_args() from parse_args([]); not pure-subtractive)",
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
@@ -1365,7 +1365,7 @@
           ],
           "persistence_seam": null,
           "async_mutation_entry_points": null,
-          "verdict": "Split and ambiguous — two sources of truth for arg-name set; make_args() can still drift (requires two-step edit), though drift is detected immediately by TestArgContract.test_make_args_keys_match_parse_args_dests"
+          "verdict": "Split and ambiguous \u2014 two sources of truth for arg-name set; make_args() can still drift (requires two-step edit), though drift is detected immediately by TestArgContract.test_make_args_keys_match_parse_args_dests"
         },
         {
           "concern": "Active subprocess handle",
@@ -1381,7 +1381,7 @@
             "SIGTERM",
             "SIGINT via signal handler"
           ],
-          "verdict": "Single and clear — one writer, one reader, idiomatic Python signal-handler pattern. The single-writer invariant is preserved this loop because the writing block was not extracted."
+          "verdict": "Single and clear \u2014 one writer, one reader, idiomatic Python signal-handler pattern. The single-writer invariant is preserved this loop because the writing block was not extracted."
         },
         {
           "concern": "Session state",
@@ -1395,15 +1395,15 @@
           ],
           "persistence_seam": "JSON file at args.session_file",
           "async_mutation_entry_points": null,
-          "verdict": "Single and clear — serialized via file; run_review() is the sole writer per execution. _build_session_data is pure assembly (no I/O), so the single-writer property holds."
+          "verdict": "Single and clear \u2014 serialized via file; run_review() is the sole writer per execution. _build_session_data is pure assembly (no I/O), so the single-writer property holds."
         }
       ],
       "strengths": [
         "run_review.py delegates all provider-specific logic to _common.providers.PROVIDERS: command construction, cap flags, effort maps, session ID extraction. Orchestrator dispatches through registry (run_review.py:457).",
         "Gemini config-overlay isolation is behavioral and tested; after this loop the logic lives in one named helper (_setup_gemini_config), unchanged in behavior.",
-        "Resume/fallback state tracked via local variables (use_resume, fallback_used), never by mutating args — and that is exactly why the attempt loop resists honest extraction (locals read after the loop).",
+        "Resume/fallback state tracked via local variables (use_resume, fallback_used), never by mutating args \u2014 and that is exactly why the attempt loop resists honest extraction (locals read after the loop).",
         "The SPT honesty bar was applied as a gate, not a formality: two phases that would have produced ceremony-laden helpers (5+ inout locals) were left inline with the reasoning recorded, instead of shallow _part1()/_part2() splits.",
-        "CLI arg contract guarded by TestArgContract.test_make_args_keys_match_parse_args_dests — the next arg addition surfaces immediately in the suite."
+        "CLI arg contract guarded by TestArgContract.test_make_args_keys_match_parse_args_dests \u2014 the next arg addition surfaces immediately in the suite."
       ],
       "findings": [
         {
@@ -1411,23 +1411,23 @@
           "stable_id": "F-005",
           "title": "run_review() attempt-loop + codex-capture phases remain inline (irreducible without ceremony)",
           "severity": "Noticeable weakness",
-          "architectural_test_failed": "Shallow module (a _run_attempt() helper with 6 inputs + a 4-tuple output would have Interface approx Implementation — no Depth, only relocation; its deletion test would pass, signalling a pass-through)",
+          "architectural_test_failed": "Shallow module (a _run_attempt() helper with 6 inputs + a 4-tuple output would have Interface approx Implementation \u2014 no Depth, only relocation; its deletion test would pass, signalling a pass-through)",
           "dependency_category": "in-process",
           "primary_file": "scripts/run_review.py",
           "primary_evidence_lines": [
             411,
             581
           ],
-          "why_it_matters": "After this loop's three extractions run_review() is 328 lines (down from ~405). The two largest remaining phases — the two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup — are cohesive concerns a reader would prefer to grasp by name, but extracting them honestly requires threading 4-5 mutable locals both into and out of the helper.",
-          "what_is_wrong": "The attempt loop reads and mutates use_resume, session_id, fallback_used, and returncode across iterations, and those values are read again after the loop (session-id capture reads session_id; _build_session_data reads fallback_used). The codex-setup block mutates session_id and use_resume on its fail-closed path. Extracting either means a 4-tuple return plus 6+ parameters — ceremony that fails SPT Q2 and Q3.",
+          "why_it_matters": "After this loop's three extractions run_review() is 328 lines (down from ~405). The two largest remaining phases \u2014 the two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup \u2014 are cohesive concerns a reader would prefer to grasp by name, but extracting them honestly requires threading 4-5 mutable locals both into and out of the helper.",
+          "what_is_wrong": "The attempt loop reads and mutates use_resume, session_id, fallback_used, and returncode across iterations, and those values are read again after the loop (session-id capture reads session_id; _build_session_data reads fallback_used). The codex-setup block mutates session_id and use_resume on its fail-closed path. Extracting either means a 4-tuple return plus 6+ parameters \u2014 ceremony that fails SPT Q2 and Q3.",
           "evidence": [
-            "run_review.py attempt loop: the resume-fallback branch sets use_resume = False; session_id = None; fallback_used = True; continue — then post-loop code at the session-id capture + _build_session_data call sites reads those same locals.",
+            "run_review.py attempt loop: the resume-fallback branch sets use_resume = False; session_id = None; fallback_used = True; continue \u2014 then post-loop code at the session-id capture + _build_session_data call sites reads those same locals.",
             "Per the contest HONESTY BAR and method.md SPT fake-clean anti-examples, a split that renames region comments into shallow helpers is fake simplification and is rejected."
           ],
           "leverage_impact": "Low (callers invoke run_review() cleanly; the residual flat region is internal)",
           "locality_impact": "Moderate (the attempt-loop and codex-setup phases must still be read in the function body rather than understood from a signature)",
-          "why_weakens_submission": "A perfect 9-anchor would have every cohesive phase behind a named helper. The honest finding is that these two phases cannot reach that bar without ceremony, so the dimension is held at 6.5/7 rather than inflated — the contest-grade ceiling absent a costume layer.",
-          "minimal_correction_path": "Either accept the inline phases as the honest state (recommended — they earn placement per the deletion test), OR return a small frozen result type CodexCapture(home, capture_enabled, sessions_before, clear_session) from the codex-setup phase and have the caller apply the session_id = None; use_resume = False clear, converting one inout pair to a value return (marginal win; defer unless re-prioritized).",
+          "why_weakens_submission": "A perfect 9-anchor would have every cohesive phase behind a named helper. The honest finding is that these two phases cannot reach that bar without ceremony, so the dimension is held at 6.5/7 rather than inflated \u2014 the contest-grade ceiling absent a costume layer.",
+          "minimal_correction_path": "Either accept the inline phases as the honest state (recommended \u2014 they earn placement per the deletion test), OR return a small frozen result type CodexCapture(home, capture_enabled, sessions_before, clear_session) from the codex-setup phase and have the caller apply the session_id = None; use_resume = False clear, converting one inout pair to a value return (marginal win; defer unless re-prioritized).",
           "blast_radius": "scripts/run_review.py only (if pursued). Avoid: all other files, _common/**.",
           "test_failed": "Shallow module test"
         }
@@ -1436,7 +1436,7 @@
         "structurally_necessary": "The three extractions (_setup_gemini_config, _build_stdin, _build_session_data) pass SPT Q1-Q5: each fixes real low-Locality (a cohesive phase was inlined), is the smallest honest fix (a single named helper with explicit inputs->outputs), adds no duplicate layer (module-internal privates), keeps runtime behavior identical (119 tests green, same count), and improves the product (a reader navigates by name).",
         "new_seam_justified": false,
         "helpful_simplification": "The gemini-overlay phase (~40 lines) and the 25-field session-dict assembly are the two highest-payoff extractions; _build_stdin is small but removes an if-nest from the body.",
-        "should_not_be_done": "Do not extract the attempt loop or codex-setup into helpers (fails the SPT honesty bar — 4-5 inout locals). Do not touch test files. Do not pursue F-006 as 'delete the dict' — it is not pure-subtractive.",
+        "should_not_be_done": "Do not extract the attempt loop or codex-setup into helpers (fails the SPT honesty bar \u2014 4-5 inout locals). Do not touch test files. Do not pursue F-006 as 'delete the dict' \u2014 it is not pure-subtractive.",
         "tests_after_fix": "119 tests pass (same count). No tests added or deleted; extracted helpers covered transitively (Indirect Interface coverage carve-out)."
       },
       "backlog": [
@@ -1444,7 +1444,7 @@
           "priority": 1,
           "finding_id": "F1",
           "stable_id": "F-005",
-          "title": "Decompose run_review() flat body — residual phases",
+          "title": "Decompose run_review() flat body \u2014 residual phases",
           "kind": "structural",
           "rank": "helpful",
           "why_it_matters": "Three cohesive phases were extracted this loop (simplicity 6->6.5); the attempt-loop + codex-setup phases remain inline because honest extraction adds ceremony.",
@@ -1457,7 +1457,7 @@
           "title": "Derive make_args() from parse_args([]) directly",
           "kind": "simplification",
           "rank": "helpful",
-          "why_it_matters": "Would eliminate the two-step edit requirement. Correction to prior framing: NOT pure-subtractive — parse_args() takes no argv param and reads sys.argv; make_args() defaults reviewer='claude' whereas parse_args([]) yields reviewer=None, so the swap changes the test default and fails SPT Q4 unless every call site is updated. The loop-3 sync test already detects drift.",
+          "why_it_matters": "Would eliminate the two-step edit requirement. Correction to prior framing: NOT pure-subtractive \u2014 parse_args() takes no argv param and reads sys.argv; make_args() defaults reviewer='claude' whereas parse_args([]) yields reviewer=None, so the swap changes the test default and fails SPT Q4 unless every call site is updated. The loop-3 sync test already detects drift.",
           "score_impact": "test_strategy +0.5 (7.5->8) if done cleanly; lower priority given the not-pure-subtractive correction"
         }
       ],
@@ -1465,19 +1465,19 @@
       "deepening_candidates": [
         {
           "candidate_module": "the inline codex CODEX_HOME setup block in run_review()",
-          "source_friction_proven": "Finding #1 — the block mutates session_id/use_resume inout, which is why it resisted extraction this loop.",
+          "source_friction_proven": "Finding #1 \u2014 the block mutates session_id/use_resume inout, which is why it resisted extraction this loop.",
           "why_shallow_or_misplaced": "inout mutation of two locals is the only thing blocking a clean extraction; converting to a value return removes it",
           "behavior_to_move_behind_interface": "per-run home reuse-or-create + capture-var derivation + the fail-closed clear decision",
           "dependency_category": "in-process",
           "test_surface_after_change": "same end-to-end tests in test_execution_paths.py (codex stale-events + last-message paths already exercise this block transitively)",
           "smallest_first_step": "introduce CodexCapture = namedtuple(...); have the helper return it; caller applies session_id = None; use_resume = False when clear_session is set",
-          "what_not_to_do": "do not extract the two-attempt loop (4 inout locals — irreducible); do not add a protocol or class hierarchy"
+          "what_not_to_do": "do not extract the two-attempt loop (4 inout locals \u2014 irreducible); do not add a protocol or class hierarchy"
         }
       ],
       "builder_notes": [
         {
           "pattern": "SPT honesty bar as an extraction gate",
-          "how_to_recognize": "A candidate helper that needs 5+ mutable locals both in and out is line-relocation, not Locality — its deletion test passes, which is the tell that it's a pass-through.",
+          "how_to_recognize": "A candidate helper that needs 5+ mutable locals both in and out is line-relocation, not Locality \u2014 its deletion test passes, which is the tell that it's a pass-through.",
           "smallest_coding_rule": "Extract only clean-boundary phases (explicit inputs->outputs); for the rest, record the inout-threading count as the rejection reason and leave the phase inline.",
           "stack_example": "run_review() had ~6 candidate phases; 3 had clean boundaries (gemini overlay, stdin, session-dict assembly), 3 threaded mutable locals (attempt loop, codex setup, multi-input session-id capture). Extracted the 3 clean ones only."
         },
@@ -1489,15 +1489,15 @@
         },
         {
           "pattern": "Scorecard humility check (Q9)",
-          "how_to_recognize": "Three borderline claims: (1) simplicity:6.5 UP — a stricter reviewer could hold at 6 (77 lines moved, still 328 LoC); (2) architecture:7 SAME — one could argue 7.5; (3) Finding #1 'irreducible' — the CodexCapture value-return is a real marginal path, so 'irreducible' is slightly strong for the codex block (the attempt loop genuinely is).",
+          "how_to_recognize": "Three borderline claims: (1) simplicity:6.5 UP \u2014 a stricter reviewer could hold at 6 (77 lines moved, still 328 LoC); (2) architecture:7 SAME \u2014 one could argue 7.5; (3) Finding #1 'irreducible' \u2014 the CodexCapture value-return is a real marginal path, so 'irreducible' is slightly strong for the codex block (the attempt loop genuinely is).",
           "smallest_coding_rule": "Surface uncertainty in builder notes rather than inflating the score; record marginal correction paths as deepening candidates instead of asserting impossibility.",
           "stack_example": null
         }
       ],
-      "narrative": "Loop 5 is the honest-partial decomposition of F-005. Three cohesive phases of run_review() — the Gemini config overlay (_setup_gemini_config), the stdin prompt prep (_build_stdin), and the 25-field session-dict assembly (_build_session_data) — are extracted into named module-level helpers, dropping the function body from ~405 to 328 lines and moving simplicity from 6 to 6.5. The decisive judgment was what NOT to extract: the two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup thread 4-5 mutable locals (use_resume, session_id, fallback_used, returncode) both into and out of any candidate helper, so extracting them would add ceremony and fail the SPT — they are left inline with the rejection recorded, not papered over with shallow _part1()/_part2() splits. This preserves the risk-boundary invariants the directive named: _active_proc single writer, SIGTERM/SIGINT save/restore ordering, env isolation, and resume/fresh semantics all live in the un-extracted attempt loop and finally block, so the green 119-test suite is direct evidence they held. F-005 is carried forward (cheap wins taken; remainder at the honesty ceiling). F-006 is carried with a correction: it is not the 'pure subtractive dict deletion' prior loops assumed — parse_args([]) flips the test's reviewer default and needs an argv seam, so it fails SPT Q4 as specified.",
+      "narrative": "Loop 5 is the honest-partial decomposition of F-005. Three cohesive phases of run_review() \u2014 the Gemini config overlay (_setup_gemini_config), the stdin prompt prep (_build_stdin), and the 25-field session-dict assembly (_build_session_data) \u2014 are extracted into named module-level helpers, dropping the function body from ~405 to 328 lines and moving simplicity from 6 to 6.5. The decisive judgment was what NOT to extract: the two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup thread 4-5 mutable locals (use_resume, session_id, fallback_used, returncode) both into and out of any candidate helper, so extracting them would add ceremony and fail the SPT \u2014 they are left inline with the rejection recorded, not papered over with shallow _part1()/_part2() splits. This preserves the risk-boundary invariants the directive named: _active_proc single writer, SIGTERM/SIGINT save/restore ordering, env isolation, and resume/fresh semantics all live in the un-extracted attempt loop and finally block, so the green 119-test suite is direct evidence they held. F-005 is carried forward (cheap wins taken; remainder at the honesty ceiling). F-006 is carried with a correction: it is not the 'pure subtractive dict deletion' prior loops assumed \u2014 parse_args([]) flips the test's reviewer default and needs an argv seam, so it fails SPT Q4 as specified.",
       "loop_result": {
         "what_changed": "Partially resolved F-005 in scripts/run_review.py by extracting the three genuinely self-contained phases of run_review() into named module-level private helpers: _setup_gemini_config(args, env) -> str|None (the ~40-line Gemini temp config overlay), _build_stdin(reviewer, prompt_file) -> str|None (prompt read + agy read-only preamble), and _build_session_data(args, session, meta, reviewer, new_session_id, fallback_used) -> dict (the 25-field resume-metadata session dict assembly). The run_review() body dropped from ~405 LoC to 328 LoC. The two largest phases (the two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup) were deliberately left inline because extracting either threads 4-5 mutable locals (use_resume, session_id, fallback_used, returncode) both into and out of the helper, failing the SPT honesty bar.",
-        "evidence_change_is_honest": "python3 -m ruff check scripts/run_review.py -> All checks passed! python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (unchanged count). run_review() body LoC dropped from ~405 (loop 4 commit d1bdfb4) to 328 (verified via awk span measurement). Risk-boundary preservation (Meta-Rule 4): _active_proc single writer, signal save/restore ordering, env['CODEX_HOME'] mutation, and resume/fresh semantics all remain in the un-extracted attempt loop + finally block — none crossed a helper boundary, so the invariants are preserved by construction and the green suite is the primary evidence.",
+        "evidence_change_is_honest": "python3 -m ruff check scripts/run_review.py -> All checks passed! python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (unchanged count). run_review() body LoC dropped from ~405 (loop 4 commit d1bdfb4) to 328 (verified via awk span measurement). Risk-boundary preservation (Meta-Rule 4): _active_proc single writer, signal save/restore ordering, env['CODEX_HOME'] mutation, and resume/fresh semantics all remain in the un-extracted attempt loop + finally block \u2014 none crossed a helper boundary, so the invariants are preserved by construction and the green suite is the primary evidence.",
         "targeted_finding_status": "carried_forward",
         "unintended_regression": null,
         "changed_paths": [
@@ -1529,7 +1529,7 @@
       },
       "implementation_review": {
         "verdict": "approved",
-        "reason": "All three checks passed: Reality (ruff exits 0 post-diff; pytest 119 passed; the three helpers exist at run_review.py:202/249/265 and are called from run_review(); body LoC dropped from ~405 to 328 via awk span measurement); Honesty (no new seam — helpers are module-internal privates; the SPT downgrade on the attempt-loop/codex-setup phases is recorded with the inout-threading reason rather than forced into shallow splits; the three extractions are behavior-preserving pure relocations; _build_session_data is pure assembly; the simplicity delta cites a concrete LoC drop against d1bdfb4); Regression (extractions preserve _active_proc single-writer, signal save/restore ordering, env isolation, and resume/fresh semantics — all in the un-extracted attempt loop; 119 tests green, same count; no new findings at equal-or-higher severity).",
+        "reason": "All three checks passed: Reality (ruff exits 0 post-diff; pytest 119 passed; the three helpers exist at run_review.py:202/249/265 and are called from run_review(); body LoC dropped from ~405 to 328 via awk span measurement); Honesty (no new seam \u2014 helpers are module-internal privates; the SPT downgrade on the attempt-loop/codex-setup phases is recorded with the inout-threading reason rather than forced into shallow splits; the three extractions are behavior-preserving pure relocations; _build_session_data is pure assembly; the simplicity delta cites a concrete LoC drop against d1bdfb4); Regression (extractions preserve _active_proc single-writer, signal save/restore ordering, env isolation, and resume/fresh semantics \u2014 all in the un-extracted attempt loop; 119 tests green, same count; no new findings at equal-or-higher severity).",
         "checks": {
           "reality": "passed",
           "honesty": "passed",
@@ -1583,7 +1583,7 @@
           "proof": "run_review.py orchestrates via _common (import-direction DAG, no cycles); registry dispatch at run_review.py:409 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id)); clean import DAG at run_review.py:25-69. The three loop-5 phase helpers (run_review.py:202 _setup_gemini_config, :249 _build_stdin, :265 _build_session_data) improve Locality without new interfaces. This loop's change was test-helper only (scripts/tests/_helpers.py), so production architecture is unchanged.",
           "residual_blocking_10": "run_review() is a 330-LoC coordinating function (run_review.py:318-647) with the two-attempt loop + codex-setup phases inline (F-005)",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": "F-005 (demoted to Priority 2 this loop — remaining phases are irreducible without ceremony; 9-anchor not met)",
+          "residual_rationale_or_backlog_ref": "F-005 (demoted to Priority 2 this loop \u2014 remaining phases are irreducible without ceremony; 9-anchor not met)",
           "unverifiable_due_to_build_failure": false
         },
         "state_management": {
@@ -1616,10 +1616,10 @@
         "framework_idioms": {
           "score": 6.5,
           "delta": "SAME",
-          "proof": "python3 -m ruff check scripts/run_review.py scripts/check_web_search.py scripts/ppr_paths.py -> All checks passed! (production clean, held). scripts/tests/_helpers.py is now ruff-clean too (this loop removed its last F401 by deleting the unused argparse import and correcting the run_review noqa). Dimension stays 6.5 because test-file violations persist across the other test modules: F405 x154 (star-import undefined-name from 'from ._helpers import *'), RUF100 x19, I001 x7, E401 x7 — accepted residual, test-only infrastructure debt.",
+          "proof": "python3 -m ruff check scripts/run_review.py scripts/check_web_search.py scripts/ppr_paths.py -> All checks passed! (production clean, held). scripts/tests/_helpers.py is now ruff-clean too (this loop removed its last F401 by deleting the unused argparse import and correcting the run_review noqa). Dimension stays 6.5 because test-file violations persist across the other test modules: F405 x154 (star-import undefined-name from 'from ._helpers import *'), RUF100 x19, I001 x7, E401 x7 \u2014 accepted residual, test-only infrastructure debt.",
           "residual_blocking_10": "test-file lint debt (F405 x154 / RUF100 x19 / I001 x7 / E401 x7 across scripts/tests/test_*.py) from the star-import test-helper pattern",
           "residual_disposition": "accepted",
-          "residual_rationale_or_backlog_ref": "test-only; the star-import pattern is a deliberate ergonomic choice for the split test suite (no production impact). Fixing would mean replacing 'from ._helpers import *' with explicit imports across 7 files — ceremony with no behavior change; SPT-rejected on Q2 (not the smallest honest fix for a contest-architecture concern).",
+          "residual_rationale_or_backlog_ref": "test-only; the star-import pattern is a deliberate ergonomic choice for the split test suite (no production impact). Fixing would mean replacing 'from ._helpers import *' with explicit imports across 7 files \u2014 ceremony with no behavior change; SPT-rejected on Q2 (not the smallest honest fix for a contest-architecture concern).",
           "accepted_on": "2026-06-22",
           "expires": "2026-12-22",
           "unverifiable_due_to_build_failure": false
@@ -1639,14 +1639,14 @@
           "proof": "This loop's change improved the test helper (make_args), not production code, so production simplicity is unchanged: run_review() is still a 330-LoC coordinating function (run_review.py:318-647, verified by awk span). The loop-5 phase extractions still stand. No production simplicity delta this loop; the F-006 win is recorded under test_strategy.",
           "residual_blocking_10": "attempt-loop + codex-setup phases remain inline in run_review() (F-005); re-derived from source as irreducible without ceremony",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": "F-005 (Priority 2; 9-anchor not met — simplicity at 6.5 cannot honestly be promoted to a 9.5 accepted residual, so it sits at its earned score with the cohesive-core blocker named per the Residual Accounting Pass)",
+          "residual_rationale_or_backlog_ref": "F-005 (Priority 2; 9-anchor not met \u2014 simplicity at 6.5 cannot honestly be promoted to a 9.5 accepted residual, so it sits at its earned score with the cohesive-core blocker named per the Residual Accounting Pass)",
           "unverifiable_due_to_build_failure": false
         },
         "test_strategy": {
           "score": 8,
           "delta": "UP",
-          "proof": "F-006 resolved this loop: scripts/tests/_helpers.py make_args() no longer duplicates the CLI arg contract in a hand-maintained 17-key dict; it derives every key + default from run_review.parse_args() (single source of truth). Structural proof: the _helpers.py diff in this loop's commit (git diff --stat: 17 insertions, 23 deletions; the dict literal and the argparse import are deleted). The class of bug that consumed loop 1 (helper drifting from parse_args when --codex-home-manifest was added) is now structurally impossible — a new parse_args() argument flows into make_args() automatically. 119 tests green (unchanged), including all 39 make_args() call sites and TestArgContract (now belt-and-suspenders, kept).",
-          "residual_blocking_10": "README.md documents a test command that collects zero tests (F-007) — a regression-discoverability gap, though not a test-coverage gap",
+          "proof": "F-006 resolved this loop: scripts/tests/_helpers.py make_args() no longer duplicates the CLI arg contract in a hand-maintained 17-key dict; it derives every key + default from run_review.parse_args() (single source of truth). Structural proof: the _helpers.py diff in this loop's commit (git diff --stat: 17 insertions, 23 deletions; the dict literal and the argparse import are deleted). The class of bug that consumed loop 1 (helper drifting from parse_args when --codex-home-manifest was added) is now structurally impossible \u2014 a new parse_args() argument flows into make_args() automatically. 119 tests green (unchanged), including all 39 make_args() call sites and TestArgContract (now belt-and-suspenders, kept).",
+          "residual_blocking_10": "README.md documents a test command that collects zero tests (F-007) \u2014 a regression-discoverability gap, though not a test-coverage gap",
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": "F-007 (Priority 1 next loop). Also: end-to-end coverage of the run_review() attempt loop is transitive via test_execution_paths.py; the contract-sync test now duplicates a structurally-guaranteed property. Honest 8 (the duplicated-authority drift class is closed; remaining items are discoverability + the inline attempt-loop test surface).",
           "unverifiable_due_to_build_failure": false
@@ -1655,7 +1655,7 @@
           "score": 8,
           "delta": "SAME",
           "proof": "The code earns its architecture: this loop's fix is genuinely subtractive (net -6 LoC, duplicated authority deleted), not a costume relocation. The loop-5 SPT downgrades on F-005 remain honestly recorded. The orchestrator-registry pattern, signal safety, and per-run Codex home isolation remain well-tested. This loop also corrected a loop-5 analytical error (F-006 was mislabeled 'not pure-subtractive / fails SPT Q4'; source proof shows zero readers of the changed default).",
-          "residual_blocking_10": "README.md:41-52 documents a stale/broken test command and test count (F-007) — a doc-vs-code credibility drag a new contributor would hit immediately",
+          "residual_blocking_10": "README.md:41-52 documents a stale/broken test command and test count (F-007) \u2014 a doc-vs-code credibility drag a new contributor would hit immediately",
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": "F-007 (Priority 1 next loop). Code-level credibility is otherwise at 8; doc-rot is peripheral to the architecture but real per method.md Step 6 doc-vs-code grep.",
           "unverifiable_due_to_build_failure": false
@@ -1669,7 +1669,7 @@
           "observers_readers": "run_review.run_review() (production); scripts/tests/_helpers.py:make_args() now DERIVES from parse_args() (no longer an independent writer of the arg-name set)",
           "persistence_seam": "none",
           "async_mutation_entry_points": "none",
-          "verdict": "Single and clear (improved this loop) — parse_args() is now the sole source of truth for both the arg-name set AND defaults. make_args() reads parse_args() under a saved/restored sys.argv and layers overrides; it can no longer drift. The loop-5 'split and ambiguous' verdict is resolved by F-006."
+          "verdict": "Single and clear (improved this loop) \u2014 parse_args() is now the sole source of truth for both the arg-name set AND defaults. make_args() reads parse_args() under a saved/restored sys.argv and layers overrides; it can no longer drift. The loop-5 'split and ambiguous' verdict is resolved by F-006."
         },
         {
           "concern": "Active subprocess handle",
@@ -1678,7 +1678,7 @@
           "observers_readers": "_signal_handler() (reads at run_review.py:191)",
           "persistence_seam": "none",
           "async_mutation_entry_points": "SIGTERM / SIGINT via signal handler",
-          "verdict": "Single and clear — one writer, one reader, idiomatic Python signal-handler pattern. Unchanged this loop."
+          "verdict": "Single and clear \u2014 one writer, one reader, idiomatic Python signal-handler pattern. Unchanged this loop."
         },
         {
           "concern": "Session state",
@@ -1687,14 +1687,14 @@
           "observers_readers": "run_review.run_review() via load_session(); tests read the file post-run",
           "persistence_seam": "JSON file at args.session_file",
           "async_mutation_entry_points": "none",
-          "verdict": "Single and clear — serialized via file; run_review() is sole writer per execution. Unchanged this loop."
+          "verdict": "Single and clear \u2014 serialized via file; run_review() is sole writer per execution. Unchanged this loop."
         }
       ],
       "strengths": [
         "CLI arg contract now has a single source of truth: scripts/tests/_helpers.py:make_args() derives keys + defaults from run_review.parse_args() (run_review.py:76-123) rather than restating them, closing the drift class that consumed loop 1. The fix is net-subtractive (17 insertions / 23 deletions).",
         "run_review.py cleanly delegates all provider-specific logic to _common.providers.PROVIDERS: command construction, cap flags, effort maps, session-id extraction. The orchestrator dispatches through the registry (run_review.py:409) without branching on provider internals.",
         "Gemini config-overlay isolation is behavioral and tested: the loop-5 helper _setup_gemini_config (run_review.py:202) excludes auto-saved policy files and preserves existing settings (test_run_review_gemini_effort_overlay_excludes_auto_saved_policies / _preserves_existing_settings).",
-        "Resume/fallback state is tracked via local variables (use_resume, fallback_used) and never by mutating args (run_review.py:326-328); the snapshot is explicit, preventing cross-attempt contamination — and is the honest reason the attempt loop resists extraction (F-005).",
+        "Resume/fallback state is tracked via local variables (use_resume, fallback_used) and never by mutating args (run_review.py:326-328); the snapshot is explicit, preventing cross-attempt contamination \u2014 and is the honest reason the attempt loop resists extraction (F-005).",
         "Codex per-run CODEX_HOME isolation fails closed: setup failure clears session_id/use_resume to force a fresh exec rather than resuming into a missing home (run_review.py:383-385)."
       ],
       "findings": [
@@ -1703,23 +1703,23 @@
           "stable_id": "F-007",
           "title": "README documents a test command that collects zero tests + a stale test count",
           "severity": "Noticeable weakness",
-          "architectural_test_failed": "n/a (doc-vs-code rot — method.md Step 6 doc-vs-code grep + lens-generic failure-modes/observability)",
+          "architectural_test_failed": "n/a (doc-vs-code rot \u2014 method.md Step 6 doc-vs-code grep + lens-generic failure-modes/observability)",
           "dependency_category": "in-process",
           "primary_file": "README.md",
           "primary_evidence_lines": [
             41,
             52
           ],
-          "why_it_matters": "A new contributor (or an AI agent) following README.md to run the suite is told to run 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' (README.md:52) against files described as the pytest suite (README.md:41-42). One of those files does not exist and the other is a unittest discovery shim, so the documented command collects zero tests — the reader would conclude the project is untested. This undermines the credibility of an otherwise well-tested adapter (119 real tests live under scripts/tests/).",
-          "what_is_wrong": "README.md:42 references scripts/test_web_search.py which does not exist (web-search tests were not split into a pytest module). README.md:41 claims 'test_run_review.py pytest suite (118 tests)' — stale count (the suite is 119) and mislabeled (test_run_review.py is a 16-LoC unittest.TestLoader().discover shim, not a pytest test module). The canonical command is 'python3 -m pytest scripts/tests/'.",
+          "why_it_matters": "A new contributor (or an AI agent) following README.md to run the suite is told to run 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' (README.md:52) against files described as the pytest suite (README.md:41-42). One of those files does not exist and the other is a unittest discovery shim, so the documented command collects zero tests \u2014 the reader would conclude the project is untested. This undermines the credibility of an otherwise well-tested adapter (119 real tests live under scripts/tests/).",
+          "what_is_wrong": "README.md:42 references scripts/test_web_search.py which does not exist (web-search tests were not split into a pytest module). README.md:41 claims 'test_run_review.py pytest suite (118 tests)' \u2014 stale count (the suite is 119) and mislabeled (test_run_review.py is a 16-LoC unittest.TestLoader().discover shim, not a pytest test module). The canonical command is 'python3 -m pytest scripts/tests/'.",
           "evidence": [
-            "README.md:41 'test_run_review.py  pytest suite (118 tests)' — stale count (actual 119) + mislabel (shim, not pytest module)",
-            "README.md:42 'test_web_search.py  web-search adapter pytest suite' — file does not exist (ls scripts/test_web_search.py -> No such file)",
-            "README.md:52 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' — verified to print 'no tests ran' (zero collected) because test_web_search.py is missing and test_run_review.py exposes no pytest-discoverable test functions",
+            "README.md:41 'test_run_review.py  pytest suite (118 tests)' \u2014 stale count (actual 119) + mislabel (shim, not pytest module)",
+            "README.md:42 'test_web_search.py  web-search adapter pytest suite' \u2014 file does not exist (ls scripts/test_web_search.py -> No such file)",
+            "README.md:52 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' \u2014 verified to print 'no tests ran' (zero collected) because test_web_search.py is missing and test_run_review.py exposes no pytest-discoverable test functions",
             "scripts/test_run_review.py is a unittest.TestLoader().discover(str(here / 'tests'), ...) shim (16 LoC), not a pytest test module"
           ],
-          "leverage_impact": "Low (documentation, not runtime) — but high friction at first contact for any new contributor or CI author.",
-          "locality_impact": "Low — the fix is local to README.md.",
+          "leverage_impact": "Low (documentation, not runtime) \u2014 but high friction at first contact for any new contributor or CI author.",
+          "locality_impact": "Low \u2014 the fix is local to README.md.",
           "why_weakens_submission": "A documented entrypoint that silently collects zero tests is a doc-vs-code credibility leak per method.md Step 6: a reviewer trusting the README would believe the suite is empty or broken. It is the kind of small honesty gap the rubric penalizes when it would mislead a reader about regression resistance.",
           "minimal_correction_path": "Update README.md to document the canonical command 'python3 -m pytest scripts/tests/'; correct the test count to 119; drop or correct the test_web_search.py reference (point at the actual web-search tests or remove the stale line). Subtractive where possible (delete the dead reference).",
           "blast_radius": "Change: README.md only. Avoid: all scripts/**, _common/**.",
@@ -1728,9 +1728,9 @@
       ],
       "simplification_check": {
         "structurally_necessary": "F-006 fix passes SPT Q1-Q5: it fixes a real duplicated-authority ambiguity (the 17-key dict restated parse_args' contract and defaults), is the smallest honest fix (derive from the existing parse_args; net -6 LoC), adds no duplicate layer (it REMOVES one), keeps runtime behavior honest (source-proven: zero call sites read the reviewer default that changed from 'claude' to None), and improves the product (drift becomes structurally impossible).",
-        "new_seam_justified": "false — no new seam proposed or created; make_args() now reads the existing parse_args() Interface instead of duplicating it.",
-        "helpful_simplification": "Deleting the make_args() dict + the now-unused argparse import is the highest-payoff subtraction available this loop; the loop-3 contract-sync test (test_make_args_keys_match_parse_args_dests) is now belt-and-suspenders — kept (cheap; documents intent), removable in a future loop as a separable subtraction.",
-        "should_not_be_done": "Do NOT extract the run_review() attempt loop or codex-setup into helpers (F-005 — re-derived from source as fails SPT: 4-5 inout locals). Do NOT rewrite the test star-import pattern to silence F405 (test-only ceremony, no behavior change). Do NOT fix README doc-rot (F-007) in this same commit — it is a separate concern and scope; queued Priority 1.",
+        "new_seam_justified": "false \u2014 no new seam proposed or created; make_args() now reads the existing parse_args() Interface instead of duplicating it.",
+        "helpful_simplification": "Deleting the make_args() dict + the now-unused argparse import is the highest-payoff subtraction available this loop; the loop-3 contract-sync test (test_make_args_keys_match_parse_args_dests) is now belt-and-suspenders \u2014 kept (cheap; documents intent), removable in a future loop as a separable subtraction.",
+        "should_not_be_done": "Do NOT extract the run_review() attempt loop or codex-setup into helpers (F-005 \u2014 re-derived from source as fails SPT: 4-5 inout locals). Do NOT rewrite the test star-import pattern to silence F405 (test-only ceremony, no behavior change). Do NOT fix README doc-rot (F-007) in this same commit \u2014 it is a separate concern and scope; queued Priority 1.",
         "tests_after_fix": "119 tests pass (unchanged count). No tests added or deleted; all 39 make_args() call sites green; TestArgContract green (now structurally guaranteed)."
       },
       "backlog": [
@@ -1748,10 +1748,10 @@
           "priority": 2,
           "finding_id": null,
           "stable_id": "F-005",
-          "title": "Decompose run_review() flat body — residual phases (irreducible without ceremony)",
+          "title": "Decompose run_review() flat body \u2014 residual phases (irreducible without ceremony)",
           "kind": "structural",
           "rank": "helpful",
-          "why_it_matters": "After loop 5's three extractions, run_review() is 330 LoC. The remaining two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup thread use_resume/session_id/fallback_used/returncode both into and out of any candidate helper (re-derived from source this loop at run_review.py:397-533 + :386-389), so extracting them adds ceremony and fails SPT — demoted from Priority 1.",
+          "why_it_matters": "After loop 5's three extractions, run_review() is 330 LoC. The remaining two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup thread use_resume/session_id/fallback_used/returncode both into and out of any candidate helper (re-derived from source this loop at run_review.py:397-533 + :386-389), so extracting them adds ceremony and fails SPT \u2014 demoted from Priority 1.",
           "score_impact": "No clean score path: simplicity (6.5) cannot honestly reach a 9.5 accepted residual from here; the only remaining move is the marginal CodexCapture value-return (a deepening candidate), a small win with non-trivial blast radius. Likely retire or accept-as-irreducible in a future loop if it reappears unchanged."
         }
       ],
@@ -1760,33 +1760,33 @@
         {
           "candidate": "Return a CodexCapture value type from the codex-setup phase (derived from F-005)",
           "candidate_module": "the inline codex CODEX_HOME setup block in run_review() (run_review.py:368-389)",
-          "source_friction_proven": "F-005 — the block mutates session_id/use_resume inout on its fail-closed path (run_review.py:383-385), which is one of the two reasons run_review() resists extraction.",
+          "source_friction_proven": "F-005 \u2014 the block mutates session_id/use_resume inout on its fail-closed path (run_review.py:383-385), which is one of the two reasons run_review() resists extraction.",
           "why_current_shape_acceptable_but_improvable": "Converting the two inout locals to a returned frozen value (CodexCapture(home, capture_enabled, sessions_before, clear_session)) would let the caller apply session_id=None/use_resume=False explicitly, removing one inout pair.",
           "behavior_to_move": "per-run home reuse-or-create + capture-var derivation + the fail-closed clear decision.",
           "dependency_category": "in-process",
           "test_surface_after_change": "same end-to-end tests in test_execution_paths.py (codex stale-events + last-message paths exercise this block transitively).",
           "smallest_first_step": "introduce CodexCapture = namedtuple(...); have a helper return it; caller applies the clear when clear_session is set.",
-          "what_not_to_do": "do not extract the two-attempt loop (4 inout locals — irreducible); do not add a protocol or class hierarchy."
+          "what_not_to_do": "do not extract the two-attempt loop (4 inout locals \u2014 irreducible); do not add a protocol or class hierarchy."
         }
       ],
       "builder_notes": [
         {
           "note": "Source-check beats inherited framing (F-006 re-derivation)",
-          "detail": "Loop 5 carried F-006 as 'not pure-subtractive; fails SPT Q4' because make_args() defaulted reviewer='claude' while parse_args([]) yields reviewer=None. I tested that claim against source with an AST scan of all 39 make_args() call sites: 38 pass reviewer= explicitly and the single bare call (test_make_args_keys_match_parse_args_dests) compares only set(vars(make_args()).keys()), never reading .reviewer. So the default change is behavior-identical and Q4 passes. Recognition rule: when a prior loop asserts a fix 'changes behavior unless every call site is updated', enumerate the call sites mechanically before accepting the demotion — the count may be zero."
+          "detail": "Loop 5 carried F-006 as 'not pure-subtractive; fails SPT Q4' because make_args() defaulted reviewer='claude' while parse_args([]) yields reviewer=None. I tested that claim against source with an AST scan of all 39 make_args() call sites: 38 pass reviewer= explicitly and the single bare call (test_make_args_keys_match_parse_args_dests) compares only set(vars(make_args()).keys()), never reading .reviewer. So the default change is behavior-identical and Q4 passes. Recognition rule: when a prior loop asserts a fix 'changes behavior unless every call site is updated', enumerate the call sites mechanically before accepting the demotion \u2014 the count may be zero."
         },
         {
           "note": "Subtractive fix hygiene cascade",
-          "detail": "Deleting the dict made the argparse import unused (removed it) which in turn made the 'import run_review' F401 noqa unnecessary because make_args now USES run_review.parse_args() (corrected the noqa to E402-only). Net: scripts/tests/_helpers.py went from carrying lint debt to fully ruff-clean, and the test-file total error count stayed flat at 187 (no new debt). Recognition rule: after a deletion, re-lint the touched file and fix the noqa directives the deletion invalidated — don't leave a stale # noqa: F401 that ruff then flags as RUF100."
+          "detail": "Deleting the dict made the argparse import unused (removed it) which in turn made the 'import run_review' F401 noqa unnecessary because make_args now USES run_review.parse_args() (corrected the noqa to E402-only). Net: scripts/tests/_helpers.py went from carrying lint debt to fully ruff-clean, and the test-file total error count stayed flat at 187 (no new debt). Recognition rule: after a deletion, re-lint the touched file and fix the noqa directives the deletion invalidated \u2014 don't leave a stale # noqa: F401 that ruff then flags as RUF100."
         },
         {
           "note": "Scorecard humility check (Q9)",
-          "detail": "Claim test_strategy 8 (UP) at scripts/tests/_helpers.py make_args() — uncertainty: a stricter reviewer could argue F-006 is a test-helper cleanup that does not raise the *product's* regression resistance and should leave test_strategy at 7.5; I scored UP because the change closes the exact drift class that caused a real prior build failure (loop 1) and makes it structurally impossible, which is a regression-resistance improvement, not cosmetics. Claim F-007 severity 'Noticeable weakness' — uncertainty: it could be read as merely 'Cosmetic for contest' since it is documentation; I held Noticeable because a documented command that collects zero tests actively misleads a reader about whether the suite exists (verified: 'no tests ran'), a credibility harm, not a typo. Claim F-005 demotion to Priority 2 rather than retirement — uncertainty: it is NOT mechanically retirement-eligible (no rejected_attempt occurrences, no resolved-then-reappeared pattern per Step 1.6 Branch A/B), so demotion is the correct lever; a reviewer could argue simplicity should be promoted to a 9.5 accepted-residual instead — I rejected that because simplicity sits at 6.5, far below the 9-anchor, so an accepted residual there would be fake-clean reward (forbidden)."
+          "detail": "Claim test_strategy 8 (UP) at scripts/tests/_helpers.py make_args() \u2014 uncertainty: a stricter reviewer could argue F-006 is a test-helper cleanup that does not raise the *product's* regression resistance and should leave test_strategy at 7.5; I scored UP because the change closes the exact drift class that caused a real prior build failure (loop 1) and makes it structurally impossible, which is a regression-resistance improvement, not cosmetics. Claim F-007 severity 'Noticeable weakness' \u2014 uncertainty: it could be read as merely 'Cosmetic for contest' since it is documentation; I held Noticeable because a documented command that collects zero tests actively misleads a reader about whether the suite exists (verified: 'no tests ran'), a credibility harm, not a typo. Claim F-005 demotion to Priority 2 rather than retirement \u2014 uncertainty: it is NOT mechanically retirement-eligible (no rejected_attempt occurrences, no resolved-then-reappeared pattern per Step 1.6 Branch A/B), so demotion is the correct lever; a reviewer could argue simplicity should be promoted to a 9.5 accepted-residual instead \u2014 I rejected that because simplicity sits at 6.5, far below the 9-anchor, so an accepted residual there would be fake-clean reward (forbidden)."
         }
       ],
-      "narrative": "Loop 6 resolved F-006 as a clean subtractive win, correcting a loop-5 analytical error in the process. The hand-maintained 17-key dict in scripts/tests/_helpers.py:make_args() — a parallel copy of the CLI arg contract that caused the loop-1 build failure when --codex-home-manifest was added — is deleted; make_args() now derives every key and default from run_review.parse_args() under a saved/restored sys.argv, then layers overrides. Net change is -6 LoC (17 insertions, 23 deletions) plus removal of the now-unused argparse import, leaving _helpers.py fully ruff-clean. Loop 5 had demoted F-006 to 'not pure-subtractive / fails SPT Q4', reasoning that make_args defaulted reviewer='claude' whereas parse_args([]) yields reviewer=None. An AST scan of all 39 make_args() call sites refuted that: 38 pass reviewer= explicitly and the one bare call reads only the namespace keys, never the reviewer value — so the default change is behavior-identical and SPT Q4 passes. The CLI-arg-contract concern in the Authority Map moves from 'Split and ambiguous' to 'Single and clear': parse_args() is now the sole source of truth for both the arg-name set and the defaults, and make_args() can no longer drift, making the loop-3 contract-sync test belt-and-suspenders (kept). test_strategy 7.5 -> 8. F-005 (decompose run_review()'s residual phases) was re-derived from current source — the two-attempt loop genuinely threads use_resume/session_id/fallback_used/returncode in+out and reads them post-loop, so extracting fails SPT — and is demoted from Priority 1 to Priority 2; simplicity holds at its earned 6.5 with the cohesive-core blocker named (it cannot honestly be promoted to a 9.5 accepted residual from 6.5). A newly surfaced finding, F-007, takes Priority 1: README.md documents 'pytest test_run_review.py test_web_search.py', which collects zero tests (test_web_search.py does not exist; test_run_review.py is a unittest discovery shim) and reports a stale count (118 vs the real 119) — a doc-vs-code credibility leak that would tell a new contributor the project is untested. Suite green (119); production lint clean.",
+      "narrative": "Loop 6 resolved F-006 as a clean subtractive win, correcting a loop-5 analytical error in the process. The hand-maintained 17-key dict in scripts/tests/_helpers.py:make_args() \u2014 a parallel copy of the CLI arg contract that caused the loop-1 build failure when --codex-home-manifest was added \u2014 is deleted; make_args() now derives every key and default from run_review.parse_args() under a saved/restored sys.argv, then layers overrides. Net change is -6 LoC (17 insertions, 23 deletions) plus removal of the now-unused argparse import, leaving _helpers.py fully ruff-clean. Loop 5 had demoted F-006 to 'not pure-subtractive / fails SPT Q4', reasoning that make_args defaulted reviewer='claude' whereas parse_args([]) yields reviewer=None. An AST scan of all 39 make_args() call sites refuted that: 38 pass reviewer= explicitly and the one bare call reads only the namespace keys, never the reviewer value \u2014 so the default change is behavior-identical and SPT Q4 passes. The CLI-arg-contract concern in the Authority Map moves from 'Split and ambiguous' to 'Single and clear': parse_args() is now the sole source of truth for both the arg-name set and the defaults, and make_args() can no longer drift, making the loop-3 contract-sync test belt-and-suspenders (kept). test_strategy 7.5 -> 8. F-005 (decompose run_review()'s residual phases) was re-derived from current source \u2014 the two-attempt loop genuinely threads use_resume/session_id/fallback_used/returncode in+out and reads them post-loop, so extracting fails SPT \u2014 and is demoted from Priority 1 to Priority 2; simplicity holds at its earned 6.5 with the cohesive-core blocker named (it cannot honestly be promoted to a 9.5 accepted residual from 6.5). A newly surfaced finding, F-007, takes Priority 1: README.md documents 'pytest test_run_review.py test_web_search.py', which collects zero tests (test_web_search.py does not exist; test_run_review.py is a unittest discovery shim) and reports a stale count (118 vs the real 119) \u2014 a doc-vs-code credibility leak that would tell a new contributor the project is untested. Suite green (119); production lint clean.",
       "loop_result": {
-        "what_changed": "Resolved F-006 in scripts/tests/_helpers.py: replaced make_args()'s hand-maintained 17-key default dict (which duplicated the run_review.py CLI arg contract and its defaults) with derivation from run_review.parse_args() itself — saved/restored sys.argv to ['run_review.py'], called parse_args() to get the canonical Namespace with real defaults, then applied **overrides via setattr. Also deleted the now-unused 'import argparse' and corrected the 'import run_review' noqa from 'E402,F401' to 'E402' (run_review is now used directly by make_args, not only re-exported). Net diff: 17 insertions, 23 deletions (-6 LoC).",
-        "evidence_change_is_honest": "python3 -m ruff check scripts/run_review.py scripts/check_web_search.py scripts/ppr_paths.py -> All checks passed! (production unchanged). python3 -m ruff check scripts/tests/_helpers.py -> All checks passed! (was carrying an argparse F401 before; now clean). python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (unchanged count) — all 39 make_args() call sites and TestArgContract green. SPT Q4 (behavior-honest) is source-proven, not asserted: an AST scan of make_args() call sites shows 38/39 pass reviewer= explicitly and the 1 bare call (test_make_args_keys_match_parse_args_dests) reads set(vars(make_args()).keys()) only — so the reviewer default changing from 'claude' to None changes no test's behavior. The fix is genuinely subtractive (net -6 LoC; a duplicate authority layer removed, none added).",
+        "what_changed": "Resolved F-006 in scripts/tests/_helpers.py: replaced make_args()'s hand-maintained 17-key default dict (which duplicated the run_review.py CLI arg contract and its defaults) with derivation from run_review.parse_args() itself \u2014 saved/restored sys.argv to ['run_review.py'], called parse_args() to get the canonical Namespace with real defaults, then applied **overrides via setattr. Also deleted the now-unused 'import argparse' and corrected the 'import run_review' noqa from 'E402,F401' to 'E402' (run_review is now used directly by make_args, not only re-exported). Net diff: 17 insertions, 23 deletions (-6 LoC).",
+        "evidence_change_is_honest": "python3 -m ruff check scripts/run_review.py scripts/check_web_search.py scripts/ppr_paths.py -> All checks passed! (production unchanged). python3 -m ruff check scripts/tests/_helpers.py -> All checks passed! (was carrying an argparse F401 before; now clean). python3 -m pytest scripts/tests/ -> 119 passed, 0 failed (unchanged count) \u2014 all 39 make_args() call sites and TestArgContract green. SPT Q4 (behavior-honest) is source-proven, not asserted: an AST scan of make_args() call sites shows 38/39 pass reviewer= explicitly and the 1 bare call (test_make_args_keys_match_parse_args_dests) reads set(vars(make_args()).keys()) only \u2014 so the reviewer default changing from 'claude' to None changes no test's behavior. The fix is genuinely subtractive (net -6 LoC; a duplicate authority layer removed, none added).",
         "targeted_finding_status": "resolved",
         "unintended_regression": null,
         "changed_paths": [
@@ -1804,7 +1804,272 @@
       },
       "implementation_review": {
         "verdict": "approved",
-        "reason": "All three checks passed. Reality: post-diff ruff check on production exits 0 and on scripts/tests/_helpers.py exits 0 (the file is now fully clean); pytest scripts/tests/ reports 119 passed; the make_args() dict literal is gone and the function derives from run_review.parse_args() (verified by reading the file and by a runtime probe: bare make_args().reviewer is None, make_args(reviewer='codex',model='gpt-5.4') returns reviewer='codex'/model='gpt-5.4'). Honesty: no new seam (a duplicate layer was removed, not added); the change is net-subtractive (17 insertions / 23 deletions); the SPT Q4 behavior-preservation claim is backed by an AST enumeration of all 39 call sites (38 explicit reviewer=, 1 keys-only bare call) rather than asserted; no suppression-as-fix. Regression: no risk boundary crossed (test-helper only — no isolation/Sendable/signal/visibility/conditional-compilation change); 119 tests green at the same count including the contract-sync test; make_args(reviewer=...) still bypasses alias normalization exactly as the deleted dict did (overrides applied post-parse); no new finding at equal-or-higher severity introduced by the change (F-007 is pre-existing README doc-rot surfaced by this loop's audit, not caused by the diff).",
+        "reason": "All three checks passed. Reality: post-diff ruff check on production exits 0 and on scripts/tests/_helpers.py exits 0 (the file is now fully clean); pytest scripts/tests/ reports 119 passed; the make_args() dict literal is gone and the function derives from run_review.parse_args() (verified by reading the file and by a runtime probe: bare make_args().reviewer is None, make_args(reviewer='codex',model='gpt-5.4') returns reviewer='codex'/model='gpt-5.4'). Honesty: no new seam (a duplicate layer was removed, not added); the change is net-subtractive (17 insertions / 23 deletions); the SPT Q4 behavior-preservation claim is backed by an AST enumeration of all 39 call sites (38 explicit reviewer=, 1 keys-only bare call) rather than asserted; no suppression-as-fix. Regression: no risk boundary crossed (test-helper only \u2014 no isolation/Sendable/signal/visibility/conditional-compilation change); 119 tests green at the same count including the contract-sync test; make_args(reviewer=...) still bypasses alias normalization exactly as the deleted dict did (overrides applied post-parse); no new finding at equal-or-higher severity introduced by the change (F-007 is pre-existing README doc-rot surfaced by this loop's audit, not caused by the diff).",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "ran_inline": true,
+        "rounds": 1,
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 4,
+      "loop": 7,
+      "loop_cap": 10,
+      "state": "HALT_STAGNATION",
+      "halt_subtype": "no_progress",
+      "halt_handoff_text": "All remaining score gaps (arch 7, domain 7, simplicity 6.5, framework_idioms 6.5) have irreducible or SPT-rejected residuals confirmed over multiple loops. F-005 (run_review() flat body) is independently re-derived as irreducible in loops 4, 5, 6, and 7. Domain (7) is blocked by untyped session dict with vendored consumer off-limits. Framework_idioms (6.5) is blocked by 187 test-lint violations (accepted residual, star-import pattern SPT Q2-rejected). No viable next action with positive expected score gain exists.",
+      "halt_handoff": {
+        "subtype": "no_progress",
+        "residuals": [
+          {
+            "dimension": "architecture_quality",
+            "score": 7,
+            "blocker": "F-005: run_review() 330-LoC flat function body; attempt-loop + codex-setup phases inline; four inout locals (use_resume/session_id/fallback_used/returncode) thread in+out of both phases, making extraction add ceremony (fails SPT Q2). Re-derived as irreducible in loops 4, 5, 6, 7."
+          },
+          {
+            "dimension": "domain_modeling",
+            "score": 7,
+            "blocker": "Untyped session dict at run_review.py:280; _build_session_data returns a plain dict post-mutated at :607-612; consumer is _common.session.save_session() (vendored, off-limits). TypedDict would add ceremony with no test strengthening."
+          },
+          {
+            "dimension": "simplicity",
+            "score": 6.5,
+            "blocker": "Same as arch \u2014 F-005; 9-anchor not met; cannot honestly promote to accepted residual at 6.5."
+          },
+          {
+            "dimension": "framework_idioms",
+            "score": 6.5,
+            "blocker": "187 test-file lint violations (F405x154/RUF100x19/I001x7/E401x7) from star-import test-helper pattern. Accepted residual (SPT Q2: ceremony, no behavior change, no contest-architecture gain). Expires 2026-12-22."
+          }
+        ],
+        "next_viable_action": "If the CodexCapture namedtuple deepening candidate (CURRENT_REVIEW.md Deepening Candidates) is attempted, it removes one inout pair from F-005 and could marginally help simplicity; but the two-attempt loop remains irreducible, so simplicity stays below 9.5 regardless. No full path to 9.5 across all dimensions exists without vendored-code changes or full rewrite."
+      },
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": null,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-4-6",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": null,
+      "verdict": "Good app, honest ceiling reached",
+      "verdict_explanation": "Tests are green (119 passed). Production lint is clean. Loop 7 resolved F-007 subtractively: README.md now documents 'python3 -m pytest scripts/tests/' with count 119 (was: 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py', count 118, test_web_search.py non-existent). Residual Accounting Pass: all remaining score gaps have irreducible or SPT-rejected residuals. HALT_STAGNATION is honest.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7,
+          "delta": "SAME",
+          "proof": "run_review.py orchestrates via _common (import-direction DAG, no cycles); registry dispatch at run_review.py:409 (PROVIDERS[reviewer]['build_cmd'](build_args, session_id)); clean import DAG at run_review.py:25-69. This loop's change was README-only, so production architecture is unchanged.",
+          "residual_blocking_10": "run_review() is a 330-LoC coordinating function (run_review.py:318-647) with the two-attempt loop + codex-setup phases inline (F-005)",
+          "residual_disposition": "accepted_irreducible",
+          "residual_rationale_or_backlog_ref": "F-005 (Priority 1 carried \u2014 re-derived as irreducible in loops 4,5,6,7; four inout locals thread in+out; extraction adds ceremony; SPT Q2 fails). 9-anchor not met.",
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 8,
+          "delta": "SAME",
+          "proof": "_active_proc at run_review.py:187 is module-level, written only inside run_review() (the attempt loop + finally), read by _signal_handler() at :191. Single-writer; idiomatic for signal-handler communication. Local resume state machine (use_resume, fallback_used, session_id) is function-scoped. No multi-writer hazard. Unchanged this loop.",
+          "residual_blocking_10": "lifecycle authority (signal save/restore + resume-state locals) lives inside the one large run_review() function rather than a dedicated owner",
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "tied to F-005 (the lifecycle locals are precisely what blocks extracting the attempt loop); 9-anchor not fully met, honest 8",
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 7,
+          "delta": "SAME",
+          "proof": "CLI adapter domain is thin by design; the PROVIDERS registry (from _common) is the core model. _build_session_data (run_review.py:265) names the session-dict assembly in one place but it remains an untyped dict (no smart constructor). Session dict post-mutated at run_review.py:607-612 and consumed by _common.session.save_session() (vendored). Unchanged this loop.",
+          "residual_blocking_10": "no discriminated type for provider-specific output / session dict (run_review.py:280 session_data assembled as a plain dict); TypedDict adds ceremony with no test strengthening; consumer is vendored off-limits",
+          "residual_disposition": "accepted_irreducible",
+          "residual_rationale_or_backlog_ref": "9-anchor not met; CLI-adapter-thin context noted; honest 7",
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 8,
+          "delta": "SAME",
+          "proof": "Clean DAG run_review.py -> _common.*. Re-exports at run_review.py:46-69 (# noqa: F401) keep mock.patch('run_review.X') paths stable. The loop-5 helpers take explicit inputs / return explicit outputs. extract_metadata/extract_text_from_output seam pre-reads output_content (run_review.py:574-579) to mitigate temporal coupling, with a comment. Unchanged this loop.",
+          "residual_blocking_10": "a couple of ambient reads of os.environ (run_review.py:345, :212) reachable from run_review() rather than threaded as typed inputs",
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "9-anchor nearly met; ambient env reads are idiomatic for a CLI adapter; honest 8",
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 6.5,
+          "delta": "SAME",
+          "proof": "python3 -m ruff check scripts/run_review.py scripts/check_web_search.py scripts/ppr_paths.py -> All checks passed! (production clean, held). Dimension stays 6.5 because test-file violations persist: F405 x154 (star-import undefined-name from 'from ._helpers import *'), RUF100 x19, I001 x7, E401 x7 \u2014 accepted residual.",
+          "residual_blocking_10": "test-file lint debt (F405 x154 / RUF100 x19 / I001 x7 / E401 x7 across scripts/tests/test_*.py) from the star-import test-helper pattern",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "test-only; the star-import pattern is a deliberate ergonomic choice for the split test suite (no production impact). Fixing would mean replacing 'from ._helpers import *' with explicit imports across 7 files \u2014 ceremony with no behavior change; SPT-rejected on Q2. Logged as F-008 (accepted pattern, no priority fix).",
+          "accepted_on": "2026-06-22",
+          "expires": "2026-12-22",
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 8,
+          "delta": "SAME",
+          "proof": "Single-threaded Python. Signal handlers saved/restored in try/finally (run_review.py:392-395 set, :632-635 restore); the save/restore and _active_proc set/clear ordering were untouched this loop. subprocess.Popen with communicate(timeout=) blocks correctly with a TimeoutExpired kill-tree path (run_review.py:448-455). Gemini/agy temp cleanup in finally. No threading races.",
+          "residual_blocking_10": "the SIGTERM/SIGINT save-restore + _active_proc set/clear ordering is correct but verified by construction + the suite mocking signal.signal, not by a direct concurrency test",
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "single-threaded adapter; the residual is a test-surface gap not a runtime hazard; honest 8",
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 6.5,
+          "delta": "SAME",
+          "proof": "README fix is documentation-only \u2014 production simplicity unchanged: run_review() is still a 330-LoC coordinating function (run_review.py:318-647). The loop-5 phase extractions still stand. No production simplicity delta this loop.",
+          "residual_blocking_10": "attempt-loop + codex-setup phases remain inline in run_review() (F-005); re-derived from source as irreducible without ceremony in loops 4,5,6,7",
+          "residual_disposition": "accepted_irreducible",
+          "residual_rationale_or_backlog_ref": "F-005 (Priority 1; 9-anchor not met \u2014 simplicity at 6.5 cannot honestly be promoted to a 9.5 accepted residual; cohesive-core blocker named per Residual Accounting Pass)",
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "UP",
+          "proof": "F-007 resolved this loop: README.md now documents 'python3 -m pytest scripts/tests/' with count 119. The 'regression-discoverability gap' cited in the loop-6 test_strategy residual is cleared \u2014 a new contributor following the README will find the real suite. 119 tests green (unchanged).",
+          "residual_blocking_10": "end-to-end coverage of the run_review() attempt loop is transitive via test_execution_paths.py; the contract-sync test (TestArgContract) now duplicates a structurally-guaranteed property (belt-and-suspenders, kept)",
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "Honest 8.5 \u2014 discoverability gap cleared; remaining items are transitive coverage and redundant test (neither a coverage gap nor a harm). Not promotable to 9.5 without addressing the attempt-loop test surface (tied to F-005).",
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8.5,
+          "delta": "UP",
+          "proof": "README doc-rot resolved \u2014 the primary doc-vs-code credibility drain cited in loop-6 residuals is gone. The fix is genuinely subtractive (net -2 lines: dropped test_web_search.py reference, relabeled test_run_review.py to tests/, corrected count 118->119, corrected command). Production code, tests, lint state unchanged.",
+          "residual_blocking_10": "no new doc-vs-code gaps identified; remaining score caps are architecture (7) and simplicity (6.5) from F-005 (structural, not credibility items)",
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": "Honest 8.5 \u2014 code-level credibility is solid after 7 loops of targeted improvements; ceiling is the structural F-005 gap, not a credibility issue.",
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [
+        {
+          "concern": "CLI arg contract",
+          "owner": "run_review.py:parse_args() (argparse definition, dest names, defaults)",
+          "allowed_writers": "run_review.py:parse_args() only",
+          "observers_readers": "run_review.run_review() (production); scripts/tests/_helpers.py:make_args() now DERIVES from parse_args() (no longer an independent writer of the arg-name set)",
+          "persistence_seam": "none",
+          "async_mutation_entry_points": "none",
+          "verdict": "Single and clear (resolved loop 6) \u2014 parse_args() is now the sole source of truth for both the arg-name set AND defaults. make_args() reads parse_args() under a saved/restored sys.argv and layers overrides; it can no longer drift."
+        },
+        {
+          "concern": "Active subprocess handle",
+          "owner": "module-level _active_proc at run_review.py:187",
+          "allowed_writers": "run_review.run_review() (sets/clears inside the attempt loop + finally, both inline)",
+          "observers_readers": "_signal_handler() (reads at run_review.py:191)",
+          "persistence_seam": "none",
+          "async_mutation_entry_points": "SIGTERM / SIGINT via signal handler",
+          "verdict": "Single and clear \u2014 one writer, one reader, idiomatic Python signal-handler pattern. Unchanged this loop."
+        },
+        {
+          "concern": "Session state",
+          "owner": "session JSON file (written by save_session() from _common.session)",
+          "allowed_writers": "run_review.run_review() via save_session() (session dict assembled by _build_session_data at run_review.py:265)",
+          "observers_readers": "run_review.run_review() via load_session(); tests read the file post-run",
+          "persistence_seam": "JSON file at args.session_file",
+          "async_mutation_entry_points": "none",
+          "verdict": "Single and clear \u2014 serialized via file; run_review() is sole writer per execution. Unchanged this loop."
+        }
+      ],
+      "strengths": [
+        "README now accurately describes the test layout: 'python3 -m pytest scripts/tests/' with count 119 \u2014 the first-contact credibility drain is closed.",
+        "CLI arg contract has a single source of truth: scripts/tests/_helpers.py:make_args() derives keys + defaults from run_review.parse_args() (run_review.py:76-123) rather than restating them, closing the drift class that consumed loop 1. The fix is net-subtractive (17 insertions / 23 deletions, loop 6).",
+        "run_review.py cleanly delegates all provider-specific logic to _common.providers.PROVIDERS: command construction, cap flags, effort maps, session-id extraction. The orchestrator dispatches through the registry (run_review.py:409) without branching on provider internals.",
+        "Gemini config-overlay isolation is behavioral and tested: the loop-5 helper _setup_gemini_config (run_review.py:202) excludes auto-saved policy files and preserves existing settings.",
+        "Resume/fallback state is tracked via local variables (use_resume, fallback_used) and never by mutating args (run_review.py:326-328); the snapshot is explicit, preventing cross-attempt contamination.",
+        "Codex per-run CODEX_HOME isolation fails closed: setup failure clears session_id/use_resume to force a fresh exec rather than resuming into a missing home (run_review.py:383-385)."
+      ],
+      "findings": [],
+      "simplification_check": {
+        "structurally_necessary": "F-007 fix passes SPT Q1-Q5: it fixes a real doc-vs-code rot (README documenting a zero-collecting test command actively misled readers), is the smallest honest fix (update two README blocks, drop the dead file reference, correct count), adds no new seam (documentation only), keeps runtime behavior honest (no code changed), and improves the product (new contributors can now find and run the suite).",
+        "new_seam_justified": "false \u2014 README-only change.",
+        "helpful_simplification": "Dropping the test_web_search.py reference (it never existed as a pytest module) is subtractive; the updated command is shorter and correct.",
+        "should_not_be_done": "Do NOT fix F-005 (irreducible without ceremony). Do NOT fix test-lint F405 violations (star-import is deliberate test ergonomics; SPT-rejected Q2). Do NOT introduce TypedDict for session dict (ceremony, vendored consumer off-limits).",
+        "tests_after_fix": "119 tests pass (unchanged count). README change only \u2014 no test added, removed, or modified."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "finding_id": null,
+          "stable_id": "F-005",
+          "title": "Decompose run_review() flat body \u2014 residual phases (irreducible without ceremony)",
+          "kind": "structural",
+          "rank": "helpful",
+          "why_it_matters": "After loop 5's three extractions, run_review() is 330 LoC. The remaining two-attempt resume/fresh subprocess loop and the per-run CODEX_HOME setup thread use_resume/session_id/fallback_used/returncode both into and out of any candidate helper (re-derived from source at run_review.py:397-533 + :386-389), so extracting them adds ceremony and fails SPT.",
+          "score_impact": "No clean score path: simplicity (6.5) and arch (7) cannot honestly reach a 9.5 accepted residual from here. The CodexCapture deepening candidate is the only remaining move (marginal win, non-trivial blast radius). Promoted from P2 to P1 (F-007 resolved).",
+          "status": "accepted_irreducible"
+        },
+        {
+          "priority": 2,
+          "finding_id": null,
+          "stable_id": "F-008",
+          "title": "Test-lint star-import pattern (187 violations in scripts/tests/)",
+          "kind": "framework_idioms",
+          "rank": "accepted_residual",
+          "why_it_matters": "python3 -m ruff check scripts/tests/ -> 187 errors: F405 x154 / RUF100 x19 / I001 x7 / E401 x7 across scripts/tests/test_*.py from 'from ._helpers import *'. Caps framework_idioms at 6.5.",
+          "score_impact": "SPT Q2 rejects: ceremony, no behavior change, no contest-architecture gain. Accepted residual expires 2026-12-22.",
+          "status": "accepted_residual",
+          "accepted_on": "2026-06-22",
+          "expires": "2026-12-22"
+        }
+      ],
+      "unresolved_reason": null,
+      "deepening_candidates": [
+        {
+          "candidate": "Return a CodexCapture value type from the codex-setup phase (derived from F-005)",
+          "candidate_module": "the inline codex CODEX_HOME setup block in run_review() (run_review.py:368-389)",
+          "source_friction_proven": "F-005 \u2014 the block mutates session_id/use_resume inout on its fail-closed path (run_review.py:383-385), which is one of the two reasons run_review() resists extraction.",
+          "why_current_shape_acceptable_but_improvable": "Converting the two inout locals to a returned frozen value (CodexCapture(home, capture_enabled, sessions_before, clear_session)) would let the caller apply session_id=None/use_resume=False explicitly, removing one inout pair.",
+          "behavior_to_move": "per-run home reuse-or-create + capture-var derivation + the fail-closed clear decision.",
+          "dependency_category": "in-process",
+          "test_surface_after_change": "same end-to-end tests in test_execution_paths.py (codex stale-events + last-message paths exercise this block transitively).",
+          "smallest_first_step": "introduce CodexCapture = namedtuple(...); have a helper return it; caller applies the clear when clear_session is set.",
+          "what_not_to_do": "do not extract the two-attempt loop (4 inout locals \u2014 irreducible); do not add a protocol or class hierarchy."
+        }
+      ],
+      "builder_notes": [
+        {
+          "note": "Residual Accounting Pass (loop 7)",
+          "detail": "All dimensions below 9.5 have named residuals: arch (7) <- F-005 attempt-loop inline; state (8) <- tied to F-005; domain (7) <- untyped session dict (TypedDict adds ceremony, vendored consumer off-limits); framework_idioms (6.5) <- 187 test-lint violations (accepted residual, expires 2026-12-22); simplicity (6.5) <- run_review() flat body F-005; concurrency (8) <- signal handler verified by construction not by direct test; test_strategy (8.5) <- attempt-loop coverage transitive only; credibility (8.5) <- no remaining doc-rot. No viable next action with positive expected score gain exists for arch, domain, simplicity, or framework_idioms. HALT_STAGNATION is the honest signal."
+        },
+        {
+          "note": "F-007 verification",
+          "detail": "ls scripts/test_web_search.py -> No such file (confirmed pre-fix). python3 -m pytest scripts/tests/ -> 119 passed (confirmed pre- and post-fix). README edit is minimal: dropped the dead test_web_search.py line, relabeled test_run_review.py to tests/, corrected count 118->119, replaced the 'cd scripts && python3 -m pytest ...' command with 'python3 -m pytest scripts/tests/'. No code files, no test files, no lint state changed."
+        }
+      ],
+      "narrative": "Loop 7 resolved F-007 \u2014 the last queued finding in the Priority 1 slot. README.md lines 41-42 and 52 documented a test command ('cd scripts && python3 -m pytest test_run_review.py test_web_search.py') that collected zero tests (verified), a non-existent file (test_web_search.py \u2014 confirmed 'ls: No such file'), and a stale count (118 vs the real 119). The fix is subtractive: the test_web_search.py reference is deleted, 'test_run_review.py  pytest suite (118 tests)' is replaced with 'tests/  pytest suite (119 tests)', and the command is replaced with 'python3 -m pytest scripts/tests/'. The Residual Accounting Pass then ran independently. Every remaining score gap has a named, re-derived-this-loop residual: arch (7) and simplicity (6.5) are both blocked by F-005 (attempt-loop + codex-setup inline; three-loop-consecutive irreducibility verdict, no SPT-viable fix exists); domain (7) is blocked by the untyped session dict (TypedDict adds ceremony, and the consumer save_session is in vendored _common); framework_idioms (6.5) is blocked by 187 test-lint violations (accepted residual \u2014 star-import pattern is deliberate, SPT Q2 rejects ceremony replacement across 7 files). No viable next action exists that would move any dimension above its current ceiling. HALT_STAGNATION is correct and honest. test_strategy ticks 8->8.5 (the discoverability gap is closed) and credibility ticks 8->8.5 (doc-rot drain removed). The suite remains at 119 green; production lint remains clean.",
+      "loop_result": {
+        "what_changed": "Resolved F-007 in README.md: dropped the stale test_web_search.py line, relabeled the test_run_review.py shim entry to tests/, corrected count from 118 to 119, replaced 'cd scripts && python3 -m pytest test_run_review.py test_web_search.py' with 'python3 -m pytest scripts/tests/'. Change is README-only (no script, no test, no lint state).",
+        "evidence_change_is_honest": "python3 -m pytest scripts/tests/ -> 119 passed (unchanged). python3 -m ruff check scripts/run_review.py scripts/check_web_search.py scripts/ppr_paths.py -> All checks passed! (unchanged). ls scripts/test_web_search.py -> No such file (confirms the deleted reference was dead). Fix is genuinely subtractive (net -2 lines: one deleted, one replaced with shorter text, command line shortened).",
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "peer-plan-review/README.md"
+        ],
+        "interface_test_coverage_path": []
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "All three checks passed. Reality: pytest scripts/tests/ -> 119 passed; ruff check production -> All checks passed!; README now documents 'python3 -m pytest scripts/tests/' with count 119 and no reference to non-existent test_web_search.py. Honesty: change is README-only and purely subtractive; no behavior changed; no new seam; no suppression-as-fix. Regression: no risk boundary crossed; 119 tests green; production lint clean; no new finding at equal-or-higher severity.",
         "checks": {
           "reality": "passed",
           "honesty": "passed",

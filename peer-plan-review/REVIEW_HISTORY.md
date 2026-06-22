@@ -528,3 +528,33 @@ Resolved F-006 (stable_id F-006) in scripts/tests/_helpers.py: replaced make_arg
 ## Loop 6 Implementation Review
 
 Verdict: **approved** (inline, ran_inline: true). Reality (post-diff ruff on production + _helpers.py both exit 0; pytest 119 passed; the dict literal is gone and make_args derives from run_review.parse_args() — runtime probe: bare make_args().reviewer is None, make_args(reviewer="codex",model="gpt-5.4") returns reviewer="codex"/model="gpt-5.4"); Honesty (no new seam — a duplicate layer was removed not added; net-subtractive 17 ins/23 del; the SPT Q4 preservation claim is backed by an AST enumeration of all 39 call sites, not asserted; no suppression-as-fix); Regression (no risk boundary crossed — test-helper only; 119 green at same count incl. contract-sync test; make_args(reviewer=...) still bypasses alias normalization exactly as the deleted dict did; F-007 is pre-existing README doc-rot surfaced by this loop's audit, not caused by the diff).
+
+--- Loop 7 (UTC 2026-06-22T08:15:00Z) ---
+
+### System Flag
+[STATE: HALT_STAGNATION]
+
+## Contest Verdict
+Good app, honest ceiling reached
+
+Tests are green (119 passed). Production lint is clean. Loop 7 resolved F-007 subtractively: README.md now documents `python3 -m pytest scripts/tests/` with count 119 (was: `cd scripts && python3 -m pytest test_run_review.py test_web_search.py`, count 118, `test_web_search.py` non-existent). The Residual Accounting Pass found all remaining score gaps have irreducible or SPT-rejected residuals. HALT_STAGNATION is honest.
+
+## Scorecard
+
+- **Architecture quality:** 7 | SAME | F-005 residual (330-LoC run_review() flat body; attempt-loop + codex-setup inline; irreducible). README-only change.
+- **State management:** 8 | SAME | Tied to F-005. Unchanged.
+- **Domain modeling:** 7 | SAME | Untyped session dict; TypedDict adds ceremony; vendored consumer off-limits. Unchanged.
+- **Data flow:** 8 | SAME | Unchanged.
+- **Framework idioms:** 6.5 | SAME | 187 test-lint violations (F405 x154/RUF100 x19/I001 x7/E401 x7); accepted residual (expires 2026-12-22).
+- **Concurrency:** 8 | SAME | Unchanged.
+- **Simplicity:** 6.5 | SAME | F-005 residual; run_review() flat body; 9-anchor not met. README-only change.
+- **Test strategy:** 8.5 | **UP** | F-007 resolved — README discoverability gap closed; `python3 -m pytest scripts/tests/` now documented correctly.
+- **Credibility:** 8.5 | **UP** | F-007 resolved — README doc-rot drain removed.
+
+## Findings
+
+None new. F-007 resolved (README doc-rot). F-008 added as accepted residual (test-lint star-import pattern, SPT Q2 rejected, expires 2026-12-22).
+
+## Loop 7 Result
+
+Resolved F-007 in `README.md`: dropped `test_web_search.py` reference (file never existed), relabeled `test_run_review.py` shim to `tests/`, corrected count 118→119, corrected command. Change is README-only (net −2 lines). Evidence: 119 tests green; ruff production clean; ls `scripts/test_web_search.py` → No such file. `test_strategy` 8→8.5, `credibility` 8→8.5. Residual Accounting Pass → HALT_STAGNATION: no viable next action with positive expected score gain across any dimension.

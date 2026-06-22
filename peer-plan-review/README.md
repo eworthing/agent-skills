@@ -38,8 +38,7 @@ scripts/
                       sync_common.py (session I/O, output parsing, summaries,
                       PROVIDERS registry + command builders, model/effort/
                       session extraction, JSONL event logger, process-tree kill)
-  test_run_review.py  pytest suite (118 tests)
-  test_web_search.py  web-search adapter pytest suite
+  tests/              pytest suite (119 tests)
   fixtures/           provider output samples for tests
 agents/openai.yaml    OpenAI subagent wiring
 ```
@@ -49,7 +48,7 @@ agents/openai.yaml    OpenAI subagent wiring
 ```bash
 python3 scripts/run_review.py --self-check                # verify all 6 CLIs
 python3 scripts/run_review.py --list-models               # print known aliases
-cd scripts && python3 -m pytest test_run_review.py test_web_search.py
+python3 -m pytest scripts/tests/
 ```
 
 ## Requirements
