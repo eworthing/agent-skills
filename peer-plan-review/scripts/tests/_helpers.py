@@ -9,17 +9,9 @@ Run:  python3 scripts/test_run_review.py
 """
 
 import argparse
-import json
-import os
-import shutil
-import signal
-import stat
 import subprocess
 import sys
-import tempfile
-import unittest
 from pathlib import Path
-from unittest import mock
 
 # Resolve paths relative to this test file
 SCRIPT_DIR = str(Path(__file__).resolve().parent.parent)  # scripts/ (this file is scripts/tests/_helpers.py)
@@ -29,9 +21,13 @@ FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
-import run_review  # noqa: E402
-from _common.session import parse_structured_review  # noqa: E402
-from run_review import extract_metadata, extract_text_from_output, self_check  # noqa: E402
+import run_review  # noqa: E402,F401 — re-exported via * for test files
+from _common.session import parse_structured_review  # noqa: E402,F401 — re-exported via *
+from run_review import (  # noqa: E402,F401 — re-exported via *
+    extract_metadata,
+    extract_text_from_output,
+    self_check,
+)
 
 
 def run_script(*extra_args):
@@ -88,7 +84,10 @@ def make_args(**overrides):
 
 _CREATE_NEW_PROCESS_GROUP = 0x00000200  # Windows constant sentinel for testing
 
-from _common.session import probe_writable, validate_prompt_file  # noqa: E402
-from _common.log import EventLogger  # noqa: E402
-from _common.metadata.extractors import compute_plan_metadata  # noqa: E402
-from _common.providers import PROVIDERS  # noqa: E402
+from _common.log import EventLogger  # noqa: E402,F401 — re-exported via *
+from _common.metadata.extractors import compute_plan_metadata  # noqa: E402,F401 — re-exported via *
+from _common.providers import PROVIDERS  # noqa: E402,F401 — re-exported via *
+from _common.session import (  # noqa: E402,F401 — re-exported via *
+    probe_writable,
+    validate_prompt_file,
+)

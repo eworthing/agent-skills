@@ -89,3 +89,81 @@ Added `"codex_home_manifest": None,` to make_args() defaults dict in scripts/tes
 ## Loop 1 Implementation Review
 
 Verdict: **approved**. All three checks passed: Reality (AttributeError no longer reachable), Honesty (one-line dict entry, no new seam), Regression (additive change, inert in non-codex paths).
+
+--- Loop 2 (UTC 2026-06-22T01:00:00Z) ---
+
+### Discovery
+- [See REVIEW_HISTORY.json loops[1].discovery for full details]
+- Source roots: `scripts/run_review.py`, `scripts/check_web_search.py`, `scripts/ppr_paths.py`, `scripts/tests/*.py`
+- Test command: `cd /Users/Shared/git/agent-skills/peer-plan-review && python3 -m pytest scripts/tests/`
+- Ground-truth state at Step 0: GREEN — 118 passed, 0 failed
+- Selected lens: Generic (Python)
+- Provider: `claude_code`. loop_model: `claude-sonnet-4-6` (default). spawn_isolation: subagent.
+
+### Loop Counter
+Loop 2 of 10 (cap)
+
+### System Flag
+[STATE: CONTINUE]
+
+---
+
+## Contest Verdict
+Good app, but not top-tier yet
+
+Tests are green (118 passed). Production code is functionally solid and cleanly separated from `_common`. The primary structural drag is a test helper with duplicated stdlib imports that generates pervasive lint noise across 7 test files, hiding real signal. `run_review()` at 405 LoC is the secondary debt.
+
+## Scorecard (1-10)
+
+- **Architecture quality:** 7 | UP | `run_review.py:339` (registry dispatch via `PROVIDERS[reviewer]["build_cmd"]`); clean import DAG `run_review -> _common.*`; no costume layers
+- **State management and runtime ownership:** 8 | UP | `_active_proc` at `run_review.py:187` single-writer; `run_review.py:209` resume_requested snapshot; local state machine `use_resume/fallback_used/session_id`
+- **Domain modeling:** 7 | UP | `REVIEWER_ALIASES` at `run_review.py:73`; normalization at CLI boundary `:121-122`; PROVIDERS registry from `_common` is the core model
+- **Data flow and dependency design:** 8 | UP | Clean DAG; temporal coupling documented at `run_review.py:501-510`
+- **Framework / platform best practices:** 6 | UP | F401 violations in `_helpers.py:12-22`; PTH108 at `run_review.py:605`; I001 at `run_review.py:27`
+- **Concurrency and runtime safety:** 8 | UP | Signal handler save/restore in try/finally (`run_review.py:322-325`, `:598-602`); Gemini/agy cleanup in finally `:601-605`
+- **Code simplicity and clarity:** 6 | UP | `run_review()` spans lines 201–605 (405 LoC, 67 AST nested control-flow nodes)
+- **Test strategy and regression resistance:** 7 | UP | 118 tests; `run_review.py:413` guard tested; gap: no parse_args/make_args sync test
+- **Overall implementation credibility:** 7 | UP | Production code earns its architecture at `_common` boundary; test infrastructure carries two drift risks
+
+## Findings
+
+### Finding #1 (F-002): Test helper re-exports stdlib it does not use, generating pervasive lint noise
+
+**Severity** — Noticeable weakness | **Status this loop** — resolved
+
+`_helpers.py:12-22` imported 9 stdlib modules unused in the helper itself. Test files already imported them directly. Removed. ruff F401 count: 18 → 0 on `_helpers.py`.
+
+### Finding #2 (F-003): make_args() has no contract-sync test — will drift again
+
+**Severity** — Noticeable weakness | **Status this loop** — carried forward (loop 3 Priority 1)
+
+`_helpers.py:64-85` manual dict; no test enforces key-set parity with `parse_args()`. Loop 1 was one dict-drift instance away from red suite. Minimal fix: ~5-line test in `test_file_io_validation.py`.
+
+### Finding #3 (F-004): PTH108 + I001 lint violations in run_review.py (pre-existing)
+
+**Severity** — Cosmetic for contest | **Status this loop** — carried forward
+
+`run_review.py:605` (`os.unlink` → PTH108), `:27` (I001 import sort), `:36` (RUF100 unused noqa). All auto-fixable.
+
+## Improvement Backlog
+
+1. **Add parse_args/make_args contract-sync test** (stable_id F-003 / structural / needed for winning)
+2. **Fix PTH108 + I001 in `run_review.py`** (stable_id F-004 / simplification / helpful)
+
+## Builder Notes
+- [See REVIEW_HISTORY.json loops[1].builder_notes for full notes]
+- Pattern: bulk stdlib re-export via star import — remove, test files already import directly
+- Pattern: manually-maintained arg contract mirror — derive from parse_args([]) instead
+- Humility: concurrency:8 uncertain re: _active_proc threading (not current usage); framework_idioms:6 uncertain re: intentional star-export; test_strategy:7 may miss 1-2 Authority Map gaps
+
+## Simplification Check
+- [See REVIEW_HISTORY.json loops[1].simplification_check for full details]
+- Structurally necessary: pure deletion passes SPT. No new seam. Tests unchanged.
+
+## Loop 2 Result
+
+Removed 8 unused stdlib imports from `scripts/tests/_helpers.py:11–22` (`json`, `os`, `shutil`, `signal`, `stat`, `tempfile`, `unittest`, `from unittest import mock`). Added `# noqa: E402,F401 — re-exported via *` to intentional star-export lines. Sorted import blocks (ruff --fix I001). Re-ran full suite: **118 passed, 0 failed** (green). Ruff check on `_helpers.py`: **0 errors**. Finding F1 (stable_id F-002) **resolved**. F2 (F-003) and F3 (F-004) **carried forward** to loop 3.
+
+## Loop 2 Implementation Review
+
+Verdict: **approved**. All three checks passed: Reality (the 8 unused stdlib imports cited in F-002 are genuinely absent from the current `_helpers.py`); Honesty (pure deletion, no redistribution; noqa annotations on intentional re-export anchors only); Regression (no new finding at same or higher severity).
