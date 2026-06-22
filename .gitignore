@@ -13,3 +13,4 @@ refs/
 .agents/
 .claude/skills/*
 !.claude/skills/skill-evaluator-1.0.0/
+skills-lock.json
