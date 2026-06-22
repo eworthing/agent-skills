@@ -168,14 +168,14 @@
       "name": "suppression-restraint",
       "layer": "refactoring-judgment",
       "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag suppression-as-fix. Here `@unchecked Sendable` carries the compensating invariant the rubric requires (architecture-rubric.md suppression-as-fix: safety suppressions are acceptable with narrow scope + concrete justification + the compensating invariant): every `storage` access is serialized behind `NSLock.withLock`, the conformance has a concrete justification comment, and a TSAN-covered concurrency test exists. SPT Q4 holds (the race is actually gone). concurrency may be 9.5. A reviewer that rejects this for the mere presence of `@unchecked Sendable` is over-flagging.",
+      "expected_output": "Does NOT flag suppression-as-fix. Here `@unchecked Sendable` carries the compensating invariant the rubric requires (architecture-rubric.md suppression-as-fix: safety suppressions are acceptable with narrow scope + concrete justification + the compensating invariant): every `storage` access is serialized behind `NSLock.withLock`, the conformance has a concrete justification comment, and a TSAN-covered concurrency test exists. SPT Q4 holds (the race is actually gone), so concurrency takes no deduction for the @unchecked Sendable conformance. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) \u2014 score-honesty, not a flag on the carve-out. A reviewer that rejects this for the mere presence of `@unchecked Sendable`, names suppression-as-fix, or caps concurrency for the conformance is over-flagging.",
       "files": [
         "scenarios/suppression-restraint/scenario.md"
       ],
       "assertions": [
         "[restraint] flagged_smells does NOT contain suppression-as-fix (the suppression is compensated)",
-        "[restraint] verdict is not \"rejected\" on account of the @unchecked Sendable conformance",
-        "[restraint] Does not cap concurrency below 9.5 solely for the presence of @unchecked Sendable",
+        "[restraint] verdict is not \"rejected\" on account of the @unchecked Sendable conformance (a score-honesty pushback on the Actor's unearned 9.5 \u2014 no named residual per the 9.5+ Threshold rule \u2014 is not a carve-out flag)",
+        "[restraint] Attributes no concurrency deduction to the @unchecked Sendable conformance; any sub-9.5 score rests on the missing-residual rule, not on the compensated suppression",
         "[restraint] Recognizes the NSLock serialization + justification + TSAN test as satisfying the safety-suppression carve-out"
       ]
     },
@@ -184,15 +184,15 @@
       "name": "crossplat-restraint",
       "layer": "refactoring-judgment",
       "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
-      "expected_output": "Does NOT flag a cross-platform problem. The haptics call is gated `#if os(iOS)` \u2014 the correct guard for an iOS-only UIKit symbol \u2014 and the Actor recorded compile evidence for every declared target (iOS/macOS/tvOS builds green, Meta-Rule 4 satisfied). No tvOS break exists; framework_idioms may be 9.5. A reviewer that demands a guard change or flags tvOS here is over-flagging.",
+      "expected_output": "Does NOT flag a cross-platform problem. The haptics call is gated `#if os(iOS)` \u2014 the correct guard for an iOS-only UIKit symbol \u2014 and the Actor recorded compile evidence for every declared target (iOS/macOS/tvOS builds green, Meta-Rule 4 satisfied). No tvOS break exists, so framework_idioms takes no deduction for the guard. The Actor's proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) \u2014 score-honesty, not a flag on the carve-out. A reviewer that demands a guard change, flags tvOS, or caps framework_idioms for the #if os(iOS) guard is over-flagging.",
       "files": [
         "scenarios/crossplat-restraint/scenario.md"
       ],
       "assertions": [
         "[restraint] Does not flag a cross-platform / tvOS compile problem (the guard is #if os(iOS), which is correct)",
         "[restraint] Recognizes the recorded per-target compile evidence satisfies Meta-Rule 4",
-        "[restraint] verdict is not \"rejected\" for cross-platform reasons; does not demand changing #if os(iOS) to canImport",
-        "[restraint] framework_idioms not capped below 9.5 for a cross-platform reason"
+        "[restraint] verdict is not \"rejected\" for cross-platform reasons; does not demand changing #if os(iOS) to canImport (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+        "[restraint] Attributes no framework_idioms deduction to the #if os(iOS) guard; any sub-9.5 score rests on the missing-residual rule, not on the cross-platform guard"
       ]
     },
     {
