@@ -152,7 +152,7 @@
       "severity": "Noticeable weakness",
       "first_seen_loop": 4,
       "first_seen_sha": null,
-      "last_seen_loop": 4,
+      "last_seen_loop": 5,
       "occurrences": [
         {
           "loop": 4,
@@ -165,6 +165,18 @@
           },
           "attempted_remedy_hash": null,
           "idempotency_key": "loop4-F-005-open"
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": null,
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop5-F-005-carried"
         }
       ]
     },

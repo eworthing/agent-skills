@@ -194,6 +194,123 @@ def _signal_handler(signum, _frame):
 
 
 # ---------------------------------------------------------------------------
+# run_review phases (private helpers; reached transitively through
+# run_review()'s end-to-end tests in scripts/tests/test_execution_paths.py)
+# ---------------------------------------------------------------------------
+
+
+def _setup_gemini_config(args, env):
+    """Build an isolated Gemini config overlay and point env at it.
+
+    Gemini runs through a temp config overlay. The review runner needs auth and
+    durable settings, but not mutable local approval policy, sessions, caches,
+    or extensions from the user's real Gemini home. Mutates env["GEMINI_CONFIG_DIR"]
+    on success. Returns the overlay dir (for teardown by the caller) or None.
+    """
+    budget = PROVIDERS["gemini"]["effort_map"].get(args.effort) if args.effort else None
+    gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
+    source_dir = os.environ.get(
+        "GEMINI_CONFIG_DIR",
+        str(Path("~/.gemini").expanduser()),
+    )
+    source_path = Path(source_dir)
+    if source_path.is_dir():
+        for child in source_path.iterdir():
+            if not child.is_file():
+                continue
+            try:
+                shutil.copy2(child, Path(gemini_config_dir) / child.name)
+            except OSError as e:
+                print(
+                    f"Warning: could not copy Gemini config file {child.name}: {e}",
+                    file=sys.stderr,
+                )
+    settings_path = Path(gemini_config_dir) / "settings.json"
+    try:
+        existing = {}
+        if settings_path.exists():
+            with settings_path.open(encoding="utf-8") as f:
+                try:
+                    existing = json.load(f)
+                except json.JSONDecodeError:
+                    existing = {}
+        if budget:
+            existing["thinkingConfig"] = {"thinkingBudget": budget}
+        with settings_path.open("w", encoding="utf-8") as f:
+            json.dump(existing, f)
+        env["GEMINI_CONFIG_DIR"] = gemini_config_dir
+    except OSError as e:
+        print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
+        shutil.rmtree(gemini_config_dir, ignore_errors=True)
+        gemini_config_dir = None
+    return gemini_config_dir
+
+
+def _build_stdin(reviewer, prompt_file):
+    """Return the prompt text to pipe via stdin, or None for argv-prompt providers.
+
+    Providers configured for stdin prompting get the prompt file's contents.
+    agy has no system-prompt flag and auto-approves tools in print mode, so it
+    gets a best-effort read-only directive prepended. agy is EXPERIMENTAL — not a
+    guaranteed-read-only reviewer (see references/antigravity.md).
+    """
+    if PROVIDERS[reviewer]["caps"].get("prompt_mode") != "stdin":
+        return None
+    stdin_data = read_prompt(prompt_file)
+    if reviewer == "agy" and stdin_data:
+        stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
+    return stdin_data
+
+
+def _build_session_data(args, session, meta, reviewer, new_session_id, fallback_used):
+    """Assemble the persisted session dict from the run's resolved metadata.
+
+    Pure assembly of already-computed values (no I/O, no subprocess) — resolves
+    the actual model/effort, computes the round number, and records resume
+    provenance. Plan-file and Codex-home fields are layered on by the caller.
+    """
+    resume_requested = args.resume
+    actual_model = meta.get("model") or session.get("model") or args.model or "default"
+    actual_effort = (
+        meta.get("effort") or args.effort
+        or PROVIDERS.get(reviewer, {}).get("effort_default", "default")
+    )
+    round_num = session.get("round", 0) + 1
+
+    session_data = {
+        "session_id": new_session_id or session.get("session_id"),
+        "reviewer": reviewer,
+        "model": actual_model,
+        "model_requested": args.model or "default",
+        "effort": actual_effort,
+        "effort_requested": args.effort or "default",
+        "effort_source": (
+            "detected"
+            if meta.get("effort")
+            else "requested"
+            if args.effort
+            else "provider_default"
+        ),
+        "round": round_num,
+        "resume_requested": resume_requested,
+        "resume_supported": PROVIDERS.get(reviewer, {}).get("caps", {}).get("resume_supported", False),
+        "resume_attempted": resume_requested and session.get("session_id") is not None,
+        "resume_fallback_used": fallback_used,
+        "resume_reason": (
+            "fallback_to_fresh" if fallback_used
+            else "session_found" if resume_requested and session.get("session_id")
+            else "no_session_id" if resume_requested
+            else "fresh_exec"
+        ),
+    }
+    if meta.get("thinking_tokens") is not None:
+        session_data["thinking_tokens"] = meta["thinking_tokens"]
+    if args.error_log:
+        session_data["error_log"] = args.error_log
+    return session_data
+
+
+# ---------------------------------------------------------------------------
 # Execution
 # ---------------------------------------------------------------------------
 
@@ -229,47 +346,7 @@ def run_review(args, logger=None):
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
 
-    # Gemini runs through a temp config overlay. The review runner needs auth
-    # and durable settings, but not mutable local approval policy, sessions,
-    # caches, or extensions from the user's real Gemini home.
-    gemini_config_dir = None
-    if reviewer == "gemini":
-        budget = PROVIDERS["gemini"]["effort_map"].get(args.effort) if args.effort else None
-        gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
-        source_dir = os.environ.get(
-            "GEMINI_CONFIG_DIR",
-            str(Path("~/.gemini").expanduser()),
-        )
-        source_path = Path(source_dir)
-        if source_path.is_dir():
-            for child in source_path.iterdir():
-                if not child.is_file():
-                    continue
-                try:
-                    shutil.copy2(child, Path(gemini_config_dir) / child.name)
-                except OSError as e:
-                    print(
-                        f"Warning: could not copy Gemini config file {child.name}: {e}",
-                        file=sys.stderr,
-                    )
-        settings_path = Path(gemini_config_dir) / "settings.json"
-        try:
-            existing = {}
-            if settings_path.exists():
-                with settings_path.open(encoding="utf-8") as f:
-                    try:
-                        existing = json.load(f)
-                    except json.JSONDecodeError:
-                        existing = {}
-            if budget:
-                existing["thinkingConfig"] = {"thinkingBudget": budget}
-            with settings_path.open("w", encoding="utf-8") as f:
-                json.dump(existing, f)
-            env["GEMINI_CONFIG_DIR"] = gemini_config_dir
-        except OSError as e:
-            print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
-            shutil.rmtree(gemini_config_dir, ignore_errors=True)
-            gemini_config_dir = None
+    gemini_config_dir = _setup_gemini_config(args, env) if reviewer == "gemini" else None
 
     # agy (Antigravity) runs through a dedicated per-run --log-file so the
     # conversation id can be recovered from the CLI log: agy prints it nowhere
@@ -281,14 +358,7 @@ def run_review(args, logger=None):
         os.close(fd)
 
     # Prepare prompt stdin for providers configured for stdin prompting.
-    stdin_data = None
-    if PROVIDERS[reviewer]["caps"].get("prompt_mode") == "stdin":
-        stdin_data = read_prompt(args.prompt_file)
-        # agy has no system-prompt flag and auto-approves tools in print mode;
-        # prepend a best-effort read-only directive. agy is EXPERIMENTAL — not a
-        # guaranteed-read-only reviewer (see references/antigravity.md).
-        if reviewer == "agy" and stdin_data:
-            stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
+    stdin_data = _build_stdin(reviewer, args.prompt_file)
 
     # Codex: isolate per-run CODEX_HOME so concurrent runs don't share
     # ~/.codex/sessions/, where the before/after diff can't tell two same-cwd
@@ -526,45 +596,10 @@ def run_review(args, logger=None):
         if reviewer in ("claude", "gemini", "copilot", "opencode"):
             extract_text_from_output(args.output_file, reviewer, content=output_content)
 
-        # Resolve actual model and effort
-        actual_model = meta.get("model") or session.get("model") or args.model or "default"
-        actual_effort = (
-            meta.get("effort") or args.effort
-            or PROVIDERS.get(reviewer, {}).get("effort_default", "default")
+        # Build session data with resolved model/effort + resume metadata
+        session_data = _build_session_data(
+            args, session, meta, reviewer, new_session_id, fallback_used
         )
-        round_num = session.get("round", 0) + 1
-
-        # Build session data with resume metadata
-        session_data = {
-            "session_id": new_session_id or session.get("session_id"),
-            "reviewer": reviewer,
-            "model": actual_model,
-            "model_requested": args.model or "default",
-            "effort": actual_effort,
-            "effort_requested": args.effort or "default",
-            "effort_source": (
-                "detected"
-                if meta.get("effort")
-                else "requested"
-                if args.effort
-                else "provider_default"
-            ),
-            "round": round_num,
-            "resume_requested": resume_requested,
-            "resume_supported": PROVIDERS.get(reviewer, {}).get("caps", {}).get("resume_supported", False),
-            "resume_attempted": resume_requested and session.get("session_id") is not None,
-            "resume_fallback_used": fallback_used,
-            "resume_reason": (
-                "fallback_to_fresh" if fallback_used
-                else "session_found" if resume_requested and session.get("session_id")
-                else "no_session_id" if resume_requested
-                else "fresh_exec"
-            ),
-        }
-        if meta.get("thinking_tokens") is not None:
-            session_data["thinking_tokens"] = meta["thinking_tokens"]
-        if args.error_log:
-            session_data["error_log"] = args.error_log
 
         # Plan-file metadata
         plan_meta = compute_plan_metadata(args.plan_file)
