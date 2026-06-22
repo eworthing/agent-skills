@@ -426,3 +426,105 @@ Partially resolved F-005 (stable_id F-005) in `scripts/run_review.py` by extract
 ## Loop 5 Implementation Review
 
 Verdict: **approved** (inline, `ran_inline: true`). All three checks passed: Reality (post-diff `ruff check scripts/run_review.py` exits 0; `pytest scripts/tests/` → 119 passed; the three helpers exist at `run_review.py:202/249/265` and are called from `run_review()`; body LoC dropped ~405→328 via `awk` span measurement); Honesty (no new seam — module-internal privates; the SPT downgrade on the attempt-loop/codex-setup phases is recorded with the inout-threading reason rather than forced into shallow splits; the three extractions are behavior-preserving pure relocations; `_build_session_data` is pure assembly; the `simplicity` delta cites a concrete LoC drop against d1bdfb4); Regression (extractions preserve `_active_proc` single-writer, signal save/restore ordering, `env` isolation, and resume/fresh semantics — all in the un-extracted attempt loop; 119 tests green, same count; no new findings at equal-or-higher severity).
+
+--- Loop 6 (UTC 2026-06-22T09:30:00Z) ---
+
+### Discovery (compressed)
+Scope: peer-plan-review/ skill dir; commits land in enclosing agent-skills repo. Source roots: scripts/run_review.py, check_web_search.py, ppr_paths.py, scripts/tests/. OFF-LIMITS: scripts/_common/** (vendored). Test (canonical): `python3 -m pytest scripts/tests/`. Lint: ruff (production-only; tests carry accepted debt). Lens: Generic (Python) + security. Provider: claude_code, spawn_isolation subagent. Full Discovery in CURRENT_REVIEW.md (loop 1).
+
+### Loop Counter
+Loop 6 of 10 (cap)
+
+### System Flag
+[STATE: CONTINUE]
+
+## Contest Verdict
+Good app, but not top-tier yet
+
+Tests green (119). Production lint clean. Loop 6 resolved F-006 subtractively: `make_args()` in `scripts/tests/_helpers.py` no longer carries a 17-key hand-maintained dict duplicating the CLI arg contract; it derives every key + default from `run_review.parse_args()` (single source of truth). Net −6 LoC plus deletion of the now-unused `argparse` import. Source proof refuted the loop-5 "fails SPT Q4" framing: 38/39 `make_args()` call sites pass `reviewer=` explicitly; the one bare call reads keys only. `test_strategy` 7.5 → 8. F-005 demoted to Priority 2 (irreducible). New F-007 (README zero-collection test command) takes Priority 1.
+
+## Scorecard (1-10)
+
+- **Architecture quality:** 7 | SAME | DAG via _common; registry dispatch run_review.py:409; loop-5 phase helpers at :202/:249/:265. Test-helper-only change this loop. Residual: 330-LoC run_review() with inline attempt-loop+codex-setup (F-005, Priority 2; 9-anchor not met).
+- **State management:** 8 | SAME | _active_proc (run_review.py:187) single-writer/single-reader; function-scoped resume state machine. Residual: lifecycle authority inside the one large function (tied to F-005); honest 8.
+- **Domain modeling:** 7 | SAME | Thin CLI adapter; PROVIDERS registry is the model; untyped session dict (run_review.py:280). 9-anchor not met; honest 7.
+- **Data flow:** 8 | SAME | Clean DAG; re-exports keep mock paths stable; pre-read output_content mitigates temporal coupling. Residual: ambient os.environ reads; honest 8.
+- **Framework idioms:** 6.5 | SAME | Production ruff clean; _helpers.py now clean too. Residual (accepted, 2026-06-22→2026-12-22): test-file debt F405×154/RUF100×19/I001×7/E401×7 from star-import pattern (test-only; SPT-rejected Q2).
+- **Concurrency:** 8 | SAME | Single-threaded; signal save/restore try/finally (run_review.py:392-395,:632-635); communicate(timeout) + kill-tree. Residual: ordering verified by construction + mocked signal, not a direct concurrency test; honest 8.
+- **Code simplicity:** 6.5 | SAME | Production unchanged this loop (run_review() still 330 LoC; F-006 win is test_strategy). Residual: inline attempt-loop+codex-setup (F-005, irreducible); 6.5 cannot honestly be a 9.5 accepted residual (9-anchor not met) — earned score with blocker named.
+- **Test strategy:** 8 | **UP** | F-006 resolved: make_args() derives from parse_args() (single source of truth); the loop-1 drift class is now structurally impossible. Structural proof: _helpers.py diff (17 ins/23 del; dict + argparse import deleted). 119 green incl. all 39 call sites + TestArgContract (belt-and-suspenders). Residual: README doc-rot (F-007, P1 next loop); honest 8.
+- **Overall credibility:** 8 | SAME | Genuinely subtractive fix (net −6 LoC), not a costume relocation; corrected loop-5's mislabel of F-006. Residual: README:41-52 stale/broken test command (F-007, P1 next loop); honest 8.
+
+## Authority Map
+
+- **CLI arg contract** — Owner: run_review.py:parse_args() (defs, dests, defaults). Writers: parse_args() only. Readers: run_review() (prod); _helpers.py:make_args() now DERIVES from parse_args() (no longer an independent writer). Verdict: **Single and clear (improved this loop)** — parse_args() is the sole source of truth for arg-name set AND defaults; make_args() reads it under saved/restored sys.argv + overrides; cannot drift. Loop-5 "Split and ambiguous" resolved by F-006.
+- **Active subprocess handle** — Owner: module-level _active_proc (run_review.py:187). Writer: run_review() (attempt loop + finally). Reader: _signal_handler() (:191). Async entry: SIGTERM/SIGINT. Verdict: Single and clear — idiomatic Python signal-handler pattern. Unchanged.
+- **Session state** — Owner: session JSON file (save_session() from _common.session). Writer: run_review() via save_session() (dict assembled by _build_session_data at :265). Reader: run_review() via load_session(); tests post-run. Seam: JSON at args.session_file. Verdict: Single and clear — sole writer per execution. Unchanged.
+
+## Strengths That Matter
+
+- CLI arg contract now has a single source of truth: _helpers.py:make_args() derives keys + defaults from run_review.parse_args() (run_review.py:76-123) rather than restating them, closing the drift class that consumed loop 1. Net-subtractive (17 ins/23 del).
+- run_review.py delegates all provider logic to _common.providers.PROVIDERS (command build, caps, effort maps, session-id extraction); dispatches via registry (run_review.py:409) without branching on provider internals.
+- Gemini config-overlay isolation is behavioral + tested: loop-5 helper _setup_gemini_config (run_review.py:202) excludes auto-saved policy files, preserves existing settings (test_run_review_gemini_effort_overlay_excludes_auto_saved_policies / _preserves_existing_settings).
+- Resume/fallback state via locals (use_resume, fallback_used), never mutating args (run_review.py:326-328); explicit snapshot prevents cross-attempt contamination — and is the honest reason the attempt loop resists extraction (F-005).
+- Codex per-run CODEX_HOME isolation fails closed: setup failure clears session_id/use_resume to force fresh exec, never resume into a missing home (run_review.py:383-385).
+
+## Findings
+
+### Finding #1: README documents a test command that collects zero tests + a stale test count
+
+**Why it matters** — A new contributor following README.md is told to run `cd scripts && python3 -m pytest test_run_review.py test_web_search.py` (README.md:52) against files called the pytest suite (README.md:41-42). One file is missing and the other is a unittest discovery shim, so the command collects **zero tests** — the reader would conclude the project is untested (119 real tests live under scripts/tests/).
+
+**What is wrong** — README.md:42 references scripts/test_web_search.py which does not exist. README.md:41 claims "test_run_review.py pytest suite (118 tests)" — stale count (actual 119) and mislabel (test_run_review.py is a 16-LoC unittest.TestLoader().discover shim, not a pytest module). Canonical command: `python3 -m pytest scripts/tests/`.
+
+**Evidence** —
+- README.md:41 "test_run_review.py  pytest suite (118 tests)" — stale count + mislabel.
+- README.md:42 "test_web_search.py  web-search adapter pytest suite" — file does not exist (ls → No such file).
+- README.md:52 "cd scripts && python3 -m pytest test_run_review.py test_web_search.py" — verified to print "no tests ran" (zero collected).
+- scripts/test_run_review.py is a unittest.TestLoader().discover(...) shim (16 LoC), not a pytest module.
+
+**Architectural test failed** — n/a (doc-vs-code rot — method.md Step 6 doc-vs-code grep + lens-generic failure-modes/observability).
+
+**Dependency category** — in-process
+
+**Leverage impact** — Low (docs, not runtime) — but high friction at first contact for any new contributor or CI author.
+
+**Locality impact** — Low — fix is local to README.md.
+
+**Why this weakens submission** — A documented entrypoint that silently collects zero tests is a doc-vs-code credibility leak per method.md Step 6: a reviewer trusting the README would believe the suite is empty/broken. The kind of small honesty gap the rubric penalizes when it misleads about regression resistance.
+
+**Severity** — Noticeable weakness
+
+**ADR conflicts** — none
+
+**Minimal correction path** — Update README.md to document `python3 -m pytest scripts/tests/`; correct count to 119; drop or correct the test_web_search.py reference. Subtractive where possible.
+
+**Blast radius** — Change: README.md only. Avoid: all scripts/**, _common/**.
+
+## Simplification Check (compressed)
+F-006 fix passes SPT Q1-Q5: fixes duplicated-authority ambiguity (17-key dict restated parse_args' contract+defaults), smallest honest fix (derive from existing parse_args; net −6 LoC), removes a duplicate layer (adds none), behavior honest (source-proven: zero readers of the changed reviewer default), product improves (drift structurally impossible). No new seam. Should NOT be done: extract run_review() attempt-loop/codex-setup (F-005, fails SPT 4-5 inout locals); rewrite test star-imports to silence F405 (test-only ceremony); fix README (F-007) in this commit (separate scope, P1). Tests after: 119 pass (unchanged); all 39 call sites + TestArgContract green.
+
+## Improvement Backlog
+
+1. **Fix README test-command doc-rot** (stable_id F-007 / simplification / noticeable weakness) — **Priority 1 (new this loop)** — README:41-52 documents a zero-collection command + stale count + missing file; credibility +0.5 (8→8.5) once README points at `python3 -m pytest scripts/tests/`.
+2. **Decompose run_review() residual phases (irreducible without ceremony)** (stable_id F-005 / structural / noticeable weakness) — **demoted to Priority 2** — remaining two-attempt loop + codex-setup thread use_resume/session_id/fallback_used/returncode in+out (run_review.py:397-533 + :386-389), fail SPT; no clean score path (simplicity 6.5 cannot become a 9.5 accepted residual). Likely retire/accept-as-irreducible if it reappears unchanged.
+
+## Deepening Candidates
+**CodexCapture value type from the codex-setup phase** (derived from F-005). Candidate module: inline codex CODEX_HOME setup (run_review.py:368-389). Friction: block mutates session_id/use_resume inout on fail-closed path (:383-385). Convert two inout locals to a returned frozen value; caller applies the clear. Dependency: in-process. Test surface: same end-to-end codex tests. Do not extract the two-attempt loop (4 inout locals); no protocol/class hierarchy.
+
+## Builder Notes (compressed)
+1. **Source-check beats inherited framing:** loop 5 demoted F-006 as "fails SPT Q4" (reviewer='claude' vs parse_args([])=None); an AST scan of all 39 make_args() call sites showed 38 pass reviewer= and the 1 bare call reads keys only — behavior-identical, Q4 passes. Rule: enumerate call sites mechanically before accepting a "changes behavior unless every call site is updated" demotion.
+2. **Subtractive fix hygiene cascade:** deleting the dict made argparse unused (removed it), which made the `import run_review` F401 noqa unnecessary (make_args now uses parse_args) — corrected to E402-only; _helpers.py is now ruff-clean; test-file total error count flat at 187 (no new debt).
+3. **Scorecard humility check (Q9):** test_strategy 8 UP (could be held at 7.5 as helper-only; scored UP because it closes a real prior build-failure drift class structurally); F-007 Noticeable (could be Cosmetic; held Noticeable because it actively misleads about whether the suite exists); F-005 demotion vs retirement (not mechanically retirement-eligible per Step 1.6 Branch A/B; simplicity can't be a 9.5 accepted residual from 6.5 — fake-clean reward forbidden).
+
+## Final Judge Narrative
+
+Loop 6 resolved F-006 as a clean subtractive win, correcting a loop-5 analytical error. The hand-maintained 17-key dict in scripts/tests/_helpers.py:make_args() — the parallel copy of the CLI arg contract that caused the loop-1 build failure when --codex-home-manifest was added — is deleted; make_args() now derives every key and default from run_review.parse_args() under a saved/restored sys.argv, then layers overrides. Net −6 LoC plus removal of the now-unused argparse import, leaving _helpers.py fully ruff-clean. Loop 5 had demoted F-006 to "not pure-subtractive / fails SPT Q4" (reviewer='claude' vs parse_args([])=None); an AST scan of all 39 make_args() call sites refuted that — 38 pass reviewer= explicitly and the one bare call reads only namespace keys, so the default change is behavior-identical and SPT Q4 passes. The CLI-arg-contract concern moves from "Split and ambiguous" to "Single and clear": parse_args() is the sole source of truth for both the arg-name set and the defaults; make_args() cannot drift, making the loop-3 contract-sync test belt-and-suspenders (kept). test_strategy 7.5 → 8. F-005 was re-derived from current source as genuinely irreducible (the two-attempt loop threads use_resume/session_id/fallback_used/returncode in+out and reads them post-loop) and demoted to Priority 2; simplicity holds at 6.5 with the cohesive-core blocker named (it cannot honestly be a 9.5 accepted residual from 6.5). F-007 takes Priority 1: README.md documents a test command that collects zero tests and reports a stale count — a doc-vs-code credibility leak. Suite green (119); production lint clean.
+
+## Loop 6 Result
+
+Resolved F-006 (stable_id F-006) in scripts/tests/_helpers.py: replaced make_args()'s hand-maintained 17-key default dict (duplicating the run_review.py CLI arg contract + defaults) with derivation from run_review.parse_args() — saved/restored sys.argv to ["run_review.py"], called parse_args() for the canonical Namespace with real defaults, then applied **overrides via setattr. Also deleted the now-unused `import argparse` and corrected the `import run_review` noqa from E402,F401 to E402 (run_review is now used directly by make_args). Net diff: 17 insertions, 23 deletions (−6 LoC). **Evidence honest:** ruff on production → All checks passed!; ruff on _helpers.py → All checks passed! (was carrying an argparse F401; now clean); pytest scripts/tests/ → 119 passed, 0 failed (unchanged) incl. all 39 make_args() call sites + TestArgContract. **SPT Q4 source-proven:** AST scan shows 38/39 call sites pass reviewer= explicitly and the 1 bare call (test_make_args_keys_match_parse_args_dests) reads set(vars(make_args()).keys()) only — the reviewer default changing from "claude" to None changes no test's behavior. Genuinely subtractive (net −6 LoC; duplicate authority removed, none added). Finding F1 (stable_id F-006) **resolved**. test_strategy 7.5 → 8; no unintended scorecard regression.
+
+## Loop 6 Implementation Review
+
+Verdict: **approved** (inline, ran_inline: true). Reality (post-diff ruff on production + _helpers.py both exit 0; pytest 119 passed; the dict literal is gone and make_args derives from run_review.parse_args() — runtime probe: bare make_args().reviewer is None, make_args(reviewer="codex",model="gpt-5.4") returns reviewer="codex"/model="gpt-5.4"); Honesty (no new seam — a duplicate layer was removed not added; net-subtractive 17 ins/23 del; the SPT Q4 preservation claim is backed by an AST enumeration of all 39 call sites, not asserted; no suppression-as-fix); Regression (no risk boundary crossed — test-helper only; 119 green at same count incl. contract-sync test; make_args(reviewer=...) still bypasses alias normalization exactly as the deleted dict did; F-007 is pre-existing README doc-rot surfaced by this loop's audit, not caused by the diff).

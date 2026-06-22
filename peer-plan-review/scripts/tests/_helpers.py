@@ -8,7 +8,6 @@ Tier 2: Optional self-checks for installed provider CLIs.
 Run:  python3 scripts/test_run_review.py
 """
 
-import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -21,7 +20,7 @@ FIXTURES_DIR = str(Path(SCRIPT_DIR) / "fixtures")
 
 # Import functions from run_review for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
-import run_review  # noqa: E402,F401 — re-exported via * for test files
+import run_review  # noqa: E402 — used by make_args + re-exported via * for test files
 from _common.session import parse_structured_review  # noqa: E402,F401 — re-exported via *
 from run_review import (  # noqa: E402,F401 — re-exported via *
     extract_metadata,
@@ -58,27 +57,22 @@ def run_paths_script(*extra_args, env=None):
 
 
 def make_args(**overrides):
-    """Create a Namespace matching run_review.py argument names."""
-    data = {
-        "reviewer": "claude",
-        "plan_file": None,
-        "prompt_file": None,
-        "output_file": None,
-        "session_file": None,
-        "events_file": None,
-        "model": None,
-        "effort": None,
-        "resume": False,
-        "timeout": 600,
-        "self_check": False,
-        "list_models": False,
-        "error_log": None,
-        "review_id": None,
-        "codex_home_manifest": None,
-        "summary_file": None,
-    }
-    data.update(overrides)
-    return argparse.Namespace(**data)
+    """Create a Namespace matching run_review.py argument names.
+
+    Defaults derive from parse_args() itself — the single source of truth — so a
+    new argument added to parse_args() flows here automatically with its real
+    default. There is no hand-maintained parallel dict to drift (the duplicated
+    authority that consumed loop 1 when --codex-home-manifest was added).
+    """
+    saved_argv = sys.argv
+    sys.argv = ["run_review.py"]
+    try:
+        args = run_review.parse_args()
+    finally:
+        sys.argv = saved_argv
+    for key, value in overrides.items():
+        setattr(args, key, value)
+    return args
 
 
 
