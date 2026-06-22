@@ -64,7 +64,7 @@
       "severity": "Noticeable weakness",
       "first_seen_loop": 2,
       "first_seen_sha": "28e06bc89c82cd5c17d94d0037c2758687c69d4f",
-      "last_seen_loop": 2,
+      "last_seen_loop": 3,
       "occurrences": [
         {
           "loop": 2,
@@ -77,6 +77,18 @@
           },
           "attempted_remedy_hash": null,
           "idempotency_key": "loop2-F-003-open"
+        },
+        {
+          "loop": 3,
+          "loop_local_id": "F3",
+          "status": "resolved",
+          "sha": "pending",
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop3-F-003-resolved"
         }
       ]
     },
@@ -90,7 +102,7 @@
       "severity": "Cosmetic for contest",
       "first_seen_loop": 2,
       "first_seen_sha": "28e06bc89c82cd5c17d94d0037c2758687c69d4f",
-      "last_seen_loop": 2,
+      "last_seen_loop": 3,
       "occurrences": [
         {
           "loop": 2,
@@ -103,6 +115,18 @@
           },
           "attempted_remedy_hash": null,
           "idempotency_key": "loop2-F-004-open"
+        },
+        {
+          "loop": 3,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": null,
+          "fingerprint": {
+            "claim_consequence_hash": null,
+            "evidence_paths_hash": null
+          },
+          "attempted_remedy_hash": null,
+          "idempotency_key": "loop3-F-004-open"
         }
       ]
     }

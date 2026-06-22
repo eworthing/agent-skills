@@ -121,3 +121,26 @@ class TestPathHelper(unittest.TestCase):
         rc, _stdout, stderr = run_paths_script("--review-id", "../bad")
         self.assertNotEqual(rc, 0)
         self.assertIn("review id must contain only", stderr)
+
+
+class TestArgContract(unittest.TestCase):
+    """Guard that make_args() stays in sync with parse_args() dest names.
+
+    Loop 1 was entirely consumed by a build failure caused by make_args()
+    drifting from parse_args() when --codex-home-manifest was added.
+    This test derives the ground truth from argparse itself so it cannot
+    drift: any new argument added to parse_args() surfaces here immediately.
+    """
+
+    def test_make_args_keys_match_parse_args_dests(self):
+        """make_args() namespace keys must equal parse_args() dest names."""
+        with mock.patch("sys.argv", ["run_review.py"]):
+            canonical = set(vars(run_review.parse_args()).keys())
+        helper = set(vars(make_args()).keys())
+        self.assertEqual(
+            canonical,
+            helper,
+            f"make_args() is out of sync with parse_args().\n"
+            f"  Missing from make_args(): {canonical - helper}\n"
+            f"  Extra in make_args():     {helper - canonical}",
+        )

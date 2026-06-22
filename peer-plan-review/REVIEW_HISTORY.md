@@ -167,3 +167,83 @@ Removed 8 unused stdlib imports from `scripts/tests/_helpers.py:11–22` (`json`
 ## Loop 2 Implementation Review
 
 Verdict: **approved**. All three checks passed: Reality (the 8 unused stdlib imports cited in F-002 are genuinely absent from the current `_helpers.py`); Honesty (pure deletion, no redistribution; noqa annotations on intentional re-export anchors only); Regression (no new finding at same or higher severity).
+
+--- Loop 3 (UTC 2026-06-22T07:10:00Z) ---
+
+### Discovery
+- [See loop 1 Discovery for full details — unchanged]
+- Ground-truth state at Step 0: GREEN — 118 passed, 0 failed (loop 2 left green)
+- Provider: `claude_code`. loop_model: `claude-sonnet-4-6` (default). spawn_isolation: subagent.
+
+### Loop Counter
+Loop 3 of 10 (cap)
+
+### System Flag
+[STATE: CONTINUE]
+
+---
+
+## Contest Verdict
+Good app, but not top-tier yet
+
+Tests are green (119 passed). Production code is functionally solid and cleanly separated from `_common`. Loop 3 added the parse_args/make_args contract-sync test, closing the authority split that caused loop 1's red suite. The remaining contest-grade drag is in production lint (I001/PTH108/RUF100 in `run_review.py`) and the `run_review()` 405-LoC complexity.
+
+## Scorecard (1-10)
+
+- **Architecture quality:** 7 | SAME | `run_review.py:339` (registry dispatch); clean import DAG; `run_review()` at 405 LoC without sub-module boundaries is primary drag
+- **State management and runtime ownership:** 8 | SAME | `_active_proc` at `run_review.py:187` single-writer; `run_review.py:209` resume_requested snapshot; local state machine
+- **Domain modeling:** 7 | SAME | `REVIEWER_ALIASES` at `run_review.py:73`; normalization at CLI boundary `:121-122`; PROVIDERS registry from `_common`
+- **Data flow and dependency design:** 8 | SAME | Clean DAG; temporal coupling documented at `run_review.py:501-510`
+- **Framework / platform best practices:** 6 | SAME | PTH108 at `run_review.py:605`; I001 at `run_review.py:27`; RUF100 at `:36`; test files retain E401+I001+RUF100+F405 from star-import pattern
+- **Concurrency and runtime safety:** 8 | SAME | Signal handler save/restore in try/finally; Gemini/agy cleanup in finally
+- **Code simplicity and clarity:** 6 | SAME | `run_review()` 405 LoC, 67+ AST nested control-flow nodes; loop 3 change purely additive
+- **Test strategy and regression resistance:** 7.5 | UP | `test_file_io_validation.py:TestArgContract.test_make_args_keys_match_parse_args_dests` (added loop 3) — derives canonical key set from `run_review.parse_args()` via sys.argv patch; 119 tests green
+- **Overall implementation credibility:** 7.5 | UP | F-003 resolved — contract-sync test closes recurrence risk; remaining drag: F-004 open and make_args() dict still manually maintained (guarded by new test)
+
+## Authority Map
+
+- **Concern:** CLI arg contract | **Owner:** `run_review.py:parse_args()` | **Readers:** `run_review.run_review()`, `_helpers.py:make_args()` | **Verdict:** Split and ambiguous (drift now detected mechanically)
+- **Concern:** Active subprocess handle | **Owner:** `_active_proc at run_review.py:187` | **Verdict:** Single and clear
+- **Concern:** Session state | **Owner:** JSON file at `args.session_file` | **Verdict:** Single and clear
+
+## Strengths That Matter
+
+- `run_review.py:339` — provider dispatch fully registry-driven; orchestrator never branches on provider internals
+- Gemini config-overlay isolation tested behaviorally (test_execution_paths.py:138-214)
+- Resume/fallback state tracked via locals; args never mutated (snapshot at :209)
+- CLI arg contract now guarded by `TestArgContract.test_make_args_keys_match_parse_args_dests` — next arg addition to `parse_args()` surfaces immediately
+
+## Findings
+
+### Finding #1 (F-004): PTH108 + I001 + RUF100 lint violations in run_review.py (pre-existing, carried forward)
+
+**Severity** — Cosmetic for contest | **Status this loop** — carried forward (loop 4 Priority 1)
+
+`run_review.py:605` (`os.unlink` → PTH108), `:27` (I001 import sort), `:36` (RUF100 unused noqa). All auto-fixable via `ruff --fix`.
+
+## Simplification Check
+- Structurally necessary: contract-sync test passes SPT Q1+Q2. No ceremony added.
+- new_seam_justified: false
+- Should NOT be done: Do not replace make_args() dict with parse_args() invocation yet (deepening candidate).
+- Tests after fix: 119 tests pass (1 new). No tests deleted.
+
+## Improvement Backlog
+1. **Fix PTH108 + I001 + RUF100 in `run_review.py`** (stable_id F-004 / simplification / helpful)
+
+## Builder Notes
+- [See REVIEW_HISTORY.json loops[2].builder_notes for full notes]
+- Pattern: manually-maintained arg contract mirror — add introspection test deriving from authoritative parse_args()
+- Pattern: introspection test over manual contract mirror — set(vars(f()).keys()) not hard-coded set
+- Humility: test_strategy:7.5 may miss check_web_search.py authority gaps; credibility:7.5 — manual dict still two-step; framework_idioms:6 — all auto-fixable cosmetics
+
+## Final Judge Narrative
+
+Loop 3 is the authority-split resolution loop. The contract-sync test (`TestArgContract.test_make_args_keys_match_parse_args_dests`) closes the recurrence class that consumed loop 1: any future arg addition to `parse_args()` surfaces immediately in the suite. The change is purely additive (7 lines), passes SPT cleanly, and the 119-test suite is green. Test strategy moves to 7.5 and overall credibility to 7.5. The remaining backlog is F-004 (production lint — PTH108 + I001 + RUF100 in `run_review.py`), which is cosmetic but fixable in one pass.
+
+## Loop 3 Result
+
+Added `TestArgContract.test_make_args_keys_match_parse_args_dests` to `scripts/tests/test_file_io_validation.py`. Test patches `sys.argv` to `["run_review.py"]`, calls `run_review.parse_args()`, asserts `set(vars(args).keys()) == set(vars(make_args()).keys())`. Derives canonical truth from argparse definition directly — cannot drift from `parse_args()` by construction. Re-ran full suite: **119 passed, 0 failed** (green, up from 118). Finding F3 (stable_id F-003) **resolved**. Finding F1 (stable_id F-004) **carried forward** to loop 4.
+
+## Loop 3 Implementation Review
+
+Verdict: **approved**. The diff adds a purely additive 23-line test class that derives canonical arg keys from `parse_args()` directly, closing the F-003 drift class with no ceremony, no new seam, and no regression.
