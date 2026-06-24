@@ -223,37 +223,73 @@ def _has_swift_sources(files: list[str]) -> bool:
     return any(Path(f).suffix in _SWIFT_EXTS for f in files)
 
 
-def _infer_static_dep_python(repo: Path, lhs: str, rhs: str) -> str:
-    """Returns 'present', 'none', or 'unavailable' for a Python pair."""
+def _module_tuple(rel: Path) -> tuple[str, ...]:
+    """Repo-relative ``.py`` path → its fully-qualified module tuple.
+
+    Drops the file suffix and a trailing ``__init__`` (a package's module is its
+    directory): ``src/billing/policy.py`` → ``("src", "billing", "policy")``.
+    """
+    parts = rel.with_suffix("").parts
+    if parts and parts[-1] == "__init__":
+        parts = parts[:-1]
+    return parts
+
+
+def _imported_modules(path: Path, rel: Path) -> set[tuple[str, ...]]:
+    """Fully-qualified module tuples imported by the file at ``path`` (repo-relative ``rel``).
+
+    Absolute and relative imports both resolve to *absolute* tuples so a target module
+    tuple can be matched by EXACT equality (which is what prevents the same-top-level
+    false-positive class). For ``from a.b import c`` both ``("a","b")`` and ``("a","b","c")``
+    are emitted — the leaf may be a submodule. Relative imports resolve against the
+    importer's own package; ``node.module`` is ``None`` for ``from . import x`` (so we never
+    ``None.split``), and an illegal over-deep relative import clamps to an empty base rather
+    than slicing the package tuple from the right.
+    """
     import ast as _ast  # local import — stdlib, never absent
 
-    def _top_level_imports(path: Path) -> set[str]:
-        try:
-            src = path.read_text(encoding="utf-8", errors="replace")
-            tree = _ast.parse(src, filename=str(path))
-        except (OSError, SyntaxError, ValueError):
-            return set()
-        tops: set[str] = set()
-        for node in _ast.walk(tree):
-            if isinstance(node, _ast.Import):
-                for alias in node.names:
-                    tops.add(alias.name.split(".", 1)[0])
-            elif isinstance(node, _ast.ImportFrom) and not node.level and node.module:
-                tops.add(node.module.split(".", 1)[0])
-        return tops
+    try:
+        tree = _ast.parse(
+            path.read_text(encoding="utf-8", errors="replace"), filename=str(path)
+        )
+    except (OSError, SyntaxError, ValueError):
+        return set()
 
-    lhs_pkg = Path(lhs).parts[0] if Path(lhs).parts else ""
-    rhs_pkg = Path(rhs).parts[0] if Path(rhs).parts else ""
-    if not lhs_pkg or not rhs_pkg:
+    pkg = rel.parent.parts  # package directories of this module
+    mods: set[tuple[str, ...]] = set()
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.Import):
+            for alias in node.names:
+                mods.add(tuple(alias.name.split(".")))
+        elif isinstance(node, _ast.ImportFrom):
+            mod_parts = tuple(node.module.split(".")) if node.module else ()
+            # relative: drop (level-1) trailing package components, clamped at 0;
+            # absolute (level 0): no base. node.module is None for `from . import x`.
+            base = pkg[: max(0, len(pkg) - (node.level - 1))] if node.level else ()
+            prefix = (*base, *mod_parts)
+            if prefix:
+                mods.add(prefix)
+            for alias in node.names:
+                mods.add((*prefix, alias.name))
+    return mods
+
+
+def _infer_static_dep_python(repo: Path, lhs: str, rhs: str) -> str:
+    """Returns 'present', 'none', or 'unavailable' for a Python pair.
+
+    Detects a DIRECT module/file import in either direction by exact module-tuple
+    match. It is NOT package-re-export, dynamic-import, or ``src``-import-root aware:
+    a 'none' means "no *direct* import between these two files", not "no relationship".
+    """
+    lhs_mod = _module_tuple(Path(lhs))
+    rhs_mod = _module_tuple(Path(rhs))
+    if not lhs_mod or not rhs_mod:
         return "unavailable"
 
-    lhs_path = repo / lhs
-    rhs_path = repo / rhs
+    lhs_imports = _imported_modules(repo / lhs, Path(lhs))
+    rhs_imports = _imported_modules(repo / rhs, Path(rhs))
 
-    lhs_imports = _top_level_imports(lhs_path)
-    rhs_imports = _top_level_imports(rhs_path)
-
-    if rhs_pkg in lhs_imports or lhs_pkg in rhs_imports:
+    if rhs_mod in lhs_imports or lhs_mod in rhs_imports:
         return "present"
     return "none"
 

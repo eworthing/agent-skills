@@ -71,6 +71,55 @@ def _pairs_by_files(result: dict) -> dict[tuple[str, str], dict]:
     return out  # type: ignore[return-value]
 
 
+def _static_dep_case(
+    label: str,
+    files: dict[str, str],
+    lhs: str,
+    rhs: str,
+    expected_dep: str,
+    failures: list[str],
+) -> None:
+    """Build a temp repo with `files` at HEAD, co-change lhs+rhs >=3x (init + 3 edits,
+    so the pair clears the candidate threshold), then assert its static_dependency.
+
+    Used by the Python static-dependency cases (5a-5d). `lhs`/`rhs` are repo-relative
+    paths; their final HEAD content is `files[path]` plus a trailing marker comment, so
+    any import line at the top of the file is preserved for AST resolution.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"
+        root.mkdir()
+        _init(root)
+        _write_and_commit(root, files, "init")
+        for i in range(1, 4):
+            bump = {lhs: files[lhs] + f"# v{i}\n", rhs: files[rhs] + f"# v{i}\n"}
+            _write_and_commit(root, bump, f"sync v{i}")
+
+        proc = _run(root)
+        if proc.returncode != 0:
+            failures.append(
+                f"{label}: expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
+            )
+            return
+        try:
+            result = json.loads(proc.stdout)
+        except json.JSONDecodeError as e:
+            failures.append(f"{label}: invalid JSON output: {e}\n{proc.stdout[:300]}")
+            return
+        pairs = _pairs_by_files(result)
+        key = tuple(sorted([lhs, rhs]))
+        if key not in pairs:
+            failures.append(
+                f"{label}: expected candidate pair {key}; got {list(pairs.keys())}"
+            )
+            return
+        dep = pairs[key].get("static_dependency")
+        if dep != expected_dep:
+            failures.append(
+                f"{label}: static_dependency expected {expected_dep!r}, got {dep!r}"
+            )
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit_cochange.py missing: {AUDIT}")
@@ -281,6 +330,63 @@ def main() -> int:
                     f"case4b: shallow clone should yield empty pairs, got: "
                     f"{result.get('pairs')}"
                 )
+
+    # ------------------------------------------------------------------ #
+    # Case 5: Python static_dependency — relative + absolute import edges  #
+    # ------------------------------------------------------------------ #
+    # 5a (positive, the bug): a relative import to the paired file must resolve
+    # to "present". Currently dropped (node.level > 0) → false "none".
+    _static_dep_case(
+        "case5a (relative import to paired file → present)",
+        {
+            "src/orders/checkout.py": "from ..billing.policy import DiscountPolicy\n",
+            "src/billing/policy.py": "class DiscountPolicy:\n    pass\n",
+        },
+        "src/orders/checkout.py",
+        "src/billing/policy.py",
+        "present",
+        failures,
+    )
+    # 5b (false-positive guard): a relative import to a SIBLING module, with the
+    # co-change pair being an unrelated same-top-level-package file → must be "none".
+    # A coarse top-level fix would wrongly mark this "present".
+    _static_dep_case(
+        "case5b (relative import to sibling, unrelated pair → none)",
+        {
+            "src/orders/checkout.py": "from .cart import Cart\n",
+            "src/billing/policy.py": "value = 1\n",
+        },
+        "src/orders/checkout.py",
+        "src/billing/policy.py",
+        "none",
+        failures,
+    )
+    # 5c (regression guard): a non-`src` absolute import to the paired file must
+    # still resolve to "present" under the new exact-match rule.
+    _static_dep_case(
+        "case5c (non-src absolute import → present, no regression)",
+        {
+            "orders/checkout.py": "from billing.policy import DiscountPolicy\n",
+            "billing/policy.py": "class DiscountPolicy:\n    pass\n",
+        },
+        "orders/checkout.py",
+        "billing/policy.py",
+        "present",
+        failures,
+    )
+    # 5d (crash guard): `from . import x` makes node.module None; resolution must
+    # not crash. The sibling target is same-dir so the cross-dir pair stays "none".
+    _static_dep_case(
+        "case5d (from . import x, node.module is None → no crash, none)",
+        {
+            "src/orders/checkout.py": "from . import cart\n",
+            "src/billing/policy.py": "value = 1\n",
+        },
+        "src/orders/checkout.py",
+        "src/billing/policy.py",
+        "none",
+        failures,
+    )
 
     # ------------------------------------------------------------------ #
     # Report                                                               #
