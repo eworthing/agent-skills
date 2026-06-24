@@ -155,7 +155,7 @@ External file at repo root. Created on first loop or via Step -1 step 0.6 bootst
 }
 ```
 
-Occurrence `status` enum: `open` (still in backlog) | `resolved` (loop's reviewer approved a fix) | `fixed_by_user` (user resolved between loops) | `rejected_attempt` (reviewer rejected the loop's attempted fix; do not drop, the audit chain needs it) | `unresolvable` (per-finding retirement per [method.md § Step 1.6](method.md); the finding is mechanically stuck via Branch A 3-way hash equality or Branch B 2-way hash equality + intervening `resolved`. Skipped for Priority-1 selection while the latest occurrence matches the retiring basis).
+Occurrence `status` enum: `open` (still in backlog) | `resolved` (loop's reviewer approved a fix) | `fixed_by_user` (user resolved between loops) | `rejected_attempt` (reviewer rejected the loop's attempted fix; do not drop, the audit chain needs it) | `withdrawn` (the Critic audited the finding and reclassified it as not-a-finding — no code change, no fix landed; distinct from `resolved`, which records a landed fix. Use when re-verification shows the prior finding was a false positive, e.g. all flagged sites are a framework-constrained carve-out. Terminal like `resolved`: dropped from the backlog, not eligible for Priority-1 selection, and not required in `halt_handoff.remaining_serious_findings_disposition[]`) | `unresolvable` (per-finding retirement per [method.md § Step 1.6](method.md); the finding is mechanically stuck via Branch A 3-way hash equality or Branch B 2-way hash equality + intervening `resolved`. Skipped for Priority-1 selection while the latest occurrence matches the retiring basis).
 
 ### Fingerprint + retirement occurrence fields (PR 1)
 
@@ -194,6 +194,7 @@ Occurrence `sha` semantics:
 - `status == "resolved"` → resolution commit sha (the loop's commit that landed the fix; matches `Step 3 step 11` commit_sha for that loop).
 - `status == "fixed_by_user"` → the user's commit sha that resolved the finding between loops (typically detected via Step -1 step 4a drift matching).
 - `status == "rejected_attempt"` → the loop's commit sha (committing review artifacts only, no code change; the attempted-fix code was reverted in Step 3 step 6).
+- `status == "withdrawn"` → the audit loop's commit sha (the loop whose Critic reclassified the finding as not-a-finding; review artifacts only, no code change).
 - `status == "open"` → the head sha at observation time (i.e., the parent of the loop's commit; equivalent to `git rev-parse HEAD~1` from the loop's commit perspective). For loop 1 with no prior commit, this is the sha of the most recent commit before `/contest-refactor` was invoked.
 
 `first_seen_sha` always uses the observation-time sha (per the `open` rule), so it answers "what was the codebase state when this finding was first noticed."

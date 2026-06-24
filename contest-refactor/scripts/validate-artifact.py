@@ -48,7 +48,7 @@ SERIOUS_OR_WORSE = ("Serious deduction", "Likely disqualifier")
 # Status values that keep a finding active at halt: open/rejected_attempt require
 # a canonical disposition + sidecar; unresolvable requires the {disposition:
 # "unresolvable"} stub (no sidecar, the registry carries the retirement block).
-# resolved / fixed_by_user are done and need not appear.
+# resolved / fixed_by_user / withdrawn are done and need not appear.
 ELIGIBLE_BACKLOG_STATUSES = ("open", "rejected_attempt", "unresolvable")
 
 # Sidecar field required per disposition (per output-format-json.md halt_handoff schema)
@@ -99,13 +99,13 @@ _G28_ORPHAN_SECONDS = 24 * 3600
 # is required at schema_version >= 2.
 _G22_COMMIT_SUBJECT_RE = re.compile(
     r"^loop \d+: .+?; finding F\d+ \(stable_id F-\d+\) "
-    r"(resolved|carried_forward|fixed_by_user|rejected_attempt)"
+    r"(resolved|carried_forward|fixed_by_user|rejected_attempt|withdrawn)"
     r" \[registry: \+\d+ findings(?:, ~\d+ occurrences)?\]$"
 )
 # G22: legacy v1 subject (no registry suffix) — used to detect v1 in v2+ artifact.
 _G22_COMMIT_SUBJECT_V1_RE = re.compile(
     r"^loop \d+: .+?; finding F\d+ \(stable_id F-\d+\) "
-    r"(resolved|carried_forward|fixed_by_user|rejected_attempt)$"
+    r"(resolved|carried_forward|fixed_by_user|rejected_attempt|withdrawn)$"
 )
 
 
