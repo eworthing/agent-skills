@@ -15,3 +15,7 @@ Previous `CURRENT_REVIEW.md` is appended to `REVIEW_HISTORY.md` (preceded by `--
 - [output-format-markdown.md](output-format-markdown.md) — CURRENT_REVIEW.md section schema (Discovery, Verdict, Scorecard, Authority Map, Strengths, Findings, Simplification Check, Improvement Backlog, Deepening Candidates, Builder Notes, Final Judge Narrative, Loop N Result) + per-loop archive compression rules.
 - [output-format-json.md](output-format-json.md) — per-loop JSON schemas: CURRENT_REVIEW.json, embedded `halt_handoff` and `re_validation_context` objects, Per-Loop Progress Line Format, canonical Deepening Keywords, Schema version 3 changelog, 27 schema validation rules.
 - [output-format-state-schemas.md](output-format-state-schemas.md) — persistent state file schemas: LOOP_STATE.json, findings_registry.json, REVIEW_HISTORY.json, Fuzzy-match rules.
+
+## Optional export — SARIF
+
+At HALT, the findings that *survive* the loop (registry entries terminally `unresolvable`, plus `accepted` scorecard residuals when a review is supplied) can be exported to SARIF 2.1.0 for IDE/CI triage: `python3 scripts/export_sarif.py findings_registry.json [--review CURRENT_REVIEW.json]`. Read-only; never mutates state, scores, or gates, and fabricates no findings (a fully-resolved registry yields an empty-results log).
