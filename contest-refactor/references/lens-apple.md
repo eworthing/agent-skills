@@ -174,6 +174,16 @@ Coverage is proxy, not proof. Absence of tests on stateful domain, reducer, pers
 
 Flag sleeps, timing hacks, unowned time, randomness, UUIDs only when they harm determinism. Do not add injection ceremony without need.
 
+### Recorded-fixture mismatch in Step 3 (regenerate vs revert)
+
+`swift-snapshot-testing` `.dump` / golden fixtures encode *expected* output. When a Step 3 refactor *intentionally* changes that output (added a row, renamed a label, reordered a section), the fixture test fails because the recording is stale — not because the build broke. Per [SKILL.md Step 3 sub-step 3], before reverting confirm the **only** failures are these recorded mismatches and the diff is exactly your intended change, then regenerate and re-run:
+
+- `SNAPSHOT_TESTING_RECORD=all swift test --filter <SuiteName>` regenerates the affected `.dump`s; then re-run the suite **without** the env var to confirm green.
+- Scope the `--filter` to the suite whose recordings you meant to change — a blanket regenerate can mask a real regression in an unrelated snapshot.
+- The `.dump` serializes the model, not the rendered view — a diff that touches model fields you did not intend to change is a regression signal, not a stale recording; revert.
+
+If any non-snapshot test fails, or the snapshot diff includes output you did **not** intend to change, treat it as a real break and revert. Regeneration never launders a behavior regression green.
+
 ### Authority-Map test-surface cross-check (mandatory before scoring test_strategy ≥ 9)
 
 A passing test count is not test strategy. Before scoring `test_strategy` ≥ 9, walk the Authority Map produced in this same loop:
