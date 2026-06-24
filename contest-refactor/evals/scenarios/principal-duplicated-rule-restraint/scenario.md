@@ -56,17 +56,16 @@ The application applies loyalty discounts at checkout. `CONTEXT.md` §7 states: 
 -            "SELECT * FROM orders WHERE member_id = ? AND is_active = 1 AND subtotal >= 50 AND prior_orders >= 3",
 -            member.id
 -        )
-+        // Policy thresholds sourced from DiscountPolicy; SQL mirrors the same constants.
-+        try await db.query(
-+            """
-+            SELECT * FROM orders
-+            WHERE member_id = ?
-+              AND is_active = 1
-+              AND subtotal >= \(DiscountPolicy.minimumCartSubtotal)
-+              AND prior_orders >= \(DiscountPolicy.minimumPriorOrders)
-+            """,
++        // Broad pre-filter: fetch all orders for this member without re-encoding
++        // eligibility criteria. DiscountPolicy owns the rule's structure and fields;
++        // this layer applies it in-memory after retrieval.
++        let candidates = try await db.query(
++            "SELECT * FROM orders WHERE member_id = ?",
 +            member.id
 +        )
++        return candidates.filter { order in
++            discountPolicy.isEligible(member: member, cartSubtotal: order.subtotal)
++        }
      }
  }
 
@@ -92,4 +91,4 @@ The application applies loyalty discounts at checkout. `CONTEXT.md` §7 states: 
  }
 ```
 
-`DiscountPolicy.isEligible` is the single evaluation point for the eligibility rule. `CartView` and `DiscountWorker` call it directly; `OrderRepository` reads the `static` threshold constants (which are the same source of truth) for its SQL literal. Updating the rule requires changing `DiscountPolicy` in one place; all three modules stay coherent.
+`DiscountPolicy.isEligible` is the single evaluation point for the eligibility rule. `CartView` and `DiscountWorker` call it directly. `OrderRepository` does a broad pre-filter in SQL (by `member_id` only) and then calls `discountPolicy.isEligible` in-memory — the rule's structure, fields, operators, and conjunction exist in exactly one place. Adding a new conjunct, flipping an operator, or changing a threshold requires editing `DiscountPolicy` only; `OrderRepository` inherits the change automatically. No independent re-statement of the predicate exists outside `DiscountPolicy`.

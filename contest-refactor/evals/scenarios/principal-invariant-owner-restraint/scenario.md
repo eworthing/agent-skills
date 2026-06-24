@@ -19,6 +19,9 @@ The application manages sports league rosters. A hard domain invariant governs m
      private(set) var activePlayers: [Player] = []
 
 +    /// Adds `player` to this roster, enforcing the One-League Rule across `allRosters`.
++    /// - Parameter allRosters: The complete set of rosters for this league, owned by
++    ///   the caller (`RosterStore`). The store passes `self.rosters` — the authoritative
++    ///   membership it controls — so the invariant is checked against live state.
 +    /// - Throws: `RosterError.playerAlreadyInLeague` if `player` is already active
 +    ///   in any roster with the same `leagueID`.
 +    mutating func addPlayer(
@@ -32,6 +35,32 @@ The application manages sports league rosters. A hard domain invariant governs m
 +            throw RosterError.playerAlreadyInLeague(player, roster: conflict)
 +        }
 +        activePlayers.append(player)
++    }
+ }
+
+--- a/Sources/Application/RosterStore.swift
++++ b/Sources/Application/RosterStore.swift
+@@
+ @MainActor
+ final class RosterStore: ObservableObject {
+     @Published private(set) var rosters: [LeagueRoster] = []
+     var currentRosterIndex: Int = 0
+
++    /// Adds `player` to the current roster, enforcing the One-League Rule.
++    /// Passes `rosters` — the store's own authoritative membership set — to the
++    /// domain check; no caller-supplied snapshot is involved.
++    func addPlayerToCurrentRoster(_ player: Player) throws {
++        try rosters[currentRosterIndex].addPlayer(player, checking: rosters)
++    }
++
++    /// Adds `player` to the roster identified by `leagueID`, enforcing the One-League Rule.
++    /// Passes `rosters` — the store's own authoritative membership set — to the
++    /// domain check; no caller-supplied snapshot is involved.
++    func addPlayer(_ player: Player, toLeague leagueID: League.ID) throws {
++        guard let idx = rosters.firstIndex(where: { $0.leagueID == leagueID }) else {
++            throw RosterError.leagueNotFound(leagueID)
++        }
++        try rosters[idx].addPlayer(player, checking: rosters)
 +    }
  }
 
@@ -67,4 +96,4 @@ The application manages sports league rosters. A hard domain invariant governs m
  }
 ```
 
-`RosterStore.addPlayerToCurrentRoster` and `RosterStore.addPlayer(toLeague:)` both delegate to `LeagueRoster.addPlayer(_:checking:)`. The invariant check executes once, in the domain type, regardless of which path adds the player. The two callers carry no guard logic of their own.
+`RosterStore` is the single owner of `rosters` — the authoritative membership set. Both `addPlayerToCurrentRoster` and `addPlayer(toLeague:)` pass `self.rosters` directly to `LeagueRoster.addPlayer(_:checking:)`, so the invariant is checked against the live state the store controls, not a snapshot passed in from outside. No caller supplies the roster set; `LeagueRoster` receives it from its owner. The invariant check executes once, in the domain type, regardless of which entry path is used. Neither `RosterView` nor `ImportService` carries any guard logic.
