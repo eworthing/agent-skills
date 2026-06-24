@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "description": "Baseline manifest for principal-defect (cross-module / domain-grain) scenarios. Every principal-* scenario directory must be registered here. The selftest scripts/_principal_baseline_selftest.py enforces this contract mechanically.",
+  "thresholds": {
+    "recall_target": 0.8,
+    "restraint_regression_tolerance": 0
+  },
+  "scenarios": [
+    {
+      "id": "principal-invariant-owner-flag",
+      "kind": "flag",
+      "pair_id": "principal-invariant-owner",
+      "dimension": "domain_modeling",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "miss"
+    },
+    {
+      "id": "principal-invariant-owner-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-invariant-owner",
+      "dimension": "domain_modeling",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "hold"
+    },
+    {
+      "id": "principal-duplicated-rule-flag",
+      "kind": "flag",
+      "pair_id": "principal-duplicated-rule",
+      "dimension": "domain_modeling",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "miss"
+    },
+    {
+      "id": "principal-duplicated-rule-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-duplicated-rule",
+      "dimension": "domain_modeling",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "hold"
+    },
+    {
+      "id": "principal-process-owner-flag",
+      "kind": "flag",
+      "pair_id": "principal-process-owner",
+      "dimension": "data_flow",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "miss"
+    },
+    {
+      "id": "principal-process-owner-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-process-owner",
+      "dimension": "data_flow",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "hold"
+    }
+  ]
+}

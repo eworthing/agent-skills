@@ -352,6 +352,108 @@
         "[restraint] Does not flag or reject the cited carve-out merely because the run is aggressive (a score-honesty pushback on an unearned 9.5 would be separate from the evidence rule)",
         "[restraint] blocks_95 is not asserted true on the basis of the residual evidence (the citation satisfies aggressive)"
       ]
+    },
+    {
+      "id": 25,
+      "name": "principal-invariant-owner-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. The domain invariant (One-League Rule) is enforced independently in RosterView (presentation) and ImportService (infrastructure), but LeagueRoster.addPlayer remains an unchecked mutation trusting its caller. Because each enforcement path builds its own predicate—RosterView reads store.currentRoster.leagueID while ImportService reads row.leagueID—a divergent code path can violate the invariant without triggering either guard. The defect is split-enforcement across modules with no single domain owner: multi-writer state / unclear ownership (architecture-rubric.md Smell List). dimension_scores names domain_modeling (or state_management) < 9.5; blocking_severity Serious deduction or Likely disqualifier. evidence_demanded: a test that invokes importRoster concurrently while RosterView has a conflicting add in flight, or a demonstration that the two leagueID sources can diverge.",
+      "files": [
+        "scenarios/principal-invariant-owner-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
+        "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+        "[discriminating] Maps the finding to domain_modeling (or state_management) with a score < 9.5",
+        "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+        "[validity] blocks_95 is true for the touched dimension",
+        "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
+      ]
+    },
+    {
+      "id": 26,
+      "name": "principal-invariant-owner-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag split invariant enforcement. LeagueRoster.addPlayer(_:checking:) is the single domain method that enforces the One-League Rule; both RosterView (via RosterStore.addPlayerToCurrentRoster) and ImportService (via RosterStore.addPlayer(toLeague:)) call through it. The invariant cannot be bypassed from either path. No cross-module duplication exists; the presentation and infrastructure layers carry no guard logic of their own. The Actor’s proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual (the 9.5+ Threshold rule) — score-honesty, not a flag on the carve-out. A reviewer that names a split-enforcement smell, flags the two call paths, or demands an aggregate/event-sourcing overhaul is over-flagging.",
+      "files": [
+        "scenarios/principal-invariant-owner-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+        "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+        "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+        "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+      ]
+    },
+    {
+      "id": 27,
+      "name": "principal-duplicated-rule-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. DiscountThresholds centralizes numeric constants but not the eligibility predicate itself. CartView, OrderRepository, and DiscountWorker each build their own eligibility expression independently. OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using DiscountThresholds.minimumPriorOrders, so updating the constant silently leaves the repository query stale. This is duplicated business rule with drift across modules (architecture-rubric.md Smell List: duplicate abstractions / multi-writer state). domain_modeling < 9.5; blocking_severity Serious deduction or Likely disqualifier. evidence_demanded: a cross-module integration test or code-path walkthrough showing all three eligibility expressions stay in sync when the threshold changes.",
+      "files": [
+        "scenarios/principal-duplicated-rule-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
+        "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+        "[discriminating] Maps the finding to domain_modeling with a score < 9.5",
+        "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+        "[validity] blocks_95 is true for the touched dimension",
+        "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
+      ]
+    },
+    {
+      "id": 28,
+      "name": "principal-duplicated-rule-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag duplicated business rule. DiscountPolicy.isEligible is the single evaluation point for the eligibility predicate. CartView and DiscountWorker call it directly. OrderRepository reads DiscountPolicy’s static constants for its SQL literal — the same source of truth — so updating the policy updates all three sites coherently. There is no independent eligibility expression in any caller. The Actor’s proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual — score-honesty, not a flag on the carve-out. A reviewer that flags the SQL literal usage in OrderRepository as duplication, or names a duplicated-rule smell, is over-flagging.",
+      "files": [
+        "scenarios/principal-duplicated-rule-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
+        "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
+        "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+        "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "principal-process-owner-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. CheckoutViewModel sequences three cross-module writes (reserve, charge, confirm) directly from the presentation layer with no process owner and no compensating rollback. If paymentService.charge succeeds but confirmationService.finalize throws, the card is charged and the seat stays in `held` state permanently with no Booking record. This is a missing process owner / temporal coupling across modules (architecture-rubric.md Smell List: temporal coupling, hidden control flow). data_flow < 9.5; blocking_severity Serious deduction or Likely disqualifier. evidence_demanded: a test or walkthrough demonstrating the partial-failure path (charge succeeds, finalize throws) and confirming no compensation runs.",
+      "files": [
+        "scenarios/principal-process-owner-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Identifies that CheckoutViewModel (presentation layer) sequences three cross-module writes with no process owner",
+        "[discriminating] Names the partial-failure scenario: charge succeeds but finalize throws, leaving an unrecoverable inconsistency (charged card, held seat, no Booking)",
+        "[discriminating] Maps the finding to data_flow (or architecture_quality) with a score < 9.5",
+        "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+        "[validity] blocks_95 is true for the touched dimension",
+        "[validity] Does not accept the passing test suite as proof the partial-failure path is handled"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "principal-process-owner-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag missing process owner. PurchaseCoordinator owns the reserve-charge-confirm saga and the compensating rollback: it releases the seat hold if charge or finalize fails, and documents the payment-capture reconciliation path per ADR-0031. CheckoutViewModel calls one method; it carries no saga logic. The process owner exists and is correctly scoped to the domain layer. The Actor’s proposed 9.5 lacks a named residual, so a rubric-faithful reviewer may hold the dimension at 9.0 or require a residual — score-honesty, not a flag on the carve-out. A reviewer that names a missing-process-owner smell, flags temporal coupling, or demands a full event-sourcing saga is over-flagging.",
+      "files": [
+        "scenarios/principal-process-owner-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag missing process owner (PurchaseCoordinator owns the saga and the compensating rollback)",
+        "[restraint] Does not name a temporal-coupling or hidden-control-flow smell for the data_flow dimension",
+        "[restraint] verdict is not \"rejected\" for missing-process-owner reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+        "[restraint] Recognizes that ADR-0031 documents the payment-capture reconciliation path; does not demand a full distributed-saga overhaul"
+      ]
     }
   ]
 }
