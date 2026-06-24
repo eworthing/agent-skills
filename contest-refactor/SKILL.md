@@ -234,8 +234,8 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
 11. Commit code (if reviewer approved) + `CURRENT_REVIEW.md` + `CURRENT_REVIEW.json` + `REVIEW_HISTORY.md` + `REVIEW_HISTORY.json` (when schema_version >= 2) + `findings_registry.json` (when schema_version >= 2) with subject matching the G22 pattern: `loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) <status> [registry: +<n> findings, ~<n> occurrences?]`. Examples:
 
     <example>
-    - `loop 3: collapse repository-theater seam in OrderIntake; finding F3 (stable_id F-007) resolved [registry: +0 findings, ~1 occurrence]`
-    - `loop 3: revert collapse attempt — reviewer rejected; finding F3 (stable_id F-007) carried_forward [registry: ~1 rejected_attempt]`
+    - `loop 3: collapse repository-theater seam in OrderIntake; finding F3 (stable_id F-007) resolved [registry: +0 findings, ~1 occurrences]`
+    - `loop 3: revert collapse attempt — reviewer rejected; finding F3 (stable_id F-007) carried_forward [registry: +0 findings, ~1 occurrences]`
     </example>
 
     **Forbidden subject prefixes**: `contest loop`, project name, Conventional-Commits style (`refactor:`, `chore:`). The `[registry: ...]` summary is required at `schema_version >= 2`. Run G22 at this step before invoking `git commit`.
