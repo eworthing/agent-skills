@@ -249,7 +249,7 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
     - 11.f. Delete `LOOP_STATE.json` (atomic rename to `.json.deleting` then unlink).
 
 12. **Loop dispatch** (mandatory continuation per Continuation Discipline + G20):
-    - **Loop Isolation** (subagent invocation) → return JSON summary to main and **stop**. Main owns dispatch of the next loop.
+    - **Loop Isolation** (subagent invocation) → return JSON summary to main and **stop**. Main owns dispatch of the next loop. If a dispatched subagent goes idle without writing any loop-N artifact, main recovers per [trust-model.md § HALT routing across the boundary](references/trust-model.md#halt-routing-across-the-boundary) (fence the dead executor → one re-dispatch → inline completion), never accepting an idle subagent as a completed loop.
     - **Inline** (no subagent) → re-read `CURRENT_REVIEW.json`. If `state == "CONTINUE"` AND `loop < loop_cap` AND backlog non-empty: increment loop counter, re-enter Step 1 **immediately, in the same turn**. Emitting a user-facing summary, "loop complete" message, or `return` here is a G20 violation. The only legal close-out for an inline run is a HALT_* handoff per [halt-handoff.md](references/halt-handoff.md) or an `open_question_for_user` (`halt_subtype: user_decision`).
 
 ## Halting Conditions
