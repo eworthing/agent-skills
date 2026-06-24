@@ -98,6 +98,8 @@ No subagent spawn available. Fall back to inline mode: the loop runs in the main
 
 The implementation reviewer must be read-only. Different providers achieve this differently. The contract is uniform: shell write/exec denied; shell read-only commands restricted to the allow-list above.
 
+**Verdict is the final message — join before routing.** Because the reviewer is read-only it cannot persist its verdict to a file; the verdict travels only as the subagent's final message. Spawn it as a **synchronous join**: await completion and read the final-message JSON as the result. On harnesses where a completed subagent's final message is not surfaced as a tool result (async / background spawn), read it from the runtime's run record / transcript before routing — a missing tool-result from a reviewer that completed is not a transient failure. Same rule applies to the challenger ([Challenger-spawn profile](#challenger-spawn-profile-step-1-halt_success-challenge)). See [implementation-reviewer.md § Verdict delivery](implementation-reviewer.md) and [halt-verifier.md § Verdict delivery](halt-verifier.md).
+
 ### claude_code (verified 2026-05-09)
 
 Spawn via the `Agent` tool:

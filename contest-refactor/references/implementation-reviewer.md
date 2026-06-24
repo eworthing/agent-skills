@@ -182,6 +182,12 @@ Rules:
 - Conservative bias: if you cannot determine a check's outcome from the diff + cited source within reasonable scope, fail it. The loop will re-attempt.
 ```
 
+## Verdict delivery (parent reads the final message)
+
+The reviewer is **strictly read-only** (see [provider-adapters.md § Reviewer read-only shell allow-list](provider-adapters.md#reviewer-read-only-shell-allow-list-uniform-across-providers) — codex denies writes, opencode runs `--read-only`), so the verdict **cannot** be written to a file by the reviewer. It travels only as the reviewer's **final message**, which the loop subagent reads as the spawn's synchronous result.
+
+**Robustness for async / background-spawn harnesses** (where a completed subagent's final message is NOT delivered back to the parent as a tool result): the parent must **join** — await reviewer completion and read its last message from the runtime's run record / transcript — *before* routing. A missing tool-result from a reviewer that actually ran to completion is **not** a reviewer failure: do not treat it as a transient timeout/spawn-error (that would burn a retry and then revert good code as "reviewer unavailable"). Only the retry envelope below applies when the reviewer genuinely produced no verdict. **Never route on an empty result** — an unread verdict is not an approval and not a rejection.
+
 ## Routing (loop subagent applies after reviewer returns)
 
 | verdict | action |

@@ -110,6 +110,10 @@ The challenger returns JSON mirroring `halt_success_challenge` in
 `outcome: "broke"` carries the finding (or residual refutation) in `attempts[]`;
 main reads it to seed the next loop's Priority-1 work.
 
+### Verdict delivery (main reads the final message)
+
+The challenger is **read-only** (identical enforcement to the reviewer — it cannot write a verdict file). The verdict travels only as its **final message**, which main reads as the spawn's synchronous result. **Robustness for async / background-spawn harnesses** (where a completed subagent's final message is not delivered to the parent as a tool result): main must **join** — await the challenger and read its last message from the runtime's run record / transcript — before routing. A terminal `HALT_SUCCESS` requires the recorded **held** challenge (G32); an *unread* verdict is not a held challenge. Do not promote on an empty result, and do not mistake "message not surfaced as a tool result" for the **unavailable** outcome (which fails closed to `verification_blocked`) when the challenger actually completed — exhaust the transcript read first.
+
 ## Oscillation
 
 A recurring candidate with the same **`candidate_fingerprint`** (the canonical
