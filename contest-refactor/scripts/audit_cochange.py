@@ -395,8 +395,8 @@ def _analyse(
         n_rhs = file_counts[rhs]
         union = n_lhs + n_rhs - count
         jaccard = count / union if union > 0 else 0.0
-        conf_lhs = count / n_lhs if n_lhs > 0 else 0.0
-        conf_rhs = count / n_rhs if n_rhs > 0 else 0.0
+        conf_rhs_given_lhs = count / n_lhs if n_lhs > 0 else 0.0  # P(rhs changes | lhs changed)
+        conf_lhs_given_rhs = count / n_rhs if n_rhs > 0 else 0.0  # P(lhs changes | rhs changed)
 
         # Determine granularity by file extensions
         exts = {Path(lhs).suffix, Path(rhs).suffix}
@@ -417,8 +417,8 @@ def _analyse(
             "cochange_count": count,
             "jaccard": round(jaccard, 4),
             "confidences": {
-                "lhs_given_rhs": round(conf_lhs, 4),
-                "rhs_given_lhs": round(conf_rhs, 4),
+                "lhs_given_rhs": round(conf_lhs_given_rhs, 4),
+                "rhs_given_lhs": round(conf_rhs_given_lhs, 4),
             },
             "directory_distance": dist,
             "static_dependency": dep,

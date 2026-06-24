@@ -389,6 +389,63 @@ def main() -> int:
     )
 
     # ------------------------------------------------------------------ #
+    # Case 6: directional confidence labels (Bug B)                       #
+    # ------------------------------------------------------------------ #
+    # Asymmetric co-change: checkout changes 10x total, discount 3x, co-change 3x.
+    # The conditional P(X changes | Y changed) = count / n_Y, so the label
+    # `<X>_given_<Y>` must carry count / n_Y. The bug swaps the two labels.
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo6"
+        root.mkdir()
+        _init(root)
+        checkout = "src/orders/checkout.ts"
+        discount = "src/billing/discount.ts"
+        change_count = {checkout: 10, discount: 3}  # total qualifying commits each appears in
+        cochange = 3
+
+        _write_and_commit(root, {checkout: "// checkout v0\n"}, "init checkout")
+        for i in range(1, 4):  # 3 co-change commits (discount only ever changes here)
+            _write_and_commit(root, {
+                checkout: f"// checkout co{i}\n",
+                discount: f"// discount v{i}\n",
+            }, f"sync checkout discount {i}")
+        for i in range(1, 7):  # 6 checkout-only commits → checkout total = 1 + 3 + 6 = 10
+            _write_and_commit(root, {checkout: f"// checkout solo{i}\n"}, f"edit checkout {i}")
+
+        proc = _run(root)
+        if proc.returncode != 0:
+            failures.append(
+                f"case6: expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
+            )
+        else:
+            try:
+                result = json.loads(proc.stdout)
+            except json.JSONDecodeError as e:
+                failures.append(f"case6: invalid JSON output: {e}\n{proc.stdout[:300]}")
+                result = {}
+            pairs = _pairs_by_files(result)
+            key = tuple(sorted([checkout, discount]))
+            if key not in pairs:
+                failures.append(f"case6: expected pair {key}; got {list(pairs.keys())}")
+            else:
+                p = pairs[key]
+                out_lhs, out_rhs = p["lhs"], p["rhs"]
+                conf = p.get("confidences", {})
+                # rhs_given_lhs = P(out_rhs changes | out_lhs changed) = count / n(out_lhs)
+                exp_rhs_given_lhs = round(cochange / change_count[out_lhs], 4)
+                exp_lhs_given_rhs = round(cochange / change_count[out_rhs], 4)
+                if conf.get("rhs_given_lhs") != exp_rhs_given_lhs:
+                    failures.append(
+                        f"case6: rhs_given_lhs = P({out_rhs}|{out_lhs}) expected "
+                        f"{exp_rhs_given_lhs} (=count/n_lhs), got {conf.get('rhs_given_lhs')!r}"
+                    )
+                if conf.get("lhs_given_rhs") != exp_lhs_given_rhs:
+                    failures.append(
+                        f"case6: lhs_given_rhs = P({out_lhs}|{out_rhs}) expected "
+                        f"{exp_lhs_given_rhs} (=count/n_rhs), got {conf.get('lhs_given_rhs')!r}"
+                    )
+
+    # ------------------------------------------------------------------ #
     # Report                                                               #
     # ------------------------------------------------------------------ #
     if failures:
