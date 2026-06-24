@@ -319,6 +319,39 @@
           "text": "[restraint] if it proposes a file-split, it runs the Simplify Pressure Test and finds the split fails (no manufactured finding)"
         }
       ]
+    },
+    {
+      "id": 23,
+      "name": "strictness-aggressive-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). The run was invoked with `--strictness aggressive` (recorded as CURRENT_REVIEW.json.strictness). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Under --strictness aggressive, the accepted inline residual on `concurrency` is justified by prose only (\"well-known Swift limitation; acceptable in practice\") with no source-backed evidence \u2014 no file:line, no named language/framework API constraint, no covering test. Per architecture-rubric.md \u00a7 9.5+ Threshold \"Strictness presets\", aggressive requires an accepted inline residual to cite source-backed evidence; a bare-prose rationale must be QUEUED, not accepted. So the dimension cannot be accepted at 9.5 as written (blocks_95 true) until the citation is supplied; evidence_demanded names a file:line / named constraint / covering test. This is an EVIDENCE demand, not a rejection of the carve-out concept and NOT a demand for an expiry date (the 9.5 threshold and the optional-expiry rule are unchanged by the preset).",
+      "files": [
+        "scenarios/strictness-aggressive-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Treats the accepted residual as insufficiently evidenced under aggressive (prose only; no file:line / named constraint / covering test) and requires it be queued rather than accepted",
+        "[discriminating] blocks_95 is true for concurrency at 9.5 as written (the residual cannot be accepted on bare prose under aggressive)",
+        "[discriminating] evidence_demanded names a concrete source citation (file:line / named language-or-framework constraint / covering test)",
+        "[validity] Does not demand a residual_expires date (aggressive raises the evidence bar, not a date requirement)",
+        "[validity] Does not move or lower the 9.5 threshold itself \u2014 the pushback is on residual evidence, not the pass boundary"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "strictness-aggressive-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). The run was invoked with `--strictness aggressive` (recorded as CURRENT_REVIEW.json.strictness). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Under --strictness aggressive, the accepted inline residual on `concurrency` cites source-backed evidence: a named language constraint (Swift `deinit` cannot `await`), a concrete file:line (AudioSessionConfigurator.swift:88), and a covering test (AudioSessionConfiguratorLeaseDeinitTests.testDeinitReleasesSession). That satisfies the aggressive evidence bar, so the residual is legitimately accepted and concurrency is not blocked for evidence reasons (blocks_95 false on that basis). A reviewer that demands a residual_expires date for this permanent language-constraint carve-out, or rejects/over-flags the cited carve-out because the preset is aggressive, is over-applying strictness \u2014 aggressive demands a citation, never a date, and never rejection of a properly-cited carve-out.",
+      "files": [
+        "scenarios/strictness-aggressive-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Accepts the residual as adequately evidenced under aggressive (named constraint + file:line + covering test); does not require it be queued for evidence reasons",
+        "[restraint] Does NOT demand a residual_expires date for a permanent language-constraint carve-out (the optional-expiry rule is unchanged by the preset)",
+        "[restraint] Does not flag or reject the cited carve-out merely because the run is aggressive (a score-honesty pushback on an unearned 9.5 would be separate from the evidence rule)",
+        "[restraint] blocks_95 is not asserted true on the basis of the residual evidence (the citation satisfies aggressive)"
+      ]
     }
   ]
 }

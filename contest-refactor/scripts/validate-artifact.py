@@ -84,6 +84,14 @@ _G27_CANONICAL_FAILED_PHRASE = "reviewer unavailable; manual verification requir
 # G27: retry_cause enum per spec at validation.md:107.
 _G27_RETRY_CAUSES = {"timeout", "spawn_error", "malformed_json"}
 
+# Optional top-level `strictness` preset (advisory metadata only — records the
+# `--strictness` the user invoked). MUST NOT influence any score/threshold gate:
+# the HALT_SUCCESS / G21 / G5 path reads only score + residual_disposition, never
+# this value. `_strictness_isolation_selftest.py` proves that preset-independence
+# against the real gate functions. Absent ⇒ "standard". See architecture-rubric.md
+# § 9.5+ Threshold ("Strictness presets") and output-format-json.md.
+_STRICTNESS_LEVELS = {"standard", "aggressive"}
+
 # G22: archive divider regex for REVIEW_HISTORY.md per output-format-markdown.md.
 # Format: `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`
 _G22_DIVIDER_RE = re.compile(
@@ -272,6 +280,16 @@ def check_schema_enums(current_review: dict, canon: _canon.Canon) -> List[Issue]
                 "schema-enum",
                 f"halt_subtype {halt_subtype!r} not in canon",
                 context="halt_subtype",
+            )
+        )
+    # Advisory-only preset; validated for typos but never consulted by any gate.
+    strictness = current_review.get("strictness")
+    if strictness is not None and strictness not in _STRICTNESS_LEVELS:
+        issues.append(
+            Issue(
+                "schema-enum",
+                f"strictness {strictness!r} not in {sorted(_STRICTNESS_LEVELS)}",
+                context="strictness",
             )
         )
     for finding in current_review.get("findings") or []:

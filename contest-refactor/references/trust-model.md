@@ -93,6 +93,10 @@ Rules: `halt_subtype` non-null iff `system_flag == "HALT_STAGNATION"`. At schema
 
 Main reads `review_artifact_path` for full detail when reporting HALT states or composing the final summary; the inline JSON above is for routing only.
 
+### Pre-dispatch precondition (fail-fast — prevention, not cure)
+
+Before the **first** subagent is dispatched, main runs Step 0's pre-dispatch gate (`scripts/preflight.py`): a knowably-bad input — a missing scope dir, a test command whose launcher does not resolve, or a configured base ref that won't `git rev-parse` — **aborts in main** with a clear message, so the run never starts inside a spawned agent. This is *prevention*. It is independent of the idle/no-artifact *cure* below (which handles a spawn that starts but stalls); neither replaces the other.
+
 ### HALT routing across the boundary
 
 - Subagent returns a terminal `HALT_STAGNATION` / `HALT_LOOP_CAP` (or `HALT_DRY_RUN`) → main terminates the run; **reads `halt_handoff.text` aloud to the user verbatim** (PR 4, schema_version >= 2; legacy schema_version 1 reads `halt_handoff_text`). Do not paraphrase or summarize — the text contains the menu the user picks from. Persist `halt_handoff.expected_actions[]` to `CURRENT_REVIEW.json` for the next invocation's Step -1 step 4a drift matcher. Do not call this "the result" or summarize further; the handoff text is the result.

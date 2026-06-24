@@ -162,11 +162,13 @@ Recorded in `CURRENT_REVIEW.json` as `loop_model_source` and `reviewer_model_sou
 
 The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases. On codebases >100K LOC or with deep architectural complexity (heavy concurrency, large state machines, cross-module ownership puzzles), Step 1 critic may need a stronger model. Upgrade via:
 
-- Claude Code: `--loop-model claude-opus-4-7`
-- Codex: `--loop-model gpt-5.4` (full, not mini)
+- Claude Code: `--loop-model claude-opus-4-8`
+- Codex: `--loop-model gpt-5.5` (full flagship, not mini)
 - OpenCode: `--loop-model deepseek-v4`
 
-The reviewer subagent rarely needs upgrading — verifying a small diff against three checks is well within the small-tier models.
+For the hardest critic runs on Claude Code — very large or architecturally dense codebases where even Opus leaves residual uncertainty — there is one tier above Opus: **Claude Fable 5** (`--loop-model claude-fable-5`). It is the most capable option and the most expensive; reserve it for runs where an Opus critic has visibly struggled, not as a default. (No Fable-equivalent top tier is wired for Codex/OpenCode; their flagship upgrade targets above are the ceiling.)
+
+The reviewer subagent rarely needs upgrading — verifying a small diff against three checks is well within the small-tier models. Model IDs are mutable; `scripts/_model_catalog_selftest.py` guards this list against drift (verified 2026-06-24).
 
 ## Skill-directory resolution
 

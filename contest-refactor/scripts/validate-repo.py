@@ -12,6 +12,8 @@ Checks:
 - Canon alignment (enum tokens in references match canon/*.toml)
 - `.contest-refactor.example.toml` parses; required keys; accepted_residuals fields complete
 - No obvious secrets in the example config
+- References tree is one level deep (no nested references/)
+- Intra-skill `.md` links from SKILL.md / references resolve (doc-rot guard)
 
 Usage:
     python3 scripts/validate-repo.py
@@ -451,6 +453,81 @@ def check_example_config() -> List[Violation]:
     return violations
 
 
+MARKDOWN_LINK_REGEX = re.compile(r"\]\(([^)]+)\)")
+
+
+def check_references_one_level_deep(skill_root: Path = SKILL_ROOT) -> List[Violation]:
+    """No reference markdown may be nested below references/ (depth must stay 1).
+
+    Progressive-disclosure references live directly in references/; a file in a
+    sub-directory is a structural smell (alirezarezvani's references_one_level_deep).
+    """
+    violations: List[Violation] = []
+    refs = skill_root / "references"
+    if not refs.is_dir():
+        return violations
+    for md in sorted(refs.rglob("*.md")):
+        if md.parent != refs:
+            violations.append(
+                Violation(
+                    "ref-tree-depth",
+                    "reference nested deeper than one level (references/ must stay "
+                    f"flat): {md.relative_to(refs)}",
+                    md,
+                )
+            )
+    return violations
+
+
+def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> List[Violation]:
+    """Every intra-skill `.md` link from SKILL.md / references/*.md must resolve.
+
+    Catches doc-rot: a renamed or deleted reference leaves a dangling link. External
+    URLs (`://`, `mailto:`), anchor-only links (`#...`), non-`.md` targets, and links
+    that resolve outside this skill are skipped — only files that should exist inside
+    the skill are policed.
+
+    (The mutual-link cycle check from alirezarezvani's validator is intentionally NOT
+    adopted: an empirical scan found 18 legitimate bidirectional navigation links in
+    references/, so it would only produce false positives on this tree.)
+    """
+    violations: List[Violation] = []
+    sources: List[Path] = []
+    skill_md = skill_root / "SKILL.md"
+    if skill_md.is_file():
+        sources.append(skill_md)
+    refs = skill_root / "references"
+    if refs.is_dir():
+        sources.extend(sorted(refs.glob("*.md")))
+
+    skill_root_resolved = skill_root.resolve()
+    for src in sources:
+        text = src.read_text(encoding="utf-8")
+        for match in MARKDOWN_LINK_REGEX.finditer(text):
+            target = match.group(1).strip()
+            if not target or target.startswith("#"):
+                continue
+            if "://" in target or target.startswith("mailto:"):
+                continue
+            path_part = target.split("#", 1)[0].strip()
+            if not path_part.endswith(".md"):
+                continue
+            resolved = (src.parent / path_part).resolve()
+            try:
+                resolved.relative_to(skill_root_resolved)  # only police in-skill links
+            except ValueError:
+                continue
+            if not resolved.is_file():
+                violations.append(
+                    Violation(
+                        "ref-link",
+                        f"intra-skill link to a missing file: {target}",
+                        src,
+                    )
+                )
+    return violations
+
+
 def main() -> int:
     canon = _canon.load_canon(SKILL_ROOT)
     violations: List[Violation] = []
@@ -461,6 +538,8 @@ def main() -> int:
     violations.extend(check_gate_sequencing(canon))
     violations.extend(check_canon_alignment(canon))
     violations.extend(check_example_config())
+    violations.extend(check_references_one_level_deep())
+    violations.extend(check_reference_links_resolve())
 
     if violations:
         for v in violations:
