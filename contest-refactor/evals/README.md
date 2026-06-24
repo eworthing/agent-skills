@@ -73,6 +73,69 @@ bare model approximates or omits. That gap is the lift.
 | `ownership-flag` (#18) | `ownership-restraint` (#19) | `@State` from a passed value with expected parent-sync vs. a local edit draft |
 | — | `style-suppression-restraint` (#20) | `// swiftlint:disable line_length` is style, not a safety suppression |
 | `strictness-aggressive-flag` (#23) | `strictness-aggressive-restraint` (#24) | under `--strictness aggressive`: a prose-only accepted residual (demand a citation, don't accept) vs. one citing a named constraint + file:line + test (accept; don't demand a date) |
+| `principal-invariant-owner-flag` (#25) | `principal-invariant-owner-restraint` (#26) | domain invariant enforced independently in two modules (split) vs. single domain method both paths call through |
+| `principal-duplicated-rule-flag` (#27) | `principal-duplicated-rule-restraint` (#28) | eligibility predicate duplicated across View + Repository + Worker with drift vs. `DiscountPolicy` already centralizes it |
+| `principal-process-owner-flag` (#29) | `principal-process-owner-restraint` (#30) | multi-step cross-module write with no process owner, no compensation vs. `PurchaseCoordinator` owns the saga + rollback |
+
+### Layer-2 domain-grain extension
+
+`evals.json` #25–#30 extend the behavioral layer **one grain up**: from component-level
+defects (single-file ownership, SwiftUI state discipline) to **cross-module / domain
+principal-defect** scenarios. The same flag/restraint discipline applies — every flag has
+a legitimate twin that must not be flagged — and the same structured verdict contract is
+used. The carve-outs under test are:
+
+- **Single invariant owner** (`principal-invariant-owner`): a domain invariant enforced
+  independently in a presentation layer and an infrastructure layer is a split-enforcement
+  defect even when both guards are correct in isolation. The restraint twin installs the
+  invariant in the domain type so both paths call through it.
+- **Single rule owner** (`principal-duplicated-rule`): a business rule duplicated across
+  three modules with shared constants but independent evaluation expressions is a
+  duplicated-rule defect. The restraint twin centralizes the predicate in a policy object
+  all callers invoke.
+- **Single process owner** (`principal-process-owner`): a multi-step cross-module write
+  sequence with no process/coordinator owner and no compensating rollback is a
+  missing-process-owner defect. The restraint twin installs a coordinator that owns the
+  saga and the rollback path.
+
+#### Baseline manifest and "no silent exclusion" contract
+
+`evals/principal_baseline.json` registers every `principal-*` scenario with its `kind`
+(`flag` / `restraint`), `pair_id`, `dimension`, `status`, and `expected_baseline`. The
+`status` field starts at `baseline_unmeasured`; after a 3-arm model run, update it to
+`measured` and record observed pass rates.
+
+`scripts/_principal_baseline_selftest.py` enforces the no-silent-exclusion invariant
+mechanically: it asserts that (a) every `evals/scenarios/principal-*` directory on disk
+is registered in the manifest, (b) every `flag` has a matching `restraint` twin via
+`pair_id`, (c) every manifest entry points to an existing scenario directory, and (d)
+`status`/`kind`/`expected_baseline` are valid enums. The script fails if a
+`principal-*` scenario exists but is unregistered. Run it after adding any new
+principal scenario:
+
+```bash
+python3 contest-refactor/scripts/_principal_baseline_selftest.py
+```
+
+#### Measuring baseline recall (3-arm model run)
+
+There is **no committed auto-grader** for the domain-grain layer — grading is semantic,
+exactly as for the component-grain pairs above. To measure baseline recall for
+`principal-*` entries:
+
+1. For each of the six scenarios, spawn three subagents (same turn): **no-skill** (bare
+   model), **pre-edit** (a prior skill revision), **current** (this dir). Give each the
+   eval `prompt` + `scenarios/<id>/scenario.md`; save `review-verdict.md`.
+2. Grade each output against the eval's `assertions[]` + the verdict JSON using a
+   `grader.md` subagent.
+3. Update `expected_baseline` fields in `principal_baseline.json` to reflect observed
+   behavior (`miss` = base model misses the flag or over-flags the restraint; `hold` =
+   base model already handles it). Update `status` to `measured`.
+4. Compute lift as `pass_rate(current) − max(pass_rate(baselines))` per assertion.
+
+`restraint_regression_tolerance: 0` in the manifest means **any** restraint regression
+(skill rejects a valid twin that baselines accepted) is a defect in the lens content, not
+a score. Grade restraint twins on the carve-out alone, same as the component-grain layer.
 
 ## Running the behavioral layer (3-arm lift)
 
