@@ -17,7 +17,7 @@ gating, resume routing, retry envelopes) to a finished `CURRENT_REVIEW.json` art
   the deterministic fixtures already guarantee. They are not the skill's core value, and they
   overlap the fixture layer by design. Don't read a high pass rate here as "the skill works."
 
-## Layer 2 — refactoring-judgment (`evals.json` #12–#20, `scenarios/`)
+## Layer 2 — refactoring-judgment (`evals.json` #12–#24, `scenarios/`)
 
 Does the Critic/reviewer make the **right loop decision** on a refactor that *looks* finished?
 This is where the skill's real leverage lives — severity calibration, the 9.5 acceptance
@@ -72,6 +72,7 @@ bare model approximates or omits. That gap is the lift.
 | `identity-flag` (#16) | `identity-restraint` (#17) | `.indices` on a dynamic/reorderable list vs. genuinely static `CaseIterable` |
 | `ownership-flag` (#18) | `ownership-restraint` (#19) | `@State` from a passed value with expected parent-sync vs. a local edit draft |
 | — | `style-suppression-restraint` (#20) | `// swiftlint:disable line_length` is style, not a safety suppression |
+| `strictness-aggressive-flag` (#23) | `strictness-aggressive-restraint` (#24) | under `--strictness aggressive`: a prose-only accepted residual (demand a citation, don't accept) vs. one citing a named constraint + file:line + test (accept; don't demand a date) |
 
 ## Running the behavioral layer (3-arm lift)
 

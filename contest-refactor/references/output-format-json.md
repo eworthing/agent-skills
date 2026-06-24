@@ -111,6 +111,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   "re_validated_at_sha": null,                  // string sha; populated by Resume Detection when drift was checked and same halt persists.
   "re_validation_context": null,                // (PR 4, v2+) required when re_validated_at_sha non-null. Object schema below.
   "dry_run": false,                             // (v3+) boolean. Audit trail of last invocation flag. NOT read on re-invocation (CLI flag is authoritative). true ⇒ state == "HALT_DRY_RUN".
+  "strictness": "standard",                     // optional enum: standard | aggressive (default standard, absent ⇒ standard). Records the --strictness flag. ADVISORY ONLY — never consulted by any score/threshold gate (G5/G21/HALT_SUCCESS read score + residual_disposition only; _strictness_isolation_selftest.py proves preset-independence). Under "aggressive" the Critic requires an accepted inline residual to cite source-backed evidence (file:line / framework constraint / ADR ref) rather than bare prose, else queues it — raising the evidence bar, not the 9.5 threshold, and not forcing a residual_expires date. See architecture-rubric.md § 9.5+ Threshold "Strictness presets".
 
   // v4+ challenge fields (required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS})
   "run_id": null,                               // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Identifies the loop run that produced the candidate.

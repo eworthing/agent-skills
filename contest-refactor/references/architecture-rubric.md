@@ -162,6 +162,11 @@ Accepted residuals come in two tiers with different expiry rules — keep them d
 
 `HALT_SUCCESS` requires every scorecard category at 10, OR at 9.5+ with an **accepted** residual (inline rationale; any `residual_expires` present is not past). Any **queued** residual blocks `HALT_SUCCESS`. Any **expired** residual — inline or toml — blocks `HALT_SUCCESS`.
 
+**Strictness presets (`--strictness`, recorded as `CURRENT_REVIEW.json.strictness`).** The preset tunes the *evidence* an inline residual must carry to be `accepted` — it does **not** move the 9.5 threshold, the `HALT_SUCCESS` criteria, or the optional-expiry rule above (those are identical under every preset; `validate-artifact.py` gates read only score + disposition, proven by `scripts/_strictness_isolation_selftest.py`).
+
+- `standard` (default): today's bar — an accepted inline residual is justified by its `residual_rationale_or_backlog_ref` (prose rationale tying it to a framework constraint, carve-out, or ADR).
+- `aggressive`: an accepted inline residual must cite **source-backed evidence** in its rationale — a concrete `file:line`/symbol, a named framework/language constraint, or an ADR ref — not bare prose. If the only justification is prose with no citable source, the residual is **queued, not accepted** (which keeps the flag `CONTINUE`). This is a conditional on an observable predicate (`strictness == "aggressive"`), and it raises the evidence bar *only*: a permanent carve-out that cites its framework constraint still passes with **no** `residual_expires` date (the C6 optional-expiry rule is untouched — `aggressive` demands a citation, never a date).
+
 Terminal normalization rule: before any HALT emit, a category at 9 cannot mean
 "excellent but I did not account for the last local concern." If the 9-anchor is
 met and no Noticeable-or-worse fix remains, promote the category to 9.5 with an
