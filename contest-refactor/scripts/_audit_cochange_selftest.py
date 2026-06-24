@@ -71,6 +71,55 @@ def _pairs_by_files(result: dict) -> dict[tuple[str, str], dict]:
     return out  # type: ignore[return-value]
 
 
+def _static_dep_case(
+    label: str,
+    files: dict[str, str],
+    lhs: str,
+    rhs: str,
+    expected_dep: str,
+    failures: list[str],
+) -> None:
+    """Build a temp repo with `files` at HEAD, co-change lhs+rhs >=3x (init + 3 edits,
+    so the pair clears the candidate threshold), then assert its static_dependency.
+
+    Used by the Python static-dependency cases (5a-5d). `lhs`/`rhs` are repo-relative
+    paths; their final HEAD content is `files[path]` plus a trailing marker comment, so
+    any import line at the top of the file is preserved for AST resolution.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo"
+        root.mkdir()
+        _init(root)
+        _write_and_commit(root, files, "init")
+        for i in range(1, 4):
+            bump = {lhs: files[lhs] + f"# v{i}\n", rhs: files[rhs] + f"# v{i}\n"}
+            _write_and_commit(root, bump, f"sync v{i}")
+
+        proc = _run(root)
+        if proc.returncode != 0:
+            failures.append(
+                f"{label}: expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
+            )
+            return
+        try:
+            result = json.loads(proc.stdout)
+        except json.JSONDecodeError as e:
+            failures.append(f"{label}: invalid JSON output: {e}\n{proc.stdout[:300]}")
+            return
+        pairs = _pairs_by_files(result)
+        key = tuple(sorted([lhs, rhs]))
+        if key not in pairs:
+            failures.append(
+                f"{label}: expected candidate pair {key}; got {list(pairs.keys())}"
+            )
+            return
+        dep = pairs[key].get("static_dependency")
+        if dep != expected_dep:
+            failures.append(
+                f"{label}: static_dependency expected {expected_dep!r}, got {dep!r}"
+            )
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit_cochange.py missing: {AUDIT}")
@@ -281,6 +330,120 @@ def main() -> int:
                     f"case4b: shallow clone should yield empty pairs, got: "
                     f"{result.get('pairs')}"
                 )
+
+    # ------------------------------------------------------------------ #
+    # Case 5: Python static_dependency — relative + absolute import edges  #
+    # ------------------------------------------------------------------ #
+    # 5a (positive, the bug): a relative import to the paired file must resolve
+    # to "present". Currently dropped (node.level > 0) → false "none".
+    _static_dep_case(
+        "case5a (relative import to paired file → present)",
+        {
+            "src/orders/checkout.py": "from ..billing.policy import DiscountPolicy\n",
+            "src/billing/policy.py": "class DiscountPolicy:\n    pass\n",
+        },
+        "src/orders/checkout.py",
+        "src/billing/policy.py",
+        "present",
+        failures,
+    )
+    # 5b (false-positive guard): a relative import to a SIBLING module, with the
+    # co-change pair being an unrelated same-top-level-package file → must be "none".
+    # A coarse top-level fix would wrongly mark this "present".
+    _static_dep_case(
+        "case5b (relative import to sibling, unrelated pair → none)",
+        {
+            "src/orders/checkout.py": "from .cart import Cart\n",
+            "src/billing/policy.py": "value = 1\n",
+        },
+        "src/orders/checkout.py",
+        "src/billing/policy.py",
+        "none",
+        failures,
+    )
+    # 5c (regression guard): a non-`src` absolute import to the paired file must
+    # still resolve to "present" under the new exact-match rule.
+    _static_dep_case(
+        "case5c (non-src absolute import → present, no regression)",
+        {
+            "orders/checkout.py": "from billing.policy import DiscountPolicy\n",
+            "billing/policy.py": "class DiscountPolicy:\n    pass\n",
+        },
+        "orders/checkout.py",
+        "billing/policy.py",
+        "present",
+        failures,
+    )
+    # 5d (crash guard): `from . import x` makes node.module None; resolution must
+    # not crash. The sibling target is same-dir so the cross-dir pair stays "none".
+    _static_dep_case(
+        "case5d (from . import x, node.module is None → no crash, none)",
+        {
+            "src/orders/checkout.py": "from . import cart\n",
+            "src/billing/policy.py": "value = 1\n",
+        },
+        "src/orders/checkout.py",
+        "src/billing/policy.py",
+        "none",
+        failures,
+    )
+
+    # ------------------------------------------------------------------ #
+    # Case 6: directional confidence labels (Bug B)                       #
+    # ------------------------------------------------------------------ #
+    # Asymmetric co-change: checkout changes 10x total, discount 3x, co-change 3x.
+    # The conditional P(X changes | Y changed) = count / n_Y, so the label
+    # `<X>_given_<Y>` must carry count / n_Y. The bug swaps the two labels.
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo6"
+        root.mkdir()
+        _init(root)
+        checkout = "src/orders/checkout.ts"
+        discount = "src/billing/discount.ts"
+        change_count = {checkout: 10, discount: 3}  # total qualifying commits each appears in
+        cochange = 3
+
+        _write_and_commit(root, {checkout: "// checkout v0\n"}, "init checkout")
+        for i in range(1, 4):  # 3 co-change commits (discount only ever changes here)
+            _write_and_commit(root, {
+                checkout: f"// checkout co{i}\n",
+                discount: f"// discount v{i}\n",
+            }, f"sync checkout discount {i}")
+        for i in range(1, 7):  # 6 checkout-only commits → checkout total = 1 + 3 + 6 = 10
+            _write_and_commit(root, {checkout: f"// checkout solo{i}\n"}, f"edit checkout {i}")
+
+        proc = _run(root)
+        if proc.returncode != 0:
+            failures.append(
+                f"case6: expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
+            )
+        else:
+            try:
+                result = json.loads(proc.stdout)
+            except json.JSONDecodeError as e:
+                failures.append(f"case6: invalid JSON output: {e}\n{proc.stdout[:300]}")
+                result = {}
+            pairs = _pairs_by_files(result)
+            key = tuple(sorted([checkout, discount]))
+            if key not in pairs:
+                failures.append(f"case6: expected pair {key}; got {list(pairs.keys())}")
+            else:
+                p = pairs[key]
+                out_lhs, out_rhs = p["lhs"], p["rhs"]
+                conf = p.get("confidences", {})
+                # rhs_given_lhs = P(out_rhs changes | out_lhs changed) = count / n(out_lhs)
+                exp_rhs_given_lhs = round(cochange / change_count[out_lhs], 4)
+                exp_lhs_given_rhs = round(cochange / change_count[out_rhs], 4)
+                if conf.get("rhs_given_lhs") != exp_rhs_given_lhs:
+                    failures.append(
+                        f"case6: rhs_given_lhs = P({out_rhs}|{out_lhs}) expected "
+                        f"{exp_rhs_given_lhs} (=count/n_lhs), got {conf.get('rhs_given_lhs')!r}"
+                    )
+                if conf.get("lhs_given_rhs") != exp_lhs_given_rhs:
+                    failures.append(
+                        f"case6: lhs_given_rhs = P({out_lhs}|{out_rhs}) expected "
+                        f"{exp_lhs_given_rhs} (=count/n_rhs), got {conf.get('lhs_given_rhs')!r}"
+                    )
 
     # ------------------------------------------------------------------ #
     # Report                                                               #

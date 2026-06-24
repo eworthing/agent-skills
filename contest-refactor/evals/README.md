@@ -137,6 +137,32 @@ exactly as for the component-grain pairs above. To measure baseline recall for
 (skill rejects a valid twin that baselines accepted) is a defect in the lens content, not
 a score. Grade restraint twins on the carve-out alone, same as the component-grain layer.
 
+#### Replication protocol (Lever 1)
+
+A single Critic review per scenario is one stochastic draw, so the original measurement could
+not distinguish a real catch from a lucky one (small-n). The **reproducibility pass** re-runs each
+of the 7 valid scenarios with **K=5 independent current-arm reviews** (5 effective slots; an
+unusable output gets one logged technical rerun, then the slot counts as a non-pass — denominator
+stays 5). Grading is **two-tier**:
+
+- **Mechanical** (the headline, operator-independent, from the verdict JSON only): a flag is
+  *caught* iff `(verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5`; a twin
+  *holds* iff `verdict==approved AND blocks_95==false` (a strict lower bound — it under-counts a
+  rubric-faithful 9.0-hold-for-missing-residual).
+- **Semantic** (pre-registered rubric over the raw `flagged_smells`): a flag *named the defect* iff
+  it names the cross-module/forces defect; a twin *holds* iff the carve-out smell is **not** flagged
+  (score-honesty ≠ restraint miss).
+
+A scenario resolves `caught`/`held` iff ≥4/5 slots, else `inconclusive`. A flag is **headline-
+excluded** iff its diff carries a present-tense/structural smell sufficient to reject it independent
+of the force under test (`abstraction-seam-flag` is contaminated this way). Every rate carries an
+exact binomial (Clopper–Pearson) 95% lower bound — 5/5 ⇒ ≈0.48, so even a perfect run is *consistent
+with* high recall, not proof of it. The raw per-slot record (prompt sha256, judge model, every
+verdict + grade + rationale) lives in `principal_baseline_replication.json`; the manifest only
+summarizes it, and `_principal_baseline_selftest.py` enforces their consistency. **Honesty caveat:**
+this is current-arm only — it measures within-judge robustness, **not** lift over a bare model and
+**not** external validity (that needs more scenarios + a second judge).
+
 ## Running the behavioral layer (3-arm lift)
 
 There is **no committed auto-grader** — grading is semantic (does `flagged_smells` name the

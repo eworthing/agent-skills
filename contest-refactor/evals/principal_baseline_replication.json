@@ -1,0 +1,980 @@
+{
+  "schema_version": 1,
+  "note": "Raw per-slot record for the Phase-1 reproducibility pass (Lever 1). Current-arm only (no no-skill arm). This file is the auditable source; principal_baseline.json only summarizes it.",
+  "prereg": {
+    "prompt_sha256": "0e228d4bb7f2044e504c7723fbefbaee814959fece76848afa13d07b8f569e24",
+    "judge_model": "claude-opus-4-8 (host-dispatched general-purpose subagents, one fresh per attempt)",
+    "K": 5,
+    "decision_threshold": ">=4/5",
+    "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
+    "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
+    "contamination_rule": "A flag is headline_excluded iff its diff carries a present-tense/structural smell sufficient for the rubric to reject it independent of the cross-module/forces force under test. Pre-classified: abstraction-seam-flag contaminated (bare protocol trips the Unified Seam Policy).",
+    "invalid_output_rule": "Empty/non-JSON/no-verdict/timeout on attempt 1 -> one logged technical rerun (attempt 2); second failure -> slot status=invalid, counts as non-pass, denominator stays 5.",
+    "confound_noted": "Current arm only. Measures within-judge robustness/reproducibility, NOT lift over a bare model and NOT external validity. Even 5/5 gives only a Clopper-Pearson two-sided 95% lower bound of ~0.48 on the true rate."
+  },
+  "captured_at": "2026-06-24",
+  "per_scenario": {
+    "principal-invariant-owner-flag": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "caught",
+      "mechanical": {
+        "caught": 5,
+        "rate": "5/5",
+        "ci_lower_95": 0.4782
+      },
+      "semantic": {
+        "caught": 5,
+        "rate": "5/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json",
+      "contaminated": false,
+      "headline_excluded": false
+    },
+    "principal-duplicated-rule-flag": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "caught",
+      "mechanical": {
+        "caught": 5,
+        "rate": "5/5",
+        "ci_lower_95": 0.4782
+      },
+      "semantic": {
+        "caught": 5,
+        "rate": "5/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json",
+      "contaminated": false,
+      "headline_excluded": false
+    },
+    "principal-process-owner-flag": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "caught",
+      "mechanical": {
+        "caught": 5,
+        "rate": "5/5",
+        "ci_lower_95": 0.4782
+      },
+      "semantic": {
+        "caught": 5,
+        "rate": "5/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json",
+      "contaminated": false,
+      "headline_excluded": false
+    },
+    "principal-consistency-boundary-flag": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "caught",
+      "mechanical": {
+        "caught": 5,
+        "rate": "5/5",
+        "ci_lower_95": 0.4782
+      },
+      "semantic": {
+        "caught": 5,
+        "rate": "5/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json",
+      "contaminated": false,
+      "headline_excluded": false
+    },
+    "principal-abstraction-seam-flag": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "caught",
+      "mechanical": {
+        "caught": 5,
+        "rate": "5/5",
+        "ci_lower_95": 0.4782
+      },
+      "semantic": {
+        "caught": 5,
+        "rate": "5/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json",
+      "contaminated": true,
+      "headline_excluded": true
+    },
+    "principal-invariant-owner-restraint": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "inconclusive",
+      "mechanical": {
+        "held": 0,
+        "rate": "0/5",
+        "ci_lower_95": 0.0
+      },
+      "semantic": {
+        "held": 4,
+        "rate": "4/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json"
+    },
+    "principal-consistency-boundary-restraint": {
+      "runs": 5,
+      "invalid_slots": 0,
+      "decision": "inconclusive",
+      "mechanical": {
+        "held": 1,
+        "rate": "1/5",
+        "ci_lower_95": 0.0051
+      },
+      "semantic": {
+        "held": 5,
+        "rate": "5/5"
+      },
+      "artifacts_ref": "principal_baseline_replication.json"
+    }
+  },
+  "attempts": [
+    {
+      "scenario_id": "principal-invariant-owner-flag",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "domain_modeling": 4,
+          "state_management_and_runtime_ownership": 4,
+          "architecture_quality": 5,
+          "test_strategy_and_regression_resistance": 4,
+          "concurrency_and_runtime_safety": 5,
+          "overall_implementation_credibility": 4
+        },
+        "flagged_smells": [
+          "multi-writer state",
+          "duplicate state",
+          "misleading abstractions",
+          "weak domain model",
+          "fake simplification",
+          "fake-clean reward",
+          "architecture costume layers",
+          "temporal coupling"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, domain_modeling=4; named multi-writer/split-enforcement, invariant-by-convention. mech caught + named."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-flag",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 4
+        },
+        "flagged_smells": [
+          "weak domain model",
+          "multi-writer state",
+          "duplicate abstractions",
+          "misleading abstractions",
+          "fake-clean reward",
+          "fake simplification"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=4; named multi-writer/invariant-by-convention. caught+named."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-flag",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 3
+        },
+        "flagged_smells": [
+          "weak domain model",
+          "multi-writer state",
+          "architecture costume layer",
+          "duplicate abstractions",
+          "fake-clean reward",
+          "misleading abstractions"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=3; Authority Map: 2 writers, doc-comment abdication. caught+named."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-flag",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 4
+        },
+        "flagged_smells": [
+          "multi-writer state",
+          "duplicate state",
+          "misleading abstractions",
+          "weak domain model",
+          "fake-clean reward",
+          "unclear ownership"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=4. caught+named."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-flag",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 3
+        },
+        "flagged_smells": [
+          "weak domain model",
+          "multi-writer state",
+          "duplicate state",
+          "fake simplification",
+          "misleading abstractions",
+          "invariant by convention",
+          "aggregate-test-count"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=3. caught+named."
+    },
+    {
+      "scenario_id": "principal-duplicated-rule-flag",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "domain_modeling": 5
+        },
+        "flagged_smells": [
+          "fake simplification",
+          "misleading abstractions",
+          "duplicate abstractions",
+          "duplicate state",
+          "multi-writer state",
+          "weak domain model",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, domain_modeling=5; named duplicated Discount Rule across 3 modules + SQL divergence. mech caught + named."
+    },
+    {
+      "scenario_id": "principal-duplicated-rule-flag",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 4
+        },
+        "flagged_smells": [
+          "fake simplification",
+          "duplicate abstractions",
+          "duplicate state",
+          "weak domain model",
+          "misleading abstractions",
+          "multi-writer state"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=4; named triplicated predicate + SQL literal divergence. caught+named."
+    },
+    {
+      "scenario_id": "principal-duplicated-rule-flag",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 5
+        },
+        "flagged_smells": [
+          "weak domain model",
+          "duplicate abstractions",
+          "multi-writer state",
+          "misleading abstractions",
+          "fake simplification",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=5; named triplicated predicate + stranded SQL literal. caught+named."
+    },
+    {
+      "scenario_id": "principal-duplicated-rule-flag",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 4
+        },
+        "flagged_smells": [
+          "duplicate abstractions",
+          "duplicate state",
+          "weak domain model",
+          "multi-writer state",
+          "unclear ownership",
+          "fake simplification",
+          "misleading abstractions",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=4. caught+named."
+    },
+    {
+      "scenario_id": "principal-duplicated-rule-flag",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 4
+        },
+        "flagged_smells": [
+          "weak domain model",
+          "duplicate abstractions",
+          "multi-writer state",
+          "misleading abstractions",
+          "fake simplification",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, dm=4. caught+named."
+    },
+    {
+      "scenario_id": "principal-process-owner-flag",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "data_flow": 4,
+          "state_management": 3,
+          "architecture": 5,
+          "test_strategy": 4
+        },
+        "flagged_smells": [
+          "unclear ownership",
+          "multi-writer state",
+          "misleading abstractions",
+          "temporal coupling",
+          "hidden control flow",
+          "fake-clean reward",
+          "persistence leakage"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, data_flow=4; named saga process-owner in presentation + no compensation/rollback. mech caught + named."
+    },
+    {
+      "scenario_id": "principal-process-owner-flag",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 3
+        },
+        "flagged_smells": [
+          "fake simplification",
+          "unclear ownership",
+          "multi-writer state",
+          "persistence leakage",
+          "fake-clean reward",
+          "polished shallow structure"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, data_flow=3; named unowned saga in presentation + no compensation. caught+named."
+    },
+    {
+      "scenario_id": "principal-process-owner-flag",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 3
+        },
+        "flagged_smells": [
+          "unclear ownership",
+          "hidden control flow",
+          "persistence leakage",
+          "framework leakage",
+          "fake simplification",
+          "fake-clean reward",
+          "temporal coupling"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, data_flow=3; named unowned saga + no compensation. caught+named."
+    },
+    {
+      "scenario_id": "principal-process-owner-flag",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 3
+        },
+        "flagged_smells": [
+          "fake simplification",
+          "unclear ownership",
+          "old authority still alive",
+          "architecture costume layers",
+          "aggregate-test-count",
+          "honesty leak"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, data_flow=3. caught+named."
+    },
+    {
+      "scenario_id": "principal-process-owner-flag",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 3
+        },
+        "flagged_smells": [
+          "fake simplification",
+          "unclear ownership",
+          "multi-writer state",
+          "fake-clean reward",
+          "aggregate-test-count",
+          "hidden control flow",
+          "persistence leakage"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier, data_flow=3. caught+named."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-flag",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Serious deduction",
+        "dimension_scores": {
+          "architecture_quality": 7,
+          "state_management_runtime_ownership": 9,
+          "concurrency_runtime_safety": 9,
+          "test_strategy_regression_resistance": 7,
+          "overall_implementation_credibility": 7,
+          "domain_modeling": 9,
+          "data_flow_dependency_design": 6,
+          "framework_platform_best_practices": 9,
+          "code_simplicity_clarity": 9
+        },
+        "flagged_smells": [
+          "temporal coupling (tx hardened as CONTEXT s4 commits to splitting Order/Inventory)",
+          "fake-clean reward",
+          "misleading abstractions (datastore coupling contradicts committed direction)"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, data_flow=6; named CONTEXT s4 inventory split / ACID across datastores impossible. mech caught + named (forces)."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-flag",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 6,
+          "architecture": 7
+        },
+        "flagged_smells": [
+          "temporal coupling",
+          "misleading abstractions",
+          "overbuilding",
+          "fake-clean reward",
+          "persistence leakage"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, data_flow=6; named CONTEXT s4 split invalidates local ACID + s6 eventual-consistency overbuild. caught+named (forces)."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-flag",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 6
+        },
+        "flagged_smells": [
+          "overbuilding",
+          "fake simplification",
+          "temporal coupling",
+          "persistence leakage"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, data_flow=6; named s4 split invalidates local ACID + s6 oversell-guard overbuild. caught+named (forces)."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-flag",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 6
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "overbuilding",
+          "temporal coupling",
+          "fake simplification"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, data_flow=6; s4 split + s6 oversell/overbuild. caught+named (forces)."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-flag",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 7.5
+        },
+        "flagged_smells": [
+          "fake-clean reward",
+          "contradicts committed CONTEXT s4 roadmap",
+          "over-strong consistency vs s6",
+          "cross-datastore-hostile coupling"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "conditional, Noticeable weakness, data_flow=7.5, blocks_95=true; named s4 roadmap collision + s6 over-strong consistency. caught+named (forces)."
+    },
+    {
+      "scenario_id": "principal-abstraction-seam-flag",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Serious deduction",
+        "dimension_scores": {
+          "architecture_quality": 7,
+          "state_management_and_runtime_ownership": 7,
+          "concurrency_and_runtime_safety": 7,
+          "test_strategy_and_regression_resistance": 6,
+          "overall_implementation_credibility": 6,
+          "domain_modeling": 7,
+          "data_flow_and_dependency_design": 6,
+          "framework_platform_best_practices": 7,
+          "code_simplicity_and_clarity": 8
+        },
+        "flagged_smells": [
+          "protocol soup",
+          "shallow module",
+          "structurally misaligned with committed Q4 roadmap",
+          "fake-clean reward risk"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, architecture_quality=7; named protocol-soup + Q4 regional-divergence roadmap misalignment. CONTAMINATED (bare protocol trips seam policy)."
+    },
+    {
+      "scenario_id": "principal-abstraction-seam-flag",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "architecture_quality": 6,
+          "domain_modeling": 5
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "weak domain model",
+          "fake simplification",
+          "overbuilding",
+          "fake-clean reward",
+          "protocol soup",
+          "polished shallow structure"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, arch=6; named protocol-soup + Q4 regional divergence. CONTAMINATED."
+    },
+    {
+      "scenario_id": "principal-abstraction-seam-flag",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "architecture_quality": 6,
+          "domain_modeling": 5
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "weak domain model",
+          "protocol soup",
+          "repository theater",
+          "architecture costume layers",
+          "polished shallow structure",
+          "fake simplification"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, arch=6; named protocol-soup + Q4 regional divergence + Region A no-push. CONTAMINATED."
+    },
+    {
+      "scenario_id": "principal-abstraction-seam-flag",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "architecture_quality": 7,
+          "domain_modeling": 5
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "fake simplification",
+          "fake-clean reward",
+          "protocol soup",
+          "polished shallow structure",
+          "weak domain model",
+          "overbuilding"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, arch=7; protocol-soup + Q4 regional divergence. CONTAMINATED."
+    },
+    {
+      "scenario_id": "principal-abstraction-seam-flag",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "architecture_quality": 7
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "weak domain model",
+          "architecture costume layers",
+          "fake simplification",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "caught",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, arch=7; protocol-soup seam + Q4 regional divergence + Region A no-push. CONTAMINATED."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-restraint",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Serious deduction",
+        "dimension_scores": {
+          "domain_modeling": 7
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "weak domain model",
+          "invariant enforced by convention not construction"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, domain_modeling=7; carve-out (single owner) AFFIRMED resolved; rejected for separate convention-vs-construction residual (checking: param). mech held=False (rejected), semantic held=True (carve-out not flagged)."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-restraint",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 7
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "weak domain model",
+          "fake simplification",
+          "unclear ownership"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, dm=7; harsh \u2014 found real caller-supplied-snapshot residual (addPlayer(checking:[]) bypass) + wrong-owner; did NOT false-flag the consolidation carve-out as duplicate. mech held=F, semantic held=T."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-restraint",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 7,
+          "concurrency_runtime_safety": 9
+        },
+        "flagged_smells": [
+          "misleading abstractions",
+          "fake simplification",
+          "weak domain model",
+          "unclear ownership",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "rejected, Serious deduction, dm=7; explicitly CREDITED concurrency safe + did NOT fabricate race; rejected for caller-supplied-snapshot convention residual; carve-out (consolidation) NOT false-flagged. mech held=F, semantic held=T."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-restraint",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 6
+        },
+        "flagged_smells": [
+          "old authority still alive",
+          "multi-writer state",
+          "fake-clean reward",
+          "aggregate-test-count-as-test-strategy",
+          "fake simplification",
+          "weak domain model"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": false,
+      "grade_rationale": "rejected, Likely disqualifier, dm=6; SPECULATED old unguarded addPlayer not deleted -> flagged multi-writer/old-authority. RESTRAINT MISS (carve-out flagged as multi-writer via assumption not in diff). mech held=F, semantic held=F."
+    },
+    {
+      "scenario_id": "principal-invariant-owner-restraint",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "dimension_scores": {
+          "domain_modeling": 7,
+          "state_management": 8.5
+        },
+        "flagged_smells": [
+          "fake-clean reward (aggregate-test-count-as-test-strategy)",
+          "weak domain model",
+          "misleading abstractions"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "rejected, Likely disqualifier (test-absence), dm=7; credited single owner + @MainActor serialization (NO multi-writer/race fabricated); rejected for caller-supplied-snapshot residual + zero new tests. carve-out NOT flagged as duplicate. mech held=F, semantic held=T."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-restraint",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "blocking_severity": "Noticeable weakness",
+        "dimension_scores": {
+          "data_flow": 9
+        },
+        "flagged_smells": [
+          "fake-clean reward",
+          "polished shallow structure"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "conditional, Noticeable weakness, data_flow=9; tx AFFIRMED correct + roadmap-aligned (couples only Order+Audit, both stay); blocked only on 9.5-without-residual score honesty. mech held=False (conditional+blocks), semantic held=True (carve-out affirmed)."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-restraint",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 9
+        },
+        "flagged_smells": [
+          "fake-clean reward",
+          "aggregate-test-count-as-test-strategy"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "conditional, Noticeable weakness, data_flow=9; tx AFFIRMED correct + roadmap-aligned (only Order+Audit, both stay); blocked on 9.5-without-named-residual. mech held=F, semantic held=T."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-restraint",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "approved",
+        "blocks_95": false,
+        "dimension_scores": {
+          "data_flow": 9.5
+        },
+        "flagged_smells": []
+      },
+      "host_grade": "held",
+      "semantic": true,
+      "grade_rationale": "APPROVED blocks_95=false data_flow=9.5; tx affirmed correct + roadmap-aligned (audit stays core DB, inventory left untouched); cleared 9.5 with accepted rollback-test residual. mech held=T, semantic held=T."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-restraint",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow": 9
+        },
+        "flagged_smells": [
+          "aggregate-test-count-as-test-strategy",
+          "fake-clean reward"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "conditional, Serious deduction, data_flow=9; tx AFFIRMED correct + explicitly closed the s4 trap (audit stays core DB); blocked only on missing rollback test (queued). mech held=F, semantic held=T."
+    },
+    {
+      "scenario_id": "principal-consistency-boundary-restraint",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "status": "valid",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "dimension_scores": {
+          "data_flow_and_dependency_design": 9.5,
+          "state_management_and_runtime_ownership": 9.5,
+          "architecture_quality": 9
+        },
+        "flagged_smells": [
+          "fake-clean reward (aggregate-test-count-as-test-strategy)"
+        ]
+      },
+      "host_grade": "not-held",
+      "semantic": true,
+      "grade_rationale": "conditional, Noticeable weakness, data_flow=9.5; tx AFFIRMED correct + explicitly closed the s4 trap (audit stays core DB, inventory untouched); blocked only on missing rollback test (queued). mech held=F, semantic held=T."
+    }
+  ]
+}

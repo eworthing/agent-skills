@@ -9,20 +9,258 @@
     "date": "2026-06-24",
     "method": "Two rounds of parallel skill-equipped Critic reviews (current arm); rubric = references/architecture-rubric.md + method.md; neutral review prompt; verdict JSON graded by the host.",
     "round1_smell_matchable": "Recall 3/3 flags CAUGHT (invariant-owner, duplicated-rule, process-owner). Restraint twins all rejected, but each twin contained a REAL residual (scenario bug), so restraint not measurable that round.",
-    "round2_frontier_and_fixed_twins": "FRONTIER (forces-dependent): consistency-boundary-flag CAUGHT via explicit grounded-roadmap reasoning (CONTEXT §4 split + §6 eventual-consistency); consistency-boundary-restraint HELD (reviewer refused to flag the look-alike the roadmap does NOT shear). abstraction-seam-flag CAUGHT but contaminated by a present-tense protocol-soup hook; abstraction-seam-restraint rejected due to a twin design bug (bare protocol trips the Unified Seam Policy). FIXED TWINS: invariant-owner-restraint now HELD (clean). duplicated-rule + process-owner twins still rejected for NEW real residuals (behavior-change; TOCTOU race) — writing a provably-clean cross-module twin from a short diff is genuinely hard.",
-    "conclusion": "Both ceilings are substantially FALSIFIED. GRAIN: the rubric catches cross-module ownership defects (5/5 flags across both rounds). TIME/forces: when forces are GROUNDED in provided CONTEXT.md, the rubric+model catch the forces-dependent defect AND restrain on the non-defect (consistency pair) — via the rubric's existing CONTEXT.md/docs-adr awareness + Meta-Rule 3 (no seam until friction proven) + a capable model. The rubric also proved a TOUGH, accurate reviewer: it found real residuals in 3/3 'clean' twins that the host and the authoring agent missed. IMPLICATION: Phase-C grain/forces machinery (forces axis, change-scenario gate) is NOT justified by this evidence. The only narrow residual: forces-reasoning fires when CONTEXT is present but is not proactively solicited when CONTEXT is thin — addressable by the much smaller scorecard context-honesty item (C1), not by C2-C5.",
-    "caveats": "Small n. The frontier flags carried present-tense hooks too (oversell; protocol-soup), so catches are not purely forces-attributable — though the consistency pair (flag caught + twin held on the same structural shape) is a clean forces demonstration. The abstraction-seam pair is contaminated and the duplicated-rule/process-owner twins remain invalid restraint cases pending rework."
+    "round2_frontier_and_fixed_twins": "FRONTIER (forces-dependent): consistency-boundary-flag CAUGHT via explicit grounded-roadmap reasoning (CONTEXT \u00a74 split + \u00a76 eventual-consistency); consistency-boundary-restraint HELD (reviewer refused to flag the look-alike the roadmap does NOT shear). abstraction-seam-flag CAUGHT but contaminated by a present-tense protocol-soup hook; abstraction-seam-restraint rejected due to a twin design bug (bare protocol trips the Unified Seam Policy). FIXED TWINS: invariant-owner-restraint now HELD (clean). duplicated-rule + process-owner twins still rejected for NEW real residuals (behavior-change; TOCTOU race) \u2014 writing a provably-clean cross-module twin from a short diff is genuinely hard.",
+    "conclusion": "Both ceilings are substantially FALSIFIED. GRAIN: the rubric catches cross-module ownership defects (5/5 flags across both rounds). TIME/forces: when forces are GROUNDED in provided CONTEXT.md, the rubric+model catch the forces-dependent defect AND restrain on the non-defect (consistency pair) \u2014 via the rubric's existing CONTEXT.md/docs-adr awareness + Meta-Rule 3 (no seam until friction proven) + a capable model. The rubric also proved a TOUGH, accurate reviewer: it found real residuals in 3/3 'clean' twins that the host and the authoring agent missed. IMPLICATION: Phase-C grain/forces machinery (forces axis, change-scenario gate) is NOT justified by this evidence. The only narrow residual: forces-reasoning fires when CONTEXT is present but is not proactively solicited when CONTEXT is thin \u2014 addressable by the much smaller scorecard context-honesty item (C1), not by C2-C5.",
+    "caveats": "Small n. The frontier flags carried present-tense hooks too (oversell; protocol-soup), so catches are not purely forces-attributable \u2014 though the consistency pair (flag caught + twin held on the same structural shape) is a clean forces demonstration. The abstraction-seam pair is contaminated and the duplicated-rule/process-owner twins remain invalid restraint cases pending rework.",
+    "replication_summary": {
+      "date": "2026-06-24",
+      "method": "Lever 1 reproducibility pass: K=5 independent current-arm Critic reviews per valid scenario (35 slots), two-tier mechanical+semantic grading; raw record in principal_baseline_replication.json (prompt_sha256 0e228d4b...).",
+      "headline_mechanical_recall": "4/4 clean flags caught >=4/5 (each 5/5; CP95 lower bound 0.478)",
+      "fullset_mechanical_recall": "5/5 flags caught >=4/5 (incl. contaminated abstraction-seam, reported separately)",
+      "semantic_confirmed_recall": "4/4 clean flags named-the-defect >=4/5 (mechanical==semantic, zero gap)",
+      "restraint_mechanical_floor": "0/2 twins held (approved+blocks_95:false) >=4/5",
+      "restraint_semantic": "2/2 twins carve-out-not-flagged >=4/5",
+      "conclusion": "GRAIN+FORCES depth-ceiling falsification is ROBUST under replication: all 5 cross-module/forces flags caught 5/5 (mechanical and semantic), not a lucky single draw. RESTRAINT is asymmetric and honest: reviewers never false-flag the carve-outs (semantic 2/2) but consistently DOCK both twins for real residuals (caller-supplied-snapshot bypass; missing rollback test), so the mechanical clean-approve floor is 0/2. This REVISES the prior single-run 'twins held cleanly' as optimistic, and reinforces that the rubric is a tough, accurate reviewer. No Phase-C machinery justified.",
+      "confound_noted": "Current arm only -> within-judge robustness, not lift over a bare model and not external validity (that needs Lever 2 breadth + a second judge). Rates carry a Clopper-Pearson 95% lower bound; 5/5 ~ 0.48."
+    }
   },
   "scenarios": [
-    {"id": "principal-invariant-owner-flag", "kind": "flag", "pair_id": "principal-invariant-owner", "dimension": "domain_modeling", "category": "smell_matchable", "status": "measured", "expected_baseline": "miss", "baseline_observed": "caught", "observed_note": "R1: Rejected, Likely disqualifier, domain_modeling=5. Named multi-writer-state + weak-domain-model via existing anchors."},
-    {"id": "principal-invariant-owner-restraint", "kind": "restraint", "pair_id": "principal-invariant-owner", "dimension": "domain_modeling", "category": "smell_matchable", "status": "measured", "expected_baseline": "hold", "baseline_observed": "held", "observed_note": "R2 (after fix): APPROVED, blocks_95=false, domain_modeling=9. Reviewer pressure-tested hard, found only the named 9->10 residual (caller-supplied completeness), accepted at 9.5. Clean restraint."},
-    {"id": "principal-duplicated-rule-flag", "kind": "flag", "pair_id": "principal-duplicated-rule", "dimension": "domain_modeling", "category": "smell_matchable", "status": "measured", "expected_baseline": "miss", "baseline_observed": "caught", "observed_note": "R1: Rejected, Serious deduction, domain_modeling=5. Caught constants-centralized-but-predicate-not; demanded the 3->5 divergence test."},
-    {"id": "principal-duplicated-rule-restraint", "kind": "restraint", "pair_id": "principal-duplicated-rule", "dimension": "domain_modeling", "category": "smell_matchable", "status": "measured", "expected_baseline": "hold", "baseline_observed": "twin_defective", "observed_note": "R2 (after fix): STILL rejected — the fetch-then-filter fix introduced a NEW real residual: filters on the live member object vs the original per-order-row columns (behavior change, Meta-Rule 4), and passes order.subtotal as cartSubtotal (cart/order conflation). Twin still not clean; needs rework."},
-    {"id": "principal-process-owner-flag", "kind": "flag", "pair_id": "principal-process-owner", "dimension": "data_flow", "category": "smell_matchable", "status": "measured", "expected_baseline": "miss", "baseline_observed": "caught", "observed_note": "R1: Rejected, Likely disqualifier, data_flow=3. Named missing process owner + saga-in-presentation + temporal coupling."},
-    {"id": "principal-process-owner-restraint", "kind": "restraint", "pair_id": "principal-process-owner", "dimension": "data_flow", "category": "smell_matchable", "status": "measured", "expected_baseline": "hold", "baseline_observed": "twin_defective", "observed_note": "R2 (after compensation fix): STILL rejected — reviewer found a NEW real residual: TOCTOU reserve race (isAvailable then hold across two awaits on an external actor) + void-failure error swallowing. Real defects; twin still not clean. Evidence the rubric is a very discerning saga reviewer."},
-    {"id": "principal-consistency-boundary-flag", "kind": "flag", "pair_id": "principal-consistency-boundary", "dimension": "data_flow", "category": "forces_dependent", "status": "measured", "expected_baseline": "miss", "baseline_observed": "caught", "observed_note": "FRONTIER: Rejected, Serious deduction. PRIMARY reasoning was forces-based — CONTEXT §4 committed inventory split makes the ACID transaction structurally impossible; §6 allows eventual consistency, so strong cross-entity consistency is the wrong boundary; cited the docs-adr-contradiction rule. Also noted oversell-not-prevented (present-tense hook). Hypothesis 'miss' FALSIFIED: the rubric does grounded-forces reasoning."},
-    {"id": "principal-consistency-boundary-restraint", "kind": "restraint", "pair_id": "principal-consistency-boundary", "dimension": "data_flow", "category": "forces_dependent", "status": "measured", "expected_baseline": "hold", "baseline_observed": "held", "observed_note": "FRONTIER: APPROVED, blocks_95=false, data_flow=9.5. Reviewer explicitly restrained: §4 keeps the audit log co-located (no split) and §6 requires strong consistency, so flagging would be 'unsupported speculation / overbuilding.' CLEAN forces-restraint: same structural shape as the flag, correctly NOT flagged because no grounded force shears it."},
-    {"id": "principal-abstraction-seam-flag", "kind": "flag", "pair_id": "principal-abstraction-seam", "dimension": "architecture_quality", "category": "forces_dependent", "status": "measured", "expected_baseline": "miss", "baseline_observed": "caught_contaminated", "observed_note": "FRONTIER: Rejected, Serious deduction. Used CONTEXT §5 committed regional divergence (forces) AND a present-tense protocol-soup hook. Catch is real but NOT purely forces-attributable (the bare protocol trips the seam policy independently)."},
-    {"id": "principal-abstraction-seam-restraint", "kind": "restraint", "pair_id": "principal-abstraction-seam", "dimension": "architecture_quality", "category": "forces_dependent", "status": "measured", "expected_baseline": "hold", "baseline_observed": "twin_defective", "observed_note": "FRONTIER: rejected for present-tense protocol-soup — host twin design bug: a bare Clock protocol (one impl, no test fake) trips the rubric's Unified Seam Policy regardless of forces. Invalid restraint case; redesign as a concrete struct or include a behavior-faithful fake."}
+    {
+      "id": "principal-invariant-owner-flag",
+      "kind": "flag",
+      "pair_id": "principal-invariant-owner",
+      "dimension": "domain_modeling",
+      "category": "smell_matchable",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "R1: Rejected, Likely disqualifier, domain_modeling=5. Named multi-writer-state + weak-domain-model via existing anchors.",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "caught",
+        "mechanical": {
+          "caught": 5,
+          "rate": "5/5",
+          "ci_lower_95": 0.4782
+        },
+        "semantic": {
+          "caught": 5,
+          "rate": "5/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json",
+        "contaminated": false,
+        "headline_excluded": false
+      }
+    },
+    {
+      "id": "principal-invariant-owner-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-invariant-owner",
+      "dimension": "domain_modeling",
+      "category": "smell_matchable",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held",
+      "observed_note": "R2 (after fix): APPROVED, blocks_95=false, domain_modeling=9. Reviewer pressure-tested hard, found only the named 9->10 residual (caller-supplied completeness), accepted at 9.5. Clean restraint.",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "inconclusive",
+        "mechanical": {
+          "held": 0,
+          "rate": "0/5",
+          "ci_lower_95": 0.0
+        },
+        "semantic": {
+          "held": 4,
+          "rate": "4/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json"
+      }
+    },
+    {
+      "id": "principal-duplicated-rule-flag",
+      "kind": "flag",
+      "pair_id": "principal-duplicated-rule",
+      "dimension": "domain_modeling",
+      "category": "smell_matchable",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "R1: Rejected, Serious deduction, domain_modeling=5. Caught constants-centralized-but-predicate-not; demanded the 3->5 divergence test.",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "caught",
+        "mechanical": {
+          "caught": 5,
+          "rate": "5/5",
+          "ci_lower_95": 0.4782
+        },
+        "semantic": {
+          "caught": 5,
+          "rate": "5/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json",
+        "contaminated": false,
+        "headline_excluded": false
+      }
+    },
+    {
+      "id": "principal-duplicated-rule-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-duplicated-rule",
+      "dimension": "domain_modeling",
+      "category": "smell_matchable",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "twin_defective",
+      "observed_note": "R2 (after fix): STILL rejected \u2014 the fetch-then-filter fix introduced a NEW real residual: filters on the live member object vs the original per-order-row columns (behavior change, Meta-Rule 4), and passes order.subtotal as cartSubtotal (cart/order conflation). Twin still not clean; needs rework.",
+      "replication": {
+        "excluded": true,
+        "reason": "twin contains a real residual; not a valid restraint case; re-authoring = out-of-scope twin polish"
+      }
+    },
+    {
+      "id": "principal-process-owner-flag",
+      "kind": "flag",
+      "pair_id": "principal-process-owner",
+      "dimension": "data_flow",
+      "category": "smell_matchable",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "R1: Rejected, Likely disqualifier, data_flow=3. Named missing process owner + saga-in-presentation + temporal coupling.",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "caught",
+        "mechanical": {
+          "caught": 5,
+          "rate": "5/5",
+          "ci_lower_95": 0.4782
+        },
+        "semantic": {
+          "caught": 5,
+          "rate": "5/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json",
+        "contaminated": false,
+        "headline_excluded": false
+      }
+    },
+    {
+      "id": "principal-process-owner-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-process-owner",
+      "dimension": "data_flow",
+      "category": "smell_matchable",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "twin_defective",
+      "observed_note": "R2 (after compensation fix): STILL rejected \u2014 reviewer found a NEW real residual: TOCTOU reserve race (isAvailable then hold across two awaits on an external actor) + void-failure error swallowing. Real defects; twin still not clean. Evidence the rubric is a very discerning saga reviewer.",
+      "replication": {
+        "excluded": true,
+        "reason": "twin contains a real residual; not a valid restraint case; re-authoring = out-of-scope twin polish"
+      }
+    },
+    {
+      "id": "principal-consistency-boundary-flag",
+      "kind": "flag",
+      "pair_id": "principal-consistency-boundary",
+      "dimension": "data_flow",
+      "category": "forces_dependent",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "FRONTIER: Rejected, Serious deduction. PRIMARY reasoning was forces-based \u2014 CONTEXT \u00a74 committed inventory split makes the ACID transaction structurally impossible; \u00a76 allows eventual consistency, so strong cross-entity consistency is the wrong boundary; cited the docs-adr-contradiction rule. Also noted oversell-not-prevented (present-tense hook). Hypothesis 'miss' FALSIFIED: the rubric does grounded-forces reasoning.",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "caught",
+        "mechanical": {
+          "caught": 5,
+          "rate": "5/5",
+          "ci_lower_95": 0.4782
+        },
+        "semantic": {
+          "caught": 5,
+          "rate": "5/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json",
+        "contaminated": false,
+        "headline_excluded": false
+      }
+    },
+    {
+      "id": "principal-consistency-boundary-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-consistency-boundary",
+      "dimension": "data_flow",
+      "category": "forces_dependent",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held",
+      "observed_note": "FRONTIER: APPROVED, blocks_95=false, data_flow=9.5. Reviewer explicitly restrained: \u00a74 keeps the audit log co-located (no split) and \u00a76 requires strong consistency, so flagging would be 'unsupported speculation / overbuilding.' CLEAN forces-restraint: same structural shape as the flag, correctly NOT flagged because no grounded force shears it.",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "inconclusive",
+        "mechanical": {
+          "held": 1,
+          "rate": "1/5",
+          "ci_lower_95": 0.0051
+        },
+        "semantic": {
+          "held": 5,
+          "rate": "5/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json"
+      }
+    },
+    {
+      "id": "principal-abstraction-seam-flag",
+      "kind": "flag",
+      "pair_id": "principal-abstraction-seam",
+      "dimension": "architecture_quality",
+      "category": "forces_dependent",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_contaminated",
+      "observed_note": "FRONTIER: Rejected, Serious deduction. Used CONTEXT \u00a75 committed regional divergence (forces) AND a present-tense protocol-soup hook. Catch is real but NOT purely forces-attributable (the bare protocol trips the seam policy independently).",
+      "replication": {
+        "runs": 5,
+        "invalid_slots": 0,
+        "decision": "caught",
+        "mechanical": {
+          "caught": 5,
+          "rate": "5/5",
+          "ci_lower_95": 0.4782
+        },
+        "semantic": {
+          "caught": 5,
+          "rate": "5/5"
+        },
+        "artifacts_ref": "principal_baseline_replication.json",
+        "contaminated": true,
+        "headline_excluded": true
+      }
+    },
+    {
+      "id": "principal-abstraction-seam-restraint",
+      "kind": "restraint",
+      "pair_id": "principal-abstraction-seam",
+      "dimension": "architecture_quality",
+      "category": "forces_dependent",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "twin_defective",
+      "observed_note": "FRONTIER: rejected for present-tense protocol-soup \u2014 host twin design bug: a bare Clock protocol (one impl, no test fake) trips the rubric's Unified Seam Policy regardless of forces. Invalid restraint case; redesign as a concrete struct or include a behavior-faithful fake.",
+      "replication": {
+        "excluded": true,
+        "reason": "twin contains a real residual; not a valid restraint case; re-authoring = out-of-scope twin polish"
+      }
+    }
   ]
 }
