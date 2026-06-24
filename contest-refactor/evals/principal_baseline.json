@@ -1,9 +1,16 @@
 {
   "schema_version": 1,
-  "description": "Baseline manifest for principal-defect (cross-module / domain-grain) scenarios. Every principal-* scenario directory must be registered here. The selftest scripts/_principal_baseline_selftest.py enforces this contract mechanically.",
+  "description": "Baseline manifest for principal-defect (cross-module / domain-grain) scenarios. Every principal-* scenario directory must be registered here. The selftest scripts/_principal_baseline_selftest.py enforces this contract mechanically. expected_baseline records the PRE-REGISTERED hypothesis; baseline_observed records the ACTUAL measured result (do not rewrite the hypothesis).",
   "thresholds": {
     "recall_target": 0.8,
     "restraint_regression_tolerance": 0
+  },
+  "measurement": {
+    "date": "2026-06-24",
+    "method": "6 parallel skill-equipped Critic reviews (current arm); rubric = references/architecture-rubric.md + method.md; neutral review prompt; verdict JSON graded by the host.",
+    "recall_flags": "3/3 caught (invariant-owner: Likely disqualifier; duplicated-rule: Serious deduction; process-owner: Likely disqualifier)",
+    "restraint_twins": "0/3 cleanly held — all 3 twins rejected, but each twin contained a REAL residual defect (scenario-quality bug), so this run does NOT measure restraint; twins must be rebuilt provably-clean-from-the-diff before restraint is measurable.",
+    "conclusion": "The grain-ceiling hypothesis (loop blind to cross-module ownership defects) is FALSIFIED on recall: the existing rubric (Authority Map + state_management/domain_modeling/data_flow anchors) catches all three at baseline. The rubric also proved discerning enough to flag genuine residuals in the 'clean' twins. Implication: Phase-C grain-ceiling machinery (forces axis etc.) is NOT justified by this evidence for these defect classes. Open question: whether subtler principal defects with no clean smell-match would still be missed."
   },
   "scenarios": [
     {
@@ -11,48 +18,60 @@
       "kind": "flag",
       "pair_id": "principal-invariant-owner",
       "dimension": "domain_modeling",
-      "status": "baseline_unmeasured",
-      "expected_baseline": "miss"
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "Rejected, blocks_95, Likely disqualifier, domain_modeling=5. Named multi-writer-state + weak-domain-model; cited 'invariants enforced at construction not convention' + 'one owner per mutable concern'."
     },
     {
       "id": "principal-invariant-owner-restraint",
       "kind": "restraint",
       "pair_id": "principal-invariant-owner",
       "dimension": "domain_modeling",
-      "status": "baseline_unmeasured",
-      "expected_baseline": "hold"
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "twin_defective",
+      "observed_note": "Rejected — but the diff does not SHOW the two RosterStore methods delegating (convergence claimed only in prose) and the invariant check depends on a caller-supplied allRosters snapshot (soundness gap). Twin is not provably-clean-from-the-diff; rebuild needed."
     },
     {
       "id": "principal-duplicated-rule-flag",
       "kind": "flag",
       "pair_id": "principal-duplicated-rule",
       "dimension": "domain_modeling",
-      "status": "baseline_unmeasured",
-      "expected_baseline": "miss"
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "Rejected, blocks_95, Serious deduction, domain_modeling=5. Caught the subtle point: constants centralized but predicate + one SQL bound not; demanded the 3->5 divergence test."
     },
     {
       "id": "principal-duplicated-rule-restraint",
       "kind": "restraint",
       "pair_id": "principal-duplicated-rule",
       "dimension": "domain_modeling",
-      "status": "baseline_unmeasured",
-      "expected_baseline": "hold"
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "twin_defective",
+      "observed_note": "Rejected — OrderRepository re-encodes the rule STRUCTURE in SQL (is_active=1 AND subtotal>= AND prior_orders>=), not just the shared constants, so changing the rule still diverges silently. Real residual; twin is not clean. Rebuild needed (fetch-then-filter via isEligible, or policy emits the predicate)."
     },
     {
       "id": "principal-process-owner-flag",
       "kind": "flag",
       "pair_id": "principal-process-owner",
       "dimension": "data_flow",
-      "status": "baseline_unmeasured",
-      "expected_baseline": "miss"
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught",
+      "observed_note": "Rejected, blocks_95, Likely disqualifier, data_flow=3. Named missing process owner + saga-in-presentation + temporal coupling; demanded a coordinator with compensation + partial-failure test."
     },
     {
       "id": "principal-process-owner-restraint",
       "kind": "restraint",
       "pair_id": "principal-process-owner",
       "dimension": "data_flow",
-      "status": "baseline_unmeasured",
-      "expected_baseline": "hold"
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "twin_defective",
+      "observed_note": "Rejected — the 'clean' twin's compensation is WRONG: on confirm-failure after a captured charge it calls reservationService.release(seat:), producing pay-but-no-seat and reselling the paid seat. Real defect (inverted compensation); twin is not clean. Rebuild needed (retain hold / refund / idempotent retry)."
     }
   ]
 }
