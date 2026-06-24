@@ -155,9 +155,12 @@ A score of **9.5+** (and < 10) on a category requires:
 
 A 9.5 without an identified residual is fake-clean reward. Downgrade to 9.
 
-Accepted residuals require `reason`, `accepted_on`, and `expires`. Expired residuals cannot satisfy `HALT_SUCCESS`. If expired, the Critic reconsiders the residual as active unless current evidence shows it no longer applies.
+Accepted residuals come in two tiers with different expiry rules — keep them distinct:
 
-`HALT_SUCCESS` requires every scorecard category at 10, OR at 9.5+ with an **accepted** residual whose `expires` date has not passed. Any **queued** residual blocks `HALT_SUCCESS`. Any **expired** accepted residual blocks `HALT_SUCCESS`.
+- **Inline scorecard residual** (the per-dimension disposition above): justified by its `residual_rationale_or_backlog_ref`. `residual_expires` is **optional** — a permanent framework carve-out (e.g. a language constraint that will never change) needs no date and is a valid `HALT_SUCCESS`. If an inline residual *does* carry `residual_expires` and that date has passed, the Critic reconsiders it as active and it cannot satisfy `HALT_SUCCESS` unless current evidence shows it no longer applies.
+- **`.contest-refactor.toml` `[[accepted_residuals]]`** (repo-level path-pattern policy): `reason`, `accepted_on`, and a **mandatory** `expires` (see [project-config.md](project-config.md)). These broad suppressions must lapse; an undated or expired toml residual is a validator error and cannot satisfy `HALT_SUCCESS`.
+
+`HALT_SUCCESS` requires every scorecard category at 10, OR at 9.5+ with an **accepted** residual (inline rationale; any `residual_expires` present is not past). Any **queued** residual blocks `HALT_SUCCESS`. Any **expired** residual — inline or toml — blocks `HALT_SUCCESS`.
 
 Terminal normalization rule: before any HALT emit, a category at 9 cannot mean
 "excellent but I did not account for the last local concern." If the 9-anchor is
