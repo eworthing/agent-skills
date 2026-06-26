@@ -38,7 +38,8 @@ GOLDEN_APPLE = {
                    "output-format-json-rules.md",
                    "output-format-markdown.md", "validation.md"],
     "step2": ["method.md", "architecture-rubric.md"],
-    "step3": ["output-format.md", "output-format-json-rules.md", "validation.md",
+    "step3": ["output-format.md", "output-format-json-rules.md",
+              "output-format-markdown-archive.md", "validation.md",
               "implementation-reviewer.md", "provider-adapters.md"],
 }
 
@@ -57,7 +58,8 @@ AUDIT_PER_LOOP = {
     "architecture-rubric.md", "architecture-rubric-scoring.md",
     "output-format.md", "output-format-json.md",
     "output-format-json-rules.md",
-    "output-format-markdown.md", "validation.md", "implementation-reviewer.md",
+    "output-format-markdown.md", "output-format-markdown-archive.md",
+    "validation.md", "implementation-reviewer.md",
     "provider-adapters.md",
 }
 loop_union = set(tb.loaded_set("loop", lens="apple"))

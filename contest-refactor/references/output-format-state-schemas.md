@@ -223,7 +223,7 @@ Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_
 }
 ```
 
-Compression rules for the markdown archive live in [output-format-markdown.md § Per-loop archive format](output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2); they apply only to REVIEW_HISTORY.md. REVIEW_HISTORY.json keeps full per-loop fidelity for downstream tooling.
+Compression rules for the markdown archive live in [output-format-markdown-archive.md § Per-loop archive format](output-format-markdown-archive.md#per-loop-archive-format-pr-5-schema_version--2); they apply only to REVIEW_HISTORY.md. REVIEW_HISTORY.json keeps full per-loop fidelity for downstream tooling.
 
 ## Incident retro feed (--incidents flag)
 

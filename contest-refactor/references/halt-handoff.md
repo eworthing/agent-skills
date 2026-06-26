@@ -48,7 +48,7 @@ A retired finding surfaces in user-visible loop output via the "Retired finding"
 **Retired finding:** F-007 marked `unresolvable` after rejected attempts in loops 3 and 5. Continuing with 4 eligible backlog items.
 ```
 
-Emit one such line per finding that transitioned to `unresolvable` in this loop. The per-loop archive header in `REVIEW_HISTORY.md` (PR 5 compression) also lists the loop's retirement transitions; see [output-format-markdown.md § Per-loop archive format](output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2).
+Emit one such line per finding that transitioned to `unresolvable` in this loop. The per-loop archive header in `REVIEW_HISTORY.md` (PR 5 compression) also lists the loop's retirement transitions; see [output-format-markdown.md § Per-loop archive format](output-format-markdown-archive.md#per-loop-archive-format-pr-5-schema_version--2).
 
 ---
 

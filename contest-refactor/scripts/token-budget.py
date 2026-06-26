@@ -56,7 +56,8 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
         # Both already loaded at step1; listed for routing fidelity, de-duped in the union.
         "step2": ["method.md", "architecture-rubric.md"],
         # SKILL.md row "Step 3": output-format + emit-rules + validation + reviewer + provider.
-        "step3": ["output-format.md", "output-format-json-rules.md", "validation.md",
+        "step3": ["output-format.md", "output-format-json-rules.md",
+                  "output-format-markdown-archive.md", "validation.md",
                   "implementation-reviewer.md", "provider-adapters.md"],
     }
     if step == "loop":
