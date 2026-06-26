@@ -181,6 +181,76 @@ Run projection after Lever 1: per-loop fixed reload 59,281 + `SKILL.md` trigger 
 
 **Levers 2–3 evaluated and declined** (decision 2026-06-26). Lever 1 captured the bulk of the safe win the audit predicted (~1.5–3% ceiling) from one structural move. Lever 2 (cross-file dedupe) netted only ~0.1–0.3% once schema self-containment (`output-format-json.md` enum values) and teaching examples (`method.md` fake-clean cases) were excluded as unsafe to strip. Lever 3 (concision via anthropic-grade-optimizer) offered ~1% but edits loop-rule prose, requiring a ~90–126-run powered behavioral sweep to prove no efficacy loss — diminishing returns past the structural win. Caveman remains rejected throughout (degrades hot-path instruction files). Peer-reviewed (Codex gpt-5.5 high: REVISE→APPROVED).
 
+## Perspective scan + Lever 4 investigation (2026-06-26)
+
+After the user asked to reduce run-tokens "from any perspective possible," an exhaustive 4-perspective scan (3 Explore agents + source verification) was run. Result: the skill is already near its token floor. Three perspectives are dead ends; one lever (Lever 4) was investigated in full below. **This section is tokenizer-measured (`tiktoken/cl100k_base`) and supersedes the word×1.33 figures elsewhere in this audit; it does not retrofit them.** No skill/runtime file was changed by this investigation — only this report.
+
+### Perspectives scanned (carried-forward context)
+
+| Perspective | Verdict | Controlling citation |
+|---|---|---|
+| Conditional / lazy loading | **Already solved by design.** `implementation-reviewer.md`, `halt-verifier.md`, `output-format*.md`, `halt-handoff.md` already load conditionally. Only `lens-security.md` is unconditional (~1.3k/loop); gating it on prior-loop scores is moderate-risk for a cross-cutting dimension. Decline. | Reference Load Matrix `SKILL.md:65-77` |
+| Output tokens (~26–46k/loop, bills ~4–5× input) | **Gate-mandated substance.** Evidence Chain (G3), score proof (G4), residual accounting (G5/G6), 17 fields/finding. Archive already compressed 15–20%; O(1) in loop count. | `output-format-markdown.md:181-197`; `validation.md` G1–G32 |
+| Per-loop input concision (Levers 2–3) | **Already declined** — ~1% for a ~90–126-run behavioral sweep; schema/pedagogy unsafe to strip. | Levers 2–3 paragraph above |
+| Loop count / reviewer sidecar | **Only untapped leverage** → Lever 4. | this section |
+
+**Lever A (skip reviewer when Step-2 SPT fails) — FALSIFIED.** A Step-2 SPT failure downgrades the fix or picks the next backlog item (`SKILL.md:185`); the SPT-failing fix never reaches Step 3, and the reviewer is "Skipped on HALT loops (no diff)" (`implementation-reviewer.md:24`). There is no reviewer invocation to skip on that path — the reviewer only ever runs on SPT-*passing* plans whose *implementation* may diverge, and is the anti-fake-clean correctness gate (`:30`). Not efficacy-neutral to cut.
+
+### Lever 4 — reviewer reference-trim: closure audit
+
+The reviewer is a separate subagent (`implementation-reviewer.md:42-49`) that Reads **full** `method.md` + **full** `architecture-rubric.md`, but it does not author the scorecard (`:209`) and does not re-Critic (`:208`). Every reviewer→{method,rubric} citation, mapped to the subset it actually needs:
+
+| Reviewer check | Reference | Target | Subset? |
+|---|---|---|---|
+| Check 1 Reality `:65` | Evidence Chain | `method.md:18-32` | ✅ in |
+| Check 1 `:69` | Architectural tests (5) | `architecture-rubric.md:67-101` | ✅ in |
+| Check 2 Honesty `:80`,`:154` | Simplify Pressure Test | `method.md:127-148` | ✅ in |
+| Check 2 `:84-101` | Unified Seam Policy + Indirect-Interface carve-out | `architecture-rubric.md:103-118`, `90-101` | ✅ in |
+| Check 2 `:104-116` | Smells (costume / fake-clean / suppression) | `architecture-rubric.md:30-65` | ✅ in |
+| Check 3 Regression `:123`,`:142` | **Severity Anchors** | `architecture-rubric.md:133-140` | ✅ in (B1) |
+| Check 3 `:126-129` | Universal smells | `architecture-rubric.md:39-65` | ✅ in |
+| Check 3 `:137` | Meta-Rule 4 (invariant preservation) | `method.md:34-42` | ✅ in |
+| (tests/seam vocab, transitive) | Vocabulary — Architecture | `architecture-rubric.md:17-28` | ✅ in (conservative) |
+| Does NOT do `:209` | Score Anchors / 9.5 threshold | `architecture-rubric.md:142-243` | ❌ never (not re-scored) |
+| Critic-only | 10-step Method, registry 1.5–1.6, Residual + Adversarial passes, guardrails | `method.md:44-125,150-169` | ❌ never |
+
+**B1 resolution (the round-1 blocker).** Check 3 compares "same or higher **severity**," a real dependency on Severity Anchors. But Severity Anchors (`133-140`) is a self-contained 4-level ladder that does **not** reference the adjacent Score Anchors (`142-243`) — so the dependency is satisfied by 8 lines and does **not** drag in the 100-line scoring block. The leak is real and closed.
+
+**Borderline soft-excludes (named, not hidden):** Dependency Categorization (`rubric:120-131`) and the method.md scoring guardrails (`150-169`) are excluded — the reviewer tags no dependency category and applies the lens + Meta-Rule 4 rather than the Critic's scoring guardrails. Including both conservatively adds back ~1k tok and still clears the GO bar by >2×, so the GO outcome is robust to that uncertainty.
+
+### Measurement (tiktoken hard-gated)
+
+`token-budget.py --files method.md architecture-rubric.md --json` → `method == "tiktoken/cl100k_base"` (heuristic fallback rejected). Subset counted with the same encoder over `sed -n 'A,Bp'` slices:
+
+```
+enc = tiktoken.get_encoding("cl100k_base")  # one-off, same encoder as token-budget.py
+method.md   ranges (18,32)(34,42)(127,148)            full 6126  subset 1480  trim 4646
+rubric      ranges (17,28)(30,65)(67,101)(103,118)(133,140)  full 5433  subset 2191  trim 3242
+per-reviewer-invocation saving = 4646 + 3242 = 7888 tok
+```
+
+**Multiplier = reviewer invocations, not loops.** The reviewer runs once per CONTINUE-with-diff Step-3 loop and may re-spawn ≤2×/loop (`implementation-reviewer.md:201-203`); skipped on HALT/dry-run loops, so reviewer-loops ≤ total loops. Net-saving band on the **8-loop Apple / post-Lever-1 basis**:
+
+| Multiplier | Reviewer invocations | Net saving / run |
+|---|---|---|
+| **lower bound** | 7 (one per CONTINUE loop, terminal HALT excluded) | **~55,216 tok** |
+| 8 loops × 1 | 8 | ~63,104 tok |
+| upper (≤2×/loop) | 14 | ~110,432 tok |
+
+Even a pessimistic 5 reviewer-loops yields ~39,440 tok/run. The saving is on the reviewer *sidecar* input (~32–42k/loop), of which method+rubric are ~11.6k → trimmed to ~3.7k (a 68% cut on those two files for the reviewer).
+
+### Recommendation — **GO** (eval-gated execution)
+
+Scored against the five Decision-gate conditions:
+
+1. **Closed subset** ✅ — every reviewer citation maps into the subset; B1 severity dependency included and provably separable from Score Anchors; soft-excludes named and immaterial to the outcome.
+2. **No unsynced duplication** ✅ (path identified) — execution is a *split* (extract), not a copy: a reviewer-scoped fragment becomes each section's single home; the Critic reads it as part of its full Step-1 set (the Reference Load Matrix lists both files), so no rule is duplicated. The Unified Seam Policy CANONICAL marker (`rubric:105`) and `canon/` enum alignment move with their section, not cloned.
+3. **Integrity path identified** ✅ — same anchor-audit discipline as Lever 1: keep or repoint every inbound link to a moved section (`SKILL.md`, `validation.md`, `implementation-reviewer.md`, `analysis/`), keep `validate-repo.py` link-integrity + canon-enum-alignment green, and keep the Critic's complete read intact via the updated Load Matrix.
+4. **Behavioral gate planned** ✅ — execution must prove the reviewer's reject/approve discrimination is unchanged, reusing the repo's replication methodology (`evals/principal_baseline_replication.json`) on the fixtures that exercise reviewer rejection (fake-clean / suppression / Replace-don't-layer / invariant-preservation). Required because the severity dependency is judgment-heavy and static closure alone is necessary-not-sufficient for an LLM consumer.
+5. **Saving clears the bar** ✅ — ~55k tok/run lower bound vs the 20k bar (~2.7×); robust to the soft-exclude uncertainty.
+
+**GO**, with the honest caveat that execution restructures the two most canonical files (medium risk) and is gated by the full verification harness **plus** the behavioral reviewer-discrimination gate. The pre-audit "~40k/run" estimate was conservative: the reviewer uses far less of these two files than assumed, so the real ceiling is ~55–110k tok/run. Execution is a separate, approval-gated phase (Lever 4 proper); this investigation does not perform it.
+
 ## Methodology & caveats
 
 - **Heuristic, not a tokenizer.** `tok ≈ words × 1.33`. JSON is denser per token than prose, so JSON-schema/instance figures are approximate. A real tokenizer (the `token-budget.py` follow-up) would tighten these.
