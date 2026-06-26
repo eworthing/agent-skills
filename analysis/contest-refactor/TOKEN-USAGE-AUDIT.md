@@ -251,6 +251,56 @@ Scored against the five Decision-gate conditions:
 
 **GO**, with the honest caveat that execution restructures the two most canonical files (medium risk) and is gated by the full verification harness **plus** the behavioral reviewer-discrimination gate. The pre-audit "~40k/run" estimate was conservative: the reviewer uses far less of these two files than assumed, so the real ceiling is ~55–110k tok/run. Execution is a separate, approval-gated phase (Lever 4 proper); this investigation does not perform it.
 
+## Empirical validation — real run (BenchHype, 4-loop HALT_SUCCESS, 2026-06-26)
+
+The sections above are static/structural estimates. This section measures an **actual** contest-refactor run against a large Apple repo (BenchHype), reconstructed from the Claude Code transcript (session `e865de31`, main jsonl + all `subagents/*.jsonl`). **Numbers corrected after a Codex gpt-5.5 (effort high) peer-validation** caught a methodology error: Claude Code splits one assistant response across multiple JSONL records that share a `message.id` and repeat `message.usage`, so a naive per-line sum over-counts **2.86×**. All figures below **deduplicate by `message.id`** (one usage record per assistant response). Main and subagent transcripts do **not** overlap (verified by `message.id` / `uuid`), so summing them is additive.
+
+### What the run actually cost
+
+4 loops + G32 challenger, converged to HALT_SUCCESS. Deduped billed-token totals across main + every subagent:
+
+| Bucket | Tokens | Cost-weighted share* | ≈ USD (Opus API rates)† |
+|---|--:|--:|--:|
+| cache_read | 81.4M | **46.6%** | ~$122 |
+| cache_write | 5.0M | **36.0%** | ~$94 |
+| output | 0.55M | **15.9%** | ~$42 |
+| uncached input | 0.26M | 1.5% | ~$4 |
+| **Total** | **~87.2M cache-inclusive / ~5.3M fresh** | 100% | **~$262 / run** |
+
+*Relative weights input 1×, cache-write 1.25×, cache-read 0.1×, output 5×. Input-side cache traffic dominates at **82.6%** (cache_read + cache_write); output is the second bucket at 15.9%. Cache **hit rate 93.9%** — caching already works; it is not the leak. †USD is API-rate modeling only (input $15/M, output $75/M, cache-write $18.75/M, cache-read $1.50/M); it does **not** apply to Max/subscription billing, where the same volume consumes usage budget — which is what exhausted the session.
+
+Headline honesty: "~87.2M" is mostly **cache reads** (re-reads of a growing cached prefix billed at 0.1×), not 87M unique tokens. Genuinely *fresh* tokens this run ≈ **5.3M** (uncached input + cache-write) + 0.55M output.
+
+### The model correction
+
+The theoretical "~1.4M tok for 8 loops" headline earlier in this audit undercounts, but **not by 100×** (an earlier draft's claim, withdrawn — it compared a unique-input estimate against a cache-read-inclusive billed total). Apples-to-apples: fresh input this run (5.3M) is **~3.8×** the estimate; cost-weighted units (17.4M) are **~12.5×**; the cache-inclusive raw figure is ~62× but that double-counts cache re-reads and is the wrong basis. The estimate undercounted because it modeled "each reference read once per loop" and ignored that **each loop is a multi-message subagent (~28–85 assistant messages) that re-bills its full context on every message** (mostly cache-read), plus the cache-write of the source walk. Cost ≈ **per-message context × messages**. Loop 1: 83 assistant messages, ~262k avg cache-read/message ≈ 21.8M.
+
+Per-agent cost-weighted share (deduped; unique assistant messages):
+
+| Agent | Msgs | Share |
+|---|--:|--:|
+| ContestLoop1 | 83 | 25.3% |
+| ContestLoop2 | 64 | 19.1% |
+| MAIN (orchestrator) | 85 | 19.1% |
+| ContestLoop3 | 66 | 17.2% |
+| G32 Challenger | 22 | 5.3% |
+| ContestLoop4 | 28 | 5.3% |
+| Step-0 audit agents (×2) | 19 + 27 | ~5.0% |
+| **Reviewer sidecars (×3)** | 3–11 ea | **3.6%** |
+
+### Findings (ranked by real impact)
+
+1. **Cut assistant messages per loop subagent — biggest lever, previously unmodeled.** ~241 unique assistant messages / 289 tool calls across 4 loops (148 Bash, 90 Read). Each message is one API call re-billing its full (~250k) context. 20% fewer messages ≈ 20% off the 82.6%-of-cost input side. Batch Reads, fewer edit→test→re-read cycles, fewer re-greps.
+2. **Per-message resident context is the multiplicand.** 90 Reads pulled ~336k tok of source in; individual 27–50KB files get re-billed every subsequent message. Read→extract→drop beats holding large files resident.
+3. **References are ~25% of per-message context** (~60–70k of ~250k) and ride in *every* message — so Lever 1 helped across all ~241 loop messages, not just 8 loops (more valuable than the static model credited). Broad reference trims are worth ~10%+ here.
+4. **Cross-loop re-reads waste cache-write.** The same 40KB file is cache-written fresh in all 4 loops (Loop-Isolation = fresh context/loop). ~5.0M cache-write (36% of cost) is largely re-reading the same source + history each loop. Tighter per-loop source scoping helps; full cross-loop source caching is blocked by blind-critic independence.
+5. **Lever 4 (reviewer reference-trim) is correct but immaterial here.** The 3 reviewer sidecars are **3.6%** of the run; trimming only their method/rubric reads (they read ~109KB of method/rubric result text total) moves **<0.1%** of real cost. The Step-0 audit agents (~5%) cost more than the reviewers. The ~29–55k/run Lever-4 projection is real but a rounding error against a ~5.3M-fresh-token run.
+6. **Output is 15.9% — bigger than the static model implied, but still hard to cut.** Output is the second-largest bucket (not the ~8% an earlier draft stated). It is nonetheless gate-mandated substance (Evidence Chain, score proof, residual accounting), so concision there risks efficacy; not a free lever.
+
+### Redirect
+
+Highest-leverage token reduction is **fewer assistant messages + smaller resident per-message context inside the loop subagents** (findings 1–2; loop subagents = **66.8%** of cost-weighted total, ~70% of all cache-read), then broad reference/context trims (finding 3) — **not** trimming static reference files in isolation, and specifically **not Lever 4** (finding 5). Loop count was not the problem this run (4 loops, clean convergence).
+
 ## Methodology & caveats
 
 - **Heuristic, not a tokenizer.** `tok ≈ words × 1.33`. JSON is denser per token than prose, so JSON-schema/instance figures are approximate. A real tokenizer (the `token-budget.py` follow-up) would tighten these.
