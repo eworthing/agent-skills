@@ -45,7 +45,7 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
         # SKILL.md row "Step 1": stack lens + always-included lenses + method + rubric.
         # SKILL.md is read first by the subagent (trust-model.md:62).
         "step1": ["SKILL.md", stack_lens, "lens-security.md",
-                  "method.md", "architecture-rubric.md",
+                  "method.md", "method-critic.md", "architecture-rubric.md",
                   "architecture-rubric-scoring.md"],
         # SKILL.md row "Step 1 emit": output-format trio + validation (+ halt-handoff
         # conditional, counted because most loops route through a HALT check at emit).
