@@ -32,7 +32,8 @@ def check(cond: bool, msg: str):
 # Step 1 emit / Step 2 / Step 3). If SKILL.md's matrix changes, update both it and these.
 GOLDEN_APPLE = {
     "step1": ["SKILL.md", "lens-apple.md", "lens-security.md",
-              "method.md", "architecture-rubric.md"],
+              "method.md", "architecture-rubric.md",
+              "architecture-rubric-scoring.md"],
     "step1_emit": ["output-format.md", "output-format-json.md",
                    "output-format-json-rules.md",
                    "output-format-markdown.md", "validation.md"],
@@ -53,7 +54,8 @@ check(tb.loaded_set("step1", lens="generic")[1] == "lens-generic.md",
 # (A1a added output-format-json-rules.md, the emit-time carve-out, at Step 1 emit / Step 3).
 AUDIT_PER_LOOP = {
     "SKILL.md", "lens-apple.md", "lens-security.md", "method.md",
-    "architecture-rubric.md", "output-format.md", "output-format-json.md",
+    "architecture-rubric.md", "architecture-rubric-scoring.md",
+    "output-format.md", "output-format-json.md",
     "output-format-json-rules.md",
     "output-format-markdown.md", "validation.md", "implementation-reviewer.md",
     "provider-adapters.md",

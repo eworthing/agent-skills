@@ -54,7 +54,7 @@ Emit one such line per finding that transitioned to `unresolvable` in this loop.
 
 ## HALT_SUCCESS
 
-Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` residual disposition (per `architecture-rubric.md` Score Anchors).
+Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` residual disposition (per `architecture-rubric-scoring.md` Score Anchors).
 
 ### Subagent records
 - `system_flag: "HALT_SUCCESS"`

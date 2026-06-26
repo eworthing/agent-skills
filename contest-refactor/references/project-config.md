@@ -59,7 +59,7 @@ The config never raises a residual to `HALT_SUCCESS` unless the residual's `expi
 
 ## Accepted residuals — semantics + expiry rule
 
-An accepted residual is a documented, scope-limited exception to the 9.5+ scoring threshold for a specific file or pattern. The rubric in [architecture-rubric.md § 9.5+ Threshold](architecture-rubric.md#95-threshold-the-contest-target) gives the structural rules; this config gives the durability.
+An accepted residual is a documented, scope-limited exception to the 9.5+ scoring threshold for a specific file or pattern. The rubric in [architecture-rubric-scoring.md § 9.5+ Threshold](architecture-rubric-scoring.md#95-threshold-the-contest-target) gives the structural rules; this config gives the durability.
 
 Mandatory fields per entry:
 
