@@ -176,6 +176,7 @@ Reductions land on `docs/contest-refactor-token-audit`, one commit per lever, ga
 |-------|--------|---------------------------:|--------------|
 | Baseline | — | 499,486 | all gates green at HEAD `22055c7` |
 | **Lever 1** | Extract main-only Step −1/Step 0 → `references/startup.md`; per-loop `SKILL.md` read drops 10,718→8,903 tok | **−14,068 (−2.82%)** | B1 load-path proof (startup.md absent from loop set; referenced only by SKILL.md); validate-repo OK; 18 fixtures; eval-skill 92% unchanged; behavioral-by-construction (no loop-rule text changed) |
+| **A2** (Phase A) | Relocate v2→v3 default-fill / schema-v3 changelog → `references/output-format-migrations.md` (resume-path only); `output-format-json.md` 11,876→11,480 tok | **−396 tok off the per-loop payload** (rides every loop message; ~0.06% of the empirical run, modest by design) | Verbatim move; 3 G29 links in `validation.md` + Contents repointed; SKILL.md Load Matrix routes it on the resume path; validate-repo OK; eval-skill 92%; self-tests green; zero efficacy loss (no rule text changed) |
 
 Run projection after Lever 1: per-loop fixed reload 59,281 + `SKILL.md` trigger 8,903 + `startup.md` once 2,267 = **485,418 tok/run**.
 

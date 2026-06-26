@@ -1,13 +1,13 @@
 # Output Format — JSON schemas (per-loop)
 
-JSON mirror schema for the per-loop artifact `CURRENT_REVIEW.json`, plus its embedded `halt_handoff` and `re_validation_context` objects, the Per-Loop Progress Line Format, the canonical Deepening Keywords list, the Schema version 3 changelog, and the 27 schema validation rules enforced by the validation hard gates.
+JSON mirror schema for the per-loop artifact `CURRENT_REVIEW.json`, plus its embedded `halt_handoff` and `re_validation_context` objects, the Per-Loop Progress Line Format, the canonical Deepening Keywords list, and the 27 schema validation rules enforced by the validation hard gates. (Schema-version migration notes — the v2→v3 default-fill table — moved to [output-format-migrations.md](output-format-migrations.md), loaded only on the resume path.)
 
 Persistent cross-loop state schemas (`LOOP_STATE.json`, `findings_registry.json`, `REVIEW_HISTORY.json`, plus the Fuzzy-match rules) live in [output-format-state-schemas.md](output-format-state-schemas.md). The human-readable markdown spec is in [output-format-markdown.md](output-format-markdown.md). Artifact index is [output-format.md](output-format.md).
 
 ## Contents
 
 - [Schema version 4 changelog](#schema-version-4-changelog)
-- [Schema version 3 changelog](#schema-version-3-changelog)
+- [Schema version 3 changelog](output-format-migrations.md#schema-version-3-changelog) (moved — resume path)
 - [CURRENT_REVIEW.json Schema](#current_reviewjson-schema)
 - [Per-Loop Progress Line Format (schema_version >= 3)](#per-loop-progress-line-format-schema_version--3)
 - [halt_handoff object (PR 4, schema_version >= 2)](#halt_handoff-object-pr-4-schema_version--2)
@@ -58,34 +58,7 @@ Persistent state file schemas (`LOOP_STATE.json`, `findings_registry.json`, `REV
 
 ## Schema version 3 changelog
 
-`CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, and `findings_registry.json` bump `schema_version: 2 → 3`. `LOOP_STATE.json` is a new file on its own track at `schema_version: 1`. Backward compatibility:
-
-- v2 artifacts on disk at re-invocation are honored read-only by Step -1; missing v3 fields default per the table below.
-- A loop running at v3 writes v3 artifacts; mixed-version `REVIEW_HISTORY.json.loops[]` entries are legal (each entry carries its own `schema_version`).
-- G29 in [validation.md](validation.md) enforces these invariants.
-
-### v2 → v3 default-fill table (when reading a v2 artifact)
-
-| Missing v3 field | Default |
-|---|---|
-| `dry_run` (top-level CURRENT_REVIEW.json) | `false` |
-| `discovery.test_scope` | `"full"` |
-| `discovery.test_filter` | `null` |
-| `discovery.working_tree_dirty_paths` | `[]` |
-| `implementation_review.retry_count` | `1` |
-| `implementation_review.retry_cause` | `null` |
-| `implementation_review.retry_attempts` | `[{"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}]` |
-| `loop_result.changed_paths` | `[]` |
-
-### v3 changes (additive; no breaking changes)
-
-- New halt state `HALT_DRY_RUN` (state enum extended); `halt_subtype: null`.
-- New top-level field `dry_run` (boolean, audit only — re-invocation reads the user's CLI flag, not this field).
-- New discovery fields `test_scope`, `test_filter`, `working_tree_dirty_paths`.
-- New `implementation_review` fields `retry_count`, `retry_cause`, `retry_attempts[]` (transient retry metadata; substantive verdict stays in `reason`).
-- New `loop_result.changed_paths[]` (paths the loop touched; restore source for narrow revert in conjunction with `LOOP_STATE.pre_step3_blob_shas`).
-- New `LOOP_STATE.json` artifact for mid-Step-3 checkpointing.
-- New gates G27 (retry envelope), G28 (checkpoint freshness), G29 (schema v3 invariants); new quality pass Q8 (per-loop progress line).
+Moved to [output-format-migrations.md § Schema version 3 changelog](output-format-migrations.md#schema-version-3-changelog) — the v2→v3 default-fill table is a resume / old-artifact concern (Step -1), not part of the per-loop investigation payload.
 
 ## CURRENT_REVIEW.json Schema
 
