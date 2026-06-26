@@ -179,6 +179,8 @@ Reductions land on `docs/contest-refactor-token-audit`, one commit per lever, ga
 
 Run projection after Lever 1: per-loop fixed reload 59,281 + `SKILL.md` trigger 8,903 + `startup.md` once 2,267 = **485,418 tok/run**.
 
+**Levers 2–3 evaluated and declined** (decision 2026-06-26). Lever 1 captured the bulk of the safe win the audit predicted (~1.5–3% ceiling) from one structural move. Lever 2 (cross-file dedupe) netted only ~0.1–0.3% once schema self-containment (`output-format-json.md` enum values) and teaching examples (`method.md` fake-clean cases) were excluded as unsafe to strip. Lever 3 (concision via anthropic-grade-optimizer) offered ~1% but edits loop-rule prose, requiring a ~90–126-run powered behavioral sweep to prove no efficacy loss — diminishing returns past the structural win. Caveman remains rejected throughout (degrades hot-path instruction files). Peer-reviewed (Codex gpt-5.5 high: REVISE→APPROVED).
+
 ## Methodology & caveats
 
 - **Heuristic, not a tokenizer.** `tok ≈ words × 1.33`. JSON is denser per token than prose, so JSON-schema/instance figures are approximate. A real tokenizer (the `token-budget.py` follow-up) would tighten these.
