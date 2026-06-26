@@ -49,12 +49,13 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
         # SKILL.md row "Step 1 emit": output-format trio + validation (+ halt-handoff
         # conditional, counted because most loops route through a HALT check at emit).
         "step1_emit": ["output-format.md", "output-format-json.md",
+                       "output-format-json-rules.md",
                        "output-format-markdown.md", "validation.md"],
         # SKILL.md row "Step 2": method (Simplify Pressure Test) + rubric (Seam Policy).
         # Both already loaded at step1; listed for routing fidelity, de-duped in the union.
         "step2": ["method.md", "architecture-rubric.md"],
-        # SKILL.md row "Step 3": output-format + validation + reviewer + provider-adapters.
-        "step3": ["output-format.md", "validation.md",
+        # SKILL.md row "Step 3": output-format + emit-rules + validation + reviewer + provider.
+        "step3": ["output-format.md", "output-format-json-rules.md", "validation.md",
                   "implementation-reviewer.md", "provider-adapters.md"],
     }
     if step == "loop":

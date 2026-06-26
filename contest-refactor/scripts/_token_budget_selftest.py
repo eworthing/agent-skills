@@ -34,9 +34,10 @@ GOLDEN_APPLE = {
     "step1": ["SKILL.md", "lens-apple.md", "lens-security.md",
               "method.md", "architecture-rubric.md"],
     "step1_emit": ["output-format.md", "output-format-json.md",
+                   "output-format-json-rules.md",
                    "output-format-markdown.md", "validation.md"],
     "step2": ["method.md", "architecture-rubric.md"],
-    "step3": ["output-format.md", "validation.md",
+    "step3": ["output-format.md", "output-format-json-rules.md", "validation.md",
               "implementation-reviewer.md", "provider-adapters.md"],
 }
 
@@ -48,16 +49,18 @@ for step, golden in GOLDEN_APPLE.items():
 check(tb.loaded_set("step1", lens="generic")[1] == "lens-generic.md",
       "generic lens did not swap lens-apple.md -> lens-generic.md in step1")
 
-# --- The de-duped "loop" union must equal the 11-file per-loop set the audit documents.
-AUDIT_PER_LOOP_11 = {
+# --- The de-duped "loop" union must equal the 12-file per-loop set the audit documents
+# (A1a added output-format-json-rules.md, the emit-time carve-out, at Step 1 emit / Step 3).
+AUDIT_PER_LOOP = {
     "SKILL.md", "lens-apple.md", "lens-security.md", "method.md",
     "architecture-rubric.md", "output-format.md", "output-format-json.md",
+    "output-format-json-rules.md",
     "output-format-markdown.md", "validation.md", "implementation-reviewer.md",
     "provider-adapters.md",
 }
 loop_union = set(tb.loaded_set("loop", lens="apple"))
-check(loop_union == AUDIT_PER_LOOP_11,
-      f"loop union {sorted(loop_union)} != audit per-loop 11 {sorted(AUDIT_PER_LOOP_11)}")
+check(loop_union == AUDIT_PER_LOOP,
+      f"loop union {sorted(loop_union)} != audit per-loop set {sorted(AUDIT_PER_LOOP)}")
 
 # --- Every file in every loaded set must actually exist on disk (catches a renamed ref).
 for step in ("step1", "step1_emit", "step2", "step3"):
