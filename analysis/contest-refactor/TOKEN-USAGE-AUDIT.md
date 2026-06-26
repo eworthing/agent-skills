@@ -166,6 +166,19 @@ Not built here; proposed so this audit becomes a living number instead of a one-
 - `--diff <ref>` → classify a change's tok/run delta by tier (start + loop + reviewer, loop-only, start-only, halt-only, out-of-context), so a PR that fattens `method.md` shows the true `×17` cost in an 8-loop Apple-stack run.
 - CI-checkable: fail or warn when the tier-1/2 footprint grows past a threshold, making reference creep visible at review time.
 
+## Reduction applied (tokenizer-measured)
+
+`scripts/token-budget.py` (the follow-up above) is now built — tiktoken/cl100k_base when importable, deterministic fallback otherwise; `--loaded-set <step>` prints the exact per-step reload set, guarded by `_token_budget_selftest.py` against the Reference Load Matrix. All figures below are **real tiktoken counts**, not the word×1.33 estimate used elsewhere in this audit (tiktoken runs higher: the per-loop fixed reload is ~61.1k tok, not the ~43.7k estimate).
+
+Reductions land on `docs/contest-refactor-token-audit`, one commit per lever, gated by the verification harness in `/Users/pl/.claude/plans/tender-mixing-avalanche.md`. Each row is paired with its commit so reverting a lever reverts its row.
+
+| Lever | Change | Net tok/run (8-loop Apple) | Verification |
+|-------|--------|---------------------------:|--------------|
+| Baseline | — | 499,486 | all gates green at HEAD `22055c7` |
+| **Lever 1** | Extract main-only Step −1/Step 0 → `references/startup.md`; per-loop `SKILL.md` read drops 10,718→8,903 tok | **−14,068 (−2.82%)** | B1 load-path proof (startup.md absent from loop set; referenced only by SKILL.md); validate-repo OK; 18 fixtures; eval-skill 92% unchanged; behavioral-by-construction (no loop-rule text changed) |
+
+Run projection after Lever 1: per-loop fixed reload 59,281 + `SKILL.md` trigger 8,903 + `startup.md` once 2,267 = **485,418 tok/run**.
+
 ## Methodology & caveats
 
 - **Heuristic, not a tokenizer.** `tok ≈ words × 1.33`. JSON is denser per token than prose, so JSON-schema/instance figures are approximate. A real tokenizer (the `token-budget.py` follow-up) would tighten these.
