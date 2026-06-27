@@ -1,0 +1,26 @@
+# Reviewer-case metadata. Read by the host runner when materializing the temp
+# repo; the manifest (evals/reviewer_baseline.json) is the source of truth the
+# selftest validates. Keep these fields consistent with the manifest entry.
+id = "fake-clean-seam-1"
+category = "fake-clean-seam"
+verdict_class = "reject"
+check_under_test = "honesty"
+pair_id = "seam"
+expected_verdict = "rejected"
+expected_reason_class = "costume-layer"
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must reject it.
+intent = """
+The targeted finding is a missing Seam: FavoritesService is a concrete class with
+no protocol boundary, injected directly into three ViewModels. head/ "fixes" it by
+extracting a FavoriteTracking protocol and adding a RecordingFavoriteTracker stub.
+But RecordingFavoriteTracker.allFavorites() always returns [] regardless of prior
+add() calls — it is a call-recording stub, not a behavior-faithful fake. One prod
+impl + one recording stub fails the Two-Adapter rule (architecture-rubric.md §
+Unified Seam Policy). No policy/failure/platform carve-out applies to this
+in-process, in-memory array. The protocol is an architecture costume layer — it
+looks like a Seam but controls nothing new. Honesty check must fail -> rejected.
+"""

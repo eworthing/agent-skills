@@ -1,0 +1,29 @@
+# Reviewer-case metadata. Restraint twin of fake-clean-seam-1/2: a single-adapter
+# Seam that IS justified under Unified Seam Policy (b)(ii)+(iii). The reviewer
+# must NOT flag it as costume layer or protocol soup. Keep fields consistent with
+# the manifest entry.
+id = "justified-single-adapter-1"
+category = "justified-single-adapter"
+verdict_class = "approve"
+check_under_test = "honesty"
+pair_id = "seam"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "false_reject"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must NOT reject it.
+intent = """
+The targeted finding is direct use of UNUserNotificationCenter at four call sites
+with no Seam; auth-denied errors and delivery failures surface uncaught at each
+site. head/ introduces LocalNotificationScheduling protocol with one prod adapter,
+UNLocalNotificationScheduler. The single-adapter seam is explicitly justified under
+Unified Seam Policy (b)(ii) failure-isolation (auth errors would otherwise require
+handling at all four call sites; the seam concentrates the failure surface) and
+(b)(iii) platform-isolation (UNUserNotificationCenter is daemon-bound with no
+reliable test harness; injectable through this protocol in tests). The loop_result
+section in finding.md records both carve-outs. Code is clean — no other residual
+smell. A reviewer that flags this seam as protocol soup or single-adapter indirection
+is over-flagging a legitimate fix (false reject). Expected: approved.
+"""

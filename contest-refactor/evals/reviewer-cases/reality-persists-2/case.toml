@@ -1,0 +1,25 @@
+# Reviewer-case metadata. Read by the host runner when materializing the temp
+# repo; the manifest (evals/reviewer_baseline.json) is the source of truth the
+# selftest validates. Keep these fields consistent with the manifest entry.
+id = "reality-persists-2"
+category = "reality-persists"
+verdict_class = "reject"
+check_under_test = "reality"
+pair_id = "reality"
+expected_verdict = "rejected"
+expected_reason_class = "targeted-pattern-persists"
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must reject it.
+intent = """
+The targeted finding is duplicate source of truth: SearchResultsViewModel carries
+its own `@Published var filters: [String]` — a manual copy of
+SearchFilterViewModel.activeFilters that diverges whenever the filter panel
+changes after the sync call. head/ renames `applyFilters` to `refreshFilters`,
+adds a `lastRefreshed: Date?` field, and improves the doc comment. The duplicate
+stored property `@Published var filters` is unchanged at line 6 of the post-diff
+SearchResultsViewModel.swift. The reviewer's Reality check must read the
+post-diff source and confirm the independent copy still exists → rejected.
+"""

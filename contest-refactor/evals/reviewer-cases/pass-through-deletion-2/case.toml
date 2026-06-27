@@ -1,0 +1,27 @@
+# Reviewer-case metadata. Standalone positive control: head/ deletes a
+# different pass-through proxy shape (SettingsStoreProxy -> SettingsStore)
+# and updates the single caller. Deletion test passes — complexity vanishes.
+# Expected: approved. Keep fields consistent with the manifest entry.
+id = "pass-through-deletion-2"
+category = "pass-through-deletion"
+verdict_class = "approve"
+check_under_test = "honesty"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "none"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+# Files present in base/ but DELETED by the diff. SettingsStore.swift is
+# unchanged (retained); only the proxy is deleted.
+deleted_paths = ["Sources/SettingsStoreProxy.swift"]
+
+# What the diff does and why the reviewer must approve it.
+intent = """
+The targeted finding is that SettingsStoreProxy is a pass-through Module: it
+delegates every method call to SettingsStore with no added policy, failure
+isolation, validation, or retry. head/ deletes SettingsStoreProxy and updates
+SettingsViewModel to hold SettingsStore directly. Deletion test passes: complexity
+vanishes (every method was a one-line async delegate). No new Seam introduced,
+no redistribution of complexity. Reality, Honesty, and Regression checks all
+pass. Expected: approved.
+"""

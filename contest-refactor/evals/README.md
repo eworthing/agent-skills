@@ -205,3 +205,77 @@ Each assertion is tagged:
 
 Acceptance for the suite: measurable with-skill lift on at least the `suppression-flag` and
 `crossplat-flag` discriminating assertions, **and zero restraint regression**.
+
+## Layer 3 — reviewer-judgment (`reviewer-cases/`, `reviewer_baseline.json`)
+
+Layers 1–2 grade the **Critic** (Step 1). They never exercise the **implementation
+reviewer** (Step 3, `references/implementation-reviewer.md`) — the read-only fresh-eyes pass
+that approves/rejects a refactor diff before commit. Layer 3 fills that gap so a change to the
+reviewer's model tier can be shown not to regress verification efficacy.
+
+The grain is the reviewer's actual input: `{targeted finding, diff} → verdict JSON`
+(`approved | rejected | conditional`). Each `reviewer-cases/<id>/` holds `case.toml`,
+`finding.md` (spliced into a synthetic `CURRENT_REVIEW.md` Findings section), and `base/` +
+`head/` source trees.
+
+**base/head/deleted_paths convention.** `base/` is the pre-diff (`HEAD`) tree; `head/`
+contains the files the diff **modifies or adds**. A file in `base/` but absent from `head/`
+is **unchanged** (retained) — *unless* it is listed in `case.toml` `deleted_paths`, which is
+how a deletion (e.g. a removed pass-through wrapper) is expressed. The runner materializes a
+throwaway git repo: copy `base/` → `git commit`; overlay every `head/` file; `git rm` each
+`deleted_paths` entry; `git add -A` (so additions and deletions appear in `git diff HEAD`) and
+leave the result **uncommitted**. The **verbatim** reviewer prompt — which runs `git diff
+HEAD` — then sees exactly the base→head diff, byte-identically to a real loop.
+`prereg.reviewer_prompt_sha256` pins that template; if the prompt is edited, the baseline must
+be re-measured.
+
+### 20 cases, 10 categories, 4 look-alike axes
+
+Same flag/restraint discipline as Layer 2, at the reviewer grain. Each **reject** category is
+paired (`pair_id`) with an **approve (restraint)** look-alike that a paranoid reviewer would
+wrongly reject — so a "reject-everything" reviewer passes the reject cases but fails its twins:
+
+| axis (`pair_id`) | reject case (must reject) | restraint twin (must approve) | reviewer check |
+|---|---|---|---|
+| `reality` | `reality-persists` (smell still in source) | `honest-deepening` (smell genuinely gone) | Reality |
+| `seam` | `fake-clean-seam` (costume / repository theater) | `justified-single-adapter` (policy/failure/platform carve-out) | Honesty |
+| `suppression` | `suppression-as-fix` (bare unsafe suppression) | `compensated-suppression` (lock+TSAN, or style-only suppression) | Honesty |
+| `invariant` | `missing-invariant-evidence` (risk boundary, no proof) | `risk-evidence-present` (compile matrix / TSAN recorded) | Regression |
+
+Plus two standalone **positive controls** (`pass-through-deletion`, approve — deletion test
+passes) and two standalone **conditional** cases (`small-fixable` — Reality passes but a small
+<10-line residual remains). Two cases per category for construction diversity.
+
+### Asymmetric thresholds (the core)
+
+The two error directions are not equally dangerous, so the gate is asymmetric:
+
+- **`false_approve_tolerance: 0`** — approving a must-reject diff carries a fake-clean refactor
+  into the audit trail. The cheaper arm (B) must `reject ≥4/5` **and** name the defect `≥4/5`
+  on **every** reject/conditional case, with no regression vs the current arm (A).
+- **`false_reject_regression_tolerance: 1`** — rejecting a must-approve diff only costs a
+  carried-forward loop. Arm B must `approve ≥4/5` per approve case; may drop to `≥3/5` on at
+  most one approve category; total new approve→reject flips vs arm A `≤1`. A sub-9.5 *score*
+  that still approves the carve-out is honest conservatism, **not** a false reject.
+
+### Measuring + the no-silent-exclusion contract
+
+`scripts/_reviewer_baseline_selftest.py` enforces mechanically (no model): every
+`reviewer-cases/<id>/` dir is registered; every paired reject case has its approve twin via
+`pair_id`; every manifest entry points to a dir with all four members; enums are valid and
+`expected_verdict ∈ canon/verdicts.toml`; and — once a case is `status: measured` — both arms
+carry 5 reps, `semantic ≤ mechanical`, and **no `false_approve` case measured arm_b as
+`approve`**. Run it after adding any reviewer case:
+
+```bash
+python3 contest-refactor/scripts/_reviewer_baseline_selftest.py
+```
+
+Measurement is **manual / host-dispatched** (same posture as Layer 2 — no committed
+auto-grader). For each case × arm × rep (K=5): materialize the temp repo, spawn the reviewer
+with the verbatim template at the arm's model (A = `claude-sonnet-4-6`, B = `claude-haiku-4-5`),
+capture the final-message verdict JSON, grade mechanical (verdict match) + semantic (reason
+names the right defect / does not flag the carve-out). Raw reps land in
+`reviewer_baseline_replication.json`; `reviewer_baseline.json` summarizes per case/arm and
+flips `status` to `measured`. **The claude_code reviewer default flip (sonnet → haiku) in
+`references/provider-adapters.md` is gated on arm B holding every threshold above.**

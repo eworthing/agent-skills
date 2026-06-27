@@ -1,0 +1,30 @@
+# Reviewer-case metadata. Standalone conditional control: head/ genuinely fixes
+# the targeted Replace-don't-layer finding (inlines PriceFormatter, adds
+# interface tests) but leaves one residual shallow test file that should be
+# deleted. Expected: conditional. Keep fields consistent with the manifest entry.
+id = "small-fixable-2"
+category = "small-fixable"
+verdict_class = "conditional"
+check_under_test = "regression"
+expected_verdict = "conditional"
+expected_reason_class = ""
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+# Files present in base/ but DELETED by the diff. PriceFormatter.swift is
+# inlined into CartViewModel and removed; Tests/PriceFormatterTests.swift is
+# intentionally retained (it is the residual the reviewer must flag).
+deleted_paths = ["Sources/PriceFormatter.swift"]
+
+# What the diff does and why the reviewer must return conditional.
+intent = """
+head/ genuinely fixes the targeted finding: PriceFormatter is deleted, its
+one-line formatting logic is inlined into CartViewModel.updateTotal(_:), and new
+interface tests are added in Tests/CartViewModelTests.swift — the structural smell
+is gone and Replace-don't-layer is satisfied for the new tests. Reality passes.
+However, Tests/PriceFormatterTests.swift still exists in head/ with one residual
+test method (testFormatsZero) that now tests CartViewModel but should have been
+deleted with the helper file. It is a shallow leftover at the wrong surface;
+deletion is a < 10-line fix. The reviewer must return conditional with that
+deletion listed in conditions[].
+"""

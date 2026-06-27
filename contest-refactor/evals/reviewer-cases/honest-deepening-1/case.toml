@@ -1,0 +1,26 @@
+# Reviewer-case metadata. Restraint twin of reality-persists-1: the same class of
+# multi-writer finding, but head/ genuinely eliminates the second writer. Keep
+# fields consistent with the manifest entry.
+id = "honest-deepening-1"
+category = "honest-deepening"
+verdict_class = "approve"
+check_under_test = "reality"
+pair_id = "reality"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "false_reject"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must approve it.
+intent = """
+The targeted finding is multi-writer ownership: `userTappedTab` and
+`handleNotification` both write `currentTab` in TabNavigationViewModel. head/
+removes `handleNotification` as a stand-alone writer and introduces a single
+`navigateTo(_ tab: Int)` entry point; `currentTab` is now `private(set)`. The
+post-diff source has exactly one write site: `navigateTo`. The reviewer's Reality
+check must grep `currentTab =` and find one hit — the targeted pattern is
+genuinely gone. A paranoid reviewer might invent a second writer that is not
+present; the restraint test is that the reviewer reads actual source and approves
+without fabricating phantom writers → approved.
+"""

@@ -1,0 +1,27 @@
+# Reviewer-case metadata. Read by the host runner when materializing the temp
+# repo; the manifest (evals/reviewer_baseline.json) is the source of truth the
+# selftest validates. Keep these fields consistent with the manifest entry.
+id = "missing-invariant-evidence-2"
+category = "missing-invariant-evidence"
+verdict_class = "reject"
+check_under_test = "regression"
+pair_id = "invariant"
+expected_verdict = "rejected"
+expected_reason_class = "missing-invariant-evidence"
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must reject it.
+intent = """
+The targeted finding is that ContentSharingController is wrapped in
+#if os(iOS) || os(tvOS) but calls UIActivityViewController — a UIKit type
+unavailable on tvOS — making the tvOS branch a latent compile error.  head/
+narrows the guard to #if os(iOS), which is structurally correct.
+
+This crosses a risk boundary: a #if os() conditional compilation gate was
+narrowed.  The loop_result contains NO invariant evidence block — there is no
+compile-matrix result, no callsite audit, and no stated reason executable
+evidence is unavailable.  Per implementation-reviewer.md Check 3 / method.md
+Meta-Rule 4, missing evidence on a narrowed gate risk boundary -> rejected.
+"""

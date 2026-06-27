@@ -1,0 +1,30 @@
+# Reviewer-case metadata. Approve twin of missing-invariant-evidence-2: SAME
+# conditional-compilation risk boundary (#if os(iOS) || os(tvOS) narrowed to
+# #if os(iOS)), but the loop_result records adequate compile-matrix + callsite
+# evidence. Keep fields consistent with the manifest entry.
+id = "risk-evidence-present-2"
+category = "risk-evidence-present"
+verdict_class = "approve"
+check_under_test = "regression"
+pair_id = "invariant"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "false_reject"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must NOT reject it.
+intent = """
+The targeted finding is that ShareSheetPresenter is gated #if os(iOS) || os(tvOS)
+but calls UIActivityViewController — unavailable on tvOS — making the tvOS branch
+a latent compile error, symmetrical to missing-invariant-evidence-2.  head/
+narrows the gate to #if os(iOS).
+
+This crosses the same conditional-compilation risk boundary.  Unlike
+missing-invariant-evidence-2, the loop_result records adequate evidence: compiled
+iOS 18 sim (green), compiled tvOS 18 sim (green — ShareSheetPresenter has zero
+callsites in the tvOS target, confirmed by grep; tvOS sharing routes through
+TVShareView instead).  Per implementation-reviewer.md Check 3 / method.md
+Meta-Rule 4, adequate evidence exists -> reviewer must NOT reject.  Over-flagging
+this as a regression is the false_reject under test.  Expected: approved.
+"""

@@ -1,0 +1,25 @@
+# Reviewer-case metadata. Standalone conditional control: head/ genuinely fixes
+# the targeted unbound Task but introduces a NEW unbound Task { } in the error
+# handler. One small mechanical fix remains. Expected: conditional.
+# Keep fields consistent with the manifest entry.
+id = "small-fixable-1"
+category = "small-fixable"
+verdict_class = "conditional"
+check_under_test = "regression"
+expected_verdict = "conditional"
+expected_reason_class = ""
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must return conditional.
+intent = """
+head/ genuinely fixes the targeted finding: the sync loop Task is now stored in
+syncTask, guarded with Task.isCancelled, and cancelled in deinit — Reality passes.
+However, the revised start() error handler introduces a NEW unbound Task { } at
+Sources/DataSyncManager.swift:24 in head/: it fires sendErrorToTelemetry with no
+stored reference and no cancellation path. This is a same-severity new finding
+(unclear task lifetime) introduced by the diff that Check 3 must catch. The fix
+is small and mechanical (< 10 lines to store and cancel the telemetry task). The
+reviewer must return conditional with that fix listed in conditions[].
+"""

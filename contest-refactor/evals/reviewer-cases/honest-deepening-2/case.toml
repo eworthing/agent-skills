@@ -1,0 +1,27 @@
+# Reviewer-case metadata. Restraint twin of reality-persists-2: the same class of
+# duplicate-state finding, but head/ eliminates the copy entirely. Keep fields
+# consistent with the manifest entry.
+id = "honest-deepening-2"
+category = "honest-deepening"
+verdict_class = "approve"
+check_under_test = "reality"
+pair_id = "reality"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "false_reject"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must approve it.
+intent = """
+The targeted finding is duplicate source of truth: CheckoutViewModel holds
+`@Published var lineItems` as a manual copy of CartViewModel.items that stales
+after any cart mutation following the sync call. head/ eliminates the stored copy:
+CheckoutViewModel now holds a `let cart: CartViewModel` reference and exposes
+`var lineItems: [CartItem] { cart.items }` as a computed (read-only) property.
+No stored `lineItems` remains; no write site for `lineItems` exists in
+CheckoutViewModel. The reviewer's Reality check must confirm the stored duplicate
+is gone and approve. A paranoid reviewer might reject on the grounds that derived
+access "could diverge" — that is a false rejection: read-only derivation has zero
+independent write sites → approved.
+"""

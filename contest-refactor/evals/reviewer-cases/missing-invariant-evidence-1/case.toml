@@ -1,0 +1,29 @@
+# Reviewer-case metadata. Read by the host runner when materializing the temp
+# repo; the manifest (evals/reviewer_baseline.json) is the source of truth the
+# selftest validates. Keep these fields consistent with the manifest entry.
+id = "missing-invariant-evidence-1"
+category = "missing-invariant-evidence"
+verdict_class = "reject"
+check_under_test = "regression"
+pair_id = "invariant"
+expected_verdict = "rejected"
+expected_reason_class = "missing-invariant-evidence"
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must reject it.
+intent = """
+The targeted finding is blocking disk I/O on the main actor: SettingsViewModel
+is @MainActor at the class level and persist() calls JSONEncoder + Data.write(to:)
+synchronously, causing UI hangs on slow storage.  head/ removes @MainActor from
+the class declaration and makes persist() async, wrapping each @Published mutation
+in await MainActor.run { }.
+
+This crosses a risk boundary: actor isolation changed (@MainActor dropped from the
+type declaration).  The loop_result records only reasoning — "each @Published write
+is now wrapped in await MainActor.run, looks safe to proceed" — with no compile run,
+no TSAN run, and no stated reason executable evidence is unavailable.  Per
+implementation-reviewer.md Check 3 / method.md Meta-Rule 4, reasoning-only evidence
+on an isolation risk boundary -> rejected.
+"""

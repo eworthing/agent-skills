@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "description": "Raw per-rep record for the reviewer-judgment baseline (evals/reviewer_baseline.json). One object per (case_id, arm, slot_index, attempt_index). attempt_index 2 only exists when attempt 1 was technically unusable (malformed JSON / spawn error); a usable attempt 1 is terminal. The selftest scripts/_reviewer_baseline_selftest.py checks that every measured case has exactly 5 terminal slots per arm here. Populated by the manual host-dispatched measurement pass (Stage A measurement); empty until then.",
+  "prereg_ref": "reviewer_baseline.json#prereg",
+  "attempts": []
+}

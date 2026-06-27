@@ -1,0 +1,24 @@
+# Reviewer-case metadata. Read by the host runner when materializing the temp
+# repo; the manifest (evals/reviewer_baseline.json) is the source of truth the
+# selftest validates. Keep these fields consistent with the manifest entry.
+id = "reality-persists-1"
+category = "reality-persists"
+verdict_class = "reject"
+check_under_test = "reality"
+pair_id = "reality"
+expected_verdict = "rejected"
+expected_reason_class = "targeted-pattern-persists"
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must reject it.
+intent = """
+The targeted finding is multi-writer ownership: both `applyFilter` and
+`resetToDefault` in FilterSegmentViewModel assign `selectedSegment`, so the
+property has two authorities. head/ renames `applyFilter` to `selectSegment` and
+adds an analytics log line — cosmetic changes only. Both `selectSegment` (line 9)
+and `resetToDefault` (line 13) still assign `selectedSegment =` in the post-diff
+source. The reviewer's Reality check must grep write sites for `selectedSegment =`
+and find two → the targeted pattern persists unchanged → rejected.
+"""

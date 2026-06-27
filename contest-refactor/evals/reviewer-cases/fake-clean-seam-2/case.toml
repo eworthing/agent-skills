@@ -1,0 +1,26 @@
+# Reviewer-case metadata. Read by the host runner when materializing the temp
+# repo; the manifest (evals/reviewer_baseline.json) is the source of truth the
+# selftest validates. Keep these fields consistent with the manifest entry.
+id = "fake-clean-seam-2"
+category = "fake-clean-seam"
+verdict_class = "reject"
+check_under_test = "honesty"
+pair_id = "seam"
+expected_verdict = "rejected"
+expected_reason_class = "repository-theater"
+danger_class = "false_approve"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must reject it.
+intent = """
+The targeted finding is a missing abstraction on RecentSearchesManager, a concrete
+class owning an in-memory [String] array. head/ introduces RecentSearchesRepository
+protocol and renames the impl to InMemoryRecentSearchesRepository. The protocol
+interface mirrors the implementation method-for-method: record/remove/clear/
+recentQueries with identical signatures. No test fake is added; no policy, failure
+isolation, or platform isolation is introduced. This is repository theater
+(architecture-rubric.md § Smells): one real Adapter, no added policy, failure
+isolation, replacement value, or Locality. The Interface adds nothing the deletion
+test confirms is earning its keep. Honesty check must fail -> rejected.
+"""

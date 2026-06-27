@@ -1,0 +1,32 @@
+# Reviewer-case metadata. Approve twin of missing-invariant-evidence-1: SAME
+# isolation risk boundary (@MainActor dropped from a ViewModel type), but the
+# loop_result records adequate executable evidence. Keep fields consistent with
+# the manifest entry.
+id = "risk-evidence-present-1"
+category = "risk-evidence-present"
+verdict_class = "approve"
+check_under_test = "regression"
+pair_id = "invariant"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "false_reject"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must NOT reject it.
+intent = """
+The targeted finding is that SearchViewModel.executeSearch() runs a synchronous
+NSRegularExpression match over a large in-memory corpus on the main actor
+(@MainActor at the class level), causing observable UI lag on low-end devices.
+head/ removes @MainActor from the class declaration and makes executeSearch()
+async, capturing @Published state via await MainActor.run before the regex runs
+nonisolated, then pushing results back via MainActor.run.
+
+This crosses an isolation risk boundary (@MainActor dropped from the type).
+Unlike missing-invariant-evidence-1, the loop_result records adequate executable
+evidence: compiled iOS-sim + macOS Catalyst affected-target matrix (both green),
+and ran SearchViewModelTests with Thread Sanitizer enabled (0 races).  Per
+implementation-reviewer.md Check 3 / method.md Meta-Rule 4, adequate executable
+evidence exists -> reviewer must NOT reject.  Over-flagging this as a regression
+is the false_reject under test.  Expected: approved.
+"""

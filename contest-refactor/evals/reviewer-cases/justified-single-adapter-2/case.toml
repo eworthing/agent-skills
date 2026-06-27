@@ -1,0 +1,28 @@
+# Reviewer-case metadata. Second restraint twin for the seam axis: a single-adapter
+# Seam justified under Unified Seam Policy (b)(iii) platform-isolation. The reviewer
+# must NOT flag it as costume layer or repository theater. Keep fields consistent
+# with the manifest entry.
+id = "justified-single-adapter-2"
+category = "justified-single-adapter"
+verdict_class = "approve"
+check_under_test = "honesty"
+pair_id = "seam"
+expected_verdict = "approved"
+expected_reason_class = ""
+danger_class = "false_reject"
+targeted_finding_id = "F1"
+lens = "lens-apple.md"
+
+# What the diff does and why the reviewer must NOT reject it.
+intent = """
+The targeted finding is direct use of AVAudioSession across the playback and
+recording modules with no Seam; setCategory/setActive errors propagate to three
+caller sites and the API cannot be exercised in XCTest without real audio hardware.
+head/ introduces AudioSessionConfiguring protocol with one prod adapter,
+SystemAudioSessionConfigurator. Justified under Unified Seam Policy (b)(iii):
+AVAudioSession is a hardware-bound system API — the explicit "SDK with no test
+harness, e.g. Spotify SDK, hardware-bound APIs" carve-out in the policy. The
+loop_result section in finding.md records the (iii) justification. Code is clean —
+no other residual smell. A reviewer that flags the single adapter as repository
+theater or costume layer is over-flagging. Expected: approved.
+"""
