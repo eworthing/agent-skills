@@ -6,7 +6,7 @@ private enum CMSEndpoint {
     static let base = "https://cms.example.com/api/v2"
 
     // swiftlint:disable:next line_length
-    static let latestArticles = URL(string: "\(base)/articles?sort=published_at&order=desc&per_page=20&include_authors=true")!
+    static let latestArticles = URL(string: "\(base)/articles?sort=published_at&order=desc&per_page=20&fields=title,summary,author,published_at")!
 
     static func article(id: String) -> URL {
         URL(string: "\(base)/articles/\(id)")!

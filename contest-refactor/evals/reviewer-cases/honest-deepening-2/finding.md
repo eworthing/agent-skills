@@ -4,10 +4,10 @@ reviewer reads at step 7 of its prompt. -->
 
 Discovery lens: lens-apple.md
 
-### F1 — Duplicate source of truth: `CheckoutViewModel.lineItems` is a manual copy of `CartViewModel.items` (Priority 1)
+### F1 — Duplicate source of truth: `OrderSummary.itemCount` is hand-synced stored state (Priority 1)
 
-- **Claim:** `CheckoutViewModel` maintains an independent `@Published var lineItems: [CartItem]` populated by a one-shot `sync(from:)` call; items added to the cart after that call do not appear in the checkout total.
-- **Source:** `Sources/CheckoutViewModel.swift:6` (`@Published var lineItems`), written at `:13` inside `sync(from:)`; `Sources/CartViewModel.swift:12` (`@Published var items`) is the only authoritative write target — two independent arrays tracking the same cart state.
-- **Consequence:** stale checkout state — items added after `sync()` are invisible to `total`, producing an incorrect purchase total on the primary checkout flow.
-- **Severity:** Serious deduction.
-- **Remedy (minimal_correction_path):** remove the stored `lineItems` copy from `CheckoutViewModel`; have it hold a `let cart: CartViewModel` reference and expose `var lineItems: [CartItem] { cart.items }` as a computed property.
+- **Claim:** `OrderSummary` keeps a stored `itemCount` maintained in parallel to `items` via manual `+= 1` / `-= 1` in every mutator; it is a second source of truth for a value already fully determined by `items`.
+- **Source:** `Sources/OrderSummary.swift` — `private(set) var itemCount` is written in `add(_:)` and `remove(at:)` alongside the `items` mutation.
+- **Consequence:** the two can diverge — any future mutator that updates `items` but forgets `itemCount` (e.g. a bulk `removeAll` or `insert(contentsOf:)`) leaves a silently wrong count; classic duplicate-source-of-truth hazard.
+- **Severity:** Noticeable weakness.
+- **Remedy (minimal_correction_path):** delete the stored `itemCount` and its manual sync; derive it as a computed `var itemCount: Int { items.count }`.

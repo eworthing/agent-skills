@@ -6,7 +6,7 @@ final class ArticleLoader {
     private let session = URLSession.shared
 
     func fetchLatest() async throws -> Data {
-        let url = URL(string: "https://cms.example.com/api/v2/articles?sort=published_at&order=desc&per_page=20")!
+        let url = URL(string: "https://cms.example.com/api/v2/articles?sort=published_at&order=desc&per_page=20&fields=title,summary,author,published_at")!
         let (data, _) = try await session.data(from: url)
         return data
     }
