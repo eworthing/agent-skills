@@ -305,6 +305,16 @@ Per-agent cost-weighted share (deduped; unique assistant messages):
 
 Highest-leverage token reduction is **fewer assistant messages + smaller resident per-message context inside the loop subagents** (findings 1–2; loop subagents = **66.8%** of cost-weighted total, ~70% of all cache-read), then broad reference/context trims (finding 3) — **not** trimming static reference files in isolation, and specifically **not Lever 4** (finding 5). Loop count was not the problem this run (4 loops, clean convergence).
 
+## Future enhancement — Phase B: doctrine-preserving concision (deferred)
+
+Phase A carved **structural** content (verbatim relocations, zero-regression by construction). The remaining reducible bytes live in the *prose* of the fat rule files, reachable only by **rewording** — a different risk class.
+
+**Scope.** Concision via `anthropic-grade-optimizer` (doctrine-aware) on the per-message resident payload, biggest-first: `validation.md` Hard Gates (~8.2k), `output-format-json.md` schema prose (~5.1k), `SKILL.md` (~9.1k), `method.md` (~5.1k), `architecture-rubric.md` (~2.9k), `lens-apple.md` (~5.2k). Preserve **every** gate id, schema field, enum value, score/severity anchor, Evidence-Chain part, and citation target — wording-only. Estimated **~6–10k off the 56.4k payload**, riding every loop message.
+
+**Why deferred (not declined).** Rewording rule/gate prose can silently weaken enforcement, so "no regression" is **not** provable by construction — it requires the **powered 3-arm behavioral sweep** (`evals/principal_baseline_replication.json`: judge `claude-opus-4-8`, Clopper–Pearson 95%, K≥5 replications) on the discriminating fixtures whose defects route through each edited section (`suppression` #12/#14, `crossplat` #13/#15, principal pairs #25/#26, #27/#28, #29/#30), scope-matched per edit (any reworded gate/section needs a fixture that would fail if its rule weakened — add fixtures for halt/resume, registry/retirement, continuation, dry-run, G32 if those files are touched). Pass = post-edit catch-rate within the pre-edit CI on every covered flag **and** zero restraint over-flag regression; any regressing file/section is reverted.
+
+**The honest trade-off.** That sweep is **~60+ model-graded Critic runs** (6 fixtures × K≥5 × 2 arms + judging) — its verification cost can **exceed** the per-run saving, and it must be properly powered, not rushed. Recommendation: run Phase B as a **focused effort with a clean budget**, or accept that Phase A captured the *sure* wins (the reviewer sidecar is only ~3.6% of run cost; the per-message-context lever is real but the verification tax is high). Plan of record: `~/.claude/plans/tender-mixing-avalanche.md` (peer-reviewed, Codex gpt-5.4 high → APPROVED).
+
 ## Methodology & caveats
 
 - **Heuristic, not a tokenizer.** `tok ≈ words × 1.33`. JSON is denser per token than prose, so JSON-schema/instance figures are approximate. A real tokenizer (the `token-budget.py` follow-up) would tighten these.
