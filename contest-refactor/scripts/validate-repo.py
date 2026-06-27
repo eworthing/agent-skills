@@ -312,10 +312,11 @@ def check_canon_alignment(canon: _canon.Canon) -> List[Violation]:
         ),
         ("validation.md", canon.states, "state enum"),
         ("output-format-json.md", canon.halt_subtypes, "halt_subtype enum"),
-        # Retirement reasons are documented as dispositions in output-format-json.md
-        # halt_handoff.remaining_serious_findings_disposition; method.md only names
-        # the load-bearing branches by name.
-        ("output-format-json.md", canon.retirement_reasons, "retirement reasons"),
+        # Retirement reasons are documented as dispositions in the emit-time rules file
+        # (output-format-json-rules.md halt_handoff.remaining_serious_findings_disposition,
+        # carved out of output-format-json.md by A1a); method.md only names the
+        # load-bearing branches by name.
+        ("output-format-json-rules.md", canon.retirement_reasons, "retirement reasons"),
     ]
     for fname, required, label in invariants:
         path = REFERENCES_DIR / fname

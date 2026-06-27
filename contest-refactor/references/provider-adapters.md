@@ -191,4 +191,4 @@ If all 5 fallback paths fail, also try `./contest-refactor/scripts/<name>.sh` re
 
 ## Token cost
 
-This file (~150 lines, ~5K tokens) is loaded **once per main-agent invocation** (Pre-Step-0 in the Reference Load Matrix), not per loop. Per-loop overhead is negligible.
+This file (~1.8k words, ~2.4k heuristic tokens) is loaded in main-agent Step -1 for provider/model detection, then again during normal Step 3 loops for reviewer-spawn rules. Reviewer and challenger sidecars also read the relevant provider allow-list/profile. The cost is modest compared with `method.md`, `architecture-rubric.md`, and the selected lens, but it is not zero per loop.

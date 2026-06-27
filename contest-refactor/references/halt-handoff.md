@@ -21,7 +21,7 @@ This file defines the handoff for each halt state and subtype.
 
 ## Schema (PR 4, schema_version >= 2)
 
-At schema_version >= 2, the handoff is emitted as a structured `halt_handoff` object (per [output-format-json.md § halt_handoff](output-format-json.md#halt_handoff-object-pr-4-schema_version--2)) with `text` (user-facing prose) and `expected_actions[]` (HandoffAction objects matching the menu options in the handoff text).
+At schema_version >= 2, the handoff is emitted as a structured `halt_handoff` object (per [output-format-json-rules.md § halt_handoff](output-format-json-rules.md#halt_handoff-object-pr-4-schema_version--2)) with `text` (user-facing prose) and `expected_actions[]` (HandoffAction objects matching the menu options in the handoff text).
 
 For each menu option in the handoff templates below, the loop subagent emits a corresponding HandoffAction with:
 - `action_id`: kebab-case derived from the menu option's verb + object (e.g., menu "Split file X" → `action_id: "split-file-x"`)
@@ -48,13 +48,13 @@ A retired finding surfaces in user-visible loop output via the "Retired finding"
 **Retired finding:** F-007 marked `unresolvable` after rejected attempts in loops 3 and 5. Continuing with 4 eligible backlog items.
 ```
 
-Emit one such line per finding that transitioned to `unresolvable` in this loop. The per-loop archive header in `REVIEW_HISTORY.md` (PR 5 compression) also lists the loop's retirement transitions; see [output-format-markdown.md § Per-loop archive format](output-format-markdown.md#per-loop-archive-format-pr-5-schema_version--2).
+Emit one such line per finding that transitioned to `unresolvable` in this loop. The per-loop archive header in `REVIEW_HISTORY.md` (PR 5 compression) also lists the loop's retirement transitions; see [output-format-markdown.md § Per-loop archive format](output-format-markdown-archive.md#per-loop-archive-format-pr-5-schema_version--2).
 
 ---
 
 ## HALT_SUCCESS
 
-Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` residual disposition (per `architecture-rubric.md` Score Anchors).
+Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` residual disposition (per `architecture-rubric-scoring.md` Score Anchors).
 
 ### Subagent records
 - `system_flag: "HALT_SUCCESS"`
