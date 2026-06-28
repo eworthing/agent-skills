@@ -1,5 +1,7 @@
 # Skill-TDD with Bad-Codebase Fixtures Gap — contest-refactor vs superpowers
 
+> **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — the judgment-grain baseline already exists (Layer-2 3-arm no-skill run + `principal_baseline.json` RED/observed); only the end-to-end bad-CODEBASE loop-replay fixture is genuinely OPEN = plan W2. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: `refs/competitors/superpowers/skills/writing-skills/testing-skills-with-subagents.md` (385 lines) + `contest-refactor/evals/` (12 existing fixtures). Research flagged this as "major moat opportunity — almost nobody else ships fixtures + expected refactors as skill evals."
 
 ## Baseline: what each tool ships today

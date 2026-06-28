@@ -1,5 +1,7 @@
 # Phase Context Isolation Gap — contest-refactor inter-phase context discipline
 
+> **CURRENT-STATE (2026-06-28):** DEFERRED — subagent-per-loop already isolates each loop; `context:fork` per-phase is P2, measure-first. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: `refs/competitors/alirezarezvani-claude-skills/` (16.1k★, MIT, added 2026-05-25 p.m.) — `context: fork` inter-skill contract. Parent skill invokes sub-skill with YAML frontmatter `context: fork` → fresh forked context → returns ≤200-word digest → parent never sees child's ingestion artifacts. Eliminates cross-skill context pollution.
 
 Also referenced in: HALT-STATE-GAP Gap G (Validator-phase fork only; this doc treats the full phase-context-isolation question).

@@ -1,5 +1,7 @@
 # Clean-Environment Validation Gap — contest-refactor vs goose + sweep + superpowers
 
+> **CURRENT-STATE (2026-06-28):** OPEN — Gap A fresh-checkout oracle is absent — G21 full-reverify + dirty-tree abort are SAME-worktree and G32's challenge is v4-only (`validation.md:152`); parked in the plan's W4. Gap B (container) deferred. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: `refs/competitors/goose/`, `refs/competitors/sweep/`, `refs/competitors/superpowers/`. Research called this P2: "final validation from fresh checkout, container, or sandbox."
 
 ## Research overstatement confirmed

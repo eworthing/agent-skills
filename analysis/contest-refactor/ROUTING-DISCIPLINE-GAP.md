@@ -1,5 +1,7 @@
 # Routing Discipline Gap — contest-refactor lens dispatch + handoff routing
 
+> **CURRENT-STATE (2026-06-28):** DEFERRED — signal-based router + forcing-question; absent by deliberate simplicity. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: `refs/competitors/alirezarezvani-claude-skills/` (16.1k★, MIT, added 2026-05-25 p.m.) — signal-based deterministic router with Matt-Pocock-style forcing-question pattern. Demonstrated in `business-operations/skills/business-operations-skills/SKILL.md` (lines 1-100).
 
 ## Baseline: contest-refactor today

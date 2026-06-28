@@ -1,5 +1,7 @@
 # Halt Taxonomy + Loop State Gap — contest-refactor vs P1 competitors
 
+> **CURRENT-STATE (2026-06-28):** DEFERRED — Gap A worktree isolation is a by-design exclusion (`trust-model.md:52`); Gap F session-spanning handoff is absent (low value, Claude-Code-only SessionStart hook); Gap G measure-first P2. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Compares contest-refactor's halt taxonomy + state-file machinery (`canon/states.toml`, `canon/halt-subtypes.toml`, `canon/retirement-reasons.toml`, `references/output-format-state-schemas.md`, `references/halt-handoff.md`, `references/resume-detection.md`) against:
 
 - **Plandex** (`refs/competitors/plandex/`) — Go agent, ~15k★, plan branching + cumulative-diff sandbox + DB-backed state

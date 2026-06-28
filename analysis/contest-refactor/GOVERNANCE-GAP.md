@@ -1,5 +1,8 @@
 # Executable Governance Ingestion Gap — contest-refactor vs P0 competitors
 
+> **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — Gap C import-graph + cycle detection is SHIPPED (`scripts/audit_boundaries.py`, real `ast` parse); only the declarative `[[boundary_rules]]` half + lint(A)/CI(B) ingestion remain OPEN (low value). See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+
 Compares contest-refactor's governance ingestion (Step 0 Context Discovery + `.contest-refactor.toml` + lens system + ADR awareness per `references/method.md`) against:
 
 - **brooks-lint** (`refs/competitors/brooks-lint/`) — 12-book grounded analysis with `.brooks-lint.yaml` config + module graph from grep
@@ -37,10 +40,10 @@ Legend: **✓** = present, **partial** = weaker form, **—** = absent.
 | **Lint config ingestion** (`.swiftlint.yml`, `.eslintrc`, `ruff.toml`, etc.) | **—** | **—** | — | — |
 | **CI workflow ingestion** (`.github/workflows/`) | **—** | **—** | — | partial (CI is consumer of archgate, not ingester) |
 | **Boundary-rule config** (declared layers / forbidden imports) | **—** | — (heuristic only) | — (hard-coded "circular = bad") | **✓ executable** — `.rules.ts` companion per ADR; `RuleSet` exports async `check(ctx)` functions; sandboxed APIs: `ctx.glob/grep/readFile/readJSON`, `ctx.scopedFiles`, `ctx.changedFiles` |
-| Import-graph construction | — (Critic reasons mentally) | partial (greps first 200/lang) | ✓ AST-based, NetworkX | — (rules use grep/regex; no whole-repo graph) |
+| Import-graph construction | ✓ AST-based (**[SHIPPED 2026-06]** `scripts/audit_boundaries.py`) | partial (greps first 200/lang) | ✓ AST-based, NetworkX | — (rules use grep/regex; no whole-repo graph) |
 | Class-graph construction | — | — | ✓ inheritance + composition | — |
 | Call-graph construction | — | — | — | — |
-| Circular dependency detection | — | ✓ Mermaid dotted edges, R5 | ✓ NetworkX SCC | partial (project must encode as a `.rules.ts` check) |
+| Circular dependency detection | ✓ AST (**[SHIPPED 2026-06]** `scripts/audit_boundaries.py`) | ✓ Mermaid dotted edges, R5 | ✓ NetworkX SCC | partial (project must encode as a `.rules.ts` check) |
 | Fan-out > N threshold warning | — | ✓ > 5 | — | partial (project must encode as a `.rules.ts` check) |
 | Per-violation citation to **local rule source** | partial (ADR title) | — (book only) | — (module names only) | **✓ structured** — `{file, line, endLine, endColumn, ruleId, adrId, severity, fix}` JSON output |
 | Hard-coded book/lens citation | ✓ lens .md | ✓ 12 books | — | — (ADRs ARE the rules; no separate canon) |

@@ -1,5 +1,7 @@
 # Domain-Aware Scanning Gap — contest-refactor vs levnik audit-suite (P2 STUB)
 
+> **CURRENT-STATE (2026-06-28):** DEFERRED — multi-domain `--domain`; low demand, monorepo handled by most-LOC source root. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: `refs/competitors/levnik-skills/shared/references/audit_worker_core_contract.md`. Already mentioned in LEVNIK-AUDIT-SUITE-GAP § Gap E as "defer indefinitely; only useful for multi-domain monorepos."
 
 This is a deliberate STUB doc — minimal scope, low priority. Written to close the coverage gap from LEVNIK-AUDIT-SUITE-GAP without inflating to a full gap-doc treatment.

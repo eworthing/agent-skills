@@ -1,5 +1,7 @@
 # Adoption-Signal Tracking Gap — meta-level concern
 
+> **CURRENT-STATE (2026-06-28):** REJECTED — meta-discipline (quality-vs-adoption rank), not a skill feature. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: landscape research § 5 "Star / Adoption Analysis" + § 8 "Watchlist". No code competitor to inspect — this is a META concern about HOW contest-refactor's landscape analysis treats adoption signals (stars, freshness, installs, marketplace listings) vs quality.
 
 Different in kind from the other 13 gap docs. Not about contest-refactor's mechanics; about contest-refactor's POSITIONING discipline and ongoing competitive monitoring.

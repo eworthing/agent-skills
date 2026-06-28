@@ -1,5 +1,7 @@
 # Critic Independence Gap — contest-refactor vs P0 competitors
 
+> **CURRENT-STATE (2026-06-28):** OPEN — Gap A within-loop Critic↔Actor is still fused (`trust-model.md:52-54`) — the owner's deferred “Execution-unfuse” item (plan W4); the cold Step-3 reviewer + HALT challenger are post-hoc complements, not a substitute. Gap B parallel-critic also W4. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Compares `contest-refactor`'s Critic Phase (`SKILL.md` Step 1 + `references/trust-model.md` Loop Isolation) against:
 
 - **Open Code Review** (`refs/competitors/open-code-review/`) — 28 sealed personas + Tech Lead synthesizer + Discourse phase

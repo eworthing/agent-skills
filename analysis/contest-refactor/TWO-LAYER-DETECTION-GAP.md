@@ -1,5 +1,8 @@
 # Two-Layer Detection Gap — contest-refactor vs levnik audit-suite
 
+> **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — the Evidence Chain already mandates grep→source-verify in prose (`method.md:18-30,36,71`); residual = a named mandatory procedure + a gate proving Layer-2 verification occurred + optional excluded-candidate trail. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+
 Source: `refs/competitors/levnik-skills/shared/references/audit_worker_core_contract.md` (verbatim quote in LEVNIK-AUDIT-SUITE-GAP).
 
 ## Baseline: contest-refactor today

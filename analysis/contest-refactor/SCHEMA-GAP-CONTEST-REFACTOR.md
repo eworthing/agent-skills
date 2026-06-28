@@ -1,5 +1,8 @@
 # Finding Schema Gap Analysis — contest-refactor vs P0 competitors
 
+> **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — Gap 6 SARIF is SHIPPED (`scripts/export_sarif.py`, SARIF 2.1.0); Gaps 2/5/7 partially covered by `test_failed`/reviewer+G32/G24-G25; Gaps 3/4 deferred to a non-existent parallel-critic mode; Gap 1 `confidence` = plan W3 defer. NOTE: `schema_version: 4` is ALREADY shipped (the HALT-challenge schema) — proposed new finding fields are **v5**, not v4. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+
 Compares `contest-refactor`'s **finding-level** schema (`CURRENT_REVIEW.json.findings[]` per `references/output-format-json.md`) against three P0 competitors verified by source inspection. Two caution flags for this comparison:
 
 1. Some adjacent strengths in contest-refactor live outside `findings[]` (for example `findings_registry.json` occurrence statuses and scorecard fields like `residual_blocking_10`). Those are worth calling out, but they are not finding-local fields.
@@ -81,6 +84,8 @@ The real missing layer here is not "make Python stricter." It is "add a semantic
 - `confidence` + `severity_rationale` become the handoff surface between Critic and validator
 
 ### Gap 6 (defer): SARIF interop (ToB only)
+
+> **[SUPERSEDED 2026-06-28]** SARIF **emit is SHIPPED** — `scripts/export_sarif.py` (SARIF 2.1.0) + `scripts/_export_sarif_selftest.py`, wired in `references/output-format.md`. Only *ingest* remains unbuilt (and unclaimed). The "defer" verdict below is historical.
 
 SARIF is useful when contest-refactor wants to plug into CI pipelines or ingest external static-analysis findings (CodeQL, Semgrep). Not core today; mention as Possible Future Lens.
 
@@ -183,6 +188,8 @@ Semantic rejection/downgrade logic does **not** belong in `validate-artifact.py`
 ## Schema-version sequencing (v4→v5)
 
 contest-refactor's `schema_version` history per `contest-refactor/references/output-format-json.md § Schema version 3 changelog`:
+
+> **[SUPERSEDED 2026-06-28]** `schema_version: 4` has SINCE shipped as the **HALT-challenge schema** (G32 fires at `schema_version >= 4`, `validation.md:152`; 12 v4 fixtures in `evals/`). The "v3 → v4" row below is therefore stale — the proposed `confidence`/`severity_rationale` fields would land in **v5+**, not v4. Treat the version arithmetic below as historical.
 
 | Version | Driver | Migration table location |
 |---|---|---|

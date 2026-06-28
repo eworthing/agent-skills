@@ -1,5 +1,7 @@
 # Levnik Audit-Suite Gap — contest-refactor vs ln-620 + 9 L3 workers
 
+> **CURRENT-STATE (2026-06-28):** COVERED — orchestrator / two-layer / phase-machine / scoring equivalents already present. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: `refs/competitors/levnik-skills/plugins/codebase-audit-suite/` (35+ specialized auditor skills across audit/test/architecture/persistence sub-suites). Inspected after research flagged it as "newest serious entrant on persisted-state orchestration." Source confirms; research understated scope (suite is 35+ workers, not just one).
 
 ## What it actually is

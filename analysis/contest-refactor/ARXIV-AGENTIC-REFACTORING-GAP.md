@@ -1,5 +1,7 @@
 # arXiv:2511.04824 Empirical Falsifier — contest-refactor positioning risk
 
+> **CURRENT-STATE (2026-06-28):** REJECTED — empirical context (the 30.7%-rename finding); no proposed mechanism. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Source: Horikawa, K., Li, H., Kashiwa, Y., Adams, B., Iida, H., & Hassan, A. E. (2026, submitted Nov 6 2025). "Agentic Refactoring: An Empirical Study of AI Coding Agents." arXiv:2511.04824.
 
 Not a gap against a competitor — a **falsifier against contest-refactor's stated premise**. Dataset: 15,451 refactoring instances across 12,256 pull requests + 14,988 commits, AIDev dataset, Java open-source projects. Closest-to-source empirical study of what AI coding agents (Codex, Claude Code, Cursor) actually do when they refactor.

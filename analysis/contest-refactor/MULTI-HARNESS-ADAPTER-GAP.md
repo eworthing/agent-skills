@@ -1,5 +1,7 @@
 # Multi-Harness Adapter Gap — contest-refactor cross-harness distribution
 
+> **CURRENT-STATE (2026-06-28):** DEFERRED — symlink install + `provider-adapters.md`; defer the adapter framework unless a 6th harness lands. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
+
 Sources:
 
 - `refs/competitors/wshobson-agents/` (35.9k★, MIT, added 2026-05-25 p.m.) — **adapter-driven** multi-harness generation. One markdown source under `plugins/` → adapters (`tools/adapters/{base,codex,cursor,opencode,gemini}.py`) transform per harness → gitignored per-harness artifacts. Five harnesses: Claude Code, Codex CLI, Cursor, OpenCode, Gemini CLI.
