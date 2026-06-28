@@ -1,11 +1,26 @@
-# Reviewer model-tier experiment: can the claude_code reviewer run on haiku?
+# Model-tier experiments (contest-refactor)
 
-**Date:** 2026-06-27 · **Outcome:** flip rejected · **Status:** closed (re-runnable)
+**Date:** 2026-06-27 · **Status:** closed (re-runnable). Consolidated write-up of every
+model-selection experiment run on the skill. The terse versions live in
+`reviewer_baseline.json` (`measurement` block), `EVAL.md`, and `README.md` (Layer 3);
+this file is the narrative + lessons.
 
-This is the full write-up of the experiment that produced the reviewer-judgment
-harness (`evals/reviewer-cases/`). The terse versions live in
-`reviewer_baseline.json` (`measurement` block), `EVAL.md`, and `README.md`
-(Layer 3); this file is the narrative + lessons.
+## Summary — all findings at a glance
+
+| Question | Verdict | Evidence | Cost |
+|---|---|---|---|
+| **Reviewer → cheaper** (sonnet→haiku)? | **No** — keep sonnet | haiku over-rejects legitimate single-adapter-seam / risk-evidence refactors (GATE B fail); never false-approves (GATE A clean) | ~5M tok (200 spawns) |
+| **Critic → upgrade** (sonnet→opus)? | **No measured benefit** — keep sonnet | sonnet catches the 3 hardest cross-module flags decisively + principal_baseline 5/5; opus has no recall headroom | ~15k tok (3 spawns) |
+| **Different-model challenger** (opus vs same-tier)? | **No** — keep same-tier | sonnet/opus agree 9/10 on cross-module defects (same-family, correlated blind spots); the lone diff had opus *more lenient* | ~80k tok (20 spawns) |
+
+**Throughline:** Sonnet is the evidence-checked default for every role — *cheaper* regresses
+(reviewer), *bigger-same-family* adds nothing (Critic, challenger). The one genuinely open
+lever is a **cross-family** challenger (Codex/Gemini), the only path to real verifier
+independence — untested, structural. Sections below give each experiment in full.
+
+What produced what: the reviewer experiment also produced the reviewer-judgment harness
+(`evals/reviewer-cases/`); the Critic + challenger experiments introduced the **low-token
+tier-test method** (last section), which is how they cost ~100× less than the first.
 
 ## The question
 
