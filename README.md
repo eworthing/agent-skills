@@ -23,7 +23,7 @@ Single source of truth lives here; agent CLIs consume each skill through a symli
 ### Cross-language tooling
 
 - **[bash-macos](bash-macos/)** — Keeps shell scripts portable across macOS (Bash 3.2, BSD userland) and Linux (Bash 4+, GNU coreutils). Debugs "command not found" / "invalid option" / "mapfile: command not found", GNU-vs-BSD `sed`/`grep`/`date`/`readlink` issues, snake_case verb-first renames.
-- **[doc-standardization](doc-standardization/)** — Standardizes documentation naming, organization, and cross-references in Markdown projects. Enforces `[domain]-[feature]-[type]-[status].md` filename pattern, valid internal links, ordered index files, code-to-doc identifier alignment.
+- **[doc-standardization](doc-standardization/)** — Standardizes Markdown docs trees around each repo's documented taxonomy. Audits naming hygiene, default type/status grammar, dated records, ADRs, declared exceptions, broken links, stale README indexes, orphans, and H1 drift.
 
 ### Workflow / meta
 

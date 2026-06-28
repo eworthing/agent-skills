@@ -1,13 +1,12 @@
 ---
 name: doc-standardization
 description: >-
-  Standardize documentation naming, organization, and cross-references in
-  Markdown-based project docs. Enforces a consistent
-  `[domain]-[feature]-[type]-[status].md` filename pattern, valid internal
-  links, ordered index files, and code-to-doc identifier alignment. Use when
-  renaming docs, standardizing specs, fixing broken markdown links, organizing
-  documentation, moving files between doc directories, consolidating or
-  splitting docs, or auditing a docs tree before a release.
+  Standardize Markdown documentation trees by discovering the project-local docs
+  contract, fixing naming drift, broken internal links, stale README indexes,
+  orphaned docs, H1 drift, and declared exceptions. Use when renaming docs,
+  reorganizing docs folders, auditing docs before release, fixing Markdown
+  links, updating docs indexes, handling ADRs or dated records, or aligning a
+  repo's documentation with its own documented taxonomy.
 allowed-tools:
   - Read
   - Write
@@ -19,147 +18,131 @@ allowed-tools:
 
 # Documentation Standardization
 
-Keep docs trees consistent as they grow: stable filename convention, valid
-internal links, ordered indexes, code↔doc identifier alignment. Catches
-naming drift, broken links, orphans, and index drift that accumulate in
-long-lived `docs/` trees.
-
-## Contents
-
-- When to Use
-- Workflow (audit → rename → fix references → re-audit)
-- Common Mistakes
-- Examples (single rename, organizing research docs)
-- Related Skills
-- References
-
-## When to Use
-
-Use when:
-- Adding new doc files
-- Renaming or reorganizing existing docs
-- User says "standardize docs", "fix doc links", "organize specs"
-- Moving files between doc directories
-- Consolidating or splitting docs
-- Auditing a docs tree before release
-
-Do NOT use when:
-- Editing content within a single file (no structural changes)
-- Working on non-doc files
-- Quick README edits with no cross-references
+Keep docs trees coherent without forcing every repo into one folder layout.
+Discover the local contract from `docs/README.md` or the nearest index, then
+enforce link integrity, index accuracy, naming hygiene, and documented
+exceptions.
 
 ## Workflow
 
-### 1. Audit current state
+### 1. Discover the local contract
 
-Ships with a one-shot audit script:
+Read the nearest `README.md` before renaming. Treat it as the source of truth
+for project areas, special bundles, and exceptions. If no contract exists, use
+the default grammar in [`references/conventions.md`](references/conventions.md).
+
+Look for:
+- curated project areas such as `product/`, `qa/`, `architecture/`, or `adr/`
+- special cases such as vendor docs, Obsidian vaults, archives, generated docs
+- required index files and dated record conventions
+
+### 2. Audit current state
+
+Run the bundled audit script from the target repo root:
 
 ```bash
 bash <skill-path>/scripts/check-doc-naming.sh docs
-# Clean: "== summary: CLEAN ...", exit 0
-# Fail:  per-class FAIL lines, exit 1
 ```
 
-Underlying patterns live in
-[`references/regex-recipes.md`](references/regex-recipes.md) — one recipe
-per error class with expected-clean and expected-failure outputs.
+Exit codes: `0` clean, `1` blocking violations found, `2` invocation error.
+Output classes map to fixes in
+[`references/error-taxonomy.md`](references/error-taxonomy.md).
 
-### 2. Pick the new name
+### 3. Choose the target path
 
-Use the convention `[domain]-[feature]-[type]-[status].md`. Full lookup
-tables (domain values, status suffixes, directory layout) in
-[`references/conventions.md`](references/conventions.md).
+Prefer the repo's documented taxonomy over a universal directory tree. For
+ordinary curated docs, use:
 
-### 3. Rename
+```text
+<topic>-<type>-<status>.md
+```
+
+For dated records, use:
+
+```text
+<topic>-<type>-YYYY-MM-DD.md
+```
+
+ADRs may keep `NNNN-topic.md`. Declared tool, vendor, and archive bundles may
+preserve their native filenames when the nearest `README.md` explains why.
+
+### 4. Rename and repair references
+
+Find references before moving a file:
 
 ```bash
-grep -rn "old-filename.md" .             # find references
-git mv docs/old-name.md docs/new-name.md # rename (reversible)
+grep -rn "old-filename.md" .
+git mv docs/old-name.md docs/new-name.md
 ```
 
 Then update:
-- All references found in step 1 (Edit each file)
-- The H1 inside the renamed file
-- Any `README.md` index entries
+- every reference found by the search
+- the H1 in the renamed file when it no longer matches the topic
+- every affected `README.md` index entry
+- any local exception notes if the file belongs to a declared bundle
 
-### 4. Re-audit
+### 5. Re-audit and pre-flight
+
+Re-run the audit script. Before handoff, verify:
+- final paths match the discovered contract or documented exceptions
+- internal Markdown links are valid
+- `README.md` indexes point at existing files
+- remaining `ORPHAN`, `H1-DRIFT`, or advisory `NAMING` lines are intentional
+- no blocking `[FAIL]` class remains
+
+### 6. Wire optional project validators
+
+Use project-local validators for semantic checks that the base skill cannot
+know, such as code-to-doc identifier alignment or product-specific status
+rules:
 
 ```bash
-bash <skill-path>/scripts/check-doc-naming.sh docs
-```
-
-Exit codes: `0` clean, `1` violations found, `2` invocation error.
-
-Each output class — `BROKEN`, `ORPHAN`, `INDEX-DRIFT`, `CASE`, `NAMING`, `H1-DRIFT` —
-maps to a canonical fix in
-[`references/error-taxonomy.md`](references/error-taxonomy.md).
-
-### 5. Wire optional project validators
-
-```bash
-# Pre-commit gate (in CI/hooks, vendor check-doc-naming.sh into the repo or pin
-# an absolute path — <skill-path> is resolved by the agent, not the shell)
 bash <skill-path>/scripts/check-doc-naming.sh docs || exit 1
-./scripts/validate_naming_consistency.sh   # project-local cross-checks (you provide)
+./scripts/validate_naming_consistency.sh
 ```
-
-Project-specific validators typically cross-check doc filenames against
-code identifiers and test scenarios — see
-[`references/conventions.md`](references/conventions.md#code--documentation-alignment).
 
 ## Common Mistakes
 
-1. **Missed reference updates** — always `grep` the old filename first
-2. **H1 / filename drift** — H1 should mention the primary slug token
-3. **Wrong status suffix** — `-implemented` for done, `-draft` for WIP
-4. **Forgotten index updates** — update `README.md`, re-run audit
-5. **Mixed case** — lowercase + hyphens only (allowlisted bases excepted)
-
-For legitimate exceptions (vendor docs, legacy specs, top-level files),
-see [`references/conventions.md`](references/conventions.md#when-to-break-the-convention).
+1. **Flattening useful project taxonomy** - keep local areas when the index
+   explains their purpose.
+2. **Missed references** - search for the old basename before `git mv`.
+3. **Undeclared exceptions** - preserve vendor or tool-native filenames only
+   when the nearest index explains the exception.
+4. **Stale indexes** - update `README.md` entries in the same change.
+5. **Treating advisories as clean** - triage each `ORPHAN`, `H1-DRIFT`, and
+   advisory `NAMING` line before handoff.
 
 ## Examples
 
-**Rename a spec:**
+**Rename a project-local spec:**
 
 ```bash
-grep -rn "toolbar-spec.md" .
-git mv docs/specs/toolbar-spec.md docs/specs/ui-toolbar-unification-spec-implemented.md
-# Edit H1 in the renamed file: "# UI Toolbar Unification Spec"
-# Edit every file from the grep output
-bash <skill-path>/scripts/check-doc-naming.sh docs   # expect: CLEAN
+grep -rn "transition-modes-spec.md" .
+git mv docs/product/transition-modes-spec.md docs/product/transition-modes-spec-implemented.md
+# Update H1 and every reference found by grep
+bash <skill-path>/scripts/check-doc-naming.sh docs
 ```
 
-**Organize research docs:**
+**Preserve a declared vault bundle:**
 
 ```bash
-mkdir -p docs/research
-git mv docs/toolbar-research.md docs/research/ui-toolbar-architecture-research.md
-git mv docs/focus-research.md   docs/research/ui-focus-management-research.md
+# docs/architecture/code-flow/README.md documents that Obsidian filenames are preserved.
 bash <skill-path>/scripts/check-doc-naming.sh docs
+# Native filenames inside that declared bundle are accepted as exceptions.
 ```
 
 ## Related Skills
 
-- [`bash-macos`](../bash-macos/SKILL.md) — Portability rules the audit script
-  follows. Consult before adding shell recipes.
-- [`swift-file-splitting`](../swift-file-splitting/SKILL.md) — Analogous
-  max-file-size pattern for code; the 600-line doc cap mirrors its
-  `file_length` enforcement.
+- [`bash-macos`](../bash-macos/SKILL.md) - consult before changing shell
+  recipes or audit scripts.
 
 ## References
 
-- Project `AGENTS.md` / `CLAUDE.md` — repo-pinned renaming rules
-- [`references/regex-recipes.md`](references/regex-recipes.md) — hardened
-  bash one-liners per error class with expected outputs
-- [`references/error-taxonomy.md`](references/error-taxonomy.md) — error
-  class → detector → canonical fix
-- [`references/conventions.md`](references/conventions.md) — naming
-  components, status suffixes, directory tree, code↔doc alignment,
-  exceptions
-- [`scripts/check-doc-naming.sh`](scripts/check-doc-naming.sh) — one-shot
-  audit script; exit 0/1/2
-- CommonMark Spec — <https://spec.commonmark.org/> — link syntax,
-  reference-style links, parser semantics
-- GitHub Flavored Markdown Spec — <https://github.github.com/gfm/> —
-  autolinks, table syntax, GitHub extensions
+- [`references/conventions.md`](references/conventions.md) - default naming
+  grammar, dated records, ADRs, project taxonomy, and exception rules
+- [`references/error-taxonomy.md`](references/error-taxonomy.md) - output class
+  to canonical fix mapping
+- [`references/regex-recipes.md`](references/regex-recipes.md) - portable shell
+  recipes and expected outputs
+- [`scripts/check-doc-naming.sh`](scripts/check-doc-naming.sh) - read-only audit
+  script; exit `0`/`1`/`2`
