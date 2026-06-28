@@ -157,6 +157,37 @@ low-token method below (3 spawns, ~15k tokens — vs the ~5M the reviewer run co
   miss them, Opus isn't needed. K=1 per case here, but each was decisive and
   `principal_baseline` already showed K=5 5/5 for the default arm.
 
+## Does a *different* model add independence? (challenger diversity probe)
+
+A separate question from "is Opus better": even if Opus has no capability *lift*, a
+**different** model has different blind spots, so it could be a more independent
+**HALT_SUCCESS challenger** (whose job is to *break* the Critic's success claim — and
+which the skill currently spawns at the *same* model as the Critic). Tested 2026-06-27
+with the disagreement probe: run Sonnet and Opus as independent reviewers on the 10
+hardest cross-module cases (5 flags + 5 restraint twins) and measure where they differ.
+
+- **Result: 9/10 verdict agreement.** All 5 defect flags — both reject, identically
+  (Opus caught nothing Sonnet missed; zero detection diversity). 4/5 restraint twins
+  agree. The lone disagreement (`invariant-owner-restraint`): Sonnet `conditional`
+  (flagged a smell), **Opus `approved`** — i.e. Opus was *more lenient*, on a case that
+  should approve.
+- **Conclusion for the challenger: not supported by the data.** (a) Sonnet and Opus
+  agree 9/10 → highly correlated judgment → little independence to gain by swapping the
+  challenger to Opus; (b) the one difference had Opus *more lenient*, the **wrong
+  direction** for a verifier meant to catch defects. So **do not make the challenger
+  Opus.**
+- **The deeper point.** Opus and Sonnet are the **same model family** (Claude) — shared
+  training lineage, so correlated blind spots are expected; a *bigger* Claude is not an
+  *independent* Claude. The 9/10 agreement is evidence of exactly that. Genuine
+  challenger independence would come from a **different family** (Codex / Gemini),
+  matching the repo's existing cross-provider-review conviction ("disagreement is the
+  signal") — but that is **untested** and a larger change (main spawning a
+  different-*provider* challenger), so it stays a documented future direction, not a
+  shipped default.
+- **Scope.** This corpus is cases Sonnet catches, so it still cannot probe Sonnet's true
+  blind-spot tail; K=1, n=10, one disagreement — low power. It bounds intra-Claude
+  diversity as *low*, not cross-family diversity.
+
 ## The low-token tier-test method (reusable)
 
 The reviewer run cost ~5M tokens (200 spawns × ~25k each, because every agent re-read
