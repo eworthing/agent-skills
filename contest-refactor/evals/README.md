@@ -279,3 +279,15 @@ names the right defect / does not flag the carve-out). Raw reps land in
 `reviewer_baseline_replication.json`; `reviewer_baseline.json` summarizes per case/arm and
 flips `status` to `measured`. **The claude_code reviewer default flip (sonnet → haiku) in
 `references/provider-adapters.md` is gated on arm B holding every threshold above.**
+
+**Measured outcome (2026-06-27 — flip NOT landed).** A K-run (raw reps in
+`reviewer_baseline_replication.json`, summary in `reviewer_baseline.json` `measurement`) found:
+GATE A (false-approve) **clean** — haiku never approved a must-reject/conditional case, so the
+cheaper reviewer does not pass fake-clean / regression diffs; GATE B (false-reject) **failed** —
+haiku over-rejects `justified-single-adapter-1` (~2/3 approve), `risk-evidence-present-1` (~2/3),
+and `risk-evidence-present-2` (~1/2) across two restraint axes where sonnet approves unanimously,
+breaching `false_reject_regression_tolerance`. Conclusion: haiku is **safe but over-conservative**
+on single-adapter-seam-justification and risk-boundary-evidence judgments — it would make the loop
+carry-forward legitimate refactors ~1/3 of the time on those axes. The reviewer default stays
+`claude-sonnet-4-6`; `claude-haiku-4-5` remains opt-in via `--reviewer-model`. This is the harness
+working as intended: it caught a real efficacy regression before it shipped.

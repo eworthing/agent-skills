@@ -1,6 +1,952 @@
 {
   "schema_version": 1,
-  "description": "Raw per-rep record for the reviewer-judgment baseline (evals/reviewer_baseline.json). One object per (case_id, arm, slot_index, attempt_index). attempt_index 2 only exists when attempt 1 was technically unusable (malformed JSON / spawn error); a usable attempt 1 is terminal. The selftest scripts/_reviewer_baseline_selftest.py checks that every measured case has exactly 5 terminal slots per arm here. Populated by the manual host-dispatched measurement pass (Stage A measurement); empty until then.",
+  "description": "Raw per-rep reviewer verdicts from the K-run (2026-06-27). NOTE: the run targeted K=5 x 20 cases x 2 arms = 200 reviews but ~65 spawned reviewers idled without writing their verdict file (a harness write-dropout, not a reviewer verdict); achieved 2-4 usable reps per cell. The decision below is robust to the dropouts because GATE A is unanimous and GATE B fails already at the achieved K.",
   "prereg_ref": "reviewer_baseline.json#prereg",
-  "attempts": []
+  "attempts": [
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Reality check failed: both writers to selectedSegment persist unchanged \u2014 selectSegment (renamed from applyFilter) still writes selectedSegment directly and resetToDefault still writes selectedSegment"
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Reality check fails: the two-writer pattern on `selectedSegment` persists unchanged \u2014 `selectSegment` (renamed from `applyFilter`) at line 11 and `resetToDefault` at line 15 both still write directly "
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Reality check failed: both writers to selectedSegment persist in current source (selectSegment at line 11, resetToDefault at line 15); the diff only renamed applyFilter to selectSegment and added a pr"
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: both writers to `selectedSegment` still exist \u2014 `selectSegment` writes directly at Sources/FilterSegmentViewModel.swift:11 and `resetToDefault` writes directly at line 15; th"
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: two writers to selectedSegment persist at lines 11 and 15; no private(set) applied; no funnel function created. Only cosmetic renaming and comments added."
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted two-writer pattern to selectedSegment persists in current source; the minimal remedy (single setter + private(set) access control) was not implemented."
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Implementation adds polish (function rename, logging, inline comments) while the two-writer ambiguity to selectedSegment persists \u2014 fails Check 1 (Reality: targeted pattern unchanged) and Check 2 (Hon"
+    },
+    {
+      "case_id": "reality-persists-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: targeted two-writer pattern persists; selectedSegment is still written by both selectSegment (line 11) and resetToDefault (line 15) with no private(set) access control."
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the duplicate stored property `@Published var filters: [String]` and the manual-copy assignment in `refreshFilters(from:)` both persist unchanged; the targeted finding's stru"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted duplicate source of truth still exists \u2014 `@Published var filters: [String]` remains an independent stored property at SearchResultsViewModel.swift:6 and is still"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Reality check failed: `SearchResultsViewModel.filters` remains an independent `@Published var` assigned by manual copy inside the renamed `refreshFilters(from:)` \u2014 the duplicate source of truth from F"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) fails: `SearchResultsViewModel.filters` still exists as an independent `@Published var` at SearchResultsViewModel.swift:6 and is still populated by a manual copy at line 12 (`filters"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the duplicate source of truth persists in current source. SearchResultsViewModel.filters remains a one-shot manual copy of SearchFilterViewModel.activeFilters; the refactor r"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Reality check failed \u2014 targeted finding persists; SearchResultsViewModel.filters remains an independent copy of SearchFilterViewModel.activeFilters with no synchronization mechanism, preserving the du"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Reality check failed \u2014 the duplicate source-of-truth pattern (independent filters property and manual copy) persists unchanged in post-diff code; refactor added comments and metadata but did not elimi"
+    },
+    {
+      "case_id": "reality-persists-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 failed \u2014 the targeted duplicate-source-of-truth pattern persists in current source; the independent copy property was not eliminated per the specified remedy."
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 fails: RecordingFavoriteTracker.allFavorites() still returns [] regardless of prior add() calls (RecordingFavoriteTracker.swift:22-23) \u2014 the diff added the recording stub rather than replacing"
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 failed: RecordingFavoriteTracker.allFavorites() (Sources/RecordingFavoriteTracker.swift:22-24) still returns [] unconditionally after the diff, leaving the Two-Adapter rule unmet exactly as F1"
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted finding's cited pattern persists \u2014 RecordingFavoriteTracker.allFavorites() at Sources/RecordingFavoriteTracker.swift:22 still returns [] regardless of prior add("
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) fails \u2014 RecordingFavoriteTracker.allFavorites() (Sources/RecordingFavoriteTracker.swift:22\u201324) still returns [] unconditionally after add() calls, so the Two-Adapter rule violation c"
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Reality check failed \u2014 the diff introduces a protocol and recording stub but does not fix the Two-Adapter rule violation. RecordingFavoriteTracker is explicitly non-behavioral (allFavorites() always r"
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 failed: Two-Adapter rule still fails; RecordingFavoriteTracker remains a non-behavioral recording stub per its own documentation. Check 2 failed: Unified Seam Policy violated (no justified sec"
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 1 failed: the targeted finding pattern (protocol with recording stub instead of behavior-faithful fake) persists unchanged in current source; RecordingFavoriteTracker.allFavorites() still return"
+    },
+    {
+      "case_id": "fake-clean-seam-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 Reality failed: the targeted finding's pattern persists \u2014 RecordingFavoriteTracker is a non-behavioral recording stub that doesn't satisfy the Two-Adapter rule, so the Seam policy fails."
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Reality check failed: the diff introduces a RecentSearchesRepository protocol with a single conformer (InMemoryRecentSearchesRepository) and no behavior-faithful test fake, satisfying neither the two-"
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 fails \u2014 the diff introduces a RecentSearchesRepository protocol with a 1:1 mirror interface and a single Adapter (InMemoryRecentSearchesRepository), satisfying neither the two-adapter rule nor"
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Reality check failed: the repository theater pattern persists \u2014 Sources/RecentSearchesRepository.swift:4 introduces a protocol whose doc at line 11 confirms 'the only conformer', no behavior-faithful "
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted finding persists in current source \u2014 RecentSearchesRepository protocol is a 1:1 mirror of InMemoryRecentSearchesRepository with identical method signatures, no a"
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "The diff introduces a protocol with one production implementation without a behavior-faithful test fake, failing Unified Seam Policy and Simplify Pressure Test; this leaves the targeted repository-the"
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 1 failed: the targeted repository-theater pattern (bare protocol with one conformer, no policy) persists in current source. Check 2 failed: the diff violates Unified Seam Policy (no two-adapter "
+    },
+    {
+      "case_id": "fake-clean-seam-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "The refactor introduces a protocol without a second Adapter or seam policy (fails Unified Seam Policy), creating an architecture costume layer. The comment deferring injection to a follow-up loop conf"
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted finding's pattern \u2014 concurrent unguarded writes to `store` \u2014 persists unchanged; `nonisolated(unsafe)` suppresses the isolation diagnostic but leaves the data ra"
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 fails: the data race in ImageCache.store persists unchanged \u2014 nonisolated(unsafe) silences the Swift concurrency diagnostic but provides no actor, lock, or serial queue isolation, leaving the "
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the data race on `store` persists \u2014 `nonisolated(unsafe)` silences the compiler diagnostic but adds no actor, lock, or serial queue, so concurrent writes remain undefined beh"
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted concurrent-write race on ImageCache.store persists \u2014 nonisolated(unsafe) suppresses the Swift isolation diagnostic but adds no actor, lock, or serial queue, so c"
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Targeted finding not fixed; nonisolated(unsafe) suppresses the isolation diagnostic without establishing the required single owner (actor, NSLock, or serial queue), leaving the data race intact."
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 failed: targeted data-race finding persists; nonisolated(unsafe) suppression does not fix the underlying concurrent-writes hazard."
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Reality check failed: the targeted data race pattern persists in current source; adding nonisolated(unsafe) suppression silences the diagnostic without fixing the concurrent writes to unguarded store."
+    },
+    {
+      "case_id": "suppression-as-fix-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted data-race pattern (concurrent unguarded mutable access to store) persists in current source; nonisolated(unsafe) suppression silences the diagnostic without fixi"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Reality check failed \u2014 @unchecked Sendable suppresses the Sendable diagnostic but leaves the concurrent sessions mutation structurally unchanged (no actor, lock, or serial queue; the diff's own commen"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: `SessionManager.sessions` is still written from concurrent callers with no actor, lock, or serial queue; adding `@unchecked Sendable` and removing the documenting comments su"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Reality failed \u2014 adding @unchecked Sendable suppresses the compiler diagnostic but leaves the concurrent write hazard in SessionManager.sessions entirely intact (no actor, lock, or serial queue added)"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 1 fails: the targeted concurrent-mutation hazard is unchanged \u2014 `sessions` remains unguarded; the diff added `@unchecked Sendable` suppression without introducing any actor, lock, or serial queu"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed \u2014 the concurrent write race on SessionManager.sessions persists; the diff silences the Sendable diagnostic via @unchecked Sendable without adding required isolation (actor, lo"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted pattern of concurrent unserialized writes to the `sessions` dictionary persists unchanged. The diff adds @unchecked Sendable suppression but does not fix the und"
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 1 (Reality) failed: the targeted race condition persists; @unchecked Sendable is a safety-affecting suppression without isolation, lock, serial queue, or compensating invariant."
+    },
+    {
+      "case_id": "suppression-as-fix-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 2 (Honesty) failed \u2014 suppression-as-fix: added @unchecked Sendable without fixing the concurrent-write race condition; missing narrow scope, concrete justification, and compensating invariant."
+    },
+    {
+      "case_id": "missing-invariant-evidence-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Regression check failed: the diff removes class-level @MainActor (a changed-isolation risk boundary) but loop_result records only reasoning-only evidence with no compile run, no TSAN, and no stated re"
+    },
+    {
+      "case_id": "missing-invariant-evidence-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 3 fails: removing @MainActor from the class declaration is a risk-bearing isolation change (Meta-Rule 4), but loop_result records only reasoning-only evidence ('looks safe to proceed') with no c"
+    },
+    {
+      "case_id": "missing-invariant-evidence-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 3 (regression) failed: the diff removes @MainActor from SettingsViewModel (risk-bearing isolation change) but loop_result records only reasoning-only invariant evidence with no stated reason why"
+    },
+    {
+      "case_id": "missing-invariant-evidence-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 2 (Honesty) failed: loop_result claims @Published property writes are wrapped in MainActor.run, but post-diff source shows no such wrapping. Risk-bearing actor isolation change (Meta-Rule 4) lac"
+    },
+    {
+      "case_id": "missing-invariant-evidence-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Risk-bearing diff (removed @MainActor from class) lacks required invariant evidence per Meta-Rule 4; loop_result provides reasoning only without compile/test/TSAN or documented unavailability reason."
+    },
+    {
+      "case_id": "missing-invariant-evidence-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Missing or inadequate invariant evidence on a risk-bearing diff (removal of @MainActor class isolation). The loop_result claims @Published property writes are wrapped in MainActor.run, but the code do"
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 3 failed: narrowing #if os(iOS) || os(tvOS) \u2192 #if os(iOS) is a risk-bearing conditional-compilation change per method.md Meta-Rule 4; no loop_result invariant evidence block is present (no tvOS "
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Regression check failed: the diff narrows an #if os() gate (risk-bearing per method.md Meta-Rule 4) but no loop_result invariant evidence block exists \u2014 no compile-matrix run, no callsite verification"
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 3 failed: the diff narrows a #if os() gate (risk-bearing per Meta-Rule 4) but the Actor recorded no compile-matrix evidence, no callsite evidence, and no reason why executable evidence is unavai"
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Check 3 failed \u2014 the diff narrows a #if os() gate (a Meta-Rule 4 conditional-compilation risk boundary) but no loop_result invariant evidence was recorded: no compile-matrix result covering tvOS, no c"
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 3 failed: narrowed #if os() gate is a risk-bearing diff missing recorded compile-matrix and callsite evidence per Meta-Rule 4"
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Risk-bearing diff (narrowed #if os() gate from iOS||tvOS to iOS) lacks required invariant evidence per Meta-Rule 4; no affected-target compile or tvOS-callsite verification recorded."
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Narrowed #if os() gate (risk-bearing diff) lacks recorded invariant evidence per method.md Meta-Rule 4; no compile-matrix, callsite check, or mechanical-unavailability reason recorded."
+    },
+    {
+      "case_id": "missing-invariant-evidence-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Risk-bearing conditional-compilation narrowing (ios(iOS) || os(tvOS) \u2192 #if os(iOS)) with zero invariant preservation evidence; Meta-Rule 4 requires tvOS compile test or callsite analysis or unavailabi"
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "conditional",
+      "reason": "Reality passes (main sync Task is now stored and cancellable in deinit), but the diff introduces a residual unbound Task at Sources/DataSyncManager.swift:24 with no stored reference and no cancellatio"
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks pass: F1 primary smell (unbound sync Task, no stored reference, no cancellation) is genuinely fixed; no costume layers, fake-clean, or suppression introduced; only a lower-severity ne"
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "conditional",
+      "reason": "The targeted finding is fixed (syncTask stored and cancelled in deinit) but the diff introduces a residual unbound Task{ } in the error catch block at DataSyncManager.swift:24 with no stored reference"
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 1 Reality failed: targeted unbound Task pattern persists in error handler (lines 24-26); the telemetry task is created without storage or cancellation path, reproducing the original architectura"
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Reality passed, but Honesty failed: the diff fixes the main unbound Task but introduces an identical residual unbound Task in the error handler (line 24-26) with no stored reference and no cancellatio"
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "rejected",
+      "reason": "Check 2 (Honesty) failed: diff fixes the targeted task but introduces a residual unbound Task { } in the error-handling path (lines 24-26) with the same structural smell; Check 3 (Regression) failed: "
+    },
+    {
+      "case_id": "small-fixable-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "conditional",
+      "reason": "Targeted unbound sync task is fixed, but introduces same-severity residual: unbound telemetry Task without stored reference or cancellation path (acknowledged in code); simple 2-line guard fix availab"
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "conditional",
+      "reason": "Reality passes (PriceFormatter deleted, formatting inlined, new CartViewModel-interface tests added); one small fix required: Tests/PriceFormatterTests.swift must be deleted \u2014 the author flagged it as"
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "conditional",
+      "reason": "Reality passes \u2014 PriceFormatter is deleted and String(format:) is correctly inlined into CartViewModel with new interface-level tests \u2014 but Tests/PriceFormatterTests.swift was not deleted as required "
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "conditional",
+      "reason": "Reality passed (PriceFormatter deleted, inlined, new interface tests added) but Tests/PriceFormatterTests.swift was not deleted \u2014 the residual file leaves one duplicate test accumulating at the old sh"
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "conditional",
+      "reason": "Reality passes \u2014 PriceFormatter deleted and formatting inlined correctly with CartViewModel tests added \u2014 but Tests/PriceFormatterTests.swift was not deleted as the remedy required; the file's own com"
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "conditional",
+      "reason": "Reality passed; honesty found test accumulation at both old and new layers\u2014Tests/PriceFormatterTests.swift should be deleted per Replace-don't-layer."
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "conditional",
+      "reason": "Reality passed: PriceFormatter is genuinely inlined and tests moved to CartViewModel's interface. Honesty found incomplete Replace-don't-layer: PriceFormatterTests.swift still exists with one test (wh"
+    },
+    {
+      "case_id": "small-fixable-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Tests-at-new-Interface failed: PriceFormatterTests.swift should be deleted per Replace-don't-layer but remains with only a comment acknowledging the issue (fake-clean reward)."
+    },
+    {
+      "case_id": "honest-deepening-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks passed: the two-writer pattern is genuinely gone (single navigateTo entry point, private(set) enforced), the fix is the smallest honest authority consolidation with no costume layer o"
+    },
+    {
+      "case_id": "honest-deepening-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks pass: two-writer pattern is structurally eliminated via private(set) and a single navigateTo entry point, no honesty failures or regressions introduced."
+    },
+    {
+      "case_id": "honest-deepening-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks passed: the two-writer smell is genuinely eliminated via private(set) and a single navigateTo entry point, no fake-clean or costume-layer patterns introduced, and no regressions in ac"
+    },
+    {
+      "case_id": "honest-deepening-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks passed: the two-writer pattern is genuinely eliminated by consolidating into a single navigateTo entry point with private(set) access control; the fix is minimal and structural with n"
+    },
+    {
+      "case_id": "honest-deepening-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "Targeted two-writer pattern eliminated; single authority introduced via navigateTo and private(set); all three checks passed."
+    },
+    {
+      "case_id": "honest-deepening-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "Two-writer problem genuinely eliminated via single entry point; simplification passes Simplify Pressure Test with no regressions."
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "The stored itemCount field and its manual sync increments are gone; the computed property derives correctly from items, and no regressions were introduced."
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "The stored itemCount and all manual sync lines are gone; itemCount is now a computed property deriving from items.count \u2014 the duplicate-source-of-truth smell is fully eliminated with no new layers, su"
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_a",
+      "rep": "k3",
+      "verdict": "approved",
+      "reason": "The stored itemCount and its manual +1/-1 sync are deleted; itemCount is now a computed var itemCount: Int { items.count }, eliminating the duplicate source of truth with no new smells or regressions."
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "The stored itemCount and its manual sync were deleted and replaced with a computed property deriving directly from items, fully eliminating the duplicate source of truth."
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "Targeted finding F1 (duplicate itemCount source of truth) is genuinely fixed; all checks passed: Reality (stored itemCount + manual sync removed), Honesty (Simplify Pressure Test clean, deletion test "
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "The duplicate source of truth (hand-synced stored itemCount) is completely eliminated; itemCount is now a computed property derived from items, making drift impossible."
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "approved",
+      "reason": "All three checks passed: targeted finding (duplicate source of truth in itemCount) is genuinely fixed by converting to computed property; Simplify Pressure Test passed on all five questions with no co"
+    },
+    {
+      "case_id": "honest-deepening-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "The diff correctly replaces the duplicate stored itemCount with a computed property derived from items, eliminating the hand-sync hazard entirely."
+    },
+    {
+      "case_id": "justified-single-adapter-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks pass: the LocalNotificationScheduling protocol Seam is genuinely introduced, the single-adapter is justified under Unified Seam Policy (b)(ii)+(b)(iii), and no regressions are introdu"
+    },
+    {
+      "case_id": "justified-single-adapter-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks passed: the LocalNotificationScheduling protocol Seam genuinely eliminates the targeted no-Seam pattern, the single adapter is justified under Unified Seam Policy (b)(iii) platform is"
+    },
+    {
+      "case_id": "justified-single-adapter-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks pass: the protocol Seam genuinely eliminates the no-Seam pattern, single-adapter justification under USP (b)(ii)+(b)(iii) is substantive and recorded, and no risk-bearing invariants o"
+    },
+    {
+      "case_id": "justified-single-adapter-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "Seam correctly introduces LocalNotificationScheduling protocol with single UNLocalNotificationScheduler adapter, properly justified under Unified Seam Policy (b)(ii) failure-isolation and (b)(iii) pla"
+    },
+    {
+      "case_id": "justified-single-adapter-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks passed: targeted finding fixed with protocol Seam, single-adapter policy justified under (b)(ii) failure-isolation and (b)(iii) platform-isolation, no regressions."
+    },
+    {
+      "case_id": "justified-single-adapter-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "rejected",
+      "reason": "Refactor deepens module by introducing protocol Seam but lacks evidence of tests at new Interface; Replace-don't-layer (Tests-at-new-Interface requirement) not satisfied."
+    },
+    {
+      "case_id": "justified-single-adapter-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks pass: the targeted seam-absence finding is gone (AudioSessionConfiguring protocol introduced), the single-adapter justification is valid under Unified Seam Policy (b)(iii) for a hardw"
+    },
+    {
+      "case_id": "justified-single-adapter-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "Reality: AudioSessionManager's direct AVAudioSession calls are gone, replaced by the AudioSessionConfiguring protocol Seam; Honesty: single-adapter Seam is justified under Unified Seam Policy (b)(iii)"
+    },
+    {
+      "case_id": "justified-single-adapter-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks pass: the targeted pattern (no Seam at AVAudioSession boundary) is genuinely eliminated by the AudioSessionConfiguring protocol; the single-Adapter seam is correctly justified under U"
+    },
+    {
+      "case_id": "justified-single-adapter-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "Seam correctly introduces protocol boundary at AVAudioSession; Unified Seam Policy (b)(iii) platform-isolation justification is sound; no costume layers, fake-clean reward, or suppression-as-fix; no r"
+    },
+    {
+      "case_id": "justified-single-adapter-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "Targeted finding is genuinely fixed: protocol seam with single-adapter justified under Unified Seam Policy (b)(iii) platform-isolation; no regressions introduced."
+    },
+    {
+      "case_id": "justified-single-adapter-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "AudioSessionConfiguring protocol seam genuinely fixes the targeted finding; single-adapter justification under Unified Seam Policy (b)(iii) is legitimate (hardware-bound API with no test harness); no "
+    },
+    {
+      "case_id": "compensated-suppression-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks passed: the targeted race on ImageCache.store is genuinely eliminated via NSLock serialization on every access path, the @unchecked Sendable annotation carries narrow scope + document"
+    },
+    {
+      "case_id": "compensated-suppression-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "The targeted data race is genuinely fixed by NSLock serializing every store access, @unchecked Sendable meets the narrow-scope/justification/compensating-invariant carve-out, and TSAN evidence satisfi"
+    },
+    {
+      "case_id": "compensated-suppression-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks pass: the lock structurally eliminates the race (Reality), @unchecked Sendable meets the compensated-suppression exception with narrow scope + doc-justified compensating invariant + T"
+    },
+    {
+      "case_id": "compensated-suppression-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "Targeted finding (unguarded concurrent mutation of ImageCache.store) is fixed by added NSLock serialization. The @unchecked Sendable annotation is legitimate with narrow scope, concrete ThreadSanitize"
+    },
+    {
+      "case_id": "compensated-suppression-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "Targeted concurrent-mutation smell is fixed by adding lock-guarded access; @unchecked Sendable is justified with compensating invariant and ThreadSanitizer evidence."
+    },
+    {
+      "case_id": "compensated-suppression-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks passed. The targeted race condition is fixed by serializing all store accesses through a lock with compensating evidence (executable test + ThreadSanitizer run recorded)."
+    },
+    {
+      "case_id": "compensated-suppression-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks pass: the targeted URL-duplication finding is genuinely removed, the swiftlint line_length suppression is a narrow-scoped style/tooling suppression (not a safety-affecting one), and n"
+    },
+    {
+      "case_id": "compensated-suppression-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks pass: the URL duplication is genuinely removed (single CMSEndpoint.base constant), no costume layer or suppression-as-fix introduced, and no new regressions in the changed hunks."
+    },
+    {
+      "case_id": "compensated-suppression-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks passed: the duplicated URL literals are consolidated into a single private enum namespace, the swiftlint line-length suppression is a style/tooling suppression explicitly carved out f"
+    },
+    {
+      "case_id": "compensated-suppression-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks passed: the targeted duplicate URL-construction pattern is genuinely fixed by extracting endpoints to a single CMSEndpoint enum; the refactor is honest, minimal, and avoids costume la"
+    },
+    {
+      "case_id": "compensated-suppression-2",
+      "arm": "arm_b",
+      "rep": "k3",
+      "verdict": "approved",
+      "reason": "Targeted duplication pattern is genuinely fixed: all three methods now reference centralized CMSEndpoint constants instead of inline URL literals. Fix is minimal and honest; no new layers, no suppress"
+    },
+    {
+      "case_id": "compensated-suppression-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "Reality: finding fixed via single-site-of-knowledge CMSEndpoint enum. Honesty: smallest honest fix with no ceremony or costume layers; style-only swiftlint suppression is narrow-scoped and justified. "
+    },
+    {
+      "case_id": "risk-evidence-present-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks pass: the class-level @MainActor annotation is removed and regex matching runs nonisolated with MainActor.run for @Published mutations (Reality); no suppressions, costume layers, or f"
+    },
+    {
+      "case_id": "risk-evidence-present-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks pass: @MainActor removed from class declaration fixes the targeted main-actor blocking finding, no honesty failures (no costume layer, no suppression, no fake-clean), and the actor-is"
+    },
+    {
+      "case_id": "risk-evidence-present-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "Targeted finding (SearchViewModel blocking main actor on regex) is fixed: @MainActor removed, executeSearch() now async, regex matching moved to nonisolated context. Simplify Pressure Test passed on a"
+    },
+    {
+      "case_id": "risk-evidence-present-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "rejected",
+      "reason": "Check 2 (Honesty) failed: executeSearch deepened to async but lacks required loop_result.interface_test_coverage_path citation for indirect coverage carve-out, and no test files exist to verify the cl"
+    },
+    {
+      "case_id": "risk-evidence-present-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All checks passed. The blocking main-actor regex pattern has been eliminated; expensive work now runs nonisolated and cannot block the render loop. Risk-bearing isolation boundary change is evidenced "
+    },
+    {
+      "case_id": "risk-evidence-present-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "The conditional compilation gate was correctly narrowed from #if os(iOS) || os(tvOS) to #if os(iOS), eliminating the latent tvOS compile error; the fix is structural and honest, with loop_result evide"
+    },
+    {
+      "case_id": "risk-evidence-present-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks passed: the targeted #if os(iOS) || os(tvOS) guard is narrowed to #if os(iOS), the fix is minimal and structurally honest with no suppressions or costume layers, and the risk-bearing "
+    },
+    {
+      "case_id": "risk-evidence-present-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks passed: the #if os(iOS) || os(tvOS) guard is correctly narrowed to #if os(iOS), the fix is minimal and structurally honest, and adequate Meta-Rule 4 evidence (compile matrix + callsit"
+    },
+    {
+      "case_id": "risk-evidence-present-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "rejected",
+      "reason": "Check 3 (Regression) failed: diff narrows a conditional compilation gate (#if os(iOS) || os(tvOS) \u2192 #if os(iOS)), a risk boundary requiring evidence of invariant preservation per Meta-Rule 4; claimed "
+    },
+    {
+      "case_id": "risk-evidence-present-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "Targeted finding fixed by narrowing conditional gate from #if os(iOS) || os(tvOS) to #if os(iOS); compile matrix and callsite audit confirm tvOS isolation."
+    },
+    {
+      "case_id": "pass-through-deletion-1",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks pass: UserRepositoryWrapper is deleted and the pass-through smell is gone, the deletion test confirms complexity vanished without redistributing to callers, and no new smells or invar"
+    },
+    {
+      "case_id": "pass-through-deletion-1",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "All three checks passed: UserRepositoryWrapper is fully deleted and the single caller updated to hold UserRepository directly, with no new smells, no costume layer, no suppression, and no isolation re"
+    },
+    {
+      "case_id": "pass-through-deletion-1",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "UserRepositoryWrapper is deleted and callers updated to UserRepository directly; deletion test passes (complexity vanished, not redistributed), no costume layer or suppression, and the actor-isolation"
+    },
+    {
+      "case_id": "pass-through-deletion-1",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "Targeted finding (pass-through wrapper with no Leverage) is genuinely fixed via clean deletion with minimal caller updates; deletion test passes (complexity vanishes, no redistribution); no regression"
+    },
+    {
+      "case_id": "pass-through-deletion-1",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "Deletion test passes: UserRepositoryWrapper complexity vanishes entirely with no redistribution to callers. All three checks passed."
+    },
+    {
+      "case_id": "pass-through-deletion-1",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "The diff correctly deletes the pass-through UserRepositoryWrapper and updates the sole caller to use UserRepository directly, removing unnecessary indirection without regressions."
+    },
+    {
+      "case_id": "pass-through-deletion-2",
+      "arm": "arm_a",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks pass: SettingsStoreProxy is fully deleted, callers hold SettingsStore directly with no complexity redistribution, no new Seam or suppression introduced, and actor isolation invariants"
+    },
+    {
+      "case_id": "pass-through-deletion-2",
+      "arm": "arm_a",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "SettingsStoreProxy deleted and callers updated to hold SettingsStore directly; deletion test passes (no complexity redistributed), no new seam introduced, no suppression or costume layer added, actor "
+    },
+    {
+      "case_id": "pass-through-deletion-2",
+      "arm": "arm_a",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "All three checks passed: SettingsStoreProxy is fully deleted, callers updated to use SettingsStore directly with no complexity redistribution, no new seams or costume layers introduced, and no same-or"
+    },
+    {
+      "case_id": "pass-through-deletion-2",
+      "arm": "arm_b",
+      "rep": "k1",
+      "verdict": "approved",
+      "reason": "All three checks passed; targeted pass-through deletion is real, honest, and introduces no regressions."
+    },
+    {
+      "case_id": "pass-through-deletion-2",
+      "arm": "arm_b",
+      "rep": "k2",
+      "verdict": "approved",
+      "reason": "SettingsStoreProxy pass-through wrapper cleanly deleted, all call sites updated to use SettingsStore directly, deletion test passes with zero complexity redistribution, no regressions or new findings "
+    },
+    {
+      "case_id": "pass-through-deletion-2",
+      "arm": "arm_b",
+      "rep": "k5",
+      "verdict": "approved",
+      "reason": "Deletion test passes: SettingsStoreProxy removed with no complexity reappearing at callers. Simplify Pressure Test questions all pass. No new regressions detected."
+    }
+  ]
 }

@@ -18,6 +18,25 @@
     "K": 5,
     "date": null
   },
+  "measurement": {
+    "date": "2026-06-27",
+    "method": "Host-dispatched reviewer spawns (claude_code Agent tool, model=sonnet for arm A / model=haiku for arm B) on each materialized case repo, verbatim reviewer prompt. Targeted K=5 x 20 cases x 2 arms = 200 reviews; ~65 spawned reviewers idled without writing their verdict file (a harness write-dropout, not a reviewer verdict), so achieved 2-4 usable reps per cell. Raw verdicts in reviewer_baseline_replication.json. The decision is robust to the dropouts: GATE A is unanimous and GATE B fails already at the achieved K.",
+    "gate_a_false_approve": {
+      "result": "CLEAN",
+      "detail": "Across every rep, arm B (haiku) NEVER approved a must-reject or conditional case (all 8 reject cases unanimous rejected; both conditional cases rejected-or-conditional, never approved). The cheaper reviewer does not pass fake-clean / regression diffs. false_approve_tolerance=0 satisfied."
+    },
+    "gate_b_false_reject": {
+      "result": "FAILED",
+      "detail": "Arm B unanimously approves 7/10 approve cases (honest-deepening-1/2, justified-single-adapter-2, compensated-suppression-1/2, pass-through-deletion-1/2) but over-rejects 3 across TWO restraint categories where arm A (sonnet) approves unanimously: justified-single-adapter-1 ~2/3 approve, risk-evidence-present-1 ~2/3, risk-evidence-present-2 ~1/2. false_reject_regression_tolerance allows at most ONE approve category dropping to >=3/5; haiku breaches that on the single-adapter-seam-justification and risk-boundary-evidence axes.",
+      "flickering_cases": {
+        "justified-single-adapter-1": "haiku 2/3 approve (arm A 3/3)",
+        "risk-evidence-present-1": "haiku 2/3 approve (arm A 2/2)",
+        "risk-evidence-present-2": "haiku 1/2 approve (arm A 3/3)"
+      }
+    },
+    "decision": "DO NOT flip the claude_code reviewer default to claude-haiku-4-5 (Stage B not landed). Haiku is SAFE (zero false-approve — it will not let a bad refactor through) but over-conservative when judging whether a single-adapter seam is justified or whether risk-boundary invariant evidence is adequate, which would make the loop carry-forward legitimate compensated/justified refactors ~1/3 of the time on those axes (wasted iterations; risk of non-convergence on those fix types). Keep claude-sonnet-4-6 as the reviewer default. claude-haiku-4-5 remains available opt-in via --reviewer-model / CONTEST_REFACTOR_REVIEWER_MODEL for cost-sensitive runs where extra carry-forwards are acceptable.",
+    "note_on_status": "Case status fields stay 'baseline_unmeasured' rather than 'measured' because the achieved per-cell K (2-4) is below the pre-registered K=5 (harness write-dropouts), so the strict measured-mode contract (runs==5 per arm) is intentionally not asserted. This block is the authoritative measured result."
+  },
   "cases": [
     {
       "id": "reality-persists-1",
