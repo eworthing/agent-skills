@@ -291,3 +291,6 @@ on single-adapter-seam-justification and risk-boundary-evidence judgments — it
 carry-forward legitimate refactors ~1/3 of the time on those axes. The reviewer default stays
 `claude-sonnet-4-6`; `claude-haiku-4-5` remains opt-in via `--reviewer-model`. This is the harness
 working as intended: it caught a real efficacy regression before it shipped.
+
+Full write-up — method, results, lessons learned, and how to re-run:
+[reviewer-model-experiment.md](reviewer-model-experiment.md).
