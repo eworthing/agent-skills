@@ -294,3 +294,62 @@ working as intended: it caught a real efficacy regression before it shipped.
 
 Full write-up — method, results, lessons learned, and how to re-run:
 [reviewer-model-experiment.md](reviewer-model-experiment.md).
+
+## Layer 4 — loop-replay regression (`loop-fixtures/`, `loop_replay_baseline.json`)
+
+Layers 1–3 each test a *slice*: artifact rules (no loop), refactoring judgment (no real loop —
+the scenario hands the model a pre-written diff), reviewer judgment (a diff, not a loop). None
+runs an **end-to-end loop against a codebase**. Layer 4 fills that: materialize a seeded bad
+repo, run **one** real loop, and grade whether the loop *found and fixed the planted debt* — the
+regression that schema↔behavior drift would break and the other layers can't see. This is the
+genuinely-open half of the SKILL-TDD-FIXTURES gap (the judgment baseline already existed in
+Layers 2/3); see `analysis/contest-refactor/GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md` (W2).
+
+### Fixture shape — `loop-fixtures/<id>/`
+
+- `codebase/` — the seeded bad source tree (the loop *creates* the diff, so there is no
+  base/+head/ split as in Layer 3).
+- `expected.toml` — source of truth for the fixture: `primary_file`, `smell`, `targeted_dimension`
+  (canon scorecard dim), `min_severity` (canon anchor), `expected_targeted_finding_status`, `lens`.
+
+`loop_replay_baseline.json` registers each fixture and, once run, carries `baseline_observed`.
+
+### Committed orchestration (the loop itself is host-dispatched)
+
+- `scripts/loop_replay_materialize.py <id> [dest]` — copies `codebase/` into a fresh committed
+  git repo and prints the dispatch + grade commands. The host then seeds Step-0 Discovery and runs
+  one loop with the **verbatim `references/trust-model.md` loop-subagent template** (same manual /
+  host-dispatched posture as Layers 2/3 — no committed auto-grader runs a model).
+- `scripts/loop_replay_grade.py <id> <artifact-dir>` — the committed grader, the part that makes
+  this measure Critic *behavior* not artifact mechanics. Required invariants:
+  - **structural:** `validate-artifact.py --mode strict` exits 0; `findings[]` non-empty;
+    `loop_result.targeted_finding_status` is a valid enum.
+  - **semantic:** a finding's `evidence[]` cites `primary_file` (debt found); that finding's
+    `severity >= min_severity`; `loop_result.what_changed` references `primary_file` (the fix
+    touched the planted file); `loop_result.targeted_finding_status == expected` (debt fixed).
+  - **advisory** (never gates): `scorecard[targeted_dimension]` movement vs the recorded baseline.
+- `scripts/_loop_replay_selftest.py` — mechanical guard (no model): every `loop-fixtures/<id>/`
+  dir is registered (no silent exclusion), required members present, `expected.toml` enums are
+  canon-valid, and a `measured` fixture carries a non-null `baseline_observed`.
+
+### Measured outcome (2026-06-28 — built RED→GREEN)
+
+The selftest was written first and watched fail (no fixture/manifest = RED), then the fixture +
+manifest + grader brought it to GREEN. The one fixture (`duplicated-subtotal-1`, a triplicated
+subtotal/tax computation) was replayed end-to-end: the loop caught it at Priority 1 (F-001,
+*Serious deduction*, evidence on `OrderCalculator.swift`), refactored to single owners,
+reviewer-approved, committed a strict-valid artifact — `loop_replay_grade.py` exits 0 on all
+required invariants. **Harness-surfaced schema fact:** `priority_1_finding_id` and
+`loop_result.targeted_finding_id` are both **null once the priority-1 finding is RESOLVED in the
+same loop**, so a grader must identify the planted finding by *evidence-cites-primary_file*, not by
+that id — exactly the kind of schema↔behavior reality this layer exists to pin down.
+
+```bash
+python3 contest-refactor/scripts/_loop_replay_selftest.py            # mechanical guard
+python3 contest-refactor/scripts/loop_replay_materialize.py duplicated-subtotal-1 /tmp/lr
+#   ... host runs one loop against /tmp/lr per trust-model.md ...
+python3 contest-refactor/scripts/loop_replay_grade.py duplicated-subtotal-1 /tmp/lr
+```
+
+Scope: one fixture, the common Critic→Architect→Execution path (not HALT/retirement tails) — a
+first smoke harness. Extend with more fixtures (and the HALT/retirement tail) as needed.

@@ -1,0 +1,24 @@
+# Loop-replay fixture spec (Layer 4). The host materializes codebase/ into a throwaway
+# git repo, runs ONE contest-refactor loop (verbatim trust-model.md loop template), then
+# grades the emitted CURRENT_REVIEW.json against the structural + semantic invariants below.
+# This file is the source of truth for the fixture; loop_replay_baseline.json registers it.
+
+id = "duplicated-subtotal-1"
+
+# The planted debt and where it lives. The Priority-1 finding's evidence[] must cite this path.
+primary_file = "Sources/OrderCalculator.swift"
+smell = "subtotal accumulation loop + tax multiplication copy-pasted verbatim across subtotal(), totalWithTax(), receiptLines() — a single pricing-rule change must be made in three places"
+
+# Semantic invariants (the anti-eval-theater checks the grader enforces).
+targeted_dimension = "simplicity"            # canon scorecard dim; expected to be the docked/targeted axis
+min_severity = "Noticeable weakness"         # the Priority-1 finding must be at least this severe
+expected_targeted_finding_status = "resolved" # after Step 3, the planted debt must actually be fixed
+
+# Discovery context the loop reads (mirrors a real Step-0 seed; no test command configured).
+lens = "lens-apple.md"
+test_command = ""
+
+# Notes for the host running the replay.
+[notes]
+common_path = "Critic -> Architect -> Execution; not HALT/retirement tails"
+expected_refactor = "extract one subtotal helper (and one tax helper) and call it from all three methods"

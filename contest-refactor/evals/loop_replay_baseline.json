@@ -1,0 +1,42 @@
+{
+  "layer": 4,
+  "name": "loop-replay regression harness",
+  "description": "End-to-end loop replay against a seeded bad codebase. Materialize codebase/ into a throwaway git repo, run ONE contest-refactor loop (verbatim references/trust-model.md loop-subagent template), then grade the emitted CURRENT_REVIEW.json against structural + semantic invariants via scripts/loop_replay_grade.py. Catches schema<->behavior drift that the static artifact fixtures (Layer 1) and the no-real-loop judgment scenarios (Layer 2) cannot. Measurement is manual / host-dispatched (no committed auto-grader runs a model), matching the Layer 2/3 posture.",
+  "prereg": {
+    "loop_prompt_source": "references/trust-model.md § Loop Isolation loop-subagent template (verbatim)",
+    "grader": "scripts/loop_replay_grade.py",
+    "materializer": "scripts/loop_replay_materialize.py",
+    "scope": "one fixture, the common Critic->Architect->Execution path; first smoke harness with one semantic assertion (not HALT/retirement tails)"
+  },
+  "invariants": {
+    "structural": [
+      "validate-artifact.py --mode strict exits 0 on the emitted artifact tree",
+      "priority_1_finding_id is non-null",
+      "loop_result.targeted_finding_status is a valid enum value"
+    ],
+    "semantic": [
+      "the Priority-1 finding's evidence[] cites expected.primary_file",
+      "the Priority-1 finding's severity is >= expected.min_severity",
+      "loop_result.targeted_finding_status == expected.expected_targeted_finding_status (the planted debt was actually fixed)"
+    ],
+    "advisory": [
+      "scorecard[targeted_dimension] rises vs the fixture's recorded pre-loop baseline (once measured)"
+    ]
+  },
+  "fixtures": [
+    {
+      "id": "duplicated-subtotal-1",
+      "status": "measured",
+      "baseline_observed": {
+        "observed_at": "2026-06-28",
+        "schema_version": 3,
+        "run_commit": "17c1bfe",
+        "planted_finding": { "id": "F1", "stable_id": "F-001", "severity": "Serious deduction" },
+        "targeted_finding_status": "resolved",
+        "scorecard_simplicity_pre_loop": 6,
+        "grade": "all required invariants hold (loop_replay_grade.py exit 0)",
+        "note": "This harness surfaced a real schema fact during bring-up: priority_1_finding_id and loop_result.targeted_finding_id are both null once the priority-1 finding is RESOLVED in the same loop, so a grader must identify the planted finding by evidence-cites-primary_file, not by that id."
+      }
+    }
+  ]
+}
