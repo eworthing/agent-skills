@@ -128,6 +128,57 @@ validators, canon, schema, and artifact fixtures are all unchanged.
   poll-then-nudge sweep. Consider committing the materializer (kept in scratchpad
   this round) if the harness is run regularly.
 
+## Sibling result: is Opus a better Critic than the Sonnet default? (no measured benefit)
+
+The reviewer is the *cheap* end of the question; the Critic is the *expensive* end —
+should the loop/Critic default be **upgraded** to Opus? Tested 2026-06-27 with the
+low-token method below (3 spawns, ~15k tokens — vs the ~5M the reviewer run cost).
+
+- **Method.** A condensed-rubric "micro-judgment": instead of each agent re-reading
+  ~600 lines of `method.md` + `architecture-rubric.md` + lens, the key cross-module
+  tests + verdict contract were inlined (~250 tokens). Ran **Sonnet only** on the **3
+  hardest** cross-module flags (`principal-consistency-boundary`, `-abstraction-seam`,
+  `-process-owner`), cheap-arm-first with an early stop.
+- **Result.** Sonnet caught all 3 **decisively** — `rejected`, `blocks_95: true`,
+  target dimension 4.5–6.5, defect named (`missing-process-owner` / `fake-clean
+  reward`). This corroborates `principal_baseline`'s **5/5** default-arm recall.
+  Because the default tier already saturates recall on the hardest tested defects,
+  **Opus has no recall headroom — there is nothing for it to catch that Sonnet
+  misses.** Early-stopped; no Opus run needed.
+- **Decision.** Keep the Sonnet Critic default. Opus/Fable stay opt-in, and
+  `provider-adapters.md § When to upgrade` was rewritten from a vague ">100K LOC"
+  benefit-claim into an **evidence-based precaution**: no measured recall benefit on
+  the tested corpus, so don't upgrade reflexively (it burns tokens for an unmeasured
+  gain) — upgrade only for codebases beyond what the corpus exercises or when a run
+  visibly stalls.
+- **Scope / honesty.** This measures **recall** (catching defects), not restraint
+  precision or fine scoring calibration, and the corpus is the existing principal
+  cases — Opus *might* help on defects harder than any tested, but if Sonnet doesn't
+  miss them, Opus isn't needed. K=1 per case here, but each was decisive and
+  `principal_baseline` already showed K=5 5/5 for the default arm.
+
+## The low-token tier-test method (reusable)
+
+The reviewer run cost ~5M tokens (200 spawns × ~25k each, because every agent re-read
+the full reference set). For *tier-discrimination* questions ("is model X measurably
+better than model Y at job Z?") that is wildly overpriced. Three levers cut it >100×:
+
+1. **Condensed inline rubric** — embed a ~250-token distilled judgment surface in the
+   prompt instead of having each agent read the full `method.md` + `architecture-rubric.md`
+   + lens. Per-spawn drops ~25k → ~4k. Valid for *discrimination* (does the tier spot
+   the defect?); **not** a substitute for the full-fidelity materialized harness when
+   you're measuring the skill's actual output *shape*.
+2. **Frontier-only cases** — test only the discriminators (the hardest cases, where a
+   weaker tier is most likely to fail), not the whole corpus. 3 cases, not 20.
+3. **Cheap-arm-first + early-stop** — run the cheaper tier first. If it already
+   saturates (catches every defect / matches the expensive tier), the expensive tier
+   has no headroom — **stop, never spawn it.** Only escalate on a miss.
+
+Plus: **reuse existing measured data** (don't re-run an arm already on record), and
+prefer **single-shot judgment** prompts over full multi-loop runs when the question is
+about one decision, not end-to-end behavior. The Critic-tier test above used all of
+these and resolved in 3 spawns.
+
 ## How to re-run / reuse
 
 - **Cases + manifest:** `evals/reviewer-cases/<id>/` (`case.toml`, `finding.md`,

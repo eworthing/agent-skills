@@ -160,7 +160,9 @@ Recorded in `CURRENT_REVIEW.json` as `loop_model_source` and `reviewer_model_sou
 
 ## When to upgrade the model
 
-The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases. On codebases >100K LOC or with deep architectural complexity (heavy concurrency, large state machines, cross-module ownership puzzles), Step 1 critic may need a stronger model. Upgrade via:
+The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
+
+**Prefer the default; upgrading is a precaution, not a measured win (evidence, 2026-06-27).** The default-tier (Sonnet) Critic caught **5/5** cross-module / forces-dependent defects in the `principal_baseline` benchmark, and a focused re-check found Sonnet catches the **3 hardest** principal flags (consistency-boundary, abstraction-seam, process-owner) decisively. So upgrading the Critic to Opus shows **no measured recall benefit** on the tested corpus — there is nothing in it Sonnet misses for Opus to catch. Treat the upgrade as an *unmeasured precaution* for codebases beyond what that corpus exercises (very large >100K LOC, dense concurrency, large state machines), or when a run visibly stalls — not as a default reflex on "this feels complex." Reflexively upgrading to Opus burns tokens for a benefit that is, so far, unmeasured. (Full method + result: [evals/reviewer-model-experiment.md § Critic tier](../evals/reviewer-model-experiment.md).) If you do upgrade:
 
 - Claude Code: `--loop-model claude-opus-4-8`
 - Codex: `--loop-model gpt-5.5` (full flagship, not mini)
@@ -168,7 +170,7 @@ The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, d
 
 For the hardest critic runs on Claude Code — very large or architecturally dense codebases where even Opus leaves residual uncertainty — there is one tier above Opus: **Claude Fable 5** (`--loop-model claude-fable-5`). It is the most capable option and the most expensive; reserve it for runs where an Opus critic has visibly struggled, not as a default. (No Fable-equivalent top tier is wired for Codex/OpenCode; their flagship upgrade targets above are the ceiling.)
 
-The reviewer subagent rarely needs upgrading — verifying a small diff against three checks is well within the small-tier models. Model IDs are mutable; `scripts/_model_catalog_selftest.py` guards this list against drift (verified 2026-06-24).
+The reviewer subagent **does not** go cheaper than its default and rarely needs upgrading: a 2026-06-27 measurement found dropping the Claude Code reviewer to `claude-haiku-4-5` regresses (haiku over-rejects legitimate single-adapter-seam / risk-evidence refactors — see [reviewer-model-experiment.md](../evals/reviewer-model-experiment.md)), while Opus is unnecessary for the bounded three-check verification. Sonnet is the measured floor. Model IDs are mutable; `scripts/_model_catalog_selftest.py` guards this list against drift (verified 2026-06-24).
 
 ## Skill-directory resolution
 
