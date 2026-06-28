@@ -1,0 +1,14 @@
+id = "risk-sendable-1"
+kind = "risk_boundary"
+primary_file = "Sources/Counter.swift"
+smell = "isolation-boundary change needing invariant evidence"
+targeted_dimension = "concurrency"
+min_severity = "Noticeable weakness"
+expected_targeted_finding_status = "resolved"
+lens = "lens-apple.md"
+change_paths = ["Sources/Counter.swift"]
+avoid_paths = []
+# Dropping @MainActor crosses an isolation/Sendable boundary; the executor must record
+# Meta-Rule-4 preservation evidence in loop_result, or carry the finding forward.
+risk_boundary_kind = "isolation"
+required_evidence_kind = "recorded_reason"

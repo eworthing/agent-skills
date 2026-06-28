@@ -1,0 +1,29 @@
+{
+  "registry_schema_version": 2,
+  "next_serial": 2,
+  "entries": [
+    {
+      "stable_id": "F-001",
+      "title": "Collapse the triplicated subtotal/tax computation into single owners",
+      "category_hint": "duplication",
+      "primary_file": "Sources/OrderCalculator.swift",
+      "primary_evidence_lines": [
+        3,
+        3
+      ],
+      "test_failed": "duplicated authority / weak domain model (not an abstraction-removal test)",
+      "severity": "Serious deduction",
+      "first_seen_loop": 1,
+      "first_seen_sha": null,
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": null
+        }
+      ]
+    }
+  ]
+}

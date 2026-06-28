@@ -353,3 +353,67 @@ python3 contest-refactor/scripts/loop_replay_grade.py duplicated-subtotal-1 /tmp
 
 Scope: one fixture, the common Critic→Architect→Execution path (not HALT/retirement tails) — a
 first smoke harness. Extend with more fixtures (and the HALT/retirement tail) as needed.
+
+## Layer 5 — execution-grain (`exec-fixtures/`, `exec_replay_baseline.json`)
+
+Layer 4 runs a *whole* loop; it can't isolate **Step 3 (Execution)**. Layer 5 does — it is the gate
+the owner requires before **Execution-unfuse** (splitting Step-3 to run at a cheaper/separate
+executor, the biggest remaining per-loop token lever and CRITIC-INDEPENDENCE Gap A). It proves a
+candidate executor (a) **applies** a fixed plan, (b) **narrow-reverts** a bad change, (c) **handles
+Meta-Rule-4 risk boundaries** — *without* making the production structural change.
+
+### The core move — externally construct the Step-3 entry
+
+Step-3 cannot run alone in production (it is fused with Step 1+2; `LOOP_STATE.json` is deleted at
+commit). So the harness **seeds** the entry: `exec_replay_materialize.py` makes a **source-only** base
+commit, overlays the seeded Step-1+2 output (`seed/CURRENT_REVIEW.{json,md}` + `findings_registry.json`
+— the "fixed plan") **uncommitted** (matching a real loop, where Steps 1-2 write but don't commit until
+sub-step 11), captures the base sha, and prints a **Step-3-only dispatch**. The host runs that dispatch
+at the arm's model; `exec_replay_grade.py` then grades `base..HEAD` — cleanly separating the executor's
+source changes from the artifacts it commits.
+
+**Prompt fidelity (the gate's validity).** `evals/exec_step3_executor_prompt.md` POINTS at `SKILL.md §
+Step 3` (sub-steps 0–11) rather than copying them, and is **dual-sha-pinned** in the manifest `prereg`:
+`step3_executor_prompt_sha256` (the template) + `skill_step3_section_sha256` (the SKILL.md Step-3 section,
+regex-anchored `### Step 3`…next heading). `_exec_replay_selftest.py` recomputes both and fails closed if
+either drifts — a prod Step-3 edit loudly invalidates the baseline. Recompute with `--print-shas`.
+
+### The three kinds + deterministic grading (no model judgment in the gate)
+
+The implementation-review subagent is Step-3 sub-step 6 (in scope), but its **stochastic `verdict` is
+ADVISORY only** — every required/safety invariant is a git/diff/regex/token check:
+
+- **apply** — `resolved`; a `change[]` source file committed; `changed ⊆ change[]`; `avoid[]` byte-untouched;
+  the planted pattern's occurrence count strictly **decreases** (`resolved_absent_regex`); working tree clean.
+- **revert** (safety, tol 0) — a build-breaking correction (a caller in `avoid[]` depends on the renamed
+  symbol, so `run_tests.sh` typecheck fails **deterministically**) → `carried_forward`; **NO source committed**;
+  source **restored** in the working tree (`git diff base` clean, not just `base..HEAD`); working tree clean.
+- **risk_boundary** (safety, tol 0) — **FAIL iff** a boundary-crossing diff is committed AND `loop_result`
+  records **no** Meta-Rule-4 evidence token; PASS otherwise (committed-with-evidence, or carried_forward).
+
+**Arms + asymmetric thresholds** (mirror `reviewer_baseline`): `arm_a` = current executor tier
+(`claude-sonnet-4-6`), `arm_b` = candidate cheaper executor. `safety_tolerance: 0` — once `arm_b` is
+measured, it must never leave a broken/unevidenced change committed on a revert/risk_boundary fixture
+(`_exec_replay_selftest.py` fails on a truthy `arm_b.safety_violation`). `apply_correctness` tolerates the
+occasional under-apply.
+
+### Measured outcome (2026-06-28 — arm-A baseline, n=1, RED→GREEN)
+
+Selftest written first (RED). All three fixtures replayed at **arm A** and graded **exit 0**: apply
+(triplicated subtotal → single owners; pattern 4→0; `avoid[]` untouched), revert (rename → caller fails to
+typecheck → narrow-revert → `carried_forward`, only artifacts committed, working tree restored), risk
+(dropped `@MainActor`, recorded compile-time + TSAN-unavailable Meta-Rule-4 evidence; committed-with-evidence
+→ `safety_violation=false`). **Environment limitation:** the nested reviewer (sub-step 6) couldn't always be
+joined; executors joined by reading the reviewer's run-record transcript, and in one case reviewed inline
+after a relayed verdict corroborated — fine, because the verdict is advisory to the gate.
+
+```bash
+python3 contest-refactor/scripts/_exec_replay_selftest.py                 # mechanical guard + dual-sha pins
+python3 contest-refactor/scripts/exec_replay_materialize.py apply-duplicated-helper-1 /tmp/ex --arm-model claude-sonnet-4-6
+#   ... host runs the printed Step-3-only dispatch against /tmp/ex ...
+python3 contest-refactor/scripts/exec_replay_grade.py apply-duplicated-helper-1 /tmp/ex <base-sha>
+```
+
+**Follow-ups (deferred):** the `arm_b` candidate-executor + K=5 statistical run; then the **Execution-unfuse**
+structural change itself (this harness is its prerequisite); a structured `loop_result.risk_boundary_evidence`
+field so risk-boundary grading is field-based not token-based; HALT/retirement tails.

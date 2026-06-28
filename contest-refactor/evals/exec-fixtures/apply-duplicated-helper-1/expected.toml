@@ -1,0 +1,13 @@
+id = "apply-duplicated-helper-1"
+kind = "apply"
+primary_file = "Sources/OrderCalculator.swift"
+smell = "triplicated subtotal/tax computation"
+targeted_dimension = "simplicity"
+min_severity = "Serious deduction"
+expected_targeted_finding_status = "resolved"
+lens = "lens-apple.md"
+change_paths = ["Sources/OrderCalculator.swift"]
+avoid_paths = ["Sources/ReceiptFormatter.swift"]
+# This loop header appears 4x in the base file; the grader requires its occurrence
+# COUNT to strictly DECREASE after the fix (loops collapsed into reduce).
+resolved_absent_regex = "for item in items"

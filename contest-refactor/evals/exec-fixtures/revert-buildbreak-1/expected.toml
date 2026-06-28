@@ -1,0 +1,14 @@
+id = "revert-buildbreak-1"
+kind = "revert"
+primary_file = "Sources/Pricing.swift"
+smell = "contrived: rename that a regression-guard test forbids"
+targeted_dimension = "simplicity"
+min_severity = "Noticeable weakness"
+expected_targeted_finding_status = "carried_forward"
+lens = "lens-apple.md"
+change_paths = ["Sources/Pricing.swift"]
+avoid_paths = ["Sources/PricingClient.swift"]
+# Renaming computeTotal in Pricing.swift (without touching the caller, which is in
+# avoid[]) breaks `swiftc -typecheck Sources/*.swift` -> deterministic build-break ->
+# Step-3 sub-step 3 revert -> carried_forward.
+test_command = "bash run_tests.sh"

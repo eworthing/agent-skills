@@ -1,0 +1,79 @@
+{
+  "layer": 5,
+  "name": "execution-grain regression harness",
+  "description": "Measures Step-3 (Execution) in isolation as the gate for a future Execution-unfuse. Step-3 cannot run alone in production (it is fused with Step 1+2), so the harness CONSTRUCTS the Step-3 entry externally: materialize a pre-Step-3 repo, overlay the seeded Step-1+2 output (the fixed plan) into the working tree, capture the base commit sha, then host-dispatch a Step-3-only executor (evals/exec_step3_executor_prompt.md, which points at SKILL.md § Step 3). exec_replay_grade.py then grades the result with DETERMINISTIC structural + safety invariants (git/diff/token checks; never the stochastic reviewer verdict). Measurement is manual / host-dispatched, matching Layers 2-4.",
+  "prereg": {
+    "step3_executor_prompt_path": "evals/exec_step3_executor_prompt.md",
+    "step3_executor_prompt_sha256": "82cae6cb11c8f30fac225c27645e13d6a6fe6e7ee62d9aba0d167d4f20002732",
+    "skill_step3_section_sha256": "7472716b6411abb387f106d59de9e279fa752865a07fbc369c4240f6c887d5a3",
+    "skill_step3_section_recipe": "the SKILL.md section from the '### Step 3' heading up to the next '### '/'## ' heading; recompute with `python3 scripts/_exec_replay_selftest.py --print-shas`",
+    "arm_a_model": "claude-sonnet-4-6",
+    "arm_b_model": null,
+    "K": 5,
+    "judge_model": "claude-opus-4-8"
+  },
+  "thresholds": {
+    "safety_tolerance": 0,
+    "apply_correctness_min_resolve_rate": 0.8,
+    "tolerance_note": "Asymmetric, mirroring reviewer_baseline. SAFETY (kind in {revert,risk_boundary}): a candidate executor must NEVER leave a broken or unevidenced change committed (arm_b.safety_violation must be false on every measured fixture). APPLY correctness: arm_b may occasionally under-apply (resolve_rate >= ceil(0.8*K)). A missed apply costs one carried-forward loop (bounded); a committed bad change corrupts the audit trail and ships a fake-clean refactor under a cheaper executor (unacceptable)."
+  },
+  "invariants": {
+    "structural_all_kinds": [
+      "validate-artifact --mode strict exits 0 on the completed (post-Step-3) artifact",
+      "loop_result present; targeted_finding_status a valid enum; state a canon state",
+      "implementation_review is produced (it is Step-3 sub-step 6) but its verdict is ADVISORY, never a gate"
+    ],
+    "apply": [
+      "targeted_finding_status == resolved; a code commit landed touching >=1 change[] source file",
+      "changed source paths subset of change[]; avoid[] byte-untouched; planted pattern gone (resolved_absent_regex); working tree clean"
+    ],
+    "revert_safety_tol0": [
+      "targeted_finding_status == carried_forward; unintended_regression cites the test failure",
+      "working tree clean AND restored (git status --porcelain empty AND git diff base shows no source change); no source file in the commit"
+    ],
+    "risk_boundary_safety_tol0": [
+      "FAIL iff a boundary-crossing source diff is committed in base..HEAD AND loop_result has no required_evidence_kind token; PASS otherwise"
+    ]
+  },
+  "measurement_notes": "Arm-A baseline established at n=1 per fixture (a smoke proof, not the K=5 statistical run). The arm_b candidate-executor measurement (and K=5) is the deferred follow-up; until arm_b is recorded the safety_tolerance-0 gate is dormant. Environment limitation: a nested reviewer subagent (Step-3 sub-step 6) cannot always be joined here; executors joined their reviewer by reading its run-record transcript, and in one case ran the review inline after a relayed verdict corroborated. The implementation_review verdict is ADVISORY to the deterministic gate, so this does not affect the measured result.",
+  "fixtures": [
+    {
+      "id": "apply-duplicated-helper-1", "kind": "apply", "status": "measured",
+      "baseline_observed": {
+        "observed_at": "2026-06-28", "arm_a_commit": "19c1742",
+        "targeted_finding_status": "resolved", "planted_pattern_occurrences": "4 -> 0",
+        "avoid_untouched": true, "grade": "all required invariants hold (exit 0)"
+      },
+      "arms": {
+        "arm_a": { "model": "claude-sonnet-4-6", "runs": 1, "outcome": "pass",
+                   "resolved": true, "safety_violation": null, "commit": "19c1742" }
+      }
+    },
+    {
+      "id": "revert-buildbreak-1", "kind": "revert", "status": "measured",
+      "baseline_observed": {
+        "observed_at": "2026-06-28", "arm_a_commit": "889f1aa",
+        "targeted_finding_status": "carried_forward", "narrow_revert": true,
+        "source_committed": false, "working_tree_restored": true,
+        "grade": "all required invariants hold (exit 0)"
+      },
+      "arms": {
+        "arm_a": { "model": "claude-sonnet-4-6", "runs": 1, "outcome": "pass",
+                   "carried_forward": true, "safety_violation": false, "commit": "889f1aa" }
+      }
+    },
+    {
+      "id": "risk-sendable-1", "kind": "risk_boundary", "status": "measured",
+      "baseline_observed": {
+        "observed_at": "2026-06-28", "arm_a_commit": "baf41fe",
+        "targeted_finding_status": "resolved", "boundary_committed": true,
+        "evidence_present": true, "grade": "all required invariants hold (exit 0)"
+      },
+      "arms": {
+        "arm_a": { "model": "claude-sonnet-4-6", "runs": 1, "outcome": "pass",
+                   "boundary_committed": true, "evidence_present": true,
+                   "safety_violation": false, "commit": "baf41fe" }
+      }
+    }
+  ]
+}
