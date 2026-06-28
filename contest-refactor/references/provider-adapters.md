@@ -147,6 +147,14 @@ The HALT_SUCCESS challenger ([references/halt-verifier.md](halt-verifier.md)) is
 
 **Why same-tier (not a bigger same-family model) — measured 2026-06-27.** Independence here comes from *who spawns it* (main, not the Critic) and *fresh context*, not from a different Claude. A disagreement probe found Opus and Sonnet agree **9/10** on the hardest cross-module defects (same training family → correlated blind spots), and on the one differing case Opus was *more lenient* — so upgrading the challenger to a bigger same-family model buys little independence and isn't the right lever. Genuine challenger diversity would need a **different family** (a Codex/Gemini challenger breaking a Claude Critic's claim) — untested, structural, recorded as a future direction in [evals/reviewer-model-experiment.md](../evals/reviewer-model-experiment.md). Until then, same-tier-different-spawner is the deliberate, evidence-checked default.
 
+## Helper-spawn profile (read-only analysis sidecars)
+
+The loop subagent MAY spawn ≤2–3 read-only helper sub-agents for bounded analysis (interpret an `audit_*` output, grep public surface, summarize churn). Unlike the reviewer and challenger, a helper emits **no verdict** — it returns candidate evidence the loop subagent re-derives and synthesizes, and the Critic/reviewer do the real judgment — so nothing the loop commits is gated on a helper. That makes the helper the one role where the **cheapest** model is the right default.
+
+- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.4-mini`; opencode `deepseek-v4-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
+- **Evidence (2026-06-27):** on bounded read-only analysis, `claude-haiku-4-5` matched `claude-sonnet-4-6` exactly — same real concerns surfaced, same look-alikes dismissed, zero misleading output (3/3 tasks). See [evals/reviewer-model-experiment.md § Helpers](../evals/reviewer-model-experiment.md). This is the inverse of the reviewer result: haiku's weakness is open-ended *judgment* (where it over-rejects), and a helper makes no judgment call.
+- **Not recorded** in `CURRENT_REVIEW.json` — helpers are ephemeral and off the audit/gate path, so there is no `helper_model` field or gate (deliberate low scope; nothing consumes it).
+
 ## Model overrides
 
 Two override paths, applied in this precedence (higher wins):

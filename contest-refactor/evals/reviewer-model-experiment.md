@@ -12,10 +12,13 @@ this file is the narrative + lessons.
 | **Reviewer → cheaper** (sonnet→haiku)? | **No** — keep sonnet | haiku over-rejects legitimate single-adapter-seam / risk-evidence refactors (GATE B fail); never false-approves (GATE A clean) | ~5M tok (200 spawns) |
 | **Critic → upgrade** (sonnet→opus)? | **No measured benefit** — keep sonnet | sonnet catches the 3 hardest cross-module flags decisively + principal_baseline 5/5; opus has no recall headroom | ~15k tok (3 spawns) |
 | **Different-model challenger** (opus vs same-tier)? | **No** — keep same-tier | sonnet/opus agree 9/10 on cross-module defects (same-family, correlated blind spots); the lone diff had opus *more lenient* | ~80k tok (20 spawns) |
+| **Helpers → cheaper** (sonnet→haiku)? | **Yes — SHIPPED** | haiku matched sonnet 3/3 on bounded analysis (same concerns found, look-alikes dismissed, zero misleading); helpers emit no verdict | ~30k tok (6 spawns) |
 
-**Throughline:** Sonnet is the evidence-checked default for every role — *cheaper* regresses
-(reviewer), *bigger-same-family* adds nothing (Critic, challenger). The one genuinely open
-lever is a **cross-family** challenger (Codex/Gemini), the only path to real verifier
+**Throughline:** Sonnet is the evidence-checked default for every role that emits a *judgment
+verdict* — *cheaper* regresses (reviewer), *bigger-same-family* adds nothing (Critic,
+challenger). The one role with **no** gating verdict — the read-only **helper** — is the
+single place haiku is safe, and it's now the helper default. The one genuinely open lever
+left is a **cross-family** challenger (Codex/Gemini), the only path to real verifier
 independence — untested, structural. Sections below give each experiment in full.
 
 What produced what: the reviewer experiment also produced the reviewer-judgment harness
@@ -202,6 +205,45 @@ hardest cross-module cases (5 flags + 5 restraint twins) and measure where they 
 - **Scope.** This corpus is cases Sonnet catches, so it still cannot probe Sonnet's true
   blind-spot tail; K=1, n=10, one disagreement — low power. It bounds intra-Claude
   diversity as *low*, not cross-family diversity.
+
+## Helpers → cheaper (claude_code: haiku) — SHIPPED
+
+The reviewer result raised the obvious follow-up: if haiku fails as a *reviewer* (judgment),
+where does it *succeed*? Answer: any role that emits **no gating verdict**. The loop subagent's
+read-only **helper** sub-agents (≤2–3, for bounded analysis the executor synthesizes) are exactly
+that — and the inverse case to the reviewer.
+
+- **Method.** 3 bounded helper tasks, each with a clear right answer *and* a look-alike to
+  dismiss: change-coupling (flag distant `Payment↔EmailFormatter`, dismiss expected `VM↔View`),
+  public-surface (flag dead `recalculateLegacyTax`/`InternalCacheKey`, keep well-used
+  `placeOrder`), churn-magnet (flag the 1400-LOC god-object reducer, dismiss cold files). Ran
+  haiku vs sonnet (6 spawns, ~30k tokens). Grade = found the real concern AND didn't *mislead*
+  (flag a look-alike) — the only real risk for an ungated helper.
+- **Result.** Haiku matched sonnet **3/3, exactly** — same real concerns, same look-alikes
+  dismissed, zero misleading output.
+- **Why it's safe (beyond the numbers).** A helper emits no verdict; the sonnet executor
+  re-derives its output and the Critic/reviewer make the real calls. So even a weaker helper
+  can at worst be slightly thinner — it can't gate a bad decision. Haiku's measured weakness is
+  open-ended *judgment*; a helper makes none.
+- **Shipped.** Helper default on claude_code → `claude-haiku-4-5` (one clause in the
+  `trust-model.md` loop template + a `provider-adapters.md § Helper-spawn profile`). No schema /
+  gate / `helper_model` field — helpers are ephemeral and off the audit path (deliberate low
+  scope). Savings are modest (helpers are occasional, ≤2–3, not every loop) but the change is
+  near-free and clean.
+
+## Open: Execution → cheaper (unfuse Critic from Execution) — gated, not done
+
+The largest remaining lower-model lever, deliberately **not** taken yet. Today Critic + Architect
++ Execution run as **one fused subagent at one tier** (sonnet). Step 3 Execution (apply the
+Step-2 plan, run tests, narrow-revert, commit) is **mechanical** and its output is gated
+downstream (sonnet reviewer + build/tests + G15–G22), so a haiku executor's errors get caught —
+making it a plausible cheaper-model candidate, and where the real per-loop tokens are (every loop,
+code edits + test output). It is **structural** (splitting the loop subagent touches Loop
+Isolation, `LOOP_STATE` checkpointing, the single-writer lease) with one judgment risk
+(Meta-Rule 4 risk-boundary invariant evidence is recorded during execution). **Decision: pursue
+only if proven safe** — gated on first building an *execution-grain* test (does haiku correctly
+apply a specified plan + narrow-revert + handle risk boundaries) before any structural change.
+Recorded here as the next scoped project, not a flip.
 
 ## The low-token tier-test method (reusable)
 
