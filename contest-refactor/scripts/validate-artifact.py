@@ -1433,6 +1433,46 @@ def check_g32_halt_success_challenge(current_review: dict) -> List[Issue]:
     return issues
 
 
+def check_g33_risk_boundary_evidence(current_review: dict, canon) -> List[Issue]:
+    """G33: loop_result.risk_boundary_evidence SHAPE (Meta-Rule-4 preservation evidence), schema_version >= 3.
+
+    The field is OPTIONAL (null/absent ⇒ no risk boundary crossed this loop). When present it must be a
+    well-formed object: boundary_kind ∈ canon, verification ∈ canon, non-empty detail, and the reasoning_only
+    escape is legal only when mechanically_testable is false. The validator checks SHAPE only (it has no git
+    diff); the git-grounded safety semantics live in the Layer-5 grader (exec_replay_grade.py).
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 3:
+        return issues
+    lr = current_review.get("loop_result")
+    if not isinstance(lr, dict):
+        return issues
+    if "risk_boundary_evidence" not in lr:
+        return issues
+    ev = lr.get("risk_boundary_evidence")
+    if ev is None:
+        return issues
+    if not isinstance(ev, dict):
+        issues.append(Issue("G33", "risk_boundary_evidence must be an object or null"))
+        return issues
+    bk = ev.get("boundary_kind")
+    if bk not in set(canon.risk_boundary_kinds):
+        issues.append(Issue(
+            "G33", f"risk_boundary_evidence.boundary_kind {bk!r} not in {sorted(canon.risk_boundary_kinds)}"))
+    verification = ev.get("verification")
+    if verification not in set(canon.risk_evidence_verifications):
+        issues.append(Issue(
+            "G33", f"risk_boundary_evidence.verification {verification!r} not in "
+            f"{sorted(canon.risk_evidence_verifications)}"))
+    detail = ev.get("detail")
+    if not (isinstance(detail, str) and detail.strip()):
+        issues.append(Issue("G33", "risk_boundary_evidence.detail required (non-empty string)"))
+    if verification == "reasoning_only" and ev.get("mechanically_testable") is not False:
+        issues.append(Issue(
+            "G33", "risk_boundary_evidence.verification=reasoning_only requires mechanically_testable=false"))
+    return issues
+
+
 def check_continue_backlog(current_review: dict) -> List[Issue]:
     """CONTINUE must carry next backlog work."""
     issues: List[Issue] = []
@@ -1502,6 +1542,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_halt_success_gating(current_review, project_config))
     issues.extend(check_g21_scorecard(current_review))
     issues.extend(check_g32_halt_success_challenge(current_review))
+    issues.extend(check_g33_risk_boundary_evidence(current_review, canon))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

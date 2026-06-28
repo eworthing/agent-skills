@@ -32,6 +32,8 @@ class Canon:
     scorecard_dimension_labels: Mapping[str, str]
     dependency_categories: Tuple[str, ...]
     retirement_reasons: Tuple[str, ...]
+    risk_boundary_kinds: Tuple[str, ...]
+    risk_evidence_verifications: Tuple[str, ...]
     validation_gates: Mapping[str, str]
     # PR2 added fixture_rule_kinds; lazy lookup via .extra
     extra: Mapping[str, Any]
@@ -126,6 +128,16 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         "retirement_reasons",
         canon_dir / "retirement-reasons.toml",
     )
+    risk_boundary_kinds = _require_list(
+        _load_toml(canon_dir / "risk-boundary-kinds.toml"),
+        "risk_boundary_kinds",
+        canon_dir / "risk-boundary-kinds.toml",
+    )
+    risk_evidence_verifications = _require_list(
+        _load_toml(canon_dir / "risk-evidence-verifications.toml"),
+        "risk_evidence_verifications",
+        canon_dir / "risk-evidence-verifications.toml",
+    )
 
     gates_data = _load_toml(canon_dir / "validation-gates.toml")
     if not isinstance(gates_data, dict) or "validation_gates" not in gates_data:
@@ -172,6 +184,8 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         scorecard_dimension_labels=MappingProxyType(scorecard_labels),
         dependency_categories=dependency_categories,
         retirement_reasons=retirement_reasons,
+        risk_boundary_kinds=risk_boundary_kinds,
+        risk_evidence_verifications=risk_evidence_verifications,
         validation_gates=MappingProxyType(gates_map),
         extra=MappingProxyType(extra),
     )
@@ -187,6 +201,8 @@ if __name__ == "__main__":
     print(f"scorecard_dimensions ({len(canon.scorecard_dimensions)}): {', '.join(canon.scorecard_dimensions)}")
     print(f"dependency_categories ({len(canon.dependency_categories)}): {', '.join(canon.dependency_categories)}")
     print(f"retirement_reasons ({len(canon.retirement_reasons)}): {', '.join(canon.retirement_reasons)}")
+    print(f"risk_boundary_kinds ({len(canon.risk_boundary_kinds)}): {', '.join(canon.risk_boundary_kinds)}")
+    print(f"risk_evidence_verifications ({len(canon.risk_evidence_verifications)}): {', '.join(canon.risk_evidence_verifications)}")
     print(f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}")
     if canon.extra:
         print(f"extra keys: {', '.join(canon.extra.keys())}")

@@ -129,3 +129,7 @@ title = "Fingerprint Integrity"
 [[validation_gates]]
 id = "G32"
 title = "HALT_SUCCESS independent challenge (terminal, v4+)"
+
+[[validation_gates]]
+id = "G33"
+title = "risk_boundary_evidence shape (Meta-Rule-4 preservation evidence, schema_version >= 3)"

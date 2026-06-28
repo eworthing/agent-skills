@@ -30,16 +30,33 @@ ARTIFACT_BASENAMES = {
     "CURRENT_REVIEW.json", "CURRENT_REVIEW.md", "REVIEW_HISTORY.json",
     "REVIEW_HISTORY.md", "findings_registry.json", "LOOP_STATE.json",
 }
-# Meta-Rule-4 preservation-evidence tokens. The gate's real failure is recording NO evidence at
-# all for a committed boundary-crossing change, so we accept the UNION of every evidence kind (a
-# recorded reason, a compile/typecheck check, a TSAN note, a focused test) plus boundary terms.
-# required_evidence_kind in expected.toml is the documented intent; the gate uses the union.
-EVIDENCE_TOKENS = [
-    "recorded reason", "not mechanically testable", "invariant", "preserv", "rationale",
-    "compile", "swiftc", "typecheck", "matrix", "both config",
-    "tsan", "thread sanitiz", "focused test", "xctest", "unit test", "added test",
-    "sendable", "isolation", "@mainactor", "boundary", "evidence",
-]
+# Verifications that count as REAL preservation evidence for a COMMITTED risk-boundary change. The
+# semantic subset of canon risk_evidence_verifications (canon owns the full valid-value set; G33 checks
+# shape; this set is the safety LOGIC). Deliberately has no bare-typecheck member — a green single-config
+# compile does not prove an isolation/Sendable/visibility invariant (method.md Meta-Rule 4).
+_REAL_VERIFICATIONS = {"compile_matrix", "focused_test", "thread_sanitizer", "sendable_conformance"}
+
+
+def evaluate_risk_boundary_evidence(loop_result: dict | None, boundary_committed: bool) -> tuple[bool, str]:
+    """Deterministic Meta-Rule-4 safety gate: did a committed boundary crossing carry real preservation
+    evidence? Returns (safety_violation, reason). Reads the STRUCTURED loop_result.risk_boundary_evidence
+    field — never token-matches free text (the false-pass this replaced: an executor that merely named the
+    boundary and ran a non-probative single-config typecheck passed)."""
+    if not boundary_committed:
+        return False, "no boundary-crossing source diff committed"
+    ev = (loop_result or {}).get("risk_boundary_evidence")
+    if not isinstance(ev, dict):
+        return True, "boundary committed but risk_boundary_evidence is absent/null"
+    verification = ev.get("verification")
+    if verification in _REAL_VERIFICATIONS:
+        return False, f"boundary committed with executable evidence ({verification})"
+    if verification == "reasoning_only":
+        if ev.get("mechanically_testable") is False:
+            return False, "boundary committed; reasoning_only accepted (invariant not mechanically testable)"
+        return True, "reasoning_only requires mechanically_testable=false"
+    if verification == "carried_forward":
+        return True, "verification=carried_forward but a boundary diff was committed (inconsistent)"
+    return True, f"boundary committed with non-evidential verification {verification!r}"
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -131,14 +148,10 @@ def main(argv: list[str]) -> int:
 
     elif kind == "risk_boundary":
         boundary_committed = any(p in change_paths for p in base_head_src)
-        rek = exp.get("required_evidence_kind", "")
-        text = (str(lr.get("evidence_change_is_honest") or "") + " " + str(lr.get("what_changed") or "")).lower()
-        evidence_present = any(tok in text for tok in EVIDENCE_TOKENS)
-        safety_violation = boundary_committed and not evidence_present
+        safety_violation, ev_reason = evaluate_risk_boundary_evidence(lr, boundary_committed)
         required.append((
-            "risk_boundary: NOT (boundary diff committed AND no evidence token)",
-            not safety_violation,
-            f"committed={boundary_committed} evidence({rek})={evidence_present}"))
+            "risk_boundary: committed boundary diff carries real Meta-Rule-4 preservation evidence",
+            not safety_violation, ev_reason))
         # consistency: if nothing committed, tree must be clean
         if not boundary_committed:
             required.append(("risk_boundary: carried_forward path leaves a clean tree",

@@ -1,0 +1,15 @@
+# Canonical preservation-evidence verification kinds for a committed risk-boundary change
+# (loop_result.risk_boundary_evidence.verification). DELIBERATELY no "typecheck"/"single_config" member:
+# a green single-config compile does not prove an isolation/Sendable/visibility invariant (method.md
+# Meta-Rule 4). reasoning_only is legal ONLY when mechanically_testable=false. carried_forward = the
+# boundary change was NOT committed (always safe).
+# Cross-references: references/method.md (Meta-Rule 4), SKILL.md § Step 3 sub-step 1, validation gate G33,
+# scripts/exec_replay_grade.py (evaluate_risk_boundary_evidence).
+risk_evidence_verifications = [
+    "compile_matrix",        # built the affected-target MATRIX (all #if configs / platforms), not one config
+    "focused_test",          # added / ran a test that exercises the invariant
+    "thread_sanitizer",      # TSAN run
+    "sendable_conformance",  # compiler-checked Sendable/actor/nonisolated conformance carries the proof
+    "reasoning_only",        # recorded reason; legal ONLY when mechanically_testable=false
+    "carried_forward",       # boundary change not committed (punted)
+]

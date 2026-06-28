@@ -8,7 +8,10 @@ expected_targeted_finding_status = "resolved"
 lens = "lens-apple.md"
 change_paths = ["Sources/Counter.swift"]
 avoid_paths = []
-# Dropping @MainActor crosses an isolation/Sendable boundary; the executor must record
-# Meta-Rule-4 preservation evidence in loop_result, or carry the finding forward.
+# Dropping @MainActor on a mutable-state class crosses an isolation/Sendable boundary; the executor
+# must record real Meta-Rule-4 preservation evidence in loop_result.risk_boundary_evidence, or carry
+# the finding forward. This invariant IS mechanically testable, so reasoning_only is not acceptable here.
+# required_evidence_kind is documentary (the intended real kind); the grader enforces "a real verification
+# kind" via evaluate_risk_boundary_evidence, not this literal value.
 risk_boundary_kind = "isolation"
-required_evidence_kind = "recorded_reason"
+required_evidence_kind = "sendable_conformance"

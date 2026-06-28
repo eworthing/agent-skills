@@ -155,6 +155,12 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   *Source:* [`halt-verifier.md`](halt-verifier.md) (challenge protocol and challenger invocation procedure) — production failure: Step-1 HALT_SUCCESS skips the only independent check, allowing a false-success claim to close the run without adversarial verification. [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #28.
 
+- [ ] **G33 risk_boundary_evidence shape (pre-emit, schema_version >= 3)** — *Applies when `loop_result.risk_boundary_evidence` is present non-null.* Shape-gates the Meta-Rule-4 preservation-evidence record: `boundary_kind` ∈ canon `risk_boundary_kinds`, `verification` ∈ canon `risk_evidence_verifications` (there is deliberately no single-config-typecheck value — a green single-config compile does not prove an isolation/`Sendable`/visibility invariant, [method.md Meta-Rule 4](method.md#meta-rules-apply-everywhere)), `detail` a non-empty string, and `verification == "reasoning_only"` requires `mechanically_testable == false`. The field is OPTIONAL (null/absent ⇒ no risk boundary crossed this loop). G33 checks SHAPE only; the git-grounded safety check — a *committed* boundary diff must carry a real verification — is the Layer-5 grader's job, not the validator's (the validator has no diff).
+
+  Run G33 at Step 1 emit (artifact write) AND at Step 3 step 8 (pre-commit). Failure → fix `loop_result.risk_boundary_evidence` to a canon-valid shape (or set it null if no boundary was crossed).
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #29; the safety semantics live in `scripts/exec_replay_grade.py` (`evaluate_risk_boundary_evidence`). Production motivation: a cheaper candidate executor false-passed the prior token-match risk gate by naming the boundary + running a non-probative single-config typecheck; the structured field makes "I compiled one config" unrepresentable as evidence.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

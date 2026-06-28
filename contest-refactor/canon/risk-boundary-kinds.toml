@@ -1,0 +1,10 @@
+# Canonical Meta-Rule-4 risk-boundary kinds. A refactor that crosses one of these requires recorded
+# preservation evidence (loop_result.risk_boundary_evidence). Verbatim from references/method.md Meta-Rule 4.
+# Cross-references: references/method.md (Meta-Rule 4), SKILL.md § Step 3 sub-step 1, validation gate G33.
+risk_boundary_kinds = [
+    "isolation",                # actor / @MainActor / global-actor isolation
+    "sendable",                 # Sendable / thread-safety boundary
+    "conditional_compilation",  # #if os(...) / canImport(...) — a config the default build never exercises
+    "cross_file_visibility",    # moving a type/extension can drop private/fileprivate access
+    "lock_ordering",            # lock acquisition order / reentrancy invariants
+]
