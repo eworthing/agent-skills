@@ -1,0 +1,8 @@
+id = "handoff-invalid-match-kind"
+purpose = "match_kind not in canon match-kinds. Must FAIL (G35)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G35"

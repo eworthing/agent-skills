@@ -1,0 +1,8 @@
+id = "handoff-any-of-with-paths"
+purpose = "match_kind=any_of with non-empty match_paths violates the coupling. Must FAIL (G35)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G35"

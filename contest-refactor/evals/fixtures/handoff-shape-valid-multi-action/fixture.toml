@@ -1,0 +1,12 @@
+id = "handoff-shape-valid-multi-action"
+purpose = "Valid handoff with one action of each match_kind (all_of+paths, any_of+empty, no_drift+empty). Must PASS."
+expected_result = "pass"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G35"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_LOOP_CAP"

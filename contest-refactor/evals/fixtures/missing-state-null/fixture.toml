@@ -1,0 +1,8 @@
+id = "missing-state-null"
+purpose = "state is null: owned by no gate today, passes strict. Must FAIL (G36)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G36"

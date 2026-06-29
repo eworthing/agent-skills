@@ -518,7 +518,14 @@ def check_g30_disposition_coverage(
             )
         )
         return issues
-    halt_handoff = current_review.get("halt_handoff") or {}
+    halt_handoff = current_review.get("halt_handoff")
+    if halt_handoff is not None and not isinstance(halt_handoff, dict):
+        # A present-but-non-dict halt_handoff is a root-type defect owned by G35.
+        # Bail so G30 does not (a) AttributeError on `.get()` below, nor (b) treat the
+        # handoff as empty and double-fire spurious missing-disposition issues alongside
+        # G35 on the same malformed field. Once the type is fixed, the re-run checks coverage.
+        return issues
+    halt_handoff = halt_handoff or {}
     dispositions = {
         entry.get("stable_id"): entry
         for entry in (halt_handoff.get("remaining_serious_findings_disposition") or [])
@@ -1525,6 +1532,80 @@ def check_g34_halt_tail_invariants(current_review: dict, canon) -> List[Issue]:
     return issues
 
 
+def check_g35_halt_handoff_shape(current_review: dict, canon) -> List[Issue]:
+    """G35: shape of the halt_handoff OBJECT (rule #18 shape half; presence is G34's job).
+
+    Scoped to the handoff-required states (_G34_HANDOFF_STATES) — the states where G34 has confirmed the
+    handoff is non-null but checked neither its type nor shape. For every other state (CONTINUE,
+    HALT_SUCCESS_candidate) G34 owns the null-required contract, so G35 staying out keeps the predicates
+    disjoint. Enforces exactly rule #18's documented shape — no more (action_id / match_keywords *content*
+    is a deliberate non-goal):
+      - halt_handoff must be an object (a non-dict here — "string", [..] — is the root-type defect that
+        satisfies G34's not-null presence check but has no other owner; check_g30 bails on it so G35 is sole).
+      - text: a non-empty string.
+      - expected_actions: a list.
+      - each action (a dict): match_kind ∈ canon.match_kinds, with the path↔kind coupling —
+        non-empty match_paths ⟹ all_of; empty/absent match_paths ⟹ {any_of, no_drift_expected}.
+    """
+    issues: List[Issue] = []
+    if current_review.get("state") not in _G34_HANDOFF_STATES:
+        return issues  # null-required / non-handoff states are G34's concern, not G35's
+    handoff = current_review.get("halt_handoff")
+    if handoff is None:
+        return issues  # absence is G34's presence concern, not shape
+    if not isinstance(handoff, dict):
+        issues.append(Issue(
+            "G35", f"halt_handoff must be an object when present (rule #18 shape); got {type(handoff).__name__}"))
+        return issues
+    text = handoff.get("text")
+    if not (isinstance(text, str) and text.strip()):
+        issues.append(Issue("G35", "halt_handoff.text must be a non-empty string (rule #18 shape)"))
+    actions = handoff.get("expected_actions")
+    if not isinstance(actions, list):
+        issues.append(Issue("G35", "halt_handoff.expected_actions must be an array (rule #18 shape)"))
+        return issues
+    valid_kinds = set(canon.match_kinds)
+    for i, action in enumerate(actions):
+        if not isinstance(action, dict):
+            issues.append(Issue("G35", f"halt_handoff.expected_actions[{i}] must be an object"))
+            continue
+        aid = action.get("action_id") or i
+        match_paths = action.get("match_paths")
+        if match_paths is not None and not isinstance(match_paths, list):
+            issues.append(Issue(
+                "G35", f"expected_actions[{aid!r}].match_paths must be an array when present"))
+            continue
+        paths_nonempty = bool(match_paths)
+        match_kind = action.get("match_kind")
+        if match_kind not in valid_kinds:
+            issues.append(Issue(
+                "G35", f"expected_actions[{aid!r}] match_kind {match_kind!r} not in canon match-kinds "
+                f"{sorted(valid_kinds)}"))
+        elif paths_nonempty and match_kind != "all_of":
+            issues.append(Issue(
+                "G35", f"expected_actions[{aid!r}] has non-empty match_paths so match_kind must be 'all_of' "
+                f"(rule #18 coupling); got {match_kind!r}"))
+        elif not paths_nonempty and match_kind not in ("any_of", "no_drift_expected"):
+            issues.append(Issue(
+                "G35", f"expected_actions[{aid!r}] has empty match_paths so match_kind must be 'any_of' or "
+                f"'no_drift_expected' (rule #18 coupling); got {match_kind!r}"))
+    return issues
+
+
+def check_g36_required_state(current_review: dict, canon) -> List[Issue]:
+    """G36: `state` is a required, non-null field (covers both `state: null` and an absent key).
+
+    Presence only — membership (`state ∈ canon.states`) for a non-null foreign state stays with
+    check_schema_enums, so the two never overlap. Closes a hole owned by no gate today: check_schema_enums
+    fires only when `state is not None`, and G34 returns early when `state ∉ canon.states`.
+    """
+    if current_review.get("state") is None:
+        return [Issue(
+            "G36", "state is a required field and must be non-null (rule #30); "
+            "membership ∈ canon is the schema-enum check's concern")]
+    return []
+
+
 def check_continue_backlog(current_review: dict) -> List[Issue]:
     """CONTINUE must carry next backlog work."""
     issues: List[Issue] = []
@@ -1596,6 +1677,8 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g32_halt_success_challenge(current_review))
     issues.extend(check_g33_risk_boundary_evidence(current_review, canon))
     issues.extend(check_g34_halt_tail_invariants(current_review, canon))
+    issues.extend(check_g35_halt_handoff_shape(current_review, canon))
+    issues.extend(check_g36_required_state(current_review, canon))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

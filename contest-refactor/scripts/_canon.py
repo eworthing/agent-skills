@@ -34,6 +34,7 @@ class Canon:
     retirement_reasons: Tuple[str, ...]
     risk_boundary_kinds: Tuple[str, ...]
     risk_evidence_verifications: Tuple[str, ...]
+    match_kinds: Tuple[str, ...]
     validation_gates: Mapping[str, str]
     # PR2 added fixture_rule_kinds; lazy lookup via .extra
     extra: Mapping[str, Any]
@@ -138,6 +139,11 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         "risk_evidence_verifications",
         canon_dir / "risk-evidence-verifications.toml",
     )
+    match_kinds = _require_list(
+        _load_toml(canon_dir / "match-kinds.toml"),
+        "match_kinds",
+        canon_dir / "match-kinds.toml",
+    )
 
     gates_data = _load_toml(canon_dir / "validation-gates.toml")
     if not isinstance(gates_data, dict) or "validation_gates" not in gates_data:
@@ -186,6 +192,7 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         retirement_reasons=retirement_reasons,
         risk_boundary_kinds=risk_boundary_kinds,
         risk_evidence_verifications=risk_evidence_verifications,
+        match_kinds=match_kinds,
         validation_gates=MappingProxyType(gates_map),
         extra=MappingProxyType(extra),
     )
@@ -203,6 +210,7 @@ if __name__ == "__main__":
     print(f"retirement_reasons ({len(canon.retirement_reasons)}): {', '.join(canon.retirement_reasons)}")
     print(f"risk_boundary_kinds ({len(canon.risk_boundary_kinds)}): {', '.join(canon.risk_boundary_kinds)}")
     print(f"risk_evidence_verifications ({len(canon.risk_evidence_verifications)}): {', '.join(canon.risk_evidence_verifications)}")
+    print(f"match_kinds ({len(canon.match_kinds)}): {', '.join(canon.match_kinds)}")
     print(f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}")
     if canon.extra:
         print(f"extra keys: {', '.join(canon.extra.keys())}")

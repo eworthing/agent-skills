@@ -1,0 +1,8 @@
+id = "handoff-action-not-dict"
+purpose = "an expected_actions entry is not an object. Must FAIL (G35)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G35"

@@ -64,7 +64,7 @@ Q8 verifies presence and shape; format violations never block emit.
 
 ## halt_handoff object (PR 4, schema_version >= 2)
 
-Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`}; null on `CONTINUE`.
+Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`, `HALT_DRY_RUN` (v3+)}; **null on `CONTINUE` and on the non-terminal `HALT_SUCCESS_candidate`** (a pause for the main-agent challenge, not a user-facing halt). Presence enforced by G34; object shape by G35.
 
 ```jsonc
 "halt_handoff": {
@@ -102,7 +102,7 @@ Replaces the flat `halt_handoff_text` field at schema_version >= 2. Required whe
 }
 ```
 
-`match_kind` semantics:
+`match_kind` semantics (the three values are canon — `canon/match-kinds.toml`; domain + coupling enforced by G35):
 - `all_of` — match if at least one match_keyword AND at least one match_path hit. **Default when match_paths is non-empty** (rule #18 enforces).
 - `any_of` — match if any match_keyword OR any match_path hit. Permitted only when match_paths is empty (keyword-only fallback).
 - `no_drift_expected` — match if `git log <halt_sha>..HEAD` returns empty.
@@ -168,9 +168,9 @@ Required when `re_validated_at_sha` is non-null (Step -1 ran a fresh Step-1 crit
 15. **Implementation review presence**: `implementation_review` is required when `loop_result` is present (i.e., a refactor was executed); absent when `loop_result` is absent. Final committed `verdict` ∈ {`approved`, `rejected`} — `conditional` is a mid-loop transient state that must be resolved (re-spawn → approved or rejected) before commit. `rounds` ≥ 1; `rounds == 2` only when first reviewer pass returned `conditional`.
 16. **Reject ↔ loop_result coherence**: when `implementation_review.verdict == "rejected"`, `loop_result.targeted_finding_status` must equal `"carried_forward"` AND `loop_result.unintended_regression` must equal `implementation_review.reason`. Mismatch = G2 fails.
 17. **Halt subtype required**: when `state == "HALT_STAGNATION"`, `halt_subtype` ∈ {`no_progress`, `oscillation`, `user_decision`, `no_backlog`, `verification_blocked`} (the canonical set owned by `canon/halt-subtypes.toml`). Every other state must have `halt_subtype: null`. **Presence (non-null iff HALT_STAGNATION) enforced by G34**; membership (∈ canon) by the schema-enum check.
-18. **Halt handoff required**: when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`, `HALT_DRY_RUN`} (HALT_DRY_RUN at schema_version >= 3 only); **null on `CONTINUE` and on the non-terminal `HALT_SUCCESS_candidate`** (a pause for the main-agent challenge, not a user-facing halt). **Handoff PRESENCE is enforced by G34; the object-shape sub-rules below (non-empty `text`, `expected_actions[]`, per-`HandoffAction` `match_kind`) remain a separate, currently-unenforced rule.**
+18. **Halt handoff required**: when `state` ∈ {`HALT_SUCCESS`, `HALT_STAGNATION`, `HALT_LOOP_CAP`, `HALT_DRY_RUN`} (HALT_DRY_RUN at schema_version >= 3 only); **null on `CONTINUE` and on the non-terminal `HALT_SUCCESS_candidate`** (a pause for the main-agent challenge, not a user-facing halt). **Handoff PRESENCE is enforced by G34; the object SHAPE sub-rules below (non-empty `text`, `expected_actions[]` array, per-`HandoffAction` `match_kind ∈ canon` + the path↔kind coupling) are enforced by G35.** (`action_id` / `match_keywords` *content* — kebab-case, non-empty — remains out of scope for G35.)
     - schema_version 1: `halt_handoff_text` non-empty string built from the matching template in `references/halt-handoff.md` with all placeholders resolved.
-    - **schema_version >= 2 (PR 4)**: `halt_handoff` object non-null with `text` non-empty AND `expected_actions[]` array (may be empty). Each HandoffAction must satisfy: if `match_paths` is non-empty, `match_kind` must be `all_of`; if `match_paths` is empty, `match_kind` ∈ {`any_of`, `no_drift_expected`}. Null on `CONTINUE`.
+    - **schema_version >= 2 (PR 4)**: `halt_handoff` object non-null with `text` non-empty AND `expected_actions[]` array (may be empty). Each HandoffAction must satisfy: `match_kind ∈ canon.match_kinds` (`canon/match-kinds.toml`); if `match_paths` is non-empty, `match_kind` must be `all_of`; if `match_paths` is empty, `match_kind` ∈ {`any_of`, `no_drift_expected`}. Null on `CONTINUE` and on the non-terminal `HALT_SUCCESS_candidate`. (Shape enforced by **G35**.)
 19. **no_backlog residual accounting**: when `state == "HALT_STAGNATION"` AND `halt_subtype == "no_backlog"`, `unresolved_reason` must account for every score `< 9.5`: the source-backed blocker, why it keeps the 9-anchor unmet, and why it cannot be a backlog item or accepted residual. Rejected Cosmetic/ADR/SPT-failing candidates alone do not satisfy this rule when the dimension's 9-anchor is met; those become accepted residuals at 9.5 or disappear into a score of 10.
 20. **user_decision coherence**: when `halt_subtype == "user_decision"`, `open_question_for_user` (in subagent return JSON) and `unresolved_reason` must both be non-null and consistent.
 21. **Stable ID presence (PR 1, v2+)**: Every emitted finding (CONTINUE and HALT alike) has both `loop_local_id` (regex `^F\d+$`) and `stable_id` (regex `^F-\d{3,}$`) non-empty. `stable_id` matches an entry in `findings_registry.json` (Method Step 1.5 fuzzy-match) or is a new ID equal to `findings_registry.next_serial - 1` after the loop's increment. Reviewer-rejected loops still emit findings with stable_id; registry occurrence carries `status: "rejected_attempt"`.
@@ -193,5 +193,7 @@ Required when `re_validated_at_sha` is non-null (Step -1 ran a fresh Step-1 crit
     - **`outcome == "broke"` + `state == "HALT_SUCCESS"`**: illegal. Main agent must demote the candidate before emitting terminal `HALT_SUCCESS` (the challenger breaks → demote, not promote).
 
 29. **risk_boundary_evidence shape (G33, v3+)**: `loop_result.risk_boundary_evidence` is OPTIONAL (null/absent ⇒ no Meta-Rule-4 risk boundary crossed this loop). When present non-null it is an object: `boundary_kind ∈ {isolation, sendable, conditional_compilation, cross_file_visibility, lock_ordering}`; `verification ∈ {compile_matrix, focused_test, thread_sanitizer, sendable_conformance, reasoning_only, carried_forward}` — there is deliberately NO single-config-typecheck value, because a green single-config compile does not prove an isolation/Sendable/visibility invariant (Meta-Rule 4); `detail` a non-empty string; and `verification == "reasoning_only"` requires `mechanically_testable == false`. G33 checks SHAPE only (the validator has no git diff); the git-grounded safety check — a committed boundary diff must carry a *real* verification — lives in the Layer-5 grader (`exec_replay_grade.py` `evaluate_risk_boundary_evidence`).
+
+30. **state required (G36)**: `state` is a required, non-null field — `state is None` (whether `null` or an absent key) is a hard-gate failure. **Presence enforced by G36**; membership (`state ∈ canon.states`) for a non-null foreign state is the schema-enum check's concern (the two are disjoint). Closes a hole owned by no gate previously: the schema-enum check fires only when `state is not None`, and G34 returns early when `state ∉ canon.states`, so a null/missing `state` passed strict.
 
 Both CURRENT_REVIEW.md / .json AND `findings_registry.json` AND `REVIEW_HISTORY.json` (v2+) are committed at end of each loop alongside the code change.

@@ -170,6 +170,18 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rules #11, #17, #18 (presence). Production motivation: these halt-tail presence rules were documented as hard-gate-enforced but had no validator coverage — a `HALT_STAGNATION` with a null `halt_subtype`, or a `HALT_LOOP_CAP` missing its `unresolved_reason`/`halt_handoff`, passed strict validation.
 
+- [ ] **G35 halt_handoff object shape (pre-emit, schema_version >= 2)** — *Applies only when `state ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN}` (the handoff-required states) and `halt_handoff` is non-null.* Shape-gates the rule #18 handoff object — presence is G34's job; this is the **shape** half: `halt_handoff` must be an object; `text` a non-empty string; `expected_actions` a list; and each HandoffAction's `match_kind ∈ canon.match_kinds` with the path↔kind coupling — non-empty `match_paths` ⟹ `match_kind == "all_of"`, empty/absent `match_paths` ⟹ `match_kind ∈ {any_of, no_drift_expected}`. Scoping to the handoff-required states keeps G35 disjoint from G34 (which owns null-required for `CONTINUE`/`HALT_SUCCESS_candidate`) and from G30 (a non-dict handoff makes G30 bail so G35 is the sole root-type owner). `action_id`/`match_keywords` *content* is out of scope.
+
+  Run G35 at Step 1 emit (artifact write). Failure → fix the handoff object to the canon-valid shape.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #18 (shape); `match_kind` domain ∈ canon `match-kinds.toml`. Production motivation: rule #18's object-shape half (non-empty `text`, `expected_actions[]` array, `match_kind` coupling) was documented but unenforced — a HALT artifact with empty `text`, a non-array `expected_actions`, or a non-canon / mis-coupled `match_kind` passed strict validation.
+
+- [ ] **G36 Required non-null state (pre-emit)** — Enforces that `state` is present and non-null (`state is None` ⇒ fail; covers both `state: null` and an absent `state` key). Presence only: membership (`∈ canon.states`) for a non-null foreign state stays with the schema-enum check, so the two do not overlap. Closes a hole owned by no gate today — the schema-enum check fires only when `state is not None`, and G34 returns early when `state ∉ canon.states`, so a null/missing `state` passed strict.
+
+  Run G36 at Step 1 emit (artifact write). Failure → set `state` to the canon-valid value for the loop's outcome.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #30. Production motivation: `state` is the artifact's routing field, but no gate required its presence — a malformed emit with a null or absent `state` validated clean.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

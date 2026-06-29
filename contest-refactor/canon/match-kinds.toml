@@ -1,0 +1,9 @@
+# Canonical HandoffAction match_kind values. A halt_handoff.expected_actions[] entry's match_kind selects how
+# the main agent's Step -1 drift matcher compares the action against commits in <halt_sha>..HEAD.
+# Cross-references: references/output-format-json-rules.md (halt_handoff schema + match_kind semantics),
+# references/halt-handoff.md, validation gate G35.
+match_kinds = [
+    "all_of",            # match iff >=1 match_keyword AND >=1 match_path hit; requires non-empty match_paths
+    "any_of",            # match iff any match_keyword OR match_path hit; keyword-only fallback (match_paths empty)
+    "no_drift_expected", # match iff git log <halt_sha>..HEAD is empty (no commits landed)
+]

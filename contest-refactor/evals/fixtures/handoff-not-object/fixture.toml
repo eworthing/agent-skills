@@ -1,0 +1,8 @@
+id = "handoff-not-object"
+purpose = "halt_handoff is a non-dict (string): passes G34 presence but is malformed. Must FAIL (G35 root-type)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G35"

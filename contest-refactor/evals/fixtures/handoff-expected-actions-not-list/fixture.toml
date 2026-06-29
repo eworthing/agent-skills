@@ -1,0 +1,8 @@
+id = "handoff-expected-actions-not-list"
+purpose = "expected_actions is a dict, not an array. Must FAIL (G35)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G35"

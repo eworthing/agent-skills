@@ -1,0 +1,8 @@
+id = "missing-state-absent"
+purpose = "state key absent: same hole, harness-tested end-to-end. Must FAIL (G36)."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G36"
