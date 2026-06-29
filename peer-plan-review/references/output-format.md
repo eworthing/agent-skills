@@ -8,8 +8,16 @@ in every prompt.
 
 ```
 ### Reasoning
-Full analysis of the plan covering sequencing, hidden assumptions,
-missing validation, rollback, and dependency gaps.
+Full analysis of the plan across two lenses:
+- **Execution risk** — sequencing, hidden assumptions, missing validation,
+  rollback, and dependency gaps.
+- **Executability** — could a fresh engineer with no prior context implement this
+  as written? Flag tasks too large or coupled to build and verify on their own,
+  steps with no stated way to confirm success, under-specification (TBD/TODO,
+  "add error handling/validation" without specifics, "same as an earlier task"),
+  and references to files, functions, types, or signatures the plan never defines
+  or whose names drift between the task that introduces them and the tasks that use
+  them.
 
 ### Blocking Issues
 - [B1] (HIGH|MEDIUM|LOW) Short description of blocking issue
@@ -49,8 +57,11 @@ findings.
 
 ```
 ### Pass A - Independent critique
-Stress-test the plan on its own merits. Do NOT assume the Domain context criteria are
-correct or complete; critique as if no criteria had been supplied.
+Stress-test the plan on its own merits — both execution risk and executability by a
+zero-context engineer (right-sized, independently-verifiable tasks; no under-specification,
+placeholders, or references to files/functions/signatures the plan never defines). Do NOT
+assume the Domain context criteria are correct or complete; critique as if no criteria had
+been supplied.
 
 ### Pass B - Domain-criteria critique
 For each supplied criterion, state whether the plan meets it. Then challenge the criteria

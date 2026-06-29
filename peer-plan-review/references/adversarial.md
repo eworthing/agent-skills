@@ -22,6 +22,9 @@ Append these instructions to the normal prompt:
   - Missing error handling for degraded dependencies
   - Schema/version compatibility risks
   - Observability gaps that would hide failure
+  - Executability seams — tasks that can't be implemented or verified
+    independently, under-specified or placeholder steps, references to
+    files/functions/signatures the plan never defines
 - Prefer one strong, well-evidenced finding over multiple weak ones.
 - Use the structured output format from `references/output-format.md`.
 - End with `VERDICT: APPROVED` or `VERDICT: REVISE`.
