@@ -169,7 +169,7 @@ Build prompt with:
 4. Structured output template from `references/output-format.md`. If a Domain context
    block is included, use its two-pass variant.
 
-Run adapter (see `references/adapter-cli.md` for full flag list). Omit `--resume` on round 1. Default timeout 600 s — raise for large plans.
+Run the runner (see `references/adapter-cli.md` for full flag list). Omit `--resume` on round 1. Default timeout 600 s — raise for large plans.
 
 ## Read the result
 
@@ -209,7 +209,7 @@ On `REVISE`:
 2. Rewrite plan snapshot with updated full plan.
 3. Write short `Changes since last round` bullet list.
 4. Rebuild prompt in this order: verdict contract → previous reviewer feedback (with finding IDs) → `Changes since last round` → updated numbered plan. Each round use fresh per-round IDs.
-5. Re-run adapter with `--resume` added.
+5. Re-run the runner with `--resume` added.
 
 Stop after approval or five rounds, whichever first.
 

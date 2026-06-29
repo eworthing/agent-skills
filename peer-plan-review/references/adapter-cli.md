@@ -1,4 +1,4 @@
-# Adapter Invocation
+# Runner Invocation
 
 Single invocation shape used for every round. Round 1 omits `--resume`;
 subsequent rounds add it.
