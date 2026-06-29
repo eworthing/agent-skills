@@ -277,10 +277,18 @@ def _extract_opencode_metadata_via_export(session_id):
         if export.returncode == 0:
             data = json.loads(export.stdout)
             for msg in data.get("messages", []):
-                model = msg.get("info", {}).get("model", {})
-                if model.get("providerID") and model.get("modelID"):
-                    meta["model"] = f"{model['providerID']}/{model['modelID']}"
-                    variant = model.get("variant")
+                info = msg.get("info", {}) or {}
+                # opencode v1.17+ keeps the nested {providerID, modelID, variant}
+                # dict on the *user* message but flattens those fields onto
+                # `info` directly for *assistant* messages (info.model is then
+                # empty). Read whichever shape is present so model/effort
+                # detection survives either layout.
+                model = info.get("model") or {}
+                provider_id = model.get("providerID") or info.get("providerID")
+                model_id = model.get("modelID") or info.get("modelID")
+                variant = model.get("variant") or info.get("variant")
+                if provider_id and model_id:
+                    meta["model"] = f"{provider_id}/{model_id}"
                     if variant:
                         meta["effort"] = _REVERSE_EFFORT_OPENCODE.get(variant, variant)
                     break

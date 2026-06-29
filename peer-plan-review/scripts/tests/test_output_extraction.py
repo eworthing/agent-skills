@@ -96,6 +96,24 @@ class TestOutputParsing(unittest.TestCase):
         finally:
             Path(tmp_path).unlink()
 
+    def test_extract_text_opencode_drops_tool_narration(self):
+        """Test 8e2: pre-answer tool-narration (in a tool-calls step) is dropped;
+        only the final stop-step review text survives."""
+        fixture = Path(FIXTURES_DIR) / "opencode_with_narration.jsonl"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as tmp:
+            with fixture.open() as f:
+                tmp.write(f.read())
+            tmp_path = tmp.name
+        try:
+            extract_text_from_output(tmp_path, "opencode")
+            text = Path(tmp_path).read_text()
+            self.assertIn("VERDICT: REVISE", text)
+            self.assertIn("No gating strategy", text)
+            # The tool-call narration must not leak into the review prose.
+            self.assertNotIn("I need to check how the deploy script", text)
+        finally:
+            Path(tmp_path).unlink()
+
     def test_extract_session_id_opencode(self):
         """Test 8f: opencode session ID extracted from first JSONL line."""
         from _common.metadata.extractors import extract_session_id_opencode
@@ -158,6 +176,31 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         meta = _extract_opencode_metadata_via_export("ses_1")
         self.assertEqual(meta["model"], "opencode-go/deepseek-v4-pro")
         self.assertEqual(meta["effort"], "xhigh")
+
+    @mock.patch("_common.metadata.extractors.subprocess.run")
+    def test_extracts_from_flattened_assistant_shape(self, mock_run):
+        """v1.17+ flattens providerID/modelID/variant onto info (info.model empty)."""
+        from _common.metadata.extractors import _extract_opencode_metadata_via_export
+
+        export_json = json.dumps({
+            "messages": [
+                {
+                    "info": {
+                        "role": "assistant",
+                        "model": {},
+                        "providerID": "opencode-go",
+                        "modelID": "deepseek-v4-flash",
+                        "variant": "high",
+                    }
+                }
+            ]
+        })
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "export", "ses_1"], 0, stdout=export_json, stderr=""
+        )
+        meta = _extract_opencode_metadata_via_export("ses_1")
+        self.assertEqual(meta["model"], "opencode-go/deepseek-v4-flash")
+        self.assertEqual(meta["effort"], "high")
 
     @mock.patch("_common.metadata.extractors.subprocess.run")
     def test_nonzero_returncode_returns_empty(self, mock_run):

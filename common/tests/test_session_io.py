@@ -144,6 +144,65 @@ class TestExtractTextFromOutput:
         extract_text_from_output(str(p), "copilot")
         assert p.read_text(encoding="utf-8") == "first\nsecond"
 
+    def _oc(self, *events):
+        return "\n".join(json.dumps(e) for e in events) + "\n"
+
+    def test_opencode_keeps_only_stop_step_text(self, tmp_path):
+        # A tool-using reviewer narrates in a step that finishes "tool-calls";
+        # the real review is the text in the step that finishes "stop". Only
+        # the stop-step text should survive — narration must be dropped.
+        p = tmp_path / "out.jsonl"
+        p.write_text(
+            self._oc(
+                {"type": "step_start", "part": {"type": "step-start"}},
+                {"type": "text", "part": {"type": "text",
+                                          "text": "Let me check the deploy script first."}},
+                {"type": "step_finish", "part": {"type": "step-finish", "reason": "tool-calls"}},
+                {"type": "step_start", "part": {"type": "step-start"}},
+                {"type": "text", "part": {"type": "text",
+                                          "text": "### Blocking Issues\n- [B1] gap\n\nVERDICT: REVISE"}},
+                {"type": "step_finish", "part": {"type": "step-finish", "reason": "stop"}},
+            ),
+            encoding="utf-8",
+        )
+        extract_text_from_output(str(p), "opencode")
+        out = p.read_text(encoding="utf-8")
+        assert "VERDICT: REVISE" in out
+        assert "Blocking Issues" in out
+        assert "Let me check the deploy script" not in out
+
+    def test_opencode_single_step_review_preserved(self, tmp_path):
+        # Backward compat: a clean run with one stop step keeps its full text,
+        # including multiple text parts streamed within that step.
+        p = tmp_path / "out.jsonl"
+        p.write_text(
+            self._oc(
+                {"type": "step_start", "part": {"type": "step-start"}},
+                {"type": "text", "part": {"type": "text", "text": "### Blocking Issues\n- [B1] a"}},
+                {"type": "text", "part": {"type": "text", "text": "\nVERDICT: APPROVED"}},
+                {"type": "step_finish", "part": {"type": "step-finish", "reason": "stop"}},
+            ),
+            encoding="utf-8",
+        )
+        extract_text_from_output(str(p), "opencode")
+        out = p.read_text(encoding="utf-8")
+        assert "Blocking Issues" in out
+        assert "VERDICT: APPROVED" in out
+
+    def test_opencode_no_stop_step_falls_back_to_all_text(self, tmp_path):
+        # Truncated/killed run never emits a stop step — keep every text part
+        # rather than silently dropping the whole review.
+        p = tmp_path / "out.jsonl"
+        p.write_text(
+            self._oc(
+                {"type": "step_start", "part": {"type": "step-start"}},
+                {"type": "text", "part": {"type": "text", "text": "partial review body"}},
+            ),
+            encoding="utf-8",
+        )
+        extract_text_from_output(str(p), "opencode")
+        assert "partial review body" in p.read_text(encoding="utf-8")
+
     def test_content_arg_bypasses_file_read(self, tmp_path):
         p = tmp_path / "out.json"
         p.write_text("ignored on-disk", encoding="utf-8")

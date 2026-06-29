@@ -1,6 +1,8 @@
 """Tests for common.metadata.extractors."""
 
 import json
+import subprocess
+from unittest import mock
 
 import pytest
 
@@ -12,6 +14,7 @@ from common.metadata import (
     extract_session_id_json,
     extract_session_id_opencode,
 )
+from common.metadata.extractors import _extract_opencode_metadata_via_export
 
 
 class TestSessionIdJson:
@@ -168,3 +171,58 @@ class TestComputePlanMetadata:
 
     def test_none(self):
         assert compute_plan_metadata(None) == {}
+
+
+class TestOpencodeMetadataExport:
+    """`opencode export` reshaped model fields across versions: the nested
+    info.model dict survives on the user message, while assistant messages
+    flatten providerID/modelID/variant onto info. Detection must handle both."""
+
+    def _run(self, payload):
+        return subprocess.CompletedProcess(
+            ["opencode", "export", "ses_1"], 0,
+            stdout=json.dumps(payload), stderr="",
+        )
+
+    def test_nested_shape(self):
+        payload = {"messages": [
+            {"info": {"model": {"providerID": "opencode-go",
+                                "modelID": "deepseek-v4-pro", "variant": "max"}}},
+        ]}
+        with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
+            meta = _extract_opencode_metadata_via_export("ses_1")
+        assert meta == {"model": "opencode-go/deepseek-v4-pro", "effort": "xhigh"}
+
+    def test_flattened_shape(self):
+        # info.model is empty/absent; fields hoisted onto info (v1.17+ assistant).
+        payload = {"messages": [
+            {"info": {"role": "assistant", "model": {},
+                      "providerID": "opencode-go", "modelID": "deepseek-v4-flash",
+                      "variant": "high"}},
+        ]}
+        with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
+            meta = _extract_opencode_metadata_via_export("ses_1")
+        assert meta == {"model": "opencode-go/deepseek-v4-flash", "effort": "high"}
+
+    def test_real_mixed_export_uses_first_resolvable_message(self):
+        # Mirrors a real v1.17.11 export: nested user message first, then
+        # flattened assistant messages. The user message resolves first.
+        payload = {"messages": [
+            {"info": {"role": "user",
+                      "model": {"providerID": "opencode-go",
+                                "modelID": "deepseek-v4-flash", "variant": "high"}}},
+            {"info": {"role": "assistant", "model": {},
+                      "providerID": "opencode-go", "modelID": "deepseek-v4-flash",
+                      "variant": "high"}},
+        ]}
+        with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
+            meta = _extract_opencode_metadata_via_export("ses_1")
+        assert meta == {"model": "opencode-go/deepseek-v4-flash", "effort": "high"}
+
+    def test_model_without_variant_omits_effort(self):
+        payload = {"messages": [
+            {"info": {"providerID": "opencode-go", "modelID": "qwen3.6-plus"}},
+        ]}
+        with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
+            meta = _extract_opencode_metadata_via_export("ses_1")
+        assert meta == {"model": "opencode-go/qwen3.6-plus"}

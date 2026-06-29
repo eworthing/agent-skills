@@ -133,20 +133,38 @@ def extract_text_from_output(output_file, reviewer, content=None):
                     continue
             text = "\n".join(messages) if messages else raw_content
         elif reviewer == "opencode":
-            # JSONL: collect text from type=text events, skip reasoning
-            messages = []
+            # JSONL event stream. A tool-using reviewer narrates ("Let me check
+            # X...") and calls tools in intermediate *steps* that close with
+            # `step_finish` reason "tool-calls"; the actual answer is the text
+            # in the final step that closes with reason "stop". Keep only
+            # stop-step text so pre-answer narration never pollutes the review.
+            # Reasoning events are a distinct type and are skipped here. If the
+            # run was truncated/killed and we never see a stop step, fall back
+            # to every text part so we never silently drop the whole review.
+            stop_texts = []   # text from step(s) that finished with reason "stop"
+            all_texts = []    # every text part — fallback when no stop step seen
+            step_buf = []     # text accumulated in the in-progress step
+            saw_stop = False
             for line in raw_content.splitlines():
                 if not line.strip():
                     continue
                 try:
                     event = json.loads(line)
-                    if event.get("type") == "text":
-                        msg = event.get("part", {}).get("text", "")
-                        if msg:
-                            messages.append(msg)
                 except json.JSONDecodeError:
                     continue
-            text = "\n".join(messages) if messages else raw_content
+                etype = event.get("type")
+                if etype == "text":
+                    msg = event.get("part", {}).get("text", "")
+                    if msg:
+                        step_buf.append(msg)
+                        all_texts.append(msg)
+                elif etype == "step_finish":
+                    if event.get("part", {}).get("reason") == "stop":
+                        stop_texts.extend(step_buf)
+                        saw_stop = True
+                    step_buf = []
+            chosen = stop_texts if saw_stop else all_texts
+            text = "\n".join(chosen) if chosen else raw_content
         else:
             # Single JSON object (Claude, Gemini)
             data = json.loads(raw_content)
