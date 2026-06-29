@@ -72,7 +72,7 @@ Return JSON only:
 {
   "loop": <int>,
   "system_flag": "CONTINUE|HALT_SUCCESS_candidate|HALT_STAGNATION|HALT_LOOP_CAP",  // loop emits HALT_SUCCESS_candidate, never terminal HALT_SUCCESS (main promotes after the challenge)
-  "halt_subtype": "no_progress|oscillation|user_decision|no_backlog" or null,
+  "halt_subtype": "no_progress|oscillation|user_decision|no_backlog|verification_blocked" or null,
   "halt_handoff": {                       // PR 4, schema_version >= 2 — replaces flat halt_handoff_text
     "text": "<full user-facing message per halt-handoff.md template, placeholders resolved>",
     "expected_actions": [...]              // HandoffAction array per output-format-json.md halt_handoff schema; may be empty
@@ -88,7 +88,7 @@ Return JSON only:
   "review_artifact_path": "./CURRENT_REVIEW.json"
 }
 
-Rules: `halt_subtype` non-null iff `system_flag == "HALT_STAGNATION"`. At schema_version >= 2, `halt_handoff` (object) non-null iff `system_flag` starts with `HALT_`; `halt_handoff_text` is null. At schema_version 1, the legacy `halt_handoff_text` is the field that carries the user-facing text. `open_question_for_user` non-null iff `halt_subtype == "user_decision"`.
+Rules: `halt_subtype` non-null iff `system_flag == "HALT_STAGNATION"`. At schema_version >= 2, `halt_handoff` (object) non-null iff `system_flag ∈ {HALT_STAGNATION, HALT_LOOP_CAP}` — **null for `CONTINUE` and the non-terminal `HALT_SUCCESS_candidate`** (the candidate is a pause for the main-agent challenge, not a user-facing halt; the terminal `HALT_SUCCESS` it promotes to carries the handoff). `halt_handoff_text` is null. At schema_version 1, the legacy `halt_handoff_text` is the field that carries the user-facing text. `open_question_for_user` non-null iff `halt_subtype == "user_decision"`. Presence of `halt_subtype` / `unresolved_reason` / `halt_handoff` by state is enforced by **G34**.
 ```
 
 Main reads `review_artifact_path` for full detail when reporting HALT states or composing the final summary; the inline JSON above is for routing only.

@@ -78,9 +78,9 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   "loop": 3,                                    // int, 1-based
   "loop_cap": 10,                               // int
   "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_SUCCESS_candidate | HALT_STAGNATION | HALT_LOOP_CAP | HALT_DRY_RUN (HALT_DRY_RUN v3+; HALT_SUCCESS_candidate v4+ only)
-  "halt_subtype": null,                         // enum (required when state == HALT_STAGNATION; null otherwise): no_progress | oscillation | user_decision | no_backlog
+  "halt_subtype": null,                         // enum (required when state == HALT_STAGNATION; null otherwise): no_progress | oscillation | user_decision | no_backlog | verification_blocked. Presence enforced by G34.
   "halt_handoff_text": null,                    // legacy v1 field. v2+ uses `halt_handoff` object below instead.
-  "halt_handoff": null,                         // (PR 4, v2+) required when state ∈ {HALT_*}; null on CONTINUE. Object schema below.
+  "halt_handoff": null,                         // (PR 4, v2+) required when state ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN(v3+)}; null on CONTINUE and HALT_SUCCESS_candidate. Presence enforced by G34. Object schema below.
   "re_validated_at_sha": null,                  // string sha; populated by Resume Detection when drift was checked and same halt persists.
   "re_validation_context": null,                // (PR 4, v2+) required when re_validated_at_sha non-null. Object schema below.
   "dry_run": false,                             // (v3+) boolean. Audit trail of last invocation flag. NOT read on re-invocation (CLI flag is authoritative). true ⇒ state == "HALT_DRY_RUN".

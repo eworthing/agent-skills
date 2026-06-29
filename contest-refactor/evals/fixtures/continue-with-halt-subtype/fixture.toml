@@ -1,0 +1,12 @@
+id = "continue-with-halt-subtype"
+purpose = "CONTINUE carrying a non-null halt_subtype. Rule #17 forbids a subtype outside HALT_STAGNATION; G34 must FAIL."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

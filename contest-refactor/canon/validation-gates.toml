@@ -133,3 +133,7 @@ title = "HALT_SUCCESS independent challenge (terminal, v4+)"
 [[validation_gates]]
 id = "G33"
 title = "risk_boundary_evidence shape (Meta-Rule-4 preservation evidence, schema_version >= 3)"
+
+[[validation_gates]]
+id = "G34"
+title = "HALT-tail emit invariants (halt_subtype / unresolved_reason / halt_handoff presence by state, schema_version >= 3)"

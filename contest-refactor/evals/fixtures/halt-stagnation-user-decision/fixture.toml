@@ -1,0 +1,12 @@
+id = "halt-stagnation-user-decision"
+purpose = "Valid HALT_STAGNATION/user_decision: subtype + unresolved_reason + halt_handoff all present. Must PASS."
+expected_result = "pass"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "user_decision"

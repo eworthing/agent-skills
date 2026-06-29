@@ -1,0 +1,12 @@
+id = "halt-candidate-with-handoff"
+purpose = "HALT_SUCCESS_candidate with a non-null halt_handoff. The candidate is exempt (handoff null); G34 must FAIL."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_SUCCESS_candidate"

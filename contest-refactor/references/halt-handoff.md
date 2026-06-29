@@ -95,11 +95,11 @@ Next step options:
 
 ## HALT_STAGNATION
 
-Triggered when the loop cannot make further progress under the rubric. Four distinct subtypes — each means something different to the user.
+Triggered when the loop cannot make further progress under the rubric. Five distinct subtypes — each means something different to the user.
 
 ### Subagent records
 - `system_flag: "HALT_STAGNATION"`
-- `halt_subtype: "no_progress" | "oscillation" | "user_decision" | "no_backlog"`
+- `halt_subtype: "no_progress" | "oscillation" | "user_decision" | "no_backlog" | "verification_blocked"`
 - `unresolved_reason: <subtype-specific explanation>`
 
 ### Subtype: `no_progress`
@@ -221,6 +221,33 @@ Next step options:
   (e) Deep-reset (purge) — run "/contest-refactor --purge" for a preview, then
       "/contest-refactor --purge --confirm" if you want to drop
       findings_registry + REVIEW_HISTORY too.
+```
+
+### Subtype: `verification_blocked` (schema_version >= 4)
+
+**Condition**: A `HALT_SUCCESS_candidate` was emitted, but the independent HALT_SUCCESS challenger ([halt-verifier.md](halt-verifier.md)) was unavailable — it timed out or failed to spawn after the bounded retry envelope. Fail-closed: the candidate is **not** auto-promoted (a terminal success is never blessed by silence) and the loop does **not** route to CONTINUE-without-a-finding. `unresolved_reason` names the unavailability; re-invoking retries the challenge against the committed candidate.
+
+#### Handoff template
+
+```
+Loop N ended at HALT_STAGNATION (subtype: verification_blocked).
+
+What this means: The loop reached a HALT_SUCCESS *candidate* — every dimension at
+the 9.5+ bar — but the independent challenger that must verify a terminal success
+was unavailable (it timed out or failed to spawn after retries). I will not
+promote a success on silence, so the run is held here, fail-closed. Nothing is
+lost: the candidate is committed and its scorecard is recorded.
+
+Current scorecard: <list dimensions and scores>
+
+Why it is blocked: <the challenger-unavailability reason>
+
+Next step options:
+  (a) Re-invoke "/contest-refactor" — I'll re-run the HALT_SUCCESS challenge
+      against the committed candidate; if it holds, this promotes to HALT_SUCCESS.
+  (b) Inspect manually — read CURRENT_REVIEW.md; the candidate and its scorecard
+      are committed, so you can review the claimed success directly.
+  (c) Reset — "/contest-refactor --reset" archives this halt and starts fresh.
 ```
 
 ---

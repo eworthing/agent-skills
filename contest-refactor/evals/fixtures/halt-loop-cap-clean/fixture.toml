@@ -1,0 +1,12 @@
+id = "halt-loop-cap-clean"
+purpose = "Valid HALT_LOOP_CAP terminal: halt_subtype null, unresolved_reason + halt_handoff present. Must PASS."
+expected_result = "pass"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_LOOP_CAP"

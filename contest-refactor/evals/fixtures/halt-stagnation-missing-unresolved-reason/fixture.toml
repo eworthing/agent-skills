@@ -1,0 +1,12 @@
+id = "halt-stagnation-missing-unresolved-reason"
+purpose = "HALT_STAGNATION with unresolved_reason:null. Rule #11 requires it non-null on HALT_STAGNATION; G34 must FAIL."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_STAGNATION"

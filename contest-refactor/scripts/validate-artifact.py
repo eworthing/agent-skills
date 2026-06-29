@@ -1473,6 +1473,58 @@ def check_g33_risk_boundary_evidence(current_review: dict, canon) -> List[Issue]
     return issues
 
 
+# G34 state predicates (rule predicates, not new enum domains; canon owns membership).
+_G34_REASON_STATES = {"HALT_STAGNATION", "HALT_LOOP_CAP"}
+_G34_HANDOFF_STATES = {"HALT_SUCCESS", "HALT_STAGNATION", "HALT_LOOP_CAP", "HALT_DRY_RUN"}
+
+
+def check_g34_halt_tail_invariants(current_review: dict, canon) -> List[Issue]:
+    """G34: HALT-tail emit invariants — PRESENCE of halt_subtype / unresolved_reason / halt_handoff by state.
+
+    Bidirectional (required-when AND null-otherwise), schema_version >= 3. Enforces the presence halves of
+    [output-format-json-rules.md] rules #11/#17/#18:
+      - halt_subtype      non-null iff state == HALT_STAGNATION  (membership stays with check_schema_enums)
+      - unresolved_reason non-null iff state in {HALT_STAGNATION, HALT_LOOP_CAP}
+      - halt_handoff      non-null iff state in {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN};
+                          null for CONTINUE and HALT_SUCCESS_candidate (a non-terminal pause for the
+                          main-agent challenge, not a user-facing halt).
+    G34 checks handoff PRESENCE only; the rule #18 handoff SHAPE (text / expected_actions[] / match_kind) is a
+    separate, currently-unenforced rule. Runs only for canon-valid states — an invalid or missing `state` is
+    the schema-enum check's concern, not G34's (so G34 does not double-report it).
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 3:
+        return issues
+    state = current_review.get("state")
+    if state not in set(canon.states):
+        return issues  # invalid/missing state owned by check_schema_enums
+    # rule #17 — halt_subtype presence by state (domain ∈ canon stays with check_schema_enums)
+    subtype = current_review.get("halt_subtype")
+    if state == "HALT_STAGNATION":
+        if subtype is None:
+            issues.append(Issue("G34", "state=HALT_STAGNATION requires a non-null halt_subtype (rule #17)"))
+    elif subtype is not None:
+        issues.append(Issue(
+            "G34", f"state={state} requires halt_subtype=null (rule #17); got {subtype!r}"))
+    # rule #11 — unresolved_reason presence by state
+    reason = current_review.get("unresolved_reason")
+    if state in _G34_REASON_STATES:
+        if reason is None:
+            issues.append(Issue("G34", f"state={state} requires a non-null unresolved_reason (rule #11)"))
+    elif reason is not None:
+        issues.append(Issue("G34", f"state={state} requires unresolved_reason=null (rule #11)"))
+    # rule #18 — halt_handoff PRESENCE by state (shape is out of scope)
+    handoff = current_review.get("halt_handoff")
+    if state in _G34_HANDOFF_STATES:
+        if handoff is None:
+            issues.append(Issue("G34", f"state={state} requires a non-null halt_handoff (rule #18 presence)"))
+    elif handoff is not None:
+        issues.append(Issue(
+            "G34", f"state={state} requires halt_handoff=null (rule #18); CONTINUE and the non-terminal "
+            f"HALT_SUCCESS_candidate carry no user-facing handoff"))
+    return issues
+
+
 def check_continue_backlog(current_review: dict) -> List[Issue]:
     """CONTINUE must carry next backlog work."""
     issues: List[Issue] = []
@@ -1543,6 +1595,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g21_scorecard(current_review))
     issues.extend(check_g32_halt_success_challenge(current_review))
     issues.extend(check_g33_risk_boundary_evidence(current_review, canon))
+    issues.extend(check_g34_halt_tail_invariants(current_review, canon))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

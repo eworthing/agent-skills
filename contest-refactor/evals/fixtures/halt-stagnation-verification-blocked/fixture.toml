@@ -1,0 +1,12 @@
+id = "halt-stagnation-verification-blocked"
+purpose = "Valid HALT_STAGNATION/verification_blocked (v4 fail-closed). Exercises the canon reconciliation. Must PASS."
+expected_result = "pass"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "verification_blocked"
