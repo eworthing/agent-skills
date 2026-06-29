@@ -24,7 +24,7 @@ claude -p "PROMPT" \
   --output-format json \
   --max-turns 10 \
   --no-session-persistence \
-  --append-system-prompt "You are a code reviewer. Read the files the plan references before judging it — do not rely on the plan text alone. Assess the plan for correctness, completeness, missing edge cases, and risks. End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
+  --append-system-prompt "You are a code reviewer. Read the files the plan references before judging it — do not rely on the plan text alone. Assess the plan for correctness, completeness, missing edge cases, and risks. If the artifact is an implementation plan or spec, also assess its executability — whether a fresh engineer with no prior context could implement and independently verify each task as written (flag tasks too large or coupled to verify alone, under-specified or placeholder steps, and references to files, functions, or signatures the plan never defines). End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
 ```
 
 - `-p "prompt"` / `--print "prompt"`: runs once and exits (no interactive TUI)

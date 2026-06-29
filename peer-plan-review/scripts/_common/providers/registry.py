@@ -123,6 +123,11 @@ def build_claude_cmd(args, session_id=None):
         else "You are a code reviewer. Read the files the plan references before "
         "judging it — do not rely on the plan text alone. Assess the plan for "
         "correctness, completeness, missing edge cases, and risks. "
+        "If the artifact is an implementation plan or spec, also assess its "
+        "executability — whether a fresh engineer with no prior context could "
+        "implement and independently verify each task as written (flag tasks too "
+        "large or coupled to verify alone, under-specified or placeholder steps, "
+        "and references to files, functions, or signatures the plan never defines). "
         "End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
     )
     cmd.extend(["--append-system-prompt", system_prompt])
