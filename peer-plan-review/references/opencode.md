@@ -1,6 +1,6 @@
 # opencode Reference — peer-plan-review
 
-Source: binary help + model listing, verified April 2026.
+Source: binary help + model listing, verified 2026-06-29.
 
 ## Install
 
@@ -49,7 +49,7 @@ opencode run "PROMPT" \
 
 List available models: `opencode models opencode-go`
 
-Common opencode-go models: `deepseek-v4-pro`, `deepseek-v4-flash`, `kimi-k2.6`, `mimo-v2.5`, `mimo-v2.5-pro`, `qwen3.6-plus`, `minimax-m2.7`, `glm-5.1`
+Common opencode-go models (live, verified 2026-06-29): `deepseek-v4-pro`, `deepseek-v4-flash`, `glm-5.2`, `glm-5.1`, `kimi-k2.6`, `kimi-k2.7-code`, `mimo-v2.5`, `mimo-v2.5-pro`, `minimax-m3`, `minimax-m2.7`, `qwen3.7-plus`, `qwen3.7-max`, `qwen3.6-plus`
 
 **Default (no `-m`):** Last-used model from the current project session. If no prior session exists, falls back to the provider's configured default (verified April 2026: `opencode-go/qwen3.6-plus`).
 
