@@ -63,3 +63,5 @@ the full doctrine boundary.
 ## Measurement results
 
 First run 2026-06-30 (sonnet, K=5): **restraint PASS** (0 added false positives), **recall inconclusive** — the 8-file fixture is fully visible to the no-map Critic (5/5 catch), so it cannot demonstrate the map's at-scale recall value. Auto-engage default-on stays gated on a realistic-scale recall fixture. See [`MEASUREMENT-2026-06-30.md`](MEASUREMENT-2026-06-30.md).
+
+**Update (windowed recall):** `recall-windowed-large-1/` (20 pkgs / 40 files, buried cycle) measured recall under an at-scale window — no-map 0/5 vs with-map 5/5. Both recall and restraint now pass; auto-engage above >300 files is justified. See [`MEASUREMENT-2026-06-30.md`](MEASUREMENT-2026-06-30.md).
