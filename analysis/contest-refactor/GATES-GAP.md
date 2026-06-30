@@ -1,7 +1,7 @@
 # Forced-Completion Gates Gap — contest-refactor vs trailofbits fp-check
 
 > **CURRENT-STATE (2026-06-28):** COVERED — continuation discipline enforced by G20/G15 at artifact level; plugin Stop-hooks are Claude-Code-only and unportable for a cross-provider skill, so the gate is the portable equivalent. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
-> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+> Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
 Compares contest-refactor's gate machinery (31 hard gates G1-G31 + 8 quality passes Q1-Q8 in `references/validation.md`, validated by `scripts/validate-artifact.py`) against Trail of Bits fp-check (`refs/competitors/trailofbits-skills/plugins/fp-check/`) which uses Claude Code's Stop + SubagentStop hook system with LLM-judge prompts.
 

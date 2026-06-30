@@ -1,6 +1,6 @@
 # Source Status Matrix — contest-refactor competitive analysis
 
-> **CURRENT-STATE (2026-06-28):** the gap corpus was re-audited against current skill source — each `*-GAP.md` now carries a verdict header, and four stale spots were corrected (SARIF + AST import-graph/cycle detection already SHIPPED; phantom gates G33+ flagged as unbuilt; `schema_version: 4` already taken by the HALT-challenge schema). See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md).
+> **CURRENT-STATE (2026-06-28):** the gap corpus was re-audited against current skill source — each `*-GAP.md` now carries a verdict header, and four stale spots were corrected (SARIF + AST import-graph/cycle detection already SHIPPED; phantom gates G37+ flagged as unbuilt (G33–G36 have since SHIPPED 2026-06-29; ceiling now G36, re-verified 2026-06-30); `schema_version: 4` already taken by the HALT-challenge schema). See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md).
 
 **Purpose**: per-candidate tracking matrix to prevent "research swamp" regrowth. Validates ChatGPT 2026-05-25 proposal. Updated whenever a new candidate is surfaced or an existing candidate's status changes.
 

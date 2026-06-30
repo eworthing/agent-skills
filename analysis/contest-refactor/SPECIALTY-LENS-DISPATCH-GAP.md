@@ -1,7 +1,7 @@
 # Specialty Lens Dispatch Gap — contest-refactor vs levnik + agentlint + claude-bouncer + trailofbits
 
 > **CURRENT-STATE (2026-06-28):** DEFERRED — static single-stack-lens + always-included security by design; no risk-triggered dispatch table. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
-> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+> Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
 Merges what was originally split between "Risk-Triggered Lenses" (per landscape doc § 6 P1) and "Specialty-Lens-Dispatch" (per LEVNIK-AUDIT-SUITE-GAP Gap C). Same architectural mechanism viewed from two angles: contest-refactor's monolithic lens system (`lens-apple.md` | `lens-generic.md`) needs to gain risk-triggered specialty packs.
 

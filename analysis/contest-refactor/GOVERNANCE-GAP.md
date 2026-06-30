@@ -1,7 +1,7 @@
 # Executable Governance Ingestion Gap — contest-refactor vs P0 competitors
 
 > **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — Gap C import-graph + cycle detection is SHIPPED (`scripts/audit_boundaries.py`, real `ast` parse); only the declarative `[[boundary_rules]]` half + lint(A)/CI(B) ingestion remain OPEN (low value). See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
-> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+> Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
 Compares contest-refactor's governance ingestion (Step 0 Context Discovery + `.contest-refactor.toml` + lens system + ADR awareness per `references/method.md`) against:
 

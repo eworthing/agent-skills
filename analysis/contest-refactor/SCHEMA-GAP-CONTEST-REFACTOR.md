@@ -1,7 +1,7 @@
 # Finding Schema Gap Analysis — contest-refactor vs P0 competitors
 
 > **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — Gap 6 SARIF is SHIPPED (`scripts/export_sarif.py`, SARIF 2.1.0); Gaps 2/5/7 partially covered by `test_failed`/reviewer+G32/G24-G25; Gaps 3/4 deferred to a non-existent parallel-critic mode; Gap 1 `confidence` = plan W3 defer. NOTE: `schema_version: 4` is ALREADY shipped (the HALT-challenge schema) — proposed new finding fields are **v5**, not v4. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
-> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+> Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
 Compares `contest-refactor`'s **finding-level** schema (`CURRENT_REVIEW.json.findings[]` per `references/output-format-json.md`) against three P0 competitors verified by source inspection. Two caution flags for this comparison:
 

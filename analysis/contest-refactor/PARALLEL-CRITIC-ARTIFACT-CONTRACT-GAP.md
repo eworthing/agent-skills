@@ -1,7 +1,7 @@
 # Parallel Critic Artifact Contract Gap — contest-refactor vs levnik audit-suite
 
 > **CURRENT-STATE (2026-06-28):** DEFERRED — self-gated — no consumers until CRITIC-INDEPENDENCE Gap B (parallel critics) ships. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
-> Gate numbers **G33+** cited below are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+> Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
 Source: `refs/competitors/levnik-skills/shared/references/audit_summary_contract.md` + `audit_final_report_contract.md` + `audit_output_schema.md`. Verified verbatim in LEVNIK-AUDIT-SUITE-GAP.
 

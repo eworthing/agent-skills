@@ -1,6 +1,6 @@
 # Competitor Inventory — contest-refactor comparison
 
-> **CURRENT-STATE (2026-06-28):** every `*-GAP.md` now carries a source-verified `CURRENT-STATE` header (SHIPPED / COVERED / PARTIALLY-COVERED / DEFERRED / REJECTED / OPEN). See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the dual-peer-reviewed audit. Note: gate numbers **G33+** anywhere in this corpus are UNBUILT proposals — the live catalog (`contest-refactor/canon/validation-gates.toml`) stops at **G32**.
+> **CURRENT-STATE (2026-06-28):** every `*-GAP.md` now carries a source-verified `CURRENT-STATE` header (SHIPPED / COVERED / PARTIALLY-COVERED / DEFERRED / REJECTED / OPEN). See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the dual-peer-reviewed audit. Field-level defer/skip decisions: [`SCHEMA-DECISIONS.md`](SCHEMA-DECISIONS.md). Note: gate numbers **G37+** anywhere in this corpus are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29) and the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36** *(re-verified 2026-06-30)*.
 
 **Location**: this inventory + all gap-analysis docs live under `analysis/contest-refactor/` (tracked by git). Competitor source clones live under `refs/competitors/` (gitignored, depth-1 git clones for source inspection). The two locations are paired but distinct: `analysis/` holds our derivative analysis; `refs/` holds upstream source.
 

@@ -9,6 +9,8 @@
 > downgraded here, W2 had concrete technical errors (now corrected), and two W3 "DECLINE"s rested
 > on doctrine that does not actually forbid the field (now reframed as honest DEFER). Change log at
 > the end.
+>
+> **RE-VERIFIED 2026-06-30:** since this 2026-06-28 audit, gates **G33–G36 have SHIPPED** — canon `validation-gates.toml` now tops out at **G36** (G37+ remain unbuilt proposals). SARIF (`export_sarif.py`) and AST import-graph/cycle detection (`audit_boundaries.py`) re-confirmed SHIPPED; the `schema_version: 4`→v5 guidance is unchanged. Each gap doc's top-of-file ceiling header was updated to match. Scattered in-body counts (e.g. “G1–G31 / 31 hard gates”) are historical 2026-06-28 snapshots — the authoritative current ceiling is each doc's updated header, not the in-body prose.
 
 **Question asked:** Did we ignore or skip the competitive gaps in `analysis/contest-refactor/*-GAP.md`
 for a *good* reason (equivalent already exists / feature is bad / deliberately deferred), or did real
