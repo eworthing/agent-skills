@@ -1,0 +1,4 @@
+# Generated prompts and run outputs are reproducible from the fixtures + harness.
+_generated/
+runs/
+__pycache__/
