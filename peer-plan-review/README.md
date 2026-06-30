@@ -22,15 +22,15 @@ Useful when you want a second opinion on a plan before touching code.
 SKILL.md              agent-facing protocol
 references/
   codex.md            Codex CLI reference (install, flags, resume, effort)
-  claude.md           Claude Code CLI reference
+  claude-code.md      Claude Code CLI reference
   copilot.md          Copilot CLI reference
   opencode.md         opencode CLI reference
   antigravity.md      Antigravity (agy) reference — experimental, not read-only
   gemini.md           Gemini CLI reference (EOL 2026-06-18; enterprise-only)
-  adapter-cli.md      run_review.py flag list and session-file contract
+  adapter-cli.md      run_review.py flags, session-file contract, env vars
   adversarial.md      prompt additions for adversarial stance
   output-format.md    structured-output template injected into every prompt
-  env.md              env vars read by the runner
+  domain-context.md   how to author an optional domain-context block
 scripts/
   run_review.py       adapter CLI entrypoint
   ppr_paths.py        thin CLI wrapper over _common/session/paths.py

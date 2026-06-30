@@ -5,9 +5,9 @@ description: >
   Copilot, opencode, Antigravity (agy), or Gemini CLI for iterative review, then
   revise and re-submit until the reviewer approves or the round limit is reached.
   Use when the user wants a second opinion on a plan, asks for cross-agent
-  review, mentions 'codex review', 'agy review', 'antigravity review', 'claude
-  review', 'copilot review', 'opencode review', or 'gemini review', wants to
-  validate a plan before executing it, or asks for peer review.
+  review, mentions '<provider> review'
+  (codex/claude/copilot/opencode/agy/antigravity/gemini), wants to validate a
+  plan before executing it, or asks for peer review.
 allowed-tools:
   - Read
   - Write
@@ -42,17 +42,14 @@ Pressure-test a plan before execution. The host agent owns the plan and revises 
 - `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. Do not reimplement it.
 - Provider references — read exactly one after reviewer chosen:
   [`references/codex.md`](references/codex.md),
-  [`references/claude.md`](references/claude.md),
+  [`references/claude-code.md`](references/claude-code.md),
   [`references/copilot.md`](references/copilot.md),
   [`references/opencode.md`](references/opencode.md),
-  [`references/antigravity.md`](references/antigravity.md) (`agy` — experimental, not read-only),
+  [`references/antigravity.md`](references/antigravity.md) (`agy` — experimental),
   [`references/gemini.md`](references/gemini.md) (EOL 2026-06-18; enterprise-only successor is `agy`).
 - [`references/output-format.md`](references/output-format.md) — structured output template. Include in every prompt.
-- [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract.
+- [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract, and the env vars the runner reads (`GEMINI_CONFIG_DIR`, `CODEX_HOME`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`).
 - [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
-- [`references/env.md`](references/env.md) — env vars runner reads
-  (`GEMINI_CONFIG_DIR`, `CODEX_HOME`,
-  `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`).
 
 For available models prefer:
 `python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`.
@@ -65,7 +62,7 @@ Before starting, confirm one of: a plan already in the session, a plan pasted by
 
 Normalize to:
 
-- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`, `agy` (Antigravity — `antigravity` is accepted and normalized to `agy`). (The `--reviewer <provider>` CLI flag uses the same values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.) **`agy` is experimental and NOT guaranteed read-only** — see [`references/antigravity.md`](references/antigravity.md); run it only on trusted plans with a clean/committed tree.
+- `reviewer` — required; the **provider** acting as reviewer for this run. One of: `codex`, `gemini`, `claude`, `copilot`, `opencode`, `agy` (Antigravity — `antigravity` is accepted and normalized to `agy`). (The `--reviewer <provider>` CLI flag uses the same values; "reviewer" names the role, "provider" names the CLI tool fulfilling it.) `agy` is the one **non-read-only** reviewer — see [Rules](#rules) and [`references/antigravity.md`](references/antigravity.md).
 - `model` — optional; pass-through if not known alias
 - `effort` — optional `low | medium | high | xhigh`
 
@@ -81,7 +78,7 @@ Parsing rule: accepted forms are `reviewer`, `reviewer <effort>`, `reviewer <mod
 ## Preflight
 
 1. Resolve `<skill-dir>` relative to this `SKILL.md`.
-2. Read `references/<provider>.md`.
+2. Read `references/<provider>.md` (for the `claude` provider, the file is `references/claude-code.md`).
 3. Verify CLI:
    `python3 <skill-dir>/scripts/run_review.py --self-check --reviewer <provider>`.
 4. If user supplied unfamiliar shorthand model, warn once and continue — runner pass unknown values through as raw IDs.
@@ -112,52 +109,27 @@ every path with `ppr_paths.py` (the `eval` above also exports
 `$CODEX_HOME_MANIFEST`). Do not use ad hoc inline Python that reads `PROMPT_FILE`
 or related path vars from the environment before they have been exported.
 
-**Concurrency:** several peer reviews can run side by side against one codebase.
-Each generates its own random `REVIEW_ID`, so their temp files never collide, and
-the Codex adapter now isolates each run's session storage (a per-run `CODEX_HOME`
-tracked in the manifest) so concurrent Codex reviews can't capture each other's
-session. Never share one id-file path between concurrent reviews — a shared
-pointer is the one thing that *would* make them step on each other.
+**Concurrency:** several peer reviews can run side by side against one codebase —
+each generates its own random `REVIEW_ID`, so their temp files never collide.
+Never share one id-file path between concurrent reviews; a shared pointer is the
+one thing that *would* make them step on each other. (Concurrent Codex runs are
+also session-isolated per run — see [`references/codex.md`](references/codex.md).)
 
 Snapshot the plan into `plan.md` before each round. Treat the snapshot as immutable for that round. Number every line (`cat -n` style) so the reviewer can cite specific lines — include the **numbered** plan in the prompt.
 
 ## Domain context (optional)
 
-Give the reviewer the host's domain conventions **only** when the plan depends on
-**project-specific rules a strong general model would not already apply** — a bespoke
-architecture contract, a custom design-token system, a private framework's invariants.
-Skip it for **well-known** platform idioms (idiomatic SwiftUI, REST, common security
-practice): a capable reviewer already enforces those, so a block is prompt weight for no
-gain. Baseline testing confirmed the asymmetry — a strong reviewer flagged idiomatic
-SwiftUI violations unaided but missed bespoke project rules (e.g. "writes must go through
-the audit store", "every model must be registered or it loses data on migration")
-entirely. Default **off**; add a block only when the plan's correctness depends on a rule specific to
-this project and absent from any public standard, framework guide, or common convention (e.g.
-a custom audit-store contract, a private migration invariant). When in doubt, omit it.
-The user may opt out per run (e.g. a maximally independent adversarial pass).
+Default **off.** Add a domain-context block **only** when the plan's correctness depends on a
+project-specific rule a strong general model would not already apply — a bespoke architecture
+contract, a private framework invariant, a custom design-token system. Skip well-known platform
+idioms (idiomatic SwiftUI, REST, common security practice): a capable reviewer already enforces
+those, so a block is prompt weight for no gain. When in doubt, omit it; the user may also opt out
+per run (e.g. a maximally independent adversarial pass).
 
-There is no API to enumerate the host's loaded skills — only you know which are active, so
-you author this block yourself as prose in the prompt; it is never runner logic.
-
-**Author it as criteria, not prescriptions** — state the standard the plan must meet,
-never restate the solution the plan already chose. Hard rule while writing it:
-
-> Do not reference the specific files, classes, or architectural choices made in the plan.
-> Output only the abstract rules the plan must satisfy — 3–6 bullets, one checkable rule each.
-
-Place the block between the numbered plan and the output template, in this shape:
-
-```
-## Domain context (review criteria — challenge these if any are wrong)
-- <checkable rule 1>
-- <checkable rule 2>
-```
-
-When a block is present, the reviewer uses the two-pass output variant in
-`references/output-format.md`: an independent Pass A that must not assume the criteria are
-right, then a Pass B that checks the plan against the criteria **and challenges the
-criteria themselves**. That preserves the independent second opinion — the reviewer can
-reject a biased or incomplete block instead of rubber-stamping the host's framing.
+Only you know which host skills are active — there is no API to enumerate them — so when you do
+add a block, **author it yourself as prose** following
+[`references/domain-context.md`](references/domain-context.md) (the authoring rule, placement, and
+the two-pass output variant). It is never runner logic.
 
 ## Round 1
 
