@@ -15,6 +15,7 @@ For each score below 9.5:
 2. If the 9-anchor is met, account for every remaining source-backed candidate:
    - Noticeable-or-worse and passes Simplify Pressure Test -> add to Improvement Backlog; state is `CONTINUE`.
    - Requires product or ownership decision -> halt as `HALT_STAGNATION` subtype `user_decision`.
+   - **Context-sufficiency cap:** 9.5+ for the dimension genuinely turns on a business / regulatory / consistency rule that is absent from `CONTEXT.md` / ADRs and not derivable from source (e.g. may a compliance audit entry be written eventually vs transactionally; must two entities be strongly consistent) -> do **not** certify 9.5+ on the Actor's disclosure of the tradeoff alone. Cap below 9.5 with the missing rule named as the blocker and demanded as evidence; halt `user_decision` if it blocks the top structural finding. Source-determinable choices are exempt — a derived, rebuildable read model is correctly eventually consistent, an aggregate's internal writes are atomic by definition; capping those for missing context is over-reach. (Mirrors the _Context-sufficiency cap_ in [architecture-rubric.md](architecture-rubric.md).)
    - Cosmetic for contest, ADR-carved-out, framework-constrained, or fails Simplify Pressure Test because every fix adds ceremony -> set score to 9.5 with `residual_disposition: "accepted"` and include the rationale.
    - No source-backed residual can be named -> set score to 10.
 3. If the 9-anchor is not met, keep the lower score only when the scorecard or
