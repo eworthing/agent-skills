@@ -10,7 +10,8 @@ in every prompt.
 ### Reasoning
 Full analysis of the plan across two lenses:
 - **Execution risk** — sequencing, hidden assumptions, missing validation,
-  rollback, and dependency gaps.
+  rollback, dependency gaps, and missing observability (no metrics or logging on
+  new, failure-prone paths such as background jobs and external calls).
 - **Executability** — could a fresh engineer with no prior context implement this
   as written? Flag tasks too large or coupled to build and verify on their own,
   steps with no stated way to confirm success, under-specification (TBD/TODO,
@@ -23,6 +24,10 @@ Full analysis of the plan across two lenses:
 - [B1] (HIGH|MEDIUM|LOW) Short description of blocking issue
   Section: <plan section name> (lines <N-M>)
   Recommendation: Concrete fix or mitigation
+
+An executability seam is BLOCKING when it would halt or mislead a fresh engineer
+(undefined reference actually used, a task too large to verify, a step with no way
+to confirm success); it is NON-BLOCKING when it is cosmetic or easily inferred.
 
 (Write "None" if no blocking issues.)
 

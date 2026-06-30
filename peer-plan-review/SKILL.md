@@ -131,7 +131,9 @@ practice): a capable reviewer already enforces those, so a block is prompt weigh
 gain. Baseline testing confirmed the asymmetry — a strong reviewer flagged idiomatic
 SwiftUI violations unaided but missed bespoke project rules (e.g. "writes must go through
 the audit store", "every model must be registered or it loses data on migration")
-entirely. Default **off**; add a block only when the convention is genuinely non-obvious.
+entirely. Default **off**; add a block only when the plan's correctness depends on a rule specific to
+this project and absent from any public standard, framework guide, or common convention (e.g.
+a custom audit-store contract, a private migration invariant). When in doubt, omit it.
 The user may opt out per run (e.g. a maximally independent adversarial pass).
 
 There is no API to enumerate the host's loaded skills — only you know which are active, so
@@ -203,12 +205,12 @@ If `model` or `effort` missing: fall back to requested → provider default →
 
 Standard stance only. Adversarial skip direct to Finalize after round 1.
 
-On `REVISE`:
+On `REVISE` (use fresh per-round finding IDs each round — `B1`, `B2`, `N1`, …; do not carry IDs forward):
 
 1. Address each finding.
 2. Rewrite plan snapshot with updated full plan.
 3. Write short `Changes since last round` bullet list.
-4. Rebuild prompt in this order: verdict contract → previous reviewer feedback (with finding IDs) → `Changes since last round` → updated numbered plan. Each round use fresh per-round IDs.
+4. Rebuild prompt in this order: verdict contract → previous reviewer feedback (with finding IDs) → `Changes since last round` → updated numbered plan.
 5. Re-run the runner with `--resume` added.
 
 Stop after approval or five rounds, whichever first.
@@ -227,7 +229,7 @@ Stop after approval or five rounds, whichever first.
 - Approved → present final revised plan; note reviewer approval.
 - Round limit (standard) → present latest plan + unresolved concerns.
 - Adversarial round ended `REVISE` → present findings as-is.
-- **In all cases, STOP.** Do not begin implementing changes, editing code, or modifying files. Ask the user which findings, if any, they want addressed.
+- **In all cases, stop here** — presenting findings for the user to triage is the whole point of peer review. Do not begin implementing changes, editing code, or modifying files. Ask the user which findings, if any, they want addressed.
 - Reclaim any per-run Codex homes (no-op for other reviewers):
   `python3 <skill-dir>/scripts/ppr_paths.py --cleanup --review-id "$REVIEW_ID"`.
   It validates each recorded home before removing it and is safe to re-run.
@@ -236,7 +238,7 @@ Stop after approval or five rounds, whichever first.
 
 ## Rules
 
-- Keep the reviewer read-only. Never ask it to modify files or execute the host workflow. (Exception: `agy`/Antigravity has no read-only mode and auto-approves tools — the runner sandboxes it and prepends a read-only directive, but it can still write. Treat it as experimental; run only on trusted plans with a clean/committed tree.)
+- Keep the reviewer read-only. Never ask it to modify files or execute the host workflow. (`agy` is the one exception — it is **not** read-only; see [Parse reviewer arguments](#parse-reviewer-arguments) and [`references/antigravity.md`](references/antigravity.md).)
 - Capture the full output each round; no tail-scraping.
 - Never use transcript-sharing flags (`--share`, `--share-gist`).
 - Treat the prompt/review/session/events files as sensitive (they contain plan text).
