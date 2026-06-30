@@ -8,6 +8,16 @@ swiftui-native-ux-workspace/
 temp/
 refs/
 
+# contest-refactor working artifacts — created when dogfooding /contest-refactor on a
+# skill dir; never commit them into the skill under review. contest-refactor's own
+# evals/ fixtures legitimately track these names, so re-include that subtree.
+CURRENT_REVIEW.json
+CURRENT_REVIEW.md
+REVIEW_HISTORY.json
+REVIEW_HISTORY.md
+findings_registry.json
+!contest-refactor/evals/**
+
 # Per-agent skill install dirs (local symlinks / npx-skills artifacts, not repo content).
 # Keep skill-evaluator-1.0.0 — it is tracked and referenced by CLAUDE.md.
 .agents/
