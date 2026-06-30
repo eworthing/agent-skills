@@ -1,0 +1,43 @@
+# Repo-map eval fixture — RECALL arm
+# Layer: W2.1 repo-map advisory candidate-evidence (Method.md Step 0 / Step 3)
+#
+# The host runs repo_map.py against codebase/ and presents the output as Step-0
+# candidate evidence to the Critic. Measurement runs Critic twice: without the map
+# (arm A, no-map control) and with the map (arm B). See README.md for the protocol.
+
+id = "recall-cross-module-coupling-1"
+arm = "recall"
+
+description = """
+Multi-module Python codebase with a hidden billing <-> reporting import cycle.
+
+billing.policy imports reporting.audit_log (to record compliance events).
+reporting.audit_log imports billing.policy (to snapshot the LATE_FEE_RATE).
+
+This bidirectional dependency is not apparent from the module directory layout:
+both packages look like independent bounded contexts to a Critic reading only
+the top-level structure. The repo-map surfaces the cycle as candidate evidence
+so the Critic can investigate whether the coupling is justified or a seam leak.
+"""
+
+# The planted coupling — the cycle repo_map.py must detect and surface.
+planted_cycle = ["billing", "reporting"]
+cycle_file_lhs = "billing/policy.py"        # imports reporting.audit_log
+cycle_file_rhs = "reporting/audit_log.py"   # imports billing.policy
+
+# Measurement expectation (not a validator assertion — evaluated by owner).
+# Arm B (with map): Critic should flag billing<->reporting coupling as candidate.
+# Arm A (no map):   Critic may miss the cycle (it's not visible in directory layout).
+expected_map_surfaces = "billing <-> reporting cycle via policy.py / audit_log.py"
+
+[notes]
+measurement_protocol = """
+1. Run: python3 scripts/repo_map.py evals/repo-map-fixtures/recall-cross-module-coupling-1/codebase/ --format md
+2. Arm A (no-map control): run Critic on codebase/ without the repo-map in Step-0 evidence.
+3. Arm B (with-map):       run Critic on codebase/ with the repo-map output prepended to Step-0.
+4. Grade: Arm B must cite the billing<->reporting cycle as a candidate coupling signal;
+   Arm A should miss it (that miss is the recall gap the map closes).
+5. Confirm Arm B uses the map as candidate evidence only — not as a finding by itself.
+"""
+expected_find_without_map = false   # Critic reading directory layout alone may miss the cycle
+expected_find_with_map = true       # Critic with the map output should surface the coupling

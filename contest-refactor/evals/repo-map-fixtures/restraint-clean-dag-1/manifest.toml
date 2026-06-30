@@ -1,0 +1,40 @@
+# Repo-map eval fixture — RESTRAINT arm
+# Layer: W2.1 repo-map advisory candidate-evidence (Method.md Step 0 / Step 3)
+#
+# The host runs repo_map.py against codebase/ and presents the output as Step-0
+# candidate evidence to the Critic. The map must introduce ZERO new false positives
+# versus the no-map control on this clean codebase. See README.md for the protocol.
+
+id = "restraint-clean-dag-1"
+arm = "restraint"
+
+description = """
+Clean Python codebase with a strictly layered dependency DAG:
+
+    api -> domain -> infrastructure
+
+No cycles, no cross-cutting back-edges. Each package has a clear single owner:
+- api:            HTTP coordination only; depends on domain, not infrastructure.
+- domain:         Core business logic; depends on infrastructure via the repository.
+- infrastructure: Persistence adapters; no first-party imports (leaf node).
+
+The repo-map should show fan_in of {infrastructure: 1, domain: 1, api: 0},
+zero cycles, and clean public surfaces. A Critic that over-reacts to advisory
+graph signal might surface the domain->infrastructure edge as a "coupling concern" —
+that would be a false positive since it is the intended dependency direction.
+"""
+
+# Expected map output (validated by owner during measurement — not a Python assertion).
+expected_cycles = []           # must be empty
+expected_false_positives = 0   # map must introduce zero new flags vs no-map control
+
+[notes]
+measurement_protocol = """
+1. Run: python3 scripts/repo_map.py evals/repo-map-fixtures/restraint-clean-dag-1/codebase/ --format md
+2. Arm A (no-map control): run Critic on codebase/ without the repo-map in Step-0 evidence.
+3. Arm B (with-map):       run Critic on codebase/ with the repo-map output prepended to Step-0.
+4. Grade: count new flags raised by Arm B that were not raised by Arm A.
+   Any new flag is a false positive introduced by the map — expected_false_positives = 0.
+5. The domain->infrastructure edge is the intended coupling direction and must NOT be flagged.
+"""
+restraint_regression_tolerance = 0   # zero new false flags permitted
