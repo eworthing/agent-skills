@@ -307,15 +307,28 @@ Next step options:
 
 Triggered when loop counter reaches cap (default 10; override via env var or directive).
 
+A cap halt has two meanings the user must not confuse: **exhausted** (budget ran out with work still queued → bump the cap) versus **converged** (the backlog is cleared; the scorecard settled below 9.5 on accepted residuals / named structural ceilings → accept). Both carry `halt_subtype: null`, so the handoff — not a new state — must distinguish them. The discriminator is the already-present `backlog`: empty ⇒ converged.
+
 ### Subagent records
 - `system_flag: "HALT_LOOP_CAP"`
-- `halt_subtype: null`
-- `unresolved_reason: "loop counter reached cap of <N>"`
+- `halt_subtype: null` — the `canon/halt-subtypes.toml` "subtype only on HALT_STAGNATION" invariant holds; convergence is read from `backlog` + scorecard, not a new subtype.
+- `unresolved_reason` — branches on whether the backlog was cleared at the cap:
+  - **Exhausted** (`backlog` non-empty): `"loop counter reached cap of <N>"`.
+  - **Converged** (`backlog == []`): `"loop counter reached cap of <N>; backlog cleared — converged below the 9.5 bar (residuals accepted per G23/G37)"`.
+
+  (G34 requires only that `unresolved_reason` be non-null for `HALT_LOOP_CAP`; both strings satisfy it. A converged cap also undergoes G23/G37 residual accounting — every sub-9.5 dimension is an accepted residual or carries `residual_blocker_kind: "structural_anchor_unmet"`.)
 
 ### Handoff template
 
+Branch on the same `backlog`-empty test; emit the matching template. The menu options of whichever you emit become `halt_handoff.expected_actions[]` (per [Schema](#schema-pr-4-schema_version--2)).
+
+#### Exhausted — `backlog` non-empty (work still queued)
+
+The cap was hit with items still in the backlog. Bumping the cap is the productive move, so it leads.
+
 ```
-Loop N ended at HALT_LOOP_CAP — I made <N> loops, the configured maximum.
+Loop N ended at HALT_LOOP_CAP — I made <N> loops, the configured maximum, and the
+backlog still has items I didn't reach.
 
 Progress so far: <delta from loop 1 scorecard to loop N scorecard, summarized>
 
@@ -327,6 +340,37 @@ Next step options:
   (b) Accept current state — <N> loops landed substantial improvements; current
       source is the new baseline.
   (c) Reset — "/contest-refactor --reset".
+```
+
+#### Converged — `backlog == []` (no carried-forward work)
+
+The cap was hit but the backlog is **cleared**: every Noticeable-or-worse finding is retired and the only scores under 9.5 are accepted residuals or named structural ceilings (G23/G37 residual accounting already made the scorecard coherent). This is convergence, not a budget overrun — lead with Accept and demote the cap bump to a diminishing-returns option. There is **no** "Current Priority 1 (carried forward)" line, because nothing is carried forward.
+
+```
+Loop N ended at HALT_LOOP_CAP — I made <N> loops, the configured maximum — but the
+backlog is cleared: there is no carried-forward work. The scorecard converged below
+the 9.5 success bar, and every dimension under 9.5 is an accepted residual or a
+named structural ceiling, not an open finding. This is convergence, not budget
+exhaustion.
+
+Progress so far: <delta from loop 1 scorecard to loop N scorecard, summarized>
+
+Why not HALT_SUCCESS: <name the structural ceiling holding the score below 9.5 —
+  e.g. "domain_modeling 6.5: approx_source is stringly-typed; no construction-time
+  invariant is possible without inventing state the domain doesn't have">. The
+remaining sub-9.5 dimensions are accounted for (G23/G37) and no backlog item passes
+the Simplify Pressure Test.
+
+Next step options:
+  (a) Accept (recommended) — the backlog is clear and the residuals are accounted
+      for; <N> loops converged the architecture. Current source is the new baseline.
+  (b) Resolve the ceiling manually — supply the missing context or decision behind
+      the named structural residual (e.g. a typed domain model), then re-invoke
+      /contest-refactor. Only that can lift a structural ceiling; more loops cannot.
+  (c) Bump cap and resume — "/contest-refactor --cap <N+5>" is available, but with
+      the backlog clear and residuals accepted, more loops yield diminishing returns
+      (expect polish, not structural gains).
+  (d) Reset — "/contest-refactor --reset".
 ```
 
 ---
