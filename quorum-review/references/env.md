@@ -24,4 +24,4 @@ Variables read by the orchestrator and adapter. All are optional; sensible defau
 
 ## Provider authentication
 
-Provider CLIs handle their own auth; the adapter does not read or write provider credentials. See the per-provider reference (`references/claude.md` etc.) for details — typically Keychain (Copilot), browser-login token (Gemini), `ANTHROPIC_API_KEY` (Claude Code), or a cached Vertex login (`agy` — no API-key env var; see `references/antigravity.md`).
+Provider CLIs handle their own auth; the adapter does not read or write provider credentials. See the per-provider reference (`references/claude-code.md` etc.) for details — typically Keychain (Copilot), browser-login token (Gemini), `ANTHROPIC_API_KEY` (Claude Code), or a cached Vertex login (`agy` — no API-key env var; see `references/antigravity.md`).

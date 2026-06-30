@@ -42,7 +42,9 @@ claude -p "PROMPT" \
 
 ## Model
 
-`--model fable|sonnet|opus|haiku|<full-id>` (e.g., `claude-opus-4-8`). `--fallback-model` for overload fallback.
+`--model fable|sonnet|opus|haiku|<full-id>` (e.g., `claude-opus-4-8`, `claude-sonnet-5`). `--fallback-model` for overload fallback.
+
+The `sonnet` alias resolves to the latest Sonnet (Sonnet 5, GA 2026-06; full id `claude-sonnet-5`) — a cheaper, faster panelist than `opus` for `--reviewers claude:sonnet`.
 
 ## Reasoning effort
 
