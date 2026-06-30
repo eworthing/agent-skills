@@ -59,3 +59,7 @@ finding. The map never decides; it surfaces candidates.
 
 See `scripts/repo_map.py` docstring and `references/method.md` Step 0 / Step 3 for
 the full doctrine boundary.
+
+## Measurement results
+
+First run 2026-06-30 (sonnet, K=5): **restraint PASS** (0 added false positives), **recall inconclusive** — the 8-file fixture is fully visible to the no-map Critic (5/5 catch), so it cannot demonstrate the map's at-scale recall value. Auto-engage default-on stays gated on a realistic-scale recall fixture. See [`MEASUREMENT-2026-06-30.md`](MEASUREMENT-2026-06-30.md).
