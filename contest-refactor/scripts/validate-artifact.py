@@ -325,7 +325,8 @@ def check_schema_enums(current_review: dict, canon: _canon.Canon) -> List[Issue]
     scorecard = current_review.get("scorecard") or {}
     if isinstance(scorecard, dict):
         allowed = set(canon.scorecard_dimensions)
-        for key in scorecard.keys():
+        allowed_blocker_kinds = set(canon.residual_blocker_kinds)
+        for key, entry in scorecard.items():
             if key not in allowed:
                 issues.append(
                     Issue(
@@ -334,6 +335,17 @@ def check_schema_enums(current_review: dict, canon: _canon.Canon) -> List[Issue]
                         context="scorecard",
                     )
                 )
+            if isinstance(entry, dict):
+                blocker_kind = entry.get("residual_blocker_kind")
+                if blocker_kind is not None and blocker_kind not in allowed_blocker_kinds:
+                    issues.append(
+                        Issue(
+                            "schema-enum",
+                            f"residual_blocker_kind {blocker_kind!r} not in canon "
+                            f"(allowed: {sorted(allowed_blocker_kinds)})",
+                            context=f"scorecard {key}",
+                        )
+                    )
     return issues
 
 
@@ -1606,6 +1618,74 @@ def check_g36_required_state(current_review: dict, canon) -> List[Issue]:
     return []
 
 
+# G37: residual-blocker-kind coherence at converged empty-backlog terminals.
+# Mechanizes the Residual Accounting Pass (method-critic.md) / G23 at the terminals where the
+# Critic decides HALT: the ONLY residual_blocker_kind that licenses keeping a dimension below
+# 9.5 is "structural_anchor_unmet". The promotion-trigger kinds mean the 9-anchor is met and the
+# dimension MUST be promoted to 9.5 with residual_disposition: "accepted". Field is additive on v4.
+_G37_STRUCTURAL_KIND = "structural_anchor_unmet"
+_G37_PROMOTION_TRIGGER_KINDS = {"ceremony", "framework_constrained", "cosmetic", "adr_carved_out"}
+
+
+def check_g37_residual_blocker_coherence(current_review: dict) -> List[Issue]:
+    """G37: at a converged empty-backlog terminal, every sub-9.5 dimension must carry
+    residual_blocker_kind == "structural_anchor_unmet". A promotion-trigger kind (or a missing
+    kind) is the scoring incoherence the Residual Accounting Pass forbids.
+
+    Trigger (closed set — mirrors references/validation.md G23 + references/method-critic.md):
+      - state == HALT_STAGNATION AND halt_subtype == "no_backlog", OR
+      - state == HALT_LOOP_CAP AND backlog == [] AND some dimension scores < 9.5.
+    Every other terminal bypasses: HALT_STAGNATION/{user_decision,oscillation,no_progress,
+    verification_blocked}, HALT_SUCCESS(_candidate), HALT_DRY_RUN, HALT_LOOP_CAP with a NON-empty
+    backlog (those sub-9.5 scores have legitimate queued items), and CONTINUE. Schema_version >= 4.
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    state = current_review.get("state")
+    subtype = current_review.get("halt_subtype")
+    backlog = current_review.get("backlog") or []
+    scorecard = current_review.get("scorecard") or {}
+    if not isinstance(scorecard, dict):
+        return issues  # scorecard shape is check_schema_enums / G21's concern
+
+    sub95: List[Tuple[str, float]] = []
+    for dim, entry in scorecard.items():
+        if not isinstance(entry, dict):
+            continue
+        try:
+            score = float(entry.get("score"))
+        except (TypeError, ValueError):
+            continue
+        if score < 9.5:
+            sub95.append((dim, score))
+
+    no_backlog = state == "HALT_STAGNATION" and subtype == "no_backlog"
+    cap_converged = state == "HALT_LOOP_CAP" and not backlog and bool(sub95)
+    if not (no_backlog or cap_converged):
+        return issues
+
+    terminal = "HALT_STAGNATION/no_backlog" if no_backlog else "HALT_LOOP_CAP"
+    for dim, score in sub95:
+        kind = scorecard[dim].get("residual_blocker_kind")
+        if kind == _G37_STRUCTURAL_KIND:
+            continue
+        if kind in _G37_PROMOTION_TRIGGER_KINDS:
+            issues.append(Issue(
+                "G37",
+                f"{terminal} dimension {dim!r} score={score} < 9.5 cites promotion-trigger "
+                f"residual_blocker_kind={kind!r}; the Residual Accounting Pass requires promoting it to "
+                f"9.5 with residual_disposition='accepted' (only 'structural_anchor_unmet' licenses keeping "
+                f"a dimension below 9.5 at a converged terminal)"))
+        elif kind is None:
+            issues.append(Issue(
+                "G37",
+                f"{terminal} dimension {dim!r} score={score} < 9.5 must declare residual_blocker_kind "
+                f"(only 'structural_anchor_unmet' licenses a sub-9.5 score at a converged terminal); got null"))
+        # any other non-null value is an unknown enum token — owned by check_schema_enums, not G37
+    return issues
+
+
 def check_continue_backlog(current_review: dict) -> List[Issue]:
     """CONTINUE must carry next backlog work."""
     issues: List[Issue] = []
@@ -1679,6 +1759,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g34_halt_tail_invariants(current_review, canon))
     issues.extend(check_g35_halt_handoff_shape(current_review, canon))
     issues.extend(check_g36_required_state(current_review, canon))
+    issues.extend(check_g37_residual_blocker_coherence(current_review))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

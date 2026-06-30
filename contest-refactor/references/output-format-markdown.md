@@ -43,7 +43,7 @@ Format: `[Score] | [Delta: UP/DOWN/SAME vs prev loop] | [Concrete proof: file:li
 Scores CANNOT increase without structural proof. Code simplicity drops → over-engineered the last refactor; revert.
 Award 10 only when the dimension matches its 10-anchor and no source-backed behavior-preserving improvement is identifiable.
 Every score above 7 must have at least one source-backed reason in this text.
-When emitting `HALT_STAGNATION/no_backlog`, every score below 9.5 must also name
+When emitting `HALT_STAGNATION/no_backlog` or a converged `HALT_LOOP_CAP` (empty backlog), every score below 9.5 must also name
 the source-backed blocker that keeps the dimension below the 9.5 threshold and
 why it is not a valid backlog item or accepted residual.
 

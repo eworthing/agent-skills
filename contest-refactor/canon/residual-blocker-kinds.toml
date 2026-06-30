@@ -1,0 +1,19 @@
+# Canonical residual-blocker kinds for a scorecard dimension scored below 9.5.
+# Source of truth. Referenced by scripts/_canon.py, scripts/validate-artifact.py
+# (check_schema_enums membership + G37 coherence), references/validation.md (G37),
+# references/method-critic.md (Residual Accounting Pass), references/output-format-json.md.
+#
+# Semantics (the G37 contract): at a CONVERGED empty-backlog terminal
+# (HALT_STAGNATION/no_backlog, or HALT_LOOP_CAP with backlog==[] and a sub-9.5
+# dimension), the ONLY kind that licenses keeping a dimension below 9.5 is
+# `structural_anchor_unmet`. The remaining kinds are PROMOTION TRIGGERS: per the
+# Residual Accounting Pass (method-critic.md) a sub-9.5 dimension whose blocker is
+# one of them has its 9-anchor met and MUST be promoted to 9.5 with
+# residual_disposition: "accepted" — keeping it sub-9.5 is the incoherence G37 rejects.
+residual_blocker_kinds = [
+    "structural_anchor_unmet",  # 9-anchor genuinely NOT met (the only legal sub-9.5 reason at a converged terminal)
+    "ceremony",                 # promotion trigger: every fix adds ceremony / fails the Simplify Pressure Test
+    "framework_constrained",    # promotion trigger: a framework/language/platform constraint
+    "cosmetic",                 # promotion trigger: cosmetic-for-contest only
+    "adr_carved_out",           # promotion trigger: an accepted ADR carve-out
+]

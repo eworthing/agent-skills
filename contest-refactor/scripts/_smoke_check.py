@@ -27,6 +27,9 @@ EXPECTED = {
     "unresolvable-insufficient-attempts": "fail",
     "expired-residual": "fail",
     "branch-b-fake-resolve-not-a-validator-error": "pass",
+    "g37-cap-incoherent-blocker": "fail",
+    "g37-cap-structural-ok": "pass",
+    "g37-no-backlog-incoherent": "fail",
 }
 
 

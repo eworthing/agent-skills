@@ -1,0 +1,47 @@
+{
+  "schema_version": 4,
+  "loop": 1,
+  "loop_cap": 10,
+  "provider": "claude_code",
+  "loop_model": "claude-sonnet-4-6",
+  "loop_model_source": "default",
+  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model_source": "default",
+  "spawn_isolation": "subagent",
+  "state": "HALT_STAGNATION",
+  "halt_subtype": "no_backlog",
+  "halt_handoff": {
+    "text": "Loop 1 ended at HALT_STAGNATION/no_backlog.",
+    "expected_actions": []
+  },
+  "unresolved_reason": "backlog empty; sub-9.5 scores remain.",
+  "findings_registry_path": "./findings_registry.json",
+  "verdict": "Strong contender",
+  "verdict_explanation": "Smoke fixture for G37.",
+  "scorecard": {
+    "domain_modeling": {
+      "score": 6.5,
+      "delta": "SAME",
+      "proof": "soundboard-snag.py:1307",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "ceremony",
+      "unverifiable_due_to_build_failure": false
+    }
+  },
+  "authority_map": [],
+  "strengths": [],
+  "findings": [],
+  "simplification_check": {
+    "structurally_necessary": "n/a",
+    "new_seam_justified": false,
+    "new_seam_adapters": [],
+    "should_not_be_done": "n/a",
+    "tests_after_fix": "n/a"
+  },
+  "backlog": [],
+  "deepening_candidates": [],
+  "builder_notes": [],
+  "narrative": "G37 smoke fixture."
+}

@@ -1,6 +1,6 @@
 # Artifact Smoke Corpus
 
-Eight minimal artifact directories exercising the load-bearing rules in
+Eleven minimal artifact directories exercising the load-bearing rules in
 `scripts/validate-artifact.py`. Each fixture is the smallest possible artifact
 set that triggers exactly one expected result.
 
@@ -25,6 +25,9 @@ helper; not part of the loop runtime).
 | `unresolvable-insufficient-attempts/` | `fail` | `[retirement] registry F-400 occurrence[1]: mechanical retirement rule failed: neither Branch A nor Branch B is satisfied` |
 | `expired-residual/` | `fail` | `[HALT_SUCCESS] scorecard concurrency accepted residual expired (expires='2020-01-01')` |
 | `branch-b-fake-resolve-not-a-validator-error/` | `pass` | `validate-artifact (strict): OK …` |
+| `g37-cap-incoherent-blocker/` | `fail` | `[G37] HALT_LOOP_CAP dimension 'framework_idioms' score=7.0 < 9.5 cites promotion-trigger residual_blocker_kind='framework_constrained' …` |
+| `g37-cap-structural-ok/` | `pass` | `validate-artifact (strict): OK …` |
+| `g37-no-backlog-incoherent/` | `fail` | `[G37] HALT_STAGNATION/no_backlog dimension 'domain_modeling' score=6.5 < 9.5 cites promotion-trigger residual_blocker_kind='ceremony' …` |
 
 ## Notes per fixture
 
@@ -59,3 +62,15 @@ Every scorecard dimension is 10 or 9.5+ with an accepted residual whose `expires
 ### `branch-b-fake-resolve-not-a-validator-error/`
 
 **Critic-owned seam (Risks item 10).** `F-200` retired via Branch B: two `open` occurrences with matching 2-way hashes, separated by an intervening `resolved` occurrence. The validator passes by design. The seam: the prior `resolved` could have been a premature mark (a "fake resolve") that lets the next reappearance qualify on the easier 2-hash path. The validator cannot catch a fake-resolve because correctness of `resolved` is a Critic/reviewer responsibility (Check 1 / Check 2), not a structural property. This fixture codifies the expected behavior so a future "make the validator stricter" PR can't accidentally start rejecting legitimate Branch B retirements.
+
+### `g37-cap-incoherent-blocker/`
+
+`state == HALT_LOOP_CAP` with an empty `backlog` and `framework_idioms` at 7.0 carrying `residual_blocker_kind: "framework_constrained"` — a promotion-trigger kind. G37 rejects: at a converged empty-backlog terminal the only kind that licenses a sub-9.5 score is `structural_anchor_unmet`; a framework/ceremony/cosmetic/ADR blocker means the 9-anchor is met and the dimension must be promoted to 9.5-accepted. This is the soundboard-snag failure mode (2026-06-30) that G23 — no_backlog-only and never mechanically enforced — silently skipped at the cap.
+
+### `g37-cap-structural-ok/`
+
+`state == HALT_LOOP_CAP`, empty `backlog`. The honest resolution: `framework_idioms` promoted to 9.5 with `residual_disposition: "accepted"`, and the one genuinely-thin dimension (`domain_modeling` 6.5) tagged `residual_blocker_kind: "structural_anchor_unmet"`. G37 passes — proving it does not over-reject a legitimately-converged scorecard.
+
+### `g37-no-backlog-incoherent/`
+
+`state == HALT_STAGNATION`, `halt_subtype == "no_backlog"`, `domain_modeling` 6.5 with `residual_blocker_kind: "ceremony"`. G37 fires on the EXISTING no_backlog terminal too (the terminal G23 always named) — mechanizing what was previously Critic-discipline-only prose.

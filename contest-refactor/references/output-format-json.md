@@ -148,6 +148,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
   //                         "accepted" = documented inline; compatible with HALT_SUCCESS
   //                         "queued"   = added to Improvement Backlog; blocks HALT_SUCCESS (state stays CONTINUE)
   //   residual_rationale_or_backlog_ref: required when residual_blocking_10 non-null. Either a rationale string ("accepted") or a backlog Finding ID like "F2" ("queued").
+  //   residual_blocker_kind: OPTIONAL enum (canon/residual-blocker-kinds.toml): structural_anchor_unmet | ceremony | framework_constrained | cosmetic | adr_carved_out. Names WHY a dimension stays below 9.5. At a converged empty-backlog terminal (HALT_STAGNATION/no_backlog or HALT_LOOP_CAP with empty backlog) G37 requires every sub-9.5 dimension to carry "structural_anchor_unmet"; the promotion-trigger kinds (ceremony/framework_constrained/cosmetic/adr_carved_out) mean the 9-anchor is met, so the dimension MUST be promoted to 9.5 with residual_disposition "accepted" (Residual Accounting Pass). Null/absent outside those terminals.
   //   residual_expires: OPTIONAL ISO-8601 date on an inline "accepted" residual. Absent = the residual stands on residual_rationale_or_backlog_ref alone (the correct shape for a permanent framework carve-out that will never change â€” e.g. "Swift deinit cannot await"; HALT_SUCCESS does not require a date). When present and its date has passed, it blocks HALT_SUCCESS (the Critic must reconsider the residual as active). This inline field is independent of the `.contest-refactor.toml` [[accepted_residuals]] tier, where `expires` is MANDATORY (broad path-pattern suppressions that should lapse) â€” see project-config.md + architecture-rubric.md Â§ 9.5+ Threshold.
   //   unverifiable_due_to_build_failure: bool. True only on Step 1 step 2 build-failure path; bypasses G4 and G8.
   //   Hard rule: scores cannot increase loop-over-loop without proof citing structural change (G8). Suspended when unverifiable_due_to_build_failure is true.
@@ -227,7 +228,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
     }
   ],
   // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP}; null otherwise.
-  // For HALT_STAGNATION/no_backlog, include residual accounting for each score < 9.5:
+  // For HALT_STAGNATION/no_backlog AND a converged HALT_LOOP_CAP (empty backlog), include residual accounting for each score < 9.5:
   // blocker, why it keeps the 9-anchor unmet, and why it is not backlog-worthy or accepted.
   "unresolved_reason": null,
 

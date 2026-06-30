@@ -5,7 +5,9 @@ The Residual Accounting Pass, the Adversarial Pass on Accepted Residuals, and th
 ## Residual Accounting Pass
 
 Run this after candidate findings are accepted, rejected, or downgraded, and
-before choosing `HALT_SUCCESS` or `HALT_STAGNATION`.
+before choosing `HALT_SUCCESS`, `HALT_STAGNATION`, or `HALT_LOOP_CAP`. The cap is a
+terminal too: when the loop ends with an empty backlog and any sub-9.5 dimension, run
+this pass before emitting `HALT_LOOP_CAP`, exactly as for `no_backlog` (enforced by G37).
 
 For each score below 9.5:
 
@@ -17,7 +19,12 @@ For each score below 9.5:
    - No source-backed residual can be named -> set score to 10.
 3. If the 9-anchor is not met, keep the lower score only when the scorecard or
    `unresolved_reason` names the source-backed blocker and explains why the loop
-   cannot turn it into a valid backlog item.
+   cannot turn it into a valid backlog item. At a converged empty-backlog terminal
+   (`no_backlog` or `HALT_LOOP_CAP` with empty backlog) tag that dimension
+   `residual_blocker_kind: "structural_anchor_unmet"` — the only kind that licenses a
+   sub-9.5 score there. The step-2 promotion reasons (ceremony / framework-constrained /
+   cosmetic / ADR-carved-out) are NOT legal sub-9.5 blockers: citing one keeps the
+   dimension below 9.5 illegitimately and is rejected by **G37**; promote to 9.5-accepted instead.
 
 Do not emit `HALT_STAGNATION` subtype `no_backlog` just because rejected
 candidates were not backlog-worthy. Rejected candidates still affect terminal
