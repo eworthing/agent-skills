@@ -187,6 +187,14 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   *Source:* [`method-critic.md § Residual Accounting Pass`](method-critic.md#residual-accounting-pass) — promotion-vs-keep-sub-9.5 decision tree; mechanized by `validate-artifact.py check_g37_residual_blocker_coherence` + `scripts/_g37_selftest.py`. Production motivation: the `soundboard-snag` 2026-06-30 run hit `HALT_LOOP_CAP` with sub-9.5 dimensions citing framework/ceremony blockers that the no_backlog-only (and never mechanically enforced) G23 silently skipped.
 
+- [ ] **G38 Premium model budget guard (pre-dispatch + pre-emit, schema_version >= 2)** — Prevents accidental full-loop execution on premium loop models listed in `canon/premium-models.toml` (currently `claude-fable-5`). Safety rule: if `loop_model ∈ canon.premium_models`, validation passes when `dry_run == true`; otherwise `premium_loop_override` must be `true` (set only by the invocation-scoped `--allow-premium-loop` flag). This guard keys on `dry_run`, not `state`, so premium planning remains valid for any dry-run artifact shape.
+
+  Coherence rule: when `premium_dry_run` is non-null, it must be an object with `model == loop_model`, `model_source ∈ {"user_flag", "env_override"}` matching `loop_model_source`, and `activated_dry_run == true`; the artifact's `dry_run` must also be `true`. `premium_loop_override` must be false on every dry-run invocation. A normal `--dry-run --loop-model <premium>` path is legal without `premium_dry_run`; the dedicated object is only for `--premium-dry-run-model` / `CONTEST_REFACTOR_PREMIUM_DRY_RUN_MODEL`.
+
+  Run G38 in Step -1 before dispatching any loop and again at Step 1/Step 3 artifact emit. Failure → stop before spawning and offer the safe commands: premium dry-run planning (`--premium-dry-run-model <model> --cap 1`), default-model execution after review, or an explicit full premium override (`--loop-model <model> --allow-premium-loop --cap 1`).
+
+  *Source:* [`provider-adapters.md § Premium model budget policy`](provider-adapters.md#premium-model-budget-policy) + [`resume-detection.md § Step 0.5 — Provider detection`](resume-detection.md#step-05--provider-detection); mechanized by `validate-artifact.py check_g38_premium_model_budget_guard`.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

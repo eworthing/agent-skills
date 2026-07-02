@@ -1,0 +1,8 @@
+id = "premium-dry-run-with-override-fails"
+purpose = "Negative G38 fixture: dry-run premium invocation incorrectly records premium_loop_override true."
+expected_result = "fail"
+notes = "--allow-premium-loop is ignored on dry-runs; artifacts must leave premium_loop_override false."
+
+[[tested_rules]]
+kind = "gate"
+id = "G38"

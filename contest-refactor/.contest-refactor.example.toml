@@ -6,6 +6,7 @@
 # completeness + ignore-list shape + absence of obvious secrets.
 #
 # This config NEVER overrides Evidence Chain, validation gates, or safety checks.
+# Premium model controls are invocation-only flags/env vars; never set them here.
 
 version = 1
 

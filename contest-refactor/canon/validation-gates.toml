@@ -149,3 +149,7 @@ title = "Required non-null state (presence; membership ∈ canon owned by the sc
 [[validation_gates]]
 id = "G37"
 title = "Residual-blocker-kind coherence at converged empty-backlog terminals (no_backlog + HALT_LOOP_CAP empty-backlog, schema_version >= 4)"
+
+[[validation_gates]]
+id = "G38"
+title = "Premium model budget guard"

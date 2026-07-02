@@ -1,0 +1,12 @@
+id = "premium-dry-run-model-valid"
+purpose = "Positive G38 fixture: dedicated --premium-dry-run-model selects claude-fable-5, forces dry_run true, records premium_dry_run, and halts before execution."
+expected_result = "pass"
+notes = "Locks the safe premium-planning path: expensive model is used only for a bounded dry-run plan."
+
+[[tested_rules]]
+kind = "gate"
+id = "G38"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_DRY_RUN"

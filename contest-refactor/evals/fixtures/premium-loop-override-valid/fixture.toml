@@ -1,0 +1,8 @@
+id = "premium-loop-override-valid"
+purpose = "Positive G38 fixture: non-dry-run premium loop model is valid only when premium_loop_override records --allow-premium-loop."
+expected_result = "pass"
+notes = "Represents the explicit one-loop override path: --loop-model claude-fable-5 --allow-premium-loop --cap 1."
+
+[[tested_rules]]
+kind = "gate"
+id = "G38"

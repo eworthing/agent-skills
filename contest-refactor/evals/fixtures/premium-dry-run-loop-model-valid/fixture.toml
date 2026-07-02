@@ -1,0 +1,12 @@
+id = "premium-dry-run-loop-model-valid"
+purpose = "Positive G38 fixture: ordinary --dry-run plus --loop-model claude-fable-5 is safe even without the dedicated premium_dry_run audit object."
+expected_result = "pass"
+notes = "G38 safety keys on dry_run true; premium_dry_run is only required for the dedicated premium dry-run controls."
+
+[[tested_rules]]
+kind = "gate"
+id = "G38"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_DRY_RUN"

@@ -19,6 +19,7 @@ Run: python3 scripts/_model_catalog_selftest.py   (exit 0 = pass, 1 = fail)
 from __future__ import annotations
 
 import sys
+import tomllib
 from pathlib import Path
 
 # Verified 2026-06-24. Strings that must NOT appear (superseded upgrade targets).
@@ -30,8 +31,12 @@ DEFAULTS_PRESENT = ("claude-sonnet-4-6", "gpt-5.4-mini", "deepseek-v4-flash")
 
 
 def main() -> int:
-    doc = Path(__file__).resolve().parent.parent / "references" / "provider-adapters.md"
+    skill_root = Path(__file__).resolve().parent.parent
+    doc = skill_root / "references" / "provider-adapters.md"
+    premium_canon = skill_root / "canon" / "premium-models.toml"
     text = doc.read_text(encoding="utf-8")
+    with premium_canon.open("rb") as fh:
+        premium_models = tomllib.load(fh).get("premium_models", [])
     failures: list[str] = []
 
     for s in STALE:
@@ -43,6 +48,11 @@ def main() -> int:
     for s in DEFAULTS_PRESENT:
         if s not in text:
             failures.append(f"tuned default unexpectedly removed: {s!r}")
+    if "claude-fable-5" not in premium_models:
+        failures.append("canonical premium model missing from canon/premium-models.toml: 'claude-fable-5'")
+    for s in premium_models:
+        if s not in text:
+            failures.append(f"canonical premium model missing from provider docs: {s!r}")
 
     if failures:
         for f in failures:

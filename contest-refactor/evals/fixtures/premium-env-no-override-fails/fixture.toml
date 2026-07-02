@@ -1,0 +1,8 @@
+id = "premium-env-no-override-fails"
+purpose = "Negative G38 fixture: environment-selected premium loop model attempts a non-dry-run CONTINUE loop without --allow-premium-loop."
+expected_result = "fail"
+notes = "This is the accidental quota-drain path G38 blocks before dispatch and at artifact validation."
+
+[[tested_rules]]
+kind = "gate"
+id = "G38"

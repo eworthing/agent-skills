@@ -100,6 +100,8 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
   "reviewer_model": "claude-sonnet-4-6",        // string, full canonical model ID. Default per provider-adapters.md reviewer-spawn table.
   "reviewer_model_source": "default",           // enum: default | env_override | user_flag
   "spawn_isolation": "subagent",                // enum: subagent | inline. "inline" only when provider == "unknown".
+  "premium_dry_run": null,                      // optional null|object. Non-null only when --premium-dry-run-model or CONTEST_REFACTOR_PREMIUM_DRY_RUN_MODEL forced dry_run. Shape: {"model": "...", "model_source": "user_flag|env_override", "activated_dry_run": true}.
+  "premium_loop_override": false,               // optional bool, absent => false. True only when --allow-premium-loop authorized non-dry-run execution of a premium loop model; false on every dry-run invocation.
 
   // Findings registry (v2+)
   "findings_registry_path": "./findings_registry.json", // string. Path to external registry. Never embedded in CURRENT_REVIEW.json.

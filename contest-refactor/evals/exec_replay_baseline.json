@@ -5,7 +5,7 @@
   "prereg": {
     "step3_executor_prompt_path": "evals/exec_step3_executor_prompt.md",
     "step3_executor_prompt_sha256": "82cae6cb11c8f30fac225c27645e13d6a6fe6e7ee62d9aba0d167d4f20002732",
-    "skill_step3_section_sha256": "e2854c6d36f19888932f293328cf526f89e59c61207b5ef214a4cdae6477f4d3",
+    "skill_step3_section_sha256": "cee7f377af5bef0fa2e6b9eefb3390b855778823c188b7177f75d8aff6a54ff1",
     "skill_step3_section_recipe": "the SKILL.md section from the '### Step 3' heading up to the next '### '/'## ' heading; recompute with `python3 scripts/_exec_replay_selftest.py --print-shas`",
     "arm_a_model": "claude-sonnet-4-6",
     "arm_b_model": null,

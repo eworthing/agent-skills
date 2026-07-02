@@ -1686,6 +1686,115 @@ def check_g37_residual_blocker_coherence(current_review: dict) -> List[Issue]:
     return issues
 
 
+def check_g38_premium_model_budget_guard(current_review: dict, canon) -> List[Issue]:
+    """G38: premium loop models require an invocation-level budget guard.
+
+    Safety rule: if `loop_model` is in canon.extra["premium_models"], the artifact must
+    either be a dry run (`dry_run: true`) or record an explicit full-loop override
+    (`premium_loop_override: true`). Coherence rule: `premium_dry_run`, when present,
+    must describe the dedicated premium dry-run flag/env path that forced dry_run.
+    """
+    issues: List[Issue] = []
+    if (current_review.get("schema_version") or 1) < 2:
+        return issues
+
+    premium_models = set((getattr(canon, "extra", {}) or {}).get("premium_models", ()))
+    if not premium_models:
+        return issues
+
+    loop_model = current_review.get("loop_model")
+    loop_source = current_review.get("loop_model_source")
+    dry_run = current_review.get("dry_run") is True
+    premium_loop_override = current_review.get("premium_loop_override", False)
+    premium_dry_run = current_review.get("premium_dry_run")
+
+    if "premium_loop_override" in current_review and not isinstance(premium_loop_override, bool):
+        issues.append(
+            Issue(
+                "G38",
+                f"premium_loop_override must be a boolean when present, got "
+                f"{type(premium_loop_override).__name__}",
+            )
+        )
+    if premium_loop_override is True and dry_run:
+        issues.append(
+            Issue(
+                "G38",
+                "premium_loop_override must be false on any dry-run invocation; "
+                "--allow-premium-loop only authorizes non-dry-run premium execution",
+            )
+        )
+
+    if premium_dry_run is not None:
+        if not isinstance(premium_dry_run, dict):
+            issues.append(
+                Issue(
+                    "G38",
+                    f"premium_dry_run must be null or an object, got {type(premium_dry_run).__name__}",
+                )
+            )
+        else:
+            pd_model = premium_dry_run.get("model")
+            pd_source = premium_dry_run.get("model_source")
+            activated = premium_dry_run.get("activated_dry_run")
+            if not dry_run:
+                issues.append(
+                    Issue(
+                        "G38",
+                        "premium_dry_run is present but dry_run is not true; dedicated premium "
+                        "dry-run controls must force invocation-scoped dry_run",
+                    )
+                )
+            if pd_model != loop_model:
+                issues.append(
+                    Issue(
+                        "G38",
+                        f"premium_dry_run.model={pd_model!r} must equal loop_model={loop_model!r}",
+                    )
+                )
+            if pd_model not in premium_models:
+                issues.append(
+                    Issue(
+                        "G38",
+                        f"premium_dry_run.model={pd_model!r} is not in canonical premium models "
+                        f"{sorted(premium_models)}",
+                    )
+                )
+            if pd_source not in {"user_flag", "env_override"}:
+                issues.append(
+                    Issue(
+                        "G38",
+                        f"premium_dry_run.model_source={pd_source!r} must be 'user_flag' or "
+                        "'env_override'",
+                    )
+                )
+            elif pd_source != loop_source:
+                issues.append(
+                    Issue(
+                        "G38",
+                        f"premium_dry_run.model_source={pd_source!r} must equal "
+                        f"loop_model_source={loop_source!r}",
+                    )
+                )
+            if activated is not True:
+                issues.append(
+                    Issue(
+                        "G38",
+                        f"premium_dry_run.activated_dry_run must be true, got {activated!r}",
+                    )
+                )
+
+    if isinstance(loop_model, str) and loop_model in premium_models and not dry_run and premium_loop_override is not True:
+        issues.append(
+            Issue(
+                "G38",
+                f"loop_model={loop_model!r} is a premium model; non-dry-run execution requires "
+                "premium_loop_override=true from --allow-premium-loop",
+            )
+        )
+    return issues
+
+
 def check_continue_backlog(current_review: dict) -> List[Issue]:
     """CONTINUE must carry next backlog work."""
     issues: List[Issue] = []
@@ -1760,6 +1869,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
     issues.extend(check_g35_halt_handoff_shape(current_review, canon))
     issues.extend(check_g36_required_state(current_review, canon))
     issues.extend(check_g37_residual_blocker_coherence(current_review))
+    issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

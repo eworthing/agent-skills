@@ -37,7 +37,8 @@ class Canon:
     match_kinds: Tuple[str, ...]
     residual_blocker_kinds: Tuple[str, ...]
     validation_gates: Mapping[str, str]
-    # PR2 added fixture_rule_kinds; lazy lookup via .extra
+    # Extended enums that are useful to validators but not common enough to
+    # promote into first-class Canon fields live in .extra.
     extra: Mapping[str, Any]
 
 
@@ -184,6 +185,12 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         kinds_data = _load_toml(fixture_kinds_path)
         extra["fixture_rule_kinds"] = _require_list(
             kinds_data, "fixture_rule_kinds", fixture_kinds_path
+        )
+    premium_models_path = canon_dir / "premium-models.toml"
+    if premium_models_path.exists():
+        premium_models_data = _load_toml(premium_models_path)
+        extra["premium_models"] = _require_list(
+            premium_models_data, "premium_models", premium_models_path
         )
 
     return Canon(

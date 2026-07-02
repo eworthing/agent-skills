@@ -1,0 +1,12 @@
+id = "premium-dry-run-nonhalt-valid"
+purpose = "Positive G38 fixture: premium dry-run safety keys on dry_run true rather than state == HALT_DRY_RUN."
+expected_result = "pass"
+notes = "Keeps the validator aligned with the approved design: G38 must not reject a dry-run artifact solely because another halt state is present."
+
+[[tested_rules]]
+kind = "gate"
+id = "G38"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_STAGNATION"

@@ -64,9 +64,22 @@ Detect provider from environment variables per [provider-adapters.md § Detectio
 - Otherwise → `provider: "unknown"`. Set `spawn_isolation: "inline"` (Loop Isolation skipped).
 - User flag `--provider <name>` overrides detection unconditionally.
 
-Resolve `loop_model` and `reviewer_model` from provider-adapters.md per-provider table, with override precedence: `--loop-model`/`--reviewer-model` user flag > `CONTEST_REFACTOR_LOOP_MODEL`/`CONTEST_REFACTOR_REVIEWER_MODEL` env > provider default. Record `*_source` ∈ {`default`, `env_override`, `user_flag`} for each.
+Resolve `loop_model` and `reviewer_model` from provider-adapters.md per-provider table:
 
-These values get written to top-level CURRENT_REVIEW.json by every loop (G19 enforces presence).
+- If `--premium-dry-run-model <id>` is present, reject simultaneous `--loop-model`, set `loop_model=<id>`, set `loop_model_source: "user_flag"`, set invocation `dry_run=true`, and populate `premium_dry_run: {"model": "<id>", "model_source": "user_flag", "activated_dry_run": true}`.
+- Else if `CONTEST_REFACTOR_PREMIUM_DRY_RUN_MODEL` is set, set `loop_model=<id>`, set `loop_model_source: "env_override"`, set invocation `dry_run=true`, and populate `premium_dry_run: {"model": "<id>", "model_source": "env_override", "activated_dry_run": true}`.
+- Else resolve the normal loop model with precedence `--loop-model` user flag > `CONTEST_REFACTOR_LOOP_MODEL` env > provider default, and set `premium_dry_run: null`.
+- Resolve `reviewer_model` independently with precedence `--reviewer-model` user flag > `CONTEST_REFACTOR_REVIEWER_MODEL` env > provider default.
+
+Record `*_source` ∈ {`default`, `env_override`, `user_flag`} for each. `premium_loop_override` is `true` only when `--allow-premium-loop` is present and the invocation is not dry-run; if the flag appears with `--dry-run` or a dedicated premium dry-run control, warn and record `premium_loop_override: false`.
+
+Before dispatching a loop subagent, apply the premium model budget guard using `canon/premium-models.toml`: if resolved `loop_model` is premium, invocation `dry_run` is false, and `--allow-premium-loop` is absent, stop before spawning. Print the safer commands:
+
+- Dry-run premium planning: `/contest-refactor --premium-dry-run-model <model> --cap 1`
+- Normal execution after reviewing the plan: `/contest-refactor` (or the same invocation with the default model controls)
+- Explicit full premium override: `/contest-refactor --loop-model <model> --allow-premium-loop --cap 1`
+
+These values get written to top-level CURRENT_REVIEW.json by every loop (G19 enforces provider/model presence; G38 enforces premium-model budget safety).
 
 ## Step 0.6 — Registry + REVIEW_HISTORY.json bootstrap
 

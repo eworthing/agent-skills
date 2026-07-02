@@ -1,0 +1,4 @@
+# Premium loop models guarded from accidental full-loop execution.
+premium_models = [
+    "claude-fable-5",
+]

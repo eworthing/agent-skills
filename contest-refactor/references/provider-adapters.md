@@ -160,13 +160,27 @@ The loop subagent MAY spawn ≤2–3 read-only helper sub-agents for bounded ana
 Two override paths, applied in this precedence (higher wins):
 
 1. **User flag** on `/contest-refactor` invocation:
+   - `--premium-dry-run-model <id>` overrides loop-spawn default and forces invocation-scoped dry-run. It is mutually exclusive with `--loop-model`.
    - `--loop-model <id>` overrides loop-spawn default
    - `--reviewer-model <id>` overrides reviewer-spawn default
 2. **Environment variable**:
+   - `CONTEST_REFACTOR_PREMIUM_DRY_RUN_MODEL=<id>` overrides loop-spawn default and forces invocation-scoped dry-run.
    - `CONTEST_REFACTOR_LOOP_MODEL=<id>` overrides loop-spawn default
    - `CONTEST_REFACTOR_REVIEWER_MODEL=<id>` overrides reviewer-spawn default
 
 Recorded in `CURRENT_REVIEW.json` as `loop_model_source` and `reviewer_model_source` ∈ {`default`, `env_override`, `user_flag`}.
+
+### Premium model budget policy
+
+Premium loop models are listed in `canon/premium-models.toml` (currently `claude-fable-5`). They are guarded because a full autonomous loop can spend the user's limited premium quota before the agent has proven the run is worth it.
+
+The intended workflow is:
+
+1. Run a bounded premium plan: `/contest-refactor --premium-dry-run-model claude-fable-5 --cap 1`.
+2. Review the emitted `HALT_DRY_RUN` plan.
+3. Re-invoke with the default model for execution, or explicitly authorize one premium loop with `/contest-refactor --loop-model claude-fable-5 --allow-premium-loop --cap 1`.
+
+If a resolved `loop_model` is premium and the invocation is not dry-run, the main agent must stop before dispatch unless `--allow-premium-loop` is present. `--allow-premium-loop` is never a project config default; it is an invocation-only acknowledgement.
 
 ## When to upgrade the model
 
@@ -178,7 +192,7 @@ The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, d
 - Codex: `--loop-model gpt-5.5` (full flagship, not mini)
 - OpenCode: `--loop-model deepseek-v4`
 
-For the hardest critic runs on Claude Code — very large or architecturally dense codebases where even Opus leaves residual uncertainty — there is one tier above Opus: **Claude Fable 5** (`--loop-model claude-fable-5`). It is the most capable option and the most expensive; reserve it for runs where an Opus critic has visibly struggled, not as a default. (No Fable-equivalent top tier is wired for Codex/OpenCode; their flagship upgrade targets above are the ceiling.)
+For the hardest critic runs on Claude Code — very large or architecturally dense codebases where even Opus leaves residual uncertainty — there is one tier above Opus: **Claude Fable 5** (`claude-fable-5`). It is the most capable option and the most expensive; reserve it for runs where an Opus critic has visibly struggled, not as a default. First use it through `--premium-dry-run-model claude-fable-5`; a full premium loop requires `--loop-model claude-fable-5 --allow-premium-loop --cap 1`. (No Fable-equivalent top tier is wired for Codex/OpenCode; their flagship upgrade targets above are the ceiling.)
 
 The reviewer subagent **does not** go cheaper than its default and rarely needs upgrading: a 2026-06-27 measurement found dropping the Claude Code reviewer to `claude-haiku-4-5` regresses (haiku over-rejects legitimate single-adapter-seam / risk-evidence refactors — see [reviewer-model-experiment.md](../evals/reviewer-model-experiment.md)), while Opus is unnecessary for the bounded three-check verification. Sonnet is the measured floor. Model IDs are mutable; `scripts/_model_catalog_selftest.py` guards this list against drift (verified 2026-06-24).
 
