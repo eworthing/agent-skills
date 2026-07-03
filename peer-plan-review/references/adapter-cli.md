@@ -27,9 +27,11 @@ python3 <skill-dir>/scripts/run_review.py \
   (alias `antigravity`; experimental — see [`antigravity.md`](antigravity.md)).
   Required.
 - `--resume`: include on rounds 2+ only. The runner falls back to a fresh
-  execution once if resume fails with no usable output.
+  execution once if the resume attempt fails (nonzero exit, timeout, or no
+  usable output).
 - `--model`: provider-specific model ID or known alias. `--list-models
-  --reviewer <provider>` prints the known aliases.
+  --reviewer <provider>` prints known aliases (claude, gemini), a live
+  listing (opencode, agy), or doc-sourced known models (codex, copilot).
 - `--effort`: portable `low | medium | high | xhigh`. The adapter maps this to
   each provider's native flag or setting internally. Pass *only* this; do not
   pass provider-native effort flags. For `agy` there is no native effort flag —

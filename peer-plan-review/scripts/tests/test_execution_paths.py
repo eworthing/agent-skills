@@ -1,5 +1,5 @@
 """execution paths tests — relocated verbatim from test_run_review.py (mechanical split)."""
-import argparse, json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest  # noqa: F401
+import argparse, glob, io, json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest  # noqa: F401
 from pathlib import Path  # noqa: F401
 from unittest import mock  # noqa: F401
 from ._helpers import *  # noqa: F401,F403
@@ -385,6 +385,7 @@ class TestRunReviewExecution(unittest.TestCase):
         proc = self._proc(0, stdout="", stderr="")
 
         with (
+            mock.patch("run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)),
             mock.patch("run_review._codex_session_files", return_value=set()),
             mock.patch("run_review.subprocess.Popen", return_value=proc),
             mock.patch("run_review.extract_metadata", return_value={}),
@@ -415,6 +416,7 @@ class TestRunReviewExecution(unittest.TestCase):
         proc.communicate.side_effect = communicate
 
         with (
+            mock.patch("run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)),
             mock.patch("run_review._codex_session_files", return_value=set()),
             mock.patch("run_review.subprocess.Popen", return_value=proc),
             mock.patch("run_review.extract_metadata", return_value={}),
@@ -425,6 +427,216 @@ class TestRunReviewExecution(unittest.TestCase):
 
         self.assertEqual(rc, 0)
         self.assertEqual(self.output_file.read_text(encoding="utf-8"), "Review text\n")
+
+    def test_run_review_resume_nonzero_with_stdout_still_falls_back(self):
+        """Regression: a resume attempt that exits nonzero but still emits an
+        error JSON payload on stdout must not suppress the fresh-exec
+        fallback (previously has_output=True short-circuited the retry,
+        leaving the error payload as the round's persisted output)."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
+        )
+        first_proc = self._proc(1, stdout='{"error":"session not found"}', stderr="resume failed")
+        second_proc = self._proc(0, stdout='{"result":"fresh review"}')
+
+        with (
+            mock.patch(
+                "run_review.load_session",
+                return_value={"session_id": "resume-session", "round": 1},
+            ),
+            mock.patch("run_review.subprocess.Popen", side_effect=[first_proc, second_proc]) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="fresh-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(mock_popen.call_count, 2)
+        self.assertEqual(self.output_file.read_text(encoding="utf-8"), '{"result":"fresh review"}')
+
+    def test_run_review_resume_timeout_falls_back_to_fresh(self):
+        """Regression: a resume attempt that times out must fall back to a
+        fresh attempt instead of immediately returning 1."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
+        )
+        timeout_proc = mock.MagicMock()
+        timeout_proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd=["claude"], timeout=args.timeout),
+            ("", ""),  # second communicate() call inside the except handler
+        ]
+        timeout_proc.returncode = None
+        timeout_proc.poll.return_value = None
+        fresh_proc = self._proc(0, stdout='{"result":"fresh review"}')
+
+        with (
+            mock.patch(
+                "run_review.load_session",
+                return_value={"session_id": "resume-session", "round": 1},
+            ),
+            mock.patch("run_review.subprocess.Popen", side_effect=[timeout_proc, fresh_proc]) as mock_popen,
+            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="fresh-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(mock_popen.call_count, 2)
+        self.assertEqual(self.output_file.read_text(encoding="utf-8"), '{"result":"fresh review"}')
+
+    def test_run_review_final_attempt_timeout_writes_failure_summary(self):
+        """Regression: a timeout on the final (non-resumable) attempt must
+        write a minimal failure summary, replacing any stale prior content."""
+        summary_file = Path(self.tmpdir.name) / "summary.json"
+        summary_file.write_text('{"verdict": "APPROVED", "round": 1}', encoding="utf-8")
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            summary_file=str(summary_file),
+            resume=False,
+        )
+        proc = mock.MagicMock()
+        proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd=["claude"], timeout=args.timeout),
+            ("", ""),
+        ]
+        proc.returncode = None
+        proc.poll.return_value = None
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertIsNone(summary["verdict"])
+        self.assertIn("error", summary)
+        self.assertIn("timeout", summary["error"])
+
+    def test_run_review_codex_vanished_session_file_skips_not_crashes(self):
+        """Regression: a codex session file that vanishes between the
+        is_file() filter and the mtime-sort stat() must be skipped rather
+        than crashing — and, since the FileNotFoundError handler is now
+        scoped to the Popen launch only, must not be mislabeled as 'Binary
+        not found' or skip session/summary persistence."""
+        codex_session_dir = Path(self.tmpdir.name) / "codex-sessions"
+        codex_session_dir.mkdir()
+        cwd_str = str(Path.cwd())
+        vanished = codex_session_dir / "vanished.jsonl"
+        vanished.write_text(
+            json.dumps({"type": "session_meta", "payload": {"id": "vanished-id", "cwd": cwd_str}}) + "\n",
+            encoding="utf-8",
+        )
+        survivor = codex_session_dir / "survivor.jsonl"
+        survivor.write_text(
+            json.dumps({"type": "session_meta", "payload": {"id": "survivor-id", "cwd": cwd_str}}) + "\n",
+            encoding="utf-8",
+        )
+
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        def communicate(input=None, timeout=None):
+            self.output_file.write_text("Review text\n", encoding="utf-8")
+            return "", ""
+
+        proc.communicate.side_effect = communicate
+
+        real_stat = Path.stat
+        stat_calls = {"vanished": 0}
+
+        def flaky_stat(self_path, *a, **kw):
+            if self_path == vanished:
+                stat_calls["vanished"] += 1
+                # First call is the is_file() filter (must still see the real
+                # file); the second call is the mtime-sort read, where the
+                # race is simulated.
+                if stat_calls["vanished"] >= 2:
+                    raise FileNotFoundError(str(self_path))
+            return real_stat(self_path, *a, **kw)
+
+        with (
+            mock.patch("run_review.setup_codex_home", return_value=(str(self.tmpdir.name), True)),
+            mock.patch(
+                "run_review._codex_session_files",
+                side_effect=[set(), {str(vanished), str(survivor)}],
+            ),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch.object(Path, "stat", new=flaky_stat),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        session = json.loads(self.session_file.read_text(encoding="utf-8"))
+        self.assertEqual(session.get("session_id"), "survivor-id")
+
+    def test_run_review_codex_no_session_file_tears_down_minted_home(self):
+        """Regression: when no --session-file is given, a codex home minted
+        this run has no resume path — it must be torn down at the end of the
+        run instead of leaking a copy of ~/.codex/auth.json in temp."""
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=None,
+            events_file=str(self.events_file),
+            resume=False,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        def communicate(input=None, timeout=None):
+            self.output_file.write_text("Review text\n", encoding="utf-8")
+            return "", ""
+
+        proc.communicate.side_effect = communicate
+
+        with (
+            mock.patch("run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-minted", True)),
+            mock.patch("run_review._codex_session_files", return_value=set()),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.teardown_codex_home") as mock_teardown,
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        mock_teardown.assert_called_once_with("/fake/ppr-codex-home-minted")
 
 
 class TestRunReviewAgy(unittest.TestCase):
@@ -516,3 +728,27 @@ class TestRunReviewAgy(unittest.TestCase):
         self.assertIsNotNone(captured.get("input"))
         self.assertTrue(captured["input"].startswith(run_review.AGY_READONLY_PREAMBLE))
         self.assertIn("Review this plan.", captured["input"])
+
+
+class TestNoCodexHomeLeak(unittest.TestCase):
+    """Regression guard for the credential-leak bug: any codex-path test in
+    TestRunReviewExecution that forgets to mock setup_codex_home would call
+    the real implementation, which copies the developer's real
+    ~/.codex/auth.json into a ppr-codex-home-* tempdir with no reclaim path
+    (session_file is set in those tests, so the run_review.py-side teardown
+    added for the no-session-file case never fires for them either). This
+    runs that TestCase in-process and asserts no new ppr-codex-home-*
+    directory appears in the system tempdir."""
+
+    def test_codex_tests_mint_no_real_codex_home(self):
+        pattern = str(Path(tempfile.gettempdir()) / "ppr-codex-home-*")
+        before = set(glob.glob(pattern))
+        try:
+            suite = unittest.TestLoader().loadTestsFromTestCase(TestRunReviewExecution)
+            unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(suite)
+            after = set(glob.glob(pattern))
+        finally:
+            for d in set(glob.glob(pattern)) - before:
+                shutil.rmtree(d, ignore_errors=True)
+        leaked = after - before
+        self.assertEqual(leaked, set(), f"codex-path tests minted real Codex home(s): {leaked}")

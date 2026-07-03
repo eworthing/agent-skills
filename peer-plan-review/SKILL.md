@@ -52,7 +52,9 @@ Pressure-test a plan before execution. The host agent owns the plan and revises 
 - [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
 
 For available models prefer:
-`python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`.
+`python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`
+(aliases for claude/gemini, live listing for opencode/agy, known models for
+codex/copilot).
 
 ## Require a plan source
 

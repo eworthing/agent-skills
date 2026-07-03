@@ -6,12 +6,40 @@ from ._helpers import *  # noqa: F401,F403
 from ._helpers import _CREATE_NEW_PROCESS_GROUP  # noqa: F401
 
 
+def run_script_isolated(*extra_args):
+    """Like run_script, but with PATH replaced by an empty temp dir.
+
+    --list-models (with no --reviewer) loops every provider, and opencode/agy
+    each carry a list_models_cmd that shells out to the real CLI with its own
+    15s subprocess timeout. If both happen to be installed-but-slow, the two
+    15s waits stack past this suite's outer 30s run_script timeout and
+    TimeoutExpired escapes. Emptying PATH makes those lookups fail instantly
+    with FileNotFoundError — which run_review.py already catches and turns
+    into its fallback line — so the test never depends on, or waits on, real
+    third-party CLIs. sys.executable is invoked by absolute path, so running
+    python itself doesn't need PATH.
+    """
+    cmd = [sys.executable, SCRIPT, *list(extra_args)]
+    with tempfile.TemporaryDirectory(prefix="ppr-empty-path-") as empty_dir:
+        env = os.environ.copy()
+        env["PATH"] = empty_dir
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+            env=env,
+        )
+    return result.returncode, result.stdout, result.stderr
+
+
 class TestListModels(unittest.TestCase):
     """Tests 1-2: --list-models output."""
 
     def test_list_models_all_providers(self):
-        """Test 1: --list-models prints all 5 providers with correct aliases."""
-        rc, stdout, stderr = run_script("--list-models")
+        """Test 1: --list-models prints all providers with correct aliases."""
+        rc, stdout, stderr = run_script_isolated("--list-models")
         self.assertEqual(rc, 0, f"stderr: {stderr}")
         for provider in ("claude", "gemini", "codex", "copilot", "opencode"):
             self.assertIn(
@@ -25,8 +53,20 @@ class TestListModels(unittest.TestCase):
         # Gemini should have auto, pro, flash, flash-lite
         self.assertIn("flash", stdout)
         self.assertIn("pro", stdout)
-        # Codex/copilot/opencode should indicate raw IDs
-        self.assertIn("raw model IDs", stdout)
+        # Codex/copilot have empty model_aliases and no list_models_cmd, so
+        # run_review.py prints either the doc-sourced known_models list (if
+        # that registry field has been wired into --list-models) or the
+        # "raw model IDs only" fallback. Tolerate either wording — assert
+        # only on the stable fact that each provider produced *some* line.
+        for provider in ("codex", "copilot"):
+            line = next(
+                (l for l in stdout.splitlines() if l.startswith(f"{provider}:")), ""
+            )
+            self.assertTrue(line, f"{provider} line missing from --list-models output")
+            self.assertTrue(
+                "raw model IDs" in line or "gpt-5" in line.lower(),
+                f"{provider} line unexpected: {line!r}",
+            )
 
     def test_list_models_single_provider(self):
         """Test 2: --list-models --reviewer gemini shows only gemini."""

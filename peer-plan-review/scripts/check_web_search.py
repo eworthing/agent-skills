@@ -2,17 +2,38 @@
 """
 check_web_search.py — Manual diagnostic: web-search capability per provider.
 
-Checks whether each provider can perform web searches in headless mode
-without hanging on permission prompts. Uses a short timeout to detect hangs.
-Not a pytest suite — it invokes real provider CLIs; run it by hand.
+Checks whether each provider CLI can perform a live web fetch in headless
+mode without hanging on a permission prompt. Not a pytest suite — it invokes
+real provider CLIs; run it by hand.
+
+Design: every command is built by calling the SAME command builders
+run_review.py uses in production (``PROVIDERS[name]["build_cmd"]`` from the
+shared ``_common/providers/registry.py``, fed a minimal argparse.Namespace
+produced by ``run_review.parse_args()`` itself). Stdin delivery reuses
+``_common.providers.build_stdin`` and non-codex/agy response extraction reuses
+``_common.session.io.extract_text_from_output``. Because every provider- and
+extraction-specific decision is delegated to the real production code paths,
+this script's commands cannot silently drift from what a live review run
+would actually execute — there is nothing here to hand-copy out of sync.
+
+Two isolation layers that run_review.py applies for concurrency safety are
+intentionally NOT replicated here for simplicity (this is a one-shot
+diagnostic, not a production run):
+  - Codex: runs against the user's real CODEX_HOME rather than a per-run
+    isolated home.
+  - Gemini: runs against the user's real Gemini config rather than an
+    isolated config-dir overlay.
+Neither omission changes the flags under test (sandbox/approval-mode/output
+format), only session/config isolation that doesn't matter for a single
+ad hoc run.
 
 Usage:
     python3 check_web_search.py                    # check all providers
-    python3 check_web_search.py --provider claude  # check one provider
+    python3 check_web_search.py --provider claude   # check one provider
+    python3 check_web_search.py --dry-run           # print built argv only
 """
 
 import argparse
-import json
 import os
 import shutil
 import subprocess
@@ -24,180 +45,172 @@ from pathlib import Path
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 sys.path.insert(0, SCRIPT_DIR)
 from _common.process.tree import _kill_tree, _popen_session_kwargs  # noqa: E402
+from _common.providers import PROVIDERS, build_stdin  # noqa: E402
+from _common.session import extract_text_from_output  # noqa: E402
+
+import run_review  # noqa: E402 — reuse parse_args() defaults so this
+# diagnostic's argv construction can never hand-drift from what a real
+# review run executes.
 
 TIMEOUT = 180  # seconds — URL fetch can be slow (Gemini/Copilot take 50-70s)
 
+PROVIDER_NAMES = ["claude", "codex", "gemini", "copilot", "opencode", "agy"]
+
+# The answer ("Wouters") is on the fetched page but never appears in this
+# prompt, so a match proves an actual fetch happened rather than the model
+# echoing the prompt/URL back or guessing from training data.
 PROMPT = (
-    "Fetch this URL and tell me the FIRST heading (h1) on the page: "
+    "Fetch this URL and read its content: "
     "https://docs.python.org/3/whatsnew/3.13.html "
-    "Then tell me how many PEP links are in the first section. "
-    "You MUST actually fetch/read the page content — do NOT guess from memory. "
-    "Do NOT use any file tools."
+    "Answer with ONLY the name of the release manager for Python 3.13, as "
+    "stated on that page. You MUST actually fetch/read the page content — "
+    "do NOT guess from memory. Do NOT use any file tools."
+)
+EXPECTED_ANSWER = "wouters"
+
+REFUSAL_PHRASES = (
+    "cannot fetch",
+    "cannot access",
+    "unable to access",
+    "unable to fetch",
+    "no internet",
+    "not able to browse",
+    "can't access",
+    "don't have the ability",
 )
 
 
-def case_claude_web(output_file):
-    """Claude: plan mode + WebSearch,WebFetch whitelisted + allowedTools."""
-    cmd = [
-        "claude",
-        "-p",
-        PROMPT,
-        "--permission-mode",
-        "plan",
-        "--tools",
-        "Read,Grep,Glob,WebSearch,WebFetch",
-        "--allowedTools",
-        "WebSearch,WebFetch",
-        "--output-format",
-        "json",
-        "--max-turns",
-        "5",
-        "--no-session-persistence",
-    ]
+def _base_args():
+    """A real parse_args() Namespace (all defaults), same technique as
+    scripts/tests/_helpers.make_args — so a new run_review.py argument
+    flows into this diagnostic automatically instead of needing a
+    hand-maintained parallel Namespace that can drift."""
+    saved_argv = sys.argv
+    sys.argv = ["run_review.py"]
+    try:
+        return run_review.parse_args()
+    finally:
+        sys.argv = saved_argv
+
+
+def build_test_args(reviewer, prompt_file, output_file):
+    args = _base_args()
+    args.reviewer = reviewer
+    args.prompt_file = str(prompt_file)
+    args.output_file = str(output_file)
+    args.timeout = TIMEOUT
+    return args
+
+
+def build_env(reviewer):
     env = os.environ.copy()
-    env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
-    return cmd, env, None
+    if reviewer == "claude":
+        env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    return env
 
 
-def case_codex_web(output_file):
-    """Codex: read-only sandbox + approval_mode=never (web works by default)."""
-    cmd = [
-        "codex",
-        "exec",
-        "--sandbox",
-        "read-only",
-        "-c",
-        "approval_mode=never",
-        "--json",
-        "--output-last-message",
-        output_file,
-        "-",
-    ]
-    return cmd, os.environ.copy(), PROMPT
+def extract_response_text(reviewer, output_file, stdout):
+    """Extract plain response text for success/refusal detection.
 
+    codex writes its own --output-last-message file; agy emits plain text on
+    stdout with no structured envelope. Every other provider gets routed
+    through production's own extract_text_from_output so this diagnostic
+    parses output exactly like a real review run does.
+    """
+    if reviewer == "codex":
+        out_p = Path(output_file)
+        if out_p.exists():
+            text = out_p.read_text(encoding="utf-8", errors="replace").strip()
+            return text or "(no output)"
+        return (stdout or "").strip() or "(no output)"
 
-def case_gemini_web(output_file):
-    """Gemini: yolo mode (required for URL fetch) + sandbox (prevents writes)."""
-    cmd = [
-        "gemini",
-        "--sandbox",
-        "--approval-mode",
-        "yolo",
-        "--output-format",
-        "json",
-        "-p",
-        PROMPT,
-    ]
-    return cmd, os.environ.copy(), None
-
-
-def case_copilot_web(output_file):
-    """Copilot: --yolo + deny write/shell/memory (--allow-tool=url hangs)."""
-    cmd = [
-        "copilot",
-        "-p",
-        PROMPT,
-        "-s",
-        "--no-ask-user",
-        "--yolo",
-        "--deny-tool=write,shell,memory",
-        "--no-custom-instructions",
-        "--no-auto-update",
-        "--output-format",
-        "json",
-    ]
-    return cmd, os.environ.copy(), None
-
-
-# Production configs — matches run_review.py --web flags per provider
-TEST_CASES = [
-    ("claude:web", case_claude_web),
-    ("codex:web", case_codex_web),
-    ("gemini:web", case_gemini_web),
-    ("copilot:web", case_copilot_web),
-]
-
-
-def extract_response(output_file, test_name, stdout):
-    """Extract the text response from structured output."""
-    provider = test_name.split(":")[0]
-
-    # For Codex, response is in the output file
-    if provider == "codex":
-        if Path(output_file).exists():
-            with Path(output_file).open() as f:
-                return f.read().strip()
-        return stdout.strip() if stdout else "(no output)"
+    if reviewer == "agy":
+        return (stdout or "").strip() or "(no output)"
 
     if not stdout:
         return "(no output)"
+    Path(output_file).write_text(stdout, encoding="utf-8")
+    extract_text_from_output(output_file, reviewer, content=stdout)
+    try:
+        text = Path(output_file).read_text(encoding="utf-8", errors="replace").strip()
+        return text or "(no output)"
+    except OSError:
+        return stdout.strip()
 
-    # Claude/Gemini: single JSON
-    if provider in ("claude", "gemini"):
+
+def _cleanup(*paths):
+    for p in paths:
         try:
-            data = json.loads(stdout)
-            if provider == "claude":
-                return data.get("result", stdout)[:500]
-            elif provider == "gemini":
-                return data.get("response", stdout)[:500]
-        except json.JSONDecodeError:
-            return stdout[:500]
+            Path(p).unlink(missing_ok=True)
+        except OSError:
+            pass
 
-    # Copilot: JSONL
-    if provider == "copilot":
-        messages = []
-        for line in stdout.splitlines():
-            if not line.strip():
-                continue
+
+def dry_run(reviewers):
+    """Print each provider's built argv + stdin mode without executing."""
+    for reviewer in reviewers:
+        binary = PROVIDERS[reviewer]["binary"]
+        if not shutil.which(binary):
+            print(f"{reviewer:8s}: SKIP ({binary} not installed)")
+            continue
+
+        prompt_fd, prompt_file = tempfile.mkstemp(prefix=f"ppr-web-dry-{reviewer}-", suffix=".txt")
+        output_fd, output_file = tempfile.mkstemp(prefix=f"ppr-web-dry-{reviewer}-out-", suffix=".txt")
+        os.close(output_fd)
+        try:
+            with os.fdopen(prompt_fd, "w", encoding="utf-8") as f:
+                f.write(PROMPT)
+
+            args = build_test_args(reviewer, prompt_file, output_file)
             try:
-                event = json.loads(line)
-                if event.get("type") == "assistant.message":
-                    msg = event.get("data", {}).get("content", "")
-                    if msg:
-                        messages.append(msg)
-            except json.JSONDecodeError:
+                cmd = PROVIDERS[reviewer]["build_cmd"](args, None)
+            except Exception as e:
+                print(f"{reviewer:8s}: ERROR building command: {e}")
                 continue
-        return "\n".join(messages)[:500] if messages else stdout[:500]
 
-    return stdout[:500]
+            stdin_data = build_stdin(reviewer, prompt_file)
+            stdin_desc = f"piped ({len(stdin_data)} bytes)" if stdin_data is not None else "none (argv prompt)"
+
+            print(f"\n{reviewer}:web")
+            print(f"  cmd:   {' '.join(cmd)}")
+            print(f"  stdin: {stdin_desc}")
+        finally:
+            _cleanup(prompt_file, output_file)
 
 
-def run_test(test_name, test_fn):
-    """Run a single test case and return results."""
-    tmpdir = tempfile.gettempdir()
-    output_file = str(Path(tmpdir) / f"web-test-{test_name.replace(':', '-')}.txt")
-
-    provider = test_name.split(":")[0]
-    binary = provider if provider != "claude" else "claude"
+def run_test(reviewer):
+    """Run a single provider's web-fetch test and return a result dict."""
+    test_name = f"{reviewer}:web"
+    binary = PROVIDERS[reviewer]["binary"]
     if not shutil.which(binary):
-        return {
-            "test": test_name,
-            "status": "SKIP",
-            "reason": f"{binary} not installed",
-            "duration": 0,
-        }
+        return {"test": test_name, "status": "SKIP", "reason": f"{binary} not installed", "duration": 0}
 
+    prompt_fd, prompt_file = tempfile.mkstemp(prefix=f"ppr-web-test-{reviewer}-", suffix=".txt")
+    output_fd, output_file = tempfile.mkstemp(prefix=f"ppr-web-test-{reviewer}-out-", suffix=".txt")
+    os.close(output_fd)
     try:
-        cmd, env, stdin_data = test_fn(output_file)
-    except Exception as e:
-        return {
-            "test": test_name,
-            "status": "ERROR",
-            "reason": str(e),
-            "duration": 0,
-        }
+        with os.fdopen(prompt_fd, "w", encoding="utf-8") as f:
+            f.write(PROMPT)
 
-    print(f"\n{'=' * 60}")
-    print(f"TEST: {test_name}")
-    print(f"CMD:  {' '.join(cmd)}")
-    print(f"{'=' * 60}")
+        args = build_test_args(reviewer, prompt_file, output_file)
+        try:
+            cmd = PROVIDERS[reviewer]["build_cmd"](args, None)
+        except Exception as e:
+            return {"test": test_name, "status": "ERROR", "reason": str(e), "duration": 0}
 
-    start = time.time()
-    try:
-        if stdin_data:
+        env = build_env(reviewer)
+        stdin_data = build_stdin(reviewer, prompt_file)
+
+        print(f"\n{'=' * 60}")
+        print(f"TEST: {test_name}")
+        print(f"CMD:  {' '.join(cmd)}")
+        print(f"{'=' * 60}")
+
+        start = time.time()
+        try:
             proc = subprocess.Popen(
                 cmd,
-                stdin=subprocess.PIPE,
+                stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 encoding="utf-8",
@@ -205,17 +218,8 @@ def run_test(test_name, test_fn):
                 env=env,
                 **_popen_session_kwargs(),
             )
-        else:
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                errors="replace",
-                env=env,
-                **_popen_session_kwargs(),
-            )
+        except FileNotFoundError:
+            return {"test": test_name, "status": "SKIP", "reason": "Binary not found", "duration": 0}
 
         try:
             stdout, stderr = proc.communicate(input=stdin_data, timeout=TIMEOUT)
@@ -231,22 +235,14 @@ def run_test(test_name, test_fn):
                 "reason": f"Timed out after {TIMEOUT}s — likely stuck on permission prompt",
                 "duration": duration,
             }
+        except Exception as e:
+            return {"test": test_name, "status": "ERROR", "reason": str(e), "duration": time.time() - start}
 
-        response = extract_response(output_file, test_name, stdout)
+        response = extract_response_text(reviewer, output_file, stdout)
+        response_lower = response.lower()
 
-        # Check if response mentions page content (indicates actual URL fetch)
-        web_search_worked = any(
-            kw in response.lower()
-            for kw in [
-                "new in python",
-                "what's new",
-                "pep",
-                "heading",
-                "h1",
-                "3.13",
-                "whatsnew",
-            ]
-        )
+        refused = any(phrase in response_lower for phrase in REFUSAL_PHRASES)
+        web_search_worked = (not refused) and (EXPECTED_ANSWER in response_lower)
 
         result = {
             "test": test_name,
@@ -254,6 +250,7 @@ def run_test(test_name, test_fn):
             "returncode": returncode,
             "duration": round(duration, 1),
             "web_search_worked": web_search_worked,
+            "refusal_detected": refused,
             "response_preview": response[:300],
         }
 
@@ -261,56 +258,47 @@ def run_test(test_name, test_fn):
             result["stderr_preview"] = stderr[:300]
 
         return result
-
-    except FileNotFoundError:
-        return {
-            "test": test_name,
-            "status": "SKIP",
-            "reason": "Binary not found",
-            "duration": 0,
-        }
-    except Exception as e:
-        return {
-            "test": test_name,
-            "status": "ERROR",
-            "reason": str(e),
-            "duration": time.time() - start,
-        }
     finally:
-        output_path = Path(output_file)
-        if output_path.exists():
-            output_path.unlink()
+        _cleanup(prompt_file, output_file)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--provider",
-        choices=["claude", "codex", "gemini", "copilot"],
+        choices=PROVIDER_NAMES,
         help="Test only this provider",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print each provider's built argv + stdin mode without executing",
     )
     args = parser.parse_args()
 
-    cases = TEST_CASES
-    if args.provider:
-        cases = [(name, fn) for name, fn in TEST_CASES if name.startswith(args.provider)]
+    reviewers = [args.provider] if args.provider else PROVIDER_NAMES
+
+    if args.dry_run:
+        dry_run(reviewers)
+        return
 
     results = []
-    for name, fn in cases:
-        result = run_test(name, fn)
+    for reviewer in reviewers:
+        result = run_test(reviewer)
         results.append(result)
 
         # Print result immediately
         status = result["status"]
         duration = result.get("duration", 0)
         icon = {"PASS": "+", "FAIL": "X", "HUNG": "!", "SKIP": "-", "ERROR": "?"}
-        print(f"\n[{icon.get(status, '?')}] {name}: {status} ({duration}s)")
+        print(f"\n[{icon.get(status, '?')}] {result['test']}: {status} ({duration}s)")
         if result.get("web_search_worked"):
             print("    Web search: YES")
+        elif result.get("refusal_detected"):
+            print("    Web search: NO (refused to fetch)")
         elif status == "PASS":
-            print("    Web search: NO (ran but didn't search web)")
+            print("    Web search: NO (ran but didn't return the expected fact)")
         if result.get("response_preview"):
-            # Print first 200 chars of response
             preview = result["response_preview"][:200].replace("\n", " ")
             print(f"    Response: {preview}")
         if result.get("reason"):
@@ -338,6 +326,8 @@ def main():
             print(f"  AVOID {r['test']}: hangs on permission prompts")
         elif r["status"] == "PASS" and r.get("web_search_worked"):
             print(f"  USE   {r['test']}: web search works without hanging")
+        elif r["status"] == "PASS" and r.get("refusal_detected"):
+            print(f"  CHECK {r['test']}: ran but refused to fetch the URL")
         elif r["status"] == "PASS":
             print(f"  MAYBE {r['test']}: runs but web search didn't trigger")
         elif r["status"] == "FAIL":

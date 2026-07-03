@@ -31,6 +31,34 @@ BASELINE = [
 MICRO = [("obs", "haiku"), ("ex", "haiku"), ("sev", "haiku"), ("f2", "sonnet"), ("f3", "sonnet")]
 
 
+def cleanup_codex_homes(jobs):
+    """Reclaim per-run CODEX_HOME dirs minted by codex reviewer jobs.
+
+    Each codex job's CODEX_HOME holds a copy of ~/.codex/auth.json; run_review.py
+    isolates one per run (see _common/session/codex_home.py) but never reclaims
+    it itself — that's the caller's job once the review is done. No-op for jobs
+    that never touched CODEX_HOME (gemini/claude reviewers, or a codex job that
+    failed before minting a home).
+    """
+    sys.path.insert(0, str(SKILL / "scripts"))
+    from _common.session.codex_home import cleanup_review_homes
+
+    created = failed = 0
+    for label, _reviewer, _model, _effort, _prompt, _plan, outdir in jobs:
+        session_file = outdir / f"{label}-session.json"
+        if session_file.exists():
+            try:
+                data = json.loads(session_file.read_text(encoding="utf-8"))
+                if data.get("codex_home"):
+                    created += 1
+            except (OSError, json.JSONDecodeError):
+                pass
+        failed += cleanup_review_homes(str(outdir), label)
+    reclaimed = max(created - failed, 0)
+    tail = f", {failed} left for retry" if failed else ""
+    print(f"[codex-home cleanup] reclaimed {reclaimed}/{created} codex home(s){tail}")
+
+
 def run_job(label, reviewer, model, effort, prompt, plan, outdir):
     rid = "ev" + uuid.uuid4().hex[:6]
     out = outdir / f"{label}-review.md"
@@ -69,17 +97,20 @@ def main():
         sys.exit(f"unknown mode: {mode!r} (use 'baseline' or 'microtest')")
 
     print(f"[{mode}] running {len(jobs)} job(s), cap=6 ...")
-    results = []
-    with ThreadPoolExecutor(max_workers=6) as ex:
-        futs = [ex.submit(run_job, *j) for j in jobs]
-        for f in as_completed(futs):
-            r = f.result(); results.append(r)
-            print(f"  {r[0]:18s} {r[1]:7s}/{r[2]:13s} exit={r[3]} ok={r[4]}")
-    ok = sum(1 for r in results if r[4])
-    print(f"\n{mode}: ok={ok}/{len(results)}")
-    for r in results:
-        if not r[4]:
-            print("  FAILED:", r[:3])
+    try:
+        results = []
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            futs = [ex.submit(run_job, *j) for j in jobs]
+            for f in as_completed(futs):
+                r = f.result(); results.append(r)
+                print(f"  {r[0]:18s} {r[1]:7s}/{r[2]:13s} exit={r[3]} ok={r[4]}")
+        ok = sum(1 for r in results if r[4])
+        print(f"\n{mode}: ok={ok}/{len(results)}")
+        for r in results:
+            if not r[4]:
+                print("  FAILED:", r[:3])
+    finally:
+        cleanup_codex_homes(jobs)
 
 
 if __name__ == "__main__":

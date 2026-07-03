@@ -97,8 +97,14 @@ class TestCorruption(unittest.TestCase):
         self.assertEqual(rc, 1)  # returns the error code, doesn't retry
         shutil.rmtree(tmpdir)
 
-    def test_resume_with_output_does_not_retry(self):
-        """Resume failure WITH output — should NOT fallback to fresh exec."""
+    def test_resume_with_output_still_retries_on_nonzero(self):
+        """Resume failure WITH output (e.g. an error JSON payload on stdout)
+        must still fall back to a fresh attempt — a nonzero exit makes the
+        resume attempt's output unusable regardless of whether it produced
+        bytes. (Previously a resume error payload counted as "has_output"
+        and suppressed the fallback entirely, leaving the error payload as
+        the round's persisted output — see run_review.py's resume-fallback
+        fix.) If the fresh attempt also fails, its exit code is returned."""
         tmpdir = tempfile.mkdtemp(prefix="ppr-no-retry-")
         prompt = Path(tmpdir) / "prompt.md"
         prompt.write_text("Review.\n", encoding="utf-8")
@@ -113,7 +119,7 @@ class TestCorruption(unittest.TestCase):
         )
 
         proc = mock.MagicMock()
-        # Non-zero exit but produces output
+        # Non-zero exit but produces output — must still trigger fallback.
         proc.communicate.return_value = ('{"result":"partial review"}', "error")
         proc.returncode = 1
         proc.poll.return_value = 1
@@ -128,9 +134,9 @@ class TestCorruption(unittest.TestCase):
             mock.patch("run_review.signal.signal"),
         ):
             rc = run_review.run_review(args)
-        self.assertEqual(rc, 1)
-        # Only one Popen call — no retry
-        self.assertEqual(mock_popen.call_count, 1)
+        self.assertEqual(rc, 1)  # fresh attempt also failed — its code is returned
+        # Both the resume attempt and the fresh-exec fallback ran.
+        self.assertEqual(mock_popen.call_count, 2)
         shutil.rmtree(tmpdir)
 
 

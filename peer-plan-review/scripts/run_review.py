@@ -10,7 +10,6 @@ Supports exec, resume, session tracking, and self-check.
 import argparse
 import contextlib
 import copy
-import json
 import os
 import shutil
 import signal
@@ -52,25 +51,40 @@ from _common.providers import (  # noqa: F401
     build_copilot_cmd,
     build_gemini_cmd,
     build_opencode_cmd,
+    build_stdin as _build_stdin,
     get_provider,
     read_prompt,
+    setup_gemini_config as _setup_gemini_config,
 )
 from _common.session import (
     default_manifest,
     extract_text_from_output,
     load_session,
+    path_has_content as _path_has_content,
     probe_writable,
     reuse_codex_home,
     save_session,
     setup_codex_home,
     teardown_codex_home,
     validate_prompt_file,
+    write_failure_summary as _write_failure_summary,
     write_summary,
 )
 
 # Friendly reviewer aliases normalized to canonical provider keys at the CLI
 # boundary (the registry key stays `agy`; `antigravity` is accepted too).
 REVIEWER_ALIASES = {"antigravity": "agy"}
+
+# Providers whose stdout carries a structured (JSON/JSONL) payload needing
+# extract_text_from_output's unwrap + a single pre-read shared with metadata
+# extraction. Derived from caps["output_mode"] == "stdout", with agy excluded:
+# agy's caps also report "stdout" (its response comes back on stdout, not a
+# file) but the payload itself is already plain text, so it never needs the
+# JSON/JSONL unwrap the other stdout providers do.
+_STRUCTURED_STDOUT_REVIEWERS = frozenset(
+    name for name, spec in PROVIDERS.items()
+    if spec["caps"].get("output_mode") == "stdout" and name != "agy"
+)
 
 
 def parse_args():
@@ -199,69 +213,6 @@ def _signal_handler(signum, _frame):
 # ---------------------------------------------------------------------------
 
 
-def _setup_gemini_config(args, env):
-    """Build an isolated Gemini config overlay and point env at it.
-
-    Gemini runs through a temp config overlay. The review runner needs auth and
-    durable settings, but not mutable local approval policy, sessions, caches,
-    or extensions from the user's real Gemini home. Mutates env["GEMINI_CONFIG_DIR"]
-    on success. Returns the overlay dir (for teardown by the caller) or None.
-    """
-    budget = PROVIDERS["gemini"]["effort_map"].get(args.effort) if args.effort else None
-    gemini_config_dir = tempfile.mkdtemp(prefix="ppr-gemini-")
-    source_dir = os.environ.get(
-        "GEMINI_CONFIG_DIR",
-        str(Path("~/.gemini").expanduser()),
-    )
-    source_path = Path(source_dir)
-    if source_path.is_dir():
-        for child in source_path.iterdir():
-            if not child.is_file():
-                continue
-            try:
-                shutil.copy2(child, Path(gemini_config_dir) / child.name)
-            except OSError as e:
-                print(
-                    f"Warning: could not copy Gemini config file {child.name}: {e}",
-                    file=sys.stderr,
-                )
-    settings_path = Path(gemini_config_dir) / "settings.json"
-    try:
-        existing = {}
-        if settings_path.exists():
-            with settings_path.open(encoding="utf-8") as f:
-                try:
-                    existing = json.load(f)
-                except json.JSONDecodeError:
-                    existing = {}
-        if budget:
-            existing["thinkingConfig"] = {"thinkingBudget": budget}
-        with settings_path.open("w", encoding="utf-8") as f:
-            json.dump(existing, f)
-        env["GEMINI_CONFIG_DIR"] = gemini_config_dir
-    except OSError as e:
-        print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
-        shutil.rmtree(gemini_config_dir, ignore_errors=True)
-        gemini_config_dir = None
-    return gemini_config_dir
-
-
-def _build_stdin(reviewer, prompt_file):
-    """Return the prompt text to pipe via stdin, or None for argv-prompt providers.
-
-    Providers configured for stdin prompting get the prompt file's contents.
-    agy has no system-prompt flag and auto-approves tools in print mode, so it
-    gets a best-effort read-only directive prepended. agy is EXPERIMENTAL — not a
-    guaranteed-read-only reviewer (see references/antigravity.md).
-    """
-    if PROVIDERS[reviewer]["caps"].get("prompt_mode") != "stdin":
-        return None
-    stdin_data = read_prompt(prompt_file)
-    if reviewer == "agy" and stdin_data:
-        stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
-    return stdin_data
-
-
 def _build_session_data(args, session, meta, reviewer, new_session_id, fallback_used):
     """Assemble the persisted session dict from the run's resolved metadata.
 
@@ -327,7 +278,14 @@ def run_review(args, logger=None):
     use_resume = resume_requested
     fallback_used = False
 
-    session = load_session(args.session_file) if use_resume else {}
+    # Loaded once regardless of resume state: a codex run needs the prior
+    # round's codex_home even when not resuming (see below), but `session`
+    # itself still resolves to {} for round/model-fallback purposes unless
+    # actually resuming.
+    raw_session = (
+        load_session(args.session_file) if (use_resume or reviewer == "codex") else {}
+    )
+    session = raw_session if use_resume else {}
     session_id = session.get("session_id") if use_resume else None
 
     logger.log(
@@ -346,7 +304,9 @@ def run_review(args, logger=None):
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
 
-    gemini_config_dir = _setup_gemini_config(args, env) if reviewer == "gemini" else None
+    gemini_config_dir = (
+        _setup_gemini_config(args, env, prefix="ppr-gemini-") if reviewer == "gemini" else None
+    )
 
     # agy (Antigravity) runs through a dedicated per-run --log-file so the
     # conversation id can be recovered from the CLI log: agy prints it nowhere
@@ -366,10 +326,11 @@ def run_review(args, logger=None):
     # setup failure clears session_id/use_resume and yields a fresh exec, never
     # a resume into a home that doesn't exist (fail closed).
     codex_home = None
+    codex_home_minted_this_run = False
     codex_capture_enabled = False
     codex_sessions_before = None
     if reviewer == "codex":
-        recorded = load_session(args.session_file).get("codex_home")
+        recorded = raw_session.get("codex_home")
         if recorded and reuse_codex_home(recorded):
             codex_home = recorded
         else:
@@ -377,6 +338,7 @@ def run_review(args, logger=None):
             new_home, ok = setup_codex_home(manifest)
             if ok:
                 codex_home = new_home
+                codex_home_minted_this_run = True
                 if recorded:  # replaced a stale home: drop its dead session id
                     teardown_codex_home(recorded)
                     session_id = None
@@ -406,7 +368,10 @@ def run_review(args, logger=None):
             # current resume state without mutating the original args.
             build_args = copy.copy(args)
             build_args.resume = use_resume
-            cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id)
+            if reviewer == "claude":
+                cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id, prompt_text=stdin_data)
+            else:
+                cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id)
             # Per-run log for agy conversation-id capture (equals form — agy
             # ignores the space form in print mode).
             if reviewer == "agy" and agy_log_path:
@@ -419,11 +384,13 @@ def run_review(args, logger=None):
                 Path(args.output_file).write_text("")
             if args.events_file and Path(args.events_file).exists():
                 Path(args.events_file).write_text("")
+            if args.summary_file and Path(args.summary_file).exists():
+                Path(args.summary_file).write_text("")
 
-            if stdin_data is not None:
+            try:
                 proc = subprocess.Popen(
                     cmd,
-                    stdin=subprocess.PIPE,
+                    stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     encoding="utf-8",
@@ -431,17 +398,12 @@ def run_review(args, logger=None):
                     env=env,
                     **_popen_session_kwargs(),
                 )
-            else:
-                proc = subprocess.Popen(
-                    cmd,
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    encoding="utf-8",
-                    errors="replace",
-                    env=env,
-                    **_popen_session_kwargs(),
-                )
+            except FileNotFoundError:
+                binary = PROVIDERS[reviewer]["binary"]
+                print(f"Binary not found: {binary}", file=sys.stderr)
+                logger.log("binary_not_found", provider=reviewer, error=binary)
+                _write_failure_summary(args.summary_file, session, f"binary_not_found: {binary}")
+                return 1
             _active_proc = proc
 
             try:
@@ -452,6 +414,19 @@ def run_review(args, logger=None):
                 proc.communicate()
                 print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
                 logger.log("provider_timeout", provider=reviewer, context={"timeout": args.timeout})
+                if attempt == 0 and use_resume and session_id:
+                    print("Resume timed out, falling back to fresh exec...", file=sys.stderr)
+                    logger.log(
+                        "resume_fallback",
+                        provider=reviewer,
+                        error=f"Resume timed out after {args.timeout}s",
+                        context={"session_id": session_id},
+                    )
+                    use_resume = False
+                    session_id = None
+                    fallback_used = True
+                    continue  # retry as fresh exec
+                _write_failure_summary(args.summary_file, session, f"timeout: {args.timeout}s")
                 return 1
 
             # Write stdout to output file for non-Codex providers
@@ -476,10 +451,7 @@ def run_review(args, logger=None):
                     ]
                 else:
                     check_paths = [Path(args.output_file)] if args.output_file else []
-                has_output = any(
-                    path.exists() and path.stat().st_size > 0
-                    for path in check_paths
-                )
+                has_output = any(_path_has_content(path) for path in check_paths)
                 if check_paths and not has_output:
                     check_label = ", ".join(str(path) for path in check_paths)
                     print(
@@ -503,9 +475,14 @@ def run_review(args, logger=None):
                     print(stderr, file=sys.stderr)
 
                 output_path = Path(args.output_file) if args.output_file else None
-                has_output = output_path and output_path.exists() and output_path.stat().st_size > 0
+                has_output = bool(output_path and _path_has_content(output_path))
 
-                if attempt == 0 and use_resume and session_id and not has_output:
+                if attempt == 0 and use_resume and session_id:
+                    # Any nonzero exit on the resume attempt makes its output
+                    # unusable — even an error JSON payload written to stdout —
+                    # so fall back regardless of has_output. The next attempt's
+                    # top-of-loop truncation clears this output file before
+                    # the fresh attempt writes to it.
                     print("Resume failed, falling back to fresh exec...", file=sys.stderr)
                     logger.log(
                         "resume_fallback",
@@ -513,7 +490,7 @@ def run_review(args, logger=None):
                         error=f"Resume failed with exit code {returncode}",
                         context={
                             "session_id": session_id,
-                            "has_output": False,
+                            "has_output": has_output,
                             "stderr": (stderr or "")[:500],
                         },
                     )
@@ -541,8 +518,19 @@ def run_review(args, logger=None):
             after = _codex_session_files(codex_home)
             new_files = after - (codex_sessions_before or set())
             valid_files = [p for p in new_files if Path(p).is_file()]
+            # A file that passed is_file() can still vanish before its mtime
+            # is read (stat race with a concurrent Codex process); skip it
+            # instead of letting the exception escape to the broad handling
+            # below, where it would be mislabeled as a missing binary.
+            mtimes = []
+            for p in valid_files:
+                try:
+                    mtimes.append((p, Path(p).stat().st_mtime))
+                except OSError:
+                    continue
+            mtimes.sort(key=lambda pair: pair[1], reverse=True)
             cwd_matches = []
-            for candidate in sorted(valid_files, key=lambda p: Path(p).stat().st_mtime, reverse=True):
+            for candidate, _mtime in mtimes:
                 parsed_id = _parse_codex_session_id(candidate)
                 if parsed_id:
                     cwd_matches.append((candidate, parsed_id))
@@ -560,19 +548,22 @@ def run_review(args, logger=None):
                     if _parse_codex_session_id(sf) == session.get("session_id"):
                         codex_session_path = sf
                         break
-        elif reviewer == "copilot":
-            new_session_id = extract_session_id_copilot(args.output_file)
-        elif reviewer == "opencode":
-            new_session_id = extract_session_id_opencode(args.output_file)
-        elif reviewer == "agy":
-            new_session_id = extract_session_id_agy(agy_log_path)
-        elif reviewer in ("gemini", "claude"):
-            new_session_id = extract_session_id_json(args.output_file)
+        else:
+            session_id_extractors = {
+                "copilot": lambda: extract_session_id_copilot(args.output_file),
+                "opencode": lambda: extract_session_id_opencode(args.output_file),
+                "agy": lambda: extract_session_id_agy(agy_log_path),
+                "gemini": lambda: extract_session_id_json(args.output_file),
+                "claude": lambda: extract_session_id_json(args.output_file),
+            }
+            extractor = session_id_extractors.get(reviewer)
+            if extractor:
+                new_session_id = extractor()
 
         # Read output file content once (eliminates temporal coupling with
         # extract_text_from_output, which overwrites the file)
         output_content = None
-        if reviewer in ("claude", "gemini", "copilot", "opencode") and args.output_file:
+        if reviewer in _STRUCTURED_STDOUT_REVIEWERS and args.output_file:
             out_p = Path(args.output_file)
             if out_p.exists():
                 with contextlib.suppress(OSError):
@@ -593,7 +584,7 @@ def run_review(args, logger=None):
             meta.update(opencode_export_meta)
 
         # Extract plain text from structured output (uses pre-read content)
-        if reviewer in ("claude", "gemini", "copilot", "opencode"):
+        if reviewer in _STRUCTURED_STDOUT_REVIEWERS:
             extract_text_from_output(args.output_file, reviewer, content=output_content)
 
         # Build session data with resolved model/effort + resume metadata
@@ -620,14 +611,16 @@ def run_review(args, logger=None):
             logger.log("execution_complete", provider=reviewer, context={"returncode": 0})
         return returncode
 
-    except FileNotFoundError:
-        binary = PROVIDERS[reviewer]["binary"]
-        print(f"Binary not found: {binary}", file=sys.stderr)
-        logger.log("binary_not_found", provider=reviewer, error=binary)
-        return 1
     except OSError as e:
+        # No dedicated FileNotFoundError handler here on purpose: the Popen
+        # launch above reports "binary not found" itself, so any
+        # FileNotFoundError (an OSError subclass) reaching this point is a
+        # stat/open race elsewhere in post-execution — correctly reported as
+        # a generic execution error instead of being mislabeled as a missing
+        # binary.
         print(f"Execution error: {e}", file=sys.stderr)
         logger.log("provider_error", provider=reviewer, error=str(e))
+        _write_failure_summary(args.summary_file, session, f"os_error: {e}")
         return 1
     finally:
         _active_proc = None
@@ -638,6 +631,12 @@ def run_review(args, logger=None):
         if agy_log_path:
             with contextlib.suppress(OSError):
                 Path(agy_log_path).unlink()
+        # No session file means no resume path — a home minted this run is
+        # single-use, so reclaim it now instead of leaking a credential-
+        # bearing temp dir with no cleanup path. A home reused from a prior
+        # round's recorded session (not minted this run) is left alone.
+        if reviewer == "codex" and not args.session_file and codex_home_minted_this_run:
+            teardown_codex_home(codex_home)
 
 
 # ---------------------------------------------------------------------------
@@ -675,6 +674,43 @@ def _validate_model(args):
         )
 
 
+def _list_models(provider):
+    """One-line --list-models description for ``provider``.
+
+    Precedence: live model_aliases > provider-native list_models_cmd (live
+    query) > known_models (doc-sourced, not live-queried) > raw-IDs-only.
+    """
+    spec = PROVIDERS.get(provider, {})
+    aliases = spec.get("model_aliases", {})
+    if aliases:
+        alias_strs = [f"{k} ({v})" for k, v in sorted(aliases.items())]
+        return f"{provider}: {', '.join(alias_strs)}"
+
+    list_cmd = spec.get("list_models_cmd")
+    if list_cmd:
+        try:
+            result = subprocess.run(
+                list_cmd,
+                capture_output=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=15,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                models = [
+                    m.strip() for m in result.stdout.strip().splitlines() if m.strip()
+                ]
+                return f"{provider}: {', '.join(models)}"
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
+            pass
+
+    known_models = spec.get("known_models")
+    if known_models:
+        return f"{provider}: {', '.join(known_models)} (known models — not live-queried)"
+
+    return f"{provider}: (raw model IDs only — no aliases)"
+
+
 def main():
     args = parse_args()
 
@@ -694,37 +730,7 @@ def main():
     if args.list_models:
         providers = [args.reviewer] if args.reviewer else list(PROVIDERS.keys())
         for provider in providers:
-            aliases = PROVIDERS.get(provider, {}).get("model_aliases", {})
-            if aliases:
-                alias_strs = [
-                    f"{k} ({v})" for k, v in sorted(aliases.items())
-                ]
-                print(f"{provider}: {', '.join(alias_strs)}")
-            else:
-                # Try provider-native model listing for empty-alias providers
-                p = PROVIDERS.get(provider, {})
-                list_cmd = p.get("list_models_cmd")
-                if list_cmd:
-                    try:
-                        result = subprocess.run(
-                            list_cmd,
-                            capture_output=True,
-                            encoding="utf-8",
-                            errors="replace",
-                            timeout=15,
-                        )
-                        if result.returncode == 0 and result.stdout.strip():
-                            models = [
-                                m.strip() for m in result.stdout.strip().splitlines()
-                                if m.strip()
-                            ]
-                            print(f"{provider}: {', '.join(models)}")
-                        else:
-                            print(f"{provider}: (raw model IDs only — no aliases)")
-                    except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
-                        print(f"{provider}: (raw model IDs only — no aliases)")
-                else:
-                    print(f"{provider}: (raw model IDs only — no aliases)")
+            print(_list_models(provider))
         sys.exit(0)
 
     if not args.reviewer:

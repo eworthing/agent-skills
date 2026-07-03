@@ -10,12 +10,12 @@ parse_structured_review so 'does it parse' is part of the score. Manual reads of
 flagged matches are still required for the judgment-subtle batteries (f2/f3) —
 this only prescreens.
 """
-import sys, re, pathlib, statistics
+import functools, sys, re, pathlib, statistics
 from collections import Counter
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
-from _common.session import parse_structured_review  # noqa: E402
+from _common.session import _parse_verdict, parse_structured_review  # noqa: E402
 
 OBS = re.compile(r"observab|metric|logging|\blog\b|monitor|telemetry|instrument|alert", re.I)
 MONEY = re.compile(r"monetar|floating[- ]?point|rounding|decimal|currency|\bmoney\b|cents?\b", re.I)
@@ -25,11 +25,18 @@ BADCRIT = re.compile(r"contradict|bypass|self[- ]?serv|in tension|criterion 3|th
 EH_FLAG = re.compile(r"error handling|retr(y|ies)|transient|idempoten|no explicit|unverified|hedge|defer", re.I)
 
 
-def review(mode, label):
-    p = HERE / "runs" / mode / f"{label}-review.md"
+@functools.lru_cache(maxsize=None)
+def _read_review_file(path_str):
+    p = pathlib.Path(path_str)
     return p.read_text(encoding="utf-8") if p.exists() else ""
 
 
+def review(mode, label):
+    p = HERE / "runs" / mode / f"{label}-review.md"
+    return _read_review_file(str(p))
+
+
+@functools.lru_cache(maxsize=None)
 def findings(txt):
     return parse_structured_review(txt) or []
 
@@ -45,7 +52,7 @@ def score_baseline():
             print(f"{label:12s}: NO OUTPUT"); continue
         fs = findings(txt)
         nb = sum(1 for x in fs if x.get("severity") == "blocking")
-        verdict = next((l.strip() for l in reversed(txt.splitlines()) if l.strip()), "")
+        verdict = _parse_verdict(None, text=txt) or "(no VERDICT line)"
         obs = "obs✓" if OBS.search(ftext(fs)) else "obs✗"
         print(f"{label:12s}: {verdict[:30]:30s} blocking={nb} nonblk={len(fs)-nb} {obs} parse={'ok' if fs else 'EMPTY'}")
 

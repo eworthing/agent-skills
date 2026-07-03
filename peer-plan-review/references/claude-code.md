@@ -23,9 +23,12 @@ claude -p "PROMPT" \
   --allowedTools "WebSearch,WebFetch" \
   --output-format json \
   --max-turns 10 \
-  --no-session-persistence \
   --append-system-prompt "You are a code reviewer. Read the files the plan references before judging it — do not rely on the plan text alone. Assess the plan for correctness, completeness, missing edge cases, and risks. If the artifact is an implementation plan or spec, also assess its executability — whether a fresh engineer with no prior context could implement and independently verify each task as written (flag tasks too large or coupled to verify alone, under-specified or placeholder steps, and references to files, functions, or signatures the plan never defines). End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line."
 ```
+
+A one-off run outside the review loop may add `--no-session-persistence` for an
+ephemeral session. Never use it for review rounds — it breaks `--resume`, which
+round 2+ depends on to continue the same session.
 
 - `-p "prompt"` / `--print "prompt"`: runs once and exits (no interactive TUI)
 - `--permission-mode plan`: read-only mode — no file modifications or command execution
@@ -33,7 +36,6 @@ claude -p "PROMPT" \
 - `--allowedTools "WebSearch,WebFetch"`: auto-approve web tools without prompting (prevents headless hangs)
 - `--output-format`: `text`, `json`, `stream-json`
 - `--max-turns N`: limits agentic turns
-- `--no-session-persistence`: ephemeral session
 - `--append-system-prompt "..."`: adds to defaults (preferred over `--system-prompt` which replaces)
 
 ## JSON response fields
