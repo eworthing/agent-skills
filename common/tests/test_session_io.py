@@ -61,6 +61,16 @@ class TestParseVerdict:
         p.write_text("VERDICT: REVISE\nlater text\nVERDICT: APPROVED\n", encoding="utf-8")
         assert _parse_verdict(str(p)) == "APPROVED"
 
+    def test_bold_verdict(self, tmp_path):
+        p = tmp_path / "review.md"
+        p.write_text("blah\n\n**VERDICT: APPROVED**\n", encoding="utf-8")
+        assert _parse_verdict(str(p)) == "APPROVED"
+
+    def test_trailing_punctuation(self, tmp_path):
+        p = tmp_path / "review.md"
+        p.write_text("blah\nVERDICT: REVISE.\n", encoding="utf-8")
+        assert _parse_verdict(str(p)) == "REVISE"
+
 
 class TestExtractSection:
     def test_basic(self):
@@ -126,6 +136,24 @@ class TestParseStructuredReview:
         assert parse_structured_review("") == []
         assert parse_structured_review("### Reasoning\njust prose") == []
 
+    def test_no_space_finding_tag_stops_previous_block_scan(self):
+        # "-[B2]" (no space after the dash) must still be recognized as a new
+        # finding tag, so it doesn't get walked past and have its Section:
+        # line misattributed to the preceding finding.
+        text = (
+            "### Blocking Issues\n"
+            "- [B1] first finding\n"
+            "-[B2] second finding\n"
+            "  Section: bar.py (lines 3-4)\n"
+        )
+        findings = parse_structured_review(text)
+        ids = [f["id"] for f in findings]
+        assert ids == ["B1", "B2"]
+        b1, b2 = findings
+        assert "section" not in b1
+        assert b2["section"] == "bar.py"
+        assert b2["lines"] == "3-4"
+
 
 class TestExtractTextFromOutput:
     def test_claude_extracts_result_field(self, tmp_path):
@@ -143,6 +171,19 @@ class TestExtractTextFromOutput:
         )
         extract_text_from_output(str(p), "copilot")
         assert p.read_text(encoding="utf-8") == "first\nsecond"
+
+    def test_copilot_null_data_does_not_crash(self, tmp_path):
+        p = tmp_path / "out.jsonl"
+        raw = json.dumps({"type": "assistant.message", "data": None})
+        p.write_text(raw + "\n", encoding="utf-8")
+        extract_text_from_output(str(p), "copilot")
+        assert p.read_text(encoding="utf-8") == raw
+
+    def test_claude_top_level_null_falls_back_to_raw(self, tmp_path):
+        p = tmp_path / "out.json"
+        p.write_text("null", encoding="utf-8")
+        extract_text_from_output(str(p), "claude")
+        assert p.read_text(encoding="utf-8") == "null"
 
     def _oc(self, *events):
         return "\n".join(json.dumps(e) for e in events) + "\n"
@@ -202,6 +243,31 @@ class TestExtractTextFromOutput:
         )
         extract_text_from_output(str(p), "opencode")
         assert "partial review body" in p.read_text(encoding="utf-8")
+
+    def test_opencode_empty_stop_step_falls_back_to_all_texts(self, tmp_path):
+        # A stop-reason step_finish with an empty step buffer must not disable
+        # the all_texts fallback — otherwise the raw JSONL gets written as the
+        # review instead of the actual content from an earlier non-stop step.
+        p = tmp_path / "out.jsonl"
+        p.write_text(
+            self._oc(
+                {"type": "step_start", "part": {"type": "step-start"}},
+                {"type": "text", "part": {"type": "text", "text": "actual review content"}},
+                {"type": "step_finish", "part": {"type": "step-finish", "reason": "tool-calls"}},
+                {"type": "step_start", "part": {"type": "step-start"}},
+                {"type": "step_finish", "part": {"type": "step-finish", "reason": "stop"}},
+            ),
+            encoding="utf-8",
+        )
+        extract_text_from_output(str(p), "opencode")
+        assert p.read_text(encoding="utf-8") == "actual review content"
+
+    def test_opencode_null_part_text_does_not_crash(self, tmp_path):
+        p = tmp_path / "out.jsonl"
+        raw = json.dumps({"type": "text", "part": None})
+        p.write_text(raw + "\n", encoding="utf-8")
+        extract_text_from_output(str(p), "opencode")
+        assert p.read_text(encoding="utf-8") == raw
 
     def test_content_arg_bypasses_file_read(self, tmp_path):
         p = tmp_path / "out.json"

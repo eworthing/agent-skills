@@ -22,7 +22,9 @@ manifest:
   repeat non-resume verifier calls sharing a session file) reuse it.
 - ``cleanup_review_homes`` is the single safe terminal reclaim: union of the
   manifest and the review's session files, validated and torn down, manifest
-  kept (with survivors) on partial failure for retry.
+  kept (with survivors) on partial failure for retry. It also age-gate-sweeps
+  the global fallback manifest (``default_manifest(None)``'s target) for
+  orphans no per-review cleanup would otherwise ever reach.
 
 Stdlib-only; POSIX + Windows (ownership checks are platform-gated).
 """
@@ -36,6 +38,7 @@ import signal
 import stat
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 # Marker prefix on every per-run home. Validation refuses to touch a path that
@@ -47,6 +50,18 @@ _HOME_PREFIX = "ppr-codex-home-"
 # avoids snapshotting mutable runtime state (history, logs, indexes) that a
 # blanket top-level copy would capture mid-write.
 _ALLOWLIST = ("auth.json", "config.toml")
+
+# Name of the fallback manifest `default_manifest(None)` writes to when a
+# caller has no review-scoped manifest to pass. Entries recorded there carry
+# no review id, so `cleanup_review_homes` treats it as a shared orphan pool
+# rather than something scoped to one review (see `_reclaim_stale_global_homes`).
+_GLOBAL_MANIFEST_NAME = "ppr-codex-homes.list"
+
+# Age guard for reclaiming entries from the global fallback manifest: a home
+# must be idle at least this long before any review's cleanup call may
+# reclaim it, so a concurrent live run's home (freshly created/touched) is
+# never pulled out from under it.
+_STALE_HOME_AGE_SECONDS = 24 * 60 * 60
 
 _POSIX = os.name == "posix"
 _REPARSE = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
@@ -243,6 +258,17 @@ def _read_manifest(manifest):
     return [ln.strip() for ln in text.splitlines() if ln.strip()]
 
 
+def _is_stale(path, now=None):
+    """True iff ``path``'s mtime is older than ``_STALE_HOME_AGE_SECONDS``.
+    False (never stale) on any stat failure, so an unreadable/vanished path
+    is left for the normal validity checks rather than assumed reclaimable."""
+    now = time.time() if now is None else now
+    try:
+        return (now - os.stat(path).st_mtime) > _STALE_HOME_AGE_SECONDS
+    except OSError:
+        return False
+
+
 def _rewrite_manifest(manifest, entries):
     tmp = Path(str(manifest) + ".tmp")
     try:
@@ -256,6 +282,36 @@ def _rewrite_manifest(manifest, entries):
             tmp.unlink()
 
 
+def _reclaim_stale_global_homes(global_manifest, already_seen):
+    """Sweep the global fallback manifest (entries with no review id) for
+    homes idle longer than ``_STALE_HOME_AGE_SECONDS``, tearing those down.
+    Entries already accounted for by the caller's own review (``already_seen``)
+    are dropped from this manifest without being touched again. Younger or
+    otherwise-untouched entries are left in place for a later sweep.
+
+    Returns the list of stale homes that failed teardown (kept in the
+    rewritten manifest so a later cleanup call can retry them).
+    """
+    keep, stale = [], []
+    for h in _read_manifest(global_manifest):
+        h = h.strip()
+        if not h or h in already_seen:
+            continue
+        if _owned_real_dir(h) and _is_stale(h):
+            stale.append(h)
+        else:
+            keep.append(h)
+
+    stale_failed = [h for h in stale if not teardown_codex_home(h)]
+    survivors = keep + stale_failed
+    if survivors:
+        _rewrite_manifest(global_manifest, survivors)
+    else:
+        with contextlib.suppress(OSError):
+            global_manifest.unlink()
+    return stale_failed
+
+
 def cleanup_review_homes(tmpdir, id_prefix):
     """Reclaim every per-run Codex home for a review. Returns the count that
     could NOT be removed (0 = fully clean; idempotent on re-run).
@@ -265,6 +321,14 @@ def cleanup_review_homes(tmpdir, id_prefix):
     id (``glob.escape``) and delimiter-bounded patterns so ``qr-demo`` never
     matches ``qr-demo2-*``. Removes the manifest only if every teardown
     succeeded; on partial failure rewrites it with the survivors for retry.
+
+    Also sweeps the global fallback manifest (``ppr-codex-homes.list``, what
+    ``default_manifest(None)`` points callers at when they have no
+    review-scoped manifest of their own) for orphaned homes — those entries
+    carry no review id, so any review's cleanup call may reclaim them, gated
+    by an mtime age guard so a concurrent live run's home is never pulled out
+    from under it. Homes that fail that sweep are folded into the returned
+    count alongside this review's own failures.
     """
     base = Path(tmpdir)
     manifest = base / f"{id_prefix}-codex-homes.list"
@@ -289,7 +353,12 @@ def cleanup_review_homes(tmpdir, id_prefix):
     failed = [h for h in homes if not teardown_codex_home(h)]
     if failed:
         _rewrite_manifest(manifest, failed)
-        return len(failed)
-    with contextlib.suppress(OSError):
-        manifest.unlink()
-    return 0
+    else:
+        with contextlib.suppress(OSError):
+            manifest.unlink()
+
+    global_manifest = base / _GLOBAL_MANIFEST_NAME
+    if global_manifest != manifest:
+        failed.extend(_reclaim_stale_global_homes(global_manifest, seen))
+
+    return len(failed)

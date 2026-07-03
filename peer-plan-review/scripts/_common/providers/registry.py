@@ -34,10 +34,9 @@ def build_codex_cmd(args, session_id=None):
     if args.resume and session_id:
         cmd.extend(["resume", str(session_id)])
         # --sandbox is NOT available on resume; original session policy applies
-        cmd.extend(["-c", "approval_mode=never"])
     else:
         cmd.extend(["--sandbox", "read-only"])
-        cmd.extend(["-c", "approval_mode=never"])
+    cmd.extend(["-c", "approval_mode=never"])
 
     cmd.append("--json")
 
@@ -81,16 +80,19 @@ def build_gemini_cmd(args, session_id=None):
     return cmd
 
 
-def build_claude_cmd(args, session_id=None):
+def build_claude_cmd(args, session_id=None, prompt_text=None):
     """Build Claude Code command.
 
-    When ``args.verification_mode`` is True OR the prompt file begins with
-    ``## Verification Request`` / ``## Verification Contract`` (sniffed
-    when ``args.prompt_file`` is set), uses the independent-verifier system
-    prompt instead of the default reviewer system prompt. This keeps the
-    quorum-review verifier role usable through the shared adapter without
-    affecting consumers (peer-plan-review) that never set the flag and
-    never write a verifier-style prompt.
+    When ``args.verification_mode`` is True OR the prompt begins with
+    ``## Verification Request`` / ``## Verification Contract``, uses the
+    independent-verifier system prompt instead of the default reviewer
+    system prompt. This keeps the quorum-review verifier role usable
+    through the shared adapter without affecting consumers (peer-plan-review)
+    that never set the flag and never write a verifier-style prompt.
+
+    ``prompt_text``, if given, is sniffed directly instead of re-reading
+    ``args.prompt_file`` from disk. When omitted, the file is read exactly
+    as before.
     """
     # -p requires an argument; prompt text is piped via stdin
     cmd = ["claude", "-p", ""]
@@ -105,9 +107,10 @@ def build_claude_cmd(args, session_id=None):
     cmd.extend(["--max-turns", "10"])
 
     verification_mode = bool(getattr(args, "verification_mode", False))
-    if not verification_mode and getattr(args, "prompt_file", None):
-        prompt_text = read_prompt(args.prompt_file) or ""
-        head = prompt_text.lstrip()
+    if not verification_mode:
+        if prompt_text is None and getattr(args, "prompt_file", None):
+            prompt_text = read_prompt(args.prompt_file) or ""
+        head = (prompt_text or "").lstrip()
         if head.startswith("## Verification Request") or head.startswith("## Verification Contract"):
             verification_mode = True
 
@@ -257,20 +260,16 @@ def build_agy_cmd(args, session_id=None):
         # (Pro / bare "Gemini 3 Flash" come back empty on tested accounts).
         # Effort then selects the variant; with no effort, effort_default.
         model = "Gemini 3.5 Flash"
-    if model:
-        stripped = model.rstrip()
-        if stripped.endswith(")") and "(" in stripped:
-            chosen = model  # already a full "Family (Level)" string — pass through
-        elif model in _AGY_FAMILIES:
-            variants = _AGY_FAMILIES[model]
-            if variants:
-                eff = effort or PROVIDERS["agy"]["effort_default"]
-                chosen = f"{model} ({variants.get(eff, variants['high'])})"
-            else:
-                chosen = model  # single-variant family (Gemini 3 Flash)
-        else:
-            chosen = model  # raw model ID — pass through
-        cmd.extend(["--model", chosen])
+    stripped = model.rstrip()
+    if stripped.endswith(")") and "(" in stripped:
+        chosen = model  # already a full "Family (Level)" string — pass through
+    elif model in _AGY_FAMILIES:
+        eff = effort or PROVIDERS["agy"]["effort_default"]
+        variants = _AGY_FAMILIES[model]
+        chosen = f"{model} ({variants.get(eff, variants['high'])})"
+    else:
+        chosen = model  # raw model ID — pass through
+    cmd.extend(["--model", chosen])
 
     return cmd
 
@@ -302,6 +301,10 @@ def read_prompt(prompt_file):
 #   caps                dict    — capability descriptors used by callers that
 #                                 want to reason about the CLI shape without
 #                                 invoking build_cmd (sandbox/resume flavor).
+#                                 caps["binary"] and caps["resume_supported"]
+#                                 are NOT authored here — they are mirrored
+#                                 from the top-level keys below the PROVIDERS
+#                                 dict, so there is a single place to edit.
 # ---------------------------------------------------------------------------
 
 PROVIDERS = {
@@ -310,16 +313,16 @@ PROVIDERS = {
         "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
         "effort_default": "medium",
         "model_aliases": {},
+        # Available models, sourced from peer-plan-review/references/codex.md.
+        "known_models": ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.2"],
         "resume_supported": True,
         "build_cmd": build_codex_cmd,
         "caps": {
-            "binary": "codex",
             "prompt_mode": "stdin",
             "output_mode": "file",
             "model_flag": "-m",
             "effort_flag": "-c model_reasoning_effort={level}",
             "resume_flag_style": "subcommand",
-            "resume_supported": True,
             "safety_flags": ["--sandbox", "read-only", "-c", "approval_mode=never"],
         },
     },
@@ -336,13 +339,11 @@ PROVIDERS = {
         "resume_supported": True,
         "build_cmd": build_gemini_cmd,
         "caps": {
-            "binary": "gemini",
             "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "-m",
             "effort_flag": "config_overlay",
             "resume_flag_style": "flag",
-            "resume_supported": True,
             "safety_flags": ["--sandbox", "--approval-mode", "yolo"],
         },
     },
@@ -354,13 +355,11 @@ PROVIDERS = {
         "resume_supported": True,
         "build_cmd": build_claude_cmd,
         "caps": {
-            "binary": "claude",
             "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "--model",
             "effort_flag": "--effort {level}",
             "resume_flag_style": "flag",
-            "resume_supported": True,
             "safety_flags": ["--permission-mode", "plan"],
         },
     },
@@ -369,16 +368,18 @@ PROVIDERS = {
         "effort_map": {"low": "low", "medium": "medium", "high": "high", "xhigh": "xhigh"},
         "effort_default": "medium",
         "model_aliases": {},
+        # Default model is "GPT-5.4 mini" (verified April 2026); the CLI does
+        # not expose a model-listing command, so this is the documented set
+        # from peer-plan-review/references/copilot.md.
+        "known_models": ["GPT-5.4 mini"],
         "resume_supported": True,
         "build_cmd": build_copilot_cmd,
         "caps": {
-            "binary": "copilot",
             "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "--model",
             "effort_flag": "--reasoning-effort {level}",
             "resume_flag_style": "flag_eq",
-            "resume_supported": True,
             "safety_flags": ["--no-ask-user", "--yolo", "--deny-tool=write,shell,memory"],
         },
     },
@@ -399,13 +400,11 @@ PROVIDERS = {
         "resume_supported": True,
         "build_cmd": build_opencode_cmd,
         "caps": {
-            "binary": "opencode",
             "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "-m",
             "effort_flag": "--variant {level}",
             "resume_flag_style": "flag",
-            "resume_supported": True,
             "safety_flags": ["--dangerously-skip-permissions"],
         },
         # opencode-go model discovery command — used by --list-models
@@ -423,14 +422,12 @@ PROVIDERS = {
         "resume_supported": True,
         "build_cmd": build_agy_cmd,
         "caps": {
-            "binary": "agy",
             "prompt_mode": "stdin",
             "output_mode": "stdout",
             "model_flag": "--model",
             # Effort is part of the model name, not a flag (see _AGY_FAMILIES).
             "effort_flag": "model_variant",
             "resume_flag_style": "flag",
-            "resume_supported": True,
             # EXPERIMENTAL: agy print mode auto-approves tools; --sandbox only
             # contains terminal commands. NOT guaranteed read-only like the rest.
             "safety_flags": ["--sandbox"],
@@ -440,6 +437,14 @@ PROVIDERS = {
         "list_models_cmd": ["agy", "models"],
     },
 }
+
+# Mirror the top-level binary/resume_supported into each entry's caps dict so
+# callers can read either location (see the caps docstring above). Authors
+# only ever edit the top-level values.
+for _spec in PROVIDERS.values():
+    _spec["caps"]["binary"] = _spec["binary"]
+    _spec["caps"]["resume_supported"] = _spec["resume_supported"]
+del _spec
 
 
 def get_provider(name, allowed=None):

@@ -62,7 +62,7 @@ def parse_args():
 def load_review_id(args):
     if args.review_id:
         review_id = args.review_id.strip()
-    else:
+    elif args.review_id_file:
         path = Path(args.review_id_file)
         try:
             review_id = path.read_text(encoding="utf-8").strip()
@@ -70,6 +70,10 @@ def load_review_id(args):
             raise ValueError(f"could not read review id file: {path}: {exc}") from exc
         if not review_id:
             raise ValueError(f"review id file is empty: {path}")
+    else:
+        raise ValueError(
+            "no review id: pass --review-id, --review-id-file, or --id-prefix"
+        )
 
     if not _REVIEW_ID_RE.match(review_id):
         raise ValueError(

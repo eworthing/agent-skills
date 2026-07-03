@@ -11,6 +11,7 @@ import os
 import stat
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -217,6 +218,56 @@ class TestCleanup:
         assert manifest.exists()
         assert str(foreign) in manifest.read_text()
         assert foreign.exists()  # refused, not removed
+
+
+class TestGlobalManifestSweep:
+    """Homes recorded via ``default_manifest(None)`` (no explicit review-scoped
+    manifest) carry no review id, so no single review's ``cleanup_review_homes``
+    call would ever reach them without the age-gated global sweep."""
+
+    def test_stale_global_entry_reclaimed(self, tmp_root, real_home):
+        manifest = default_manifest(None)
+        home, ok = setup_codex_home(manifest, real_home=str(real_home))
+        assert ok
+        stale_time = time.time() - ch._STALE_HOME_AGE_SECONDS - 3600
+        os.utime(home, (stale_time, stale_time))
+
+        # A cleanup call for an unrelated review still sweeps the orphan.
+        remaining = cleanup_review_homes(str(tmp_root), "ppr-unrelated")
+        assert remaining == 0
+        assert not os.path.exists(home)
+        global_manifest = tmp_root / ch._GLOBAL_MANIFEST_NAME
+        assert not global_manifest.exists()
+
+    def test_fresh_global_entry_left_alone(self, tmp_root, real_home):
+        manifest = default_manifest(None)
+        home, ok = setup_codex_home(manifest, real_home=str(real_home))
+        assert ok
+
+        # Freshly created — must survive an unrelated review's cleanup call.
+        remaining = cleanup_review_homes(str(tmp_root), "ppr-unrelated")
+        assert remaining == 0
+        assert os.path.exists(home)
+        global_manifest = tmp_root / ch._GLOBAL_MANIFEST_NAME
+        assert global_manifest.exists()
+        assert home in global_manifest.read_text()
+
+    def test_stale_entry_owned_by_same_review_not_double_processed(self, tmp_root, real_home):
+        # A home already reclaimed via the per-review manifest/session files
+        # must be dropped from the global manifest without a second teardown
+        # attempt (which would otherwise be a silent no-op, but exercises the
+        # already_seen skip path explicitly).
+        manifest = _manifest(tmp_root, "ppr-dup")
+        home, ok = setup_codex_home(manifest, real_home=str(real_home))
+        assert ok
+        global_manifest = tmp_root / ch._GLOBAL_MANIFEST_NAME
+        global_manifest.write_text(home + "\n")
+        (tmp_root / "ppr-dup-session.json").write_text(json.dumps({"codex_home": home}))
+
+        remaining = cleanup_review_homes(str(tmp_root), "ppr-dup")
+        assert remaining == 0
+        assert not os.path.exists(home)
+        assert not global_manifest.exists()
 
 
 class TestTeardownAndDefaults:

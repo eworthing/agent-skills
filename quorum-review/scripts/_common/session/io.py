@@ -49,16 +49,18 @@ def save_session(session_file, data):
             tmp.unlink()
 
 
-def _parse_verdict(output_file):
-    if not output_file or not Path(output_file).exists():
-        return None
-    try:
-        text = Path(output_file).read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return None
+def _parse_verdict(output_file, text=None):
+    if text is None:
+        if not output_file or not Path(output_file).exists():
+            return None
+        try:
+            text = Path(output_file).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return None
     for line in reversed([ln.strip() for ln in text.splitlines() if ln.strip()]):
+        line = _strip_markdown_wrappers(line)
         if line.startswith("VERDICT:"):
-            verdict = line.split(":", 1)[1].strip().upper()
+            verdict = line.split(":", 1)[1].strip().rstrip(".,!").upper()
             if verdict in ("APPROVED", "REVISE"):
                 return verdict
     return None
@@ -80,7 +82,7 @@ def write_summary(summary_file, output_file, session_data):
         findings = parse_structured_review(text) if text else []
         blocking = sum(1 for f in findings if f.get("id", "").startswith("B"))
         summary = {
-            "verdict": _parse_verdict(output_file),
+            "verdict": _parse_verdict(output_file, text=text),
             "reviewer": session_data.get("reviewer"),
             "model": session_data.get("model"),
             "effort": session_data.get("effort"),
@@ -125,12 +127,14 @@ def extract_text_from_output(output_file, reviewer, content=None):
                     continue
                 try:
                     event = json.loads(line)
-                    if event.get("type") == "assistant.message":
-                        msg = event.get("data", {}).get("content", "")
-                        if msg:
-                            messages.append(msg)
                 except json.JSONDecodeError:
                     continue
+                if not isinstance(event, dict):
+                    continue
+                if event.get("type") == "assistant.message":
+                    msg = (event.get("data") or {}).get("content", "")
+                    if msg:
+                        messages.append(msg)
             text = "\n".join(messages) if messages else raw_content
         elif reviewer == "opencode":
             # JSONL event stream. A tool-using reviewer narrates ("Let me check
@@ -152,23 +156,27 @@ def extract_text_from_output(output_file, reviewer, content=None):
                     event = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                if not isinstance(event, dict):
+                    continue
                 etype = event.get("type")
                 if etype == "text":
-                    msg = event.get("part", {}).get("text", "")
+                    msg = (event.get("part") or {}).get("text", "")
                     if msg:
                         step_buf.append(msg)
                         all_texts.append(msg)
                 elif etype == "step_finish":
-                    if event.get("part", {}).get("reason") == "stop":
+                    if (event.get("part") or {}).get("reason") == "stop":
                         stop_texts.extend(step_buf)
                         saw_stop = True
                     step_buf = []
-            chosen = stop_texts if saw_stop else all_texts
+            chosen = stop_texts if (saw_stop and stop_texts) else all_texts
             text = "\n".join(chosen) if chosen else raw_content
         else:
             # Single JSON object (Claude, Gemini)
             data = json.loads(raw_content)
-            if reviewer == "claude":
+            if not isinstance(data, dict):
+                text = raw_content
+            elif reviewer == "claude":
                 text = data.get("result", raw_content)
             elif reviewer == "gemini":
                 text = data.get("response", raw_content)
@@ -245,7 +253,7 @@ def _parse_finding_block(section_text, tag_match):
     lines_after = rest.split("\n")
     for line in lines_after:
         stripped = line.strip()
-        if not stripped or stripped.startswith("- "):
+        if not stripped or stripped.startswith("- ") or _RE_FINDING_TAG.match(line):
             break
         sec_m = _RE_SECTION_REF.match(line)
         if sec_m:

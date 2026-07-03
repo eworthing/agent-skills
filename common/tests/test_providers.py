@@ -47,6 +47,21 @@ class TestRegistry:
                     f"{name} effort_map missing portable level {level!r}"
                 )
 
+    def test_caps_binary_and_resume_supported_mirror_top_level(self):
+        # binary/resume_supported are authored once at the top level and
+        # mechanically mirrored into caps — verify the mirror actually ran
+        # and stayed in sync, for every provider.
+        for name, spec in PROVIDERS.items():
+            assert spec["caps"]["binary"] == spec["binary"], name
+            assert spec["caps"]["resume_supported"] == spec["resume_supported"], name
+
+    def test_known_models_present_for_codex_and_copilot(self):
+        # codex and copilot have no list_models_cmd (no CLI model-listing
+        # command), so --list-models relies on this authored fallback.
+        assert PROVIDERS["codex"]["known_models"]
+        assert "gpt-5.4" in PROVIDERS["codex"]["known_models"]
+        assert PROVIDERS["copilot"]["known_models"]
+
 
 class TestGetProvider:
     def test_lookup_known(self):
@@ -88,6 +103,17 @@ class TestBuildCmd:
         # Sandbox flag is not valid on resume.
         assert "--sandbox" not in cmd
 
+    def test_codex_fresh_argv_order_pinned(self):
+        # approval_mode=never is hoisted below the resume/fresh branch, but
+        # the emitted order for a fresh exec must stay exactly what
+        # consumers' own tests assert (peer-plan-review test_command_builders).
+        cmd = build_codex_cmd(_args())
+        assert cmd[:6] == ["codex", "exec", "--sandbox", "read-only", "-c", "approval_mode=never"]
+
+    def test_codex_resume_argv_order_pinned(self):
+        cmd = build_codex_cmd(_args(resume=True), session_id="codex-session")
+        assert cmd[:6] == ["codex", "exec", "resume", "codex-session", "-c", "approval_mode=never"]
+
     def test_gemini_basic(self):
         cmd = build_gemini_cmd(_args())
         assert cmd[0] == "gemini"
@@ -100,6 +126,24 @@ class TestBuildCmd:
         assert cmd[0] == "claude"
         assert "--permission-mode" in cmd
         assert "plan" in cmd
+
+    def test_claude_prompt_text_sniffs_verification_without_file_read(self):
+        # prompt_text lets a caller sniff the verification-mode header without
+        # a real prompt_file on disk (and without re-reading a file it already
+        # has in memory).
+        cmd = build_claude_cmd(
+            _args(prompt_file="/nonexistent/path/does-not-exist.md"),
+            prompt_text="## Verification Request\nblah",
+        )
+        idx = cmd.index("--append-system-prompt")
+        assert "independent verifier" in cmd[idx + 1]
+
+    def test_claude_prompt_text_none_falls_back_to_file_read(self, tmp_path):
+        p = tmp_path / "prompt.md"
+        p.write_text("## Verification Contract\nblah", encoding="utf-8")
+        cmd = build_claude_cmd(_args(prompt_file=str(p)))
+        idx = cmd.index("--append-system-prompt")
+        assert "independent verifier" in cmd[idx + 1]
 
     def test_claude_effort_xhigh_maps_to_max(self):
         cmd = build_claude_cmd(_args(effort="xhigh"))
