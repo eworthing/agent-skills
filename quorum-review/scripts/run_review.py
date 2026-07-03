@@ -18,7 +18,6 @@ CLI surface.
 """
 
 import argparse
-import json
 import os
 import shutil
 import signal
@@ -43,8 +42,14 @@ from _common.metadata.extractors import (  # noqa: F401 — re-exported for test
     extract_metadata,
 )
 from _common.process.tree import _kill_tree, _popen_session_kwargs
-from _common.providers import AGY_READONLY_PREAMBLE, PROVIDERS, get_provider, read_prompt
+from _common.providers import (
+    PROVIDERS,
+    build_stdin,
+    get_provider,
+    setup_gemini_config,
+)
 from _common.providers.registry import (  # noqa: F401 — re-exported for tests
+    AGY_READONLY_PREAMBLE,
     build_agy_cmd,
     build_claude_cmd,
     build_codex_cmd,
@@ -253,50 +258,24 @@ def run_review(args):
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
 
-    # Gemini effort via temp settings overlay
-    # Clone the real config dir so auth, extensions, and other state survive,
-    # then overlay the effort-specific settings.json.
+    # Gemini effort via temp settings overlay. Only built when an effort is
+    # requested (unlike peer-plan-review's always-isolate behavior); clones
+    # the whole real config dir (auth, extensions, other state) via deep
+    # copy, then overlays the effort-specific settings.json.
     gemini_config_dir = None
-    if reviewer == "gemini" and args.effort:
-        budget = PROVIDERS["gemini"]["effort_map"].get(args.effort)
-        if budget:
-            gemini_config_dir = tempfile.mkdtemp(prefix="qr-gemini-")
-            source_dir = os.environ.get(
-                "GEMINI_CONFIG_DIR",
-                str(Path("~/.gemini").expanduser()),
-            )
-            # Copy existing config if present (auth, extensions, etc.)
-            if Path(source_dir).is_dir():
-                shutil.copytree(source_dir, gemini_config_dir, dirs_exist_ok=True)
-            # Overlay effort settings (merges into existing settings.json)
-            settings_path = Path(gemini_config_dir) / "settings.json"
-            try:
-                existing = {}
-                if settings_path.exists():
-                    with settings_path.open(encoding="utf-8") as f:
-                        try:
-                            existing = json.load(f)
-                        except json.JSONDecodeError:
-                            existing = {}
-                existing["thinkingConfig"] = {"thinkingBudget": budget}
-                with settings_path.open("w", encoding="utf-8") as f:
-                    json.dump(existing, f)
-                env["GEMINI_CONFIG_DIR"] = gemini_config_dir
-            except OSError as e:
-                print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
+    if reviewer == "gemini":
+        gemini_config_dir = setup_gemini_config(
+            args, env, prefix="qr-gemini-", require_effort=True, deep_copy=True
+        )
 
     # Prepare prompt for stdin-mode providers. The PROVIDERS caps dict
     # declares each provider's prompt delivery mode; all four accepted
     # reviewers use stdin (build_*_cmd emits a placeholder -p "" or "-"
-    # marker and expects the prompt body on stdin).
-    stdin_data = None
-    if spec["caps"].get("prompt_mode") == "stdin":
-        stdin_data = read_prompt(args.prompt_file)
-        # agy has no system-prompt flag and auto-approves tools; prepend a
-        # best-effort read-only directive (agy is EXPERIMENTAL — not guaranteed
-        # read-only). See references/antigravity.md.
-        if reviewer == "agy" and stdin_data:
-            stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
+    # marker and expects the prompt body on stdin). agy has no
+    # system-prompt flag and auto-approves tools; build_stdin prepends a
+    # best-effort read-only directive (agy is EXPERIMENTAL — not guaranteed
+    # read-only). See references/antigravity.md.
+    stdin_data = build_stdin(reviewer, args.prompt_file)
 
     # Snapshot Codex session files before exec for race-safe ID extraction
     codex_sessions_before = None

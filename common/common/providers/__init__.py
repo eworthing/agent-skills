@@ -9,8 +9,10 @@ from .registry import (
     build_copilot_cmd,
     build_gemini_cmd,
     build_opencode_cmd,
+    build_stdin,
     get_provider,
     read_prompt,
+    setup_gemini_config,
 )
 
 __all__ = [
@@ -22,6 +24,8 @@ __all__ = [
     "build_copilot_cmd",
     "build_gemini_cmd",
     "build_opencode_cmd",
+    "build_stdin",
     "get_provider",
     "read_prompt",
+    "setup_gemini_config",
 ]

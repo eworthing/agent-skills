@@ -100,6 +100,35 @@ def write_summary(summary_file, output_file, session_data):
         print(f"Warning: could not write summary: {e}", file=sys.stderr)
 
 
+def path_has_content(path):
+    """True iff ``path`` exists and is non-empty. Race-safe: a vanished or
+    permission-denied path reports False instead of raising."""
+    try:
+        return path.stat().st_size > 0
+    except OSError:
+        return False
+
+
+def write_failure_summary(summary_file, session, reason):
+    """Best-effort minimal summary for a round that failed before normal
+    post-execution could compute session_data and call write_summary().
+    Keeps a subset of write_summary()'s keys so callers can't confuse a
+    stale or absent summary file with a completed round.
+    """
+    if not summary_file:
+        return
+    round_num = session.get("round", 0) + 1 if isinstance(session, dict) else None
+    summary = {"round": round_num, "verdict": None, "error": reason}
+    try:
+        target = Path(summary_file)
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+        os.replace(tmp, target)
+    except OSError as e:
+        print(f"Warning: could not write failure summary: {e}", file=sys.stderr)
+
+
 def extract_text_from_output(output_file, reviewer, content=None):
     """Extract review text from structured output and rewrite as plain text.
 

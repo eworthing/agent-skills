@@ -16,6 +16,11 @@ TO ADD A NEW PROVIDER:
        common/metadata/extractors.py.
 """
 
+import json
+import os
+import shutil
+import sys
+import tempfile
 from pathlib import Path
 
 
@@ -78,6 +83,75 @@ def build_gemini_cmd(args, session_id=None):
     cmd.extend(["-p", ""])
 
     return cmd
+
+
+def setup_gemini_config(args, env, *, prefix="gemini-", require_effort=False, deep_copy=False):
+    """Build an isolated Gemini config overlay and point env at it.
+
+    Gemini runs through a temp config overlay: the review runner needs auth
+    and durable settings, but not mutable local approval policy, sessions,
+    caches, or extensions from the user's real Gemini home. Mutates
+    env["GEMINI_CONFIG_DIR"] on success. Returns the overlay dir (for
+    teardown by the caller) or None.
+
+    Two intentional divergences between the callers that use this (kept as
+    parameters rather than hand-copied so the shared behavior can't drift):
+
+    ``require_effort`` — if True, only build the overlay when ``args.effort``
+    maps to a known thinking-budget value; skip isolation entirely otherwise
+    (returns None). If False (default), always build the overlay regardless
+    of effort.
+
+    ``deep_copy`` — if True, clone the whole source config directory via
+    ``shutil.copytree`` (includes subdirectories such as extensions). If
+    False (default), copy only top-level files, which excludes subdirectories
+    like auto-saved approval policies.
+    """
+    budget = PROVIDERS["gemini"]["effort_map"].get(args.effort) if args.effort else None
+    if require_effort and not budget:
+        return None
+    gemini_config_dir = tempfile.mkdtemp(prefix=prefix)
+    source_dir = os.environ.get(
+        "GEMINI_CONFIG_DIR",
+        str(Path("~/.gemini").expanduser()),
+    )
+    source_path = Path(source_dir)
+    if source_path.is_dir():
+        if deep_copy:
+            try:
+                shutil.copytree(source_dir, gemini_config_dir, dirs_exist_ok=True)
+            except OSError as e:
+                print(f"Warning: could not copy Gemini config dir: {e}", file=sys.stderr)
+        else:
+            for child in source_path.iterdir():
+                if not child.is_file():
+                    continue
+                try:
+                    shutil.copy2(child, Path(gemini_config_dir) / child.name)
+                except OSError as e:
+                    print(
+                        f"Warning: could not copy Gemini config file {child.name}: {e}",
+                        file=sys.stderr,
+                    )
+    settings_path = Path(gemini_config_dir) / "settings.json"
+    try:
+        existing = {}
+        if settings_path.exists():
+            with settings_path.open(encoding="utf-8") as f:
+                try:
+                    existing = json.load(f)
+                except json.JSONDecodeError:
+                    existing = {}
+        if budget:
+            existing["thinkingConfig"] = {"thinkingBudget": budget}
+        with settings_path.open("w", encoding="utf-8") as f:
+            json.dump(existing, f)
+        env["GEMINI_CONFIG_DIR"] = gemini_config_dir
+    except OSError as e:
+        print(f"Warning: could not write Gemini settings: {e}", file=sys.stderr)
+        shutil.rmtree(gemini_config_dir, ignore_errors=True)
+        gemini_config_dir = None
+    return gemini_config_dir
 
 
 def build_claude_cmd(args, session_id=None, prompt_text=None):
@@ -283,6 +357,22 @@ def read_prompt(prompt_file):
             return f.read()
     except OSError:
         return None
+
+
+def build_stdin(reviewer, prompt_file):
+    """Return the prompt text to pipe via stdin, or None for argv-prompt providers.
+
+    Providers configured for stdin prompting get the prompt file's contents.
+    agy has no system-prompt flag and auto-approves tools in print mode, so it
+    gets a best-effort read-only directive prepended. agy is EXPERIMENTAL — not a
+    guaranteed-read-only reviewer (see references/antigravity.md).
+    """
+    if PROVIDERS[reviewer]["caps"].get("prompt_mode") != "stdin":
+        return None
+    stdin_data = read_prompt(prompt_file)
+    if reviewer == "agy" and stdin_data:
+        stdin_data = f"{AGY_READONLY_PREAMBLE}\n\n{stdin_data}"
+    return stdin_data
 
 
 # ---------------------------------------------------------------------------

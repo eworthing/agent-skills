@@ -11,9 +11,11 @@ from common.session import (
     extract_text_from_output,
     load_session,
     parse_structured_review,
+    path_has_content,
     probe_writable,
     save_session,
     validate_prompt_file,
+    write_failure_summary,
     write_summary,
 )
 
@@ -332,3 +334,46 @@ class TestWriteSummary:
         assert data["finding_count"] == 2
         assert data["blocking_count"] == 1
         assert data["reviewer"] == "claude"
+
+
+class TestPathHasContent:
+    def test_true_for_nonempty_file(self, tmp_path):
+        p = tmp_path / "f.txt"
+        p.write_text("data", encoding="utf-8")
+        assert path_has_content(p) is True
+
+    def test_false_for_empty_file(self, tmp_path):
+        p = tmp_path / "f.txt"
+        p.write_text("", encoding="utf-8")
+        assert path_has_content(p) is False
+
+    def test_false_for_missing_path(self, tmp_path):
+        assert path_has_content(tmp_path / "nope.txt") is False
+
+
+class TestWriteFailureSummary:
+    def test_writes_minimal_shape(self, tmp_path):
+        sf = tmp_path / "summary.json"
+        write_failure_summary(str(sf), {"round": 1}, "timeout: 600s")
+        data = json.loads(sf.read_text(encoding="utf-8"))
+        # Subset of write_summary()'s keys — round/verdict/error only — so a
+        # caller can't confuse a failure summary with a completed round.
+        assert data == {"round": 2, "verdict": None, "error": "timeout: 600s"}
+
+    def test_no_summary_file_is_noop(self):
+        write_failure_summary(None, {"round": 1}, "reason")  # must not raise
+
+    def test_non_dict_session_round_is_none(self, tmp_path):
+        sf = tmp_path / "summary.json"
+        write_failure_summary(str(sf), None, "reason")
+        data = json.loads(sf.read_text(encoding="utf-8"))
+        assert data["round"] is None
+
+    def test_replaces_stale_content(self, tmp_path):
+        sf = tmp_path / "summary.json"
+        sf.write_text('{"verdict": "APPROVED", "round": 1}', encoding="utf-8")
+        write_failure_summary(str(sf), {"round": 5}, "os_error: boom")
+        data = json.loads(sf.read_text(encoding="utf-8"))
+        assert data["verdict"] is None
+        assert data["round"] == 6
+        assert data["error"] == "os_error: boom"

@@ -1,10 +1,13 @@
 """Tests for common.providers.registry."""
 
+import json
+import shutil
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from common.providers import PROVIDERS, get_provider, read_prompt
+from common.providers import AGY_READONLY_PREAMBLE, PROVIDERS, get_provider, read_prompt
 from common.providers.registry import (
     build_agy_cmd,
     build_claude_cmd,
@@ -12,6 +15,8 @@ from common.providers.registry import (
     build_copilot_cmd,
     build_gemini_cmd,
     build_opencode_cmd,
+    build_stdin,
+    setup_gemini_config,
 )
 
 
@@ -227,3 +232,144 @@ class TestReadPrompt:
         p = tmp_path / "prompt.md"
         p.write_text("hello world", encoding="utf-8")
         assert read_prompt(str(p)) == "hello world"
+
+
+class TestBuildStdin:
+    """build_stdin: shared prompt-delivery helper for stdin-mode providers."""
+
+    def test_stdin_provider_returns_file_contents(self, tmp_path):
+        p = tmp_path / "prompt.md"
+        p.write_text("Review this plan.", encoding="utf-8")
+        assert build_stdin("claude", str(p)) == "Review this plan."
+
+    def test_missing_prompt_file_returns_none(self, tmp_path):
+        assert build_stdin("claude", str(tmp_path / "nope.md")) is None
+
+    def test_argv_mode_provider_returns_none(self, monkeypatch, tmp_path):
+        # No shipped provider currently uses argv prompt delivery — inject a
+        # temporary one to exercise the branch without depending on that
+        # staying true.
+        monkeypatch.setitem(PROVIDERS, "fake-argv", {"caps": {"prompt_mode": "argv"}})
+        p = tmp_path / "prompt.md"
+        p.write_text("ignored", encoding="utf-8")
+        assert build_stdin("fake-argv", str(p)) is None
+
+    def test_agy_prepends_readonly_preamble(self, tmp_path):
+        p = tmp_path / "prompt.md"
+        p.write_text("Review this plan.", encoding="utf-8")
+        result = build_stdin("agy", str(p))
+        assert result.startswith(AGY_READONLY_PREAMBLE)
+        assert result.endswith("Review this plan.")
+
+    def test_agy_empty_prompt_gets_no_preamble(self, tmp_path):
+        p = tmp_path / "empty.md"
+        p.write_text("", encoding="utf-8")
+        # read_prompt("") is falsy, so the preamble-prepend branch is skipped.
+        assert build_stdin("agy", str(p)) == ""
+
+
+class TestSetupGeminiConfig:
+    """setup_gemini_config: shared isolated-overlay builder for the Gemini CLI.
+
+    Parameterized for the peer-plan-review vs quorum-review divergence:
+    always-isolate + shallow file copy (peer) vs effort-gated + deep
+    directory copy (quorum).
+    """
+
+    @staticmethod
+    def _cleanup(overlay):
+        if overlay:
+            shutil.rmtree(overlay, ignore_errors=True)
+
+    def test_require_effort_false_always_builds_overlay(self, tmp_path, monkeypatch):
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "settings.json").write_text("{}", encoding="utf-8")
+        monkeypatch.setenv("GEMINI_CONFIG_DIR", str(source))
+        env = {}
+        args = SimpleNamespace(effort=None)
+        overlay = setup_gemini_config(args, env, prefix="test-gemini-", require_effort=False)
+        try:
+            assert overlay is not None
+            assert env["GEMINI_CONFIG_DIR"] == overlay
+        finally:
+            self._cleanup(overlay)
+
+    def test_require_effort_true_skips_without_budget(self, tmp_path, monkeypatch):
+        source = tmp_path / "source"
+        source.mkdir()
+        monkeypatch.setenv("GEMINI_CONFIG_DIR", str(source))
+        env = {}
+        args = SimpleNamespace(effort=None)
+        overlay = setup_gemini_config(args, env, require_effort=True)
+        assert overlay is None
+        assert "GEMINI_CONFIG_DIR" not in env
+
+    def test_require_effort_true_builds_with_budget(self, tmp_path, monkeypatch):
+        source = tmp_path / "source"
+        source.mkdir()
+        monkeypatch.setenv("GEMINI_CONFIG_DIR", str(source))
+        env = {}
+        args = SimpleNamespace(effort="high")
+        overlay = setup_gemini_config(args, env, require_effort=True)
+        try:
+            assert overlay is not None
+            settings = json.loads((Path(overlay) / "settings.json").read_text(encoding="utf-8"))
+            assert settings["thinkingConfig"]["thinkingBudget"] == PROVIDERS["gemini"]["effort_map"]["high"]
+        finally:
+            self._cleanup(overlay)
+
+    def test_shallow_copy_excludes_subdirectories(self, tmp_path, monkeypatch):
+        source = tmp_path / "source"
+        (source / "policies").mkdir(parents=True)
+        (source / "settings.json").write_text('{"theme":"dark"}', encoding="utf-8")
+        (source / "policies" / "auto-saved.toml").write_text("stale", encoding="utf-8")
+        monkeypatch.setenv("GEMINI_CONFIG_DIR", str(source))
+        env = {}
+        args = SimpleNamespace(effort=None)
+        overlay = setup_gemini_config(args, env, deep_copy=False)
+        try:
+            assert not (Path(overlay) / "policies").exists()
+            settings = json.loads((Path(overlay) / "settings.json").read_text(encoding="utf-8"))
+            assert settings["theme"] == "dark"
+        finally:
+            self._cleanup(overlay)
+
+    def test_deep_copy_includes_subdirectories(self, tmp_path, monkeypatch):
+        source = tmp_path / "source"
+        (source / "extensions").mkdir(parents=True)
+        (source / "settings.json").write_text("{}", encoding="utf-8")
+        (source / "extensions" / "ext.json").write_text("{}", encoding="utf-8")
+        monkeypatch.setenv("GEMINI_CONFIG_DIR", str(source))
+        env = {}
+        args = SimpleNamespace(effort=None)
+        overlay = setup_gemini_config(args, env, deep_copy=True)
+        try:
+            assert (Path(overlay) / "extensions" / "ext.json").exists()
+        finally:
+            self._cleanup(overlay)
+
+    def test_preserves_existing_settings_keys(self, tmp_path, monkeypatch):
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "settings.json").write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+        monkeypatch.setenv("GEMINI_CONFIG_DIR", str(source))
+        env = {}
+        args = SimpleNamespace(effort="low")
+        overlay = setup_gemini_config(args, env)
+        try:
+            settings = json.loads((Path(overlay) / "settings.json").read_text(encoding="utf-8"))
+            assert settings["theme"] == "dark"
+            assert settings["thinkingConfig"]["thinkingBudget"] == PROVIDERS["gemini"]["effort_map"]["low"]
+        finally:
+            self._cleanup(overlay)
+
+    def test_prefix_used_for_tempdir_name(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("GEMINI_CONFIG_DIR", raising=False)
+        env = {}
+        args = SimpleNamespace(effort=None)
+        overlay = setup_gemini_config(args, env, prefix="my-prefix-")
+        try:
+            assert Path(overlay).name.startswith("my-prefix-")
+        finally:
+            self._cleanup(overlay)

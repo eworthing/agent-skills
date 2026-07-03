@@ -15,9 +15,11 @@ from .io import (
     extract_text_from_output,
     load_session,
     parse_structured_review,
+    path_has_content,
     probe_writable,
     save_session,
     validate_prompt_file,
+    write_failure_summary,
     write_summary,
 )
 from .paths import build_paths, render_shell
@@ -32,6 +34,7 @@ __all__ = [
     "extract_text_from_output",
     "load_session",
     "parse_structured_review",
+    "path_has_content",
     "probe_writable",
     "record_codex_home",
     "render_shell",
@@ -40,5 +43,6 @@ __all__ = [
     "setup_codex_home",
     "teardown_codex_home",
     "validate_prompt_file",
+    "write_failure_summary",
     "write_summary",
 ]
