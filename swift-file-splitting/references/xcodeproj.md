@@ -2,7 +2,32 @@
 
 SPM-only projects (`Package.swift`, no `.xcodeproj`) auto-discover sources under declared target paths — **skip this entire reference**.
 
-For `.xcodeproj` projects, new `.swift` files need entries in `project.pbxproj`. Three workable paths, in order of preference:
+For `.xcodeproj` projects, whether a new `.swift` file needs a `project.pbxproj` entry depends on **where the file lands**, not on the project as a whole. Check Path 0 first; only if it doesn't apply do you need the legacy group-based paths.
+
+## Path 0 — Buildable folders (Xcode 16+)
+
+Since Xcode 16, a group can be a **file-system synchronized group** (`PBXFileSystemSynchronizedRootGroup`) — a "buildable folder" that stores only the folder path. Xcode auto-adds every on-disk file **under that folder** to the owning target, so a new file there needs **zero** registration. This is a **two-step** check, because a project can *mix* buildable folders and legacy yellow groups — "the project has synchronized groups" does **not** by itself mean *your* new file is auto-included.
+
+**Step A — does the project use synchronized groups at all?**
+
+```bash
+grep -q PBXFileSystemSynchronizedRootGroup MyApp.xcodeproj/project.pbxproj \
+  && echo "project uses buildable folders (may be mixed with legacy groups)"
+```
+
+**Step B — is the new file under a synchronized folder?** The auto-include applies only when the file's directory is (under) a folder Xcode synchronizes. Confirm by the **visual cue** — in the Project Navigator that folder shows as a plain **blue folder**, not a yellow group. (Matching the file's parent dir against the synchronized root paths inside `project.pbxproj` is fiddly and error-prone; the reliable check is the blue-folder cue plus a build.)
+
+**Headless fallback (no Xcode UI):** when you can't see the navigator and can't confirm the synchronized root path from the pbxproj, treat the result as **inconclusive** — do a normal build to confirm the new file compiles into the target before assuming the skip. If it's missing from the build, fall through to the legacy paths below.
+
+**Rule (conditional):**
+- New file **inside** a synchronized folder's path → auto-included, **skip all registration** (no gem, no pbxproj edit, no drag-in).
+- Project is mixed and the file is under a **yellow group** → it still needs registration; use the legacy paths below.
+
+**Exception note:** individual files can be *excluded* from a synchronized folder via `PBXFileSystemSynchronizedBuildFileExceptionSet` (e.g. `README`, `Fastfile`). A new `.swift` sibling of already-built sources is included by default.
+
+## Legacy group-based registration
+
+If the project uses yellow groups, or the new file is **not** under a synchronized folder, register it via one of the three paths below (in order of preference).
 
 ## 1. XcodeGen (preferred when available)
 
@@ -64,7 +89,7 @@ A single typo or missing reference corrupts the project, often with cryptic erro
 
 ## Verifying the File Is in the Build
 
-After adding, confirm:
+A file confirmed under a **buildable folder** (Path 0) needs no verification beyond a normal build — if it compiles, it's in the target. For the legacy paths, after adding, confirm:
 
 ```bash
 xcodebuild -showBuildSettings -scheme YourScheme | grep -q "OK" \

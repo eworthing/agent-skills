@@ -110,9 +110,18 @@ Naming convention: `OriginalFile+Feature.swift`. Compound splits chain: `SomeVie
 
 ### Step 6: Register With Xcode (if applicable)
 
-SPM projects (`Package.swift` only): auto-discovered, skip this step.
+Whether registration is needed depends on **where the new file lands**, not the project as a whole (a project can mix buildable folders and legacy groups). In order of likelihood:
 
-`.xcodeproj` projects: see [xcodeproj.md](references/xcodeproj.md) for the three supported paths (XcodeGen, `xcodeproj` Ruby gem, or Xcode UI drag-in).
+1. **SPM** (`Package.swift` only) → auto-discovered, skip.
+2. **New file sits under a buildable folder** (Xcode 16+ synchronized group) → auto-included, skip. Check the project has synchronized groups, then confirm *this file's* location:
+
+   ```bash
+   grep -q PBXFileSystemSynchronizedRootGroup MyApp.xcodeproj/project.pbxproj \
+     && echo "buildable folders present — confirm the new file is under a blue (synchronized) folder"
+   ```
+
+   The reliable confirmation is the **blue folder** cue in the Project Navigator (not a yellow group) plus a successful build.
+3. **Legacy yellow groups, or the file is not under a synchronized folder** → see [xcodeproj.md](references/xcodeproj.md) (XcodeGen / `xcodeproj` Ruby gem / Xcode UI drag-in).
 
 ### Step 7: Build & Verify
 
@@ -131,7 +140,7 @@ If the build fails, see [troubleshooting.md](references/troubleshooting.md) for 
 2. **Splitting too granularly** — don't create files under 100 lines.
 3. **Missing import statements** — the new file needs its own `import SwiftUI`, etc.
 4. **Breaking MARK sections** — keep related code together; split *at* boundaries, not through them.
-5. **Forgetting Xcode project updates** — `.xcodeproj` projects need `project.pbxproj` entries. See [xcodeproj.md](references/xcodeproj.md). SPM projects need nothing.
+5. **Forgetting Xcode project updates** — legacy group-based `.xcodeproj` projects need `project.pbxproj` entries. See [xcodeproj.md](references/xcodeproj.md). **SPM projects and files *confirmed under* a buildable (blue) folder need nothing** — check the file's location before reaching for the gem.
 6. **Suppressing `file_length` instead of splitting** — only suppress when the file is genuinely an unsplittable declarative blob. See [troubleshooting.md → escape hatch](references/troubleshooting.md#escape-hatch-when-you-should-not-split).
 
 ## References
