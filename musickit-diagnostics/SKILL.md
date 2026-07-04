@@ -70,9 +70,12 @@ Find the symptom; jump to the relevant section or reference file.
 | `CreateRecordingTap: nullptr == Tap()` crash | [references/speech-coexistence.md](references/speech-coexistence.md) |
 | `applicationQueuePlayer _establishConnectionIfNeeded timeout` | [references/speech-coexistence.md](references/speech-coexistence.md) |
 | Song list auto-scrolls / cycles by itself | [iOS anti-patterns](#ios-anti-patterns) → §5 |
+| Playback fails though the user is signed in to Apple Music | [iOS anti-patterns](#ios-anti-patterns) → §6 (subscription / `canPlayCatalogContent`) |
 | `MPMusicPlayerControllerErrorDomain` error 1 after a successful save | [references/error-codes.md](references/error-codes.md) → that section |
 | Bundle ID in install log not in Apple Developer Identifiers | [references/bundle-id-setup.md](references/bundle-id-setup.md) |
 | Catalog search works on device but not Simulator | [Simulator vs device](#simulator-vs-device) |
+| Music Picker sheet dismisses with nothing selected, or crashes on cancel | [references/ios27-additions.md](references/ios27-additions.md) → Music Picker |
+| Catalog resource request returns fewer items than requested, no error thrown | [references/ios27-additions.md](references/ios27-additions.md) → findEquivalents |
 
 ## Diagnostic-first protocol
 
@@ -117,9 +120,14 @@ Full per-field rationale and per-code deep dives live in
 | `ICErrorDomain` | **-7013** | Account-store entitlement | Run on device + bundle ID must have MusicKit capability in Apple Developer. | [error-codes.md](references/error-codes.md#icerrordomain--7013--account-store-entitlement) + [bundle-id-setup.md](references/bundle-id-setup.md) |
 | `MPMusicPlayerControllerErrorDomain` | **1** | Post-save playback hiccup | Don't show a blocking dialog if the save itself succeeded; degrade to a non-blocking hint. | [error-codes.md](references/error-codes.md#mpmusicplayercontrollererrordomain-1--post-save-playback-hiccup) |
 
+The `ICErrorDomain` codes are **undocumented heuristics** observed from device
+logs, not a public Apple enum — see [error-codes.md](references/error-codes.md)
+intro. Anchor durable logic on `MusicAuthorization.Status`,
+`MusicSubscription.canPlayCatalogContent`, and `MusicDataRequest.Error`.
+
 ## iOS anti-patterns
 
-Five named anti-patterns that recur in MusicKit code. Each has a WRONG
+Six named anti-patterns that recur in MusicKit code. Each has a WRONG
 example and the CORRECT fix.
 
 ### 1. Developer token on iOS
@@ -195,9 +203,13 @@ gives the user something actionable.
 
 ### 4. `Album` (or constructed items) passed to library-playlist add
 
-`MusicLibrary.shared.add(_:to:)` requires items with a valid catalog or
-library identifier. `Album` instances and items constructed from display
-strings have empty identifier sets; the add silently fails and logs
+`MusicLibrary.shared.add(_:to:)` requires items with a **populated
+identifier set**. `Song`, `Track`, and `Album` all conform to
+`MusicPlaylistAddable` (verified against the iOS 27 SDK) — so this is a
+*runtime* failure, not a compile-time conformance gap. Items not fetched
+from a catalog request — built from display strings, or an `Album` never
+fetched from the catalog — carry an empty identifier set; the add silently
+fails and logs
 
 ```
 No catalogID, libraryID, or deviceLocalID was found …
@@ -205,7 +217,8 @@ MPIdentifierSet EMPTY … type … Album
 ```
 
 ```swift
-// WRONG: Album type, or items built from title/artist strings
+// WRONG: an item with an empty identifier set — compiles fine (Album
+// conforms), but fails at runtime if not catalog-fetched.
 try await MusicLibrary.shared.add(album, to: playlist)
 
 // CORRECT: Song from catalog search
@@ -240,6 +253,40 @@ List(songs) { song in SongRow(song: song) }
 
 Show the current track in the player UI. Do not move the list. If the
 user wants to find the current song, they will scroll.
+
+### 6. Playback attempted without checking `canPlayCatalogContent`
+
+Browsing and searching the catalog work **without** an Apple Music
+subscription; **playback does not**. There is no distinct typed error for
+"no subscription" — `ApplicationMusicPlayer.play()` just fails (often
+surfacing one of the undocumented `ICErrorDomain` codes). The fix is to
+**pre-check**, not to catch:
+
+```swift
+// WRONG: play, then try to interpret an opaque failure
+try await ApplicationMusicPlayer.shared.play()
+
+// CORRECT: gate on the documented capability first
+let sub = try await MusicSubscription.current
+guard sub.canPlayCatalogContent else {
+    statusMessage = "An Apple Music subscription is required to play songs."
+    // Optionally present MusicSubscriptionOffer here.
+    return
+}
+try await ApplicationMusicPlayer.shared.play()
+```
+
+**Voice Plan gotcha:** Apple Music **Voice Plan** subscribers have
+`canPlayCatalogContent == false` even though they *are* subscribed —
+in-app `ApplicationMusicPlayer` catalog playback is not available to them.
+So `canPlayCatalogContent == false` means "cannot play catalog content
+in-app," not "no subscription."
+
+Distinguish the three that look alike:
+
+- **`-7013` (entitlement)** — app-side: bundle ID lacks MusicKit capability. See [references/bundle-id-setup.md](references/bundle-id-setup.md).
+- **No subscription / Voice Plan** — account-side: `canPlayCatalogContent == false`. Gate as above.
+- **Privacy not acknowledged (`-8102`/`-7007`)** — open the Music app once. See [references/error-codes.md](references/error-codes.md).
 
 ## Simulator vs device
 
@@ -284,7 +331,7 @@ These questions belong to the general `musickit` skill, not here:
 - "How do I set up Now Playing / Lock Screen / Remote Commands?" → general `musickit` skill.
 - "How do I check the user's subscription?" → general `musickit` skill, Subscription Checks.
 - "How do I build a queue from an album?" → general `musickit` skill, Queue Management.
-- "I want to add basic SwiftUI integration around an `ApplicationMusicPlayer`" → general `musickit` skill → references/musickit-patterns.md.
+- "I want to add basic SwiftUI integration around an `ApplicationMusicPlayer`" → general `musickit` skill, its `musickit-patterns` reference (that skill's own file, not this one's).
 
 This skill takes over when those happy-path patterns are in place and a
 specific failure mode surfaces.
@@ -307,6 +354,10 @@ Apple documentation:
 - [Playlist.Entry](https://developer.apple.com/documentation/musickit/playlist/entry)
 - [Create a New Library Playlist](https://developer.apple.com/documentation/applemusicapi/create-a-new-library-playlist)
 - [Add Tracks to a Library Playlist](https://developer.apple.com/documentation/applemusicapi/add-tracks-to-a-library-playlist)
+- [musicPicker(isPresented:title:selection:)](https://developer.apple.com/documentation/swiftui/view/musicpicker(ispresented:title:selection:)) — iOS 27 Music Picker
+- [PickableMusicItem](https://developer.apple.com/documentation/MusicKit/PickableMusicItem)
+- [MusicCatalogResourceRequestOption.findEquivalents](https://developer.apple.com/documentation/MusicKit/MusicCatalogResourceRequestOption/findEquivalents) — 26.4+
+- [WWDC 2026 session 254 — Integrate MusicKit into your app](https://developer.apple.com/videos/play/wwdc2026/254/)
 
 Internal references (this skill):
 
@@ -314,3 +365,9 @@ Internal references (this skill):
 - [references/library-playlists.md](references/library-playlists.md) — `MusicLibrary.createPlaylist` + `add(_:to:)` patterns and failures
 - [references/speech-coexistence.md](references/speech-coexistence.md) — AVAudioEngine tap discipline; speech-then-playback flow
 - [references/bundle-id-setup.md](references/bundle-id-setup.md) — Apple Developer portal registration for MusicKit capability
+- [references/ios27-additions.md](references/ios27-additions.md) — iOS 27 Music Picker + `findEquivalents` (26.4) diagnostic traps
+
+MusicKit docs checked 2026-07: no iOS 27 / macOS 27 deprecation or behavior
+change found for the failure modes above. Core signatures
+(`MusicLibrary.createPlaylist`, `add(_:to:)`, `MusicAuthorization.request()`,
+`ApplicationMusicPlayer`) are current at iOS 15/16 baselines.

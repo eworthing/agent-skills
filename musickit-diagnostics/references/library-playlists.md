@@ -34,8 +34,10 @@ func saveSelectionToLibrary(name: String, songs: [Song]) async throws -> Playlis
         authorDisplayName: nil
     )
 
-    // 2. Add each song one by one. Items must conform to MusicPlaylistAddable
-    //    (Song and Track conform; Album does not — see below).
+    // 2. Add each song one by one. Song, Track, and Album all conform to
+    //    MusicPlaylistAddable — the failure below is a *runtime* empty
+    //    identifier set, not a compile-time conformance gap. Pass
+    //    catalog-fetched Songs (see below).
     for song in songs {
         try await MusicLibrary.shared.add(song, to: playlist)
     }
@@ -57,9 +59,12 @@ app's local cache refreshes asynchronously.
 
 ## The Song-only rule
 
-`MusicLibrary.shared.add(_:to:)` accepts any `MusicPlaylistAddable`. In
-practice, you should **only pass `Song` or `Track` instances that came
-back from `MusicCatalogSearchRequest`**:
+`MusicLibrary.shared.add(_:to:)` accepts any `MusicPlaylistAddable` —
+`Song`, `Track`, and `Album` all conform (verified against the iOS 27 SDK
+`MusicKit.swiftinterface`). Conformance is **not** the issue; a populated
+identifier set is. In practice, **only pass items that came back from
+`MusicCatalogSearchRequest`** — a catalog-fetched `Song` is the reliable
+choice:
 
 ```swift
 // CORRECT: Song from catalog search
@@ -69,19 +74,21 @@ for song in response.songs {
     try await MusicLibrary.shared.add(song, to: playlist)
 }
 
-// WRONG: Album type
-let album: Album = ...
-try await MusicLibrary.shared.add(album, to: playlist) // empty identifier set
-
-// WRONG: any item constructed from display strings (title/artist) instead
-// of fetched from the catalog. There is no valid catalog/library ID.
+// WRONG: an item with an empty identifier set — not a conformance error.
+// e.g. an Album (or any item) not fetched from a catalog request, or one
+// constructed from display strings (title/artist). There is no valid
+// catalog/library ID, so the add silently does nothing.
+let album: Album = ...   // compiles (Album conforms); fails at runtime if unpopulated
+try await MusicLibrary.shared.add(album, to: playlist)
 ```
 
 **Why.** A library playlist entry needs a valid catalog or library
 identifier. `Song` instances returned from `MusicCatalogSearchRequest`
-carry a populated `MPIdentifierSet`. `Album` instances and
-hand-constructed items do not — even when their `title` and `artistName`
-look fine to a human reader. The framework will log
+carry a populated `MPIdentifierSet`. Items **not** fetched from a catalog
+request — hand-constructed from `title`/`artistName` display strings, or an
+`Album` that was never fetched from the catalog — have an empty identifier
+set, even when their fields look fine to a human reader. The framework will
+log
 
 ```
 No catalogID, libraryID, or deviceLocalID was found from underlying

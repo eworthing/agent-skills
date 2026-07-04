@@ -1,8 +1,8 @@
 # musickit-diagnostics Evaluation
 
-**Date:** 2026-05-19
-**Evaluator:** agent (Claude Opus 4.7)
-**Skill version:** initial (extracted from `LEARNINGS_MUSICKIT.md` field notes)
+**Date:** 2026-07-04 (baseline 2026-05-19)
+**Evaluator:** agent (Claude Opus 4.8)
+**Skill version:** verify-facts pass — see Revision History (2026-07-04, 98/100)
 **Automated score:** 100% (13/13 structural checks pass)
 
 ---
@@ -117,7 +117,7 @@ Path: /Users/Shared/git/agent-skills/musickit-diagnostics
 | 8.3 | Composability | 4/4 | Cross-refs general `musickit` (basics), `swift-concurrency` (async/actor), `swiftui-expert-skill` (view-model gate), `apple-multiplatform` and `apple-tvos` (platform boundaries). "Skip this skill when" prevents misfire against general `musickit`. |
 | 8.4 | Idempotency | 4/4 | Documentation skill; re-reading is always safe. The diagnostic snippet is explicitly flagged as one-time debugging probe, not production telemetry. |
 | 8.5 | Escape Hatches | 4/4 | "Skip this skill when" section names six question patterns that belong to the general `musickit` skill. "Scope" section names macOS / tvOS as out-of-scope and routes to the right skills. |
-| | **TOTAL** | **97/100** | Solid, publishable. |
+| | **TOTAL** | **98/100** | Solid, publishable. 2026-07-04 pass corrected the `MusicPlaylistAddable` conformance claim, added subscription (§6) + iOS 27 coverage, and deduped. 6.2 (term validation) and 7.3 (no runtime unit tests) unchanged at 3/4. |
 
 ## Source-Fidelity Map
 
@@ -164,12 +164,22 @@ None. Skill passes structural checks (13/13) and exceeds the ≥90 manual thresh
 None at present. Re-evaluate after first real use by an agent debugging an actual MusicKit failure.
 
 ### P2 — Nice to Have
-1. Add `MusicSubscription`-related error variants if they prove to recur in the field (currently the general `musickit` skill covers `canPlayCatalogContent` and the subscription-offer sheet, which has been sufficient).
-2. If `term`-validation pitfalls (Unicode, length limits, empty strings) start producing field reports, add a short section on `MusicCatalogSearchRequest` input validation.
-3. Add an iOS-26+ section if new MusicKit APIs (e.g. `MusicLibrary` mutation APIs beyond `createPlaylist` / `add`) introduce new failure modes.
+1. ~~Add `MusicSubscription`-related error variants~~ — **DONE (2026-07-04)**:
+   anti-pattern §6 covers the `canPlayCatalogContent` pre-check plus the Voice
+   Plan (`canPlayCatalogContent == false` despite an active subscription)
+   gotcha, and distinguishes account-side "no subscription" from app-side
+   `-7013` entitlement.
+2. ~~`term`-validation section~~ — **DROPPED (2026-07-04)**: an apple-docs pass
+   found Apple documents **no** constraints on `MusicCatalogSearchRequest.term`
+   (length, empty, Unicode). Adding prose would be a no-op; re-open only if a
+   field report surfaces a real constraint.
+3. ~~iOS-26+ section~~ — **DONE (2026-07-04)**: iOS 26 had no MusicKit delta;
+   the iOS 27 / 26.4 additions that *are* failure-prone (Music Picker,
+   `findEquivalents`) live in `references/ios27-additions.md`.
 
 ## Revision History
 
 | Date       | Score   | Notes |
 |------------|---------|-------|
 | 2026-05-19 | 97/100  | Baseline — extracted from `LEARNINGS_MUSICKIT.md` field notes; complements user's general `musickit` skill. |
+| 2026-07-04 | 98/100  | Verify-facts pass (two apple-docs research rounds + iOS 27 SDK-header probe), peer-reviewed by codex gpt-5.4-mini (2 approval cycles). **Correctness:** removed the wrong "`Album` does not conform to `MusicPlaylistAddable`" claim — SDK confirms Album/Song/Track/MusicVideo/Playlist all conform; reframed §4 + library-playlists.md on the true *runtime* empty-identifier-set cause. Added undocumented-`ICErrorDomain`-codes honesty note steering to `MusicAuthorization.Status` / `canPlayCatalogContent` / `MusicDataRequest.Error`. **Coverage:** new anti-pattern §6 (subscription / Voice Plan gotcha); new `references/ios27-additions.md` (Music Picker `@MainActor` + empty-on-cancel + Song/Track/MusicVideo-only conformance; `findEquivalents` silent partial results). **Pruning:** deduped fallback snippet to a single source (SKILL.md §3). Term-validation P2 dropped as no-op. 13/13 structural retained; body 351 lines. |

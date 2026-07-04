@@ -6,6 +6,15 @@ lives on the underlying `NSError`: its `domain`, `code`, and any nested
 `NSUnderlyingErrorKey`. Read those before changing code — the fix branches
 sharply by code.
 
+> **These `ICErrorDomain` codes are heuristics, not a public API.** Apple
+> does not document `ICErrorDomain` or the specific `-7xxx` / `-8xxx` codes
+> as MusicKit errors; the only documented MusicKit error types are
+> `MusicDataRequest.Error` and `MusicTokenRequestError`. The mappings below
+> were observed from real device logs and may shift between OS releases.
+> Treat them as a fast triage table, but anchor durable logic on the
+> documented signals: `MusicAuthorization.Status`,
+> `MusicSubscription.canPlayCatalogContent`, and `MusicDataRequest.Error`.
+
 ## Contents
 
 - [Diagnostic injection (do this first)](#diagnostic-injection-do-this-first)
@@ -154,21 +163,9 @@ recognizer is holding the audio session — see `speech-coexistence.md`.
 
 MusicKit sometimes throws an error whose `localizedDescription` is empty
 or literally the string "unknown error". Showing that raw string to the
-user is useless. Use a fallback that points at the actual fix:
+user is useless — fall back to a message that points at the actual fix.
 
-```swift
-} catch {
-    let raw = error.localizedDescription
-    let isGeneric = raw.isEmpty || raw.lowercased().contains("unknown")
-    let fallback = "Could not access Apple Music. " +
-        "Check Settings → Music and sign in with an Apple Music subscription."
-    await MainActor.run {
-        errorMessage = isGeneric ? fallback : "Search failed: \(raw)"
-    }
-}
-```
-
-This pattern applies to search and playback paths alike. Apply it
-*alongside* the diagnostic injection above — the diagnostic captures the
-real domain/code so you can fix the root cause; the fallback gives the
-user something actionable while you debug.
+Use the fallback pattern in **SKILL.md → iOS anti-patterns §3** (single
+source of the snippet). Apply it *alongside* the diagnostic injection above:
+the diagnostic captures the real domain/code so you can fix the root cause;
+the fallback gives the user something actionable while you debug.
