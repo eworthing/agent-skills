@@ -1,5 +1,21 @@
 # Source Architecture
 
+## Contents
+
+- Core Principle
+- Skill Structure
+- Source Of Truth
+- Evidence Tiers
+- Normalized Confidence Scale
+- Ranked Source Table
+- Source Placement Rule
+- What Belongs In SKILL.md
+- What Belongs In References
+- What Belongs In Workflows
+- What Belongs In Data
+- Demoted Claims
+- Maintenance Rule
+
 Use this reference when maintaining the skill, evaluating evidence, or deciding where guidance belongs.
 
 ## Core Principle

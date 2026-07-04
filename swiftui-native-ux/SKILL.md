@@ -41,7 +41,6 @@ This skill is a capability layer, not a design textbook. Keep the always-on core
 - Default Workflow
 - Output Contract
 - Tone Of Review (prefer/reject example pairs across navigation, sheets, glass, iPad, accessibility)
-- Evidence Discipline
 
 ## Quick Decision Tree
 
@@ -78,24 +77,9 @@ Do not use macOS 27 as the current baseline. Mention it only as future-looking r
 
 ## When To Use
 
-Use this skill when the task involves:
+Triggers live in this skill's `description` (the single source) — do not restate them here.
 
-- creating or rewriting SwiftUI screens
-- reviewing SwiftUI UI code
-- adapting iPhone UI to iPad
-- choosing navigation structure
-- improving visual hierarchy
-- making UI more Apple-native
-- reducing generic AI-generated UI
-- removing web, Tailwind, React, Material, or dashboard residue
-- using Liquid Glass
-- auditing accessibility, Dynamic Type, motion, transparency, localization, or VoiceOver order
-- generating previews or state variants for UI
-- using Google Stitch / Stitch MCP for visual variants
-- writing or revising DESIGN.md / DESIGN-swiftui.md tokens
-- translating Stitch design-to-code output into native SwiftUI
-
-Do not use this skill for backend architecture, data modeling alone, networking alone, or non-UI code unless the UI contract is affected.
+Scope boundary: do not use this skill for backend architecture, data modeling alone, networking alone, or non-UI code — **unless the UI contract is affected**.
 
 ## Sibling Skills — Defer When
 
@@ -139,8 +123,8 @@ When running the Stitch workflow (`workflows/stitch-design-handoff.md`), this sk
 - Prefer Observation for new SwiftUI UI state, but allow legacy `ObservableObject` when justified.
 - Prefer SwiftData for simple local Apple-platform persistence, but do not override an existing persistence architecture.
 - Reject hero sections, dashboard grids, hamburger menus, Material FABs, Tailwind spacing reflexes, right-rail AI panels, hover-only affordances, decorative gradient blobs, and custom navigation chrome when native containers fit.
-- Critique before generating.
-- Self-review generated UI against the rubric before final output.
+
+(Critique-before-generating and self-review-against-rubric are steps 4 and 11 of the Default Workflow below.)
 
 ## Hard Rejections
 
@@ -167,17 +151,16 @@ Reject these unless the user explicitly asks for them and the tradeoff is docume
 
 ## Source Use Policy
 
-Apple sources define platform behavior.
+Do not treat all sources as equal. Rank them:
 
-Research sources explain model failure modes.
-
-Practitioner sources provide lenses.
-
-Web sources provide translated concepts or anti-patterns.
-
-Do not treat all sources as equal. A practitioner blog can sharpen judgment, but it should not overrule Apple platform behavior. A web design system can teach hierarchy, but it must not leak Tailwind, Material, or SaaS-dashboard structure into SwiftUI.
+- **Apple** (HIG, Developer docs, WWDC sessions, sample code) — primary authority; defines platform behavior.
+- **Research** (AI/LLM) — explains model failure modes; justifies anti-generic rules.
+- **Practitioner** — critique lenses that sharpen judgment, but never overrule Apple platform behavior.
+- **Web / design systems** — translated concepts and anti-patterns only, and only after translating away React, Tailwind, Material, SaaS-dashboard, and landing-page assumptions. A web design system can teach hierarchy, but must not leak its structure into SwiftUI.
 
 Stitch sources slot in at the tool tier. Google Stitch docs and MCP/tool documentation are authoritative for Stitch capabilities only — what the tool can fetch, what variant prompts it accepts, how to call its MCP. They are **not** authoritative for native app behavior; Apple HIG and SwiftUI platform rules outrank them on any visual or navigation decision. React/Tailwind Stitch prompt examples are workflow hints, not Apple-native design guidance — translate away the web framing before applying.
+
+When evidence is weak, write the rule as a heuristic, not a fact. For the full evidence-tier ranking and confidence scale, see `references/source-architecture.md`.
 
 ## Load References As Needed
 
@@ -285,15 +268,3 @@ Use reject/prefer pairs covering the skill's full surface, not just one slice:
 **Accessibility hooks on interactive rows**
 - Prefer: `.accessibilityLabel` + `.accessibilityValue` + `.accessibilityHint` distinguished per their semantic role.
 - Reject: A single concatenated `.accessibilityLabel` string that swallows the value and the action hint.
-
-## Evidence Discipline
-
-Use Apple HIG, Apple Developer documentation, WWDC sessions, and Apple sample code as primary authority.
-
-Use expert practitioners as critique lenses.
-
-Use AI/LLM research to justify anti-generic rules.
-
-Use web/design-system sources only after translating away React, Tailwind, Material, SaaS dashboards, and landing-page assumptions.
-
-When evidence is weak, write the rule as a heuristic, not a fact.

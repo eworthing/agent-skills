@@ -19,7 +19,11 @@ Pass: 13  Warn: 0  Fail: 0
 Structural score: 100%
 ```
 
-Description length: 948 chars / 123 words (Codex 1024 limit OK).
+Description length: 846 chars / 107 words (Codex 1024 limit OK).
+
+### anthropic-grade-optimizer scorecard (2026-07-03, target opus-4-7, Pass-1 mechanical)
+
+`SCORE=100 GATE=PASS MUST_FIX=0 SHOULD_FIX=0 MAY_FIX=0` — "Anthropic-grade. Ship it." All 11 dimensions 100.0 (Clarity, Structure, Examples, Reasoning, Context, Model-fit, Agency, Self-check, Tools, Vision, Claude Code). Pass-2 (llm-judge) not run via API; qualitative duplication findings surfaced by a manual four-lens cross-audit (anthropic-grade-optimizer + skill-creator + writing-skills + writing-great-skills) and applied in the dedup pass below.
 
 ## Manual Assessment
 
@@ -31,7 +35,7 @@ Description length: 948 chars / 123 words (Codex 1024 limit OK).
 | 2.1 | Fault Tolerance | 4/4 | Pure knowledge skill — no runtime failure surface. |
 | 2.2 | Error Reporting | 4/4 | Failure conditions explicit in each workflow. |
 | 2.3 | Recoverability | 4/4 | Non-destructive; critiques only. |
-| 3.1 | Token Cost | 3/4 | ~4900 LOC total across refs+workflows; agent must load selectively via SKILL.md L32–42 decision tree. SKILL.md itself is lean (244 lines). |
+| 3.1 | Token Cost | 3/4 | ~4900 LOC total across refs+workflows; agent must load selectively via the SKILL.md decision tree. SKILL.md itself is lean (270 lines after the 2026-07-03 dedup pass). |
 | 3.2 | Execution Efficiency | 4/4 | No external calls; decision tree at SKILL.md L32–42 routes early. |
 | 4.1 | Learnability | 4/4 | Quick-start decision tree + "When to Use" + workflow list. |
 | 4.2 | Consistency | 4/4 | Unified vocab across refs/workflows. |
@@ -84,3 +88,4 @@ _All P2 issues resolved 2026-05-17._
 | 2026-05-17 | 95/100 | P1+P2 fixes: Liquid Glass examples, iPad multiwindow recipes, keyboard command set, design-tokens cross-link |
 | 2026-05-17 | 95/100 | Add Stitch design-handoff workflow (9 new files: 1 workflow + 6 references + `data/stitch-negative-constraints.csv` + `templates/stitch-apple-native-brief.md`). SKILL.md routed via section anchors. Description compressed 948→846 chars (Codex headroom). House-rule labels applied. Paste-export fallback when no MCP tool found. Peer-reviewed by codex gpt-5.5 across 3 rounds. Structural 13/13 retained. |
 | 2026-06-18 | 95/100 | `references/navigation-patterns.md`: added SDK 27 presentation/layout APIs harvested from Apple's Xcode 27 `swiftui-whats-new-27` skill — toolbar overflow/minimization (`visibilityPriority`, `ToolbarOverflowMenu`, `.topBarPinnedTrailing`, `toolbarMinimizeBehavior`, `toolbarVisibility(.statusBar)`), `swipeActionsContainer()` for swipe outside `List`, and data-driven `confirmationDialog(_:item:)`/`alert(_:item:)` as a presentation-choice guideline. Scoped strictly to design/layout/presentation — no state/dataflow content (that stays with the external `swiftui-expert-skill`; peer-review B1). Signatures verified against Xcode 27.0 (27A5194q); all snippets type-checked clean (`swiftc -typecheck -target arm64-apple-ios27.0`). Availability-gated. Structural 13/13 retained; manual held 95. |
+| 2026-07-03 | 95/100 | Dedup/polish pass from a four-lens audit (anthropic-grade-optimizer Pass-1 100/100 + skill-creator + writing-skills + writing-great-skills). SKILL.md 299→270 lines: merged duplicate `Source Use Policy` + `Evidence Discipline` into one section (deep tiers stay in `source-architecture.md`); trimmed `When To Use` to a scope-boundary pointer (triggers now single-sourced in the `description`); removed two `Always Apply` bullets duplicating Default Workflow steps 4/11. Added `## Contents` TOC to the 10 references ≥250 lines (canonical AR-CC-S21 >100 deviated to ≥250 on writing-great-skills no-op grounds; 7 mid-band refs left TOC-less by documented choice). Preserved by design: Hard Rejections negative list (correct prohibition form), description keyword-variants (trigger surface), version pinning, zero coercive emphasis. Plan peer-reviewed by codex gpt-5.4-mini xhigh across 3 rounds (2 REVISE → APPROVED). Structural 13/13 retained. |

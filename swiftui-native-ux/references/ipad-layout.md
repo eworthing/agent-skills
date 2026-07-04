@@ -1,5 +1,21 @@
 # iPad Layout
 
+## Contents
+
+- Core Principle
+- Choose Structure By Task
+- NavigationSplitView
+- TabView On iPad
+- Inspectors
+- Compact Width Survival
+- Selection State
+- Keyboard Support
+- Multiwindow
+- Pointer Support
+- Drag And Drop
+- Density
+- iPad Review Checklist
+
 Use this reference when designing, generating, or critiquing iPad UI, Mac-class layouts, or adaptive SwiftUI.
 
 ## Core Principle

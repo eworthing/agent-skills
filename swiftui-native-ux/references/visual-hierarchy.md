@@ -1,5 +1,23 @@
 # Visual Hierarchy
 
+## Contents
+
+- Core Principle
+- Hierarchy Variables
+- One Variable Rule
+- Typography
+- Spacing
+- Grouping
+- Lists
+- Cards
+- Empty States
+- Loading States
+- Error States
+- Color
+- Motion
+- Reductionist Pass
+- Visual Hierarchy Review Checklist
+
 Use this reference when polishing spacing, typography, grouping, density, empty states, loading states, and overall visual clarity.
 
 ## Core Principle

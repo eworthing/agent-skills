@@ -1,5 +1,27 @@
 # Generation Output Format
 
+## Contents
+
+- Core Principle
+- Required Generation Steps
+- Default Code Assumptions
+- Persistence
+- View Size
+- State Placement
+- Centralized Style Architecture
+- Localization
+- Accessibility In Generated Code
+- Preview Matrix
+- State Fixtures
+- Generated Output Template
+- Native Structure
+- State Coverage
+- Accessibility Notes
+- SwiftUI Code
+- Preview Notes
+- Self-Review
+- Do Not Generate
+
 Use this reference when generating SwiftUI code.
 
 ## Core Principle

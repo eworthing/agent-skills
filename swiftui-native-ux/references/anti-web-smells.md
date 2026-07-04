@@ -1,5 +1,21 @@
 # Anti-Web-Smells
 
+## Contents
+
+- Core Principle
+- The AI-Generated App Silhouette
+- Layout Smells
+- Navigation Smells
+- Typography Smells
+- Color And Material Smells
+- Spacing Smells
+- Interaction Smells
+- AI Feature Smells
+- iPad Smells
+- SwiftUI Maintainability Smells
+- Imported Skill Smells
+- Rewrite Rule
+
 Use this reference when reviewing generated SwiftUI, rewriting web-style UI, or detecting React/Tailwind/SaaS/dashboard residue.
 
 This file is the attack dog. It should bark early.

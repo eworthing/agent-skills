@@ -1,5 +1,20 @@
 # Navigation Patterns
 
+## Contents
+
+- Core Principle
+- Decision Tree
+- NavigationStack Rules
+- NavigationSplitView Rules
+- TabView Rules
+- Sheets
+- Inspectors
+- Confirmation Dialogs and Alerts
+- Toolbar Placement
+- Search
+- Row Actions
+- Navigation Review Checklist
+
 Use this reference when choosing or critiquing SwiftUI navigation structure.
 
 ## Core Principle

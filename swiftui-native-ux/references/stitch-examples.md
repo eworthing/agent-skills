@@ -1,5 +1,13 @@
 # Stitch Brief Examples
 
+## Contents
+
+- Example 1: iPhone Settings Screen
+- Example 2: iPad Collection/Detail Screen
+- Example 3: Playback / Control Screen With Liquid Glass
+- Example 4: Empty-State-Heavy iPhone Screen
+- Example 5: AI-Assisted Feature Without Right Rail
+
 Five worked examples of Apple-native Stitch briefs. Use as patterns when filling out `templates/stitch-apple-native-brief.md`.
 
 ## Example 1: iPhone Settings Screen
