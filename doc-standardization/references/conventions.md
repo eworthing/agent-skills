@@ -76,10 +76,12 @@ Some docs should preserve native filenames:
 - **Top-level files** - `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
   `LICENSE.md`, `CODEOWNERS`, and `index.md` are pre-allowlisted.
 
-Document each exception in the nearest `README.md`. The audit script recognizes
-common `vendor`, `_archive`, `archive`, and `code-flow` bundle paths as
-declared-style exceptions for filename hygiene, but links inside them are still
-validated.
+Document each exception in the nearest `README.md`. The audit script exempts the
+generic bundle paths `vendor`, `archive`, and `_archive` from filename hygiene
+by default; any other declared bundle is passed at audit time via
+`--bundle-glob '<pattern>'`, and project-local type/status vocab via
+`--types` / `--states` (see the SKILL.md audit step). Links inside every exempt
+bundle are still validated.
 
 ## Code-to-document alignment
 

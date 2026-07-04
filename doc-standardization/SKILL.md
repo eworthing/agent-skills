@@ -36,13 +36,31 @@ Look for:
 - special cases such as vendor docs, Obsidian vaults, archives, generated docs
 - required index files and dated record conventions
 
+Carry what you discover into the audit as flags — the script enforces a
+repo-agnostic default, so a declared bundle it does not recognize by default
+(anything outside `vendor`/`archive`/`_archive`) or a custom type/status vocab
+must be passed explicitly (see step 2). You read the contract; the script
+enforces the parts you hand it.
+
 ### 2. Audit current state
 
-Run the bundled audit script from the target repo root:
+Run the bundled audit script from the target repo root, passing any
+contract details you discovered in step 1:
 
 ```bash
-bash <skill-path>/scripts/check-doc-naming.sh docs
+bash <skill-path>/scripts/check-doc-naming.sh docs \
+  --bundle-glob '*/legal/*' \    # a README-declared preserved bundle
+  --types 'rfc' \                # a project-local type token
+  --allow NOTICE.md              # an extra top-level file
 ```
+
+Flags (repeatable where noted, run `--help` for the full list):
+- `--bundle-glob GLOB` — exempt a declared bundle from filename hygiene (links
+  inside are still validated). Built-in defaults: `vendor`, `archive`,
+  `_archive`.
+- `--types 'a|b'` / `--states 'a|b'` — extend the recognized vocab with literal
+  ERE alternation fragments appended to the defaults.
+- `--allow NAME` — allowlist an extra basename.
 
 Exit codes: `0` clean, `1` blocking violations found, `2` invocation error.
 Output classes map to fixes in
@@ -127,8 +145,8 @@ bash <skill-path>/scripts/check-doc-naming.sh docs
 
 ```bash
 # docs/architecture/code-flow/README.md documents that Obsidian filenames are preserved.
-bash <skill-path>/scripts/check-doc-naming.sh docs
-# Native filenames inside that declared bundle are accepted as exceptions.
+bash <skill-path>/scripts/check-doc-naming.sh docs --bundle-glob '*/code-flow/*'
+# Native filenames inside the declared bundle are accepted; links are still validated.
 ```
 
 ## Related Skills

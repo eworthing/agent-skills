@@ -13,7 +13,56 @@
 
 set -u
 
-DOCS_ROOT="${1:-docs}"
+types_re='spec|guide|ref|research|audit|plan|decision'
+states_re='draft|proposed|active|implemented|deprecated'
+
+DOCS_ROOT="docs"
+extra_bundles=()
+extra_allows=()
+
+print_usage() {
+  cat <<'USAGE'
+check-doc-naming.sh - doc-standardization audit script.
+
+Usage: check-doc-naming.sh [docs-root] [flags]   (default docs-root: ./docs)
+Exit:  0 = no blocking violations, 1 = blocking violations found,
+       2 = invocation error.
+
+Flags:
+  --bundle-glob GLOB   Extra declared-bundle path pattern, exempt from filename
+                       hygiene (links inside are still validated). Repeatable.
+  --allow NAME         Extra allowlisted basename. Repeatable.
+  --types 'a|b'        Extend the recognized type vocab (a literal ERE
+                       alternation fragment, appended to the defaults).
+  --states 'a|b'       Extend the recognized status vocab (same form).
+  -h, --help           Show this help and exit.
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --bundle-glob)
+      shift; [ $# -gt 0 ] || { printf 'check-doc-naming.sh: --bundle-glob needs a value\n' >&2; exit 2; }
+      extra_bundles+=("$1") ;;
+    --allow)
+      shift; [ $# -gt 0 ] || { printf 'check-doc-naming.sh: --allow needs a value\n' >&2; exit 2; }
+      extra_allows+=("$1") ;;
+    --types)
+      shift; [ $# -gt 0 ] || { printf 'check-doc-naming.sh: --types needs a value\n' >&2; exit 2; }
+      types_re="${types_re}|$1" ;;
+    --states)
+      shift; [ $# -gt 0 ] || { printf 'check-doc-naming.sh: --states needs a value\n' >&2; exit 2; }
+      states_re="${states_re}|$1" ;;
+    -h|--help)
+      print_usage; exit 0 ;;
+    --*)
+      printf 'check-doc-naming.sh: unknown flag: %s\n' "$1" >&2; exit 2 ;;
+    *)
+      DOCS_ROOT="$1" ;;
+  esac
+  shift
+done
+
 if [ ! -d "$DOCS_ROOT" ]; then
   printf 'check-doc-naming.sh: directory not found: %s\n' "$DOCS_ROOT" >&2
   exit 2
@@ -30,22 +79,30 @@ orphan_fail=0
 index_fail=0
 h1_fail=0
 
-types_re='spec|guide|ref|research|audit|plan|decision'
-states_re='draft|proposed|active|implemented|deprecated'
-
 is_allowlisted_base() {
   case "$1" in
     README.md|CHANGELOG.md|CONTRIBUTING.md|LICENSE.md|CODEOWNERS|index.md)
       return 0 ;;
   esac
+  for a in "${extra_allows[@]:-}"; do
+    [ -n "$a" ] || continue
+    [ "$1" = "$a" ] && return 0
+  done
   return 1
 }
 
 is_declared_bundle_path() {
   case "$1" in
-    */vendor/*|*/_archive/*|*/archive/*|*/code-flow/*)
+    */vendor/*|*/_archive/*|*/archive/*)
       return 0 ;;
   esac
+  for g in "${extra_bundles[@]:-}"; do
+    [ -n "$g" ] || continue
+    # shellcheck disable=SC2254 -- $g is an intentional glob pattern.
+    case "$1" in
+      $g) return 0 ;;
+    esac
+  done
   return 1
 }
 
@@ -82,7 +139,7 @@ last_slug_token() {
   printf '%s\n' "$base_no_ext" | awk -F- '{print $NF}'
 }
 
-topic_token_for_h1() {
+topic_phrase_for_h1() {
   base_no_ext="${1%.md}"
   topic_part="$base_no_ext"
   if is_default_name "$1"; then
@@ -92,7 +149,9 @@ topic_token_for_h1() {
   elif is_adr_path "$2"; then
     topic_part=$(printf '%s\n' "$base_no_ext" | sed -E 's/^[0-9]{4}-//')
   fi
-  printf '%s\n' "$topic_part" | awk -F- '{print $1}'
+  # Return the full topic slug as a space-separated phrase so multi-word topics
+  # are checked in their entirety, not just their first token.
+  printf '%s\n' "$topic_part" | tr '-' ' '
 }
 
 printf '== doc-standardization audit: %s ==\n' "$DOCS_ROOT"
@@ -271,10 +330,10 @@ while IFS= read -r f; do
   if is_allowlisted_base "$base"; then continue; fi
   if is_declared_bundle_path "$f"; then continue; fi
   h1=$(grep -m1 -E '^# ' "$f" 2>/dev/null | sed 's/^# //' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9 ')
-  h1_topic=$(topic_token_for_h1 "$base" "$f")
+  h1_topic=$(topic_phrase_for_h1 "$base" "$f")
   if [ -n "$h1_topic" ] && [ -n "$h1" ]; then
-    if ! printf '%s' "$h1" | grep -q "$h1_topic"; then
-      h1_violations="${h1_violations}H1-DRIFT: ${f} -> H1 \"${h1}\" missing slug token \"${h1_topic}\"
+    if ! printf '%s' "$h1" | grep -Fq "$h1_topic"; then
+      h1_violations="${h1_violations}H1-DRIFT: ${f} -> H1 \"${h1}\" missing topic phrase \"${h1_topic}\"
 "
       h1_fail=$((h1_fail + 1))
     fi

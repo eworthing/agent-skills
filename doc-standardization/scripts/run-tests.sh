@@ -16,9 +16,10 @@ run_case() {
   name="$1"
   expected_status="$2"
   required="$3"
+  shift 3
   docs_root="$fixtures/$name/docs"
 
-  output="$(bash "$checker" "$docs_root" 2>&1)"
+  output="$(bash "$checker" "$docs_root" "$@" 2>&1)"
   status=$?
 
   if [ "$status" -ne "$expected_status" ]; then
@@ -56,6 +57,16 @@ run_case fail-invalid-status 1 '[FAIL] naming convention|invalid status/date'
 run_case fail-uppercase-or-space 1 '[FAIL] filename hygiene|CASE:'
 run_case warn-orphan 0 '[WARN] orphan check|ORPHAN:'
 run_case warn-h1-drift 0 '[WARN] H1 drift|H1-DRIFT:'
+
+# Flag-driven local-contract discovery: same fixture flagged vs. bare.
+run_case fail-undeclared-custom-bundle 1 'CASE:'
+run_case fail-undeclared-custom-bundle 0 'CLEAN' --bundle-glob '*/legal/*'
+run_case fail-custom-type-vocab 1 'recognized status without approved type'
+run_case fail-custom-type-vocab 0 'CLEAN' --types rfc
+
+# H1-drift precision: full topic phrase, not just the first slug token.
+run_case warn-multiword-h1-drift 0 'H1-DRIFT'
+run_case clean-multiword-h1 0 '[OK] H1 drift'
 
 if [ "$failures" -eq 0 ]; then
   printf '== doc-standardization tests: PASS ==\n'

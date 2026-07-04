@@ -18,7 +18,10 @@ find docs -type f -name "*.md" | LC_ALL=C sort
 ## 2. Detect universal hygiene failures
 
 Curated filenames should be lowercase kebab-case. Allowlisted top-level names,
-ADRs, dated records, and declared bundles are handled separately.
+ADRs, dated records, and declared bundles are handled separately. Project-local
+contracts extend this at audit time via `check-doc-naming.sh` flags —
+`--bundle-glob` (exempt a declared bundle), `--allow` (extra basename), and
+`--types` / `--states` (extend the grammar vocab).
 
 ```bash
 base="${f##*/}"
