@@ -21,6 +21,12 @@ This repo holds reusable skills for AI coding agents (Claude Code, Codex CLI, op
 - `contest-refactor` ships Python validators in `scripts/`. Stdlib-only on Python 3.11+ (uses `tomllib`). Run `validate-repo.py`, `validate-artifact.py`, and `validate-fixtures.py` directly. The `_*_selftest.py` files are standalone unit tests (run each directly, exit 0 = pass) — including `_reviewer_baseline_selftest.py`, which guards the reviewer-judgment harness under `evals/reviewer-cases/` (see `evals/README.md` Layer 3).
 - `common/` has its own pytest suite (`common/tests/`) and three CI scripts: `sync_common.py` (vendor + check), `check_shim_contract.py` (AST scan that a compatibility shim re-exports every name a test file imports), `check_module_size.py` (600-LoC soft warning + 800-LoC hard cap with `# WAIVER: module-size <reason>` escape). Enable the pre-commit hook with `git config core.hooksPath .githooks`.
 
+## Dev tooling
+
+- **Ruff** is the linter/formatter for all Python here, configured in `pyproject.toml` (rule set tuned for LLM-generated code: pyflakes/bugbear correctness plus `PGH`, `A`, `ISC`, `C4`, `PIE`, `RET`; re-export shims and test idioms scoped via `per-file-ignores`). Pinned version: **`ruff==0.15.6`** — determinism depends on the pin (rule sets shift between releases). Install with `pip install ruff==0.15.6`.
+- The pre-commit hook (Gate 3) runs `ruff check` + `ruff format --check` on staged Python and warns (not blocks) on a version mismatch against the pin above.
+- Self-correct before committing: `ruff check --fix .` then `ruff format .`. Never hand-edit a vendored `_common/` mirror to satisfy the linter — fix `common/common/` and re-run `sync_common.py`.
+
 ## Installation (Symlink Pattern)
 
 Every skill is installed by symlinking from this repo into each agent's per-user skills directory:

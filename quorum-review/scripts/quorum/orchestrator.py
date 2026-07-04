@@ -20,10 +20,10 @@ the test suite actually intercepts the call.
 """
 
 import copy
+import json
 import subprocess
 import sys
 import tempfile
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -33,14 +33,6 @@ from quorum.cli import (
     _resolve_verifier_spec,
     parse_args,
     validate_panel,
-)
-from quorum.parsing import (
-    parse_cross_critique,
-    parse_structured_review,
-    parse_verdict,
-    read_review,
-    read_session_meta,
-    _normalize_text,
 )
 from quorum.ledger import (
     _as_list,
@@ -57,10 +49,13 @@ from quorum.ledger import (
     save_ledger,
 )
 from quorum.merge import apply_merge_pipeline
-from quorum.verification import (
-    _sync_verification_state,
-    generate_verification_prompts,
-    parse_verification_response,
+from quorum.parsing import (
+    _normalize_text,
+    parse_cross_critique,
+    parse_structured_review,
+    parse_verdict,
+    read_review,
+    read_session_meta,
 )
 from quorum.prompts import (
     CROSS_CRITIQUE_INSTRUCTIONS,
@@ -72,7 +67,11 @@ from quorum.prompts import (
     write_cross_critique_prompt,
     write_initial_prompt,
 )
-
+from quorum.verification import (
+    _sync_verification_state,
+    generate_verification_prompts,
+    parse_verification_response,
+)
 
 EXIT_APPROVED = 0
 EXIT_ERROR = 1
@@ -121,13 +120,20 @@ def run_single_reviewer(
     cmd = [
         sys.executable,
         run_review_py,
-        "--reviewer", provider,
-        "--plan-file", plan_file,
-        "--prompt-file", prompt_file,
-        "--output-file", output_file,
-        "--session-file", session_file,
-        "--events-file", events_file,
-        "--timeout", str(timeout),
+        "--reviewer",
+        provider,
+        "--plan-file",
+        plan_file,
+        "--prompt-file",
+        prompt_file,
+        "--output-file",
+        output_file,
+        "--session-file",
+        session_file,
+        "--events-file",
+        events_file,
+        "--timeout",
+        str(timeout),
     ]
     # Review-scoped manifest of per-run Codex homes (concurrency isolation +
     # terminal cleanup). Every reviewer + verifier in a review shares one path.
@@ -249,7 +255,10 @@ def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
             for issue_id in critique["agrees"]:
                 if issue_id in issue_map:
                     issue = issue_map[issue_id]
-                    if idx not in _as_list(issue["adjudication"].get("proposed_by")) and idx not in issue["adjudication"]["endorsed_by"]:
+                    if (
+                        idx not in _as_list(issue["adjudication"].get("proposed_by"))
+                        and idx not in issue["adjudication"]["endorsed_by"]
+                    ):
                         issue["adjudication"]["endorsed_by"].append(idx)
                         _refresh_issue(issue)
 
@@ -265,7 +274,10 @@ def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
                 issue_id = entry["id"]
                 if issue_id in issue_map:
                     issue = issue_map[issue_id]
-                    if idx not in _as_list(issue["adjudication"].get("proposed_by")) and idx not in issue["adjudication"]["refined_by"]:
+                    if (
+                        idx not in _as_list(issue["adjudication"].get("proposed_by"))
+                        and idx not in issue["adjudication"]["refined_by"]
+                    ):
                         issue["adjudication"]["refined_by"].append(idx)
                         _refresh_issue(issue)
 
@@ -300,9 +312,7 @@ def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
                 issue_map[canonical_id] = new_issue
 
             existing_texts = {
-                _normalize_text(_issue_summary(i))
-                for i in ledger["issues"]
-                if _issue_summary(i)
+                _normalize_text(_issue_summary(i)) for i in ledger["issues"] if _issue_summary(i)
             }
 
             if parsed.get("has_blocking_section"):
@@ -354,11 +364,13 @@ def build_issue_ledger(panel, quorum_id, tmpdir, round_num, prev_ledger=None):
         ledger["rounds"][str(round_num)] = {
             "reviewer_count": len(panel),
             "blocking_open": sum(
-                1 for i in ledger["issues"]
+                1
+                for i in ledger["issues"]
                 if _issue_severity(i) == "blocking" and _issue_status(i) == "open"
             ),
             "nb_open": sum(
-                1 for i in ledger["issues"]
+                1
+                for i in ledger["issues"]
                 if _issue_severity(i) == "non_blocking" and _issue_status(i) == "open"
             ),
             "approved_count": approved_count,
@@ -386,8 +398,11 @@ def derive_verdict(ledger, threshold_name, total_reviewers):
     threshold_fn = THRESHOLDS.get(threshold_name, THRESHOLDS["super"])
 
     open_blockers = [
-        i for i in ledger["issues"]
-        if _issue_severity(i) == "blocking" and _issue_status(i) == "open" and not _issue_is_invalidated(i)
+        i
+        for i in ledger["issues"]
+        if _issue_severity(i) == "blocking"
+        and _issue_status(i) == "open"
+        and not _issue_is_invalidated(i)
     ]
 
     surviving = []
@@ -418,26 +433,27 @@ def format_issue_consensus(ledger, threshold_name, total_reviewers):
     if surviving:
         for issue in surviving:
             lines.append(
-                f"- {issue['id']} \"{_issue_summary(issue)}\": "
+                f'- {issue["id"]} "{_issue_summary(issue)}": '
                 f"support {_issue_support_count(issue)}/{total_reviewers} "
                 f"— SURVIVES"
             )
     if dropped:
         for issue in dropped:
             lines.append(
-                f"- {issue['id']} \"{_issue_summary(issue)}\": "
+                f'- {issue["id"]} "{_issue_summary(issue)}": '
                 f"support {_issue_support_count(issue)}/{total_reviewers} "
                 f"— DROPPED"
             )
 
     # Non-blocking issues (informational)
     open_nb = [
-        i for i in ledger["issues"]
+        i
+        for i in ledger["issues"]
         if _issue_severity(i) == "non_blocking" and _issue_status(i) == "open"
     ]
     for issue in open_nb:
         lines.append(
-            f"- {issue['id']} \"{_issue_summary(issue)}\": "
+            f'- {issue["id"]} "{_issue_summary(issue)}": '
             f"support {_issue_support_count(issue)}/{total_reviewers} "
             f"— NON-BLOCKING"
         )
@@ -458,7 +474,11 @@ def _is_unanimous(ledger, issue_id, total):
     high-probability true positives that don't need additional validation.
     """
     issue = next((i for i in ledger["issues"] if i["id"] == issue_id), None)
-    return issue is not None and _issue_support_count(issue) >= total and not _issue_is_invalidated(issue)
+    return (
+        issue is not None
+        and _issue_support_count(issue) >= total
+        and not _issue_is_invalidated(issue)
+    )
 
 
 def should_exit_early(ledger, threshold_name, total_reviewers):
@@ -474,8 +494,11 @@ def should_exit_early(ledger, threshold_name, total_reviewers):
     3. All surviving blockers at max support → more rounds won't change, stop
     """
     open_blockers = [
-        i for i in ledger["issues"]
-        if _issue_severity(i) == "blocking" and _issue_status(i) == "open" and not _issue_is_invalidated(i)
+        i
+        for i in ledger["issues"]
+        if _issue_severity(i) == "blocking"
+        and _issue_status(i) == "open"
+        and not _issue_is_invalidated(i)
     ]
 
     if not open_blockers:
@@ -489,7 +512,10 @@ def should_exit_early(ledger, threshold_name, total_reviewers):
 
     all_at_max = all(_issue_support_count(i) >= total_reviewers for i in surviving)
     if all_at_max:
-        return True, "all surviving blockers at maximum support — further rounds cannot change outcome"
+        return (
+            True,
+            "all surviving blockers at maximum support — further rounds cannot change outcome",
+        )
 
     return False, ""
 
@@ -539,9 +565,7 @@ def compile_deliberation(panel, quorum_id, tmpdir, round_num):
         }
 
         # Anonymous section header — no model/effort info
-        sections.append(
-            f"--- {anon_label} — VERDICT: {verdict_str} ---\n\n{review_text}"
-        )
+        sections.append(f"--- {anon_label} — VERDICT: {verdict_str} ---\n\n{review_text}")
 
     deliberation_text = "\n\n".join(sections)
     return deliberation_text, verdicts, reviewer_map
@@ -552,8 +576,7 @@ def compile_deliberation(panel, quorum_id, tmpdir, round_num):
 # ---------------------------------------------------------------------------
 
 
-def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num,
-                               blind_mode=False):
+def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num, blind_mode=False):
     """Build compressed context for rounds 3+.
 
     Instead of full prose, carries forward:
@@ -574,8 +597,7 @@ def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num,
             lines.append("|-----|----------|-------------|")
             for issue in open_issues:
                 lines.append(
-                    f"| {issue['id']} | {_issue_severity(issue)} | "
-                    f"{_issue_summary(issue)[:60]} |"
+                    f"| {issue['id']} | {_issue_severity(issue)} | {_issue_summary(issue)[:60]} |"
                 )
         else:
             lines.append("| ID | Severity | Description | Support | Disputes |")
@@ -617,8 +639,7 @@ def compile_compressed_context(ledger, panel, quorum_id, tmpdir, round_num,
 # ---------------------------------------------------------------------------
 
 
-def tally_verdicts(verdicts, threshold_name, original_panel_size=None,
-                   active_panel_size=None):
+def tally_verdicts(verdicts, threshold_name, original_panel_size=None, active_panel_size=None):
     """Compute advisory tally from a list of (label, verdict, model, effort) tuples.
 
     In v2, this tally is ADVISORY — the authoritative verdict comes from
@@ -661,10 +682,7 @@ def tally_verdicts(verdicts, threshold_name, original_panel_size=None,
         + (f" ({', '.join(v[0] for v in revise)})" if revise else ""),
     ]
     if failed:
-        lines.append(
-            f"- NO VERDICT: {len(failed)}/{total}"
-            f" ({', '.join(v[0] for v in failed)})"
-        )
+        lines.append(f"- NO VERDICT: {len(failed)}/{total} ({', '.join(v[0] for v in failed)})")
     lines.append(f"- Threshold: {threshold_label}")
     if orig != active:
         lines.append(f"- Panel: {active} active of {orig} original")
@@ -697,7 +715,7 @@ def main():
     # intercept the call (a direct module-local reference would bypass the
     # patch). The shim is already in ``sys.modules`` whether main() was
     # invoked via the shim or directly through `python -m quorum.orchestrator`.
-    import run_quorum  # noqa: WPS433 — intentional late import
+    import run_quorum
 
     args = parse_args()
 
@@ -728,9 +746,7 @@ def main():
     rubric_text = load_review_md()
 
     # Load issue ledger (for rounds 2+)
-    ledger_file = args.ledger_file or str(
-        Path(tmpdir) / f"qr-{quorum_id}-ledger.json"
-    )
+    ledger_file = args.ledger_file or str(Path(tmpdir) / f"qr-{quorum_id}-ledger.json")
     ledger = load_ledger(ledger_file) if round_num > 1 else _empty_ledger()
 
     # Read deliberation context from prior round (for rounds 2+)
@@ -750,7 +766,11 @@ def main():
         role_label = _role_for_mode(args.mode, idx)
         if round_num == 1:
             write_initial_prompt(
-                str(prompt_file), idx, len(panel), review_contract, plan_text,
+                str(prompt_file),
+                idx,
+                len(panel),
+                review_contract,
+                plan_text,
                 rubric_text=rubric_text,
                 mode=args.mode,
                 role_label=role_label,
@@ -778,7 +798,11 @@ def main():
             # blind_mode=True strips support/dispute counts to prevent
             # conformity anchoring in later rounds
             compressed = compile_compressed_context(
-                ledger, panel, quorum_id, tmpdir, round_num,
+                ledger,
+                panel,
+                quorum_id,
+                tmpdir,
+                round_num,
                 blind_mode=True,
             )
             write_cross_critique_prompt(
@@ -876,8 +900,7 @@ def main():
             ]
             active_panel_size = len(active_panel)
             print(
-                f"SHRINK-QUORUM: panel reduced from {original_panel_size} "
-                f"to {active_panel_size}",
+                f"SHRINK-QUORUM: panel reduced from {original_panel_size} to {active_panel_size}",
                 file=sys.stderr,
             )
         # fail-open: continue with original panel size as threshold denominator
@@ -889,13 +912,11 @@ def main():
 
     # For shrink-quorum, filter verdicts to active panel only
     if args.on_failure == "shrink-quorum" and failed_reviewers:
-        verdicts = [
-            v for v in verdicts
-            if reviewer_map[v[0]]["idx"] not in failed_reviewers
-        ]
+        verdicts = [v for v in verdicts if reviewer_map[v[0]]["idx"] not in failed_reviewers]
 
     tally = tally_verdicts(
-        verdicts, args.threshold,
+        verdicts,
+        args.threshold,
         original_panel_size=original_panel_size,
         active_panel_size=active_panel_size,
     )
@@ -962,10 +983,14 @@ def main():
                                     "provider": v_provider,
                                     "model": v_model,
                                 }
-                                issue["verification"]["verification_rationale"] = read_review(v_output_file)
+                                issue["verification"]["verification_rationale"] = read_review(
+                                    v_output_file
+                                )
                                 if status == "INVALIDATED":
                                     issue["status"] = "invalidated_by_verifier"
-                                    issue.setdefault("adjudication", {})["status"] = "invalidated_by_verifier"
+                                    issue.setdefault("adjudication", {})["status"] = (
+                                        "invalidated_by_verifier"
+                                    )
                                 break
                     else:
                         print(
@@ -996,14 +1021,10 @@ def main():
     derived_verdict, surviving_issues, dropped_issues = derive_verdict(
         verdict_ledger, args.threshold, active_panel_size
     )
-    issue_consensus = format_issue_consensus(
-        verdict_ledger, args.threshold, active_panel_size
-    )
+    issue_consensus = format_issue_consensus(verdict_ledger, args.threshold, active_panel_size)
 
     # Write deliberation file for next round
-    delib_out = args.deliberation_file or str(
-        Path(tmpdir) / f"qr-{quorum_id}-deliberation.md"
-    )
+    delib_out = args.deliberation_file or str(Path(tmpdir) / f"qr-{quorum_id}-deliberation.md")
     Path(delib_out).write_text(deliberation_text, encoding="utf-8")
 
     # Write tally as JSON
@@ -1033,9 +1054,7 @@ def main():
             }
             for v in verdicts
         ],
-        "reviewer_map": {
-            label: info for label, info in reviewer_map.items()
-        },
+        "reviewer_map": dict(reviewer_map),
         "exit_codes": results,
         "early_exit": early_exit,
         "early_exit_reason": early_exit_reason,

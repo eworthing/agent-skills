@@ -1,9 +1,20 @@
 """session state tests — relocated verbatim from test_run_review.py (mechanical split)."""
-import argparse, json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from unittest import mock  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
-from ._helpers import _CREATE_NEW_PROCESS_GROUP  # noqa: F401
+
+import argparse
+import json
+import os
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from ._helpers import *
+from ._helpers import _CREATE_NEW_PROCESS_GROUP
 
 
 class TestEventLogger(unittest.TestCase):
@@ -107,9 +118,7 @@ class TestPromptValidation(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIsNone(err)
 
-    @unittest.skipIf(
-        sys.platform == "win32", "POSIX file permissions not supported on Windows"
-    )
+    @unittest.skipIf(sys.platform == "win32", "POSIX file permissions not supported on Windows")
     def test_unreadable_prompt_rejected(self):
         f = Path(self.tmpdir.name) / "unreadable.md"
         f.write_text("content", encoding="utf-8")
@@ -138,9 +147,7 @@ class TestWriteProbes(unittest.TestCase):
         self.assertTrue(ok)
         self.assertIsNone(err)
 
-    @unittest.skipIf(
-        sys.platform == "win32", "POSIX file permissions not supported on Windows"
-    )
+    @unittest.skipIf(sys.platform == "win32", "POSIX file permissions not supported on Windows")
     def test_existing_readonly_file(self):
         f = Path(self.tmpdir.name) / "readonly.json"
         f.write_text("{}", encoding="utf-8")
@@ -190,9 +197,7 @@ class TestWriteProbes(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("not a regular file", err)
 
-    @unittest.skipIf(
-        sys.platform == "win32", "FIFOs require POSIX"
-    )
+    @unittest.skipIf(sys.platform == "win32", "FIFOs require POSIX")
     def test_path_is_fifo(self):
         fifo = Path(self.tmpdir.name) / "test.fifo"
         os.mkfifo(str(fifo))
@@ -209,8 +214,16 @@ class TestProviderCapabilityTable(unittest.TestCase):
             self.assertIn("caps", p, f"Missing caps on PROVIDERS[{name}]")
 
     def test_caps_fields_present(self):
-        required = {"binary", "prompt_mode", "output_mode", "model_flag",
-                     "effort_flag", "resume_flag_style", "resume_supported", "safety_flags"}
+        required = {
+            "binary",
+            "prompt_mode",
+            "output_mode",
+            "model_flag",
+            "effort_flag",
+            "resume_flag_style",
+            "resume_supported",
+            "safety_flags",
+        }
         for name, p in PROVIDERS.items():
             caps = p["caps"]
             for field in required:
@@ -241,9 +254,12 @@ class TestResumeMetadata(unittest.TestCase):
 
     def test_session_records_resume_requested_false(self):
         args = make_args(
-            reviewer="claude", prompt_file=str(self.prompt_file),
-            output_file=str(self.output_file), session_file=str(self.session_file),
-            events_file=str(self.events_file), resume=False,
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
         )
         proc = self._proc(0, stdout='{"result":"ok"}')
         with (
@@ -262,9 +278,12 @@ class TestResumeMetadata(unittest.TestCase):
 
     def test_session_records_resume_requested_true(self):
         args = make_args(
-            reviewer="claude", prompt_file=str(self.prompt_file),
-            output_file=str(self.output_file), session_file=str(self.session_file),
-            events_file=str(self.events_file), resume=True,
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
         )
         proc = self._proc(0, stdout='{"result":"ok"}')
         with (
@@ -284,9 +303,12 @@ class TestResumeMetadata(unittest.TestCase):
 
     def test_session_records_fallback(self):
         args = make_args(
-            reviewer="claude", prompt_file=str(self.prompt_file),
-            output_file=str(self.output_file), session_file=str(self.session_file),
-            events_file=str(self.events_file), resume=True,
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
         )
         first_proc = self._proc(2, stdout="", stderr="resume failed")
         second_proc = self._proc(0, stdout='{"result":"ok"}')

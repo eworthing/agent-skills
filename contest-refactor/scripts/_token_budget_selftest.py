@@ -7,6 +7,7 @@ savings number is never trusted off a tool whose routing has silently drifted.
 
 Run directly: `python3 scripts/_token_budget_selftest.py` (exit 0 = pass). Stdlib-only.
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -31,16 +32,31 @@ def check(cond: bool, msg: str):
 # --- Golden per-step sets (source: SKILL.md "## Reference Load Matrix", rows Step 1 /
 # Step 1 emit / Step 2 / Step 3). If SKILL.md's matrix changes, update both it and these.
 GOLDEN_APPLE = {
-    "step1": ["SKILL.md", "lens-apple.md", "lens-security.md",
-              "method.md", "method-critic.md", "architecture-rubric.md",
-              "architecture-rubric-scoring.md"],
-    "step1_emit": ["output-format.md", "output-format-json.md",
-                   "output-format-json-rules.md",
-                   "output-format-markdown.md", "validation.md"],
+    "step1": [
+        "SKILL.md",
+        "lens-apple.md",
+        "lens-security.md",
+        "method.md",
+        "method-critic.md",
+        "architecture-rubric.md",
+        "architecture-rubric-scoring.md",
+    ],
+    "step1_emit": [
+        "output-format.md",
+        "output-format-json.md",
+        "output-format-json-rules.md",
+        "output-format-markdown.md",
+        "validation.md",
+    ],
     "step2": ["method.md", "architecture-rubric.md"],
-    "step3": ["output-format.md", "output-format-json-rules.md",
-              "output-format-markdown-archive.md", "validation.md",
-              "implementation-reviewer.md", "provider-adapters.md"],
+    "step3": [
+        "output-format.md",
+        "output-format-json-rules.md",
+        "output-format-markdown-archive.md",
+        "validation.md",
+        "implementation-reviewer.md",
+        "provider-adapters.md",
+    ],
 }
 
 for step, golden in GOLDEN_APPLE.items():
@@ -48,23 +64,35 @@ for step, golden in GOLDEN_APPLE.items():
     check(got == golden, f"loaded_set({step!r}) = {got}, expected {golden}")
 
 # Generic lens swaps only the stack lens file.
-check(tb.loaded_set("step1", lens="generic")[1] == "lens-generic.md",
-      "generic lens did not swap lens-apple.md -> lens-generic.md in step1")
+check(
+    tb.loaded_set("step1", lens="generic")[1] == "lens-generic.md",
+    "generic lens did not swap lens-apple.md -> lens-generic.md in step1",
+)
 
 # --- The de-duped "loop" union must equal the 12-file per-loop set the audit documents
 # (A1a added output-format-json-rules.md, the emit-time carve-out, at Step 1 emit / Step 3).
 AUDIT_PER_LOOP = {
-    "SKILL.md", "lens-apple.md", "lens-security.md", "method.md", "method-critic.md",
-    "architecture-rubric.md", "architecture-rubric-scoring.md",
-    "output-format.md", "output-format-json.md",
+    "SKILL.md",
+    "lens-apple.md",
+    "lens-security.md",
+    "method.md",
+    "method-critic.md",
+    "architecture-rubric.md",
+    "architecture-rubric-scoring.md",
+    "output-format.md",
+    "output-format-json.md",
     "output-format-json-rules.md",
-    "output-format-markdown.md", "output-format-markdown-archive.md",
-    "validation.md", "implementation-reviewer.md",
+    "output-format-markdown.md",
+    "output-format-markdown-archive.md",
+    "validation.md",
+    "implementation-reviewer.md",
     "provider-adapters.md",
 }
 loop_union = set(tb.loaded_set("loop", lens="apple"))
-check(loop_union == AUDIT_PER_LOOP,
-      f"loop union {sorted(loop_union)} != audit per-loop set {sorted(AUDIT_PER_LOOP)}")
+check(
+    loop_union == AUDIT_PER_LOOP,
+    f"loop union {sorted(loop_union)} != audit per-loop set {sorted(AUDIT_PER_LOOP)}",
+)
 
 # --- Every file in every loaded set must actually exist on disk (catches a renamed ref).
 for step in ("step1", "step1_emit", "step2", "step3"):

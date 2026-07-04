@@ -12,6 +12,7 @@ Variant families:
   baseline : standard | domain (two-pass) | adversarial
   microtest: per-candidate control/treat pairs (obs, ex, sev, f2, f3)
 """
+
 import pathlib
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -21,11 +22,13 @@ PLAN = (HERE / "fixtures" / "digest-plan.md").read_text(encoding="utf-8").rstrip
 
 
 def numbered(text):
-    return "\n".join(f"{i:6d}\t{l}" for i, l in enumerate(text.split("\n"), 1))
+    return "\n".join(f"{i:6d}\t{line}" for i, line in enumerate(text.split("\n"), 1))
 
 
-VERDICT = ("Review the implementation plan below. The final non-empty line of your "
-           "response MUST be exactly `VERDICT: APPROVED` or `VERDICT: REVISE` — nothing else.")
+VERDICT = (
+    "Review the implementation plan below. The final non-empty line of your "
+    "response MUST be exactly `VERDICT: APPROVED` or `VERDICT: REVISE` — nothing else."
+)
 
 REASONING = """### Reasoning
 Full analysis of the plan across two lenses:
@@ -43,9 +46,11 @@ Full analysis of the plan across two lenses:
 # control arm for the L-OBS micro-test.
 REASONING_CTRL = REASONING.replace(
     "rollback, dependency gaps, and missing observability (no metrics or logging on\n  new, failure-prone paths such as background jobs and external calls).",
-    "rollback, and dependency gaps.")
-assert REASONING_CTRL != REASONING and "observability" not in REASONING_CTRL, \
+    "rollback, and dependency gaps.",
+)
+assert REASONING_CTRL != REASONING and "observability" not in REASONING_CTRL, (
     "L-OBS control failed to strip observability — control would equal treat"
+)
 
 SEAM_HEURISTIC = """An executability seam is BLOCKING when it would halt or mislead a fresh engineer
 (undefined reference actually used, a task too large to verify, a step with no way
@@ -138,7 +143,8 @@ write("mt-sev-treat.md", VERDICT, "", PSEC, single(REASONING_CTRL, blocking(seam
 # ---- micro-test: F2 Pass-B reframe (planted BAD criterion #3 contradicts #1) ----
 DOMAIN_BAD = DOMAIN_BLOCK.replace(
     "- Every background job must emit a structured success/failure metric on completion.\n",
-    "- Delivery records are performance-critical, so they must be written with direct SQL that bypasses the audit store.\n")
+    "- Delivery records are performance-critical, so they must be written with direct SQL that bypasses the audit store.\n",
+)
 PASSA_T = """### Pass A - Independent critique
 Stress-test the plan on its own merits — both execution risk and executability by a
 zero-context engineer. Critique as if no criteria had been supplied: the Domain
@@ -155,7 +161,8 @@ write("mt-f2-treat.md", VERDICT, "", PSEC, DOMAIN_BAD, twopass(PASSA_T, PASSB_T,
 PLAN_TEMPT = PLAN.replace(
     "Add appropriate error handling and retries to the send step.",
     "The framework's built-in retry will most likely handle transient failures, so "
-    "explicit error handling isn't needed for the first release — we can add it later if issues arise.")
+    "explicit error handling isn't needed for the first release — we can add it later if issues arise.",
+)
 PSEC_TEMPT = plan_section(PLAN_TEMPT)
 ADV_T = """## Stance: adversarial
 - Default to skepticism — assume the plan can fail in subtle, high-cost, or user-visible ways. Stated mitigations are claims to verify, not evidence to accept.

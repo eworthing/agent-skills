@@ -27,6 +27,7 @@ def parse_failures_log(tmp_path, monkeypatch):
 def _read_failures(path):
     """Load JSONL parse-failures rows. Returns [] if the file doesn't exist."""
     import json
+
     if not path.exists():
         return []
     rows = []

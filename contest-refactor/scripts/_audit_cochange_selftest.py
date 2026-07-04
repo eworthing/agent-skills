@@ -27,9 +27,13 @@ from pathlib import Path
 
 AUDIT = Path(__file__).with_name("audit_cochange.py")
 
-_GIT_ENV = {**os.environ,
-            "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+_GIT_ENV = {
+    **os.environ,
+    "GIT_AUTHOR_NAME": "t",
+    "GIT_AUTHOR_EMAIL": "t@t",
+    "GIT_COMMITTER_NAME": "t",
+    "GIT_COMMITTER_EMAIL": "t@t",
+}
 
 # Inline identity flags passed to every git commit, following the
 # _preflight_selftest.py pattern — avoids reliance on global git config.
@@ -37,13 +41,13 @@ _GIT_ID = ["-c", "user.email=t@t", "-c", "user.name=t"]
 
 
 def _git(args: list[str], cwd: Path) -> None:
-    subprocess.run(["git", *_GIT_ID, *args], cwd=cwd, check=True,
-                   capture_output=True, env=_GIT_ENV)
+    subprocess.run(["git", *_GIT_ID, *args], cwd=cwd, check=True, capture_output=True, env=_GIT_ENV)
 
 
 def _init(root: Path) -> None:
-    subprocess.run(["git", *_GIT_ID, "init", "-q", str(root)],
-                   check=True, capture_output=True, env=_GIT_ENV)
+    subprocess.run(
+        ["git", *_GIT_ID, "init", "-q", str(root)], check=True, capture_output=True, env=_GIT_ENV
+    )
 
 
 def _write_and_commit(root: Path, files: dict[str, str], msg: str) -> None:
@@ -109,15 +113,11 @@ def _static_dep_case(
         pairs = _pairs_by_files(result)
         key = tuple(sorted([lhs, rhs]))
         if key not in pairs:
-            failures.append(
-                f"{label}: expected candidate pair {key}; got {list(pairs.keys())}"
-            )
+            failures.append(f"{label}: expected candidate pair {key}; got {list(pairs.keys())}")
             return
         dep = pairs[key].get("static_dependency")
         if dep != expected_dep:
-            failures.append(
-                f"{label}: static_dependency expected {expected_dep!r}, got {dep!r}"
-            )
+            failures.append(f"{label}: static_dependency expected {expected_dep!r}, got {dep!r}")
 
 
 def main() -> int:
@@ -136,18 +136,26 @@ def main() -> int:
         _init(root)
 
         # initial state
-        _write_and_commit(root, {
-            "src/orders/checkout.ts": "// checkout v0\n",
-            "src/billing/discount.ts": "// discount v0\n",
-            "src/orders/cart.ts": "// cart\n",
-        }, "init")
+        _write_and_commit(
+            root,
+            {
+                "src/orders/checkout.ts": "// checkout v0\n",
+                "src/billing/discount.ts": "// discount v0\n",
+                "src/orders/cart.ts": "// cart\n",
+            },
+            "init",
+        )
 
         # 3 co-change commits for the distant pair
         for i in range(1, 4):
-            _write_and_commit(root, {
-                "src/orders/checkout.ts": f"// checkout v{i}\n",
-                "src/billing/discount.ts": f"// discount v{i}\n",
-            }, f"feat: sync checkout+discount v{i}")
+            _write_and_commit(
+                root,
+                {
+                    "src/orders/checkout.ts": f"// checkout v{i}\n",
+                    "src/billing/discount.ts": f"// discount v{i}\n",
+                },
+                f"feat: sync checkout+discount v{i}",
+            )
 
         proc = _run(root)
         if proc.returncode != 0:
@@ -176,29 +184,45 @@ def main() -> int:
         root.mkdir()
         _init(root)
 
-        _write_and_commit(root, {
-            "src/orders/checkout.ts": "// checkout\n",
-            "src/orders/cart.ts": "// cart\n",
-            "package-lock.json": '{"lockfileVersion": 1}\n',
-        }, "init")
+        _write_and_commit(
+            root,
+            {
+                "src/orders/checkout.ts": "// checkout\n",
+                "src/orders/cart.ts": "// cart\n",
+                "package-lock.json": '{"lockfileVersion": 1}\n',
+            },
+            "init",
+        )
 
         # same-module pair: checkout + cart (same dir) — should NOT be flagged
-        _write_and_commit(root, {
-            "src/orders/checkout.ts": "// checkout v2\n",
-            "src/orders/cart.ts": "// cart v2\n",
-        }, "refactor: local renames in orders")
+        _write_and_commit(
+            root,
+            {
+                "src/orders/checkout.ts": "// checkout v2\n",
+                "src/orders/cart.ts": "// cart v2\n",
+            },
+            "refactor: local renames in orders",
+        )
 
         # lockfile-only churn across 4 commits — should be ignored
         for i in range(1, 5):
-            _write_and_commit(root, {
-                "package-lock.json": f'{{"lockfileVersion": {i + 1}}}\n',
-            }, "chore: update lockfile")
+            _write_and_commit(
+                root,
+                {
+                    "package-lock.json": f'{{"lockfileVersion": {i + 1}}}\n',
+                },
+                "chore: update lockfile",
+            )
 
         # single co-change of a distant pair — below threshold → NOT flagged
-        _write_and_commit(root, {
-            "src/orders/checkout.ts": "// checkout v3\n",
-            "src/billing/invoice.ts": "// invoice v1\n",
-        }, "feat: add invoice once")
+        _write_and_commit(
+            root,
+            {
+                "src/orders/checkout.ts": "// checkout v3\n",
+                "src/billing/invoice.ts": "// invoice v1\n",
+            },
+            "feat: add invoice once",
+        )
 
         proc = _run(root)
         if proc.returncode != 0:
@@ -222,9 +246,7 @@ def main() -> int:
             # single co-change should not appear
             single_key = ("src/billing/invoice.ts", "src/orders/checkout.ts")
             if single_key in pairs:
-                failures.append(
-                    f"case2: single-co-change pair {single_key} should NOT be flagged"
-                )
+                failures.append(f"case2: single-co-change pair {single_key} should NOT be flagged")
 
     # ------------------------------------------------------------------ #
     # Case 3: Swift fixture → static_dependency == "unavailable"          #
@@ -234,16 +256,24 @@ def main() -> int:
         root.mkdir()
         _init(root)
 
-        _write_and_commit(root, {
-            "A/Foo.swift": "// Foo\n",
-            "B/Bar.swift": "// Bar\n",
-        }, "init")
+        _write_and_commit(
+            root,
+            {
+                "A/Foo.swift": "// Foo\n",
+                "B/Bar.swift": "// Bar\n",
+            },
+            "init",
+        )
 
         for i in range(1, 4):
-            _write_and_commit(root, {
-                "A/Foo.swift": f"// Foo v{i}\n",
-                "B/Bar.swift": f"// Bar v{i}\n",
-            }, f"feat: update Foo+Bar v{i}")
+            _write_and_commit(
+                root,
+                {
+                    "A/Foo.swift": f"// Foo v{i}\n",
+                    "B/Bar.swift": f"// Bar v{i}\n",
+                },
+                f"feat: update Foo+Bar v{i}",
+            )
 
         proc = _run(root)
         if proc.returncode != 0:
@@ -259,15 +289,12 @@ def main() -> int:
             pairs = _pairs_by_files(result)
             key = ("A/Foo.swift", "B/Bar.swift")
             if key not in pairs:
-                failures.append(
-                    f"case3: Swift pair {key} should appear; got: {list(pairs.keys())}"
-                )
+                failures.append(f"case3: Swift pair {key} should appear; got: {list(pairs.keys())}")
             else:
                 dep = pairs[key].get("static_dependency")
                 if dep != "unavailable":
                     failures.append(
-                        f"case3: static_dependency should be 'unavailable' for Swift, "
-                        f"got {dep!r}"
+                        f"case3: static_dependency should be 'unavailable' for Swift, got {dep!r}"
                     )
 
     # ------------------------------------------------------------------ #
@@ -281,8 +308,7 @@ def main() -> int:
         proc = _run(nodir)
         if proc.returncode != 0:
             failures.append(
-                f"case4a (no .git): expected exit 0, got {proc.returncode}\n"
-                f"{proc.stderr.rstrip()}"
+                f"case4a (no .git): expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
             )
         else:
             try:
@@ -292,8 +318,7 @@ def main() -> int:
                 result = {}
             if result.get("pairs"):
                 failures.append(
-                    f"case4a: no-.git dir should yield empty pairs, got: "
-                    f"{result.get('pairs')}"
+                    f"case4a: no-.git dir should yield empty pairs, got: {result.get('pairs')}"
                 )
 
     # ------------------------------------------------------------------ #
@@ -310,14 +335,15 @@ def main() -> int:
         shallow = Path(td) / "shallow"
         subprocess.run(
             ["git", *_GIT_ID, "clone", "--depth=1", str(origin), str(shallow)],
-            check=True, capture_output=True, env=_GIT_ENV,
+            check=True,
+            capture_output=True,
+            env=_GIT_ENV,
         )
 
         proc = _run(shallow)
         if proc.returncode != 0:
             failures.append(
-                f"case4b (shallow): expected exit 0, got {proc.returncode}\n"
-                f"{proc.stderr.rstrip()}"
+                f"case4b (shallow): expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
             )
         else:
             try:
@@ -327,8 +353,7 @@ def main() -> int:
                 result = {}
             if result.get("pairs"):
                 failures.append(
-                    f"case4b: shallow clone should yield empty pairs, got: "
-                    f"{result.get('pairs')}"
+                    f"case4b: shallow clone should yield empty pairs, got: {result.get('pairs')}"
                 )
 
     # ------------------------------------------------------------------ #
@@ -405,10 +430,14 @@ def main() -> int:
 
         _write_and_commit(root, {checkout: "// checkout v0\n"}, "init checkout")
         for i in range(1, 4):  # 3 co-change commits (discount only ever changes here)
-            _write_and_commit(root, {
-                checkout: f"// checkout co{i}\n",
-                discount: f"// discount v{i}\n",
-            }, f"sync checkout discount {i}")
+            _write_and_commit(
+                root,
+                {
+                    checkout: f"// checkout co{i}\n",
+                    discount: f"// discount v{i}\n",
+                },
+                f"sync checkout discount {i}",
+            )
         for i in range(1, 7):  # 6 checkout-only commits → checkout total = 1 + 3 + 6 = 10
             _write_and_commit(root, {checkout: f"// checkout solo{i}\n"}, f"edit checkout {i}")
 

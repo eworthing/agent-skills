@@ -11,6 +11,7 @@ binding and changes on every recommit — so the SHA can never detect recurrence
 Owned here; referenced by references/output-format-json.md and halt-verifier.md.
 Run directly to execute the stability self-test:  python3 scripts/candidate_fingerprint.py
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -31,9 +32,7 @@ def _architecture_payload(review: dict) -> dict:
                 "score": entry.get("score"),
                 "residual_disposition": entry.get("residual_disposition"),
                 "residual_blocking_10": entry.get("residual_blocking_10"),
-                "residual_rationale_or_backlog_ref": entry.get(
-                    "residual_rationale_or_backlog_ref"
-                ),
+                "residual_rationale_or_backlog_ref": entry.get("residual_rationale_or_backlog_ref"),
             }
     findings = [
         {
@@ -55,9 +54,7 @@ def _architecture_payload(review: dict) -> dict:
 
 def candidate_fingerprint(review: dict) -> str:
     """Return the canonical oscillation fingerprint for a candidate review dict."""
-    canonical = json.dumps(
-        _architecture_payload(review), sort_keys=True, separators=(",", ":")
-    )
+    canonical = json.dumps(_architecture_payload(review), sort_keys=True, separators=(",", ":"))
     return "fp-sha256-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
 
 
@@ -91,23 +88,23 @@ def _selftest() -> None:
             "narrative": "completely different prose",
         }
     )
-    assert candidate_fingerprint(base) == candidate_fingerprint(
-        other
-    ), "volatile metadata must not change the fingerprint"
+    assert candidate_fingerprint(base) == candidate_fingerprint(other), (
+        "volatile metadata must not change the fingerprint"
+    )
     # Meaningful scorecard change -> DIFFERENT fingerprint.
     changed = json.loads(json.dumps(base))
     changed["scorecard"]["data_flow"]["score"] = 9.0
-    assert candidate_fingerprint(base) != candidate_fingerprint(
-        changed
-    ), "a scorecard change must change the fingerprint"
+    assert candidate_fingerprint(base) != candidate_fingerprint(changed), (
+        "a scorecard change must change the fingerprint"
+    )
     # Meaningful findings change -> DIFFERENT fingerprint.
     changed2 = json.loads(json.dumps(base))
     changed2["findings"] = [
         {"title": "new", "evidence": ["a.py:1"], "severity": "Serious deduction"}
     ]
-    assert candidate_fingerprint(base) != candidate_fingerprint(
-        changed2
-    ), "a findings change must change the fingerprint"
+    assert candidate_fingerprint(base) != candidate_fingerprint(changed2), (
+        "a findings change must change the fingerprint"
+    )
     print("candidate_fingerprint self-test: OK (3 assertions passed)")
 
 

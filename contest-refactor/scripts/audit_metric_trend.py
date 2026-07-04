@@ -27,9 +27,9 @@ from pathlib import Path
 
 # metric key -> (human label, "bad direction"): does a HIGHER value mean worse?
 _METRICS = {
-    "coverage_pct": ("coverage", False),   # lower is worse
-    "lint_count": ("lint count", True),    # higher is worse
-    "complexity": ("complexity", True),    # higher is worse
+    "coverage_pct": ("coverage", False),  # lower is worse
+    "lint_count": ("lint count", True),  # higher is worse
+    "complexity": ("complexity", True),  # higher is worse
 }
 
 
@@ -76,7 +76,9 @@ def main(argv: list[str] | None = None) -> int:
         description="Advisory cross-loop metric-regression alarm (never scores or gates)."
     )
     parser.add_argument("history", help="path to REVIEW_HISTORY.json")
-    parser.add_argument("--current", help="path to CURRENT_REVIEW.json (appended as the latest loop)")
+    parser.add_argument(
+        "--current", help="path to CURRENT_REVIEW.json (appended as the latest loop)"
+    )
     args = parser.parse_args(argv)
 
     history_path = Path(args.history)

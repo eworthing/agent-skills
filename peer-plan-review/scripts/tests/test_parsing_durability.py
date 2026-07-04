@@ -1,9 +1,20 @@
 """parsing durability tests — relocated verbatim from test_run_review.py (mechanical split)."""
-import argparse, json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from unittest import mock  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
-from ._helpers import _CREATE_NEW_PROCESS_GROUP  # noqa: F401
+
+import argparse
+import json
+import os
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from ._helpers import *
+from ._helpers import _CREATE_NEW_PROCESS_GROUP
 
 
 class TestCorruption(unittest.TestCase):
@@ -15,6 +26,7 @@ class TestCorruption(unittest.TestCase):
             tmp_path = f.name
         try:
             from _common.session import extract_text_from_output
+
             extract_text_from_output(tmp_path, "claude")  # should not raise
             self.assertEqual(Path(tmp_path).read_text(), "")
         finally:
@@ -26,6 +38,7 @@ class TestCorruption(unittest.TestCase):
             tmp_path = f.name
         try:
             from _common.session import load_session
+
             result = load_session(tmp_path)
             self.assertEqual(result, {})
         finally:
@@ -40,7 +53,8 @@ class TestCorruption(unittest.TestCase):
         session.write_text("{}", encoding="utf-8")
 
         args = make_args(
-            reviewer="claude", prompt_file=str(prompt),
+            reviewer="claude",
+            prompt_file=str(prompt),
             output_file=str(Path(tmpdir) / "out.json"),
             session_file=str(session),
             events_file=str(Path(tmpdir) / "events.jsonl"),
@@ -73,7 +87,8 @@ class TestCorruption(unittest.TestCase):
         output.write_text('{"result":"Review text here"}', encoding="utf-8")
 
         args = make_args(
-            reviewer="claude", prompt_file=str(prompt),
+            reviewer="claude",
+            prompt_file=str(prompt),
             output_file=str(output),
             session_file=str(Path(tmpdir) / "session.json"),
             events_file=str(Path(tmpdir) / "events.jsonl"),
@@ -111,7 +126,8 @@ class TestCorruption(unittest.TestCase):
         output = Path(tmpdir) / "review.json"
 
         args = make_args(
-            reviewer="claude", prompt_file=str(prompt),
+            reviewer="claude",
+            prompt_file=str(prompt),
             output_file=str(output),
             session_file=str(Path(tmpdir) / "session.json"),
             events_file=str(Path(tmpdir) / "events.jsonl"),
@@ -191,6 +207,7 @@ class TestMockPathCompatibility(unittest.TestCase):
         sentinel_cmd = ["echo", "test"]
         mock_build = mock.Mock(return_value=sentinel_cmd)
         from _common.providers import PROVIDERS as _PROVIDERS
+
         with (
             mock.patch.dict(_PROVIDERS["claude"], {"build_cmd": mock_build}),
             mock.patch("run_review.subprocess.Popen", return_value=self._proc()),
@@ -371,6 +388,7 @@ class TestProviderRegistry(unittest.TestCase):
 
     def test_get_provider_returns_entry(self):
         from _common.providers import get_provider
+
         codex = get_provider("codex")
         self.assertEqual(codex["binary"], "codex")
         self.assertTrue(codex["resume_supported"])
@@ -379,9 +397,15 @@ class TestProviderRegistry(unittest.TestCase):
 
     def test_all_providers_have_required_keys(self):
         from _common.providers import PROVIDERS
+
         required = {
-            "binary", "effort_map", "effort_default", "model_aliases",
-            "resume_supported", "build_cmd", "caps",
+            "binary",
+            "effort_map",
+            "effort_default",
+            "model_aliases",
+            "resume_supported",
+            "build_cmd",
+            "caps",
         }
         for name, p in PROVIDERS.items():
             self.assertTrue(required.issubset(p.keys()), f"{name} missing keys")
@@ -393,6 +417,7 @@ class TestSessionDurability(unittest.TestCase):
 
     def test_save_session_atomic_rename(self):
         from _common.session import save_session
+
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir) / "session.json"
             target.write_text(json.dumps({"round": 1, "session_id": "abc"}))
@@ -402,6 +427,7 @@ class TestSessionDurability(unittest.TestCase):
 
     def test_save_session_failure_preserves_target(self):
         from _common.session import save_session
+
         with tempfile.TemporaryDirectory() as tmpdir:
             target = Path(tmpdir) / "session.json"
             target.write_text(json.dumps({"round": 1}))
@@ -416,6 +442,7 @@ class TestSummaryFile(unittest.TestCase):
 
     def test_summary_with_findings(self):
         from _common.session import write_summary
+
         with tempfile.TemporaryDirectory() as tmpdir:
             review = Path(tmpdir) / "review.md"
             review.write_text(
@@ -440,6 +467,7 @@ class TestSummaryFile(unittest.TestCase):
 
     def test_summary_missing_output_file(self):
         from _common.session import write_summary
+
         with tempfile.TemporaryDirectory() as tmpdir:
             summary = Path(tmpdir) / "summary.json"
             write_summary(str(summary), str(Path(tmpdir) / "nope.md"), {"reviewer": "claude"})
@@ -449,4 +477,5 @@ class TestSummaryFile(unittest.TestCase):
 
     def test_summary_none_path_is_noop(self):
         from _common.session import write_summary
+
         write_summary(None, None, {})  # must not raise

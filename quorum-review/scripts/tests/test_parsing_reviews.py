@@ -1,7 +1,15 @@
 """parsing reviews tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestStructuredReviewParsing(unittest.TestCase):
@@ -50,9 +58,7 @@ class TestStructuredReviewParsing(unittest.TestCase):
 
     def test_parse_confidence_levels(self):
         for level in ["HIGH", "MEDIUM", "LOW"]:
-            path = self._write_review(
-                f"### Confidence\n{level}\n\nVERDICT: APPROVED\n"
-            )
+            path = self._write_review(f"### Confidence\n{level}\n\nVERDICT: APPROVED\n")
             result = parse_structured_review(path)
             self.assertEqual(result["confidence"], level)
             os.unlink(path)
@@ -157,19 +163,14 @@ class TestCrossCritiqueParsing(unittest.TestCase):
         return f.name
 
     def test_parse_cross_critique_agree(self):
-        path = self._write_review(
-            "[AGREE BLK-001]\n"
-            "[AGREE BLK-002]\n\n"
-            "VERDICT: REVISE\n"
-        )
+        path = self._write_review("[AGREE BLK-001]\n[AGREE BLK-002]\n\nVERDICT: REVISE\n")
         result = parse_cross_critique(path)
         self.assertEqual(result["agrees"], ["BLK-001", "BLK-002"])
         os.unlink(path)
 
     def test_parse_cross_critique_disagree(self):
         path = self._write_review(
-            "[DISAGREE BLK-003] This is actually handled by the middleware\n\n"
-            "VERDICT: APPROVED\n"
+            "[DISAGREE BLK-003] This is actually handled by the middleware\n\nVERDICT: APPROVED\n"
         )
         result = parse_cross_critique(path)
         self.assertEqual(len(result["disagrees"]), 1)
@@ -179,8 +180,7 @@ class TestCrossCritiqueParsing(unittest.TestCase):
 
     def test_parse_cross_critique_refine(self):
         path = self._write_review(
-            "[REFINE NB-001] Should also consider cursor-based pagination\n\n"
-            "VERDICT: REVISE\n"
+            "[REFINE NB-001] Should also consider cursor-based pagination\n\nVERDICT: REVISE\n"
         )
         result = parse_cross_critique(path)
         self.assertEqual(len(result["refines"]), 1)
@@ -260,7 +260,7 @@ class TestTallyVerdicts(unittest.TestCase):
 
     def _make_verdicts(self, verdict_list):
         return [
-            (f"Reviewer {chr(65 + i)}", v, f"model-{i+1}", "medium")
+            (f"Reviewer {chr(65 + i)}", v, f"model-{i + 1}", "medium")
             for i, v in enumerate(verdict_list)
         ]
 
@@ -291,9 +291,7 @@ class TestTallyVerdicts(unittest.TestCase):
         self.assertFalse(tally["threshold_met"])
 
     def test_four_reviewers_supermajority(self):
-        verdicts = self._make_verdicts(
-            ["APPROVED", "APPROVED", "APPROVED", "REVISE"]
-        )
+        verdicts = self._make_verdicts(["APPROVED", "APPROVED", "APPROVED", "REVISE"])
         tally = tally_verdicts(verdicts, "super")
         self.assertTrue(tally["threshold_met"])
 

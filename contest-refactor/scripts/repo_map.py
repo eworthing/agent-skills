@@ -68,9 +68,7 @@ def _public_names(path: Path) -> list[str]:
     (annotated or unannotated). Private / dunder names are excluded.
     """
     try:
-        tree = ast.parse(
-            path.read_text(encoding="utf-8", errors="replace"), filename=str(path)
-        )
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
     except (SyntaxError, ValueError, OSError):
         return []
     names: list[str] = []
@@ -82,9 +80,12 @@ def _public_names(path: Path) -> list[str]:
             for target in node.targets:
                 if isinstance(target, ast.Name) and not target.id.startswith("_"):
                     names.append(target.id)
-        elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and not node.target.id.startswith("_"):
-                names.append(node.target.id)
+        elif (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and not node.target.id.startswith("_")
+        ):
+            names.append(node.target.id)
     return sorted(set(names))
 
 
@@ -112,9 +113,7 @@ def _build_graph(
     for f in files:
         pkg = _ab._package_of(f, source_root)
         try:
-            tree = ast.parse(
-                f.read_text(encoding="utf-8", errors="replace"), filename=str(f)
-            )
+            tree = ast.parse(f.read_text(encoding="utf-8", errors="replace"), filename=str(f))
         except (SyntaxError, ValueError, OSError):
             continue  # unparseable file → skip; never crash the audit
 
@@ -204,7 +203,7 @@ def _analyse(repo: Path) -> dict:
     cycles = _find_cycles(graph)
 
     # Fan-in: count how many packages import each package
-    fan_in: dict[str, int] = {pkg: 0 for pkg in graph}
+    fan_in: dict[str, int] = dict.fromkeys(graph, 0)
     imported_by: dict[str, list[str]] = {pkg: [] for pkg in graph}
     for pkg, imports in graph.items():
         for dep in imports:
@@ -213,19 +212,19 @@ def _analyse(repo: Path) -> dict:
 
     modules: list[dict] = []
     for pkg in sorted(graph):
-        rel_files = sorted(
-            str(f.relative_to(source_root)) for f in pkg_files.get(pkg, [])
+        rel_files = sorted(str(f.relative_to(source_root)) for f in pkg_files.get(pkg, []))
+        modules.append(
+            {
+                "module": pkg,
+                "files": rel_files,
+                "public_surface": pub.get(pkg, []),
+                "fan_in": fan_in.get(pkg, 0),
+                "fan_out": len(graph[pkg]),
+                "imports": sorted(graph[pkg]),
+                "imported_by": sorted(imported_by.get(pkg, [])),
+                "promotion_allowed": False,
+            }
         )
-        modules.append({
-            "module": pkg,
-            "files": rel_files,
-            "public_surface": pub.get(pkg, []),
-            "fan_in": fan_in.get(pkg, 0),
-            "fan_out": len(graph[pkg]),
-            "imports": sorted(graph[pkg]),
-            "imported_by": sorted(imported_by.get(pkg, [])),
-            "promotion_allowed": False,
-        })
 
     edges: list[dict] = [
         {"from": pkg, "to": dep, "promotion_allowed": False}
@@ -306,8 +305,7 @@ def _format_md(result: dict) -> str:
         if len(surface) > 5:
             sample += f" … (+{len(surface) - 5})"
         lines.append(
-            f"| {m['module']} | {m['fan_in']} | {m['fan_out']} "
-            f"| {sample} | {len(m['files'])} |"
+            f"| {m['module']} | {m['fan_in']} | {m['fan_out']} | {sample} | {len(m['files'])} |"
         )
 
     lines += [

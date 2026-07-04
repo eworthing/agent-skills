@@ -44,7 +44,9 @@ def _collect_principal_dirs() -> list[str]:
     """Return sorted list of principal-* scenario directory names."""
     if not SCENARIOS_DIR.exists():
         return []
-    return sorted(p.name for p in SCENARIOS_DIR.iterdir() if p.is_dir() and p.name.startswith("principal-"))
+    return sorted(
+        p.name for p in SCENARIOS_DIR.iterdir() if p.is_dir() and p.name.startswith("principal-")
+    )
 
 
 def _check_replication(entries: list, failures: list[str]) -> None:
@@ -68,7 +70,9 @@ def _check_replication(entries: list, failures: list[str]) -> None:
         for a in art.get("attempts", []):
             artifacts_attempts.setdefault(a.get("scenario_id", "?"), []).append(a)
     else:
-        failures.append(f"replication recorded in manifest but artifacts file missing: {REPLICATION_PATH.name}")
+        failures.append(
+            f"replication recorded in manifest but artifacts file missing: {REPLICATION_PATH.name}"
+        )
 
     for e in repl_entries:
         sid = e.get("id", "<missing id>")
@@ -86,7 +90,9 @@ def _check_replication(entries: list, failures: list[str]) -> None:
         if rep.get("runs") != 5:
             failures.append(f"replication '{sid}': runs={rep.get('runs')!r} must be 5")
         if rep.get("decision") not in VALID_DECISIONS:
-            failures.append(f"replication '{sid}': decision={rep.get('decision')!r} not in {sorted(VALID_DECISIONS)}")
+            failures.append(
+                f"replication '{sid}': decision={rep.get('decision')!r} not in {sorted(VALID_DECISIONS)}"
+            )
         mech, sem = rep.get("mechanical", {}), rep.get("semantic", {})
         inv = rep.get("invalid_slots", 0)
         m, s = mech.get(field), sem.get(field)
@@ -94,12 +100,18 @@ def _check_replication(entries: list, failures: list[str]) -> None:
             failures.append(f"replication '{sid}': mechanical/semantic missing int '{field}'")
             continue
         if m + inv > 5:
-            failures.append(f"replication '{sid}': mechanical.{field}({m}) + invalid_slots({inv}) > 5")
+            failures.append(
+                f"replication '{sid}': mechanical.{field}({m}) + invalid_slots({inv}) > 5"
+            )
         # kind-specific floor ordering
         if kind == "flag" and s > m:
-            failures.append(f"replication '{sid}': flag semantic.caught({s}) must be <= mechanical.caught({m}) (named-the-defect is a subset)")
+            failures.append(
+                f"replication '{sid}': flag semantic.caught({s}) must be <= mechanical.caught({m}) (named-the-defect is a subset)"
+            )
         if kind == "restraint" and m > s:
-            failures.append(f"replication '{sid}': twin mechanical.held({m}) must be <= semantic.held({s}) (mechanical is the strict floor)")
+            failures.append(
+                f"replication '{sid}': twin mechanical.held({m}) must be <= semantic.held({s}) (mechanical is the strict floor)"
+            )
         if rep.get("headline_excluded") and not rep.get("contaminated"):
             failures.append(f"replication '{sid}': headline_excluded implies contaminated")
 
@@ -111,25 +123,37 @@ def _check_replication(entries: list, failures: list[str]) -> None:
         terminal: dict = {}
         for a in atts:
             si = a.get("slot_index")
-            if si not in terminal or a.get("attempt_index", 1) > terminal[si].get("attempt_index", 1):
+            if si not in terminal or a.get("attempt_index", 1) > terminal[si].get(
+                "attempt_index", 1
+            ):
                 terminal[si] = a
         if len(terminal) != 5:
-            failures.append(f"replication '{sid}': artifacts have {len(terminal)} terminal slots, expected 5")
+            failures.append(
+                f"replication '{sid}': artifacts have {len(terminal)} terminal slots, expected 5"
+            )
         # no attempt 2 after a valid attempt 1
         first = {a.get("slot_index"): a for a in atts if a.get("attempt_index") == 1}
         for a in atts:
             si = a.get("slot_index")
             if a.get("attempt_index", 1) >= 2 and first.get(si, {}).get("status") == "valid":
-                failures.append(f"replication '{sid}': slot {si} has a retry attempt after a valid attempt 1")
+                failures.append(
+                    f"replication '{sid}': slot {si} has a retry attempt after a valid attempt 1"
+                )
         n_inv = sum(1 for a in terminal.values() if a.get("status") != "valid")
         if n_inv != inv:
-            failures.append(f"replication '{sid}': invalid_slots={inv} but artifacts show {n_inv} terminal-invalid slots")
+            failures.append(
+                f"replication '{sid}': invalid_slots={inv} but artifacts show {n_inv} terminal-invalid slots"
+            )
         for a in terminal.values():
             if a.get("status") == "valid":
                 if a.get("verdict_json") is None or a.get("host_grade") is None:
-                    failures.append(f"replication '{sid}': valid slot {a.get('slot_index')} missing verdict_json/host_grade")
+                    failures.append(
+                        f"replication '{sid}': valid slot {a.get('slot_index')} missing verdict_json/host_grade"
+                    )
             elif not a.get("invalid_reason"):
-                failures.append(f"replication '{sid}': invalid slot {a.get('slot_index')} missing invalid_reason")
+                failures.append(
+                    f"replication '{sid}': invalid slot {a.get('slot_index')} missing invalid_reason"
+                )
 
 
 def main() -> int:

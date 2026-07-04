@@ -17,6 +17,7 @@ Usage:
     check_module_size.py <module_dir> [--soft 600] [--hard 800]
     check_module_size.py quorum-review/scripts/quorum/
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,10 +46,16 @@ def has_waiver(path: Path) -> tuple[bool, str | None]:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("module_dir", help="Directory containing .py modules to check")
-    parser.add_argument("--soft", type=int, default=600, help="Soft cap (warning) in LoC. Default: 600.")
-    parser.add_argument("--hard", type=int, default=800, help="Hard cap (fail) in LoC. Default: 800.")
+    parser.add_argument(
+        "--soft", type=int, default=600, help="Soft cap (warning) in LoC. Default: 600."
+    )
+    parser.add_argument(
+        "--hard", type=int, default=800, help="Hard cap (fail) in LoC. Default: 800."
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.module_dir).resolve()

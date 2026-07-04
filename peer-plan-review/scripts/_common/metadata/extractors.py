@@ -12,12 +12,14 @@ import json
 import os
 import re
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 _REVERSE_EFFORT_OPENCODE = {
-    "low": "low", "medium": "medium",
-    "high": "high", "max": "xhigh",
+    "low": "low",
+    "medium": "medium",
+    "high": "high",
+    "max": "xhigh",
 }
 
 
@@ -134,8 +136,9 @@ def extract_session_id_agy(log_file):
     return sid
 
 
-def extract_metadata(output_file, events_file, reviewer, codex_session_file=None,
-                     output_content=None, logger=None):
+def extract_metadata(
+    output_file, events_file, reviewer, codex_session_file=None, output_content=None, logger=None
+):
     """Extract model/effort metadata from structured output.
 
     For providers that read the output file (claude, gemini, copilot),
@@ -292,8 +295,7 @@ def _extract_opencode_metadata_via_export(session_id):
                     if variant:
                         meta["effort"] = _REVERSE_EFFORT_OPENCODE.get(variant, variant)
                     break
-    except (json.JSONDecodeError, OSError, subprocess.TimeoutExpired,
-            subprocess.SubprocessError):
+    except (json.JSONDecodeError, OSError, subprocess.TimeoutExpired, subprocess.SubprocessError):
         pass
     return meta
 
@@ -317,7 +319,7 @@ def compute_plan_metadata(plan_file):
             "plan_name": p.name,
             "plan_bytes": stat.st_size,
             "plan_sha256": sha,
-            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
+            "plan_mtime": datetime.fromtimestamp(stat.st_mtime, tz=UTC).isoformat(),
         }
     except OSError:
         return {}

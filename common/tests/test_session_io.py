@@ -3,7 +3,6 @@
 import json
 
 import pytest
-
 from common.session import (
     _extract_section,
     _parse_verdict,
@@ -167,8 +166,10 @@ class TestExtractTextFromOutput:
     def test_copilot_jsonl(self, tmp_path):
         p = tmp_path / "out.jsonl"
         p.write_text(
-            json.dumps({"type": "assistant.message", "data": {"content": "first"}}) + "\n"
-            + json.dumps({"type": "assistant.message", "data": {"content": "second"}}) + "\n",
+            json.dumps({"type": "assistant.message", "data": {"content": "first"}})
+            + "\n"
+            + json.dumps({"type": "assistant.message", "data": {"content": "second"}})
+            + "\n",
             encoding="utf-8",
         )
         extract_text_from_output(str(p), "copilot")
@@ -198,12 +199,19 @@ class TestExtractTextFromOutput:
         p.write_text(
             self._oc(
                 {"type": "step_start", "part": {"type": "step-start"}},
-                {"type": "text", "part": {"type": "text",
-                                          "text": "Let me check the deploy script first."}},
+                {
+                    "type": "text",
+                    "part": {"type": "text", "text": "Let me check the deploy script first."},
+                },
                 {"type": "step_finish", "part": {"type": "step-finish", "reason": "tool-calls"}},
                 {"type": "step_start", "part": {"type": "step-start"}},
-                {"type": "text", "part": {"type": "text",
-                                          "text": "### Blocking Issues\n- [B1] gap\n\nVERDICT: REVISE"}},
+                {
+                    "type": "text",
+                    "part": {
+                        "type": "text",
+                        "text": "### Blocking Issues\n- [B1] gap\n\nVERDICT: REVISE",
+                    },
+                },
                 {"type": "step_finish", "part": {"type": "step-finish", "reason": "stop"}},
             ),
             encoding="utf-8",
@@ -326,9 +334,16 @@ class TestWriteSummary:
             encoding="utf-8",
         )
         sf = tmp_path / "summary.json"
-        write_summary(str(sf), str(review), {
-            "reviewer": "claude", "model": "x", "effort": "high", "round": 2,
-        })
+        write_summary(
+            str(sf),
+            str(review),
+            {
+                "reviewer": "claude",
+                "model": "x",
+                "effort": "high",
+                "round": 2,
+            },
+        )
         data = json.loads(sf.read_text(encoding="utf-8"))
         assert data["verdict"] == "REVISE"
         assert data["finding_count"] == 2

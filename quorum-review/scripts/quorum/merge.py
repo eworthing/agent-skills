@@ -13,29 +13,27 @@ import copy
 import json
 import re
 from collections import defaultdict
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
-from datetime import datetime, timezone
 from itertools import combinations
 from pathlib import Path
 
-from quorum.parsing import (
-    _STOPWORDS,
-    _NEGATION_WORDS,
-    _normalize_text,
-    _summary_tokens,
-)
 from quorum.ledger import (
     _as_list,
-    _issue_adjudication,
     _issue_is_invalidated,
     _issue_severity,
     _issue_status,
     _issue_summary,
+    _refresh_round_snapshot,
     _sync_issue_aliases,
     _unique_preserve_order,
-    _refresh_round_snapshot,
 )
-
+from quorum.parsing import (
+    _NEGATION_WORDS,
+    _STOPWORDS,
+    _normalize_text,
+    _summary_tokens,
+)
 
 MERGE_CLASSIFICATIONS = {"EQUIVALENT", "RELATED_DISTINCT", "CONFLICT", "UNCERTAIN"}
 
@@ -121,7 +119,11 @@ def _migrate_merge(merge):
 
 def _issue_sort_key(issue):
     match = re.search(r"-(\d+)$", issue.get("id", ""))
-    return (0 if _issue_severity(issue) == "blocking" else 1, int(match.group(1)) if match else 10**9, issue.get("id", ""))
+    return (
+        0 if _issue_severity(issue) == "blocking" else 1,
+        int(match.group(1)) if match else 10**9,
+        issue.get("id", ""),
+    )
 
 
 def _issue_is_mergeable(issue):
@@ -167,20 +169,19 @@ def _anchors_related(left, right):
     right_anchor = right.get("anchor") or {}
     if not left_anchor or not right_anchor:
         return False
-    if (
-        left_anchor.get("anchor_hash")
-        and left_anchor.get("anchor_hash") == right_anchor.get("anchor_hash")
+    if left_anchor.get("anchor_hash") and left_anchor.get("anchor_hash") == right_anchor.get(
+        "anchor_hash"
     ):
         return True
-    if (
-        left_anchor.get("artifact_path")
-        and left_anchor.get("artifact_path") == right_anchor.get("artifact_path")
+    if left_anchor.get("artifact_path") and left_anchor.get("artifact_path") == right_anchor.get(
+        "artifact_path"
     ):
         if _line_range_overlap(left_anchor, right_anchor):
             return True
-        if (
-            left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "section"
-            and _sections_related(left_anchor.get("section"), right_anchor.get("section"))
+        if left_anchor.get("anchor_kind") == right_anchor.get(
+            "anchor_kind"
+        ) == "section" and _sections_related(
+            left_anchor.get("section"), right_anchor.get("section")
         ):
             return True
         if (
@@ -191,16 +192,14 @@ def _anchors_related(left, right):
             return True
     left_section = left_anchor.get("section")
     right_section = right_anchor.get("section")
-    if (
+    return (
         left_anchor.get("anchor_kind") == right_anchor.get("anchor_kind") == "section"
         and not left_anchor.get("artifact_path")
         and not right_anchor.get("artifact_path")
         and left_section
         and right_section
         and _sections_related(left_section, right_section)
-    ):
-        return True
-    return False
+    )
 
 
 def _anchor_has_location(anchor):
@@ -227,10 +226,7 @@ def _has_conflict_signal(left_summary, right_summary):
 
 def generate_merge_candidates(ledger):
     candidates = []
-    issues = [
-        issue for issue in ledger.get("issues", [])
-        if _issue_is_mergeable(issue)
-    ]
+    issues = [issue for issue in ledger.get("issues", []) if _issue_is_mergeable(issue)]
     issues.sort(key=_issue_sort_key)
 
     for left, right in combinations(issues, 2):
@@ -325,7 +321,7 @@ def _merge_issue_records(survivor, absorbed):
             _as_list(survivor_adj.get(field)) + _as_list(absorbed_adj.get(field))
         )
     survivor_adj["merged_from"] = _unique_preserve_order(
-        _as_list(survivor_adj.get("merged_from")) + [absorbed["id"]]
+        [*_as_list(survivor_adj.get("merged_from")), absorbed["id"]]
     )
 
     survivor_rel = survivor.setdefault("relations", {})
@@ -357,11 +353,15 @@ def _merge_issue_records(survivor, absorbed):
 def apply_merge_pipeline(ledger, quorum_id, tmpdir, round_num):
     candidates = generate_merge_candidates(ledger)
     if not candidates:
-        return {"candidates": [], "merged": [], "log_path": str(Path(tmpdir) / f"qr-{quorum_id}-merge-log.jsonl")}
+        return {
+            "candidates": [],
+            "merged": [],
+            "log_path": str(Path(tmpdir) / f"qr-{quorum_id}-merge-log.jsonl"),
+        }
 
     issue_map = {issue["id"]: issue for issue in ledger.get("issues", [])}
     parent = {issue_id: issue_id for issue_id in issue_map}
-    rank = {issue_id: 0 for issue_id in issue_map}
+    rank = dict.fromkeys(issue_map, 0)
     log_path = Path(tmpdir) / f"qr-{quorum_id}-merge-log.jsonl"
     merged_pairs = []
 
@@ -389,7 +389,7 @@ def apply_merge_pipeline(ledger, quorum_id, tmpdir, round_num):
         right = issue_map[candidate["right"]]
         classification, reason = classify_merge_candidate(left, right)
         decision = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "round": round_num,
             "left": left["id"],
             "right": right["id"],
@@ -438,7 +438,7 @@ def apply_merge_pipeline(ledger, quorum_id, tmpdir, round_num):
     for issue_id in issue_map:
         groups[find(issue_id)].append(issue_id)
 
-    for root, issue_ids in groups.items():
+    for _root, issue_ids in groups.items():
         if len(issue_ids) <= 1:
             continue
         ordered = sorted(issue_ids, key=lambda issue_id: _issue_sort_key(issue_map[issue_id]))
@@ -461,7 +461,7 @@ def apply_merge_pipeline(ledger, quorum_id, tmpdir, round_num):
             _log_merge_decision(
                 log_path,
                 {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "round": round_num,
                     "left": survivor_id,
                     "right": absorbed_id,

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Discovery runner — runs the split unittest suite under tests/. Entrypoint preserved
 (`python3 scripts/test_run_review.py`). The test classes live in scripts/tests/test_*.py."""
+
 import sys
 import unittest
 from pathlib import Path

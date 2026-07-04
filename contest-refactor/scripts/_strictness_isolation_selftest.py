@@ -71,8 +71,7 @@ def main() -> int:
         v_agg = _verdict(va, agg)
         if v_std != v_agg:
             failures.append(
-                f"{label}: preset changed the verdict\n"
-                f"  standard:   {v_std}\n  aggressive: {v_agg}"
+                f"{label}: preset changed the verdict\n  standard:   {v_std}\n  aggressive: {v_agg}"
             )
 
     # Sanity: the boundary really does separate pass from fail (so the test above

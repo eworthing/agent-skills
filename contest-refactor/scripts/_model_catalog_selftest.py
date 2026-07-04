@@ -49,7 +49,9 @@ def main() -> int:
         if s not in text:
             failures.append(f"tuned default unexpectedly removed: {s!r}")
     if "claude-fable-5" not in premium_models:
-        failures.append("canonical premium model missing from canon/premium-models.toml: 'claude-fable-5'")
+        failures.append(
+            "canonical premium model missing from canon/premium-models.toml: 'claude-fable-5'"
+        )
     for s in premium_models:
         if s not in text:
             failures.append(f"canonical premium model missing from provider docs: {s!r}")

@@ -3,6 +3,7 @@
 (`python3 scripts/test_run_quorum.py`). The relocated TestCase classes live in
 scripts/tests/test_*.py; the pre-existing pytest-only files (test_parsing_variants.py,
 test_mid_quorum_resume.py) contribute no TestCase and are imported-but-empty here."""
+
 import sys
 import unittest
 from pathlib import Path

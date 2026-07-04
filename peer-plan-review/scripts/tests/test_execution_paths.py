@@ -1,9 +1,22 @@
 """execution paths tests — relocated verbatim from test_run_review.py (mechanical split)."""
-import argparse, glob, io, json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from unittest import mock  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
-from ._helpers import _CREATE_NEW_PROCESS_GROUP  # noqa: F401
+
+import argparse
+import glob
+import io
+import json
+import os
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from ._helpers import *
+from ._helpers import _CREATE_NEW_PROCESS_GROUP
 
 
 class TestSelfCheckUnit(unittest.TestCase):
@@ -78,7 +91,9 @@ class TestPlatformHelpers(unittest.TestCase):
         self.assertEqual(result, {"start_new_session": True})
 
     @mock.patch(
-        "_common.process.tree.subprocess.CREATE_NEW_PROCESS_GROUP", _CREATE_NEW_PROCESS_GROUP, create=True
+        "_common.process.tree.subprocess.CREATE_NEW_PROCESS_GROUP",
+        _CREATE_NEW_PROCESS_GROUP,
+        create=True,
     )
     @mock.patch("_common.process.tree.sys")
     def test_popen_session_kwargs_windows(self, mock_sys):
@@ -307,7 +322,9 @@ class TestRunReviewExecution(unittest.TestCase):
                 "run_review.load_session",
                 return_value={"session_id": "resume-session", "round": 1, "model": "prior-model"},
             ),
-            mock.patch("run_review.subprocess.Popen", side_effect=[first_proc, second_proc]) as mock_popen,
+            mock.patch(
+                "run_review.subprocess.Popen", side_effect=[first_proc, second_proc]
+            ) as mock_popen,
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
             mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
@@ -329,9 +346,12 @@ class TestRunReviewExecution(unittest.TestCase):
         so that round 2 resume can find the session."""
         # Round 1: fresh exec
         args_round1 = make_args(
-            reviewer="claude", prompt_file=str(self.prompt_file),
-            output_file=str(self.output_file), session_file=str(self.session_file),
-            events_file=str(self.events_file), resume=False,
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
         )
         proc1 = self._proc(0, stdout='{"result":"ok","session_id":"round1-sess"}')
         with (
@@ -350,13 +370,18 @@ class TestRunReviewExecution(unittest.TestCase):
 
         # Round 2: resume=True with session_id from round 1
         args_round2 = make_args(
-            reviewer="claude", prompt_file=str(self.prompt_file),
-            output_file=str(self.output_file), session_file=str(self.session_file),
-            events_file=str(self.events_file), resume=True,
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
         )
         proc2 = self._proc(0, stdout='{"result":"ok","session_id":"round2-sess"}')
         with (
-            mock.patch("run_review.load_session", return_value={"session_id": "round1-sess", "round": 1}),
+            mock.patch(
+                "run_review.load_session", return_value={"session_id": "round1-sess", "round": 1}
+            ),
             mock.patch("run_review.subprocess.Popen", return_value=proc2) as mock_popen2,
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
@@ -385,7 +410,9 @@ class TestRunReviewExecution(unittest.TestCase):
         proc = self._proc(0, stdout="", stderr="")
 
         with (
-            mock.patch("run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)),
+            mock.patch(
+                "run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)
+            ),
             mock.patch("run_review._codex_session_files", return_value=set()),
             mock.patch("run_review.subprocess.Popen", return_value=proc),
             mock.patch("run_review.extract_metadata", return_value={}),
@@ -416,7 +443,9 @@ class TestRunReviewExecution(unittest.TestCase):
         proc.communicate.side_effect = communicate
 
         with (
-            mock.patch("run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)),
+            mock.patch(
+                "run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)
+            ),
             mock.patch("run_review._codex_session_files", return_value=set()),
             mock.patch("run_review.subprocess.Popen", return_value=proc),
             mock.patch("run_review.extract_metadata", return_value={}),
@@ -449,7 +478,9 @@ class TestRunReviewExecution(unittest.TestCase):
                 "run_review.load_session",
                 return_value={"session_id": "resume-session", "round": 1},
             ),
-            mock.patch("run_review.subprocess.Popen", side_effect=[first_proc, second_proc]) as mock_popen,
+            mock.patch(
+                "run_review.subprocess.Popen", side_effect=[first_proc, second_proc]
+            ) as mock_popen,
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
             mock.patch("run_review.extract_session_id_json", return_value="fresh-session"),
@@ -487,7 +518,9 @@ class TestRunReviewExecution(unittest.TestCase):
                 "run_review.load_session",
                 return_value={"session_id": "resume-session", "round": 1},
             ),
-            mock.patch("run_review.subprocess.Popen", side_effect=[timeout_proc, fresh_proc]) as mock_popen,
+            mock.patch(
+                "run_review.subprocess.Popen", side_effect=[timeout_proc, fresh_proc]
+            ) as mock_popen,
             mock.patch("run_review._kill_tree"),
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
@@ -548,12 +581,14 @@ class TestRunReviewExecution(unittest.TestCase):
         cwd_str = str(Path.cwd())
         vanished = codex_session_dir / "vanished.jsonl"
         vanished.write_text(
-            json.dumps({"type": "session_meta", "payload": {"id": "vanished-id", "cwd": cwd_str}}) + "\n",
+            json.dumps({"type": "session_meta", "payload": {"id": "vanished-id", "cwd": cwd_str}})
+            + "\n",
             encoding="utf-8",
         )
         survivor = codex_session_dir / "survivor.jsonl"
         survivor.write_text(
-            json.dumps({"type": "session_meta", "payload": {"id": "survivor-id", "cwd": cwd_str}}) + "\n",
+            json.dumps({"type": "session_meta", "payload": {"id": "survivor-id", "cwd": cwd_str}})
+            + "\n",
             encoding="utf-8",
         )
 
@@ -625,7 +660,9 @@ class TestRunReviewExecution(unittest.TestCase):
         proc.communicate.side_effect = communicate
 
         with (
-            mock.patch("run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-minted", True)),
+            mock.patch(
+                "run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-minted", True)
+            ),
             mock.patch("run_review._codex_session_files", return_value=set()),
             mock.patch("run_review.subprocess.Popen", return_value=proc),
             mock.patch("run_review.extract_metadata", return_value={}),

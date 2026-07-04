@@ -12,7 +12,7 @@ anchor-formatter).
 import copy
 import re
 
-from quorum.parsing import read_review
+from quorum.cli import THRESHOLDS
 from quorum.ledger import (
     _issue_is_invalidated,
     _issue_severity,
@@ -21,12 +21,12 @@ from quorum.ledger import (
     _issue_support_count,
     _sync_issue_aliases,
 )
+from quorum.parsing import read_review
 from quorum.prompts import (
     VERIFICATION_CONTRACT,
     _artifact_heading_for_mode,
     _format_anchor_for_prompt,
 )
-from quorum.cli import THRESHOLDS
 
 
 def _format_verification_anchor(anchor):
@@ -60,7 +60,11 @@ def generate_verification_prompts(ledger, artifact_text, threshold_name, total, 
     artifact_heading = _artifact_heading_for_mode(mode)
 
     for issue in ledger["issues"]:
-        if _issue_severity(issue) != "blocking" or _issue_status(issue) != "open" or _issue_is_invalidated(issue):
+        if (
+            _issue_severity(issue) != "blocking"
+            or _issue_status(issue) != "open"
+            or _issue_is_invalidated(issue)
+        ):
             continue
         if not threshold_fn(_issue_support_count(issue), total):
             continue
@@ -81,12 +85,8 @@ def generate_verification_prompts(ledger, artifact_text, threshold_name, total, 
     return prompts
 
 
-_RE_VERIFIED = re.compile(
-    r"^\s*(?:`)?VERIFIED\s+(BLK-\d+)(?:`)?", re.MULTILINE
-)
-_RE_INVALIDATED = re.compile(
-    r"^\s*(?:`)?INVALIDATED\s+(BLK-\d+)(?:`)?", re.MULTILINE
-)
+_RE_VERIFIED = re.compile(r"^\s*(?:`)?VERIFIED\s+(BLK-\d+)(?:`)?", re.MULTILINE)
+_RE_INVALIDATED = re.compile(r"^\s*(?:`)?INVALIDATED\s+(BLK-\d+)(?:`)?", re.MULTILINE)
 
 
 def parse_verification_response(review_file):

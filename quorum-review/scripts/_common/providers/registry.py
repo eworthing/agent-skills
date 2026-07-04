@@ -23,7 +23,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Provider command builders
 # ---------------------------------------------------------------------------
@@ -185,7 +184,7 @@ def build_claude_cmd(args, session_id=None, prompt_text=None):
         if prompt_text is None and getattr(args, "prompt_file", None):
             prompt_text = read_prompt(args.prompt_file) or ""
         head = (prompt_text or "").lstrip()
-        if head.startswith("## Verification Request") or head.startswith("## Verification Contract"):
+        if head.startswith(("## Verification Request", "## Verification Contract")):
             verification_mode = True
 
     system_prompt = (

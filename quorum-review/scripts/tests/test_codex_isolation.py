@@ -31,7 +31,7 @@ ADAPTERS = {
 # $CODEX_HOME/sessions/ (session_meta + turn_context, cwd echoed so the adapter's
 # cwd filter accepts it); on `exec resume <id>` it appends nothing new. A short
 # sleep guarantees the two concurrent runs are genuinely in-flight together.
-_FAKE_CODEX = r'''#!/usr/bin/env python3
+_FAKE_CODEX = r"""#!/usr/bin/env python3
 import sys, os, json, uuid, time
 args = sys.argv[1:]
 try: sys.stdin.read()
@@ -65,7 +65,7 @@ if out:
         f.write("### Reasoning\nok\n\n### Blocking Issues\nNone\n\n"
                 "### Non-Blocking Issues\nNone\n\nVERDICT: APPROVED\n")
 sys.exit(0)
-'''
+"""
 
 
 @pytest.fixture
@@ -96,18 +96,28 @@ def _run_adapter(adapter, workdir, env, *, label, resume=False):
     events = workdir / f"{label}-events.jsonl"
     manifest = workdir / f"{label}-codex-homes.list"
     cmd = [
-        sys.executable, str(adapter),
-        "--reviewer", "codex",
-        "--prompt-file", str(prompt),
-        "--output-file", str(out),
-        "--session-file", str(session),
-        "--events-file", str(events),
-        "--codex-home-manifest", str(manifest),
-        "--timeout", "30",
+        sys.executable,
+        str(adapter),
+        "--reviewer",
+        "codex",
+        "--prompt-file",
+        str(prompt),
+        "--output-file",
+        str(out),
+        "--session-file",
+        str(session),
+        "--events-file",
+        str(events),
+        "--codex-home-manifest",
+        str(manifest),
+        "--timeout",
+        "30",
     ]
     if resume:
         cmd.append("--resume")
-    proc = subprocess.run(cmd, cwd=str(workdir), env=env, capture_output=True, text=True, timeout=60)
+    proc = subprocess.run(
+        cmd, cwd=str(workdir), env=env, capture_output=True, text=True, timeout=60
+    )
     assert proc.returncode == 0, f"{label} adapter failed: {proc.stderr}"
     return json.loads(session.read_text())
 
@@ -169,16 +179,26 @@ def test_setup_failure_fails_closed_to_fresh_exec(tmp_path, fake_codex_env, monk
     bad_manifest = blocker / "nested" / "F-codex-homes.list"
 
     cmd = [
-        sys.executable, str(adapter),
-        "--reviewer", "codex",
-        "--prompt-file", str(prompt),
-        "--output-file", str(work / "F-review.md"),
-        "--session-file", str(session),
-        "--events-file", str(work / "F-events.jsonl"),
-        "--codex-home-manifest", str(bad_manifest),
-        "--timeout", "30",
+        sys.executable,
+        str(adapter),
+        "--reviewer",
+        "codex",
+        "--prompt-file",
+        str(prompt),
+        "--output-file",
+        str(work / "F-review.md"),
+        "--session-file",
+        str(session),
+        "--events-file",
+        str(work / "F-events.jsonl"),
+        "--codex-home-manifest",
+        str(bad_manifest),
+        "--timeout",
+        "30",
     ]
-    proc = subprocess.run(cmd, cwd=str(work), env=fake_codex_env, capture_output=True, text=True, timeout=60)
+    proc = subprocess.run(
+        cmd, cwd=str(work), env=fake_codex_env, capture_output=True, text=True, timeout=60
+    )
     assert proc.returncode == 0, proc.stderr
     data = json.loads(session.read_text())
     # Failed closed: no per-run home recorded, capture disabled (session_id None),

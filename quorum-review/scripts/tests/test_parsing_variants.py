@@ -17,7 +17,6 @@ contained and can be read without flipping between source and data.
 from collections import Counter
 
 import pytest
-
 from quorum.parsing import parse_verdict
 
 
@@ -50,20 +49,23 @@ class TestVerdictTier1:
 
 
 class TestVerdictTier2Variants:
-    @pytest.mark.parametrize("body,expected", [
-        # Whitespace variants
-        ("VERDICT:APPROVED",       "APPROVED"),    # no space after colon
-        ("VERDICT:  APPROVED",     "APPROVED"),    # multiple spaces
-        ("  VERDICT: APPROVED  ",  "APPROVED"),    # surrounding whitespace
-        # Case variants
-        ("Verdict: Approved",      "APPROVED"),
-        ("verdict: revise",        "REVISE"),
-        ("VeRdIcT: aPpRoVeD",      "APPROVED"),
-        # Trailing punctuation
-        ("VERDICT: REVISE.",       "REVISE"),
-        ("VERDICT: APPROVED!",     "APPROVED"),
-        ("VERDICT: APPROVED .",    "APPROVED"),    # space then period
-    ])
+    @pytest.mark.parametrize(
+        "body,expected",
+        [
+            # Whitespace variants
+            ("VERDICT:APPROVED", "APPROVED"),  # no space after colon
+            ("VERDICT:  APPROVED", "APPROVED"),  # multiple spaces
+            ("  VERDICT: APPROVED  ", "APPROVED"),  # surrounding whitespace
+            # Case variants
+            ("Verdict: Approved", "APPROVED"),
+            ("verdict: revise", "REVISE"),
+            ("VeRdIcT: aPpRoVeD", "APPROVED"),
+            # Trailing punctuation
+            ("VERDICT: REVISE.", "REVISE"),
+            ("VERDICT: APPROVED!", "APPROVED"),
+            ("VERDICT: APPROVED .", "APPROVED"),  # space then period
+        ],
+    )
     def test_accepted_variant(self, tmp_path, parse_failures_log, read_failures, body, expected):
         p = _write(tmp_path, "r.md", body + "\n")
         assert parse_verdict(p) == expected
@@ -77,15 +79,18 @@ class TestVerdictTier2Variants:
 
 
 class TestVerdictMalformed:
-    @pytest.mark.parametrize("body,description", [
-        ("Some review without a verdict line.",            "no verdict at all"),
-        ("VERDICT IS APPROVED",                            "missing colon"),
-        ("approved",                                       "bare word"),
-        ("VERDICT: MAYBE",                                 "unknown value"),
-        ("VERDICT: APPROVED REVISE",                       "ambiguous"),
-        # Truncated — last non-empty line is cut off mid-word
-        ("VERDICT: APPR",                                  "truncated value"),
-    ])
+    @pytest.mark.parametrize(
+        "body,description",
+        [
+            ("Some review without a verdict line.", "no verdict at all"),
+            ("VERDICT IS APPROVED", "missing colon"),
+            ("approved", "bare word"),
+            ("VERDICT: MAYBE", "unknown value"),
+            ("VERDICT: APPROVED REVISE", "ambiguous"),
+            # Truncated — last non-empty line is cut off mid-word
+            ("VERDICT: APPR", "truncated value"),
+        ],
+    )
     def test_malformed_returns_none_and_logs(
         self, tmp_path, parse_failures_log, read_failures, body, description
     ):
@@ -160,4 +165,6 @@ class TestTelemetryIsolation:
         for body in ("approved", "VERDICT: MAYBE"):
             p = _write(tmp_path, f"r-{body[:5]}.md", body + "\n")
             assert parse_verdict(p) is None
-        assert Counter(r["parser_name"] for r in read_failures(parse_failures_log)) == {"verdict": 2}
+        assert Counter(r["parser_name"] for r in read_failures(parse_failures_log)) == {
+            "verdict": 2
+        }

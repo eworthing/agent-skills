@@ -80,16 +80,20 @@ def _sparkline_svg(points: list[float]) -> str:
         return '<span class="empty">—</span>'
     if len(points) == 1:
         y = h - pad - (h - 2 * pad) * (points[0] / 10.0)
-        return (f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
-                f'role="img" aria-label="score trend">'
-                f'<circle cx="{w - pad}" cy="{y:.1f}" r="2.2"/></svg>')
+        return (
+            f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
+            f'role="img" aria-label="score trend">'
+            f'<circle cx="{w - pad}" cy="{y:.1f}" r="2.2"/></svg>'
+        )
     n = len(points)
     xs = [pad + (w - 2 * pad) * i / (n - 1) for i in range(n)]
     ys = [h - pad - (h - 2 * pad) * (p / 10.0) for p in points]
     poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys, strict=True))
-    return (f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
-            f'role="img" aria-label="score trend {points[0]:g} to {points[-1]:g}">'
-            f'<polyline points="{poly}"/></svg>')
+    return (
+        f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
+        f'role="img" aria-label="score trend {points[0]:g} to {points[-1]:g}">'
+        f'<polyline points="{poly}"/></svg>'
+    )
 
 
 def _esc(value: object) -> str:
@@ -164,7 +168,9 @@ def render_html(review: dict, history: list[dict], labels: dict[str, str], gener
     tokens = {
         "{{TITLE}}": f"contest-refactor — loop {_esc(loop)}",
         "{{SUBTITLE}}": subtitle,
-        "{{VERDICT_EXPLAIN}}": _esc(review.get("verdict_explanation") or review.get("narrative") or ""),
+        "{{VERDICT_EXPLAIN}}": _esc(
+            review.get("verdict_explanation") or review.get("narrative") or ""
+        ),
         "{{SCORECARD_ROWS}}": _scorecard_rows_html(review, history, labels),
         "{{STRENGTHS}}": _strengths_html(review),
         "{{FINDINGS}}": _findings_html(review),
@@ -176,7 +182,9 @@ def render_html(review: dict, history: list[dict], labels: dict[str, str], gener
     return out
 
 
-def render_markdown(review: dict, history: list[dict], labels: dict[str, str], generated: str) -> str:
+def render_markdown(
+    review: dict, history: list[dict], labels: dict[str, str], generated: str
+) -> str:
     scorecard = review.get("scorecard") or {}
     lines = [
         f"# contest-refactor report — loop {review.get('loop', '?')}",
@@ -196,7 +204,9 @@ def render_markdown(review: dict, history: list[dict], labels: dict[str, str], g
         residual = cell.get("residual_blocking_10") or ""
         if residual and cell.get("residual_disposition"):
             residual += f" ({cell['residual_disposition']})"
-        lines.append(f"| {label} | {cell.get('score')} | {cell.get('delta', '')} | {trend} | {residual} |")
+        lines.append(
+            f"| {label} | {cell.get('score')} | {cell.get('delta', '')} | {trend} | {residual} |"
+        )
     findings = review.get("findings") or []
     lines += ["", "## Findings", ""]
     if findings:
@@ -209,7 +219,9 @@ def render_markdown(review: dict, history: list[dict], labels: dict[str, str], g
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Render a contest-refactor review as HTML or markdown.")
+    parser = argparse.ArgumentParser(
+        description="Render a contest-refactor review as HTML or markdown."
+    )
     parser.add_argument("review", help="path to CURRENT_REVIEW.json")
     parser.add_argument("--history", help="path to REVIEW_HISTORY.json (enables trend sparklines)")
     parser.add_argument("--format", choices=("html", "markdown"), default="html")
@@ -230,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         if not history_path.is_file():
             return _die(f"history not found: {history_path}")
         try:
-            history = (_load_json(history_path).get("loops") or [])
+            history = _load_json(history_path).get("loops") or []
         except (json.JSONDecodeError, OSError) as exc:
             return _die(f"cannot read history {history_path}: {exc}")
 

@@ -59,7 +59,8 @@ def _base_ref_resolves(base_ref: str) -> tuple[bool, str]:
         return False, "base ref given but `git` is not available"
     proc = subprocess.run(
         ["git", "rev-parse", "--verify", "--quiet", f"{base_ref}^{{commit}}"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if proc.returncode == 0:
         return True, ""

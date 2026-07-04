@@ -1,7 +1,15 @@
 """ledger tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestIssueLedger(unittest.TestCase):
@@ -97,8 +105,14 @@ class TestIssueLedger(unittest.TestCase):
                     },
                 ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 2,
-                                 "nb_open": 0, "approved_count": 1}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 3,
+                        "blocking_open": 2,
+                        "nb_open": 0,
+                        "approved_count": 1,
+                    }
+                },
             }
 
             # Round 2: reviewer 1 agrees with BLK-002, reviewer 2 agrees with BLK-001,
@@ -114,8 +128,7 @@ class TestIssueLedger(unittest.TestCase):
                 "VERDICT: REVISE\n"
             )
             (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "[DISAGREE BLK-002] Not exploitable in this context\n\n"
-                "VERDICT: APPROVED\n"
+                "[DISAGREE BLK-002] Not exploitable in this context\n\nVERDICT: APPROVED\n"
             )
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
@@ -141,19 +154,35 @@ class TestIssueLedger(unittest.TestCase):
             ledger = {
                 "next_blk_id": 2,
                 "next_nb_id": 1,
-                "issues": [{
-                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
-                    "round_introduced": 1, "severity": "blocking",
-                    "text": "Existing issue", "status": "open",
-                    "resolved_round": None, "merged_from": [],
-                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
-                    "disputed_by": [],
-                    "support_count": 1, "dispute_count": 0,
-                    "owner_summary": "Existing issue",
-                }],
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "source_reviewer": 1,
+                        "source_label": "B1",
+                        "round_introduced": 1,
+                        "severity": "blocking",
+                        "text": "Existing issue",
+                        "status": "open",
+                        "resolved_round": None,
+                        "merged_from": [],
+                        "proposed_by": 1,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 1,
+                        "dispute_count": 0,
+                        "owner_summary": "Existing issue",
+                    }
+                ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
-                                 "nb_open": 0, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 3,
+                        "blocking_open": 1,
+                        "nb_open": 0,
+                        "approved_count": 0,
+                    }
+                },
             }
 
             (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
@@ -165,22 +194,16 @@ class TestIssueLedger(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
 
-            new_blk = next(
-                (i for i in updated["issues"] if i["id"] == "BLK-002"), None
-            )
+            new_blk = next((i for i in updated["issues"] if i["id"] == "BLK-002"), None)
             self.assertIsNotNone(new_blk)
             self.assertIn("rate limiting", new_blk["text"])
             self.assertEqual(new_blk["source_label"], "B-NEW")
 
-            new_nb = next(
-                (i for i in updated["issues"] if i["id"] == "NB-001"), None
-            )
+            new_nb = next((i for i in updated["issues"] if i["id"] == "NB-001"), None)
             self.assertIsNotNone(new_nb)
             self.assertIn("docs", new_nb["text"])
 
@@ -193,12 +216,8 @@ class TestIssueLedger(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
                 "### Blocking Issues\n- [B1] Issue A\n\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text("VERDICT: APPROVED\n")
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             ledger = build_issue_ledger(panel, quorum_id, tmpdir, 1)
             self.assertIn("1", ledger["rounds"])
@@ -213,12 +232,22 @@ class TestIssueLedger(unittest.TestCase):
             ledger = {
                 "next_blk_id": 3,
                 "next_nb_id": 2,
-                "issues": [{
-                    "id": "BLK-001", "status": "open", "text": "Test",
-                    "severity": "blocking",
-                }],
-                "merges": [{"survivor": "BLK-001", "absorbed": ["BLK-002"],
-                            "round": 2, "reason": "Duplicate"}],
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "status": "open",
+                        "text": "Test",
+                        "severity": "blocking",
+                    }
+                ],
+                "merges": [
+                    {
+                        "survivor": "BLK-001",
+                        "absorbed": ["BLK-002"],
+                        "round": 2,
+                        "reason": "Duplicate",
+                    }
+                ],
                 "rounds": {"1": {"reviewer_count": 3}},
             }
             save_ledger(ledger_file, ledger)
@@ -304,8 +333,12 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             "anchor_end": 14,
         }
         left = _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor)
-        conflict = _make_issue("BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor)
-        related = _make_issue("BLK-003", "blocking", 1, 3, "B3", "Add rate limiting to endpoint", anchor=anchor)
+        conflict = _make_issue(
+            "BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor
+        )
+        related = _make_issue(
+            "BLK-003", "blocking", 1, 3, "B3", "Add rate limiting to endpoint", anchor=anchor
+        )
 
         classification, reason = classify_merge_candidate(left, conflict)
         self.assertEqual(classification, "CONFLICT")
@@ -322,20 +355,46 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             "anchor_start": 10,
             "anchor_end": 14,
         }
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "Missing input validation on user registration endpoint", anchor=anchor)
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                             "No input validation for user registration handler", anchor=anchor)
+        left = _make_issue(
+            "BLK-001",
+            "blocking",
+            1,
+            1,
+            "B1",
+            "Missing input validation on user registration endpoint",
+            anchor=anchor,
+        )
+        right = _make_issue(
+            "BLK-002",
+            "blocking",
+            1,
+            2,
+            "B2",
+            "No input validation for user registration handler",
+            anchor=anchor,
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "EQUIVALENT")
         self.assertIn("signature", reason)
 
     def test_classify_very_high_similarity_no_anchor_as_equivalent(self):
         """Near-identical wording can merge without anchors when signatures match."""
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "SQL injection via string interpolation in login query")
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "SQL injection via string interpolation in login query handler")
+        left = _make_issue(
+            "BLK-001",
+            "blocking",
+            1,
+            1,
+            "B1",
+            "SQL injection via string interpolation in login query",
+        )
+        right = _make_issue(
+            "BLK-002",
+            "blocking",
+            1,
+            2,
+            "B2",
+            "SQL injection via string interpolation in login query handler",
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "EQUIVALENT")
         self.assertIn("signature", reason)
@@ -347,20 +406,22 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             "anchor_kind": "section",
             "section": "POST /api/auth/login",
         }
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "Missing rate limiting on login", anchor=anchor)
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "Missing CSRF protection on login", anchor=anchor)
+        left = _make_issue(
+            "BLK-001", "blocking", 1, 1, "B1", "Missing rate limiting on login", anchor=anchor
+        )
+        right = _make_issue(
+            "BLK-002", "blocking", 1, 2, "B2", "Missing CSRF protection on login", anchor=anchor
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "RELATED_DISTINCT")
         self.assertIn("same area", reason)
 
     def test_classify_broad_and_narrow_no_anchor_as_related_distinct(self):
         """A broad blocker must not absorb a narrower blocker without anchors."""
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "Missing auth on admin route")
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "Missing auth and CSRF protection on admin route")
+        left = _make_issue("BLK-001", "blocking", 1, 1, "B1", "Missing auth on admin route")
+        right = _make_issue(
+            "BLK-002", "blocking", 1, 2, "B2", "Missing auth and CSRF protection on admin route"
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "RELATED_DISTINCT")
         self.assertIn("lexically related", reason)
@@ -435,10 +496,18 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             "anchor_end": 14,
             "anchor_hash": "sha256:same-anchor",
         }
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "Missing auth guard on admin route", anchor=anchor)
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "Missing input validation on admin route", anchor=anchor)
+        left = _make_issue(
+            "BLK-001", "blocking", 1, 1, "B1", "Missing auth guard on admin route", anchor=anchor
+        )
+        right = _make_issue(
+            "BLK-002",
+            "blocking",
+            1,
+            2,
+            "B2",
+            "Missing input validation on admin route",
+            anchor=anchor,
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "RELATED_DISTINCT")
         self.assertIn("same area", reason)
@@ -453,10 +522,12 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             "anchor_end": 24,
             "anchor_hash": "sha256:cache-anchor",
         }
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "Add caching on product route", anchor=anchor)
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "Remove caching on product route", anchor=anchor)
+        left = _make_issue(
+            "BLK-001", "blocking", 1, 1, "B1", "Add caching on product route", anchor=anchor
+        )
+        right = _make_issue(
+            "BLK-002", "blocking", 1, 2, "B2", "Remove caching on product route", anchor=anchor
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "CONFLICT")
         self.assertIn("opposing actions", reason)
@@ -469,10 +540,12 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
             "anchor_start": 10,
             "anchor_end": 14,
         }
-        left = _make_issue("BLK-001", "blocking", 1, 1, "B1",
-                           "Add caching for product catalog", anchor=anchor)
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2",
-                            "Remove caching from product catalog", anchor=anchor)
+        left = _make_issue(
+            "BLK-001", "blocking", 1, 1, "B1", "Add caching for product catalog", anchor=anchor
+        )
+        right = _make_issue(
+            "BLK-002", "blocking", 1, 2, "B2", "Remove caching from product catalog", anchor=anchor
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "CONFLICT")
         self.assertIn("opposing actions", reason)
@@ -491,7 +564,14 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
                         _make_issue("NB-001", "non_blocking", 1, 3, "N1", "Add logging"),
                     ],
                     "merges": [],
-                    "rounds": {"1": {"reviewer_count": 3, "blocking_open": 2, "nb_open": 1, "approved_count": 0}},
+                    "rounds": {
+                        "1": {
+                            "reviewer_count": 3,
+                            "blocking_open": 2,
+                            "nb_open": 1,
+                            "approved_count": 0,
+                        }
+                    },
                 }
 
             ledger = make_ledger()
@@ -532,11 +612,22 @@ class TestLedgerMigrationAndMergePipeline(unittest.TestCase):
                 "next_blk_id": 3,
                 "next_nb_id": 1,
                 "issues": [
-                    _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor),
-                    _make_issue("BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor),
+                    _make_issue(
+                        "BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor
+                    ),
+                    _make_issue(
+                        "BLK-002", "blocking", 1, 2, "B2", "Remove auth middleware", anchor=anchor
+                    ),
                 ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 2, "nb_open": 0, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 3,
+                        "blocking_open": 2,
+                        "nb_open": 0,
+                        "approved_count": 0,
+                    }
+                },
             }
 
             result = apply_merge_pipeline(ledger, quorum_id, tmpdir, 1)

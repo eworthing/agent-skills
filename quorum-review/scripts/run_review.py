@@ -18,6 +18,7 @@ CLI surface.
 """
 
 import argparse
+import contextlib
 import os
 import shutil
 import signal
@@ -36,7 +37,7 @@ from _common.metadata import (
     extract_session_id_copilot,
     extract_session_id_json,
 )
-from _common.metadata.extractors import (  # noqa: F401 — re-exported for tests
+from _common.metadata.extractors import (
     _codex_session_files,
     _parse_codex_session_id,
     extract_metadata,
@@ -56,7 +57,7 @@ from _common.providers.registry import (  # noqa: F401 — re-exported for tests
     build_copilot_cmd,
     build_gemini_cmd,
 )
-from _common.session import (  # noqa: F401 — re-exported for tests
+from _common.session import (
     default_manifest,
     extract_text_from_output,
     load_session,
@@ -461,10 +462,8 @@ def run_review(args):
             shutil.rmtree(gemini_config_dir, ignore_errors=True)
         # Clean up agy per-run log
         if agy_log_path:
-            try:
-                os.unlink(agy_log_path)
-            except OSError:
-                pass
+            with contextlib.suppress(OSError):
+                Path(agy_log_path).unlink()
 
 
 # ---------------------------------------------------------------------------

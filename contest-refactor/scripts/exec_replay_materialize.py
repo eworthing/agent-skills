@@ -10,6 +10,7 @@ Step-3 executor is host-dispatched via the pinned evals/exec_step3_executor_prom
 Usage:
   exec_replay_materialize.py <fixture-id> [dest-dir] [--arm-model MODEL]
 """
+
 from __future__ import annotations
 
 import json
@@ -28,7 +29,9 @@ SEED_FILES = ("CURRENT_REVIEW.json", "CURRENT_REVIEW.md", "findings_registry.jso
 
 
 def _git(repo: Path, *args: str) -> str:
-    out = subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True)
+    out = subprocess.run(
+        ["git", "-C", str(repo), *args], check=True, capture_output=True, text=True
+    )
     return out.stdout.strip()
 
 
@@ -66,8 +69,17 @@ def main(argv: list[str]) -> int:
     shutil.copytree(codebase, dest)
     _git(dest, "init", "-q")
     _git(dest, "add", "-A")
-    _git(dest, "-c", "user.name=exec-replay", "-c", "user.email=exec-replay@local",
-         "commit", "-q", "-m", f"base: {fixture_id} source (pre-Step-1)")
+    _git(
+        dest,
+        "-c",
+        "user.name=exec-replay",
+        "-c",
+        "user.email=exec-replay@local",
+        "commit",
+        "-q",
+        "-m",
+        f"base: {fixture_id} source (pre-Step-1)",
+    )
     base_sha = _git(dest, "rev-parse", "HEAD")
 
     # overlay the seeded Step-1+2 output UNCOMMITTED (in-flight working state)
@@ -80,8 +92,11 @@ def main(argv: list[str]) -> int:
     test_cmd = expected.get("test_command") or "(none configured; build oracle = swiftc -typecheck)"
     dispatch = TEMPLATE_PATH.read_text()
     for k, v in {
-        "{{REPO}}": str(dest), "{{LENS}}": lens, "{{TEST_COMMAND}}": test_cmd,
-        "{{ARM_MODEL}}": arm_model, "{{SKILL_DIR}}": str(SKILL_ROOT),
+        "{{REPO}}": str(dest),
+        "{{LENS}}": lens,
+        "{{TEST_COMMAND}}": test_cmd,
+        "{{ARM_MODEL}}": arm_model,
+        "{{SKILL_DIR}}": str(SKILL_ROOT),
     }.items():
         dispatch = dispatch.replace(k, v)
 

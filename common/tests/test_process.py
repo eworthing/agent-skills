@@ -5,7 +5,6 @@ import sys
 import time
 
 import pytest
-
 from common.process.tree import _kill_tree, _popen_session_kwargs
 
 

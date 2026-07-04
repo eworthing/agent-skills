@@ -55,9 +55,7 @@ def _run_map(root: Path) -> dict:
         text=True,
     )
     if proc.returncode != 0:
-        raise RuntimeError(
-            f"repo_map.py exited {proc.returncode}: {proc.stderr.strip()}"
-        )
+        raise RuntimeError(f"repo_map.py exited {proc.returncode}: {proc.stderr.strip()}")
     return json.loads(proc.stdout)
 
 
@@ -101,8 +99,7 @@ def main() -> int:
             "\nclass Invoice:\n    pass\n"
         ),
         "orders/__init__.py": (
-            "from shipping import tracker\n"
-            "\ndef checkout(cart):\n    return cart\n"
+            "from shipping import tracker\n\ndef checkout(cart):\n    return cart\n"
         ),
         "shipping/__init__.py": "READY = True\n",
     }
@@ -133,16 +130,12 @@ def main() -> int:
             # 3. first_party_file_count (3 files)
             fpc = result.get("first_party_file_count")
             if fpc != 3:
-                failures.append(
-                    f"DAG fixture: first_party_file_count expected 3, got {fpc!r}"
-                )
+                failures.append(f"DAG fixture: first_party_file_count expected 3, got {fpc!r}")
 
             # 4. auto_engage must be False for 3 files (threshold is 300)
             ae = result.get("auto_engage")
             if ae is not False:
-                failures.append(
-                    f"DAG fixture: auto_engage expected False for 3 files, got {ae!r}"
-                )
+                failures.append(f"DAG fixture: auto_engage expected False for 3 files, got {ae!r}")
 
             # 5. Import edges: billing->orders, billing->shipping, orders->shipping
             edges = {(e["from"], e["to"]) for e in result.get("import_edges", [])}
@@ -153,9 +146,7 @@ def main() -> int:
             }
             missing = expected_edges - edges
             if missing:
-                failures.append(
-                    f"DAG fixture: missing import edges {missing}; got {edges}"
-                )
+                failures.append(f"DAG fixture: missing import edges {missing}; got {edges}")
 
             # 6. Fan-in values
             mods_by_name = {m["module"]: m for m in result.get("modules", [])}
@@ -176,9 +167,7 @@ def main() -> int:
 
             # 8. No cycles in a clean DAG
             if result.get("cycles"):
-                failures.append(
-                    f"DAG fixture: unexpected cycles {result['cycles']!r}"
-                )
+                failures.append(f"DAG fixture: unexpected cycles {result['cycles']!r}")
 
             # 9. Public surface: Invoice in billing, checkout in orders, READY in shipping
             expected_surface = {"billing": "Invoice", "orders": "checkout", "shipping": "READY"}
@@ -215,9 +204,7 @@ def main() -> int:
             # Every edge record must carry promotion_allowed: false
             for edge in result.get("import_edges", []):
                 if edge.get("promotion_allowed") is not False:
-                    failures.append(
-                        f"Cycle fixture: edge {edge} missing promotion_allowed: false"
-                    )
+                    failures.append(f"Cycle fixture: edge {edge} missing promotion_allowed: false")
 
     # -----------------------------------------------------------------------
     # Isolation test: repo_map field on an artifact must not change any verdict
@@ -259,13 +246,9 @@ def main() -> int:
 
         # Sanity: the boundary genuinely separates pass from fail (test isn't vacuous)
         if _verdict(va, _artifact(9.5, "accepted")):
-            failures.append(
-                "Isolation sanity: expected 9.5-accepted to PASS gate (got issues)"
-            )
+            failures.append("Isolation sanity: expected 9.5-accepted to PASS gate (got issues)")
         if not _verdict(va, _artifact(9.4, "accepted")):
-            failures.append(
-                "Isolation sanity: expected 9.4-accepted to FAIL gate (got none)"
-            )
+            failures.append("Isolation sanity: expected 9.4-accepted to FAIL gate (got none)")
 
     if failures:
         for f in failures:

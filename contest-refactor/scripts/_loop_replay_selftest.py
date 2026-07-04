@@ -15,6 +15,7 @@ Checks:
   (d) manifest consistency — status ∈ {baseline_unmeasured, measured}; a measured fixture
       must carry a non-null baseline_observed
 """
+
 from __future__ import annotations
 
 import json

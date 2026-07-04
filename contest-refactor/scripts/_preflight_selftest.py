@@ -33,16 +33,29 @@ PREFLIGHT = Path(__file__).with_name("preflight.py")
 def _run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(PREFLIGHT), *args],
-        capture_output=True, text=True, cwd=str(cwd) if cwd else None,
+        capture_output=True,
+        text=True,
+        cwd=str(cwd) if cwd else None,
     )
 
 
 def _init_repo(root: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
     subprocess.run(
-        ["git", "-c", "user.email=t@t", "-c", "user.name=t",
-         "commit", "--allow-empty", "-q", "-m", "init"],
-        cwd=root, check=True,
+        [
+            "git",
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "user.name=t",
+            "commit",
+            "--allow-empty",
+            "-q",
+            "-m",
+            "init",
+        ],
+        cwd=root,
+        check=True,
     )
 
 
@@ -74,7 +87,9 @@ def main() -> int:
         if p.returncode == 0:
             failures.append("bad-test-cmd: expected non-zero exit, got 0")
         elif "test command" not in p.stderr.lower():
-            failures.append(f"bad-test-cmd: message should name the test command\n{p.stderr.rstrip()}")
+            failures.append(
+                f"bad-test-cmd: message should name the test command\n{p.stderr.rstrip()}"
+            )
 
         # 4) base ref resolution (real temp git repo).
         if shutil.which("git"):
@@ -83,7 +98,9 @@ def main() -> int:
             _init_repo(repo)
             p = _run([str(repo), "--base-ref", "HEAD"], cwd=repo)
             if p.returncode != 0:
-                failures.append(f"good-ref: HEAD should resolve, got {p.returncode}\n{p.stderr.rstrip()}")
+                failures.append(
+                    f"good-ref: HEAD should resolve, got {p.returncode}\n{p.stderr.rstrip()}"
+                )
             p = _run([str(repo), "--base-ref", "no-such-ref-zzz"], cwd=repo)
             if p.returncode == 0:
                 failures.append("bad-ref: expected non-zero exit, got 0")

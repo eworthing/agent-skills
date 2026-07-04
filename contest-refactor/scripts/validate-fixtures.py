@@ -33,6 +33,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -40,8 +41,9 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, List, Sequence
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -67,7 +69,7 @@ RESIDUAL_RULES = {
 class Violation:
     """A single rule failure."""
 
-    __slots__ = ("rule", "message", "path")
+    __slots__ = ("message", "path", "rule")
 
     def __init__(self, rule: str, message: str, path: Path | None = None) -> None:
         self.rule = rule
@@ -101,7 +103,7 @@ def _canon_enum_values(canon: _canon.Canon) -> set[str]:
 def _fixture_rule_kinds(canon: _canon.Canon) -> Sequence[str]:
     """Fetch fixture_rule_kinds from canon, falling back to extra mapping."""
     if hasattr(canon, "fixture_rule_kinds"):  # promoted to first-class field
-        kinds = getattr(canon, "fixture_rule_kinds")
+        kinds = canon.fixture_rule_kinds
         if kinds:
             return kinds
     extra = getattr(canon, "extra", {}) or {}
@@ -113,7 +115,7 @@ def _load_toml(path: Path) -> Any:
         with path.open("rb") as fh:
             return tomllib.load(fh)
     except tomllib.TOMLDecodeError as exc:
-        raise SystemExit(f"error: {path}: TOML parse failed: {exc}")
+        raise SystemExit(f"error: {path}: TOML parse failed: {exc}") from exc
 
 
 _METHOD_STEPS_CACHE: set[str] | None = None
@@ -144,11 +146,9 @@ def _method_step_labels() -> set[str]:
     return _METHOD_STEPS_CACHE
 
 
-def _validate_tested_rule(
-    rule: Any, canon: _canon.Canon, kinds: Sequence[str]
-) -> List[str]:
+def _validate_tested_rule(rule: Any, canon: _canon.Canon, kinds: Sequence[str]) -> list[str]:
     """Return list of error strings for a single tested_rules[i] entry."""
-    errors: List[str] = []
+    errors: list[str] = []
     if not isinstance(rule, dict):
         return ["entry must be a mapping with 'kind' and 'id' keys"]
     kind = rule.get("kind")
@@ -156,9 +156,7 @@ def _validate_tested_rule(
     if kind is None:
         errors.append("missing 'kind'")
     elif kind not in kinds:
-        errors.append(
-            f"unknown kind {kind!r} (allowed: {sorted(kinds)})"
-        )
+        errors.append(f"unknown kind {kind!r} (allowed: {sorted(kinds)})")
     if rid is None or (isinstance(rid, str) and not rid.strip()):
         errors.append("missing or empty 'id'")
         return errors
@@ -166,9 +164,7 @@ def _validate_tested_rule(
     rid_str = str(rid)
     if kind == "gate":
         if rid_str not in canon.validation_gates:
-            errors.append(
-                f"unknown gate id {rid_str!r} (not in canon/validation-gates.toml)"
-            )
+            errors.append(f"unknown gate id {rid_str!r} (not in canon/validation-gates.toml)")
     elif kind == "method-step":
         if rid_str not in _method_step_labels():
             errors.append(
@@ -184,28 +180,23 @@ def _validate_tested_rule(
             )
     elif kind == "scorecard-dimension":
         if rid_str not in canon.scorecard_dimensions:
-            errors.append(
-                f"scorecard-dimension {rid_str!r} not in canon/scorecard-dimensions.toml"
-            )
-    elif kind == "residual-rule":
-        if rid_str not in RESIDUAL_RULES:
-            errors.append(
-                f"residual-rule {rid_str!r} not in canonical set {sorted(RESIDUAL_RULES)}"
-            )
+            errors.append(f"scorecard-dimension {rid_str!r} not in canon/scorecard-dimensions.toml")
+    elif kind == "residual-rule" and rid_str not in RESIDUAL_RULES:
+        errors.append(f"residual-rule {rid_str!r} not in canonical set {sorted(RESIDUAL_RULES)}")
     return errors
 
 
 def _validate_one_fixture(
     fixture_dir: Path, canon: _canon.Canon, kinds: Sequence[str]
-) -> List[Violation]:
+) -> list[Violation]:
     """Schema + content checks on a single fixture's fixture.toml."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     toml_path = fixture_dir / "fixture.toml"
     if not toml_path.exists():
         violations.append(
             Violation(
                 "missing-sidecar",
-                f"fixture.toml is required for every evals/fixtures/<id>/",
+                "fixture.toml is required for every evals/fixtures/<id>/",
                 toml_path,
             )
         )
@@ -260,9 +251,7 @@ def _validate_one_fixture(
             )
     tested = data.get("tested_rules") or []
     if not isinstance(tested, list):
-        violations.append(
-            Violation("schema", "tested_rules must be a list", toml_path)
-        )
+        violations.append(Violation("schema", "tested_rules must be a list", toml_path))
         tested = []
     for idx, rule in enumerate(tested):
         for err in _validate_tested_rule(rule, canon, kinds):
@@ -348,10 +337,8 @@ def _run_artifact_check(
         except (json.JSONDecodeError, OSError):
             pass
     finally:
-        try:
+        with contextlib.suppress(OSError):
             json_path.unlink()
-        except OSError:
-            pass
     return result.returncode, output.strip(), issues
 
 
@@ -366,9 +353,7 @@ def _extract_cited_gates(fixture_data: dict) -> list[str]:
     return out
 
 
-def _cross_check_expected_result(
-    fixture_dir: Path, fixture_data: dict
-) -> List[Violation]:
+def _cross_check_expected_result(fixture_dir: Path, fixture_data: dict) -> list[Violation]:
     """Run validate-artifact.py --mode strict, confirm exit code matches
     expected_result, and (for non-aspirational fail fixtures with cited gates)
     assert that at least one fired issue's rule matches a cited gate id.
@@ -378,7 +363,7 @@ def _cross_check_expected_result(
     validator-implemented; the fixture continues to regression-test exit code
     only until the gate is wired.
     """
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     expected = fixture_data.get("expected_result")
     reference_now = fixture_data.get("reference_now")
     if not isinstance(reference_now, str) or not reference_now.strip():
@@ -399,8 +384,8 @@ def _cross_check_expected_result(
         violations.append(
             Violation(
                 "expected-fail",
-                f"expected_result=fail but validate-artifact.py --mode strict "
-                f"exited 0 (passed); fixture cannot regression-test a failure case",
+                "expected_result=fail but validate-artifact.py --mode strict "
+                "exited 0 (passed); fixture cannot regression-test a failure case",
                 fixture_dir,
             )
         )
@@ -453,8 +438,7 @@ def main(argv: list[str] | None = None) -> int:
     kinds = _fixture_rule_kinds(canon)
     if not kinds:
         sys.stderr.write(
-            "error: canon/fixture-rule-kinds.toml missing or empty; "
-            "PR2 requires this canon file\n"
+            "error: canon/fixture-rule-kinds.toml missing or empty; PR2 requires this canon file\n"
         )
         return 2
 
@@ -466,7 +450,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"error: no fixture subdirectories in {fixtures_dir}\n")
         return 2
 
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     for fixture_dir in fixture_subdirs:
         fixture_violations = _validate_one_fixture(fixture_dir, canon, kinds)
         violations.extend(fixture_violations)
@@ -488,9 +472,7 @@ def main(argv: list[str] | None = None) -> int:
             f"across {len(fixture_subdirs)} fixture(s)\n"
         )
         return 1
-    sys.stdout.write(
-        f"validate-fixtures: OK ({len(fixture_subdirs)} fixtures passed)\n"
-    )
+    sys.stdout.write(f"validate-fixtures: OK ({len(fixture_subdirs)} fixtures passed)\n")
     return 0
 
 

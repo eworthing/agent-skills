@@ -136,9 +136,12 @@ def build_sarif(registry: dict, review: dict | None) -> dict:
             if isinstance(cell, dict) and cell.get("residual_disposition") == "accepted":
                 rule_id = f"residual/{dim}"
                 rules.append(
-                    {"id": rule_id, "name": rule_id,
-                     "shortDescription": {"text": f"Accepted residual on {dim}"},
-                     "defaultConfiguration": {"level": "note"}}
+                    {
+                        "id": rule_id,
+                        "name": rule_id,
+                        "shortDescription": {"text": f"Accepted residual on {dim}"},
+                        "defaultConfiguration": {"level": "note"},
+                    }
                 )
                 results.append(_residual_result(dim, cell))
 

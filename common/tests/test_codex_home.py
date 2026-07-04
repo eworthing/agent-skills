@@ -15,7 +15,6 @@ import time
 from pathlib import Path
 
 import pytest
-
 from common.metadata.extractors import _codex_session_files
 from common.session import (
     cleanup_review_homes,
@@ -281,5 +280,7 @@ class TestTeardownAndDefaults:
         assert d.exists()
 
     def test_default_manifest_derivation(self):
-        assert default_manifest("/tmp/ppr-abc123-session.json") == "/tmp/ppr-abc123-codex-homes.list"
+        assert (
+            default_manifest("/tmp/ppr-abc123-session.json") == "/tmp/ppr-abc123-codex-homes.list"
+        )
         assert default_manifest("/t/qr-Q1-r2-session.json") == "/t/qr-Q1-r2-codex-homes.list"

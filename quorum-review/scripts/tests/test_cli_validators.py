@@ -1,7 +1,15 @@
 """cli validators tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestReviewerSpecParsing(unittest.TestCase):
@@ -39,10 +47,14 @@ class TestCLIValidation(unittest.TestCase):
             plan.write(b"test plan")
             plan.flush()
             rc, stdout, stderr = run_script(
-                "--reviewers", "claude:sonnet,gemini:pro",
-                "--plan-file", plan.name,
-                "--quorum-id", "abc",
-                "--round", "1",
+                "--reviewers",
+                "claude:sonnet,gemini:pro",
+                "--plan-file",
+                plan.name,
+                "--quorum-id",
+                "abc",
+                "--round",
+                "1",
             )
             self.assertNotEqual(rc, 0)
             self.assertIn("at least 3", stderr)
@@ -53,10 +65,14 @@ class TestCLIValidation(unittest.TestCase):
             plan.write(b"test plan")
             plan.flush()
             rc, stdout, stderr = run_script(
-                "--reviewers", "claude:sonnet,gemini:pro,bogus:foo",
-                "--plan-file", plan.name,
-                "--quorum-id", "abc",
-                "--round", "1",
+                "--reviewers",
+                "claude:sonnet,gemini:pro,bogus:foo",
+                "--plan-file",
+                plan.name,
+                "--quorum-id",
+                "abc",
+                "--round",
+                "1",
             )
             self.assertNotEqual(rc, 0)
             self.assertIn("unknown provider", stderr)
@@ -82,10 +98,14 @@ class TestPlanFileValidation(unittest.TestCase):
 
     def test_missing_plan_file_cli(self):
         rc, stdout, stderr = run_script(
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/nonexistent/plan.md",
-            "--quorum-id", "abc",
-            "--round", "1",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/nonexistent/plan.md",
+            "--quorum-id",
+            "abc",
+            "--round",
+            "1",
         )
         self.assertNotEqual(rc, 0)
         self.assertIn("--plan-file", stderr)
@@ -95,11 +115,16 @@ class TestPlanFileValidation(unittest.TestCase):
             plan.write(b"test plan")
             plan.flush()
             rc, stdout, stderr = run_script(
-                "--reviewers", "claude:sonnet,gemini:pro,codex",
-                "--plan-file", plan.name,
-                "--quorum-id", "abc",
-                "--round", "1",
-                "--effort", "extreme",
+                "--reviewers",
+                "claude:sonnet,gemini:pro,codex",
+                "--plan-file",
+                plan.name,
+                "--quorum-id",
+                "abc",
+                "--round",
+                "1",
+                "--effort",
+                "extreme",
             )
             self.assertNotEqual(rc, 0)
             self.assertIn("invalid choice", stderr)
@@ -111,6 +136,7 @@ class TestPathResolution(unittest.TestCase):
 
     def test_resolve_finds_local_run_review(self):
         from run_quorum import _resolve_run_review
+
         path = _resolve_run_review()
         self.assertTrue(Path(path).exists(), f"Resolved path does not exist: {path}")
         self.assertTrue(path.endswith("run_review.py"))
@@ -124,10 +150,14 @@ class TestDefaultThreshold(unittest.TestCase):
     def test_default_threshold_is_super(self):
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
         ]
         args = parse_args()
         self.assertEqual(args.threshold, "super")
@@ -140,10 +170,14 @@ class TestDefaultChanges(unittest.TestCase):
         """Default on-failure is shrink-quorum."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
         ]
         args = parse_args()
         self.assertEqual(args.on_failure, "shrink-quorum")
@@ -152,10 +186,14 @@ class TestDefaultChanges(unittest.TestCase):
         """Default max-rounds is 3."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
         ]
         args = parse_args()
         self.assertEqual(args.max_rounds, 3)
@@ -164,11 +202,16 @@ class TestDefaultChanges(unittest.TestCase):
         """--max-rounds > 5 is rejected."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
-            "--max-rounds", "6",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
+            "--max-rounds",
+            "6",
         ]
         with self.assertRaises(SystemExit):
             parse_args()
@@ -177,11 +220,16 @@ class TestDefaultChanges(unittest.TestCase):
         """--max-rounds 5 is accepted."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
-            "--max-rounds", "5",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
+            "--max-rounds",
+            "5",
         ]
         args = parse_args()
         self.assertEqual(args.max_rounds, 5)
@@ -209,7 +257,11 @@ class TestReviewMdSupport(unittest.TestCase):
         """REVIEW.md content appears in initial prompt when provided."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             write_initial_prompt(
-                f.name, 1, 3, REVIEW_CONTRACT_V2, "# My Plan\nDo stuff.",
+                f.name,
+                1,
+                3,
+                REVIEW_CONTRACT_V2,
+                "# My Plan\nDo stuff.",
                 rubric_text="## Custom Rules\n- Always check security",
             )
             content = Path(f.name).read_text()
@@ -222,7 +274,11 @@ class TestReviewMdSupport(unittest.TestCase):
         """No rubric section when rubric_text is empty."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             write_initial_prompt(
-                f.name, 1, 3, REVIEW_CONTRACT_V2, "# My Plan\nDo stuff.",
+                f.name,
+                1,
+                3,
+                REVIEW_CONTRACT_V2,
+                "# My Plan\nDo stuff.",
                 rubric_text="",
             )
             content = Path(f.name).read_text()
@@ -252,8 +308,7 @@ class TestIndeterminateExitCode(unittest.TestCase):
         """Structured reviews are detected."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(
-                "### Blocking Issues\n- [B1] Issue\n\n"
-                "### Confidence\nHIGH\n\nVERDICT: REVISE\n"
+                "### Blocking Issues\n- [B1] Issue\n\n### Confidence\nHIGH\n\nVERDICT: REVISE\n"
             )
             f.flush()
             result = parse_structured_review(f.name)

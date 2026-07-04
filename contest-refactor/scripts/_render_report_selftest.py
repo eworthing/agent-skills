@@ -37,35 +37,55 @@ def _review() -> dict:
         "verdict": "Strong contender",
         "verdict_explanation": "Two dims still climbing.",
         "scorecard": {
-            "architecture_quality": {"score": 10, "delta": "SAME", "proof": "A.swift:1",
-                                     "residual_blocking_10": None, "residual_disposition": None,
-                                     "residual_rationale_or_backlog_ref": None},
-            "concurrency": {"score": 9.5, "delta": "UP", "proof": "B.swift:8",
-                            "residual_blocking_10": "deinit carve-out",
-                            "residual_disposition": "accepted",
-                            "residual_rationale_or_backlog_ref": "Swift constraint; covered by test."},
+            "architecture_quality": {
+                "score": 10,
+                "delta": "SAME",
+                "proof": "A.swift:1",
+                "residual_blocking_10": None,
+                "residual_disposition": None,
+                "residual_rationale_or_backlog_ref": None,
+            },
+            "concurrency": {
+                "score": 9.5,
+                "delta": "UP",
+                "proof": "B.swift:8",
+                "residual_blocking_10": "deinit carve-out",
+                "residual_disposition": "accepted",
+                "residual_rationale_or_backlog_ref": "Swift constraint; covered by test.",
+            },
         },
         "strengths": ["Module graph enforced by source <like this & that>."],
         "findings": [
-            {"title": "Reducer mutates shared state", "severity": "Serious deduction",
-             "why_it_matters": "Two writers race on AppState.",
-             "evidence": ["Core/AppState.swift:42"]},
+            {
+                "title": "Reducer mutates shared state",
+                "severity": "Serious deduction",
+                "why_it_matters": "Two writers race on AppState.",
+                "evidence": ["Core/AppState.swift:42"],
+            },
         ],
     }
 
 
 def _history_with_scores() -> dict:
     def loop_entry(n, arch, conc):
-        return {"loop": n, "schema_version": 2, "state": "CONTINUE",
-                "scorecard": {"architecture_quality": {"score": arch},
-                              "concurrency": {"score": conc}}}
+        return {
+            "loop": n,
+            "schema_version": 2,
+            "state": "CONTINUE",
+            "scorecard": {"architecture_quality": {"score": arch}, "concurrency": {"score": conc}},
+        }
+
     return {"schema_version": 2, "loops": [loop_entry(1, 8.0, 7.5), loop_entry(2, 9.0, 9.0)]}
 
 
 def _history_compressed() -> dict:
-    return {"schema_version": 2,
-            "loops": [{"loop": 1, "schema_version": 2, "state": "CONTINUE"},
-                      {"loop": 2, "schema_version": 2, "state": "CONTINUE"}]}
+    return {
+        "schema_version": 2,
+        "loops": [
+            {"loop": 1, "schema_version": 2, "state": "CONTINUE"},
+            {"loop": 2, "schema_version": 2, "state": "CONTINUE"},
+        ],
+    }
 
 
 def _run(args: list[str]) -> subprocess.CompletedProcess:
@@ -98,12 +118,18 @@ def main() -> int:
             if "{{" in html or "}}" in html:
                 leaked = [ln for ln in html.splitlines() if "{{" in ln or "}}" in ln]
                 failures.append("html: unresolved placeholder(s):\n  " + "\n  ".join(leaked[:5]))
-            if "<script src" in html.lower() or "http://" in html.lower() or "https://" in html.lower():
+            if (
+                "<script src" in html.lower()
+                or "http://" in html.lower()
+                or "https://" in html.lower()
+            ):
                 failures.append("html: must be offline — found a script src or http(s) URL")
             if "Concurrency" not in html and "concurrency" not in html:
                 failures.append("html: concurrency dimension row missing")
             if "<polyline" not in html:
-                failures.append("html: expected an inline <svg> sparkline (<polyline>) for the trend")
+                failures.append(
+                    "html: expected an inline <svg> sparkline (<polyline>) for the trend"
+                )
             if "Reducer mutates shared state" not in html:
                 failures.append("html: finding not rendered")
             # raw angle brackets from the strength text must be escaped, not injected
@@ -124,7 +150,9 @@ def main() -> int:
         _write(hist, _history_compressed())
         p = _run([str(review), "--history", str(hist), "--format", "html"])
         if p.returncode != 0:
-            failures.append(f"compressed-history: non-zero exit (should degrade gracefully)\n{p.stderr.rstrip()}")
+            failures.append(
+                f"compressed-history: non-zero exit (should degrade gracefully)\n{p.stderr.rstrip()}"
+            )
         elif "{{" in p.stdout:
             failures.append("compressed-history: unresolved placeholder leaked")
 

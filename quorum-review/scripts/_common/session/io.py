@@ -42,7 +42,7 @@ def save_session(session_file, data):
     try:
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
-        os.replace(tmp, target)
+        tmp.replace(target)
     except OSError as e:
         print(f"Warning: could not save session: {e}", file=sys.stderr)
         with contextlib.suppress(OSError):
@@ -95,7 +95,7 @@ def write_summary(summary_file, output_file, session_data):
         tmp = target.with_suffix(target.suffix + ".tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2)
-        os.replace(tmp, target)
+        tmp.replace(target)
     except OSError as e:
         print(f"Warning: could not write summary: {e}", file=sys.stderr)
 
@@ -124,7 +124,7 @@ def write_failure_summary(summary_file, session, reason):
         tmp = target.with_suffix(target.suffix + ".tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2)
-        os.replace(tmp, target)
+        tmp.replace(target)
     except OSError as e:
         print(f"Warning: could not write failure summary: {e}", file=sys.stderr)
 
@@ -174,9 +174,9 @@ def extract_text_from_output(output_file, reviewer, content=None):
             # Reasoning events are a distinct type and are skipped here. If the
             # run was truncated/killed and we never see a stop step, fall back
             # to every text part so we never silently drop the whole review.
-            stop_texts = []   # text from step(s) that finished with reason "stop"
-            all_texts = []    # every text part — fallback when no stop step seen
-            step_buf = []     # text accumulated in the in-progress step
+            stop_texts = []  # text from step(s) that finished with reason "stop"
+            all_texts = []  # every text part — fallback when no stop step seen
+            step_buf = []  # text accumulated in the in-progress step
             saw_stop = False
             for line in raw_content.splitlines():
                 if not line.strip():
@@ -242,7 +242,7 @@ def _strip_markdown_wrappers(text):
     text = text.strip()
     for wrap in ("***", "**", "*", "___", "__", "_"):
         if text.startswith(wrap) and text.endswith(wrap) and len(text) >= 2 * len(wrap):
-            inner = text[len(wrap):-len(wrap)]
+            inner = text[len(wrap) : -len(wrap)]
             # Recurse for nested wrappers
             return _strip_markdown_wrappers(inner)
     return text
@@ -276,7 +276,7 @@ def _parse_finding_block(section_text, tag_match):
         "description": desc,
     }
 
-    rest = section_text[tag_match.end():]
+    rest = section_text[tag_match.end() :]
     if rest.startswith("\n"):
         rest = rest[1:]
     lines_after = rest.split("\n")
@@ -366,7 +366,7 @@ def probe_writable(fpath):
             fd, probe = tempfile.mkstemp(dir=str(parent), prefix=".ppr-probe-")
             os.close(fd)
             with contextlib.suppress(OSError):
-                os.unlink(probe)
+                Path(probe).unlink()
             return True, None
         except OSError as e:
             return False, f"directory is not writable: {parent}: {e}"

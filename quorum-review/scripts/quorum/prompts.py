@@ -37,7 +37,6 @@ from quorum.ledger import (
     _issue_support_count,
 )
 
-
 # ---------------------------------------------------------------------------
 # === review contracts ===
 # ---------------------------------------------------------------------------
@@ -59,18 +58,18 @@ REVIEW_CONTRACT_PLAN = (
     "  Section: <plan section> (lines <N-M>)\n"
     "  Recommendation: Concrete fix or mitigation\n"
     "- [B2] (MEDIUM) Description of blocking issue...\n"
-    "(Write \"None\" if no blocking issues.)\n\n"
+    '(Write "None" if no blocking issues.)\n\n'
     "### Non-Blocking Issues\n"
     "Suggestions and improvements. Use [N1], [N2], etc.\n"
     "- [N1] Description...\n"
     "  Section: <plan section> (lines <N-M>)\n"
     "  Recommendation: Suggested improvement\n"
-    "(Write \"None\" if no non-blocking issues.)\n\n"
+    '(Write "None" if no non-blocking issues.)\n\n'
     "### Confidence\n"
     "State your confidence in this review: HIGH, MEDIUM, or LOW\n\n"
     "### Scope\n"
-    "Which areas of the plan does your review cover? (e.g., \"architecture\",\n"
-    "\"security\", \"testing\", \"API design\", \"performance\")\n\n"
+    'Which areas of the plan does your review cover? (e.g., "architecture",\n'
+    '"security", "testing", "API design", "performance")\n\n'
     "Your review MUST end with a verdict on the LAST non-empty line:\n"
     "- `VERDICT: APPROVED` if the plan is ready to execute as-is\n"
     "- `VERDICT: REVISE` if changes are needed before execution\n\n"
@@ -142,16 +141,16 @@ REVIEW_CONTRACT_CODE = (
     "- [B2] (MEDIUM) Diff hunk still allows unsafe fallback\n"
     "  Anchor: diff hunk @@ -12,7 +12,9 @@\n"
     "  Recommendation: Remove the fallback branch\n"
-    "(Write \"None\" if no blocking issues.)\n\n"
+    '(Write "None" if no blocking issues.)\n\n'
     "### Non-Blocking Issues\n"
     "Suggestions and improvements. Use [N1], [N2], etc.\n"
     "Include an Anchor line when the note refers to a specific file or hunk.\n"
-    "(Write \"None\" if no non-blocking issues.)\n\n"
+    '(Write "None" if no non-blocking issues.)\n\n'
     "### Confidence\n"
     "State your confidence in this review: HIGH, MEDIUM, or LOW\n\n"
     "### Scope\n"
-    "Which areas of the change does your review cover? (e.g., \"correctness\",\n"
-    "\"security\", \"maintainability\", \"performance\", \"operability\")\n\n"
+    'Which areas of the change does your review cover? (e.g., "correctness",\n'
+    '"security", "maintainability", "performance", "operability")\n\n'
     "Your review MUST end with a verdict on the LAST non-empty line:\n"
     "- `VERDICT: APPROVED` if the change is ready to land as-is\n"
     "- `VERDICT: REVISE` if changes are needed before landing\n\n"
@@ -294,15 +293,9 @@ def write_initial_prompt(
     """Write the initial review prompt for round 1."""
     rubric_section = ""
     if rubric_text:
-        rubric_section = (
-            f"\n\n## Project Review Guidelines\n\n{rubric_text}\n"
-        )
+        rubric_section = f"\n\n## Project Review Guidelines\n\n{rubric_text}\n"
     artifact_lower = artifact_heading.lower()
-    role_line = (
-        f"Your private role for this round is: {role_label}.\n"
-        if role_label
-        else ""
-    )
+    role_line = f"Your private role for this round is: {role_label}.\n" if role_label else ""
 
     content = (
         f"{review_contract}{rubric_section}\n\n"
@@ -334,11 +327,7 @@ def write_deliberation_prompt(
 ):
     """Write the deliberation prompt for a specific reviewer in rounds 2+."""
     artifact_lower = artifact_heading.lower()
-    role_line = (
-        f"Your private role for this round is: {role_label}.\n"
-        if role_label
-        else ""
-    )
+    role_line = f"Your private role for this round is: {role_label}.\n" if role_label else ""
     content = (
         f"{review_contract}\n\n"
         f"## Panel Context\n\n"
@@ -375,11 +364,7 @@ def write_cross_critique_prompt(
     artifact_heading="Plan",
 ):
     """Write round 2+ prompt with cross-critique instructions and issue ledger."""
-    role_line = (
-        f"Your private role for this round is: {role_label}.\n"
-        if role_label
-        else ""
-    )
+    role_line = f"Your private role for this round is: {role_label}.\n" if role_label else ""
     content = (
         f"{review_contract}\n\n"
         f"{cross_critique_instructions}\n\n"
@@ -418,9 +403,7 @@ def format_ledger_summary(ledger, blind_mode=False):
     lines = []
     for issue in open_issues:
         if blind_mode:
-            lines.append(
-                f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']}"
-            )
+            lines.append(f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']}")
         else:
             lines.append(
                 f"- **{issue['id']}** ({issue['severity']}): {issue['owner_summary']} "

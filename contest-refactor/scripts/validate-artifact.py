@@ -31,9 +31,10 @@ import re
 import subprocess
 import sys
 import tomllib
-from datetime import date, datetime, timezone
+from collections.abc import Iterable
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Any, Iterable, List, Tuple
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -120,7 +121,7 @@ _G22_COMMIT_SUBJECT_V1_RE = re.compile(
 class Issue:
     """A single rule failure in an artifact."""
 
-    __slots__ = ("rule", "message", "context")
+    __slots__ = ("context", "message", "rule")
 
     def __init__(self, rule: str, message: str, context: str | None = None) -> None:
         self.rule = rule
@@ -145,7 +146,7 @@ def _load_json(path: Path) -> Any | None:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise SystemExit(f"error: {path}: JSON parse failed: {exc}")
+        raise SystemExit(f"error: {path}: JSON parse failed: {exc}") from exc
 
 
 def _parse_iso_date(value: Any) -> date | None:
@@ -192,14 +193,14 @@ def _git_command(repo_root: Path, *args: str) -> tuple[int | None, str]:
 def _parse_iso_timestamp(value: Any) -> datetime | None:
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(tzinfo=UTC)
         return value
     if isinstance(value, str):
         try:
             cleaned = value.replace("Z", "+00:00")
             ts = datetime.fromisoformat(cleaned)
             if ts.tzinfo is None:
-                ts = ts.replace(tzinfo=timezone.utc)
+                ts = ts.replace(tzinfo=UTC)
             return ts
         except ValueError:
             return None
@@ -217,20 +218,18 @@ def _reference_now() -> datetime:
         parsed = _parse_iso_timestamp(override)
         if parsed is not None:
             return parsed
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def check_required_artifacts(
     artifact_dir: Path, current_review: dict
-) -> Tuple[List[Issue], dict | None, dict | None]:
+) -> tuple[list[Issue], dict | None, dict | None]:
     """Verify required files exist per schema_version. Returns (issues, history, registry)."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     schema_version = current_review.get("schema_version") or 1
     md_path = artifact_dir / "CURRENT_REVIEW.md"
     if not md_path.exists():
-        issues.append(
-            Issue("required-artifact", "CURRENT_REVIEW.md missing")
-        )
+        issues.append(Issue("required-artifact", "CURRENT_REVIEW.md missing"))
     history: dict | None = None
     registry: dict | None = None
     if schema_version >= 2:
@@ -241,7 +240,7 @@ def check_required_artifacts(
             issues.append(
                 Issue(
                     "required-artifact",
-                    f"REVIEW_HISTORY.json missing (required at schema_version >= 2)",
+                    "REVIEW_HISTORY.json missing (required at schema_version >= 2)",
                 )
             )
         else:
@@ -250,7 +249,7 @@ def check_required_artifacts(
             issues.append(
                 Issue(
                     "required-artifact",
-                    f"findings_registry.json missing (required at schema_version >= 2)",
+                    "findings_registry.json missing (required at schema_version >= 2)",
                 )
             )
         else:
@@ -259,20 +258,18 @@ def check_required_artifacts(
             issues.append(
                 Issue(
                     "required-artifact",
-                    f"REVIEW_HISTORY.md missing (required at schema_version >= 2)",
+                    "REVIEW_HISTORY.md missing (required at schema_version >= 2)",
                 )
             )
     return issues, history, registry
 
 
-def check_schema_enums(current_review: dict, canon: _canon.Canon) -> List[Issue]:
+def check_schema_enums(current_review: dict, canon: _canon.Canon) -> list[Issue]:
     """Every canon-typed value in CURRENT_REVIEW.json must be valid."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     state = current_review.get("state")
     if state is not None and state not in canon.states:
-        issues.append(
-            Issue("schema-enum", f"state {state!r} not in canon", context="state")
-        )
+        issues.append(Issue("schema-enum", f"state {state!r} not in canon", context="state"))
     halt_subtype = current_review.get("halt_subtype")
     if halt_subtype is not None and halt_subtype not in canon.halt_subtypes:
         issues.append(
@@ -349,9 +346,9 @@ def check_schema_enums(current_review: dict, canon: _canon.Canon) -> List[Issue]
     return issues
 
 
-def check_per_finding_evidence_chain(current_review: dict) -> List[Issue]:
+def check_per_finding_evidence_chain(current_review: dict) -> list[Issue]:
     """Every finding has all four Evidence Chain pieces populated."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     findings = current_review.get("findings") or []
     for finding in findings:
         fid = finding.get("loop_local_id") or finding.get("id") or "<unknown>"
@@ -390,7 +387,7 @@ def check_per_finding_evidence_chain(current_review: dict) -> List[Issue]:
     return issues
 
 
-def _occurrences_for(registry: dict | None, stable_id: str) -> List[dict]:
+def _occurrences_for(registry: dict | None, stable_id: str) -> list[dict]:
     if registry is None:
         return []
     for entry in registry.get("entries") or []:
@@ -399,7 +396,7 @@ def _occurrences_for(registry: dict | None, stable_id: str) -> List[dict]:
     return []
 
 
-def _occurrence_fingerprint(occ: dict) -> Tuple[str | None, str | None, str | None]:
+def _occurrence_fingerprint(occ: dict) -> tuple[str | None, str | None, str | None]:
     fp = occ.get("fingerprint") or {}
     return (
         fp.get("claim_consequence_hash"),
@@ -408,22 +405,16 @@ def _occurrence_fingerprint(occ: dict) -> Tuple[str | None, str | None, str | No
     )
 
 
-def _branch_a_satisfied(
-    prior_rejected: List[dict], retiring_hashes: Tuple[str, str, str]
-) -> bool:
+def _branch_a_satisfied(prior_rejected: list[dict], retiring_hashes: tuple[str, str, str]) -> bool:
     """≥2 prior rejected_attempts share all three hashes with each other AND the retiring occurrence."""
     if any(h is None for h in retiring_hashes):
         return False
-    matching = [
-        occ
-        for occ in prior_rejected
-        if _occurrence_fingerprint(occ) == retiring_hashes
-    ]
+    matching = [occ for occ in prior_rejected if _occurrence_fingerprint(occ) == retiring_hashes]
     return len(matching) >= 2
 
 
 def _branch_b_satisfied(
-    occurrences_before_retiring: List[dict], retiring_hashes_2: Tuple[str, str]
+    occurrences_before_retiring: list[dict], retiring_hashes_2: tuple[str, str]
 ) -> bool:
     """≥2 prior occurrences share 2-way hashes with each other AND retiring; ≥1 intervening resolved."""
     if any(h is None for h in retiring_hashes_2):
@@ -431,8 +422,8 @@ def _branch_b_satisfied(
     # collect indices of occurrences whose 2-way hashes match the retiring basis,
     # AND whose status is NOT `resolved` (the resolved occurrence serves only as
     # the "intervening" pivot — it cannot count as one of the matching pair).
-    matching_non_resolved: List[int] = []
-    resolved_indices: List[int] = []
+    matching_non_resolved: list[int] = []
+    resolved_indices: list[int] = []
     for idx, occ in enumerate(occurrences_before_retiring):
         cch, eph, _ = _occurrence_fingerprint(occ)
         if cch == retiring_hashes_2[0] and eph == retiring_hashes_2[1]:
@@ -451,17 +442,12 @@ def _branch_b_satisfied(
     # matching-non-resolved indices.
     first = matching_non_resolved[0]
     last = matching_non_resolved[-1]
-    for r in resolved_indices:
-        if first < r < last:
-            return True
-    return False
+    return any(first < r < last for r in resolved_indices)
 
 
-def check_retirement_rule(
-    current_review: dict, registry: dict | None
-) -> List[Issue]:
+def check_retirement_rule(current_review: dict, registry: dict | None) -> list[Issue]:
     """Validate mechanical retirement: status==unresolvable requires Branch A or Branch B + retirement metadata."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if registry is None:
         return issues
     for entry in registry.get("entries") or []:
@@ -493,9 +479,7 @@ def check_retirement_rule(
                 )
             cch, eph, arh = _occurrence_fingerprint(occ)
             prior = occurrences[:idx]
-            prior_rejected = [
-                p for p in prior if p.get("status") == "rejected_attempt"
-            ]
+            prior_rejected = [p for p in prior if p.get("status") == "rejected_attempt"]
             branch_a_ok = _branch_a_satisfied(prior_rejected, (cch, eph, arh))
             branch_b_ok = _branch_b_satisfied(prior, (cch, eph))
             if not (branch_a_ok or branch_b_ok):
@@ -513,11 +497,9 @@ def check_retirement_rule(
     return issues
 
 
-def check_g30_disposition_coverage(
-    current_review: dict, registry: dict | None
-) -> List[Issue]:
+def check_g30_disposition_coverage(current_review: dict, registry: dict | None) -> list[Issue]:
     """G30: HALT_STAGNATION/oscillation must disposition every eligible Serious-or-worse finding."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if current_review.get("state") != "HALT_STAGNATION":
         return issues
     if current_review.get("halt_subtype") != "oscillation":
@@ -589,19 +571,13 @@ def check_g30_disposition_coverage(
     return issues
 
 
-def check_g31_fingerprint_integrity(registry: dict | None) -> List[Issue]:
+def check_g31_fingerprint_integrity(registry: dict | None) -> list[Issue]:
     """G31: stored fingerprints recompute equal to current field values."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if registry is None:
         return issues
     for entry in registry.get("entries") or []:
         stable_id = entry.get("stable_id", "<unknown>")
-        # Recompute from the entry's canonical fields if available
-        finding_view = {
-            "title": entry.get("title"),
-            # registry doesn't store these structurally; only verify stored hashes
-            # by recomputing from occurrence-time snapshot when included
-        }
         # Validate the occurrence-level fingerprints against any inline finding
         # snapshot fields. The validator depends on the occurrences carrying the
         # hashes; mismatch between two occurrences with otherwise identical-looking
@@ -650,14 +626,12 @@ def check_g31_fingerprint_integrity(registry: dict | None) -> List[Issue]:
     return issues
 
 
-def check_g18_review_history_append(
-    current_review: dict, history: dict | None
-) -> List[Issue]:
+def check_g18_review_history_append(current_review: dict, history: dict | None) -> list[Issue]:
     """G18: REVIEW_HISTORY.json must contain exactly N entries (N = current loop),
     and the most recent entry must equal CURRENT_REVIEW.json (parsed-dict equality).
     Per validation.md:82-83. Schema_version >= 2.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 2:
         return issues
     if history is None:
@@ -691,7 +665,7 @@ def check_g18_review_history_append(
     return issues
 
 
-def check_g19_provider_model(current_review: dict) -> List[Issue]:
+def check_g19_provider_model(current_review: dict) -> list[Issue]:
     """G19: provider/model attribution per validation.md:84-85 + provider-adapters.md.
     Schema_version >= 2.
 
@@ -704,7 +678,7 @@ def check_g19_provider_model(current_review: dict) -> List[Issue]:
     - Known providers (claude_code, codex, opencode) ⇒ both models are non-null strings.
     - Reject placeholder literal "inline-current-model".
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 2:
         return issues
 
@@ -799,7 +773,11 @@ def check_g19_provider_model(current_review: dict) -> List[Issue]:
                 )
         # Default-source ⇒ value matches provider default.
         provider_default = _PROVIDER_DEFAULTS[provider]
-        if loop_source == "default" and isinstance(loop_model, str) and loop_model != provider_default:
+        if (
+            loop_source == "default"
+            and isinstance(loop_model, str)
+            and loop_model != provider_default
+        ):
             issues.append(
                 Issue(
                     "G19",
@@ -807,7 +785,11 @@ def check_g19_provider_model(current_review: dict) -> List[Issue]:
                     f"{provider!r} default is {provider_default!r}",
                 )
             )
-        if reviewer_source == "default" and isinstance(reviewer_model, str) and reviewer_model != provider_default:
+        if (
+            reviewer_source == "default"
+            and isinstance(reviewer_model, str)
+            and reviewer_model != provider_default
+        ):
             issues.append(
                 Issue(
                     "G19",
@@ -829,7 +811,7 @@ def check_g19_provider_model(current_review: dict) -> List[Issue]:
 
 def check_g22_archive_divider(
     artifact_dir: Path, current_review: dict, project_config: dict | None = None
-) -> List[Issue]:
+) -> list[Issue]:
     """G22 (both halves): REVIEW_HISTORY.md `--- Loop ` dividers must match
     output-format-markdown.md format; recent commit subjects must match the
     pattern from validation.md:92. Schema_version >= 2.
@@ -839,7 +821,7 @@ def check_g22_archive_divider(
     chain — signal that we're in a loop-managed repo). Fixture dirs nested
     inside the skills repo skip the git shell-out silently.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 2:
         return issues
     md_path = artifact_dir / "REVIEW_HISTORY.md"
@@ -850,16 +832,15 @@ def check_g22_archive_divider(
             issues.append(Issue("G22", f"REVIEW_HISTORY.md unreadable: {exc}"))
             text = ""
         for lineno, line in enumerate(text.splitlines(), start=1):
-            if line.startswith("--- Loop "):
-                if not _G22_DIVIDER_RE.match(line):
-                    issues.append(
-                        Issue(
-                            "G22",
-                            f"REVIEW_HISTORY.md line {lineno}: archive divider does not match "
-                            f"`--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
-                            context=line[:120],
-                        )
+            if line.startswith("--- Loop ") and not _G22_DIVIDER_RE.match(line):
+                issues.append(
+                    Issue(
+                        "G22",
+                        f"REVIEW_HISTORY.md line {lineno}: archive divider does not match "
+                        f"`--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+                        context=line[:120],
                     )
+                )
     # Commit-subject sub-check (requires git + loop-managed repo).
     if project_config is None:
         return issues
@@ -880,8 +861,8 @@ def check_g22_archive_divider(
             issues.append(
                 Issue(
                     "G22",
-                    f"commit subject missing required `[registry: ...]` suffix "
-                    f"(schema_version >= 2 requires it)",
+                    "commit subject missing required `[registry: ...]` suffix "
+                    "(schema_version >= 2 requires it)",
                     context=subject[:120],
                 )
             )
@@ -889,16 +870,16 @@ def check_g22_archive_divider(
             issues.append(
                 Issue(
                     "G22",
-                    f"commit subject does not match loop-N pattern "
-                    f"`loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) "
-                    f"<status> [registry: +<n> findings(, ~<n> occurrences)?]`",
+                    "commit subject does not match loop-N pattern "
+                    "`loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) "
+                    "<status> [registry: +<n> findings(, ~<n> occurrences)?]`",
                     context=subject[:120],
                 )
             )
     return issues
 
 
-def check_g27_retry_envelope(current_review: dict) -> List[Issue]:
+def check_g27_retry_envelope(current_review: dict) -> list[Issue]:
     """G27: implementation_review retry envelope shape per validation.md:104-110.
     Schema_version >= 3.
 
@@ -910,7 +891,7 @@ def check_g27_retry_envelope(current_review: dict) -> List[Issue]:
     - When all attempts non-ok AND verdict == "rejected", reason must equal the
       exact canonical phrase.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 3:
         return issues
     impl = current_review.get("implementation_review")
@@ -1014,7 +995,7 @@ def check_g28_loop_state_freshness(
     artifact_dir: Path,
     current_review: dict,
     project_config: dict | None = None,
-) -> List[Issue]:
+) -> list[Issue]:
     """G28 (full): LOOP_STATE.json invariants per validation.md:113-120.
     Schema_version >= 3.
 
@@ -1027,7 +1008,7 @@ def check_g28_loop_state_freshness(
     - post-commit cleanup: LOOP_STATE.json must be absent when commit_attempted_sha
       matches git HEAD (requires project_config + git available)
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 3:
         return issues
     loop_state_path = artifact_dir / "LOOP_STATE.json"
@@ -1063,7 +1044,7 @@ def check_g28_loop_state_freshness(
                 f"LOOP_STATE.step_started={step_started!r} must be int in 1..11",
             )
         )
-    if not isinstance(step_completed, int) or step_completed not in range(0, 12):
+    if not isinstance(step_completed, int) or step_completed not in range(12):
         issues.append(
             Issue(
                 "G28",
@@ -1159,11 +1140,9 @@ def check_g28_loop_state_freshness(
     return issues
 
 
-def check_halt_success_gating(
-    current_review: dict, project_config: dict | None
-) -> List[Issue]:
+def check_halt_success_gating(current_review: dict, project_config: dict | None) -> list[Issue]:
     """HALT_SUCCESS: no unresolved Serious-or-worse, no expired accepted residuals."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if current_review.get("state") not in ("HALT_SUCCESS", "HALT_SUCCESS_candidate"):
         return issues
     findings = current_review.get("findings") or []
@@ -1208,7 +1187,7 @@ def check_halt_success_gating(
     return issues
 
 
-def check_g21_scorecard(current_review: dict) -> List[Issue]:
+def check_g21_scorecard(current_review: dict) -> list[Issue]:
     """G21-scorecard: HALT_SUCCESS requires every dimension to satisfy
     score == 10 OR (score >= 9.5 AND residual_disposition == "accepted").
 
@@ -1218,7 +1197,7 @@ def check_g21_scorecard(current_review: dict) -> List[Issue]:
         - score >= 9.5 AND score < 10 AND disp == "accepted"     → pass
         - anything else (including queued at any score)          → fail
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if current_review.get("state") not in ("HALT_SUCCESS", "HALT_SUCCESS_candidate"):
         return issues
     scorecard = current_review.get("scorecard") or {}
@@ -1290,7 +1269,7 @@ def check_g21_scorecard(current_review: dict) -> List[Issue]:
     return issues
 
 
-def check_g32_halt_success_challenge(current_review: dict) -> List[Issue]:
+def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
     """G32: HALT_SUCCESS terminal state (v4+) requires an independent challenge.
 
     When state == "HALT_SUCCESS" and schema_version >= 4:
@@ -1308,7 +1287,7 @@ def check_g32_halt_success_challenge(current_review: dict) -> List[Issue]:
 
     When schema_version < 4: G32 does not fire.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     schema_version = current_review.get("schema_version") or 1
     if schema_version < 4:
         return issues  # legacy v3 HALT_SUCCESS without a challenge stays valid
@@ -1452,7 +1431,7 @@ def check_g32_halt_success_challenge(current_review: dict) -> List[Issue]:
     return issues
 
 
-def check_g33_risk_boundary_evidence(current_review: dict, canon) -> List[Issue]:
+def check_g33_risk_boundary_evidence(current_review: dict, canon) -> list[Issue]:
     """G33: loop_result.risk_boundary_evidence SHAPE (Meta-Rule-4 preservation evidence), schema_version >= 3.
 
     The field is OPTIONAL (null/absent ⇒ no risk boundary crossed this loop). When present it must be a
@@ -1460,7 +1439,7 @@ def check_g33_risk_boundary_evidence(current_review: dict, canon) -> List[Issue]
     escape is legal only when mechanically_testable is false. The validator checks SHAPE only (it has no git
     diff); the git-grounded safety semantics live in the Layer-5 grader (exec_replay_grade.py).
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 3:
         return issues
     lr = current_review.get("loop_result")
@@ -1476,19 +1455,31 @@ def check_g33_risk_boundary_evidence(current_review: dict, canon) -> List[Issue]
         return issues
     bk = ev.get("boundary_kind")
     if bk not in set(canon.risk_boundary_kinds):
-        issues.append(Issue(
-            "G33", f"risk_boundary_evidence.boundary_kind {bk!r} not in {sorted(canon.risk_boundary_kinds)}"))
+        issues.append(
+            Issue(
+                "G33",
+                f"risk_boundary_evidence.boundary_kind {bk!r} not in {sorted(canon.risk_boundary_kinds)}",
+            )
+        )
     verification = ev.get("verification")
     if verification not in set(canon.risk_evidence_verifications):
-        issues.append(Issue(
-            "G33", f"risk_boundary_evidence.verification {verification!r} not in "
-            f"{sorted(canon.risk_evidence_verifications)}"))
+        issues.append(
+            Issue(
+                "G33",
+                f"risk_boundary_evidence.verification {verification!r} not in "
+                f"{sorted(canon.risk_evidence_verifications)}",
+            )
+        )
     detail = ev.get("detail")
     if not (isinstance(detail, str) and detail.strip()):
         issues.append(Issue("G33", "risk_boundary_evidence.detail required (non-empty string)"))
     if verification == "reasoning_only" and ev.get("mechanically_testable") is not False:
-        issues.append(Issue(
-            "G33", "risk_boundary_evidence.verification=reasoning_only requires mechanically_testable=false"))
+        issues.append(
+            Issue(
+                "G33",
+                "risk_boundary_evidence.verification=reasoning_only requires mechanically_testable=false",
+            )
+        )
     return issues
 
 
@@ -1497,7 +1488,7 @@ _G34_REASON_STATES = {"HALT_STAGNATION", "HALT_LOOP_CAP"}
 _G34_HANDOFF_STATES = {"HALT_SUCCESS", "HALT_STAGNATION", "HALT_LOOP_CAP", "HALT_DRY_RUN"}
 
 
-def check_g34_halt_tail_invariants(current_review: dict, canon) -> List[Issue]:
+def check_g34_halt_tail_invariants(current_review: dict, canon) -> list[Issue]:
     """G34: HALT-tail emit invariants — PRESENCE of halt_subtype / unresolved_reason / halt_handoff by state.
 
     Bidirectional (required-when AND null-otherwise), schema_version >= 3. Enforces the presence halves of
@@ -1511,7 +1502,7 @@ def check_g34_halt_tail_invariants(current_review: dict, canon) -> List[Issue]:
     separate, currently-unenforced rule. Runs only for canon-valid states — an invalid or missing `state` is
     the schema-enum check's concern, not G34's (so G34 does not double-report it).
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 3:
         return issues
     state = current_review.get("state")
@@ -1521,30 +1512,41 @@ def check_g34_halt_tail_invariants(current_review: dict, canon) -> List[Issue]:
     subtype = current_review.get("halt_subtype")
     if state == "HALT_STAGNATION":
         if subtype is None:
-            issues.append(Issue("G34", "state=HALT_STAGNATION requires a non-null halt_subtype (rule #17)"))
+            issues.append(
+                Issue("G34", "state=HALT_STAGNATION requires a non-null halt_subtype (rule #17)")
+            )
     elif subtype is not None:
-        issues.append(Issue(
-            "G34", f"state={state} requires halt_subtype=null (rule #17); got {subtype!r}"))
+        issues.append(
+            Issue("G34", f"state={state} requires halt_subtype=null (rule #17); got {subtype!r}")
+        )
     # rule #11 — unresolved_reason presence by state
     reason = current_review.get("unresolved_reason")
     if state in _G34_REASON_STATES:
         if reason is None:
-            issues.append(Issue("G34", f"state={state} requires a non-null unresolved_reason (rule #11)"))
+            issues.append(
+                Issue("G34", f"state={state} requires a non-null unresolved_reason (rule #11)")
+            )
     elif reason is not None:
         issues.append(Issue("G34", f"state={state} requires unresolved_reason=null (rule #11)"))
     # rule #18 — halt_handoff PRESENCE by state (shape is out of scope)
     handoff = current_review.get("halt_handoff")
     if state in _G34_HANDOFF_STATES:
         if handoff is None:
-            issues.append(Issue("G34", f"state={state} requires a non-null halt_handoff (rule #18 presence)"))
+            issues.append(
+                Issue("G34", f"state={state} requires a non-null halt_handoff (rule #18 presence)")
+            )
     elif handoff is not None:
-        issues.append(Issue(
-            "G34", f"state={state} requires halt_handoff=null (rule #18); CONTINUE and the non-terminal "
-            f"HALT_SUCCESS_candidate carry no user-facing handoff"))
+        issues.append(
+            Issue(
+                "G34",
+                f"state={state} requires halt_handoff=null (rule #18); CONTINUE and the non-terminal "
+                f"HALT_SUCCESS_candidate carry no user-facing handoff",
+            )
+        )
     return issues
 
 
-def check_g35_halt_handoff_shape(current_review: dict, canon) -> List[Issue]:
+def check_g35_halt_handoff_shape(current_review: dict, canon) -> list[Issue]:
     """G35: shape of the halt_handoff OBJECT (rule #18 shape half; presence is G34's job).
 
     Scoped to the handoff-required states (_G34_HANDOFF_STATES) — the states where G34 has confirmed the
@@ -1559,22 +1561,28 @@ def check_g35_halt_handoff_shape(current_review: dict, canon) -> List[Issue]:
       - each action (a dict): match_kind ∈ canon.match_kinds, with the path↔kind coupling —
         non-empty match_paths ⟹ all_of; empty/absent match_paths ⟹ {any_of, no_drift_expected}.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if current_review.get("state") not in _G34_HANDOFF_STATES:
         return issues  # null-required / non-handoff states are G34's concern, not G35's
     handoff = current_review.get("halt_handoff")
     if handoff is None:
         return issues  # absence is G34's presence concern, not shape
     if not isinstance(handoff, dict):
-        issues.append(Issue(
-            "G35", f"halt_handoff must be an object when present (rule #18 shape); got {type(handoff).__name__}"))
+        issues.append(
+            Issue(
+                "G35",
+                f"halt_handoff must be an object when present (rule #18 shape); got {type(handoff).__name__}",
+            )
+        )
         return issues
     text = handoff.get("text")
     if not (isinstance(text, str) and text.strip()):
         issues.append(Issue("G35", "halt_handoff.text must be a non-empty string (rule #18 shape)"))
     actions = handoff.get("expected_actions")
     if not isinstance(actions, list):
-        issues.append(Issue("G35", "halt_handoff.expected_actions must be an array (rule #18 shape)"))
+        issues.append(
+            Issue("G35", "halt_handoff.expected_actions must be an array (rule #18 shape)")
+        )
         return issues
     valid_kinds = set(canon.match_kinds)
     for i, action in enumerate(actions):
@@ -1584,27 +1592,40 @@ def check_g35_halt_handoff_shape(current_review: dict, canon) -> List[Issue]:
         aid = action.get("action_id") or i
         match_paths = action.get("match_paths")
         if match_paths is not None and not isinstance(match_paths, list):
-            issues.append(Issue(
-                "G35", f"expected_actions[{aid!r}].match_paths must be an array when present"))
+            issues.append(
+                Issue("G35", f"expected_actions[{aid!r}].match_paths must be an array when present")
+            )
             continue
         paths_nonempty = bool(match_paths)
         match_kind = action.get("match_kind")
         if match_kind not in valid_kinds:
-            issues.append(Issue(
-                "G35", f"expected_actions[{aid!r}] match_kind {match_kind!r} not in canon match-kinds "
-                f"{sorted(valid_kinds)}"))
+            issues.append(
+                Issue(
+                    "G35",
+                    f"expected_actions[{aid!r}] match_kind {match_kind!r} not in canon match-kinds "
+                    f"{sorted(valid_kinds)}",
+                )
+            )
         elif paths_nonempty and match_kind != "all_of":
-            issues.append(Issue(
-                "G35", f"expected_actions[{aid!r}] has non-empty match_paths so match_kind must be 'all_of' "
-                f"(rule #18 coupling); got {match_kind!r}"))
+            issues.append(
+                Issue(
+                    "G35",
+                    f"expected_actions[{aid!r}] has non-empty match_paths so match_kind must be 'all_of' "
+                    f"(rule #18 coupling); got {match_kind!r}",
+                )
+            )
         elif not paths_nonempty and match_kind not in ("any_of", "no_drift_expected"):
-            issues.append(Issue(
-                "G35", f"expected_actions[{aid!r}] has empty match_paths so match_kind must be 'any_of' or "
-                f"'no_drift_expected' (rule #18 coupling); got {match_kind!r}"))
+            issues.append(
+                Issue(
+                    "G35",
+                    f"expected_actions[{aid!r}] has empty match_paths so match_kind must be 'any_of' or "
+                    f"'no_drift_expected' (rule #18 coupling); got {match_kind!r}",
+                )
+            )
     return issues
 
 
-def check_g36_required_state(current_review: dict, canon) -> List[Issue]:
+def check_g36_required_state(current_review: dict, canon) -> list[Issue]:
     """G36: `state` is a required, non-null field (covers both `state: null` and an absent key).
 
     Presence only — membership (`state ∈ canon.states`) for a non-null foreign state stays with
@@ -1612,9 +1633,13 @@ def check_g36_required_state(current_review: dict, canon) -> List[Issue]:
     fires only when `state is not None`, and G34 returns early when `state ∉ canon.states`.
     """
     if current_review.get("state") is None:
-        return [Issue(
-            "G36", "state is a required field and must be non-null (rule #30); "
-            "membership ∈ canon is the schema-enum check's concern")]
+        return [
+            Issue(
+                "G36",
+                "state is a required field and must be non-null (rule #30); "
+                "membership ∈ canon is the schema-enum check's concern",
+            )
+        ]
     return []
 
 
@@ -1627,7 +1652,7 @@ _G37_STRUCTURAL_KIND = "structural_anchor_unmet"
 _G37_PROMOTION_TRIGGER_KINDS = {"ceremony", "framework_constrained", "cosmetic", "adr_carved_out"}
 
 
-def check_g37_residual_blocker_coherence(current_review: dict) -> List[Issue]:
+def check_g37_residual_blocker_coherence(current_review: dict) -> list[Issue]:
     """G37: at a converged empty-backlog terminal, every sub-9.5 dimension must carry
     residual_blocker_kind == "structural_anchor_unmet". A promotion-trigger kind (or a missing
     kind) is the scoring incoherence the Residual Accounting Pass forbids.
@@ -1639,7 +1664,7 @@ def check_g37_residual_blocker_coherence(current_review: dict) -> List[Issue]:
     verification_blocked}, HALT_SUCCESS(_candidate), HALT_DRY_RUN, HALT_LOOP_CAP with a NON-empty
     backlog (those sub-9.5 scores have legitimate queued items), and CONTINUE. Schema_version >= 4.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 4:
         return issues
     state = current_review.get("state")
@@ -1649,7 +1674,7 @@ def check_g37_residual_blocker_coherence(current_review: dict) -> List[Issue]:
     if not isinstance(scorecard, dict):
         return issues  # scorecard shape is check_schema_enums / G21's concern
 
-    sub95: List[Tuple[str, float]] = []
+    sub95: list[tuple[str, float]] = []
     for dim, entry in scorecard.items():
         if not isinstance(entry, dict):
             continue
@@ -1671,22 +1696,28 @@ def check_g37_residual_blocker_coherence(current_review: dict) -> List[Issue]:
         if kind == _G37_STRUCTURAL_KIND:
             continue
         if kind in _G37_PROMOTION_TRIGGER_KINDS:
-            issues.append(Issue(
-                "G37",
-                f"{terminal} dimension {dim!r} score={score} < 9.5 cites promotion-trigger "
-                f"residual_blocker_kind={kind!r}; the Residual Accounting Pass requires promoting it to "
-                f"9.5 with residual_disposition='accepted' (only 'structural_anchor_unmet' licenses keeping "
-                f"a dimension below 9.5 at a converged terminal)"))
+            issues.append(
+                Issue(
+                    "G37",
+                    f"{terminal} dimension {dim!r} score={score} < 9.5 cites promotion-trigger "
+                    f"residual_blocker_kind={kind!r}; the Residual Accounting Pass requires promoting it to "
+                    f"9.5 with residual_disposition='accepted' (only 'structural_anchor_unmet' licenses keeping "
+                    f"a dimension below 9.5 at a converged terminal)",
+                )
+            )
         elif kind is None:
-            issues.append(Issue(
-                "G37",
-                f"{terminal} dimension {dim!r} score={score} < 9.5 must declare residual_blocker_kind "
-                f"(only 'structural_anchor_unmet' licenses a sub-9.5 score at a converged terminal); got null"))
+            issues.append(
+                Issue(
+                    "G37",
+                    f"{terminal} dimension {dim!r} score={score} < 9.5 must declare residual_blocker_kind "
+                    f"(only 'structural_anchor_unmet' licenses a sub-9.5 score at a converged terminal); got null",
+                )
+            )
         # any other non-null value is an unknown enum token — owned by check_schema_enums, not G37
     return issues
 
 
-def check_g38_premium_model_budget_guard(current_review: dict, canon) -> List[Issue]:
+def check_g38_premium_model_budget_guard(current_review: dict, canon) -> list[Issue]:
     """G38: premium loop models require an invocation-level budget guard.
 
     Safety rule: if `loop_model` is in canon.extra["premium_models"], the artifact must
@@ -1694,7 +1725,7 @@ def check_g38_premium_model_budget_guard(current_review: dict, canon) -> List[Is
     (`premium_loop_override: true`). Coherence rule: `premium_dry_run`, when present,
     must describe the dedicated premium dry-run flag/env path that forced dry_run.
     """
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 2:
         return issues
 
@@ -1784,7 +1815,12 @@ def check_g38_premium_model_budget_guard(current_review: dict, canon) -> List[Is
                     )
                 )
 
-    if isinstance(loop_model, str) and loop_model in premium_models and not dry_run and premium_loop_override is not True:
+    if (
+        isinstance(loop_model, str)
+        and loop_model in premium_models
+        and not dry_run
+        and premium_loop_override is not True
+    ):
         issues.append(
             Issue(
                 "G38",
@@ -1795,9 +1831,9 @@ def check_g38_premium_model_budget_guard(current_review: dict, canon) -> List[Is
     return issues
 
 
-def check_continue_backlog(current_review: dict) -> List[Issue]:
+def check_continue_backlog(current_review: dict) -> list[Issue]:
     """CONTINUE must carry next backlog work."""
-    issues: List[Issue] = []
+    issues: list[Issue] = []
     if current_review.get("state") != "CONTINUE":
         return issues
     backlog = current_review.get("backlog") or []
@@ -1814,7 +1850,7 @@ def check_continue_backlog(current_review: dict) -> List[Issue]:
 
 def _load_project_config(artifact_dir: Path) -> dict | None:
     """Load `.contest-refactor.toml` from the artifact dir or its repo root."""
-    candidates: List[Path] = [
+    candidates: list[Path] = [
         artifact_dir / ".contest-refactor.toml",
     ]
     cur = artifact_dir.resolve()
@@ -1834,8 +1870,8 @@ def _load_project_config(artifact_dir: Path) -> dict | None:
     return None
 
 
-def run_checks(artifact_dir: Path) -> List[Issue]:
-    issues: List[Issue] = []
+def run_checks(artifact_dir: Path) -> list[Issue]:
+    issues: list[Issue] = []
     canon = _canon.load_canon(SKILL_ROOT)
     current_review_path = artifact_dir / "CURRENT_REVIEW.json"
     if not current_review_path.exists():
@@ -1846,9 +1882,7 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
             )
         ]
     current_review = _load_json(current_review_path) or {}
-    required_issues, history, registry = check_required_artifacts(
-        artifact_dir, current_review
-    )
+    required_issues, history, registry = check_required_artifacts(artifact_dir, current_review)
     issues.extend(required_issues)
     issues.extend(check_schema_enums(current_review, canon))
     issues.extend(check_per_finding_evidence_chain(current_review))
@@ -1876,15 +1910,12 @@ def run_checks(artifact_dir: Path) -> List[Issue]:
 
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "artifact_dir", type=Path, help="directory containing CURRENT_REVIEW.json"
-    )
+    parser.add_argument("artifact_dir", type=Path, help="directory containing CURRENT_REVIEW.json")
     parser.add_argument(
         "--mode",
         choices=("advisory", "strict"),
         default="strict",
-        help="strict (default, PR2+): exit non-zero on any failure; "
-        "advisory: WARN, exit 0",
+        help="strict (default, PR2+): exit non-zero on any failure; advisory: WARN, exit 0",
     )
     parser.add_argument(
         "--json",

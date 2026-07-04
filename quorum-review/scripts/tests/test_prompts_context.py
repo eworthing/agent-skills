@@ -1,7 +1,15 @@
 """prompts context tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestPromptGeneration(unittest.TestCase):
@@ -53,14 +61,16 @@ class TestDeliberationCompilation(unittest.TestCase):
                 review_file.write_text(f"Review from {prov}.\n\nVERDICT: APPROVED\n")
 
                 session_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-session.json"
-                session_file.write_text(json.dumps({
-                    "model": model or "default-model",
-                    "effort": "medium",
-                }))
+                session_file.write_text(
+                    json.dumps(
+                        {
+                            "model": model or "default-model",
+                            "effort": "medium",
+                        }
+                    )
+                )
 
-            delib_text, verdicts, reviewer_map = compile_deliberation(
-                panel, quorum_id, tmpdir, 1
-            )
+            delib_text, verdicts, reviewer_map = compile_deliberation(panel, quorum_id, tmpdir, 1)
 
             # Verify anonymous labels
             self.assertIn("Reviewer A", delib_text)
@@ -85,9 +95,7 @@ class TestDeliberationCompilation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             quorum_id = "test5678"
             panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
-            _delib_text, verdicts, _reviewer_map = compile_deliberation(
-                panel, quorum_id, tmpdir, 1
-            )
+            _delib_text, verdicts, _reviewer_map = compile_deliberation(panel, quorum_id, tmpdir, 1)
             self.assertEqual(len(verdicts), 3)
             self.assertTrue(all(v[1] is None for v in verdicts))
 
@@ -97,20 +105,20 @@ class TestPromptFormatting(unittest.TestCase):
 
     def test_initial_prompt_no_indentation(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-            write_initial_prompt(
-                f.name, 1, 3, "## Review Contract\nTest.", "# My Plan\nStuff."
-            )
+            write_initial_prompt(f.name, 1, 3, "## Review Contract\nTest.", "# My Plan\nStuff.")
             content = Path(f.name).read_text()
             for line in content.splitlines():
                 if line.startswith("##"):
-                    self.assertFalse(line.startswith("    "),
-                                     f"Header is indented: {line!r}")
+                    self.assertFalse(line.startswith("    "), f"Header is indented: {line!r}")
             os.unlink(f.name)
 
     def test_deliberation_prompt_no_indentation(self):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             write_deliberation_prompt(
-                f.name, 1, 3, 2,
+                f.name,
+                1,
+                3,
+                2,
                 "## Review Contract\nTest.",
                 "--- R1 ---\nFeedback.",
                 "- Fixed things",
@@ -119,8 +127,7 @@ class TestPromptFormatting(unittest.TestCase):
             content = Path(f.name).read_text()
             for line in content.splitlines():
                 if line.startswith("##"):
-                    self.assertFalse(line.startswith("    "),
-                                     f"Header is indented: {line!r}")
+                    self.assertFalse(line.startswith("    "), f"Header is indented: {line!r}")
             os.unlink(f.name)
 
 
@@ -147,17 +154,23 @@ class TestContextCompression(unittest.TestCase):
                 )
 
             ledger = {
-                "issues": [{
-                    "id": "BLK-001", "severity": "blocking", "status": "open",
-                    "owner_summary": "Missing auth", "support_count": 2,
-                    "dispute_count": 0,
-                }],
-                "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "severity": "blocking",
+                        "status": "open",
+                        "owner_summary": "Missing auth",
+                        "support_count": 2,
+                        "dispute_count": 0,
+                    }
+                ],
+                "next_blk_id": 2,
+                "next_nb_id": 1,
+                "merges": [],
+                "rounds": {},
             }
 
-            compressed = compile_compressed_context(
-                ledger, panel, quorum_id, tmpdir, 3
-            )
+            compressed = compile_compressed_context(ledger, panel, quorum_id, tmpdir, 3)
 
             # Should contain issue ledger
             self.assertIn("BLK-001", compressed)
@@ -180,7 +193,9 @@ class TestCrossCritiquePrompt(unittest.TestCase):
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             write_cross_critique_prompt(
                 f.name,
-                1, 3, 2,
+                1,
+                3,
+                2,
                 REVIEW_CONTRACT_V2,
                 CROSS_CRITIQUE_INSTRUCTIONS,
                 "--- Reviewer A ---\nSome review.",
@@ -343,14 +358,22 @@ class TestCrossCritiqueInstructions(unittest.TestCase):
         """Round 2+ prompt must contain review contract, cross-critique, and all context."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 1, "dispute_count": 0,
-                 "owner_summary": "Missing auth"},
+                {
+                    "id": "BLK-001",
+                    "severity": "blocking",
+                    "status": "open",
+                    "support_count": 1,
+                    "dispute_count": 0,
+                    "owner_summary": "Missing auth",
+                },
             ],
         }
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             write_cross_critique_prompt(
-                f.name, 1, 3, 2,
+                f.name,
+                1,
+                3,
+                2,
                 REVIEW_CONTRACT_V2,
                 CROSS_CRITIQUE_INSTRUCTIONS,
                 "--- Reviewer A ---\nSome review...",
@@ -375,8 +398,9 @@ class TestCrossCritiqueInstructions(unittest.TestCase):
                 pos = content.index(heading)
                 positions.append(pos)
             # Verify headings appear in order
-            self.assertEqual(positions, sorted(positions),
-                             f"Section headings must appear in order: {headings}")
+            self.assertEqual(
+                positions, sorted(positions), f"Section headings must appear in order: {headings}"
+            )
 
             # Must contain the actual issue from the ledger
             self.assertIn("BLK-001", content)

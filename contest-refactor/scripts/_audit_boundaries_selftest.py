@@ -42,7 +42,8 @@ def _write(root: Path, files: dict[str, str]) -> None:
 def _run(root: Path) -> str:
     proc = subprocess.run(
         [sys.executable, str(AUDIT), str(root)],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     return proc.stdout
 

@@ -2,6 +2,13 @@
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+  ".claude/skills/skill-evaluator-1.0.0",           # third-party bundled skill
+  "contest-refactor/evals/**/repo-map-fixtures/**",  # synthetic malformed fixtures
+]
+# refs/, temp/, .agents/ are already skipped via .gitignore (Ruff respects it).
+# Vendored **/scripts/_common/ is intentionally NOT excluded: it must stay
+# byte-identical to common/common/, and identical config keeps it clean.
 
 [tool.ruff.lint]
 select = [
@@ -14,13 +21,42 @@ select = [
   "RUF",  # Ruff-specific correctness/cleanup rules
   "PTH",  # flake8-use-pathlib (already adopted in codebase)
   "YTT",  # flake8-2020 (sys.version correctness)
+  # --- LLM-failure-mode additions ---
+  "PGH",  # blanket-noqa / bare type:ignore without a code (no lazy silencing)
+  "A",    # flake8-builtins (shadowing id/type/list/dict/input)
+  "ISC",  # implicit str concat -> catches missing comma in a collection
+  "C4",   # flake8-comprehensions
+  "PIE",  # misc lints
+  "RET",  # flake8-return
 ]
 ignore = [
-  "E501",   # formatter does best-effort line wrapping; avoid noisy conflicts
+  "E501",    # formatter does best-effort line wrapping; avoid noisy conflicts
+  "ISC001",  # conflicts with the formatter (ruff format owns implicit concat)
+  "RET504",  # allow explicit `x = ...; return x` for readability
 ]
 
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# Test trees: star-import fixtures, sys.path shims, asserts, multi-import lines,
+# plus test-only idioms — mock kwargs shadowing builtins (A002), throwaway tuple
+# unpacks (RUF059), deliberate raw open()/try-except in fixtures (SIM115/SIM105),
+# and short loop/index names (E741). Relaxed here so the safety-net tests are not
+# rewritten to satisfy the linter.
+"**/tests/**" = [
+  "F403", "F405", "F401", "E402", "E401", "S101",
+  "A002", "RUF059", "SIM115", "SIM105", "E741",
+  "PTH",  # os.path for throwaway temp paths in fixtures — not worth converting
+]
+"**/conftest.py" = ["F401"]
+"contest-refactor/scripts/_*_selftest.py" = ["F403", "F405", "F401", "E402", "S101"]
+# Intentional re-export shims — names are re-exported for callers/tests, not used
+# locally (run_quorum.py must re-export every name in quorum tests/shim-contract.txt).
+"peer-plan-review/scripts/ppr_paths.py" = ["F401", "E402"]
+"quorum-review/scripts/run_quorum.py" = ["F401"]
+# `×` (U+00D7) is intentional notation in the token-math docstrings/output here.
+"contest-refactor/scripts/token-budget.py" = ["RUF001", "RUF002"]
 
 [tool.ruff.format]
 docstring-code-format = true

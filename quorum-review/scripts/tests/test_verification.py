@@ -1,7 +1,15 @@
 """verification tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestVerificationStage(unittest.TestCase):
@@ -25,7 +33,10 @@ class TestVerificationStage(unittest.TestCase):
                 ),
                 make_issue("BLK-002", "Minor", support_count=1),
             ],
-            "next_blk_id": 3, "next_nb_id": 1, "merges": [], "rounds": {},
+            "next_blk_id": 3,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
         }
         prompts = generate_verification_prompts(ledger, "# Plan text", "super", 3)
         # Only BLK-001 survives supermajority (2/3), BLK-002 doesn't (1/3)
@@ -73,8 +84,7 @@ class TestVerificationStage(unittest.TestCase):
         """Parse multiple VERIFIED/INVALIDATED in one response."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
             f.write(
-                "VERIFIED BLK-001\nAuth still missing.\n\n"
-                "INVALIDATED BLK-002\nFixed in revision.\n"
+                "VERIFIED BLK-001\nAuth still missing.\n\nINVALIDATED BLK-002\nFixed in revision.\n"
             )
             f.flush()
             results = parse_verification_response(f.name)
@@ -86,10 +96,14 @@ class TestVerificationStage(unittest.TestCase):
         """--skip-verification is accepted."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
             "--skip-verification",
         ]
         args = parse_args()
@@ -121,7 +135,10 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
                     },
                 ),
             ],
-            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
         }
         plan_text = "## My Specific Plan\nDeploy auth middleware to /admin."
         prompts = generate_verification_prompts(ledger, plan_text, "super", 3)
@@ -137,10 +154,18 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
         """Calling with 3 args (the old bug) must raise TypeError."""
         ledger = {
             "issues": [
-                {"id": "BLK-001", "severity": "blocking", "status": "open",
-                 "support_count": 2, "owner_summary": "Issue"},
+                {
+                    "id": "BLK-001",
+                    "severity": "blocking",
+                    "status": "open",
+                    "support_count": 2,
+                    "owner_summary": "Issue",
+                },
             ],
-            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
         }
         with self.assertRaises(TypeError):
             generate_verification_prompts(ledger, "super", 3)
@@ -157,9 +182,7 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create plan file
             plan_file = os.path.join(tmpdir, "plan.md")
-            Path(plan_file).write_text(
-                "# Test Plan\nImplement feature X.", encoding="utf-8"
-            )
+            Path(plan_file).write_text("# Test Plan\nImplement feature X.", encoding="utf-8")
 
             # Create a ledger with a surviving blocker (support=2, super threshold, total=3)
             ledger = {
@@ -204,14 +227,23 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
             verifier_calls = []
 
             def mock_run_single_reviewer(
-                run_review_py, provider, model, plan_file_arg,
-                prompt_file, output_file, session_file, events_file,
-                effort="high", resume=False, timeout=300, verification_mode=False,
+                run_review_py,
+                provider,
+                model,
+                plan_file_arg,
+                prompt_file,
+                output_file,
+                session_file,
+                events_file,
+                effort="high",
+                resume=False,
+                timeout=300,
+                verification_mode=False,
                 codex_home_manifest=None,
             ):
                 # Write a canned VERIFIED response
                 Path(output_file).write_text(
-                    f"VERIFIED BLK-001\nStill a valid concern.\n",
+                    "VERIFIED BLK-001\nStill a valid concern.\n",
                     encoding="utf-8",
                 )
                 verification_calls.append(output_file)
@@ -221,15 +253,23 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
             # Patch sys.argv for parse_args and run_single_reviewer
             test_argv = [
                 "run_quorum.py",
-                "--reviewers", "claude:sonnet,gemini:pro,codex",
-                "--plan-file", plan_file,
-                "--quorum-id", "test",
-                "--round", "2",
-                "--threshold", "super",
-                "--tmpdir", tmpdir,
-                "--ledger-file", ledger_file,
+                "--reviewers",
+                "claude:sonnet,gemini:pro,codex",
+                "--plan-file",
+                plan_file,
+                "--quorum-id",
+                "test",
+                "--round",
+                "2",
+                "--threshold",
+                "super",
+                "--tmpdir",
+                tmpdir,
+                "--ledger-file",
+                ledger_file,
                 "--sequential",
-                "--verifier", "copilot:gpt-5.4",
+                "--verifier",
+                "copilot:gpt-5.4",
             ]
 
             # Create deliberation and changes files expected by round 2
@@ -241,8 +281,12 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
             Path(changes_file).write_text("- Fixed auth.", encoding="utf-8")
             test_argv.extend(["--changes-summary", changes_file])
 
-            with patch.object(sys, "argv", test_argv), \
-                 patch.object(run_quorum, "run_single_reviewer", side_effect=mock_run_single_reviewer):
+            with (
+                patch.object(sys, "argv", test_argv),
+                patch.object(
+                    run_quorum, "run_single_reviewer", side_effect=mock_run_single_reviewer
+                ),
+            ):
                 try:
                     run_quorum.main()
                 except SystemExit:
@@ -252,11 +296,15 @@ class TestVerificationCallSiteSignature(unittest.TestCase):
             # (at least one call should be for a verify file)
             verify_calls = [c for c in verification_calls if "verify" in c]
             self.assertGreater(
-                len(verify_calls), 0,
+                len(verify_calls),
+                0,
                 "Verification path was not exercised — test is not covering the bug",
             )
             self.assertTrue(
-                any(provider == "copilot" and model == "gpt-5.4" for provider, model, _ in verifier_calls),
+                any(
+                    provider == "copilot" and model == "gpt-5.4"
+                    for provider, model, _ in verifier_calls
+                ),
                 f"Expected explicit verifier copilot:gpt-5.4, saw {verifier_calls}",
             )
 

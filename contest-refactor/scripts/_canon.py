@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import sys
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Mapping, Tuple
-
+from typing import Any
 
 CANON_DIR_NAME = "canon"
 
@@ -23,19 +23,19 @@ CANON_DIR_NAME = "canon"
 class Canon:
     """Frozen snapshot of every canon/*.toml file."""
 
-    states: Tuple[str, ...]
-    halt_subtypes: Tuple[str, ...]
-    finding_statuses: Tuple[str, ...]
-    verdicts: Tuple[str, ...]
-    severity_anchors: Tuple[str, ...]
-    scorecard_dimensions: Tuple[str, ...]
+    states: tuple[str, ...]
+    halt_subtypes: tuple[str, ...]
+    finding_statuses: tuple[str, ...]
+    verdicts: tuple[str, ...]
+    severity_anchors: tuple[str, ...]
+    scorecard_dimensions: tuple[str, ...]
     scorecard_dimension_labels: Mapping[str, str]
-    dependency_categories: Tuple[str, ...]
-    retirement_reasons: Tuple[str, ...]
-    risk_boundary_kinds: Tuple[str, ...]
-    risk_evidence_verifications: Tuple[str, ...]
-    match_kinds: Tuple[str, ...]
-    residual_blocker_kinds: Tuple[str, ...]
+    dependency_categories: tuple[str, ...]
+    retirement_reasons: tuple[str, ...]
+    risk_boundary_kinds: tuple[str, ...]
+    risk_evidence_verifications: tuple[str, ...]
+    match_kinds: tuple[str, ...]
+    residual_blocker_kinds: tuple[str, ...]
     validation_gates: Mapping[str, str]
     # Extended enums that are useful to validators but not common enough to
     # promote into first-class Canon fields live in .extra.
@@ -58,7 +58,7 @@ def _load_toml(path: Path) -> Any:
     return data
 
 
-def _require_list(data: Mapping[str, Any], key: str, path: Path) -> Tuple[str, ...]:
+def _require_list(data: Mapping[str, Any], key: str, path: Path) -> tuple[str, ...]:
     if key not in data:
         sys.stderr.write(f"error: canon file {path}: missing top-level key '{key}'\n")
         sys.exit(2)
@@ -81,16 +81,26 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         sys.stderr.write(f"error: canon directory missing: {canon_dir}\n")
         sys.exit(2)
 
-    states = _require_list(_load_toml(canon_dir / "states.toml"), "states", canon_dir / "states.toml")
+    states = _require_list(
+        _load_toml(canon_dir / "states.toml"), "states", canon_dir / "states.toml"
+    )
     halt_subtypes = _require_list(
-        _load_toml(canon_dir / "halt-subtypes.toml"), "halt_subtypes", canon_dir / "halt-subtypes.toml"
+        _load_toml(canon_dir / "halt-subtypes.toml"),
+        "halt_subtypes",
+        canon_dir / "halt-subtypes.toml",
     )
     finding_statuses = _require_list(
-        _load_toml(canon_dir / "finding-statuses.toml"), "finding_statuses", canon_dir / "finding-statuses.toml"
+        _load_toml(canon_dir / "finding-statuses.toml"),
+        "finding_statuses",
+        canon_dir / "finding-statuses.toml",
     )
-    verdicts = _require_list(_load_toml(canon_dir / "verdicts.toml"), "verdicts", canon_dir / "verdicts.toml")
+    verdicts = _require_list(
+        _load_toml(canon_dir / "verdicts.toml"), "verdicts", canon_dir / "verdicts.toml"
+    )
     severity_anchors = _require_list(
-        _load_toml(canon_dir / "severity-anchors.toml"), "severity_anchors", canon_dir / "severity-anchors.toml"
+        _load_toml(canon_dir / "severity-anchors.toml"),
+        "severity_anchors",
+        canon_dir / "severity-anchors.toml",
     )
     scorecard_data = _load_toml(canon_dir / "scorecard-dimensions.toml")
     if not isinstance(scorecard_data, dict) or "scorecard_dimensions" not in scorecard_data:
@@ -219,13 +229,27 @@ if __name__ == "__main__":
     print(f"finding_statuses ({len(canon.finding_statuses)}): {', '.join(canon.finding_statuses)}")
     print(f"verdicts ({len(canon.verdicts)}): {', '.join(canon.verdicts)}")
     print(f"severity_anchors ({len(canon.severity_anchors)}): {', '.join(canon.severity_anchors)}")
-    print(f"scorecard_dimensions ({len(canon.scorecard_dimensions)}): {', '.join(canon.scorecard_dimensions)}")
-    print(f"dependency_categories ({len(canon.dependency_categories)}): {', '.join(canon.dependency_categories)}")
-    print(f"retirement_reasons ({len(canon.retirement_reasons)}): {', '.join(canon.retirement_reasons)}")
-    print(f"risk_boundary_kinds ({len(canon.risk_boundary_kinds)}): {', '.join(canon.risk_boundary_kinds)}")
-    print(f"risk_evidence_verifications ({len(canon.risk_evidence_verifications)}): {', '.join(canon.risk_evidence_verifications)}")
+    print(
+        f"scorecard_dimensions ({len(canon.scorecard_dimensions)}): {', '.join(canon.scorecard_dimensions)}"
+    )
+    print(
+        f"dependency_categories ({len(canon.dependency_categories)}): {', '.join(canon.dependency_categories)}"
+    )
+    print(
+        f"retirement_reasons ({len(canon.retirement_reasons)}): {', '.join(canon.retirement_reasons)}"
+    )
+    print(
+        f"risk_boundary_kinds ({len(canon.risk_boundary_kinds)}): {', '.join(canon.risk_boundary_kinds)}"
+    )
+    print(
+        f"risk_evidence_verifications ({len(canon.risk_evidence_verifications)}): {', '.join(canon.risk_evidence_verifications)}"
+    )
     print(f"match_kinds ({len(canon.match_kinds)}): {', '.join(canon.match_kinds)}")
-    print(f"residual_blocker_kinds ({len(canon.residual_blocker_kinds)}): {', '.join(canon.residual_blocker_kinds)}")
-    print(f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}")
+    print(
+        f"residual_blocker_kinds ({len(canon.residual_blocker_kinds)}): {', '.join(canon.residual_blocker_kinds)}"
+    )
+    print(
+        f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}"
+    )
     if canon.extra:
         print(f"extra keys: {', '.join(canon.extra.keys())}")

@@ -34,7 +34,9 @@ def _load_validator():
 def _artifact(score: float, disposition: str | None) -> dict:
     return {
         "state": "HALT_SUCCESS",
-        "scorecard": {"architecture_quality": {"score": score, "residual_disposition": disposition}},
+        "scorecard": {
+            "architecture_quality": {"score": score, "residual_disposition": disposition}
+        },
         "findings": [],
     }
 

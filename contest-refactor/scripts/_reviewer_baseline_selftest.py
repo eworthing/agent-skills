@@ -88,7 +88,9 @@ def _check_arm(case_id: str, arm_name: str, arm: dict, failures: list[str]) -> N
         failures.append(f"case '{case_id}' {arm_name}: mechanical/semantic missing int 'hits'")
         return
     if not isinstance(inv, int) or m + inv > 5:
-        failures.append(f"case '{case_id}' {arm_name}: mechanical.hits({m}) + invalid_slots({inv}) > 5")
+        failures.append(
+            f"case '{case_id}' {arm_name}: mechanical.hits({m}) + invalid_slots({inv}) > 5"
+        )
     # semantic (named-the-defect / carve-out-not-flagged) is a subset of the
     # mechanical verdict — you cannot name the defect on a run you did not reject.
     if s > m:
@@ -122,7 +124,9 @@ def _check_replication_raw(measured_ids: set[str], failures: list[str]) -> None:
             terminal: dict = {}
             for a in atts:
                 si = a.get("slot_index")
-                if si not in terminal or a.get("attempt_index", 1) > terminal[si].get("attempt_index", 1):
+                if si not in terminal or a.get("attempt_index", 1) > terminal[si].get(
+                    "attempt_index", 1
+                ):
                     terminal[si] = a
             if len(terminal) != 5:
                 failures.append(
@@ -175,16 +179,24 @@ def main() -> int:
         entry_id = entry.get("id", "<missing id>")
         vc = entry.get("verdict_class")
         if vc not in VALID_VERDICT_CLASSES:
-            failures.append(f"entry '{entry_id}': verdict_class={vc!r} not in {sorted(VALID_VERDICT_CLASSES)}")
+            failures.append(
+                f"entry '{entry_id}': verdict_class={vc!r} not in {sorted(VALID_VERDICT_CLASSES)}"
+            )
         cut = entry.get("check_under_test")
         if cut not in VALID_CHECKS:
-            failures.append(f"entry '{entry_id}': check_under_test={cut!r} not in {sorted(VALID_CHECKS)}")
+            failures.append(
+                f"entry '{entry_id}': check_under_test={cut!r} not in {sorted(VALID_CHECKS)}"
+            )
         status = entry.get("status")
         if status not in VALID_STATUSES:
-            failures.append(f"entry '{entry_id}': status={status!r} not in {sorted(VALID_STATUSES)}")
+            failures.append(
+                f"entry '{entry_id}': status={status!r} not in {sorted(VALID_STATUSES)}"
+            )
         danger = entry.get("danger_class")
         if danger not in VALID_DANGER:
-            failures.append(f"entry '{entry_id}': danger_class={danger!r} not in {sorted(VALID_DANGER)}")
+            failures.append(
+                f"entry '{entry_id}': danger_class={danger!r} not in {sorted(VALID_DANGER)}"
+            )
         expected = entry.get("expected_verdict")
         if expected not in valid_verdicts:
             failures.append(
@@ -231,7 +243,10 @@ def main() -> int:
         _check_arm(entry_id, "arm_a", arms["arm_a"], failures)
         _check_arm(entry_id, "arm_b", arms["arm_b"], failures)
         # the asymmetric gate: a must-reject case may never measure arm_b as approve.
-        if entry.get("danger_class") == "false_approve" and arms["arm_b"].get("decision") == "approve":
+        if (
+            entry.get("danger_class") == "false_approve"
+            and arms["arm_b"].get("decision") == "approve"
+        ):
             failures.append(
                 f"measured case '{entry_id}': arm_b.decision='approve' on a false_approve case "
                 "violates false_approve_tolerance=0 (cheaper reviewer must not rubber-stamp a must-reject diff)"

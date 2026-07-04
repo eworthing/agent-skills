@@ -30,6 +30,7 @@ as the guard, so no awk/Python byte mismatch).
 RED-first: run before creating the manifest/fixtures/template to confirm it fails.
 Run: python3 scripts/_exec_replay_selftest.py   (exit 0 = pass, 1 = fail)
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -52,8 +53,16 @@ VALID_KINDS = {"apply", "revert", "risk_boundary"}
 VALID_STATUS = {"baseline_unmeasured", "measured"}
 VALID_FINDING_STATUS = {"resolved", "carried_forward"}
 BASE_EXPECTED_KEYS = (
-    "id", "kind", "primary_file", "smell", "targeted_dimension", "min_severity",
-    "expected_targeted_finding_status", "lens", "change_paths", "avoid_paths",
+    "id",
+    "kind",
+    "primary_file",
+    "smell",
+    "targeted_dimension",
+    "min_severity",
+    "expected_targeted_finding_status",
+    "lens",
+    "change_paths",
+    "avoid_paths",
 )
 SEED_MEMBERS = ("CURRENT_REVIEW.json", "CURRENT_REVIEW.md", "findings_registry.json")
 
@@ -82,7 +91,9 @@ def _skill_step3_section() -> str | None:
 
 
 def _computed_shas() -> tuple[str | None, str | None]:
-    tmpl = _sha256_text(TEMPLATE_PATH.read_text(encoding="utf-8")) if TEMPLATE_PATH.exists() else None
+    tmpl = (
+        _sha256_text(TEMPLATE_PATH.read_text(encoding="utf-8")) if TEMPLATE_PATH.exists() else None
+    )
     section = _skill_step3_section()
     return tmpl, (_sha256_text(section) if section is not None else None)
 
@@ -103,9 +114,13 @@ def _check_expected(fid: str, exp: dict, canon, failures: list[str]) -> str | No
     if kind not in VALID_KINDS:
         failures.append(f"fixture '{fid}': kind '{kind}' not in {sorted(VALID_KINDS)}")
     if exp.get("targeted_dimension") not in set(canon.scorecard_dimensions):
-        failures.append(f"fixture '{fid}': targeted_dimension '{exp.get('targeted_dimension')}' not a canon dim")
+        failures.append(
+            f"fixture '{fid}': targeted_dimension '{exp.get('targeted_dimension')}' not a canon dim"
+        )
     if exp.get("min_severity") not in set(canon.severity_anchors):
-        failures.append(f"fixture '{fid}': min_severity '{exp.get('min_severity')}' not a canon severity anchor")
+        failures.append(
+            f"fixture '{fid}': min_severity '{exp.get('min_severity')}' not a canon severity anchor"
+        )
     if exp.get("expected_targeted_finding_status") not in VALID_FINDING_STATUS:
         failures.append(
             f"fixture '{fid}': expected_targeted_finding_status "
@@ -116,7 +131,9 @@ def _check_expected(fid: str, exp: dict, canon, failures: list[str]) -> str | No
             failures.append(f"fixture '{fid}': expected.toml '{key}' must be a list")
     # conditional required keys
     if kind == "apply" and not exp.get("resolved_absent_regex"):
-        failures.append(f"fixture '{fid}': kind=apply requires 'resolved_absent_regex' (deterministic pattern-gone check)")
+        failures.append(
+            f"fixture '{fid}': kind=apply requires 'resolved_absent_regex' (deterministic pattern-gone check)"
+        )
     if kind == "revert" and not exp.get("test_command"):
         failures.append(f"fixture '{fid}': kind=revert requires a non-empty 'test_command'")
     if kind == "risk_boundary":
@@ -136,20 +153,28 @@ def _check_seed(fid: str, seed_dir: Path, canon, failures: list[str]) -> None:
         failures.append(f"fixture '{fid}': seed/CURRENT_REVIEW.json does not parse: {exc}")
         return
     if art.get("state") != "CONTINUE":
-        failures.append(f"fixture '{fid}': seed state '{art.get('state')}' must be 'CONTINUE' (pre-Step-3)")
+        failures.append(
+            f"fixture '{fid}': seed state '{art.get('state')}' must be 'CONTINUE' (pre-Step-3)"
+        )
     findings = art.get("findings") or []
     if not findings:
         failures.append(f"fixture '{fid}': seed has no findings[]")
     else:
         f0 = findings[0]
         if not f0.get("minimal_correction_path"):
-            failures.append(f"fixture '{fid}': seed findings[0] missing minimal_correction_path (the plan Step-3 applies)")
+            failures.append(
+                f"fixture '{fid}': seed findings[0] missing minimal_correction_path (the plan Step-3 applies)"
+            )
         br = f0.get("blast_radius") or {}
         if not isinstance(br.get("change"), list) or not isinstance(br.get("avoid"), list):
-            failures.append(f"fixture '{fid}': seed findings[0].blast_radius must have list change[] + avoid[]")
+            failures.append(
+                f"fixture '{fid}': seed findings[0].blast_radius must have list change[] + avoid[]"
+            )
         backlog = art.get("backlog") or []
         if not backlog or backlog[0].get("title") != f0.get("title"):
-            failures.append(f"fixture '{fid}': seed backlog[0].title must match findings[0].title (Step-3 selection)")
+            failures.append(
+                f"fixture '{fid}': seed backlog[0].title must match findings[0].title (Step-3 selection)"
+            )
     scorecard = art.get("scorecard") or {}
     missing = [d for d in canon.scorecard_dimensions if d not in scorecard]
     if missing:
@@ -183,7 +208,9 @@ def main(argv: list[str]) -> int:
     # (a) no silent exclusion
     for d in fixture_dirs:
         if d not in registered:
-            failures.append(f"fixture dir '{d}' exists on disk but is NOT registered in the manifest")
+            failures.append(
+                f"fixture dir '{d}' exists on disk but is NOT registered in the manifest"
+            )
     if not fixture_dirs:
         failures.append("no fixture dirs under evals/exec-fixtures/ (need >= 1)")
     if not entries:

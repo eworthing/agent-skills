@@ -51,24 +51,32 @@ from _common.providers import (  # noqa: F401
     build_copilot_cmd,
     build_gemini_cmd,
     build_opencode_cmd,
-    build_stdin as _build_stdin,
     get_provider,
     read_prompt,
+)
+from _common.providers import (
+    build_stdin as _build_stdin,
+)
+from _common.providers import (
     setup_gemini_config as _setup_gemini_config,
 )
 from _common.session import (
     default_manifest,
     extract_text_from_output,
     load_session,
-    path_has_content as _path_has_content,
     probe_writable,
     reuse_codex_home,
     save_session,
     setup_codex_home,
     teardown_codex_home,
     validate_prompt_file,
-    write_failure_summary as _write_failure_summary,
     write_summary,
+)
+from _common.session import (
+    path_has_content as _path_has_content,
+)
+from _common.session import (
+    write_failure_summary as _write_failure_summary,
 )
 
 # Friendly reviewer aliases normalized to canonical provider keys at the CLI
@@ -82,7 +90,8 @@ REVIEWER_ALIASES = {"antigravity": "agy"}
 # file) but the payload itself is already plain text, so it never needs the
 # JSON/JSONL unwrap the other stdout providers do.
 _STRUCTURED_STDOUT_REVIEWERS = frozenset(
-    name for name, spec in PROVIDERS.items()
+    name
+    for name, spec in PROVIDERS.items()
     if spec["caps"].get("output_mode") == "stdout" and name != "agy"
 )
 
@@ -223,7 +232,8 @@ def _build_session_data(args, session, meta, reviewer, new_session_id, fallback_
     resume_requested = args.resume
     actual_model = meta.get("model") or session.get("model") or args.model or "default"
     actual_effort = (
-        meta.get("effort") or args.effort
+        meta.get("effort")
+        or args.effort
         or PROVIDERS.get(reviewer, {}).get("effort_default", "default")
     )
     round_num = session.get("round", 0) + 1
@@ -236,21 +246,22 @@ def _build_session_data(args, session, meta, reviewer, new_session_id, fallback_
         "effort": actual_effort,
         "effort_requested": args.effort or "default",
         "effort_source": (
-            "detected"
-            if meta.get("effort")
-            else "requested"
-            if args.effort
-            else "provider_default"
+            "detected" if meta.get("effort") else "requested" if args.effort else "provider_default"
         ),
         "round": round_num,
         "resume_requested": resume_requested,
-        "resume_supported": PROVIDERS.get(reviewer, {}).get("caps", {}).get("resume_supported", False),
+        "resume_supported": PROVIDERS.get(reviewer, {})
+        .get("caps", {})
+        .get("resume_supported", False),
         "resume_attempted": resume_requested and session.get("session_id") is not None,
         "resume_fallback_used": fallback_used,
         "resume_reason": (
-            "fallback_to_fresh" if fallback_used
-            else "session_found" if resume_requested and session.get("session_id")
-            else "no_session_id" if resume_requested
+            "fallback_to_fresh"
+            if fallback_used
+            else "session_found"
+            if resume_requested and session.get("session_id")
+            else "no_session_id"
+            if resume_requested
             else "fresh_exec"
         ),
     }
@@ -282,9 +293,7 @@ def run_review(args, logger=None):
     # round's codex_home even when not resuming (see below), but `session`
     # itself still resolves to {} for round/model-fallback purposes unless
     # actually resuming.
-    raw_session = (
-        load_session(args.session_file) if (use_resume or reviewer == "codex") else {}
-    )
+    raw_session = load_session(args.session_file) if (use_resume or reviewer == "codex") else {}
     session = raw_session if use_resume else {}
     session_id = session.get("session_id") if use_resume else None
 
@@ -361,7 +370,9 @@ def run_review(args, logger=None):
         returncode = 1
         for attempt in range(2):
             if attempt == 0 and use_resume and session_id:
-                logger.log("resume_attempted", provider=reviewer, context={"session_id": session_id})
+                logger.log(
+                    "resume_attempted", provider=reviewer, context={"session_id": session_id}
+                )
 
             # Build provider-specific command using use_resume (not args.resume).
             # Create a lightweight namespace for the builder that reflects
@@ -369,7 +380,9 @@ def run_review(args, logger=None):
             build_args = copy.copy(args)
             build_args.resume = use_resume
             if reviewer == "claude":
-                cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id, prompt_text=stdin_data)
+                cmd = PROVIDERS[reviewer]["build_cmd"](
+                    build_args, session_id, prompt_text=stdin_data
+                )
             else:
                 cmd = PROVIDERS[reviewer]["build_cmd"](build_args, session_id)
             # Per-run log for agy conversation-id capture (equals form — agy
@@ -446,8 +459,7 @@ def run_review(args, logger=None):
             if returncode == 0:
                 if reviewer == "codex":
                     check_paths = [
-                        Path(path) for path in (args.events_file, args.output_file)
-                        if path
+                        Path(path) for path in (args.events_file, args.output_file) if path
                     ]
                 else:
                     check_paths = [Path(args.output_file)] if args.output_file else []
@@ -499,13 +511,12 @@ def run_review(args, logger=None):
                     session_id = None
                     fallback_used = True
                     continue  # retry as fresh exec
-                else:
-                    logger.log(
-                        "provider_error",
-                        provider=reviewer,
-                        error=f"Exit code {returncode}",
-                        context={"stderr": (stderr or "")[:500]},
-                    )
+                logger.log(
+                    "provider_error",
+                    provider=reviewer,
+                    error=f"Exit code {returncode}",
+                    context={"stderr": (stderr or "")[:500]},
+                )
 
             break  # success or non-recoverable failure
 
@@ -576,9 +587,12 @@ def run_review(args, logger=None):
 
         # Extract model metadata (uses pre-read content for claude/gemini/copilot)
         meta = extract_metadata(
-            args.output_file, args.events_file, reviewer,
+            args.output_file,
+            args.events_file,
+            reviewer,
             codex_session_file=codex_session_path,
-            output_content=output_content, logger=logger
+            output_content=output_content,
+            logger=logger,
         )
         if opencode_export_meta:
             meta.update(opencode_export_meta)
@@ -697,9 +711,7 @@ def _list_models(provider):
                 timeout=15,
             )
             if result.returncode == 0 and result.stdout.strip():
-                models = [
-                    m.strip() for m in result.stdout.strip().splitlines() if m.strip()
-                ]
+                models = [m.strip() for m in result.stdout.strip().splitlines() if m.strip()]
                 return f"{provider}: {', '.join(models)}"
         except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
             pass

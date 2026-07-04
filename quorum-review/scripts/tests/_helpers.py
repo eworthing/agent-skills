@@ -17,16 +17,16 @@ import unittest
 from pathlib import Path
 
 # Resolve paths relative to this test file
-SCRIPT_DIR = str(Path(__file__).resolve().parent.parent)  # scripts/ (this file is scripts/tests/_helpers.py)
+SCRIPT_DIR = str(
+    Path(__file__).resolve().parent.parent
+)  # scripts/ (this file is scripts/tests/_helpers.py)
 SCRIPT = str(Path(SCRIPT_DIR) / "run_quorum.py")
 
 # Import functions for direct unit tests
 sys.path.insert(0, SCRIPT_DIR)
-import run_quorum  # noqa: E402
-import run_review  # noqa: E402
-from run_quorum import (  # noqa: E402
-    _make_issue,
-    _role_for_mode,
+import run_quorum
+import run_review
+from run_quorum import (
     CROSS_CRITIQUE_INSTRUCTIONS,
     EXIT_APPROVED,
     EXIT_INDETERMINATE,
@@ -34,17 +34,19 @@ from run_quorum import (  # noqa: E402
     MAX_ROUNDS_LIMIT,
     MIN_QUORUM_SIZE,
     REVIEW_CONTRACT_V2,
-    apply_merge_pipeline,
-    classify_merge_candidate,
-    generate_merge_candidates,
     _extract_section,
     _is_unanimous,
+    _make_issue,
+    _role_for_mode,
+    apply_merge_pipeline,
     build_issue_ledger,
+    classify_merge_candidate,
     compile_compressed_context,
     compile_deliberation,
     derive_verdict,
     format_issue_consensus,
     format_ledger_summary,
+    generate_merge_candidates,
     generate_verification_prompts,
     load_ledger,
     load_review_md,
@@ -117,5 +119,3 @@ def make_issue(
 # _extract_section, _is_unanimous, _make_issue) so `from ._helpers import *` in the
 # split test modules carries them — `import *` otherwise drops names starting with "_".
 __all__ = [n for n in dir() if not n.startswith("__")]
-
-

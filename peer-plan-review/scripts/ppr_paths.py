@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _common.session.paths import (  # noqa: F401 — re-exported for callers
+from _common.session.paths import (
     build_paths,
     load_review_id,
     main,

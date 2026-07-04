@@ -3,7 +3,6 @@
 import sys
 
 import pytest
-
 from common.session.paths import build_paths, load_review_id, main, render_shell
 
 
@@ -28,8 +27,16 @@ class TestRenderShell:
     def test_shell_export_format(self, tmp_path):
         paths = build_paths("rid", tmpdir=str(tmp_path))
         shell = render_shell(paths)
-        for var in ("REVIEW_ID", "TMPDIR", "PLAN_FILE", "PROMPT_FILE",
-                    "OUTPUT_FILE", "SESSION_FILE", "EVENTS_FILE", "ERROR_LOG"):
+        for var in (
+            "REVIEW_ID",
+            "TMPDIR",
+            "PLAN_FILE",
+            "PROMPT_FILE",
+            "OUTPUT_FILE",
+            "SESSION_FILE",
+            "EVENTS_FILE",
+            "ERROR_LOG",
+        ):
             assert f"export {var}=" in shell
 
     def test_paths_with_spaces_are_quoted(self, tmp_path):

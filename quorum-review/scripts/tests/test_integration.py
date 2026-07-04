@@ -1,7 +1,15 @@
 """integration tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestMainOrchestration(unittest.TestCase):
@@ -9,10 +17,20 @@ class TestMainOrchestration(unittest.TestCase):
 
     def _mock_reviewer(self, review_text):
         """Return a mock run_single_reviewer that writes canned review text."""
+
         def mock_fn(
-            run_review_py, provider, model, plan_file_arg,
-            prompt_file, output_file, session_file, events_file,
-            effort="high", resume=False, timeout=300, verification_mode=False,
+            run_review_py,
+            provider,
+            model,
+            plan_file_arg,
+            prompt_file,
+            output_file,
+            session_file,
+            events_file,
+            effort="high",
+            resume=False,
+            timeout=300,
+            verification_mode=False,
             codex_home_manifest=None,
         ):
             Path(output_file).write_text(review_text, encoding="utf-8")
@@ -21,6 +39,7 @@ class TestMainOrchestration(unittest.TestCase):
                 encoding="utf-8",
             )
             return 0
+
         return mock_fn
 
     def test_round1_all_approved_exits_0(self):
@@ -42,17 +61,25 @@ class TestMainOrchestration(unittest.TestCase):
 
             test_argv = [
                 "run_quorum.py",
-                "--reviewers", "claude:sonnet,gemini:pro,codex",
-                "--plan-file", plan_file,
-                "--quorum-id", "integ",
-                "--round", "1",
-                "--tmpdir", tmpdir,
+                "--reviewers",
+                "claude:sonnet,gemini:pro,codex",
+                "--plan-file",
+                plan_file,
+                "--quorum-id",
+                "integ",
+                "--round",
+                "1",
+                "--tmpdir",
+                tmpdir,
                 "--sequential",
             ]
 
-            with patch.object(sys, "argv", test_argv), \
-                 patch.object(run_quorum, "run_single_reviewer",
-                              side_effect=self._mock_reviewer(review_text)):
+            with (
+                patch.object(sys, "argv", test_argv),
+                patch.object(
+                    run_quorum, "run_single_reviewer", side_effect=self._mock_reviewer(review_text)
+                ),
+            ):
                 with self.assertRaises(SystemExit) as cm:
                     run_quorum.main()
                 self.assertEqual(cm.exception.code, EXIT_APPROVED)
@@ -83,19 +110,28 @@ class TestMainOrchestration(unittest.TestCase):
 
             test_argv = [
                 "run_quorum.py",
-                "--reviewers", "claude:sonnet,gemini:pro,codex",
-                "--plan-file", plan_file,
-                "--quorum-id", "integ2",
-                "--round", "1",
-                "--threshold", "majority",
-                "--tmpdir", tmpdir,
+                "--reviewers",
+                "claude:sonnet,gemini:pro,codex",
+                "--plan-file",
+                plan_file,
+                "--quorum-id",
+                "integ2",
+                "--round",
+                "1",
+                "--threshold",
+                "majority",
+                "--tmpdir",
+                tmpdir,
                 "--sequential",
                 "--skip-verification",
             ]
 
-            with patch.object(sys, "argv", test_argv), \
-                 patch.object(run_quorum, "run_single_reviewer",
-                              side_effect=self._mock_reviewer(review_text)):
+            with (
+                patch.object(sys, "argv", test_argv),
+                patch.object(
+                    run_quorum, "run_single_reviewer", side_effect=self._mock_reviewer(review_text)
+                ),
+            ):
                 with self.assertRaises(SystemExit) as cm:
                     run_quorum.main()
                 self.assertEqual(cm.exception.code, EXIT_APPROVED)
@@ -103,8 +139,7 @@ class TestMainOrchestration(unittest.TestCase):
             ledger_file = os.path.join(tmpdir, "qr-integ2-ledger.json")
             ledger = json.loads(Path(ledger_file).read_text(encoding="utf-8"))
             blocking = [
-                i for i in ledger["issues"]
-                if i["severity"] == "blocking" and i["status"] == "open"
+                i for i in ledger["issues"] if i["severity"] == "blocking" and i["status"] == "open"
             ]
             self.assertEqual(len(blocking), 1)
             self.assertEqual(blocking[0]["support_count"], 3)
@@ -128,17 +163,25 @@ class TestMainOrchestration(unittest.TestCase):
 
             test_argv = [
                 "run_quorum.py",
-                "--reviewers", "claude:sonnet,gemini:pro,codex",
-                "--plan-file", plan_file,
-                "--quorum-id", "integ3",
-                "--round", "1",
-                "--tmpdir", tmpdir,
+                "--reviewers",
+                "claude:sonnet,gemini:pro,codex",
+                "--plan-file",
+                plan_file,
+                "--quorum-id",
+                "integ3",
+                "--round",
+                "1",
+                "--tmpdir",
+                tmpdir,
                 "--sequential",
             ]
 
-            with patch.object(sys, "argv", test_argv), \
-                 patch.object(run_quorum, "run_single_reviewer",
-                              side_effect=self._mock_reviewer(review_text)):
+            with (
+                patch.object(sys, "argv", test_argv),
+                patch.object(
+                    run_quorum, "run_single_reviewer", side_effect=self._mock_reviewer(review_text)
+                ),
+            ):
                 with self.assertRaises(SystemExit) as cm:
                     run_quorum.main()
                 self.assertEqual(cm.exception.code, EXIT_INDETERMINATE)
@@ -153,19 +196,30 @@ class TestRound2SectionScan(unittest.TestCase):
         return {
             "next_blk_id": 2,
             "next_nb_id": 1,
-            "issues": [{
-                "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
-                "round_introduced": 1, "severity": "blocking",
-                "text": "Existing auth issue", "status": "open",
-                "resolved_round": None, "merged_from": [],
-                "proposed_by": 1, "endorsed_by": [], "refined_by": [],
-                "disputed_by": [],
-                "support_count": 1, "dispute_count": 0,
-                "owner_summary": "Existing auth issue",
-            }],
+            "issues": [
+                {
+                    "id": "BLK-001",
+                    "source_reviewer": 1,
+                    "source_label": "B1",
+                    "round_introduced": 1,
+                    "severity": "blocking",
+                    "text": "Existing auth issue",
+                    "status": "open",
+                    "resolved_round": None,
+                    "merged_from": [],
+                    "proposed_by": 1,
+                    "endorsed_by": [],
+                    "refined_by": [],
+                    "disputed_by": [],
+                    "support_count": 1,
+                    "dispute_count": 0,
+                    "owner_summary": "Existing auth issue",
+                }
+            ],
             "merges": [],
-            "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
-                             "nb_open": 0, "approved_count": 0}},
+            "rounds": {
+                "1": {"reviewer_count": 3, "blocking_open": 1, "nb_open": 0, "approved_count": 0}
+            },
         }
 
     def test_round2_section_scan_catches_untagged_issues(self):
@@ -189,17 +243,12 @@ class TestRound2SectionScan(unittest.TestCase):
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
             # Reviewer 3: approves
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
 
             # The new issue should have been caught by section-scan
-            new_issues = [
-                i for i in updated["issues"]
-                if i["source_label"] == "section-scan"
-            ]
+            new_issues = [i for i in updated["issues"] if i["source_label"] == "section-scan"]
             self.assertEqual(len(new_issues), 1)
             self.assertIn("rate limiting", new_issues[0]["text"])
             self.assertEqual(new_issues[0]["severity"], "blocking")
@@ -224,20 +273,20 @@ class TestRound2SectionScan(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
 
             # Count issues about rate limiting — should be exactly 1
             rate_limit_issues = [
-                i for i in updated["issues"]
-                if "rate limiting" in i["text"].lower()
+                i for i in updated["issues"] if "rate limiting" in i["text"].lower()
             ]
-            self.assertEqual(len(rate_limit_issues), 1,
-                             f"Expected 1 rate-limiting issue, got {len(rate_limit_issues)}: "
-                             f"{[i['id'] + ':' + i['source_label'] for i in rate_limit_issues]}")
+            self.assertEqual(
+                len(rate_limit_issues),
+                1,
+                f"Expected 1 rate-limiting issue, got {len(rate_limit_issues)}: "
+                f"{[i['id'] + ':' + i['source_label'] for i in rate_limit_issues]}",
+            )
 
     def test_round2_section_scan_ignores_existing(self):
         """Standard section issue matching existing ledger entry → not re-added."""
@@ -257,9 +306,7 @@ class TestRound2SectionScan(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
 
@@ -282,9 +329,7 @@ class TestRound2SectionScan(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
 
@@ -308,14 +353,11 @@ class TestRound2SectionScan(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
             scan_issues = [
-                issue for issue in updated["issues"]
-                if issue["source_label"] == "section-scan"
+                issue for issue in updated["issues"] if issue["source_label"] == "section-scan"
             ]
             self.assertEqual(len(scan_issues), 1)
             self.assertIn("rate limiting", scan_issues[0]["text"].lower())
@@ -337,14 +379,13 @@ class TestRound2SectionScan(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
 
             nb_scan = [
-                i for i in updated["issues"]
+                i
+                for i in updated["issues"]
                 if i["source_label"] == "section-scan" and i["severity"] == "non_blocking"
             ]
             self.assertEqual(len(nb_scan), 1)
@@ -403,17 +444,25 @@ class TestRunReviewAgy(unittest.TestCase):
         prompt = Path(tmp) / "prompt.md"
         prompt.write_text("Review this plan.\n", encoding="utf-8")
         return argparse.Namespace(
-            reviewer="agy", plan_file=None, prompt_file=str(prompt),
+            reviewer="agy",
+            plan_file=None,
+            prompt_file=str(prompt),
             output_file=str(Path(tmp) / "out.txt"),
             session_file=str(Path(tmp) / "session.json"),
-            events_file=None, model=None, effort=None, resume=False,
-            timeout=600, self_check=False, list_models=False,
+            events_file=None,
+            model=None,
+            effort=None,
+            resume=False,
+            timeout=600,
+            self_check=False,
+            list_models=False,
             verification_mode=False,
         )
 
     def test_agy_captures_id_and_prepends_preamble(self):
-        from unittest import mock
         import signal
+        from unittest import mock
+
         with tempfile.TemporaryDirectory(prefix="qr-agy-test-") as tmp:
             args = self._agy_args(tmp)
             captured = {}

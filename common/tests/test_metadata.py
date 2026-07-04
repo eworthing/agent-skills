@@ -5,7 +5,6 @@ import subprocess
 from unittest import mock
 
 import pytest
-
 from common.metadata import (
     compute_plan_metadata,
     extract_metadata,
@@ -55,9 +54,7 @@ class TestSessionIdCopilot:
     def test_skips_malformed_lines(self, tmp_path):
         p = tmp_path / "events.jsonl"
         p.write_text(
-            "not json\n"
-            + json.dumps({"type": "result", "sessionId": "cop-9"})
-            + "\n",
+            "not json\n" + json.dumps({"type": "result", "sessionId": "cop-9"}) + "\n",
             encoding="utf-8",
         )
         assert extract_session_id_copilot(str(p)) == "cop-9"
@@ -67,8 +64,7 @@ class TestSessionIdOpencode:
     def test_first_line_sessionid(self, tmp_path):
         p = tmp_path / "events.jsonl"
         p.write_text(
-            json.dumps({"sessionID": "oc-1", "other": True}) + "\n"
-            "ignored\n",
+            json.dumps({"sessionID": "oc-1", "other": True}) + "\nignored\n",
             encoding="utf-8",
         )
         assert extract_session_id_opencode(str(p)) == "oc-1"
@@ -88,8 +84,7 @@ class TestSessionIdAgy:
     def test_extracts_created_conversation(self, tmp_path):
         log = tmp_path / "agy.log"
         log.write_text(
-            "I0614 server.go:753] Created conversation "
-            "f014e69c-55a3-40a1-a89e-1df03b6ba6e9\n",
+            "I0614 server.go:753] Created conversation f014e69c-55a3-40a1-a89e-1df03b6ba6e9\n",
             encoding="utf-8",
         )
         assert extract_session_id_agy(str(log)) == "f014e69c-55a3-40a1-a89e-1df03b6ba6e9"
@@ -113,15 +108,17 @@ class TestExtractMetadata:
     def test_gemini_stats_models(self, tmp_path):
         p = tmp_path / "out.json"
         p.write_text(
-            json.dumps({
-                "stats": {
-                    "models": {
-                        "gemini-3-pro-preview": {
-                            "tokens": {"thoughts": 4096},
+            json.dumps(
+                {
+                    "stats": {
+                        "models": {
+                            "gemini-3-pro-preview": {
+                                "tokens": {"thoughts": 4096},
+                            }
                         }
                     }
                 }
-            }),
+            ),
             encoding="utf-8",
         )
         meta = extract_metadata(str(p), events_file=None, reviewer="gemini")
@@ -140,15 +137,16 @@ class TestExtractMetadata:
     def test_codex_turn_context(self, tmp_path):
         p = tmp_path / "events.jsonl"
         p.write_text(
-            json.dumps({
-                "type": "turn_context",
-                "payload": {"model": "gpt-5.4", "effort": "high"},
-            }) + "\n",
+            json.dumps(
+                {
+                    "type": "turn_context",
+                    "payload": {"model": "gpt-5.4", "effort": "high"},
+                }
+            )
+            + "\n",
             encoding="utf-8",
         )
-        meta = extract_metadata(
-            output_file=None, events_file=str(p), reviewer="codex"
-        )
+        meta = extract_metadata(output_file=None, events_file=str(p), reviewer="codex")
         assert meta["model"] == "gpt-5.4"
         assert meta["effort"] == "high"
 
@@ -180,26 +178,45 @@ class TestOpencodeMetadataExport:
 
     def _run(self, payload):
         return subprocess.CompletedProcess(
-            ["opencode", "export", "ses_1"], 0,
-            stdout=json.dumps(payload), stderr="",
+            ["opencode", "export", "ses_1"],
+            0,
+            stdout=json.dumps(payload),
+            stderr="",
         )
 
     def test_nested_shape(self):
-        payload = {"messages": [
-            {"info": {"model": {"providerID": "opencode-go",
-                                "modelID": "deepseek-v4-pro", "variant": "max"}}},
-        ]}
+        payload = {
+            "messages": [
+                {
+                    "info": {
+                        "model": {
+                            "providerID": "opencode-go",
+                            "modelID": "deepseek-v4-pro",
+                            "variant": "max",
+                        }
+                    }
+                },
+            ]
+        }
         with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
             meta = _extract_opencode_metadata_via_export("ses_1")
         assert meta == {"model": "opencode-go/deepseek-v4-pro", "effort": "xhigh"}
 
     def test_flattened_shape(self):
         # info.model is empty/absent; fields hoisted onto info (v1.17+ assistant).
-        payload = {"messages": [
-            {"info": {"role": "assistant", "model": {},
-                      "providerID": "opencode-go", "modelID": "deepseek-v4-flash",
-                      "variant": "high"}},
-        ]}
+        payload = {
+            "messages": [
+                {
+                    "info": {
+                        "role": "assistant",
+                        "model": {},
+                        "providerID": "opencode-go",
+                        "modelID": "deepseek-v4-flash",
+                        "variant": "high",
+                    }
+                },
+            ]
+        }
         with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
             meta = _extract_opencode_metadata_via_export("ses_1")
         assert meta == {"model": "opencode-go/deepseek-v4-flash", "effort": "high"}
@@ -207,22 +224,39 @@ class TestOpencodeMetadataExport:
     def test_real_mixed_export_uses_first_resolvable_message(self):
         # Mirrors a real v1.17.11 export: nested user message first, then
         # flattened assistant messages. The user message resolves first.
-        payload = {"messages": [
-            {"info": {"role": "user",
-                      "model": {"providerID": "opencode-go",
-                                "modelID": "deepseek-v4-flash", "variant": "high"}}},
-            {"info": {"role": "assistant", "model": {},
-                      "providerID": "opencode-go", "modelID": "deepseek-v4-flash",
-                      "variant": "high"}},
-        ]}
+        payload = {
+            "messages": [
+                {
+                    "info": {
+                        "role": "user",
+                        "model": {
+                            "providerID": "opencode-go",
+                            "modelID": "deepseek-v4-flash",
+                            "variant": "high",
+                        },
+                    }
+                },
+                {
+                    "info": {
+                        "role": "assistant",
+                        "model": {},
+                        "providerID": "opencode-go",
+                        "modelID": "deepseek-v4-flash",
+                        "variant": "high",
+                    }
+                },
+            ]
+        }
         with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
             meta = _extract_opencode_metadata_via_export("ses_1")
         assert meta == {"model": "opencode-go/deepseek-v4-flash", "effort": "high"}
 
     def test_model_without_variant_omits_effort(self):
-        payload = {"messages": [
-            {"info": {"providerID": "opencode-go", "modelID": "qwen3.6-plus"}},
-        ]}
+        payload = {
+            "messages": [
+                {"info": {"providerID": "opencode-go", "modelID": "qwen3.6-plus"}},
+            ]
+        }
         with mock.patch.object(subprocess, "run", return_value=self._run(payload)):
             meta = _extract_opencode_metadata_via_export("ses_1")
         assert meta == {"model": "opencode-go/qwen3.6-plus"}

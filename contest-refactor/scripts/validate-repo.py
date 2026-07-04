@@ -24,9 +24,9 @@ from __future__ import annotations
 import re
 import sys
 import tomllib
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
-from typing import List, Sequence, Tuple
 
 # Local sibling imports
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -46,9 +46,7 @@ EVIDENCE_CHAIN_FILES = [
     "validation.md",
 ]
 
-EVIDENCE_CHAIN_REGEX = re.compile(
-    r"Claim\s*[→\-]\s*Source\s*[→\-]\s*Consequence\s*[→\-]\s*Remedy"
-)
+EVIDENCE_CHAIN_REGEX = re.compile(r"Claim\s*[→\-]\s*Source\s*[→\-]\s*Consequence\s*[→\-]\s*Remedy")
 
 OBVIOUS_SECRET_REGEXES = [
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),  # AWS access key
@@ -74,7 +72,7 @@ KNOWN_DEFAULT_KEYS = {"lens", "loop_cap", "test_command"}
 class Violation:
     """A single rule failure."""
 
-    __slots__ = ("rule", "message", "path")
+    __slots__ = ("message", "path", "rule")
 
     def __init__(self, rule: str, message: str, path: Path | None = None) -> None:
         self.rule = rule
@@ -92,15 +90,13 @@ class Violation:
         return f"{prefix} {self.message}"
 
 
-def check_evidence_chain_coverage() -> List[Violation]:
+def check_evidence_chain_coverage() -> list[Violation]:
     """Each of the 7 required files contains the Evidence Chain 4-token pattern."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     for name in EVIDENCE_CHAIN_FILES:
         path = REFERENCES_DIR / name
         if not path.exists():
-            violations.append(
-                Violation("evidence-chain", "required file missing", path)
-            )
+            violations.append(Violation("evidence-chain", "required file missing", path))
             continue
         text = path.read_text(encoding="utf-8")
         if not EVIDENCE_CHAIN_REGEX.search(text):
@@ -114,7 +110,7 @@ def check_evidence_chain_coverage() -> List[Violation]:
     return violations
 
 
-def _walk_ordered_list(text: str) -> List[Tuple[str, int, int]]:
+def _walk_ordered_list(text: str) -> list[tuple[str, int, int]]:
     """Return ordered-list items at top-level indentation in document order.
 
     Each entry: (label, start_index, end_index). Labels are the leading
@@ -122,7 +118,7 @@ def _walk_ordered_list(text: str) -> List[Tuple[str, int, int]]:
     whitespace are considered top-level siblings.
     """
     pattern = re.compile(r"^(?P<label>\d+(?:\.\d+)?)\.\s+", re.MULTILINE)
-    items: List[Tuple[str, int, int]] = []
+    items: list[tuple[str, int, int]] = []
     matches = list(pattern.finditer(text))
     for idx, match in enumerate(matches):
         # Confirm zero-indent (start of line, no leading spaces)
@@ -137,9 +133,9 @@ def _walk_ordered_list(text: str) -> List[Tuple[str, int, int]]:
     return items
 
 
-def check_step_1_5_and_1_6_adjacency() -> List[Violation]:
+def check_step_1_5_and_1_6_adjacency() -> list[Violation]:
     """method.md must contain Step 1.5 with the bridge sentence AND Step 1.6 immediately after."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     path = REFERENCES_DIR / "method.md"
     if not path.exists():
         return [Violation("step-1.6", "method.md missing", path)]
@@ -147,15 +143,11 @@ def check_step_1_5_and_1_6_adjacency() -> List[Violation]:
     items = _walk_ordered_list(text)
     labels = [item[0] for item in items]
     if "1.5" not in labels:
-        violations.append(
-            Violation("step-1.6", "method.md missing Step 1.5", path)
-        )
+        violations.append(Violation("step-1.6", "method.md missing Step 1.5", path))
         return violations
     idx_1_5 = labels.index("1.5")
     block_1_5 = text[items[idx_1_5][1] : items[idx_1_5][2]]
-    if not re.search(
-        r"Registry lookup feeds Step 1\.6 eligibility and retirement", block_1_5
-    ):
+    if not re.search(r"Registry lookup feeds Step 1\.6 eligibility and retirement", block_1_5):
         violations.append(
             Violation(
                 "step-1.6",
@@ -200,9 +192,9 @@ def check_step_1_5_and_1_6_adjacency() -> List[Violation]:
     return violations
 
 
-def check_g30_g31_present() -> List[Violation]:
+def check_g30_g31_present() -> list[Violation]:
     """validation.md must declare both G30 and G31 as list items."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     path = REFERENCES_DIR / "validation.md"
     if not path.exists():
         return [Violation("g30-g31", "validation.md missing", path)]
@@ -218,9 +210,9 @@ def check_g30_g31_present() -> List[Violation]:
     return violations
 
 
-def check_g3_evidence_chain_cross_reference() -> List[Violation]:
+def check_g3_evidence_chain_cross_reference() -> list[Violation]:
     """G3 entry in validation.md must cross-reference the Evidence Chain section."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     path = REFERENCES_DIR / "validation.md"
     if not path.exists():
         return [Violation("g3-evidence-chain", "validation.md missing", path)]
@@ -240,18 +232,16 @@ def check_g3_evidence_chain_cross_reference() -> List[Violation]:
     return violations
 
 
-def check_gate_sequencing(canon: _canon.Canon) -> List[Violation]:
+def check_gate_sequencing(canon: _canon.Canon) -> list[Violation]:
     """Gates in canon/validation-gates.toml are unique, sequential, no gaps."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     gate_ids = list(canon.validation_gates.keys())
     # Expect IDs of the form G<n>
-    parsed: List[int] = []
+    parsed: list[int] = []
     for gid in gate_ids:
         match = re.match(r"^G(\d+)$", gid)
         if not match:
-            violations.append(
-                Violation("gate-sequencing", f"gate id {gid!r} does not match G<n>")
-            )
+            violations.append(Violation("gate-sequencing", f"gate id {gid!r} does not match G<n>"))
             continue
         parsed.append(int(match.group(1)))
     if not parsed:
@@ -298,13 +288,13 @@ def _enum_tokens_from_text(text: str) -> set[str]:
     return tokens
 
 
-def check_canon_alignment(canon: _canon.Canon) -> List[Violation]:
+def check_canon_alignment(canon: _canon.Canon) -> list[Violation]:
     """Spot-check that headline canon tokens appear in references."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     # For each reference file, ensure canonical enums that are referenced are
     # genuinely canon values. Conservative: we list a few load-bearing
     # invariants here.
-    invariants: List[Tuple[str, Sequence[str], str]] = [
+    invariants: list[tuple[str, Sequence[str], str]] = [
         (
             "output-format-state-schemas.md",
             canon.finding_statuses,
@@ -335,16 +325,12 @@ def check_canon_alignment(canon: _canon.Canon) -> List[Violation]:
     return violations
 
 
-def check_example_config() -> List[Violation]:
+def check_example_config() -> list[Violation]:
     """`.contest-refactor.example.toml` parse + required keys + accepted_residuals shape."""
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     path = SKILL_ROOT / ".contest-refactor.example.toml"
     if not path.exists():
-        return [
-            Violation(
-                "example-config", ".contest-refactor.example.toml missing", path
-            )
-        ]
+        return [Violation("example-config", ".contest-refactor.example.toml missing", path)]
     raw = path.read_text(encoding="utf-8")
     # Obvious secrets check
     for secret_re in OBVIOUS_SECRET_REGEXES:
@@ -376,9 +362,7 @@ def check_example_config() -> List[Violation]:
     # Defaults sub-keys
     defaults = data.get("defaults") or {}
     if not isinstance(defaults, dict):
-        violations.append(
-            Violation("example-config", "defaults must be a mapping", path)
-        )
+        violations.append(Violation("example-config", "defaults must be a mapping", path))
     else:
         unknown_defaults = set(defaults.keys()) - KNOWN_DEFAULT_KEYS
         if unknown_defaults:
@@ -392,15 +376,11 @@ def check_example_config() -> List[Violation]:
     # ignore is an array
     ignore = data.get("ignore")
     if ignore is not None and not isinstance(ignore, list):
-        violations.append(
-            Violation("example-config", "ignore must be a list", path)
-        )
+        violations.append(Violation("example-config", "ignore must be a list", path))
     # accepted_residuals shape
     residuals = data.get("accepted_residuals", [])
     if not isinstance(residuals, list):
-        violations.append(
-            Violation("example-config", "accepted_residuals must be a list", path)
-        )
+        violations.append(Violation("example-config", "accepted_residuals must be a list", path))
         residuals = []
     seen_ids: set[str] = set()
     for idx, entry in enumerate(residuals):
@@ -441,9 +421,7 @@ def check_example_config() -> List[Violation]:
                 continue
             if isinstance(value, date):
                 continue  # tomllib parses YYYY-MM-DD as datetime.date
-            if not isinstance(value, str) or not re.match(
-                r"^\d{4}-\d{2}-\d{2}$", value
-            ):
+            if not isinstance(value, str) or not re.match(r"^\d{4}-\d{2}-\d{2}$", value):
                 violations.append(
                     Violation(
                         "example-config",
@@ -457,13 +435,13 @@ def check_example_config() -> List[Violation]:
 MARKDOWN_LINK_REGEX = re.compile(r"\]\(([^)]+)\)")
 
 
-def check_references_one_level_deep(skill_root: Path = SKILL_ROOT) -> List[Violation]:
+def check_references_one_level_deep(skill_root: Path = SKILL_ROOT) -> list[Violation]:
     """No reference markdown may be nested below references/ (depth must stay 1).
 
     Progressive-disclosure references live directly in references/; a file in a
     sub-directory is a structural smell (alirezarezvani's references_one_level_deep).
     """
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     refs = skill_root / "references"
     if not refs.is_dir():
         return violations
@@ -480,7 +458,7 @@ def check_references_one_level_deep(skill_root: Path = SKILL_ROOT) -> List[Viola
     return violations
 
 
-def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> List[Violation]:
+def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> list[Violation]:
     """Every intra-skill `.md` link from SKILL.md / references/*.md must resolve.
 
     Catches doc-rot: a renamed or deleted reference leaves a dangling link. External
@@ -492,8 +470,8 @@ def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> List[Violati
     adopted: an empirical scan found 18 legitimate bidirectional navigation links in
     references/, so it would only produce false positives on this tree.)
     """
-    violations: List[Violation] = []
-    sources: List[Path] = []
+    violations: list[Violation] = []
+    sources: list[Path] = []
     skill_md = skill_root / "SKILL.md"
     if skill_md.is_file():
         sources.append(skill_md)
@@ -531,7 +509,7 @@ def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> List[Violati
 
 def main() -> int:
     canon = _canon.load_canon(SKILL_ROOT)
-    violations: List[Violation] = []
+    violations: list[Violation] = []
     violations.extend(check_evidence_chain_coverage())
     violations.extend(check_step_1_5_and_1_6_adjacency())
     violations.extend(check_g30_g31_present())

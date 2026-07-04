@@ -6,7 +6,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from common.providers import AGY_READONLY_PREAMBLE, PROVIDERS, get_provider, read_prompt
 from common.providers.registry import (
     build_agy_cmd,
@@ -35,12 +34,24 @@ def _args(**overrides):
 class TestRegistry:
     def test_all_providers_present(self):
         assert set(PROVIDERS.keys()) == {
-            "claude", "gemini", "codex", "copilot", "opencode", "agy",
+            "claude",
+            "gemini",
+            "codex",
+            "copilot",
+            "opencode",
+            "agy",
         }
 
     def test_required_keys(self):
-        required = {"binary", "effort_map", "effort_default", "model_aliases",
-                    "resume_supported", "build_cmd", "caps"}
+        required = {
+            "binary",
+            "effort_map",
+            "effort_default",
+            "model_aliases",
+            "resume_supported",
+            "build_cmd",
+            "caps",
+        }
         for name, spec in PROVIDERS.items():
             missing = required - set(spec.keys())
             assert not missing, f"{name} missing keys: {missing}"
@@ -315,7 +326,10 @@ class TestSetupGeminiConfig:
         try:
             assert overlay is not None
             settings = json.loads((Path(overlay) / "settings.json").read_text(encoding="utf-8"))
-            assert settings["thinkingConfig"]["thinkingBudget"] == PROVIDERS["gemini"]["effort_map"]["high"]
+            assert (
+                settings["thinkingConfig"]["thinkingBudget"]
+                == PROVIDERS["gemini"]["effort_map"]["high"]
+            )
         finally:
             self._cleanup(overlay)
 
@@ -360,7 +374,10 @@ class TestSetupGeminiConfig:
         try:
             settings = json.loads((Path(overlay) / "settings.json").read_text(encoding="utf-8"))
             assert settings["theme"] == "dark"
-            assert settings["thinkingConfig"]["thinkingBudget"] == PROVIDERS["gemini"]["effort_map"]["low"]
+            assert (
+                settings["thinkingConfig"]["thinkingBudget"]
+                == PROVIDERS["gemini"]["effort_map"]["low"]
+            )
         finally:
             self._cleanup(overlay)
 

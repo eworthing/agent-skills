@@ -42,9 +42,23 @@ from pathlib import Path
 # manufacture a production cycle (a documented restraint).
 IGNORE_DIRS = frozenset(
     {
-        ".git", "__pycache__", "node_modules", ".venv", "venv", "env", ".env",
-        "build", "dist", ".tox", ".mypy_cache", ".pytest_cache", "site-packages",
-        "migrations", "tests", "test", ".eggs",
+        ".git",
+        "__pycache__",
+        "node_modules",
+        ".venv",
+        "venv",
+        "env",
+        ".env",
+        "build",
+        "dist",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+        "site-packages",
+        "migrations",
+        "tests",
+        "test",
+        ".eggs",
     }
 )
 

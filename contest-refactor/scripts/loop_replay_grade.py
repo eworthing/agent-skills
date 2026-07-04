@@ -17,6 +17,7 @@ Usage:
 
 Exit 0 = all required invariants hold; 1 = a required invariant failed or inputs missing.
 """
+
 from __future__ import annotations
 
 import json
@@ -66,27 +67,37 @@ def main(argv: list[str]) -> int:
     # ---- STRUCTURAL ----
     proc = subprocess.run(
         [sys.executable, str(VALIDATE_ARTIFACT), str(artifact_dir), "--mode", "strict"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
-    required.append((
-        "structural: validate-artifact --mode strict exits 0",
-        proc.returncode == 0,
-        (proc.stdout + proc.stderr).strip().splitlines()[-1] if (proc.stdout or proc.stderr) else "",
-    ))
+    required.append(
+        (
+            "structural: validate-artifact --mode strict exits 0",
+            proc.returncode == 0,
+            (proc.stdout + proc.stderr).strip().splitlines()[-1]
+            if (proc.stdout or proc.stderr)
+            else "",
+        )
+    )
 
     findings_list = [f for f in artifact.get("findings", []) if isinstance(f, dict)]
-    required.append((
-        "structural: findings[] is non-empty", bool(findings_list),
-        f"count={len(findings_list)}",
-    ))
+    required.append(
+        (
+            "structural: findings[] is non-empty",
+            bool(findings_list),
+            f"count={len(findings_list)}",
+        )
+    )
 
     loop_result = artifact.get("loop_result") or {}
     tfs = loop_result.get("targeted_finding_status")
-    required.append((
-        "structural: loop_result.targeted_finding_status valid enum",
-        tfs in {"resolved", "carried_forward"},
-        f"status={tfs!r}",
-    ))
+    required.append(
+        (
+            "structural: loop_result.targeted_finding_status valid enum",
+            tfs in {"resolved", "carried_forward"},
+            f"status={tfs!r}",
+        )
+    )
 
     # ---- SEMANTIC ----
     # Identify the planted finding. priority_1_finding_id / loop_result.targeted_finding_id are
@@ -109,40 +120,53 @@ def main(argv: list[str]) -> int:
         )
         planted = citing[0] if citing else None
 
-    required.append((
-        "semantic: a finding cites the planted primary_file (debt was found)",
-        planted is not None, f"primary_file={primary!r}",
-    ))
+    required.append(
+        (
+            "semantic: a finding cites the planted primary_file (debt was found)",
+            planted is not None,
+            f"primary_file={primary!r}",
+        )
+    )
     if planted is not None:
         sev = planted.get("severity")
         floor = expected["min_severity"]
-        required.append((
-            "semantic: that finding's severity >= min_severity",
-            sev in sev_rank and sev_rank[sev] >= sev_rank[floor],
-            f"severity={sev!r} floor={floor!r} id={planted.get('id')!r}",
-        ))
+        required.append(
+            (
+                "semantic: that finding's severity >= min_severity",
+                sev in sev_rank and sev_rank[sev] >= sev_rank[floor],
+                f"severity={sev!r} floor={floor!r} id={planted.get('id')!r}",
+            )
+        )
 
     what_changed = str(loop_result.get("what_changed") or "")
-    required.append((
-        "semantic: loop_result.what_changed references primary_file (fix touched planted file)",
-        primary in what_changed, f"primary_file={primary!r} present={primary in what_changed}",
-    ))
+    required.append(
+        (
+            "semantic: loop_result.what_changed references primary_file (fix touched planted file)",
+            primary in what_changed,
+            f"primary_file={primary!r} present={primary in what_changed}",
+        )
+    )
 
     exp_status = expected["expected_targeted_finding_status"]
-    required.append((
-        "semantic: loop_result.targeted_finding_status == expected (planted debt fixed)",
-        tfs == exp_status, f"got={tfs!r} expected={exp_status!r}",
-    ))
+    required.append(
+        (
+            "semantic: loop_result.targeted_finding_status == expected (planted debt fixed)",
+            tfs == exp_status,
+            f"got={tfs!r} expected={exp_status!r}",
+        )
+    )
 
     # ---- ADVISORY (never affects exit) ----
     dim = expected["targeted_dimension"]
     scorecard = artifact.get("scorecard") or {}
     dim_entry = scorecard.get(dim)
     score = dim_entry.get("score") if isinstance(dim_entry, dict) else dim_entry
-    advisory.append((
-        f"advisory: scorecard[{dim}] present (movement vs baseline once measured)",
-        f"score={score!r}",
-    ))
+    advisory.append(
+        (
+            f"advisory: scorecard[{dim}] present (movement vs baseline once measured)",
+            f"score={score!r}",
+        )
+    )
 
     # ---- REPORT ----
     print(f"loop_replay_grade: fixture '{fixture_id}' @ {artifact_dir}")

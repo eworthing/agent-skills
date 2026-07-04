@@ -1,7 +1,15 @@
 """merge classification tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestUncertainClassification(unittest.TestCase):
@@ -15,7 +23,9 @@ class TestUncertainClassification(unittest.TestCase):
             "anchor_end": 14,
         }
         left = _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor)
-        right = _make_issue("BLK-002", "blocking", 1, 2, "B2", "Refactor database pool", anchor=anchor)
+        right = _make_issue(
+            "BLK-002", "blocking", 1, 2, "B2", "Refactor database pool", anchor=anchor
+        )
         classification, reason = classify_merge_candidate(left, right)
         self.assertEqual(classification, "UNCERTAIN")
 
@@ -32,11 +42,22 @@ class TestUncertainClassification(unittest.TestCase):
                 "next_blk_id": 3,
                 "next_nb_id": 1,
                 "issues": [
-                    _make_issue("BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor),
-                    _make_issue("BLK-002", "blocking", 1, 2, "B2", "Refactor database pool", anchor=anchor),
+                    _make_issue(
+                        "BLK-001", "blocking", 1, 1, "B1", "Add auth middleware", anchor=anchor
+                    ),
+                    _make_issue(
+                        "BLK-002", "blocking", 1, 2, "B2", "Refactor database pool", anchor=anchor
+                    ),
                 ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 2, "blocking_open": 2, "nb_open": 0, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 2,
+                        "blocking_open": 2,
+                        "nb_open": 0,
+                        "approved_count": 0,
+                    }
+                },
             }
             result = apply_merge_pipeline(ledger, "uncertain01", tmpdir, 1)
             self.assertEqual(result["merged"], [])
@@ -66,7 +87,9 @@ class TestCrossSeverityMergeBlocking(unittest.TestCase):
                 _make_issue("NB-001", "non_blocking", 1, 2, "N1", "Missing auth on admin routes"),
             ],
             "merges": [],
-            "rounds": {"1": {"reviewer_count": 2, "blocking_open": 1, "nb_open": 1, "approved_count": 0}},
+            "rounds": {
+                "1": {"reviewer_count": 2, "blocking_open": 1, "nb_open": 1, "approved_count": 0}
+            },
         }
         candidates = generate_merge_candidates(ledger)
         self.assertEqual(candidates, [])
@@ -79,10 +102,19 @@ class TestCrossSeverityMergeBlocking(unittest.TestCase):
                 "next_nb_id": 2,
                 "issues": [
                     _make_issue("BLK-001", "blocking", 1, 1, "B1", "Missing auth on admin routes"),
-                    _make_issue("NB-001", "non_blocking", 1, 2, "N1", "Missing auth on admin routes"),
+                    _make_issue(
+                        "NB-001", "non_blocking", 1, 2, "N1", "Missing auth on admin routes"
+                    ),
                 ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 2, "blocking_open": 1, "nb_open": 1, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 2,
+                        "blocking_open": 1,
+                        "nb_open": 1,
+                        "approved_count": 0,
+                    }
+                },
             }
             result = apply_merge_pipeline(ledger, "xsev01", tmpdir, 1)
             self.assertEqual(result["merged"], [])
@@ -99,7 +131,10 @@ class TestDerivedVerdict(unittest.TestCase):
             "issues": [
                 make_issue("BLK-001", "Minor concern", support_count=1),
             ],
-            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
         }
         # supermajority of 3 requires 2 — support_count=1 doesn't survive
         verdict, surviving, dropped = derive_verdict(ledger, "super", 3)
@@ -115,7 +150,10 @@ class TestDerivedVerdict(unittest.TestCase):
                 make_issue("BLK-002", "Minor", support_count=1),
                 make_issue("NB-001", "Nice to have", severity="non_blocking", support_count=3),
             ],
-            "next_blk_id": 3, "next_nb_id": 2, "merges": [], "rounds": {},
+            "next_blk_id": 3,
+            "next_nb_id": 2,
+            "merges": [],
+            "rounds": {},
         }
         # supermajority of 3 requires 2 — BLK-001 survives, BLK-002 doesn't
         verdict, surviving, dropped = derive_verdict(ledger, "super", 3)
@@ -130,7 +168,10 @@ class TestDerivedVerdict(unittest.TestCase):
             "issues": [
                 make_issue("BLK-001", "Fixed now", status="resolved", support_count=3),
             ],
-            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
         }
         verdict, surviving, dropped = derive_verdict(ledger, "super", 3)
         self.assertEqual(verdict, "APPROVED")
@@ -142,7 +183,10 @@ class TestDerivedVerdict(unittest.TestCase):
             "issues": [
                 make_issue("BLK-001", "Issue", support_count=2),
             ],
-            "next_blk_id": 2, "next_nb_id": 1, "merges": [], "rounds": {},
+            "next_blk_id": 2,
+            "next_nb_id": 1,
+            "merges": [],
+            "rounds": {},
         }
         # Unanimous of 3 requires 3 — support_count=2 doesn't survive
         verdict, surviving, _dropped = derive_verdict(ledger, "unanimous", 3)
@@ -162,7 +206,10 @@ class TestDerivedVerdict(unittest.TestCase):
                 make_issue("BLK-001", "Auth missing", support_count=2),
                 make_issue("NB-001", "Add docs", severity="non_blocking", support_count=1),
             ],
-            "next_blk_id": 2, "next_nb_id": 2, "merges": [], "rounds": {},
+            "next_blk_id": 2,
+            "next_nb_id": 2,
+            "merges": [],
+            "rounds": {},
         }
         output = format_issue_consensus(ledger, "super", 3)
         self.assertIn("BLK-001", output)
@@ -180,7 +227,9 @@ class TestDeriveVerdictSkipsInvalidated(unittest.TestCase):
             "next_blk_id": 3,
             "next_nb_id": 1,
             "issues": [
-                make_issue("BLK-001", "Was invalidated", status="invalidated_by_verifier", support_count=3),
+                make_issue(
+                    "BLK-001", "Was invalidated", status="invalidated_by_verifier", support_count=3
+                ),
                 make_issue("BLK-002", "Low support", support_count=1, dispute_count=2),
             ],
             "merges": [],
@@ -232,7 +281,9 @@ class TestVerificationSync(unittest.TestCase):
         source_issue = source_ledger["issues"][0]
         source_issue["verification"]["status"] = "invalidated"
         source_issue["verification"]["verified_by"] = {"provider": "copilot", "model": "gpt-5.4"}
-        source_issue["verification"]["verification_rationale"] = "Anchor does not support the claim."
+        source_issue["verification"]["verification_rationale"] = (
+            "Anchor does not support the claim."
+        )
         source_issue["status"] = "invalidated_by_verifier"
         source_issue["adjudication"]["status"] = "invalidated_by_verifier"
 

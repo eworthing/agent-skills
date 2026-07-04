@@ -42,7 +42,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from quorum.ledger import load_ledger, save_ledger
 
 FIXTURE_R3 = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "mid-quorum-r3"
@@ -129,9 +128,7 @@ class TestMergeLogReplay:
             if ln.strip()
         ]
         expected = [
-            json.loads(ln)
-            for ln in replay.read_text(encoding="utf-8").splitlines()
-            if ln.strip()
+            json.loads(ln) for ln in replay.read_text(encoding="utf-8").splitlines() if ln.strip()
         ]
         assert actual == expected
 

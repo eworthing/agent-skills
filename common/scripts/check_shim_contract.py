@@ -28,6 +28,7 @@ the script is a developer-only tool intended to run on the maintainer's
 own working tree or in CI where the source has already been reviewed.
 Do NOT run it against an untrusted clone or a path you do not control.
 """
+
 from __future__ import annotations
 
 import ast
@@ -54,15 +55,18 @@ def collect_references(tree: ast.AST, module_name: str) -> tuple[set[str], list[
                     required.add(alias.name)
 
         # Case B: import <module>; then  <module>.X  (attribute access)
-        elif isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == module_name:
+        elif (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
+            and node.value.id == module_name
+        ):
             required.add(node.attr)
 
         # Cases C+D+E: function calls — mock.patch("X.Y"), patch.object(M, "Y"), getattr(M, "Y")
         elif isinstance(node, ast.Call):
             # Case C: patch(...) or mock.patch("module.X") — string-target patches.
-            is_patch_str = (
-                (isinstance(node.func, ast.Attribute) and node.func.attr == "patch")
-                or (isinstance(node.func, ast.Name) and node.func.id == "patch")
+            is_patch_str = (isinstance(node.func, ast.Attribute) and node.func.attr == "patch") or (
+                isinstance(node.func, ast.Name) and node.func.id == "patch"
             )
             if is_patch_str:
                 for arg in node.args:
@@ -78,8 +82,14 @@ def collect_references(tree: ast.AST, module_name: str) -> tuple[set[str], list[
                 isinstance(node.func, ast.Attribute)
                 and node.func.attr == "object"
                 and (
-                    (isinstance(node.func.value, ast.Name) and node.func.value.id in ("patch", "mock"))
-                    or (isinstance(node.func.value, ast.Attribute) and node.func.value.attr == "patch")
+                    (
+                        isinstance(node.func.value, ast.Name)
+                        and node.func.value.id in ("patch", "mock")
+                    )
+                    or (
+                        isinstance(node.func.value, ast.Attribute)
+                        and node.func.value.attr == "patch"
+                    )
                 )
             )
             if is_patch_object and len(node.args) >= 2:
@@ -93,7 +103,11 @@ def collect_references(tree: ast.AST, module_name: str) -> tuple[set[str], list[
                     required.add(attr.value)
 
             # Case E: getattr(<module>, "X" [, default])
-            if isinstance(node.func, ast.Name) and node.func.id == "getattr" and len(node.args) >= 2:
+            if (
+                isinstance(node.func, ast.Name)
+                and node.func.id == "getattr"
+                and len(node.args) >= 2
+            ):
                 target, attr = node.args[0], node.args[1]
                 if isinstance(target, ast.Name) and target.id == module_name:
                     if isinstance(attr, ast.Constant) and isinstance(attr.value, str):

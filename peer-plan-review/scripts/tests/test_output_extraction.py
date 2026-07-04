@@ -1,9 +1,20 @@
 """output extraction tests — relocated verbatim from test_run_review.py (mechanical split)."""
-import argparse, json, os, shutil, signal, stat, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from unittest import mock  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
-from ._helpers import _CREATE_NEW_PROCESS_GROUP  # noqa: F401
+
+import argparse
+import json
+import os
+import shutil
+import signal
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+from ._helpers import *
+from ._helpers import _CREATE_NEW_PROCESS_GROUP
 
 
 class TestOutputParsing(unittest.TestCase):
@@ -117,6 +128,7 @@ class TestOutputParsing(unittest.TestCase):
     def test_extract_session_id_opencode(self):
         """Test 8f: opencode session ID extracted from first JSONL line."""
         from _common.metadata.extractors import extract_session_id_opencode
+
         fixture = Path(FIXTURES_DIR) / "opencode_output.jsonl"
         sid = extract_session_id_opencode(str(fixture))
         self.assertEqual(sid, "ses_fixture12345abcdef")
@@ -157,19 +169,21 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         """Valid export JSON returns model (providerID/modelID) and effort (max→xhigh)."""
         from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
-        export_json = json.dumps({
-            "messages": [
-                {
-                    "info": {
-                        "model": {
-                            "providerID": "opencode-go",
-                            "modelID": "deepseek-v4-pro",
-                            "variant": "max",
+        export_json = json.dumps(
+            {
+                "messages": [
+                    {
+                        "info": {
+                            "model": {
+                                "providerID": "opencode-go",
+                                "modelID": "deepseek-v4-pro",
+                                "variant": "max",
+                            }
                         }
                     }
-                }
-            ]
-        })
+                ]
+            }
+        )
         mock_run.return_value = subprocess.CompletedProcess(
             ["opencode", "export", "ses_1"], 0, stdout=export_json, stderr=""
         )
@@ -182,19 +196,21 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         """v1.17+ flattens providerID/modelID/variant onto info (info.model empty)."""
         from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
-        export_json = json.dumps({
-            "messages": [
-                {
-                    "info": {
-                        "role": "assistant",
-                        "model": {},
-                        "providerID": "opencode-go",
-                        "modelID": "deepseek-v4-flash",
-                        "variant": "high",
+        export_json = json.dumps(
+            {
+                "messages": [
+                    {
+                        "info": {
+                            "role": "assistant",
+                            "model": {},
+                            "providerID": "opencode-go",
+                            "modelID": "deepseek-v4-flash",
+                            "variant": "high",
+                        }
                     }
-                }
-            ]
-        })
+                ]
+            }
+        )
         mock_run.return_value = subprocess.CompletedProcess(
             ["opencode", "export", "ses_1"], 0, stdout=export_json, stderr=""
         )
@@ -218,9 +234,7 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         """TimeoutExpired returns empty dict."""
         from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
-        mock_run.side_effect = subprocess.TimeoutExpired(
-            ["opencode", "export", "ses_1"], 15
-        )
+        mock_run.side_effect = subprocess.TimeoutExpired(["opencode", "export", "ses_1"], 15)
         meta = _extract_opencode_metadata_via_export("ses_1")
         self.assertEqual(meta, {})
 
@@ -240,19 +254,21 @@ class TestOpencodeMetadataExport(unittest.TestCase):
         """Unrecognized variant is passed through unchanged."""
         from _common.metadata.extractors import _extract_opencode_metadata_via_export
 
-        export_json = json.dumps({
-            "messages": [
-                {
-                    "info": {
-                        "model": {
-                            "providerID": "opencode-go",
-                            "modelID": "deepseek-v4-pro",
-                            "variant": "unknown-effort",
+        export_json = json.dumps(
+            {
+                "messages": [
+                    {
+                        "info": {
+                            "model": {
+                                "providerID": "opencode-go",
+                                "modelID": "deepseek-v4-pro",
+                                "variant": "unknown-effort",
+                            }
                         }
                     }
-                }
-            ]
-        })
+                ]
+            }
+        )
         mock_run.return_value = subprocess.CompletedProcess(
             ["opencode", "export", "ses_1"], 0, stdout=export_json, stderr=""
         )

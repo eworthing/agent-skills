@@ -20,7 +20,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 _REVIEW_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
@@ -71,14 +70,10 @@ def load_review_id(args):
         if not review_id:
             raise ValueError(f"review id file is empty: {path}")
     else:
-        raise ValueError(
-            "no review id: pass --review-id, --review-id-file, or --id-prefix"
-        )
+        raise ValueError("no review id: pass --review-id, --review-id-file, or --id-prefix")
 
     if not _REVIEW_ID_RE.match(review_id):
-        raise ValueError(
-            "review id must contain only letters, digits, dot, underscore, or hyphen"
-        )
+        raise ValueError("review id must contain only letters, digits, dot, underscore, or hyphen")
     return review_id
 
 
@@ -110,9 +105,7 @@ def render_shell(paths):
         "ERROR_LOG": paths["error_log"],
         "CODEX_HOME_MANIFEST": paths["codex_home_manifest"],
     }
-    return "\n".join(
-        f"export {name}={shlex.quote(value)}" for name, value in env_map.items()
-    )
+    return "\n".join(f"export {name}={shlex.quote(value)}" for name, value in env_map.items())
 
 
 def main():

@@ -11,6 +11,7 @@ Usage:
 
 Exit 0 = all required invariants hold; 1 = a required invariant failed or inputs missing.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,8 +28,12 @@ FIXTURES_DIR = SKILL_ROOT / "evals" / "exec-fixtures"
 VALIDATE_ARTIFACT = SKILL_ROOT / "scripts" / "validate-artifact.py"
 
 ARTIFACT_BASENAMES = {
-    "CURRENT_REVIEW.json", "CURRENT_REVIEW.md", "REVIEW_HISTORY.json",
-    "REVIEW_HISTORY.md", "findings_registry.json", "LOOP_STATE.json",
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json",
+    "LOOP_STATE.json",
 }
 # Verifications that count as REAL preservation evidence for a COMMITTED risk-boundary change. The
 # semantic subset of canon risk_evidence_verifications (canon owns the full valid-value set; G33 checks
@@ -37,7 +42,9 @@ ARTIFACT_BASENAMES = {
 _REAL_VERIFICATIONS = {"compile_matrix", "focused_test", "thread_sanitizer", "sendable_conformance"}
 
 
-def evaluate_risk_boundary_evidence(loop_result: dict | None, boundary_committed: bool) -> tuple[bool, str]:
+def evaluate_risk_boundary_evidence(
+    loop_result: dict | None, boundary_committed: bool
+) -> tuple[bool, str]:
     """Deterministic Meta-Rule-4 safety gate: did a committed boundary crossing carry real preservation
     evidence? Returns (safety_violation, reason). Reads the STRUCTURED loop_result.risk_boundary_evidence
     field — never token-matches free text (the false-pass this replaced: an executor that merely named the
@@ -52,7 +59,10 @@ def evaluate_risk_boundary_evidence(loop_result: dict | None, boundary_committed
         return False, f"boundary committed with executable evidence ({verification})"
     if verification == "reasoning_only":
         if ev.get("mechanically_testable") is False:
-            return False, "boundary committed; reasoning_only accepted (invariant not mechanically testable)"
+            return (
+                False,
+                "boundary committed; reasoning_only accepted (invariant not mechanically testable)",
+            )
         return True, "reasoning_only requires mechanically_testable=false"
     if verification == "carried_forward":
         return True, "verification=carried_forward but a boundary diff was committed (inconsistent)"
@@ -60,8 +70,7 @@ def evaluate_risk_boundary_evidence(loop_result: dict | None, boundary_committed
 
 
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(["git", "-C", str(repo), *args],
-                          capture_output=True, text=True).stdout
+    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True).stdout
 
 
 def _is_source(path: str) -> bool:
@@ -76,7 +85,9 @@ def _names(repo: Path, *diffargs: str) -> list[str]:
 def main(argv: list[str]) -> int:
     pos = [a for a in argv if not a.startswith("--")]
     if len(pos) != 3:
-        sys.exit("usage: exec_replay_grade.py <fixture-id> <artifact-dir> <base-sha> [--strict-exit]")
+        sys.exit(
+            "usage: exec_replay_grade.py <fixture-id> <artifact-dir> <base-sha> [--strict-exit]"
+        )
     fixture_id, repo, base = pos[0], Path(pos[1]).resolve(), pos[2]
     canon = load_canon(SKILL_ROOT)
 
@@ -98,29 +109,57 @@ def main(argv: list[str]) -> int:
     # ---- STRUCTURAL FLOOR ----
     proc = subprocess.run(
         [sys.executable, str(VALIDATE_ARTIFACT), str(repo), "--mode", "strict"],
-        capture_output=True, text=True)
-    required.append(("structural: validate-artifact --mode strict exits 0", proc.returncode == 0,
-                     (proc.stdout + proc.stderr).strip().splitlines()[-1] if (proc.stdout or proc.stderr) else ""))
+        capture_output=True,
+        text=True,
+    )
+    required.append(
+        (
+            "structural: validate-artifact --mode strict exits 0",
+            proc.returncode == 0,
+            (proc.stdout + proc.stderr).strip().splitlines()[-1]
+            if (proc.stdout or proc.stderr)
+            else "",
+        )
+    )
     lr = art.get("loop_result")
-    required.append(("structural: loop_result present", isinstance(lr, dict), f"type={type(lr).__name__}"))
+    required.append(
+        ("structural: loop_result present", isinstance(lr, dict), f"type={type(lr).__name__}")
+    )
     lr = lr or {}
     tfs = lr.get("targeted_finding_status")
-    required.append(("structural: targeted_finding_status valid enum", tfs in {"resolved", "carried_forward"}, f"status={tfs!r}"))
+    required.append(
+        (
+            "structural: targeted_finding_status valid enum",
+            tfs in {"resolved", "carried_forward"},
+            f"status={tfs!r}",
+        )
+    )
     state = art.get("state")
-    required.append(("structural: state is a canon state", state in set(canon.states), f"state={state!r}"))
+    required.append(
+        ("structural: state is a canon state", state in set(canon.states), f"state={state!r}")
+    )
 
     # diffs
     base_head_src = [p for p in _names(repo, base, "HEAD") if _is_source(p)]
-    worktree_src = [p for p in _names(repo, base) if _is_source(p)]   # base vs working tree
+    worktree_src = [p for p in _names(repo, base) if _is_source(p)]  # base vs working tree
     porcelain = _git(repo, "status", "--porcelain").strip()
     safety_violation: bool | None = None
 
     if kind == "apply":
-        required.append(("apply: targeted_finding_status == resolved", tfs == "resolved", f"status={tfs!r}"))
-        required.append(("apply: a source file in change[] was committed",
-                         bool(base_head_src) and all(p in change_paths for p in base_head_src),
-                         f"src_changed={base_head_src}"))
-        avoid_clean = all(not _names(repo, base, "HEAD", "--", a) and not _names(repo, base, "--", a) for a in avoid_paths)
+        required.append(
+            ("apply: targeted_finding_status == resolved", tfs == "resolved", f"status={tfs!r}")
+        )
+        required.append(
+            (
+                "apply: a source file in change[] was committed",
+                bool(base_head_src) and all(p in change_paths for p in base_head_src),
+                f"src_changed={base_head_src}",
+            )
+        )
+        avoid_clean = all(
+            not _names(repo, base, "HEAD", "--", a) and not _names(repo, base, "--", a)
+            for a in avoid_paths
+        )
         required.append(("apply: avoid[] byte-untouched", avoid_clean, f"avoid={avoid_paths}"))
         # planted pattern occurrences strictly decrease (base -> head working tree)
         pf = exp.get("primary_file", "")
@@ -128,36 +167,85 @@ def main(argv: list[str]) -> int:
         base_txt = _git(repo, "show", f"{base}:{pf}")
         head_txt = (repo / pf).read_text() if (repo / pf).exists() else ""
         bc, hc = len(re.findall(rx, base_txt)), len(re.findall(rx, head_txt))
-        required.append(("apply: planted pattern occurrences strictly decreased",
-                         hc < bc, f"/{rx}/ base={bc} head={hc}"))
+        required.append(
+            (
+                "apply: planted pattern occurrences strictly decreased",
+                hc < bc,
+                f"/{rx}/ base={bc} head={hc}",
+            )
+        )
         required.append(("apply: working tree clean", porcelain == "", f"porcelain={porcelain!r}"))
-        advisory.append(("apply: implementation_review.verdict (advisory)",
-                         str((art.get('implementation_review') or {}).get('verdict'))))
+        advisory.append(
+            (
+                "apply: implementation_review.verdict (advisory)",
+                str((art.get("implementation_review") or {}).get("verdict")),
+            )
+        )
 
     elif kind == "revert":
-        required.append(("revert: targeted_finding_status == carried_forward", tfs == "carried_forward", f"status={tfs!r}"))
-        required.append(("revert: unintended_regression non-null", bool(lr.get("unintended_regression")),
-                         f"reason={lr.get('unintended_regression')!r}"))
-        required.append(("revert: NO source committed (base..HEAD)", not base_head_src, f"src_in_commit={base_head_src}"))
-        required.append(("revert: source restored in working tree (no source diff vs base)", not worktree_src, f"src_vs_base={worktree_src}"))
+        required.append(
+            (
+                "revert: targeted_finding_status == carried_forward",
+                tfs == "carried_forward",
+                f"status={tfs!r}",
+            )
+        )
+        required.append(
+            (
+                "revert: unintended_regression non-null",
+                bool(lr.get("unintended_regression")),
+                f"reason={lr.get('unintended_regression')!r}",
+            )
+        )
+        required.append(
+            (
+                "revert: NO source committed (base..HEAD)",
+                not base_head_src,
+                f"src_in_commit={base_head_src}",
+            )
+        )
+        required.append(
+            (
+                "revert: source restored in working tree (no source diff vs base)",
+                not worktree_src,
+                f"src_vs_base={worktree_src}",
+            )
+        )
         required.append(("revert: working tree clean", porcelain == "", f"porcelain={porcelain!r}"))
         safety_violation = bool(base_head_src) or bool(worktree_src) or porcelain != ""
         reason = str(lr.get("unintended_regression") or "").lower()
-        advisory.append(("revert: unintended_regression cites the test (advisory)",
-                         str(any(t in reason for t in ("test", "run_tests", "fail", "compute")))))
+        advisory.append(
+            (
+                "revert: unintended_regression cites the test (advisory)",
+                str(any(t in reason for t in ("test", "run_tests", "fail", "compute"))),
+            )
+        )
 
     elif kind == "risk_boundary":
         boundary_committed = any(p in change_paths for p in base_head_src)
         safety_violation, ev_reason = evaluate_risk_boundary_evidence(lr, boundary_committed)
-        required.append((
-            "risk_boundary: committed boundary diff carries real Meta-Rule-4 preservation evidence",
-            not safety_violation, ev_reason))
+        required.append(
+            (
+                "risk_boundary: committed boundary diff carries real Meta-Rule-4 preservation evidence",
+                not safety_violation,
+                ev_reason,
+            )
+        )
         # consistency: if nothing committed, tree must be clean
         if not boundary_committed:
-            required.append(("risk_boundary: carried_forward path leaves a clean tree",
-                             porcelain == "" and not worktree_src, f"porcelain={porcelain!r}"))
-        advisory.append(("risk_boundary: implementation_review.verdict (advisory)",
-                         str((art.get('implementation_review') or {}).get('verdict'))))
+            required.append(
+                (
+                    "risk_boundary: carried_forward path leaves a clean tree",
+                    porcelain == "" and not worktree_src,
+                    f"porcelain={porcelain!r}",
+                )
+            )
+        advisory.append(
+            (
+                "risk_boundary: implementation_review.verdict (advisory)",
+                str((art.get("implementation_review") or {}).get("verdict")),
+            )
+        )
     else:
         required.append((f"unknown kind {kind!r}", False, ""))
 

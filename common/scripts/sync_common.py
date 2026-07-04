@@ -22,6 +22,7 @@ Usage:
     sync_common.py --skill quorum-review
     sync_common.py --check        # gate mode (exit non-zero on drift)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -130,9 +131,17 @@ def sync_skill(skill_dir: Path, source_dir: Path) -> None:
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--check", action="store_true", help="Verify vendored trees match source; exit non-zero on drift.")
-    parser.add_argument("--skill", help="Limit to one consumer skill (directory name under the repo root).")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Verify vendored trees match source; exit non-zero on drift.",
+    )
+    parser.add_argument(
+        "--skill", help="Limit to one consumer skill (directory name under the repo root)."
+    )
     args = parser.parse_args(argv)
 
     if not SOURCE_DIR.is_dir():
@@ -143,7 +152,10 @@ def main(argv: list[str]) -> int:
     if args.skill:
         consumers = [c for c in consumers if c.name == args.skill]
         if not consumers:
-            print(f"error: no consumer skill found with scripts/_common/ named {args.skill!r}", file=sys.stderr)
+            print(
+                f"error: no consumer skill found with scripts/_common/ named {args.skill!r}",
+                file=sys.stderr,
+            )
             return 2
 
     if not consumers:
@@ -151,9 +163,10 @@ def main(argv: list[str]) -> int:
         if args.check:
             print("sync_common: no consumer skills (no <skill>/scripts/_common/ found).")
             return 0
-        else:
-            print("sync_common: no consumer skills to sync. Create <skill>/scripts/_common/ first, then re-run.")
-            return 0
+        print(
+            "sync_common: no consumer skills to sync. Create <skill>/scripts/_common/ first, then re-run."
+        )
+        return 0
 
     if args.check:
         any_drift = False
@@ -173,11 +186,10 @@ def main(argv: list[str]) -> int:
             return 1
         print(f"sync_common: clean — {len(consumers)} consumer(s) byte-identical to source.")
         return 0
-    else:
-        for skill in consumers:
-            sync_skill(skill, SOURCE_DIR)
-            print(f"synced: {skill.name}/scripts/_common/")
-        return 0
+    for skill in consumers:
+        sync_skill(skill, SOURCE_DIR)
+        print(f"synced: {skill.name}/scripts/_common/")
+    return 0
 
 
 if __name__ == "__main__":

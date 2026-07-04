@@ -55,12 +55,16 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
 
-        def check(name: str, metrics: list[dict | None], expect_alarm: bool, needle: str | None = None):
+        def check(
+            name: str, metrics: list[dict | None], expect_alarm: bool, needle: str | None = None
+        ):
             path = base / f"{name}.json"
             path.write_text(json.dumps(_history(metrics), indent=2), encoding="utf-8")
             p = _run(path)
             if p.returncode != 0:
-                failures.append(f"{name}: non-zero exit (alarm is advisory, must exit 0)\n{p.stderr.rstrip()}")
+                failures.append(
+                    f"{name}: non-zero exit (alarm is advisory, must exit 0)\n{p.stderr.rstrip()}"
+                )
                 return
             alarmed = "METRIC REGRESSION" in p.stdout
             if alarmed != expect_alarm:
@@ -72,10 +76,22 @@ def main() -> int:
         check("coverage-drop", [{"coverage_pct": 82.0}, {"coverage_pct": 74.5}], True, "coverage")
         check("lint-up", [{"lint_count": 3}, {"lint_count": 11}], True, "lint")
         check("complexity-up", [{"complexity": 12}, {"complexity": 19}], True, "complexity")
-        check("all-stable", [{"coverage_pct": 80, "lint_count": 2, "complexity": 10},
-                             {"coverage_pct": 80, "lint_count": 2, "complexity": 10}], False)
-        check("improving", [{"coverage_pct": 70, "lint_count": 9, "complexity": 20},
-                            {"coverage_pct": 85, "lint_count": 1, "complexity": 11}], False)
+        check(
+            "all-stable",
+            [
+                {"coverage_pct": 80, "lint_count": 2, "complexity": 10},
+                {"coverage_pct": 80, "lint_count": 2, "complexity": 10},
+            ],
+            False,
+        )
+        check(
+            "improving",
+            [
+                {"coverage_pct": 70, "lint_count": 9, "complexity": 20},
+                {"coverage_pct": 85, "lint_count": 1, "complexity": 11},
+            ],
+            False,
+        )
         check("no-metrics", [None, None], False)
 
     if failures:

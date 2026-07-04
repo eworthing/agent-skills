@@ -15,7 +15,6 @@ from pathlib import Path
 
 from quorum.parsing import _normalize_anchor
 
-
 LEDGER_VERSION = 3
 LEDGER_SCHEMA_VERSION = 3
 
@@ -105,16 +104,13 @@ def _issue_support_count(issue):
     adjudication = _issue_adjudication(issue)
     relations = _issue_relations(issue)
     proposed = _as_list(
-        relations.get("proposed_by")
-        or adjudication.get("proposed_by", issue.get("proposed_by"))
+        relations.get("proposed_by") or adjudication.get("proposed_by", issue.get("proposed_by"))
     )
     endorsed = _as_list(
-        relations.get("endorsed_by")
-        or adjudication.get("endorsed_by", issue.get("endorsed_by"))
+        relations.get("endorsed_by") or adjudication.get("endorsed_by", issue.get("endorsed_by"))
     )
     refined = _as_list(
-        relations.get("refined_by")
-        or adjudication.get("refined_by", issue.get("refined_by"))
+        relations.get("refined_by") or adjudication.get("refined_by", issue.get("refined_by"))
     )
     derived = len(proposed) + len(endorsed) + len(refined)
     if derived:
@@ -127,8 +123,7 @@ def _issue_dispute_count(issue):
     adjudication = _issue_adjudication(issue)
     relations = _issue_relations(issue)
     disputed = _as_list(
-        relations.get("disputed_by")
-        or adjudication.get("disputed_by", issue.get("disputed_by"))
+        relations.get("disputed_by") or adjudication.get("disputed_by", issue.get("disputed_by"))
     )
     if disputed:
         return len(disputed)
@@ -190,7 +185,9 @@ def _sync_issue_aliases(issue):
     relations["merged_from"] = _unique_preserve_order(
         _as_list(relations.get("merged_from")) + merged_from
     )
-    relations["related_distinct"] = _unique_preserve_order(_as_list(relations.get("related_distinct")))
+    relations["related_distinct"] = _unique_preserve_order(
+        _as_list(relations.get("related_distinct"))
+    )
     relations["conflict"] = _unique_preserve_order(
         _as_list(relations.get("conflict")) + _as_list(relations.get("conflicts_with"))
     )
@@ -299,7 +296,6 @@ def _migrate_issue(issue):
     if not isinstance(issue, dict):
         return None
     migrated = copy.deepcopy(issue)
-    identity = migrated.get("identity") if isinstance(migrated.get("identity"), dict) else {}
     if "claim" not in migrated:
         summary = migrated.get("owner_summary") or migrated.get("text") or ""
         migrated["claim"] = {
@@ -331,7 +327,9 @@ def _migrate_issue(issue):
         }
     if "verification" not in migrated:
         migrated["verification"] = {
-            "status": "invalidated" if migrated.get("status") == "invalidated_by_verifier" else "pending",
+            "status": "invalidated"
+            if migrated.get("status") == "invalidated_by_verifier"
+            else "pending",
             "verified_by": None,
             "verification_rationale": None,
         }
@@ -376,7 +374,9 @@ def _migrate_ledger(ledger):
         return _empty_ledger()
 
     migrated = _empty_ledger()
-    migrated.update({k: copy.deepcopy(v) for k, v in ledger.items() if k not in {"issues", "merges", "rounds"}})
+    migrated.update(
+        {k: copy.deepcopy(v) for k, v in ledger.items() if k not in {"issues", "merges", "rounds"}}
+    )
     migrated["schema_version"] = LEDGER_SCHEMA_VERSION
     migrated["version"] = LEDGER_SCHEMA_VERSION
     migrated["issues"] = []
@@ -385,10 +385,7 @@ def _migrate_ledger(ledger):
         if migrated_issue:
             migrated["issues"].append(migrated_issue)
     migrated["merges"] = [
-        merge for merge in (
-            _migrate_merge(entry) for entry in ledger.get("merges", [])
-        )
-        if merge
+        merge for merge in (_migrate_merge(entry) for entry in ledger.get("merges", [])) if merge
     ]
     migrated["rounds"] = copy.deepcopy(ledger.get("rounds", {}))
 
@@ -419,7 +416,10 @@ def _migrate_ledger(ledger):
 
 def _issue_is_invalidated(issue):
     verification = _issue_verification(issue)
-    return _issue_status(issue) == "invalidated_by_verifier" or verification.get("status") == "invalidated"
+    return (
+        _issue_status(issue) == "invalidated_by_verifier"
+        or verification.get("status") == "invalidated"
+    )
 
 
 def _refresh_issue(issue):
@@ -432,11 +432,13 @@ def _refresh_round_snapshot(ledger, round_num):
     round_info = ledger.setdefault("rounds", {}).setdefault(key, {})
     round_info.setdefault("reviewer_count", 0)
     round_info["blocking_open"] = sum(
-        1 for issue in ledger.get("issues", [])
+        1
+        for issue in ledger.get("issues", [])
         if _issue_severity(issue) == "blocking" and _issue_status(issue) == "open"
     )
     round_info["nb_open"] = sum(
-        1 for issue in ledger.get("issues", [])
+        1
+        for issue in ledger.get("issues", [])
         if _issue_severity(issue) == "non_blocking" and _issue_status(issue) == "open"
     )
     return round_info

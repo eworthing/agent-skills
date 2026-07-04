@@ -177,7 +177,7 @@ def setup_codex_home(manifest, real_home=None):
     home = None
     try:
         home = tempfile.mkdtemp(prefix=_HOME_PREFIX)
-        os.chmod(home, 0o700)
+        Path(home).chmod(0o700)
         record_codex_home(manifest, home)
     except OSError as e:
         if home:
@@ -198,7 +198,7 @@ def setup_codex_home(manifest, real_home=None):
                 shutil.copy2(s, d)
                 if name == "auth.json":
                     with contextlib.suppress(OSError):
-                        os.chmod(d, 0o600)
+                        d.chmod(0o600)
         return (home, True)
     except OSError as e:
         shutil.rmtree(home, ignore_errors=True)
@@ -264,7 +264,7 @@ def _is_stale(path, now=None):
     is left for the normal validity checks rather than assumed reclaimable."""
     now = time.time() if now is None else now
     try:
-        return (now - os.stat(path).st_mtime) > _STALE_HOME_AGE_SECONDS
+        return (now - Path(path).stat().st_mtime) > _STALE_HOME_AGE_SECONDS
     except OSError:
         return False
 
@@ -275,7 +275,7 @@ def _rewrite_manifest(manifest, entries):
         with tmp.open("w", encoding="utf-8") as f:
             for e in entries:
                 f.write(e + "\n")
-        os.replace(tmp, manifest)
+        tmp.replace(manifest)
     except OSError as e:
         print(f"Warning: could not rewrite manifest {manifest}: {e}", file=sys.stderr)
         with contextlib.suppress(OSError):
@@ -345,7 +345,11 @@ def cleanup_review_homes(tmpdir, id_prefix):
         _add(h)
 
     esc = glob.escape(id_prefix)
-    for pattern in (f"{esc}-session.json", f"{esc}-r*-session.json", f"{esc}-verify-*-session.json"):
+    for pattern in (
+        f"{esc}-session.json",
+        f"{esc}-r*-session.json",
+        f"{esc}-verify-*-session.json",
+    ):
         for sf in base.glob(pattern):
             with contextlib.suppress(OSError, ValueError):
                 _add(json.loads(sf.read_text(encoding="utf-8")).get("codex_home"))

@@ -34,6 +34,7 @@ Usage:
 """
 
 import argparse
+import contextlib
 import os
 import shutil
 import subprocess
@@ -44,11 +45,11 @@ from pathlib import Path
 
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 sys.path.insert(0, SCRIPT_DIR)
+import run_review  # noqa: E402 — reuse parse_args() defaults so this
 from _common.process.tree import _kill_tree, _popen_session_kwargs  # noqa: E402
 from _common.providers import PROVIDERS, build_stdin  # noqa: E402
 from _common.session import extract_text_from_output  # noqa: E402
 
-import run_review  # noqa: E402 — reuse parse_args() defaults so this
 # diagnostic's argv construction can never hand-drift from what a real
 # review run executes.
 
@@ -140,10 +141,8 @@ def extract_response_text(reviewer, output_file, stdout):
 
 def _cleanup(*paths):
     for p in paths:
-        try:
+        with contextlib.suppress(OSError):
             Path(p).unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def dry_run(reviewers):
@@ -155,7 +154,9 @@ def dry_run(reviewers):
             continue
 
         prompt_fd, prompt_file = tempfile.mkstemp(prefix=f"ppr-web-dry-{reviewer}-", suffix=".txt")
-        output_fd, output_file = tempfile.mkstemp(prefix=f"ppr-web-dry-{reviewer}-out-", suffix=".txt")
+        output_fd, output_file = tempfile.mkstemp(
+            prefix=f"ppr-web-dry-{reviewer}-out-", suffix=".txt"
+        )
         os.close(output_fd)
         try:
             with os.fdopen(prompt_fd, "w", encoding="utf-8") as f:
@@ -169,7 +170,11 @@ def dry_run(reviewers):
                 continue
 
             stdin_data = build_stdin(reviewer, prompt_file)
-            stdin_desc = f"piped ({len(stdin_data)} bytes)" if stdin_data is not None else "none (argv prompt)"
+            stdin_desc = (
+                f"piped ({len(stdin_data)} bytes)"
+                if stdin_data is not None
+                else "none (argv prompt)"
+            )
 
             print(f"\n{reviewer}:web")
             print(f"  cmd:   {' '.join(cmd)}")
@@ -183,7 +188,12 @@ def run_test(reviewer):
     test_name = f"{reviewer}:web"
     binary = PROVIDERS[reviewer]["binary"]
     if not shutil.which(binary):
-        return {"test": test_name, "status": "SKIP", "reason": f"{binary} not installed", "duration": 0}
+        return {
+            "test": test_name,
+            "status": "SKIP",
+            "reason": f"{binary} not installed",
+            "duration": 0,
+        }
 
     prompt_fd, prompt_file = tempfile.mkstemp(prefix=f"ppr-web-test-{reviewer}-", suffix=".txt")
     output_fd, output_file = tempfile.mkstemp(prefix=f"ppr-web-test-{reviewer}-out-", suffix=".txt")
@@ -219,7 +229,12 @@ def run_test(reviewer):
                 **_popen_session_kwargs(),
             )
         except FileNotFoundError:
-            return {"test": test_name, "status": "SKIP", "reason": "Binary not found", "duration": 0}
+            return {
+                "test": test_name,
+                "status": "SKIP",
+                "reason": "Binary not found",
+                "duration": 0,
+            }
 
         try:
             stdout, stderr = proc.communicate(input=stdin_data, timeout=TIMEOUT)
@@ -236,7 +251,12 @@ def run_test(reviewer):
                 "duration": duration,
             }
         except Exception as e:
-            return {"test": test_name, "status": "ERROR", "reason": str(e), "duration": time.time() - start}
+            return {
+                "test": test_name,
+                "status": "ERROR",
+                "reason": str(e),
+                "duration": time.time() - start,
+            }
 
         response = extract_response_text(reviewer, output_file, stdout)
         response_lower = response.lower()

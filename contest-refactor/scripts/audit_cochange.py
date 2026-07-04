@@ -100,9 +100,7 @@ def _git_available() -> bool:
 
 
 def _git_run(args: list[str], cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8"
-    )
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, encoding="utf-8")
 
 
 def _has_git_dir(repo: Path) -> bool:
@@ -120,9 +118,7 @@ def _repo_head(repo: Path) -> str:
     return r.stdout.strip() if r.returncode == 0 else "unknown"
 
 
-def _log_commits(
-    repo: Path, max_commits: int, since: str
-) -> list[tuple[str, str, list[str]]]:
+def _log_commits(repo: Path, max_commits: int, since: str) -> list[tuple[str, str, list[str]]]:
     """Return list of (sha, subject, [changed_files]) — merge commits excluded.
 
     Uses --diff-filter=d to skip deleted files (renames handled separately via
@@ -249,9 +245,7 @@ def _imported_modules(path: Path, rel: Path) -> set[tuple[str, ...]]:
     import ast as _ast  # local import — stdlib, never absent
 
     try:
-        tree = _ast.parse(
-            path.read_text(encoding="utf-8", errors="replace"), filename=str(path)
-        )
+        tree = _ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
     except (OSError, SyntaxError, ValueError):
         return set()
 
@@ -409,23 +403,25 @@ def _analyse(
 
         dep = _resolve_static_dep(repo, lhs, rhs)
         pair_id += 1
-        pairs.append({
-            "id": f"cochange-{pair_id:04d}",
-            "lhs": lhs,
-            "rhs": rhs,
-            "granularity": granularity,
-            "cochange_count": count,
-            "jaccard": round(jaccard, 4),
-            "confidences": {
-                "lhs_given_rhs": round(conf_lhs_given_rhs, 4),
-                "rhs_given_lhs": round(conf_rhs_given_lhs, 4),
-            },
-            "directory_distance": dist,
-            "static_dependency": dep,
-            "classification": "candidate",
-            "promotion_allowed": False,
-            "supporting_commits": supporting[(lhs, rhs)][:20],  # cap at 20
-        })
+        pairs.append(
+            {
+                "id": f"cochange-{pair_id:04d}",
+                "lhs": lhs,
+                "rhs": rhs,
+                "granularity": granularity,
+                "cochange_count": count,
+                "jaccard": round(jaccard, 4),
+                "confidences": {
+                    "lhs_given_rhs": round(conf_lhs_given_rhs, 4),
+                    "rhs_given_lhs": round(conf_rhs_given_lhs, 4),
+                },
+                "directory_distance": dist,
+                "static_dependency": dep,
+                "classification": "candidate",
+                "promotion_allowed": False,
+                "supporting_commits": supporting[(lhs, rhs)][:20],  # cap at 20
+            }
+        )
 
     # Sort by co-change count descending, then jaccard descending
     pairs.sort(key=lambda p: (-p["cochange_count"], -p["jaccard"]))
@@ -459,8 +455,7 @@ def _format_md(result: dict) -> str:
     ]
     window = result.get("analysis_window", {})
     lines.append(
-        f"**window:** since={window.get('since')}, "
-        f"max_commits={window.get('max_commits')}  "
+        f"**window:** since={window.get('since')}, max_commits={window.get('max_commits')}  "
     )
     summary = result.get("summary", {})
     lines += [

@@ -6,7 +6,7 @@ append-only logging. A logging failure never crashes the review.
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -25,7 +25,7 @@ class EventLogger:
         if self._log_path is None:
             return
         entry = {
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "review_id": self._review_id,
             "event": event_type,
         }

@@ -26,6 +26,17 @@ from quorum.cli import (
     resolve_verifier,
     validate_panel,
 )
+from quorum.ledger import (
+    _make_issue,
+    _sync_issue_aliases,
+    load_ledger,
+    save_ledger,
+)
+from quorum.merge import (
+    apply_merge_pipeline,
+    classify_merge_candidate,
+    generate_merge_candidates,
+)
 from quorum.orchestrator import (
     EXIT_APPROVED,
     EXIT_INDETERMINATE,
@@ -42,27 +53,11 @@ from quorum.orchestrator import (
     should_exit_early,
     tally_verdicts,
 )
-from quorum.ledger import (
-    _make_issue,
-    _sync_issue_aliases,
-    load_ledger,
-    save_ledger,
-)
 from quorum.parsing import (
     _extract_section,
     parse_cross_critique,
     parse_structured_review,
     parse_verdict,
-)
-from quorum.merge import (
-    apply_merge_pipeline,
-    classify_merge_candidate,
-    generate_merge_candidates,
-)
-from quorum.verification import (
-    _sync_verification_state,
-    generate_verification_prompts,
-    parse_verification_response,
 )
 from quorum.prompts import (
     CROSS_CRITIQUE_INSTRUCTIONS,
@@ -74,7 +69,11 @@ from quorum.prompts import (
     write_deliberation_prompt,
     write_initial_prompt,
 )
-
+from quorum.verification import (
+    _sync_verification_state,
+    generate_verification_prompts,
+    parse_verification_response,
+)
 
 if __name__ == "__main__":
     main()

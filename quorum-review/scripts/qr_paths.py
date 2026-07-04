@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _common.session.paths import main  # noqa: F401 — re-exported for callers
+from _common.session.paths import main
 
 if __name__ == "__main__":
     main()

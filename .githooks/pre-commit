@@ -46,4 +46,32 @@ if [[ $size_rc -ne 0 ]]; then
   exit 1
 fi
 
+# --- Gate 3: Ruff lint + format on staged Python -----------------------------
+if ! command -v ruff >/dev/null 2>&1; then
+  echo "pre-commit: ruff not found. Install the pinned version: pip install ruff==0.15.6"
+  exit 1
+fi
+# Soft version check — determinism depends on the pin. Warn (don't block) on drift
+# so a minor local bump doesn't halt commits, but the mismatch is visible.
+want_ruff=0.15.6
+have_ruff=$(ruff --version 2>/dev/null | awk '{print $2}')
+if [[ "$have_ruff" != "$want_ruff" ]]; then
+  echo "pre-commit: warning — ruff $have_ruff != pinned $want_ruff; results may differ. See AGENTS.md ## Dev tooling."
+fi
+# Guard first so xargs never runs on empty input — this is what keeps it portable:
+# GNU xargs would run ruff with zero paths (linting the whole tree) on empty input
+# unless given -r, but BSD/macOS xargs rejects -r. The `grep -q .` guard sidesteps
+# the divergence entirely. The -z/-0 pair keeps paths with spaces/newlines intact.
+# --force-exclude honors extend-exclude/.gitignore for the explicit paths. This
+# lints the working-tree copy of staged files (not the staged blob), matching the
+# repo's existing gates; partial stages are the committer's responsibility.
+if git diff --cached --name-only --diff-filter=ACMR -- '*.py' | grep -q .; then
+  git diff --cached -z --name-only --diff-filter=ACMR -- '*.py' \
+    | xargs -0 ruff check --force-exclude || {
+      echo "pre-commit: ruff check failed. Fix, or run: ruff check --fix"; exit 1; }
+  git diff --cached -z --name-only --diff-filter=ACMR -- '*.py' \
+    | xargs -0 ruff format --check --force-exclude || {
+      echo "pre-commit: formatting drift. Run: ruff format"; exit 1; }
+fi
+
 exit 0

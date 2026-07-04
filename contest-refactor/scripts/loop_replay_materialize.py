@@ -12,6 +12,7 @@ Usage:
 
   dest-dir  where to materialize (default: a fresh temp dir). Must not already exist.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -52,8 +53,17 @@ def main(argv: list[str]) -> int:
     _git(dest, "init", "-q")
     _git(dest, "add", "-A")
     # deterministic identity so the replay doesn't depend on host git config
-    _git(dest, "-c", "user.name=loop-replay", "-c", "user.email=loop-replay@local",
-         "commit", "-q", "-m", f"base: {fixture_id} fixture")
+    _git(
+        dest,
+        "-c",
+        "user.name=loop-replay",
+        "-c",
+        "user.email=loop-replay@local",
+        "commit",
+        "-q",
+        "-m",
+        f"base: {fixture_id} fixture",
+    )
 
     lens = expected.get("lens", "(select per Step 0)")
     test_cmd = expected.get("test_command") or "(none configured)"
@@ -63,8 +73,8 @@ def main(argv: list[str]) -> int:
     print(f"  {dest}")
     print()
     print("DISPATCH (host-run, one loop):")
-    print(f"  Run ONE contest-refactor loop against the repo above using the verbatim")
-    print(f"  references/trust-model.md § Loop Isolation loop-subagent template.")
+    print("  Run ONE contest-refactor loop against the repo above using the verbatim")
+    print("  references/trust-model.md § Loop Isolation loop-subagent template.")
     print(f"  Step-0 context to seed: lens={lens}; test command={test_cmd}.")
     print(f"  Planted debt to catch: {smell}")
     print()

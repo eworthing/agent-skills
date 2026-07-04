@@ -50,11 +50,19 @@ def _unresolvable_registry() -> dict:
                 "first_seen_sha": "aaaa111",
                 "last_seen_loop": 5,
                 "occurrences": [
-                    {"loop": 3, "loop_local_id": "F1", "status": "rejected_attempt",
-                     "sha": "aaaa111"},
-                    {"loop": 5, "loop_local_id": "F2", "status": "unresolvable",
-                     "sha": "bbbb222",
-                     "retirement": {"reason": "unresolvable", "rationale": "exhausted attempts"}},
+                    {
+                        "loop": 3,
+                        "loop_local_id": "F1",
+                        "status": "rejected_attempt",
+                        "sha": "aaaa111",
+                    },
+                    {
+                        "loop": 5,
+                        "loop_local_id": "F2",
+                        "status": "unresolvable",
+                        "sha": "bbbb222",
+                        "retirement": {"reason": "unresolvable", "rationale": "exhausted attempts"},
+                    },
                 ],
             }
         ],
@@ -87,7 +95,8 @@ def _review_with_accepted_residual() -> dict:
 def _run(args: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(EXPORT), *args],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
 
 
@@ -150,7 +159,9 @@ def main() -> int:
                     if uri != "Tests/Common/DateAssertions.swift":
                         failures.append(f"unresolvable: location uri wrong (got {uri!r})")
                     if region.get("startLine") != 21:
-                        failures.append(f"unresolvable: region.startLine != 21 (got {region.get('startLine')!r})")
+                        failures.append(
+                            f"unresolvable: region.startLine != 21 (got {region.get('startLine')!r})"
+                        )
 
         # --- Case 2: fully-resolved registry -> empty results, still valid ---
         reg2 = base / "reg_resolved.json"
@@ -184,7 +195,9 @@ def main() -> int:
                         f"(ruleIds={[r.get('ruleId') for r in results]})"
                     )
                 elif resid[0].get("level") != "note":
-                    failures.append(f"residual: accepted residual must be 'note' (got {resid[0].get('level')!r})")
+                    failures.append(
+                        f"residual: accepted residual must be 'note' (got {resid[0].get('level')!r})"
+                    )
 
         # --- Case 4: missing registry file -> non-zero exit, clear message ---
         p = _run([str(base / "does_not_exist.json")])

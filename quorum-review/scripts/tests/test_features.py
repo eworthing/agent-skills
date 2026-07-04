@@ -1,7 +1,15 @@
 """features tests — relocated verbatim from test_run_quorum.py (mechanical split)."""
-import argparse, json, os, subprocess, sys, tempfile, unittest  # noqa: F401
-from pathlib import Path  # noqa: F401
-from ._helpers import *  # noqa: F401,F403
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+from ._helpers import *
 
 
 class TestAnonymization(unittest.TestCase):
@@ -17,9 +25,14 @@ class TestAnonymization(unittest.TestCase):
                 review_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-review.md"
                 review_file.write_text(f"Review #{idx} looks fine.\n\nVERDICT: APPROVED\n")
                 session_file = Path(tmpdir) / f"qr-{quorum_id}-r{idx}-session.json"
-                session_file.write_text(json.dumps({
-                    "model": model or "default", "effort": "high",
-                }))
+                session_file.write_text(
+                    json.dumps(
+                        {
+                            "model": model or "default",
+                            "effort": "high",
+                        }
+                    )
+                )
 
             # Test for multiple rounds — always anonymous
             for round_num in [1, 2, 3, 4, 5]:
@@ -67,14 +80,20 @@ class TestFailurePolicy(unittest.TestCase):
         """fail-closed exits non-zero with --on-failure fail-closed (via CLI)."""
         # We can test the parse_args validation here
         from run_quorum import parse_args
+
         # Just verify the flag is accepted
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
-            "--on-failure", "fail-closed",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
+            "--on-failure",
+            "fail-closed",
         ]
         args = parse_args()
         self.assertEqual(args.on_failure, "fail-closed")
@@ -83,10 +102,14 @@ class TestFailurePolicy(unittest.TestCase):
         """shrink-quorum is the default failure policy."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
         ]
         args = parse_args()
         self.assertEqual(args.on_failure, "shrink-quorum")
@@ -95,11 +118,16 @@ class TestFailurePolicy(unittest.TestCase):
         """shrink-quorum is accepted."""
         sys.argv = [
             "run_quorum.py",
-            "--reviewers", "claude:sonnet,gemini:pro,codex",
-            "--plan-file", "/tmp/test.md",
-            "--quorum-id", "test",
-            "--round", "1",
-            "--on-failure", "shrink-quorum",
+            "--reviewers",
+            "claude:sonnet,gemini:pro,codex",
+            "--plan-file",
+            "/tmp/test.md",
+            "--quorum-id",
+            "test",
+            "--round",
+            "1",
+            "--on-failure",
+            "shrink-quorum",
         ]
         args = parse_args()
         self.assertEqual(args.on_failure, "shrink-quorum")
@@ -116,7 +144,8 @@ class TestFailurePolicy(unittest.TestCase):
             ("Reviewer B", "APPROVED", "pro", "medium"),
         ]
         tally = tally_verdicts(
-            verdicts, "super",
+            verdicts,
+            "super",
             original_panel_size=3,
             active_panel_size=2,
         )
@@ -137,12 +166,8 @@ class TestSplitSupportFields(unittest.TestCase):
             (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
                 "### Blocking Issues\n- [B1] Auth missing\n\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text("VERDICT: APPROVED\n")
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             ledger = build_issue_ledger(panel, quorum_id, tmpdir, 1)
             blk001 = ledger["issues"][0]
@@ -158,25 +183,40 @@ class TestSplitSupportFields(unittest.TestCase):
             panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
 
             ledger = {
-                "next_blk_id": 2, "next_nb_id": 1,
-                "issues": [{
-                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
-                    "round_introduced": 1, "severity": "blocking",
-                    "text": "Auth missing", "status": "open",
-                    "resolved_round": None, "merged_from": [],
-                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
-                    "disputed_by": [],
-                    "support_count": 1, "dispute_count": 0,
-                    "owner_summary": "Auth missing",
-                }],
+                "next_blk_id": 2,
+                "next_nb_id": 1,
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "source_reviewer": 1,
+                        "source_label": "B1",
+                        "round_introduced": 1,
+                        "severity": "blocking",
+                        "text": "Auth missing",
+                        "status": "open",
+                        "resolved_round": None,
+                        "merged_from": [],
+                        "proposed_by": 1,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 1,
+                        "dispute_count": 0,
+                        "owner_summary": "Auth missing",
+                    }
+                ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
-                                 "nb_open": 0, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 3,
+                        "blocking_open": 1,
+                        "nb_open": 0,
+                        "approved_count": 0,
+                    }
+                },
             }
 
-            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
-                "VERDICT: REVISE\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text("VERDICT: REVISE\n")
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[AGREE BLK-001]\nVERDICT: REVISE\n"
             )
@@ -197,31 +237,44 @@ class TestSplitSupportFields(unittest.TestCase):
             panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
 
             ledger = {
-                "next_blk_id": 2, "next_nb_id": 1,
-                "issues": [{
-                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
-                    "round_introduced": 1, "severity": "blocking",
-                    "text": "Auth missing", "status": "open",
-                    "resolved_round": None, "merged_from": [],
-                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
-                    "disputed_by": [],
-                    "support_count": 1, "dispute_count": 0,
-                    "owner_summary": "Auth missing",
-                }],
+                "next_blk_id": 2,
+                "next_nb_id": 1,
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "source_reviewer": 1,
+                        "source_label": "B1",
+                        "round_introduced": 1,
+                        "severity": "blocking",
+                        "text": "Auth missing",
+                        "status": "open",
+                        "resolved_round": None,
+                        "merged_from": [],
+                        "proposed_by": 1,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 1,
+                        "dispute_count": 0,
+                        "owner_summary": "Auth missing",
+                    }
+                ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
-                                 "nb_open": 0, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 3,
+                        "blocking_open": 1,
+                        "nb_open": 0,
+                        "approved_count": 0,
+                    }
+                },
             }
 
-            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
-                "VERDICT: REVISE\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text("VERDICT: REVISE\n")
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[REFINE BLK-001] Should use OAuth2 specifically\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             updated = build_issue_ledger(panel, quorum_id, tmpdir, 2, ledger)
             blk001 = updated["issues"][0]
@@ -235,25 +288,40 @@ class TestSplitSupportFields(unittest.TestCase):
             panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
 
             ledger = {
-                "next_blk_id": 2, "next_nb_id": 1,
-                "issues": [{
-                    "id": "BLK-001", "source_reviewer": 1, "source_label": "B1",
-                    "round_introduced": 1, "severity": "blocking",
-                    "text": "Auth missing", "status": "open",
-                    "resolved_round": None, "merged_from": [],
-                    "proposed_by": 1, "endorsed_by": [], "refined_by": [],
-                    "disputed_by": [],
-                    "support_count": 1, "dispute_count": 0,
-                    "owner_summary": "Auth missing",
-                }],
+                "next_blk_id": 2,
+                "next_nb_id": 1,
+                "issues": [
+                    {
+                        "id": "BLK-001",
+                        "source_reviewer": 1,
+                        "source_label": "B1",
+                        "round_introduced": 1,
+                        "severity": "blocking",
+                        "text": "Auth missing",
+                        "status": "open",
+                        "resolved_round": None,
+                        "merged_from": [],
+                        "proposed_by": 1,
+                        "endorsed_by": [],
+                        "refined_by": [],
+                        "disputed_by": [],
+                        "support_count": 1,
+                        "dispute_count": 0,
+                        "owner_summary": "Auth missing",
+                    }
+                ],
                 "merges": [],
-                "rounds": {"1": {"reviewer_count": 3, "blocking_open": 1,
-                                 "nb_open": 0, "approved_count": 0}},
+                "rounds": {
+                    "1": {
+                        "reviewer_count": 3,
+                        "blocking_open": 1,
+                        "nb_open": 0,
+                        "approved_count": 0,
+                    }
+                },
             }
 
-            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
-                "VERDICT: REVISE\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text("VERDICT: REVISE\n")
             (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
                 "[DISAGREE BLK-001] Already handled by middleware\nVERDICT: APPROVED\n"
             )
@@ -311,9 +379,7 @@ class TestPerIssueConfidence(unittest.TestCase):
     def test_per_issue_confidence_case_insensitive(self):
         """Per-issue confidence is case-insensitive."""
         path = self._write_review(
-            "### Blocking Issues\n"
-            "- [B1] (low) Minor concern\n\n"
-            "VERDICT: REVISE\n"
+            "### Blocking Issues\n- [B1] (low) Minor concern\n\nVERDICT: REVISE\n"
         )
         result = parse_structured_review(path)
         self.assertEqual(result["blocking"][0]["confidence"], "LOW")
@@ -326,16 +392,10 @@ class TestPerIssueConfidence(unittest.TestCase):
             panel = [("claude", "sonnet"), ("gemini", "pro"), ("codex", None)]
 
             (Path(tmpdir) / f"qr-{quorum_id}-r1-review.md").write_text(
-                "### Blocking Issues\n"
-                "- [B1] (HIGH) Auth missing\n\n"
-                "VERDICT: REVISE\n"
+                "### Blocking Issues\n- [B1] (HIGH) Auth missing\n\nVERDICT: REVISE\n"
             )
-            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
-            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text(
-                "VERDICT: APPROVED\n"
-            )
+            (Path(tmpdir) / f"qr-{quorum_id}-r2-review.md").write_text("VERDICT: APPROVED\n")
+            (Path(tmpdir) / f"qr-{quorum_id}-r3-review.md").write_text("VERDICT: APPROVED\n")
 
             ledger = build_issue_ledger(panel, quorum_id, tmpdir, 1)
             blk001 = ledger["issues"][0]
@@ -377,9 +437,7 @@ class TestBlindMode(unittest.TestCase):
                 review_file = Path(tmpdir) / f"qr-test-r{idx}-review.md"
                 review_file.write_text("VERDICT: REVISE\n", encoding="utf-8")
 
-            result = compile_compressed_context(
-                ledger, panel, "test", tmpdir, 3, blind_mode=True
-            )
+            result = compile_compressed_context(ledger, panel, "test", tmpdir, 3, blind_mode=True)
             self.assertNotIn("Support", result)
             self.assertNotIn("Disputes", result)
             self.assertIn("BLK-001", result)
@@ -407,8 +465,6 @@ class TestBlindMode(unittest.TestCase):
             for idx in range(1, 4):
                 review_file = Path(tmpdir) / f"qr-test-r{idx}-review.md"
                 review_file.write_text("VERDICT: REVISE\n", encoding="utf-8")
-            result = compile_compressed_context(
-                ledger, panel, "test", tmpdir, 3, blind_mode=False
-            )
+            result = compile_compressed_context(ledger, panel, "test", tmpdir, 3, blind_mode=False)
             self.assertIn("Support", result)
             self.assertIn("Disputes", result)

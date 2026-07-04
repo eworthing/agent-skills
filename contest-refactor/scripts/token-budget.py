@@ -21,6 +21,7 @@ Multiplier basis (TOKEN-USAGE-AUDIT.md): SKILL.md is read once at trigger + once
 only by the main agent at startup (e.g. references/startup.md) is ×1 and must be passed via
 --once so it is not multiplied.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,21 +45,36 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
     table: dict[str, list[str]] = {
         # SKILL.md row "Step 1": stack lens + always-included lenses + method + rubric.
         # SKILL.md is read first by the subagent (trust-model.md:62).
-        "step1": ["SKILL.md", stack_lens, "lens-security.md",
-                  "method.md", "method-critic.md", "architecture-rubric.md",
-                  "architecture-rubric-scoring.md"],
+        "step1": [
+            "SKILL.md",
+            stack_lens,
+            "lens-security.md",
+            "method.md",
+            "method-critic.md",
+            "architecture-rubric.md",
+            "architecture-rubric-scoring.md",
+        ],
         # SKILL.md row "Step 1 emit": output-format trio + validation (+ halt-handoff
         # conditional, counted because most loops route through a HALT check at emit).
-        "step1_emit": ["output-format.md", "output-format-json.md",
-                       "output-format-json-rules.md",
-                       "output-format-markdown.md", "validation.md"],
+        "step1_emit": [
+            "output-format.md",
+            "output-format-json.md",
+            "output-format-json-rules.md",
+            "output-format-markdown.md",
+            "validation.md",
+        ],
         # SKILL.md row "Step 2": method (Simplify Pressure Test) + rubric (Seam Policy).
         # Both already loaded at step1; listed for routing fidelity, de-duped in the union.
         "step2": ["method.md", "architecture-rubric.md"],
         # SKILL.md row "Step 3": output-format + emit-rules + validation + reviewer + provider.
-        "step3": ["output-format.md", "output-format-json-rules.md",
-                  "output-format-markdown-archive.md", "validation.md",
-                  "implementation-reviewer.md", "provider-adapters.md"],
+        "step3": [
+            "output-format.md",
+            "output-format-json-rules.md",
+            "output-format-markdown-archive.md",
+            "validation.md",
+            "implementation-reviewer.md",
+            "provider-adapters.md",
+        ],
     }
     if step == "loop":
         seen: dict[str, None] = {}
@@ -67,8 +83,7 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
                 seen.setdefault(f, None)
         return list(seen)
     if step not in table:
-        raise SystemExit(f"unknown step '{step}'; choose from: "
-                         f"{', '.join(sorted(table))}, loop")
+        raise SystemExit(f"unknown step '{step}'; choose from: {', '.join(sorted(table))}, loop")
     return table[step]
 
 
@@ -78,10 +93,12 @@ def _resolve(name: str) -> Path:
 
 # --- tokenizer --------------------------------------------------------------
 
+
 def _make_counter():
     """Return (count_fn, method_label). Prefer tiktoken; else deterministic heuristic."""
     try:
-        import tiktoken  # type: ignore
+        import tiktoken  # type: ignore[import-not-found]
+
         enc = tiktoken.get_encoding("cl100k_base")
         return (lambda text: len(enc.encode(text)), "tiktoken/cl100k_base")
     except Exception:
@@ -91,10 +108,12 @@ def _make_counter():
             words = len(text.split())
             nbytes = len(text.encode("utf-8"))
             return int(max(words / 0.75, nbytes / 4))
+
         return (heuristic, "heuristic(max(words/0.75, bytes/4))")
 
 
 # --- reporting --------------------------------------------------------------
+
 
 def count_files(names: list[str], count_fn) -> dict[str, int]:
     out: dict[str, int] = {}
@@ -132,8 +151,18 @@ def cmd_loaded_set(args, count_fn, method):
     counts = count_files(names, count_fn)
     total = sum(c for c in counts.values() if c >= 0)
     if args.json:
-        print(json.dumps({"step": args.loaded_set, "lens": args.lens,
-                          "method": method, "files": counts, "total": total}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "step": args.loaded_set,
+                    "lens": args.lens,
+                    "method": method,
+                    "files": counts,
+                    "total": total,
+                },
+                indent=2,
+            )
+        )
         return
     print(f"# loaded set: step={args.loaded_set} lens={args.lens} ({method})")
     for name in names:
@@ -159,10 +188,13 @@ def cmd_project(args, count_fn, method):
         once_total = sum(c for c in once_counts.values() if c >= 0)
         run_total += once_total
     report = {
-        "method": method, "lens": args.lens, "loops": loops,
+        "method": method,
+        "lens": args.lens,
+        "loops": loops,
         "per_loop_fixed_reload": per_loop,
         "skill_trigger_extra": skill,
-        "once_files": once_counts, "once_total": once_total,
+        "once_files": once_counts,
+        "once_total": once_total,
         "run_total_projection": run_total,
     }
     if args.json:
@@ -177,16 +209,26 @@ def cmd_project(args, count_fn, method):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--files", nargs="*", help="file names to count (default: SKILL.md + references/*.md)")
-    ap.add_argument("--loaded-set", metavar="STEP",
-                    help="print the file list a loop step reloads: step1|step1_emit|step2|step3|loop")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--files", nargs="*", help="file names to count (default: SKILL.md + references/*.md)"
+    )
+    ap.add_argument(
+        "--loaded-set",
+        metavar="STEP",
+        help="print the file list a loop step reloads: step1|step1_emit|step2|step3|loop",
+    )
     ap.add_argument("--project", action="store_true", help="per-run token projection")
     ap.add_argument("--loops", type=int, default=8, help="loop count for --project (default 8)")
     ap.add_argument("--once", nargs="*", help="files read once per run (×1, e.g. startup.md)")
-    ap.add_argument("--lens", choices=["apple", "generic"], default="apple",
-                    help="stack lens to model (default apple, the heavier path)")
+    ap.add_argument(
+        "--lens",
+        choices=["apple", "generic"],
+        default="apple",
+        help="stack lens to model (default apple, the heavier path)",
+    )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args(argv)
 

@@ -28,9 +28,8 @@ empty so callers behave exactly as before (None verdict → REVISE).
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 # ---------------------------------------------------------------------------
 # === text normalization ===
@@ -39,15 +38,48 @@ from pathlib import Path
 _WORD_RE = re.compile(r"[a-z0-9]+")
 
 _COMMON_WORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "in",
-    "into", "is", "it", "of", "on", "or", "that", "the", "this", "to",
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "in",
+    "into",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "this",
+    "to",
     "with",
 }
 
 _NEGATION_WORDS = {
-    "avoid", "cannot", "denies", "deny", "disable", "disabled", "excluding",
-    "exclude", "false", "lacks", "lack", "missing", "never", "no", "not",
-    "off", "without",
+    "avoid",
+    "cannot",
+    "denies",
+    "deny",
+    "disable",
+    "disabled",
+    "excluding",
+    "exclude",
+    "false",
+    "lacks",
+    "lack",
+    "missing",
+    "never",
+    "no",
+    "not",
+    "off",
+    "without",
 }
 
 _ACTION_OPPOSITES = (
@@ -60,9 +92,36 @@ _ACTION_OPPOSITES = (
 )
 
 _STOPWORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "for", "from",
-    "if", "in", "into", "is", "it", "may", "of", "on", "or", "our", "should",
-    "that", "the", "their", "this", "to", "use", "with",
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "can",
+    "do",
+    "for",
+    "from",
+    "if",
+    "in",
+    "into",
+    "is",
+    "it",
+    "may",
+    "of",
+    "on",
+    "or",
+    "our",
+    "should",
+    "that",
+    "the",
+    "their",
+    "this",
+    "to",
+    "use",
+    "with",
 }
 
 
@@ -189,7 +248,7 @@ def _log_parse_failure(parser_name, *, excerpt="", quorum_id=None):
     parser surface tripped.
     """
     row = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
         "parser_name": parser_name,
         "excerpt": excerpt[:200] if excerpt else "",
     }
@@ -321,7 +380,8 @@ def _extract_section_with_presence(text, header):
 
 _RE_BLOCKING = re.compile(r"^\s*(?:-\s*)?\*{0,2}\[B(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
 _RE_BLOCKING_WITH_CONF = re.compile(
-    r"^\s*(?:-\s*)?\*{0,2}\[B(\d+)\]\s*\((HIGH|MEDIUM|LOW)\)\*{0,2}\s*(.+)", re.MULTILINE | re.IGNORECASE
+    r"^\s*(?:-\s*)?\*{0,2}\[B(\d+)\]\s*\((HIGH|MEDIUM|LOW)\)\*{0,2}\s*(.+)",
+    re.MULTILINE | re.IGNORECASE,
 )
 _RE_NON_BLOCKING = re.compile(r"^\s*(?:-\s*)?\*{0,2}\[N(\d+)\]\*{0,2}\s*(.+)", re.MULTILINE)
 _RE_CONFIDENCE = re.compile(
@@ -349,12 +409,8 @@ def parse_structured_review(review_file):
     verdict = parse_verdict(review_file)
 
     # Extract section text to avoid matching issues from Reasoning section
-    blocking_section, has_blocking_section = _extract_section_with_presence(
-        text, "Blocking Issues"
-    )
-    nb_section, has_nb_section = _extract_section_with_presence(
-        text, "Non-Blocking Issues"
-    )
+    blocking_section, has_blocking_section = _extract_section_with_presence(text, "Blocking Issues")
+    nb_section, has_nb_section = _extract_section_with_presence(text, "Non-Blocking Issues")
 
     # Parse blocking issues — try per-issue confidence first
     conf_matches = {
@@ -365,34 +421,44 @@ def parse_structured_review(review_file):
     blocking = []
     for idx, m in enumerate(blocking_matches):
         bid = m.group(1)
-        next_start = blocking_matches[idx + 1].start() if idx + 1 < len(blocking_matches) else len(blocking_section)
-        anchor = _extract_issue_anchor(blocking_section[m.end():next_start])
+        next_start = (
+            blocking_matches[idx + 1].start()
+            if idx + 1 < len(blocking_matches)
+            else len(blocking_section)
+        )
+        anchor = _extract_issue_anchor(blocking_section[m.end() : next_start])
         if bid in conf_matches:
             issue_conf, issue_text = conf_matches[bid]
-            blocking.append({
-                "id": f"B{bid}",
-                "text": issue_text,
-                "confidence": issue_conf,
-                "anchor": anchor or None,
-            })
+            blocking.append(
+                {
+                    "id": f"B{bid}",
+                    "text": issue_text,
+                    "confidence": issue_conf,
+                    "anchor": anchor or None,
+                }
+            )
         else:
-            blocking.append({
-                "id": f"B{bid}",
-                "text": m.group(2).strip(),
-                "confidence": None,
-                "anchor": anchor or None,
-            })
+            blocking.append(
+                {
+                    "id": f"B{bid}",
+                    "text": m.group(2).strip(),
+                    "confidence": None,
+                    "anchor": anchor or None,
+                }
+            )
 
     nb_matches = list(_RE_NON_BLOCKING.finditer(nb_section))
     non_blocking = []
     for idx, m in enumerate(nb_matches):
         next_start = nb_matches[idx + 1].start() if idx + 1 < len(nb_matches) else len(nb_section)
-        anchor = _extract_issue_anchor(nb_section[m.end():next_start])
-        non_blocking.append({
-            "id": f"N{m.group(1)}",
-            "text": m.group(2).strip(),
-            "anchor": anchor or None,
-        })
+        anchor = _extract_issue_anchor(nb_section[m.end() : next_start])
+        non_blocking.append(
+            {
+                "id": f"N{m.group(1)}",
+                "text": m.group(2).strip(),
+                "anchor": anchor or None,
+            }
+        )
 
     conf_match = _RE_CONFIDENCE.search(text)
     confidence = conf_match.group(1).upper() if conf_match else None
@@ -443,13 +509,9 @@ def parse_cross_critique(review_file):
 
     agrees = [m.group(1) for m in _RE_AGREE.finditer(text)]
     disagrees = [
-        {"id": m.group(1), "reason": m.group(2).strip()}
-        for m in _RE_DISAGREE.finditer(text)
+        {"id": m.group(1), "reason": m.group(2).strip()} for m in _RE_DISAGREE.finditer(text)
     ]
-    refines = [
-        {"id": m.group(1), "text": m.group(2).strip()}
-        for m in _RE_REFINE.finditer(text)
-    ]
+    refines = [{"id": m.group(1), "text": m.group(2).strip()} for m in _RE_REFINE.finditer(text)]
     new_blocking = [m.group(1).strip() for m in _RE_NEW_BLOCKING.finditer(text)]
     new_non_blocking = [m.group(1).strip() for m in _RE_NEW_NON_BLOCKING.finditer(text)]
 

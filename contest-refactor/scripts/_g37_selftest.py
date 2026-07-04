@@ -62,47 +62,113 @@ def _cases():
     cases = []
 
     # --- TRIGGER: G37 must fire ---
-    cases.append(("cap empty-backlog, sub-9.5 promotion-trigger kind",
-                  _art("HALT_LOOP_CAP", {"framework_idioms": _dim(7.0, FW)}), True))
-    cases.append(("cap empty-backlog, sub-9.5 MISSING kind",
-                  _art("HALT_LOOP_CAP", {"domain_modeling": _dim(6.5, None)}), True))
-    cases.append(("no_backlog, sub-9.5 promotion-trigger kind",
-                  _art("HALT_STAGNATION", {"domain_modeling": _dim(6.5, "ceremony")},
-                       halt_subtype="no_backlog"), True))
-    cases.append(("no_backlog, sub-9.5 MISSING kind",
-                  _art("HALT_STAGNATION", {"state_management": _dim(7.5, None)},
-                       halt_subtype="no_backlog"), True))
+    cases.append(
+        (
+            "cap empty-backlog, sub-9.5 promotion-trigger kind",
+            _art("HALT_LOOP_CAP", {"framework_idioms": _dim(7.0, FW)}),
+            True,
+        )
+    )
+    cases.append(
+        (
+            "cap empty-backlog, sub-9.5 MISSING kind",
+            _art("HALT_LOOP_CAP", {"domain_modeling": _dim(6.5, None)}),
+            True,
+        )
+    )
+    cases.append(
+        (
+            "no_backlog, sub-9.5 promotion-trigger kind",
+            _art(
+                "HALT_STAGNATION",
+                {"domain_modeling": _dim(6.5, "ceremony")},
+                halt_subtype="no_backlog",
+            ),
+            True,
+        )
+    )
+    cases.append(
+        (
+            "no_backlog, sub-9.5 MISSING kind",
+            _art(
+                "HALT_STAGNATION", {"state_management": _dim(7.5, None)}, halt_subtype="no_backlog"
+            ),
+            True,
+        )
+    )
 
     # --- BYPASS: honest resolution at a trigger terminal ---
-    cases.append(("cap empty-backlog, sub-9.5 structural_anchor_unmet (honest)",
-                  _art("HALT_LOOP_CAP", {"domain_modeling": _dim(6.5, STRUCT),
-                                         "framework_idioms": _dim(9.5, None, "accepted")}), False))
-    cases.append(("no_backlog, sub-9.5 structural_anchor_unmet (honest)",
-                  _art("HALT_STAGNATION", {"domain_modeling": _dim(6.5, STRUCT)},
-                       halt_subtype="no_backlog"), False))
-    cases.append(("cap empty-backlog, all dims >= 9.5 (no sub-9.5 -> not our case)",
-                  _art("HALT_LOOP_CAP", {"architecture_quality": _dim(9.5, None, "accepted")}), False))
+    cases.append(
+        (
+            "cap empty-backlog, sub-9.5 structural_anchor_unmet (honest)",
+            _art(
+                "HALT_LOOP_CAP",
+                {
+                    "domain_modeling": _dim(6.5, STRUCT),
+                    "framework_idioms": _dim(9.5, None, "accepted"),
+                },
+            ),
+            False,
+        )
+    )
+    cases.append(
+        (
+            "no_backlog, sub-9.5 structural_anchor_unmet (honest)",
+            _art(
+                "HALT_STAGNATION", {"domain_modeling": _dim(6.5, STRUCT)}, halt_subtype="no_backlog"
+            ),
+            False,
+        )
+    )
+    cases.append(
+        (
+            "cap empty-backlog, all dims >= 9.5 (no sub-9.5 -> not our case)",
+            _art("HALT_LOOP_CAP", {"architecture_quality": _dim(9.5, None, "accepted")}),
+            False,
+        )
+    )
 
     # --- BYPASS: the closed-set guarantee — every OTHER terminal, even with an incoherent dim ---
-    cases.append(("cap NON-empty backlog (queued items legitimate)",
-                  _art("HALT_LOOP_CAP", {"framework_idioms": _dim(7.0, FW)},
-                       backlog=[{"id": "F1"}]), False))
+    cases.append(
+        (
+            "cap NON-empty backlog (queued items legitimate)",
+            _art("HALT_LOOP_CAP", {"framework_idioms": _dim(7.0, FW)}, backlog=[{"id": "F1"}]),
+            False,
+        )
+    )
     for st in ("user_decision", "oscillation", "no_progress", "verification_blocked"):
-        cases.append((f"HALT_STAGNATION/{st} (not a residual-accounting terminal)",
-                      _art("HALT_STAGNATION", {"framework_idioms": _dim(7.0, FW)},
-                           halt_subtype=st), False))
-    cases.append(("HALT_SUCCESS",
-                  _art("HALT_SUCCESS", {"framework_idioms": _dim(7.0, FW)}), False))
-    cases.append(("HALT_SUCCESS_candidate",
-                  _art("HALT_SUCCESS_candidate", {"framework_idioms": _dim(7.0, FW)}), False))
-    cases.append(("HALT_DRY_RUN",
-                  _art("HALT_DRY_RUN", {"framework_idioms": _dim(7.0, FW)}), False))
-    cases.append(("CONTINUE",
-                  _art("CONTINUE", {"framework_idioms": _dim(7.0, FW)}, backlog=[{"id": "F1"}]), False))
+        cases.append(
+            (
+                f"HALT_STAGNATION/{st} (not a residual-accounting terminal)",
+                _art("HALT_STAGNATION", {"framework_idioms": _dim(7.0, FW)}, halt_subtype=st),
+                False,
+            )
+        )
+    cases.append(("HALT_SUCCESS", _art("HALT_SUCCESS", {"framework_idioms": _dim(7.0, FW)}), False))
+    cases.append(
+        (
+            "HALT_SUCCESS_candidate",
+            _art("HALT_SUCCESS_candidate", {"framework_idioms": _dim(7.0, FW)}),
+            False,
+        )
+    )
+    cases.append(("HALT_DRY_RUN", _art("HALT_DRY_RUN", {"framework_idioms": _dim(7.0, FW)}), False))
+    cases.append(
+        (
+            "CONTINUE",
+            _art("CONTINUE", {"framework_idioms": _dim(7.0, FW)}, backlog=[{"id": "F1"}]),
+            False,
+        )
+    )
 
     # --- BYPASS: version gate — field is additive on v4; pre-v4 never fires ---
-    cases.append(("schema_version 3, cap incoherent (pre-field, must NOT fire)",
-                  _art("HALT_LOOP_CAP", {"framework_idioms": _dim(7.0, FW)}, schema_version=3), False))
+    cases.append(
+        (
+            "schema_version 3, cap incoherent (pre-field, must NOT fire)",
+            _art("HALT_LOOP_CAP", {"framework_idioms": _dim(7.0, FW)}, schema_version=3),
+            False,
+        )
+    )
 
     return cases
 
@@ -115,8 +181,13 @@ def _isolation(va) -> list[str]:
     def art(kind):
         return {
             "state": "HALT_SUCCESS",
-            "scorecard": {"architecture_quality": {
-                "score": 9.5, "residual_disposition": "accepted", "residual_blocker_kind": kind}},
+            "scorecard": {
+                "architecture_quality": {
+                    "score": 9.5,
+                    "residual_disposition": "accepted",
+                    "residual_blocker_kind": kind,
+                }
+            },
             "findings": [],
         }
 
@@ -130,7 +201,8 @@ def _isolation(va) -> list[str]:
         if v != baseline:
             failures.append(
                 f"residual_blocker_kind={kind!r} changed an unrelated gate verdict\n"
-                f"  baseline: {baseline}\n  {kind}: {v}")
+                f"  baseline: {baseline}\n  {kind}: {v}"
+            )
     return failures
 
 
@@ -145,7 +217,8 @@ def main() -> int:
             failures.append(
                 f"{label}: expected {'FIRE' if expect_fire else 'BYPASS'}, "
                 f"got {'FIRE' if fired else 'BYPASS'}"
-                + (f"\n  {issues[0].message}" if issues else ""))
+                + (f"\n  {issues[0].message}" if issues else "")
+            )
 
     failures.extend(_isolation(va))
 
@@ -158,8 +231,10 @@ def main() -> int:
             print(f"FAIL: {f}")
         return 1
     n = len(_cases())
-    print(f"OK: G37 closed-set predicate holds across {n} state/subtype cases; "
-          f"residual_blocker_kind is isolated from G21 / halt_success_gating")
+    print(
+        f"OK: G37 closed-set predicate holds across {n} state/subtype cases; "
+        f"residual_blocker_kind is isolated from G21 / halt_success_gating"
+    )
     return 0
 
 

@@ -37,15 +37,11 @@ def _load_validator():
 
 def _make_clean_tree(root: Path) -> None:
     (root / "references").mkdir(parents=True)
-    (root / "SKILL.md").write_text(
-        "# Skill\nSee [a](references/a.md).\n", encoding="utf-8"
-    )
+    (root / "SKILL.md").write_text("# Skill\nSee [a](references/a.md).\n", encoding="utf-8")
     (root / "references" / "a.md").write_text(
         "# A\nSee [b](b.md) and the [skill](../SKILL.md).\n", encoding="utf-8"
     )
-    (root / "references" / "b.md").write_text(
-        "# B\nBack to [a](a.md#top).\n", encoding="utf-8"
-    )
+    (root / "references" / "b.md").write_text("# B\nBack to [a](a.md#top).\n", encoding="utf-8")
 
 
 def main() -> int:
@@ -76,17 +72,19 @@ def main() -> int:
         (deep / "references" / "sub" / "nested.md").write_text("# nested\n", encoding="utf-8")
         d = vr.check_references_one_level_deep(deep)
         if not d:
-            failures.append("deep: expected a depth violation for references/sub/nested.md, got none")
+            failures.append(
+                "deep: expected a depth violation for references/sub/nested.md, got none"
+            )
 
         # 3) an intra-skill link to a missing file -> link check flags it.
         rot = base / "rot"
         _make_clean_tree(rot)
-        (rot / "references" / "a.md").write_text(
-            "# A\nSee [gone](missing.md).\n", encoding="utf-8"
-        )
+        (rot / "references" / "a.md").write_text("# A\nSee [gone](missing.md).\n", encoding="utf-8")
         link = vr.check_reference_links_resolve(rot)
         if not link:
-            failures.append("rot: expected a broken-link violation for references/missing.md, got none")
+            failures.append(
+                "rot: expected a broken-link violation for references/missing.md, got none"
+            )
         # external + anchor-only links must NOT be flagged.
         ext = base / "ext"
         _make_clean_tree(ext)
@@ -96,7 +94,9 @@ def main() -> int:
         )
         link = vr.check_reference_links_resolve(ext)
         if link:
-            failures.append(f"ext: http/anchor links must not be flagged, got {[v.render() for v in link]}")
+            failures.append(
+                f"ext: http/anchor links must not be flagged, got {[v.render() for v in link]}"
+            )
 
     if failures:
         for f in failures:
