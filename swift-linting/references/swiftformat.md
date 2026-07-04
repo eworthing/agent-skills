@@ -25,18 +25,25 @@ Benefits:
 
 ## Trailing Commas
 
+The `trailingCommas` rule (default `always`) adds a trailing comma to wrapped
+collection literals, function arguments, and tuples — one element per line.
+
 ```swift
-// Adding a new case only changes one line
-enum State {
-    case loading,
-    case success,
-    case error,  // trailing comma
-}
+// Adding a new element changes only one line
+let states: [State] = [
+    .loading,
+    .success,
+    .error,  // trailing comma
+]
 ```
 
 Benefits:
 - Reduces diff noise when appending items
-- Prevents common LLM mistake of forgetting commas
+- Prevents the common LLM mistake of forgetting commas
+
+Enum cases are the exception: the separate `wrapEnumCases` rule puts each `case`
+on its own line with **no** trailing comma (`case loading` / `case success`) —
+not a comma-chained list.
 
 ## Explicit Self
 
@@ -66,7 +73,8 @@ Disable comment placement:
 
 SwiftFormat auto-generates `// MARK: -` sections:
 - Lifecycle, Internal, Private visibility groups
-- Only triggers on types exceeding thresholds (struct: 40, class: 50, enum: 30 lines)
+- Only triggers on types past the configured line thresholds — read `.swiftformat`
+  for this repo's values (typical: struct 40 / class 50 / enum 30)
 
 ## Running SwiftFormat
 

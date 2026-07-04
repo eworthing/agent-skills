@@ -13,7 +13,6 @@ description: >-
   `swift-concurrency` skill's own `references/linting.md`.
 allowed-tools:
   - Read
-  - Write
   - Edit
   - Bash
   - Glob
@@ -31,6 +30,8 @@ SwiftFormat and SwiftLint with clear separation of concerns, optimized for LLM-a
 | **SwiftLint** | Semantics, safety, correctness, complexity | `.swiftlint.yml` |
 
 **Key principle:** SwiftFormat handles *how code looks*, SwiftLint handles *what code does*.
+
+**Read the config first.** This skill targets the *repo-prescriptive* config. Before acting on any size, complexity, or threshold rule, open `.swiftlint.yml` and `.swiftformat` for the repo's actual limits — every number in this skill's references is a typical example, not authoritative.
 
 ## When to Use
 
@@ -56,6 +57,5 @@ Load the relevant reference when working on a specific subtopic. Each is focused
 
 - Requires the `swiftformat` and `swiftlint` CLIs on PATH — e.g. `brew install swiftformat swiftlint`, or the repo's pinned SwiftPM/Mint setup
 - Never disable SwiftLint safety rules without good reason
-- Keep files under 600 lines (extension files under 400) — split early
 - Use `// swiftformat:disable` sparingly (mainly for Logger `@autoclosure`)
 - Run `swiftformat . --lint && swiftlint lint --quiet` before commits

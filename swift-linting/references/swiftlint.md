@@ -28,8 +28,12 @@ swiftformat . --lint && swiftlint lint --quiet
 
 ### Safety (opt-in, prevent crashes)
 - `force_unwrapping`, `force_cast`, `force_try`
-- `unhandled_throwing_task` (Swift 6 concurrency)
-- `weak_delegate`, `unowned_variable_capture`
+- `unhandled_throwing_task`, `weak_delegate`, `unowned_variable_capture`
+
+Concurrency-semantic lints (`async_without_await`, `unowned_variable_capture`,
+`weak_delegate`, `unhandled_throwing_task`) are owned authoritatively by the
+`swift-concurrency` skill's `references/linting.md` — the list above is orientation
+only; go there for the diagnose-and-fix workflow.
 
 ### Accessibility (opt-in)
 - `accessibility_label_for_image`
@@ -41,7 +45,7 @@ swiftformat . --lint && swiftlint lint --quiet
 
 ## File Length Rule
 
-`file_length` enforces 600-line cap (400 for overlays). When triggered, do not silence — split the file. See the `swift-file-splitting` skill for the refactor workflow.
+`file_length` enforces the repo's configured cap — read `.swiftlint.yml` for the value (typical: 600 lines, 400 for overlays). When triggered, do not silence — split the file. See the `swift-file-splitting` skill for the refactor workflow.
 
 ## Disable Comments
 
