@@ -47,7 +47,9 @@ Use when:
 
 ## Shell Target
 
-Target `/bin/bash` 3.2 explicitly. Note the macOS shell landscape:
+Target `/bin/bash` 3.2 explicitly. Verified on macOS 27 Golden Gate (Darwin 27,
+checked 2026-07): stock `/bin/bash` is `3.2.57`, userland still BSD (UNIX 03) —
+the premise holds on the current release. Note the macOS shell landscape:
 
 - `/bin/bash` — Bash 3.2.x (frozen since GPLv3). Skill target. See
   [Supported on Bash 3.2](#supported-on-bash-32) for the explicit allow-list
@@ -107,7 +109,7 @@ macOS uses BSD tools, not GNU. Common incompatibilities:
 | `sed -i` | `sed -i ''` | **In-place differs.** BSD `sed` requires a backup suffix arg (use `''` for none). GNU `sed` uses `-i` or `-i''` (no space). |
 | `grep -P` | `grep -E` | No PCRE; use extended regex |
 | `date -d` | `date -j -f` | Date parsing differs completely |
-| `readlink -f` | See below | Works on recent macOS; use `realpath_portable()` fallback if targeting older macOS |
+| `readlink -f` | See below | Ships and works on macOS 13+ (confirmed macOS 27, 2026-07); `/bin/realpath` also ships now. Use `realpath_portable()` only for pre-Ventura or to avoid a subprocess |
 | `xargs -r` | Largely unneeded | BSD `xargs` already skips empty stdin; `-r` is accepted on modern macOS (tested 13+) but mostly cosmetic. For unknown versions, guard the pipeline: `[[ -n "$(cmd)" ]] && cmd \| xargs ...` |
 | `stat -c` | `stat -f` | Different format syntax |
 
@@ -135,12 +137,15 @@ else
 fi
 ```
 
-### Portable realpath (no `readlink -f`)
+### Portable realpath
 
-Pure-bash, no external interpreter (macOS no longer ships a working
-`python3` at `/usr/bin/python3` by default — it's a CLT stub that prompts
-to install Xcode CLT, so scripts can't rely on it). Resolves to an
-absolute path; does not follow symlinks beyond the final component —
+macOS 13+ ships a working `/bin/realpath` and `readlink -f` (confirmed on macOS
+27, 2026-07), so on a current Mac either binary resolves paths directly. The
+pure-bash helper below is the zero-dependency fallback — reach for it only when
+targeting pre-Ventura macOS or avoiding a subprocess. It needs no external
+interpreter (relevant because macOS no longer ships a working `python3` at
+`/usr/bin/python3` — it's a CLT stub that prompts to install Xcode CLT). Resolves
+to an absolute path; does not follow symlinks beyond the final component —
 sufficient for most script-local path resolution:
 
 ```bash

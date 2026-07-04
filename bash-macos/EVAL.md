@@ -1,6 +1,6 @@
 # bash-macos Evaluation
 
-**Date:** 2026-05-13
+**Date:** 2026-07-04
 **Evaluator:** Claude Opus 4.7 (skill-evaluator-1.0.0)
 **Skill version:** e637a5b
 **Automated score:** 100% (13/13 checks passed)
@@ -91,3 +91,4 @@ All five resolved in Phase A (see Revision History 2026-05-12) and cell updates 
 | 2026-05-12 | 90/100 | Phase A: split forbidden-features.md + template.md, trimmed SKILL.md 332→244 lines (+1 token cost, +1 completeness w/ zsh+ERR+dry-run+validation, +1 forgiveness, +1 data safety). Description tightened with exact error strings ("mapfile: command not found", etc.). 17/17 with-skill assertions pass in iteration-1 benchmark vs 16/17 baseline. |
 | 2026-05-13 | 90/100 | Audit pass: propagated Phase A cell updates to score table (1.1, 3.1, 5.2, 6.3); fixed two correctness bugs in guidance (`${#arr[@]:-0}` non-fix; template's `set -- "${args[@]}" "$@"` empty-array crash on Bash 3.2); added `${arr[@]+"${arr[@]}"}` idiom + outer-unquoted explainer; refreshed python3-stub wording, xargs `-r` claim, template `-E` hint. Correctness stays 4/4 (bugs fixed, not introduced). |
 | 2026-05-23 | 98/100 anthropic-grade (A, top 5%) | Orthogonal audit via `anthropic-grade-optimizer` (rules v1.2, 189 cited rules, target opus-4-7). Baseline 87 → 98 after two fixes: removed non-standard `author:` frontmatter key (AR-CC-021, source: code.claude.com/docs/en/skills#frontmatter-reference), added 12-line Contents TOC (AR-CC-S10/S21, source: skill-creator + platform.claude.com best-practices). 10/11 dimensions perfect; D-CC 90/100. Remaining 🟢 F-CC-S22 is a confirmed false positive (illustrative `script.sh`/`run_tests.sh` placeholders, not skill-owned executables). Local skill-evaluator score (90/100, ISO/OpenSSF rubric) unchanged — orthogonal lens. |
+| 2026-07-04 | 90/100 (unchanged) | macOS 27 Golden Gate currency pass. Ground-truthed on Darwin 27: `/bin/bash` still `3.2.57`, BSD userland, `/bin/realpath` + `readlink -f` now ship (macOS 13+). Added a dated verification anchor to Shell Target; reframed the `readlink -f` row + Portable-realpath preamble (shipped binaries now primary, pure-bash helper is the pre-Ventura/no-subprocess fallback). **Rejected** a planned "commands absent on macOS" section (timeout/nproc/shuf): RED-first control measured 8/8 no-skill baselines already emitting the portable form (`sysctl -n hw.ncpu`, `sort -R`/`awk`+`srand`, watchdog/`perl`/`curl --max-time`) — content would be sediment for a capable model, no failing test to justify it. Structural checks stay 100%. |
