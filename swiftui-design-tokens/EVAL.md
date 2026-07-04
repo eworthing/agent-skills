@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-04 (Motion SSOT consolidation + iOS 27 currency + audit script)
 **Evaluator:** Claude Opus 4.8
-**Skill version:** SKILL.md + references/{motion-tokens,token-values}.md + scripts/audit-hardcoded-tokens.sh
+**Skill version:** SKILL.md + references/{motion-tokens,token-values,application-recipes}.md + scripts/audit-hardcoded-tokens.sh
 **Automated score:** 100% (13/13)
 
 ---
@@ -16,7 +16,7 @@
     ✅ Description length adequate
     ✅ Description includes trigger contexts (Use when…)
   [DOCUMENTATION]
-    ✅ SKILL.md body length (449 lines)
+    ✅ SKILL.md body length (321 lines)
     ✅ References linked from SKILL.md
   [SCRIPTS]
     ✅ scripts/audit-hardcoded-tokens.sh (executable, portable bash)
@@ -70,7 +70,7 @@ Rejected (Tiercade-coupled):
 | 2.1 | Fault Tolerance | 3/4 | Reduce-motion alternatives prevent silent accessibility failure. Audit recipe + exemptions section preempt false-positive flags. |
 | 2.2 | Error Reporting | 3/4 | "WRONG/CORRECT" pairs on Motion anti-patterns and Modal Sizing. Doesn't enumerate runtime failure modes (N/A — tokens are compile-time). |
 | 2.3 | Recoverability | 4/4 | Read-only doc artifact. |
-| 3.1 | Token Cost | 4/4 | SKILL.md 449 lines; motion catalog offloaded to references/motion-tokens.md. Agent loads only the depth it needs. |
+| 3.1 | Token Cost | 4/4 | SKILL.md 321 lines. Motion catalog, applied recipes (modal/form/modifier/text), and raw token values all offloaded to references/. Body carries only the system + lookup tables; agent loads depth on demand. |
 | 3.2 | Execution Efficiency | 4/4 | Single static-audit script (grep-only, no runtime deps). |
 | 4.1 | Learnability | 4/4 | Concrete example for every token category; selection-guide table for motion. |
 | 4.2 | Consistency | 4/4 | Uniform code-fence style; uniform WRONG/CORRECT pairs; tables for context-based selection. |
@@ -85,7 +85,7 @@ Rejected (Tiercade-coupled):
 | 7.2 | Modifiability | 4/4 | Add new motion token → references row + selection-guide row. Add new modifier → View Modifiers section. |
 | 7.3 | Testability | 4/4 | `scripts/audit-hardcoded-tokens.sh` gives automated drift detection (`DTOKEN-FAIL` output, nonzero exit) and self-verifies in the Verification section. Apple HIG/API citations on Motion, FormStyle, Spring, bouncy, Button Styles, TypeScale. |
 | 8.1 | Trigger Precision | 4/4 | Description specific; trigger phrase present; iOS/macOS/tvOS coverage explicit. |
-| 8.2 | Progressive Disclosure | 4/4 | Body covers common path; spring catalog + selection guide in references/motion-tokens.md; raw values in references/token-values.md. |
+| 8.2 | Progressive Disclosure | 4/4 | Body teaches the token system + lookup tables (Button Styles, Diagnostic Recipes); three references disclose depth — motion-tokens.md (catalog), token-values.md (raw values), application-recipes.md (modal/form/modifier/text recipes). `## Load References As Needed` routes them. |
 | 8.3 | Composability | 4/4 | First-class `## Sibling Skills (Defer When)` table maps each out-of-scope trigger → owner (`swiftui-animation`, `swiftui-expert-skill`, `apple-multiplatform`, `apple-tvos`); `## Load References As Needed` routes depth. Bidirectional with native-ux/apple-multiplatform, which name this skill the token authority. |
 | 8.4 | Idempotency | 4/4 | Read-only. |
 | 8.5 | Escape Hatches | 3/4 | Exemptions section documents acceptable hardcoded values (user-selectable presets, color computations). |
@@ -130,3 +130,4 @@ scripts/audit-hardcoded-tokens.sh <clean-tree>             # "No ... found.", ex
 | 2026-05-13 (P2 fixes) | 100% structural / 94 manual | Added Apple HIG citations to Motion and Form Styling sections (HIG Motion, Spring/bouncy/FormStyle/scenePadding API docs). Added 10-pattern Diagnostic Recipes table mapping symptoms → causes → fixes. 4.3 Feedback Quality: 3→4. 7.3 Testability: 2→3. |
 | 2026-06-03 (AGO polish) | 100% structural / 94 manual | anthropic-grade-optimizer audit (opus-4-7): Pass-1 clean, ~97/100 grade A. Added `## Contents` TOC to references/motion-tokens.md (122 ln) + references/token-values.md (114 ln) per AR-CC-S21 (>100-line refs). Clarified `rg` audit-block execution intent per AR-CC-S22. No rubric-score change. |
 | 2026-07-04 (SSOT + iOS 27 + tooling) | 100% structural / 96 manual | Consolidated three divergent `Motion` vocabularies into references/motion-tokens.md as the single source of truth: removed the orphan `reducedMotion` token and fixed the dangling `.reduced` recipe → `Motion.fast : Motion.spring`. Aligned Metrics casing to all-caps across files. Fixed stale `swiftui-tvos-focus` → `apple-tvos`. Added `## Load References As Needed`, `## Sibling Skills (Defer When)`, `## Do NOT Use For` + description `Skip` clause, and normalized `// Preferred`/`// Avoid` → `// WRONG`/`// CORRECT`. iOS 27 currency (Motion/materials): dated freshness stamps, trimmed vestigial `.bouncy()` pre-17 fallback, Liquid Glass 27 note (verified against apple-multiplatform SKILL.md:139). Added `scripts/audit-hardcoded-tokens.sh` (grep-only, `DTOKEN-FAIL` output, portable bash 3.2). Apple-docs URLs on Button Styles + TypeScale. Removed committed `.DS_Store`. Plan peer-reviewed by Gemini pro (xhigh) — APPROVED round 2 (B1 iOS-27 false positive rebutted with in-repo evidence; N1 rg→grep accepted). 7.3 Testability 3→4; 8.3 Composability 3→4. |
+| 2026-07-04 (disclosure trim) | 100% structural / 96 manual | Trimmed SKILL.md body 449→321 lines. Deduped Metrics/TypeScale enums to minimal snippets + pointer (full enums already in token-values.md); cut the redundant Spacing example. Disclosed five applied-recipe sections (Modal Backgrounds, Form Styling (macOS), Modal Sizing, View Modifiers, Text Hierarchy) into new references/application-recipes.md, replaced by one `## Applying Tokens` pointer. Body now carries the token system + lookup tables only. No rubric-score change (Token Cost / Progressive Disclosure notes updated). |
