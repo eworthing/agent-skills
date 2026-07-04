@@ -4,14 +4,16 @@ description: >-
   Writes, debugs, and selectively executes XCTest UI automation for iOS,
   macOS, and tvOS apps. Covers accessibility identifiers (typed-enum
   contract, leaf-only placement, cross-platform root markers),
-  wait-for-element, drag-and-drop, sheet/alert testing, macOS
+  wait-for-element, drag-and-drop, sheet/alert testing, automated
+  accessibility audits (`performAccessibilityAudit`), macOS
   window-pinning, platform divergence, and `.xctestrun`-based selective
   execution (`-only-testing`, list/range/glob/match/class/id selection,
   zero-test detection, `PIPESTATUS` propagation, `-retry-tests-on-failure`).
   Use when writing or debugging UI tests, investigating flaky failures,
-  wiring accessibility identifiers, adding a modal/sheet needing
-  coverage, debugging "Executed 0 tests", reproducing CI-only failures,
-  or building runner scripts. The community `swift-testing-expert`
+  wiring accessibility identifiers, auditing a screen for accessibility
+  regressions (contrast, tap-target size, missing descriptions), adding
+  a modal/sheet needing coverage, debugging "Executed 0 tests",
+  reproducing CI-only failures, or building runner scripts. The community `swift-testing-expert`
   covers Swift Testing (unit tests); XCUITest UI automation stays here.
 allowed-tools:
   - Read
@@ -31,6 +33,7 @@ allowed-tools:
 - Running Tests
 - Deterministic UI Test Launch
 - Accessibility Identifier Conventions
+- Accessibility Auditing
 - Test Patterns
 - macOS-Specific Patterns
 - Platform Divergences Matrix (iOS / macOS / tvOS)
@@ -41,10 +44,8 @@ allowed-tools:
 
 ## Overview
 
-XCTest UI automation patterns for iOS (iPhone + iPad), macOS (window
-pinning, AppKit divergences), and tvOS (focus-driven navigation,
-remote-press synthesis). Covers accessibility identifiers, wait-for-element
-strategies, selective execution via `.xctestrun`, and common pitfalls.
+XCTest UI automation across iOS (iPhone + iPad), macOS (window pinning, AppKit
+divergences), and tvOS (focus-driven navigation, remote-press synthesis).
 
 ## When to Use
 
@@ -199,6 +200,22 @@ Use it as the marker overlay:
 UIKit/AppKit native views reliably expose identifiers to the accessibility tree
 across all three platforms; `Color.clear` does not.
 
+## Accessibility Auditing
+
+Identifiers make a screen *testable*; `performAccessibilityAudit` checks it is
+*usable*. Unlike the rest of XCUITest — which sees structure, not pixels — the
+audit evaluates rendered output: contrast, tap-target size, clipped text, and
+missing descriptions. Reach for it before hand-rolling label or frame checks.
+Available iOS 17+ / macOS 14+ / tvOS 17+ (Xcode 16.3+).
+
+```swift
+try app.performAccessibilityAudit()   // .all default; throws → fails the test
+```
+
+Run as a dedicated per-screen audit test, after the settle marker. Audit types,
+`issueHandler` suppression, and per-platform relevance:
+[references/accessibility-audit.md](references/accessibility-audit.md).
+
 ## Test Patterns
 
 ### Wait for Element
@@ -268,8 +285,9 @@ alert.buttons["Delete"].tap()
 
 ### Sheet Detent Testing (iOS 16+)
 
-When testing sheets with `.presentationDetents()`, verify behavior at
-different detent sizes by checking element visibility.
+For sheets with `.presentationDetents()`, assert element visibility per detent
+(identifier-based, not coordinates) — full pattern in
+[references/new-component-checklist.md](references/new-component-checklist.md) step 6.
 
 ## macOS-Specific Patterns
 
@@ -359,6 +377,7 @@ underlying interaction model differs.
 | Activation | Not applicable | Not applicable | **Required before every event burst** |
 | Coordinate stability | Layout-driven | Layout-driven | **Pin window size in `-uiTest`** |
 | Focus assertions | N/A | `element.hasFocus` | N/A |
+| Accessibility audit | `performAccessibilityAudit(for:)` | subset (no touch / Dynamic Type) | `performAccessibilityAudit(for:)` |
 
 For tvOS-specific patterns (Siri Remote, focus assertions, focus reachability
 audits, modal focus containment), see
@@ -484,7 +503,7 @@ before reacting — most "flaky failures" are really one of these:
 | Category | Examples | Action |
 |---|---|---|
 | **Functional bug** | element never appears (`waitForExistence` false), tap is a no-op, navigation lands on the wrong screen, expected data missing | Fail / report |
-| **Visual–layout bug** | overlapping or truncated labels, element off-screen, wrong state shown | Fail / report — XCUITest sees structure not pixels, so assert on `frame` / `isHittable` or attach a screenshot for review |
+| **Visual–layout bug** | overlapping or truncated labels, element off-screen, wrong state shown | Fail / report. XCUITest sees structure not pixels, so assert on `frame` / `isHittable` or attach a screenshot — **except** contrast, tap-target size, clipped text, and missing descriptions, which `performAccessibilityAudit` checks directly (see *Accessibility Auditing*) |
 | **Transient state** | spinner, in-flight animation, keyboard appearing or dismissing | Not a failure — `waitForExistence` past it; don't assert mid-transition |
 | **Unexpected exit** | app crash or termination | Always a failure — assert `app.state == .runningForeground` after a flow; a crash is never "flaky" |
 | **Expected behavior** | empty-state placeholder, disabled button on an incomplete form, a system permission dialog | Not a bug — assert the *expected* empty/disabled state; handle system dialogs with `addUIInterruptionMonitor` |
@@ -510,6 +529,7 @@ TestIdentifiers enum, direct-launch support, dialog/detent tests,
 
 | Concern | Skill |
 |---|---|
+| Automated accessibility audit (contrast, hit-target, descriptions, clipped text via `performAccessibilityAudit`) | [references/accessibility-audit.md](references/accessibility-audit.md) |
 | Swift Testing unit-test framework (`#expect`, `#require`, traits, parameterized, parallel isolation, XCTest migration) | `swift-testing-expert` (community) — defers to XCUITest for UI automation |
 | Selective execution mechanics (`.xctestrun`, `build-for-testing` vs `test-without-building`, wrapper-script flag surface) | [references/runner.md](references/runner.md) |
 | Cross-platform conditionals (`#if os(tvOS)`, Catalyst, `XCUICoordinate` divergence) | `apple-multiplatform` |

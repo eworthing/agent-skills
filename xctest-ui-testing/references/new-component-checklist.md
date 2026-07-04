@@ -177,6 +177,12 @@ xcodebuild test -scheme YourApp -destination 'platform=macOS'
 xcodebuild test -scheme YourApp -destination 'platform=tvOS Simulator,name=Apple TV'
 ```
 
+Add an **accessibility audit** test for the new screen — one
+`performAccessibilityAudit(for: .all)` call after the settle marker catches
+contrast, tap-target, missing-description, and clipped-text regressions that
+identifier-based tests can't. See
+[../references/accessibility-audit.md](../references/accessibility-audit.md).
+
 Per-platform divergences (see [SKILL.md](../SKILL.md)'s "Platform
 Divergences Matrix") often mean a test that passes on iOS fails silently on
 macOS until you actually run it there.
