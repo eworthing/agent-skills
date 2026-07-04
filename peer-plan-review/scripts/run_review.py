@@ -117,7 +117,7 @@ def parse_args():
         help="Reasoning effort level",
     )
     p.add_argument("--resume", action="store_true", help="Resume previous session")
-    p.add_argument("--timeout", type=int, default=600, help="Timeout in seconds (default: 600)")
+    p.add_argument("--timeout", type=int, default=1200, help="Timeout in seconds (default: 1200)")
     p.add_argument(
         "--self-check", action="store_true", help="Verify CLI binary and flags, exit 0/1"
     )

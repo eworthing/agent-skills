@@ -105,6 +105,8 @@ Canonical temp files:
 - `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl`
 - `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` *(retained after cleanup)*
 - `${TMPDIR}/ppr-${REVIEW_ID}-codex-homes.list` *(Codex isolation manifest; reclaimed at Finalize)*
+- `${TMPDIR}/ppr-${REVIEW_ID}-runner.log` *(written by `ppr_launch.sh`; runner stdout+stderr)*
+- `${TMPDIR}/ppr-${REVIEW_ID}-exit.code` *(written by `ppr_launch.sh`; true runner exit code)*
 
 Keep the `REVIEW_ID` in your own working context across rounds and reconstruct
 every path with `ppr_paths.py` (the `eval` above also exports
@@ -145,17 +147,40 @@ Build prompt with:
 4. Structured output template from `references/output-format.md`. If a Domain context
    block is included, use its two-pass variant.
 
-Run the runner (see `references/adapter-cli.md` for full flag list). Omit `--resume` on round 1. The runner's own `--timeout` defaults to 600 s — raise for large plans.
+Run the round through the canonical launcher — one command, backgrounded:
 
-**Run it in the background — do not block on a foreground shell call.** A real
-review routinely outlasts the host's shell-command ceiling, which is *separate
-from and shorter than* the runner's `--timeout`. In Claude Code the Bash tool
-defaults to a 120 s timeout (max 600 s), so a foreground invocation is killed at
-~2 min — long before the reviewer finishes and regardless of `--timeout`. Launch
-the runner with `run_in_background: true` (or the host's equivalent) and poll for
-completion. Never rely on a single foreground call to survive the full review.
+```bash
+bash <skill-dir>/scripts/ppr_launch.sh \
+  --review-id "$REVIEW_ID" --reviewer <provider> \
+  [--model <m>] [--effort <e>] [--timeout <s>] [--resume]
+```
+
+Launch it with `run_in_background: true` (or the host's equivalent). The
+launcher derives every path from the review id, always pairs the runner's
+coupled flags, tees runner output to `${TMPDIR}/ppr-${REVIEW_ID}-runner.log`,
+writes the true runner exit code to `${TMPDIR}/ppr-${REVIEW_ID}-exit.code`, and
+exits with that code — so the host's completion notification reflects real
+success or failure. Unrecognized flags pass through to `run_review.py` (see
+`references/adapter-cli.md`). Omit `--resume` on round 1. `--timeout` defaults
+to 1200 s; the trigger for raising it is reasoning depth (codex/gemini at
+`xhigh`), not plan size.
+
+After launching, the round is over for now: end the turn. The harness
+re-invokes you with a completion notification when the runner exits — that
+notification is the wait mechanism. (Red flag: a foreground `sleep`/poll loop
+is killed at the host's shell ceiling — in Claude Code the Bash tool defaults
+to 120 s, max 600 s, both shorter than a real review — which is the exact
+failure background launch exists to avoid.)
 
 ## Read the result
+
+Gate on the exit code first: read `${TMPDIR}/ppr-${REVIEW_ID}-exit.code`. Only
+when it is `0` **and** both `$OUTPUT_FILE` and `$SESSION_FILE` are non-empty,
+dump them. Otherwise read `…-runner.log` and `…-errors.jsonl`, treat the round
+as failed (see [Handle failures](#handle-failures)), and never parse a verdict
+from absent files. If `-runner.log` contains a `WARNING: resume degraded`
+line, relay it to the user — a requested resume silently fell back to a fresh
+exec.
 
 Dump both files with `cat` — never with `read`, and never with inline Python
 that prints a dict. `read VAR` treats a leaked quote/space as a variable name
@@ -165,8 +190,14 @@ JSON; emit it verbatim.
 
 ```bash
 # paths must already be exported via ppr_paths.py --format shell
-echo "=== SESSION ==="; cat "$SESSION_FILE"
-echo "=== REVIEW ==="; cat "$OUTPUT_FILE"
+if [ "$(cat "${TMPDIR}/ppr-${REVIEW_ID}-exit.code")" = "0" ] \
+   && [ -s "$OUTPUT_FILE" ] && [ -s "$SESSION_FILE" ]; then
+  echo "=== SESSION ==="; cat "$SESSION_FILE"
+  echo "=== REVIEW ==="; cat "$OUTPUT_FILE"
+else
+  echo "=== RUNNER LOG (round failed) ==="
+  cat "${TMPDIR}/ppr-${REVIEW_ID}-runner.log"; cat "$ERROR_LOG"
+fi
 ```
 
 1. Read session file; extract actual `model`, `effort`, `effort_source`
@@ -204,6 +235,9 @@ Stop after approval or five rounds, whichever first.
   Do not submit a second manual retry on top of the automatic fallback.
 - Runner non-zero + no output: report, ask user to retry, switch reviewers, or stop.
 - Runner non-zero + some output: try extract review anyway.
+- Retrying a failed round (bad flag, timeout): reuse the **same** `REVIEW_ID` —
+  the runner writes fresh output files and the error log is append-only, so
+  log/session continuity is preserved. Mint a new id only for a new review.
 - Binary missing: fail fast, quote install command from provider reference.
 
 ## Finalize
@@ -222,6 +256,10 @@ Stop after approval or five rounds, whichever first.
 
 - Keep the reviewer read-only. Never ask it to modify files or execute the host workflow. (`agy` is the one exception — it is **not** read-only; see [Parse reviewer arguments](#parse-reviewer-arguments) and [`references/antigravity.md`](references/antigravity.md).)
 - Capture the full output each round; no tail-scraping.
+- Verify a Gemini **blocking** finding against in-repo evidence before adopting
+  it — Gemini can under-reason and confabulate HIGH findings on niche or
+  temporal facts (see [`references/gemini.md`](references/gemini.md)); prefer
+  ≥2 providers so one reviewer's confabulation can't force a false REVISE.
 - Never use transcript-sharing flags (`--share`, `--share-gist`).
 - Treat the prompt/review/session/events files as sensitive (they contain plan text).
 - Show the actual model/effort from the session file, not guessed values.

@@ -77,3 +77,22 @@ Adapter builds a temp config overlay from top-level files in the real config dir
 - `--allowed-mcp-server-names`: restrict MCP servers
 - `--include-directories`: add directories to context
 - `--yolo` / `-y`: legacy shortcut for `--approval-mode=yolo`
+
+## Reliability caveat — confabulated blocking findings
+
+Gemini can under-reason (e.g. ~1,600 thinking tokens used of a 32,768 `xhigh`
+budget) and then **confabulate HIGH blocking findings**, especially on niche or
+temporal facts. Observed in production (2026-07-04, two separate reviews):
+
+- Invented a file reference — misparsed a Swift `@main` attribute on the cited
+  line as an `@`-path reference and "quoted" a repo path that exists nowhere in
+  the plan or snapshot.
+- Declared a real, current OS version a "chronological hallucination" that
+  "will not exist for years" — the reviewer's own knowledge-cutoff error,
+  presented at HIGH confidence. Codex reviewed the same plans without either
+  error.
+
+Handling: verify any Gemini blocking finding against in-repo evidence before
+adopting it; rebut with evidence in the next round's prompt rather than
+accepting a false REVISE; prefer ≥2 providers so a single reviewer's
+confabulation can't gate the plan.
