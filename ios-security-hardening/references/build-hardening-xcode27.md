@@ -5,10 +5,18 @@ Runtime input-validation (the rest of this skill) defends against attacker-contr
 Xcode 27 exposes through the **Enhanced Security** capability: control-flow integrity,
 memory-safety enforcement, and security diagnostics.
 
-Verified against **Xcode 27.0 (build 27A5194q), iPhoneOS27.0 SDK** (2026-06-18). Re-verify
-setting/entitlement names against the SDK in use before relying on them — names and defaults
-can shift across betas. Source of truth: Xcode's bundled "audit-xcode-security-settings"
-skill + Apple developer documentation.
+Verified against **Xcode 27 beta 2 (build 27A5209h), iPhoneOS27.0 SDK** (re-checked 2026-07-04;
+originally 27A5194q / 2026-06-18). No Xcode 27 GM has shipped yet — the stable channel is still
+Xcode 26.x — so the "re-verify names against the SDK in use" caveat below stays in force. Beta 2
+extended Enhanced Security support to visionOS. Re-verify setting/entitlement names against the
+SDK in use before relying on them — names and defaults can shift across betas. Source of truth:
+Xcode's bundled "audit-xcode-security-settings" skill + Apple developer documentation.
+
+**Lineage (avoid over-indexing on "27").** Enhanced Security debuted at **WWDC 2025 / Xcode 26 /
+iOS 26**, and Memory Integrity Enforcement (MIE) is the **Sep 2025 / iPhone 17** hardware feature
+(see below) — neither is new in iOS 27. Xcode 27 is the *current tooling*; the `-string`
+entitlement variants and guard objects arrived in the 26.4 cycle. This doc says "Xcode 27" because
+that is what you build with today, not because the protections are 27-only.
 
 ## Scope — when this applies
 
@@ -94,6 +102,11 @@ family. Without the main toggle the runtime pieces are inert.
 <key>com.apple.security.hardened-process.enhanced-security-version-string</key><string>2</string>
 ```
 
+**Availability:** the `-string` entitlement variants
+(`enhanced-security-version-string`, `platform-restrictions-string`) require an **iOS/iPadOS/
+macOS/visionOS 26.4+ runtime** — not 26.0. Their default is the `*` wildcard (auto-latest);
+setting `"2"` pins the current generation.
+
 **Default-ON (add when missing):**
 
 - `com.apple.security.hardened-process.hardened-heap` — extra type-isolation allocator
@@ -106,6 +119,20 @@ family. Without the main toggle the runtime pieces are inert.
 `…platform-restrictions` (→ `-string` variant) and `…enhanced-security-version`
 (→ `-version-string` variant). If you see `…version-string = "1"` or the deprecated
 version key, migrate to `"2"`.
+
+## Guard objects (free once you set `version-string = "2"`)
+
+iOS/macOS **26.4+** added an automatic use-after-free defense: freed memory (both VM mappings
+and heap allocations) is replaced with inaccessible **guard regions**, so a dangling access
+traps instead of reading reused memory. It turns on **automatically** whenever
+`enhanced-security-version-string ≥ "2"` — which the required entitlement above already sets — so
+you get it for free with no extra key. It is hardware-independent (unlike MTE below).
+
+Opt out **only** if profiling shows a real regression, via:
+
+```xml
+<key>com.apple.security.hardened-process.no-guard-objects</key><true/>
+```
 
 ## Hardware Memory Tagging (MTE) — distinct from the allocator settings
 

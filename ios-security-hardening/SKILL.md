@@ -3,14 +3,15 @@ name: ios-security-hardening
 description: >-
   Applies input-validation and file-handling safeguards for untrusted data
   (path-traversal prevention, URL scheme/domain allowlisting, multi-source image
-  reference resolution, CSV/JSON sanitization, AI prompt sanitization, sandbox
-  directories, iOS Data Protection) and Xcode 27 build-time hardening (Enhanced
-  Security capability, pointer authentication / arm64e, stack zero-init, hardened
-  allocators, hardware memory tagging, C/C++ bounds safety). Use when importing
-  files, restoring backups, handling URLs or user-provided paths, processing
-  CSV/JSON from external sources, reviewing features that accept external input,
-  or configuring Xcode build security settings / Enhanced Security / pointer
-  authentication entitlements.
+  reference resolution, CSV/JSON sanitization, AI prompt sanitization, agentic
+  Foundation Models hardening, sandbox directories, iOS Data Protection) and
+  Xcode build-time hardening (Enhanced Security capability, pointer
+  authentication / arm64e, stack zero-init, hardened allocators, hardware memory
+  tagging, C/C++ bounds safety). Use when importing files, restoring backups,
+  handling URLs or user-provided paths, processing CSV/JSON from external
+  sources, building agentic features that call tools or App Intents, reviewing
+  features that accept external input, or configuring Xcode build security
+  settings / Enhanced Security / pointer authentication entitlements.
 allowed-tools:
   - Read
   - Write
@@ -29,6 +30,7 @@ allowed-tools:
 - Workflow (identify attack surfaces, apply mitigations, verify)
 - Common Mistakes to Avoid
 - Examples (export file write, multi-source image refs, CSV import, AI prompts, secrets)
+- Agentic AI Hardening (iOS 27 Foundation Models — reference)
 - Build-Time Hardening (Xcode 27)
 - References
 - Constraints
@@ -297,6 +299,14 @@ func generatePrompt(userInput: String) -> String {
 }
 ```
 
+For **agentic** features — where an on-device model can call tools / App Intents or ingest
+untrusted content (calendar, feeds, web) — length-capping is not enough: the exposure is
+indirect prompt injection driving real actions. See
+[references/ai-agent-hardening.md](references/ai-agent-hardening.md) for the iOS 27 Foundation
+Models threat model (the "Lethal Trifecta") and the deterministic app-side controls (own the
+`Transcript` to redact untrusted history, gate side effects inside `Tool.call(arguments:)`, App
+Intents `authenticationPolicy`).
+
 #### Size Limits
 
 ```swift
@@ -488,7 +498,8 @@ static-analyzer security checkers, and lowest-risk-first adoption order.
 
 ## References
 
-- [Build-time hardening (Xcode 27 Enhanced Security)](references/build-hardening-xcode27.md)
+- [Agentic AI hardening (iOS 27 Foundation Models / App Intents)](references/ai-agent-hardening.md)
+- [Build-time hardening (Xcode Enhanced Security)](references/build-hardening-xcode27.md)
 - OWASP Mobile Security Testing Guide
 - Apple App Sandbox documentation
 
