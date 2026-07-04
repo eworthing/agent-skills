@@ -1,5 +1,8 @@
 # Motion Tokens
 
+> Last verified: 2026-07-04 (iOS 27 SDK). Availability is tagged per token; no
+> global baseline lock.
+
 Motion tokens centralize animation timing so interactions feel consistent
 across the app. Define them once in your `DesignTokens.swift` and reference
 the tokens from view code -- never inline raw `.spring(...)` or
@@ -62,7 +65,8 @@ extension Motion {
 }
 ```
 
-`.bouncy()` is iOS 17 / tvOS 17+. On older OS versions, fall back to
+`.bouncy()` is iOS 17+ / tvOS 17+ — the floor for current deployment targets.
+Only if you still ship a pre-17 target, substitute
 `.spring(response: 0.3, dampingFraction: 0.75)` for a similar feel.
 
 ## Reduce Motion Alternatives
@@ -128,4 +132,4 @@ For SwiftUI animation mechanics (implicit vs explicit animations,
 authoritative `swiftui-expert-skill` (`references/animation-basics.md`,
 `animation-transitions.md`, `animation-advanced.md`) -- this file is
 only the token catalog and selection guide. tvOS focus-animation
-caveats live in `swiftui-tvos-focus`.
+caveats live in `apple-tvos`.

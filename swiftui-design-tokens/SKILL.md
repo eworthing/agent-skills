@@ -6,7 +6,9 @@ description: >-
   changing visual styling, defining or extending spring/timed motion tokens,
   choosing reduce-motion alternatives, replacing hardcoded padding, font, or
   color values, picking platform-appropriate button styles, applying macOS
-  form styling, or sizing modal frames with tokens.
+  form styling, or sizing modal frames with tokens. Skip pure animation
+  mechanics, backend or data logic, UIKit/AppKit-only layout, and non-Apple
+  platforms.
 allowed-tools:
   - Read
   - Write
@@ -21,7 +23,9 @@ allowed-tools:
 ## Contents
 
 - Overview
+- Load References As Needed
 - When to Use
+- Do NOT Use For
 - Token Architecture
 - Palette (Colors)
 - Metrics (Spacing)
@@ -35,6 +39,7 @@ allowed-tools:
 - Common Patterns
 - Diagnostic Recipes
 - Auditing for Hardcoded Values
+- Sibling Skills (Defer When)
 - Exemptions (Not Violations)
 
 ## Overview
@@ -43,6 +48,13 @@ A well-structured iOS app centralizes visual values into design tokens --
 named constants for colors, spacing, typography, and motion. This prevents
 hardcoded "magic numbers" scattered across views and ensures visual consistency.
 
+## Load References As Needed
+
+| Topic | Reference |
+|-------|-----------|
+| Full motion catalog — spring/`lift`/`drop`/`focusSpring`, reduce-motion alternatives, per-interaction selection guide | [references/motion-tokens.md](references/motion-tokens.md) |
+| Token-file template — placeholder Palette/Metrics/TypeScale/Motion values to copy into a new project | [references/token-values.md](references/token-values.md) |
+
 ## When to Use
 
 - Adding new colors or styling to views
@@ -50,6 +62,12 @@ hardcoded "magic numbers" scattered across views and ensures visual consistency.
 - Implementing button styles
 - Fixing hardcoded color or spacing violations
 - Setting up a design token system for a new project
+
+## Do NOT Use For
+
+Animation mechanics, platform gating, deprecated-API migration, and tvOS focus
+belong to sibling skills — see [Sibling Skills (Defer When)](#sibling-skills-defer-when).
+This skill owns only the project's token *vocabulary* and how to apply it.
 
 ## Token Architecture
 
@@ -147,6 +165,9 @@ enum TypeScale {
 Prefer Dynamic Type-compatible fonts (`Font.body`, `.title`, etc.) where
 possible so text scales with user accessibility settings.
 
+API reference: [`Font`](https://developer.apple.com/documentation/swiftui/font)
+and [`ScaledMetric`](https://developer.apple.com/documentation/swiftui/scaledmetric).
+
 ### Font Weight
 
 Prefer `.bold()` over `.fontWeight(.bold)` -- `.bold()` lets the system
@@ -163,6 +184,9 @@ scale with user accessibility settings:
 ```
 
 ## Motion (Animation)
+
+_Last verified: 2026-07-04 (iOS 27 SDK). Availability is tagged per token, not
+locked to a global baseline._
 
 ### Token Examples
 
@@ -208,6 +232,10 @@ Choose button styles based on where the button appears, not what it does:
 | Content rows | `.plain` | `.plain` |
 | Inline actions | `.borderless` | `.borderless` |
 
+API reference: [`buttonStyle(_:)`](https://developer.apple.com/documentation/swiftui/view/buttonstyle(_:))
+and the [`PrimitiveButtonStyle`](https://developer.apple.com/documentation/swiftui/primitivebuttonstyle)
+values (`.borderedProminent`, `.bordered`, `.plain`, `.borderless`).
+
 ### Tinting
 
 Apply brand tint to bordered buttons for visual consistency:
@@ -224,7 +252,7 @@ Use system materials for modal/overlay backgrounds instead of hardcoded
 opacity values. Materials adapt to light/dark mode and accessibility settings:
 
 ```swift
-// Preferred
+// CORRECT
 ZStack {
     Color.clear
         .background(.regularMaterial)
@@ -232,13 +260,19 @@ ZStack {
     ModalContent()
 }
 
-// Avoid -- hardcoded opacity doesn't adapt
+// WRONG -- hardcoded opacity doesn't adapt
 ZStack {
     Color.black.opacity(0.6)
         .ignoresSafeArea()
     ModalContent()
 }
 ```
+
+On the iOS 27 SDK, Liquid Glass is the system default for many surfaces (the
+`UIDesignRequiresCompatibility` opt-out is ignored), but `.regularMaterial`
+remains correct for a modal backdrop. Glass *adoption* itself (`glassEffect`,
+material hierarchy) is owned by `swiftui-expert-skill` (`references/liquid-glass.md`)
+and `apple-multiplatform` — this skill only covers applying it via tokens.
 
 ## Form Styling (macOS)
 
@@ -274,17 +308,20 @@ Use sizing tokens for modal frames instead of magic numbers. Define a
 namespace such as `ScaledDimensions` (or extend `Metrics`) so window sizes
 stay consistent and adapt to Dynamic Type or accessibility scaling:
 
+The numbers here are illustrative (macOS-window scale); size tokens to your own
+layouts and platform.
+
 ```swift
 enum ScaledDimensions {
     static let modalWidth: CGFloat = 1200
     static let modalHeight: CGFloat = 860
 }
 
-// Use the token
+// CORRECT -- use the token
 .frame(maxWidth: ScaledDimensions.modalWidth,
        maxHeight: ScaledDimensions.modalHeight)
 
-// Avoid -- magic numbers, drift across modals
+// WRONG -- magic numbers, drift across modals
 .frame(maxWidth: 1200, maxHeight: 860)
 ```
 
@@ -342,7 +379,7 @@ When visual issues surface, use this table to identify likely token misuse:
 |---------|-------------|-----|
 | Inconsistent corner radii across cards | Raw numbers instead of `Metrics.rSM`/`rMD`/`rLG` | Replace with `Metrics.r*` tokens |
 | Headings vary in size across screens | Mixing raw `Font.system(size:)` with `TypeScale` | Use only `TypeScale.h1`/`h2`/`h3` |
-| Animation feels harsh with accessibility | No reduce-motion gate on spring animations | Add `reduceMotion ? .reduced : .spring` ternary |
+| Animation feels harsh with accessibility | No reduce-motion gate on spring animations | Add `reduceMotion ? Motion.fast : Motion.spring` ternary |
 | Uneven spacing between sections | Raw padding values instead of `Metrics.spacing*` | Switch to semantic spacing tokens |
 | Colors don't adapt in dark mode | Hardcoded `Color.white`/`.black` | Use semantic `Palette.*` colors with Asset Catalog variants |
 | Button looks wrong for its context | Wrong button style for that UI region | Check Button Styles context table above |
@@ -353,7 +390,16 @@ When visual issues surface, use this table to identify likely token misuse:
 
 ## Auditing for Hardcoded Values
 
-Run these ripgrep searches to find hardcoded colors in view files:
+Run the bundled audit script across a source tree. It flags hardcoded colors,
+raw `Font.system(size:)`, and magic padding literals, emits
+`DTOKEN-FAIL <category> <file>:<line>`, and exits nonzero on findings
+(CI-friendly). Files under a `Design/` directory are skipped as token definitions:
+
+```bash
+scripts/audit-hardcoded-tokens.sh YourApp/
+```
+
+For quick interactive spot-checks, these ripgrep one-liners cover the color cases:
 
 ```bash
 rg 'Color\.(black|white|gray|red|blue|green|orange|yellow|pink|purple)\.opacity\(' --glob '*.swift' YourApp/Views/
@@ -365,6 +411,19 @@ Common false positives to ignore:
 - SwiftUI previews
 - `Color.clear` layout spacers
 - Shadow definitions in style files
+
+## Sibling Skills (Defer When)
+
+This skill owns the project's design-token vocabulary and how to apply it. Defer
+the following to their owners:
+
+| Trigger | Skill |
+|---------|-------|
+| Animation mechanics — implicit vs explicit, transitions, `matchedGeometryEffect`, phase/keyframe animators | `swiftui-animation`, `swiftui-expert-skill` |
+| `#if os()` platform gating; "Cannot find X in scope" errors that reproduce on one platform | `apple-multiplatform` |
+| tvOS focus behavior; focus-context Liquid Glass regressions | `apple-tvos` |
+| Deprecated-API replacement (e.g. `foregroundColor` → `foregroundStyle`) | `swiftui-expert-skill` (`references/latest-apis.md`) |
+| Generic Liquid Glass adoption (`glassEffect`, materials) beyond token application | `swiftui-expert-skill` (`references/liquid-glass.md`), `apple-multiplatform` |
 
 ## Exemptions (Not Violations)
 
@@ -388,5 +447,3 @@ RGB channel calculations in color pickers are functional, not design violations:
 // Acceptable -- color picker component logic
 var color: Color { Color(red: r / 255, green: g / 255, blue: b / 255) }
 ```
-
-See the `swiftui-expert-skill` skill (`references/latest-apis.md`) for deprecated API replacements (e.g., `foregroundColor` -> `foregroundStyle`).

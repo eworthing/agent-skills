@@ -45,15 +45,15 @@ Replace placeholder values with your actual design system values.
 ```swift
 enum Metrics {
     static let grid: CGFloat = 8         // Base unit (8pt grid)
-    static let rSm: CGFloat = 8          // Small corner radius
-    static let rMd: CGFloat = 12         // Medium corner radius
-    static let rLg: CGFloat = 16         // Large corner radius
+    static let rSM: CGFloat = 8          // Small corner radius
+    static let rMD: CGFloat = 12         // Medium corner radius
+    static let rLG: CGFloat = 16         // Large corner radius
 
     // Semantic spacing
     static let spacingXS: CGFloat = 8    // grid * 1
-    static let spacingSm: CGFloat = 16   // grid * 2
-    static let spacingMd: CGFloat = 24   // grid * 3
-    static let spacingLg: CGFloat = 32   // grid * 4
+    static let spacingSM: CGFloat = 16   // grid * 2
+    static let spacingMD: CGFloat = 24   // grid * 3
+    static let spacingLG: CGFloat = 32   // grid * 4
     static let spacingXL: CGFloat = 40   // grid * 5
 
     // Component-specific
@@ -87,6 +87,9 @@ accessibility settings.
 
 For iPad, consider using `ScaledDimensions` tokens for modal frames:
 
+Values below are illustrative — size them to your own layouts, and branch inside
+the token definition if a platform needs different dimensions.
+
 ```swift
 enum ScaledDimensions {
     static let modalWidth: CGFloat = 600
@@ -106,19 +109,22 @@ enum ScaledDimensions {
 
 ## Motion Tokens
 
+This is a minimal starter set. The full motion catalog — spring tokens
+(`lift`, `drop`, platform-branched `focusSpring`), dedicated reduce-motion
+alternatives (`liftReduced`, `dropReduced`), and the per-interaction selection
+guide — lives in [motion-tokens.md](motion-tokens.md). Reduce-motion columns
+never use a spring.
+
 ```swift
 enum Motion {
     static let fast = Animation.easeOut(duration: 0.12)
     static let standard = Animation.easeOut(duration: 0.20)
     static let spring = Animation.spring(response: 0.30, dampingFraction: 0.8)
-
-    // Reduce motion alternatives
-    static let reducedMotion = Animation.easeOut(duration: 0.15)
 }
 ```
 
 | Interaction | Normal | Reduce Motion |
 |-------------|--------|---------------|
 | Overlay appear | `spring` | `fast` |
-| Content transition | `standard` | `reducedMotion` |
-| Drag interaction | `spring` | `reducedMotion` |
+| Content transition | `standard` | `fast` |
+| Drag interaction | `spring` | `standard` |
