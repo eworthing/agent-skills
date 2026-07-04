@@ -38,6 +38,10 @@ python3 <skill-dir>/scripts/run_review.py \
   effort is encoded as a model-name variant (e.g. `Gemini 3.5 Flash (High)`);
   `xhigh` maps to `High` (agy's max).
 - `--timeout`: seconds. Default 600. Raise for large plans or slower reviewers.
+  This governs the *runner's* internal wait, not the host shell-command ceiling.
+  The host tool that spawns the runner (e.g. Claude Code's Bash tool, default
+  120 s / max 600 s) will kill a foreground call first — always launch the runner
+  in the background and poll (see SKILL.md "Run the runner").
 - `--codex-home-manifest`: review-scoped list of per-run Codex homes for
   concurrency-safe isolation + terminal cleanup. Codex only; defaults to a path
   derived from `--session-file` if omitted. The `ppr_paths.py --format shell`

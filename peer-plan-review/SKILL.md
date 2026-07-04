@@ -145,7 +145,15 @@ Build prompt with:
 4. Structured output template from `references/output-format.md`. If a Domain context
    block is included, use its two-pass variant.
 
-Run the runner (see `references/adapter-cli.md` for full flag list). Omit `--resume` on round 1. Default timeout 600 s — raise for large plans.
+Run the runner (see `references/adapter-cli.md` for full flag list). Omit `--resume` on round 1. The runner's own `--timeout` defaults to 600 s — raise for large plans.
+
+**Run it in the background — do not block on a foreground shell call.** A real
+review routinely outlasts the host's shell-command ceiling, which is *separate
+from and shorter than* the runner's `--timeout`. In Claude Code the Bash tool
+defaults to a 120 s timeout (max 600 s), so a foreground invocation is killed at
+~2 min — long before the reviewer finishes and regardless of `--timeout`. Launch
+the runner with `run_in_background: true` (or the host's equivalent) and poll for
+completion. Never rely on a single foreground call to survive the full review.
 
 ## Read the result
 
