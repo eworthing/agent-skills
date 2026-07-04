@@ -28,17 +28,16 @@ allowed-tools:
 - When to Use
 - When Not to Use
 - Architecture: DropDelegate vs `.onDrop`
-- Internal Reorder (SDK 27): `reorderable()` vs DropDelegate
 - Drop Priority (Winner-Take-All)
 - DropDelegate Skeleton
 - NSItemProvider Lifecycle Rules
 - Payload Extraction Across Providers
-- Chrome / Cross-Browser Image-Drag Compatibility
 - View Attachment: Don't Attach Drops Directly to `Button`
 - Platform Gating
 - Debugging Drop Types
 - Undo Semantics
-- Constraints
+- Before You're Done
+- References
 
 ## Purpose
 
@@ -68,8 +67,8 @@ API — all receiving code must be platform-gated.
   doesn't need this skill. Use this skill when you must accept *external*
   pasteboard payloads (browser drags, Finder, Photos).
 - Same-app drag-to-**reorder** on SDK 27 targets — use `reorderable()` /
-  `reorderContainer(for:)` (see *Internal Reorder* below), not a hand-rolled
-  `DropDelegate` reorder chain.
+  `reorderContainer(for:)`, not a hand-rolled `DropDelegate` reorder chain. See
+  [`references/internal-reorder.md`](references/internal-reorder.md).
 - macOS `NSPasteboard` paste shortcuts — different surface.
 
 ## Architecture: DropDelegate vs `.onDrop`
@@ -85,69 +84,13 @@ Once any target on screen needs priority routing, **all** participating
 targets must be `DropDelegate`. Mixing `.onDrop` callbacks with
 `DropDelegate` makes priority undefined.
 
-## Internal Reorder (SDK 27): `reorderable()` vs DropDelegate
-
-SDK 27 adds first-class drag-to-reorder for **any** container (`List`,
-`LazyVStack`, `LazyVGrid`, stacks, custom layouts) — no longer `List`-only.
-For *same-app* reorder, use these instead of a hand-rolled `DropDelegate`
-chain. The rest of this skill (priority routing, payload extraction) remains
-for *external* pasteboard payloads.
-
-**Availability:** iOS / macOS / watchOS / visionOS 27; **tvOS unavailable**.
-The examples reference SDK-27-only symbols, so they require the **Xcode 27 SDK
-to compile**; use `if #available(iOS 27, *)` to support older deployment
-targets, and keep the existing `#if !os(tvOS)` gate.
-
-Two modifiers cooperate — `.reorderable()` on the `ForEach` (it's declared on
-`DynamicViewContent`), `.reorderContainer(for:move:)` on the container. The
-`move` closure receives a `ReorderDifference` you apply to your own data:
-
-```swift
-ScrollView {
-    LazyVGrid(columns: columns) {
-        ForEach(stickers) { StickerView($0) }
-            .reorderable()
-    }
-    .reorderContainer(for: Sticker.self) { difference in
-        difference.apply(to: &stickers)   // mutate your @State collection
-    }
-}
-```
-
-`apply(to:)` is **your** helper, not SDK-provided: switch on
-`difference.destination.position` (`.before(id)` inserts ahead of that item,
-`.end` appends) and move `difference.sources` within your collection.
-
-- `Item` must be `Identifiable` for the `for:` overload (keys on `\.id`);
-  otherwise use `reorderContainer(for:itemID:)` with a key path.
-- **Sections / multiple collections:** tag each `ForEach` with
-  `.reorderable(collectionID:)` and declare the id type on the container with
-  `reorderContainer(for:in:)`; route via `difference.destination.collectionID`.
-
-`reorderContainer(for:)` **already acts as a drag container and drop
-destination**, so plain reorder works with no extra drop code. Customize only
-when needed:
-
-| Need | Add |
-|---|---|
-| Same-app reorder | `reorderable()` + `reorderContainer(for:)` (nothing else) |
-| Custom drag payload / drag-out to other apps | `.dragContainer(for:)` on the container (a bare `.draggable` does **not** customize it) |
-| Drop one item onto another (combine) | `.dropDestination(for:isEnabled:)` on each child |
-| Accept a drop at the reorder position | `.dropDestination(for:)` on container + `session.reorderDestination(for:)` |
-| Accept **external** pasteboard payloads | this skill's `DropDelegate` priority architecture (below) |
-
-**Critical overload pitfall.** For drop-to-combine use the void overload
-`dropDestination(for:isEnabled:) { items, session in … }`, and put the
-per-item predicate in `isEnabled:` (SwiftUI calls the closure only when it's
-true; it draws the target/gap for you). Do **not** use the legacy
-`dropDestination(for:) { … } isTargeted: { … }` overload — it reports hover
-state for custom feedback, returns `Bool`, and does **not** gate combining.
-Picking it is the common mistake.
-
-When reorder coexists with external drop handlers, the priority rules below
-still govern the external targets.
-
 ## Drop Priority (Winner-Take-All)
+
+> Same-app **reorder** is a separate SDK-27 path — use `reorderable()` /
+> `reorderContainer(for:)`, covered in
+> [`references/internal-reorder.md`](references/internal-reorder.md). When reorder
+> coexists with external drop handlers, the priority rules here still govern the
+> external targets.
 
 When multiple drop handlers cover the same hit area, SwiftUI delivers the
 drop to the topmost target whose `validateDrop` returns `true`. Encode
@@ -255,8 +198,9 @@ These are Apple requirements, not stylistic choices:
 3. **Hop to `@MainActor` before touching observable state** in
    `loadItem`/`loadDataRepresentation` completion handlers. They run on
    a background queue.
-4. **Capture providers by value** — they are reference types but the
-   pasteboard backing store may be released; load on a `Task` you own.
+4. **Retain providers on a `Task` you own** — `NSItemProvider` is a class, but
+   its pasteboard backing store may be released after `performDrop` returns;
+   drive the load from a `Task` that keeps the providers alive until it finishes.
 
 ```swift
 provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
@@ -303,24 +247,11 @@ Keep the extractor pure-ish: take `[NSItemProvider]`, return
 `DroppedPayload?`. No view-model coupling, no global state. This is the
 piece you'll unit-test.
 
-## Chrome / Cross-Browser Image-Drag Compatibility
-
-Browser image drags surface different UTTypes:
-
-| UTType | Safari | Chrome | Firefox | Notes |
-|---|---|---|---|---|
-| `public.image` | reliable | rare | sometimes | Preferred when present |
-| `public.tiff` | sometimes | reliable | sometimes | Chrome's primary image surface |
-| `public.html` | reliable | reliable | reliable | Parse for `<img src>`, `srcset`, `og:image`, `data:` URLs |
-| `public.url` | reliable for links | unreliable for images | unreliable for images | Often points at the page, not the image |
-| `public.file-url` | drag from Finder only | n/a | n/a | |
-
-**Practical rule:** parse `public.html` *before* trying `public.tiff`.
-HTML extraction gives you a real image URL you can fetch with proper
-caching; the TIFF blob is opaque and large.
-
-A minimal HTML parser only needs to find the first `<img …>` element and
-read its `src` (and `srcset`, picking the largest candidate).
+**Cross-browser rule:** parse `public.html` *before* `public.tiff` — HTML yields
+a real fetchable image URL, while the TIFF blob is opaque and large. Browsers
+surface different UTTypes (Chrome favors `public.tiff`, Safari `public.image`);
+for the per-browser reliability matrix and the minimal HTML-extraction recipe, see
+[`references/browser-compat.md`](references/browser-compat.md).
 
 ## View Attachment: Don't Attach Drops Directly to `Button`
 
@@ -402,6 +333,10 @@ Common diagnoses:
 - Has `public.html` but no `public.image` → browser drag; route through
   the HTML parser.
 
+When the type log alone doesn't explain a misroute, see the symptom → cause → fix
+catalog and macOS-specific notes in
+[`references/troubleshooting.md`](references/troubleshooting.md).
+
 ## Undo Semantics
 
 - **Replace image (single mutation):** one undo step using your existing
@@ -410,16 +345,26 @@ Common diagnoses:
   Open the group before the first insert, close after the last; do not
   emit one undo step per item.
 
-## Constraints
+## Before You're Done
 
-- `validateDrop` is the only place to encode priority suppression.
-- `performDrop` must return `true` if you accept; do async work after.
-- Start `NSItemProvider` loading **inside** `performDrop`, not earlier.
-- Hop to `@MainActor` before touching observable state in completion
-  handlers.
-- Background/fallback handlers must reject internal-move UTTypes.
-- All drop-receiving code is gated `#if !os(tvOS)`.
-- Don't attach `.onDrop` directly to `Button` — use a wrapper with
-  `.contentShape(.rect)`.
-- The payload extractor should be pure: providers in, payload out, no
-  global state.
+Self-check before declaring drop work complete — each item verifies a rule from the
+sections above:
+
+- [ ] Priority suppression lives only in `validateDrop` — no `performDrop` returns
+  `false` after accepting (that's a *ghost drop*).
+- [ ] Every accepting `performDrop` returns `true`.
+- [ ] Provider loading starts inside `performDrop`, with a `@MainActor` hop before
+  any observable-state write.
+- [ ] Background/fallback handlers reject internal-move UTTypes.
+- [ ] All drop code is gated `#if !os(tvOS)` and the tvOS build compiles locally.
+- [ ] No `.onDrop` sits on a `Button`; its wrapper carries `.contentShape(.rect)`.
+- [ ] The payload extractor is pure — `[NSItemProvider]` in, `DroppedPayload?` out.
+
+## References
+
+- [`references/internal-reorder.md`](references/internal-reorder.md) — SDK-27
+  `reorderable()` / `reorderContainer(for:)` same-app reorder.
+- [`references/browser-compat.md`](references/browser-compat.md) — per-browser UTType
+  reliability matrix + minimal HTML image extraction.
+- [`references/troubleshooting.md`](references/troubleshooting.md) — "wrong handler
+  catches drop" symptom → cause → fix catalog + macOS notes.
