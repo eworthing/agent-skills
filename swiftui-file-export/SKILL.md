@@ -2,14 +2,15 @@
 name: swiftui-file-export
 description: >-
   SwiftUI file export patterns using the modern Transferable API on iOS 16+,
-  iPadOS 16+, and macOS 13+. Covers fileExporter root-placement rules,
-  Transferable conformance for single and multiple formats, ShareLink vs.
-  fileExporter selection, sandbox compliance, macOS entitlements, menu-bar
-  Commands integration, and tvOS gating. Use when implementing file export,
-  Transferable, fileExporter, ShareLink, NSSavePanel, sandbox compliance,
-  macOS save panel, CSV/JSON/Markdown export, document export, menu bar
-  export commands, multi-format exports, or diagnosing fileExporter silent
-  failure on macOS.
+  iPadOS 16+, macOS 13+, and visionOS 1+. Covers fileExporter root-placement
+  rules, Transferable conformance for single and multiple formats, FileDocument
+  document export, ShareLink vs. fileExporter selection, sandbox compliance,
+  macOS entitlements, menu-bar Commands integration, save-dialog configuration,
+  and tvOS gating. Use when implementing file export, Transferable, fileExporter,
+  FileDocument, ShareLink, NSSavePanel, sandbox compliance, macOS save panel,
+  save-panel customization, onCancellation, CSV/JSON/Markdown export, document
+  export, multi-document or multi-format export, menu bar export commands, or
+  diagnosing fileExporter silent failure on macOS.
 allowed-tools:
   - Read
   - Write
@@ -24,18 +25,21 @@ allowed-tools:
 ## Contents
 
 - Purpose
+- Load References As Needed
 - When to Use
 - Do NOT Use For
 - Critical Rule #1: `.fileExporter` MUST Be at the Root View Level
 - Critical Rule #2: Never Direct-Write to User Directories
 - Critical Rule #3: Menu Bar Commands Route Through Observable State
 - Transferable Implementation
+- Document Export & Dialog Configuration
 - ShareLink vs. `.fileExporter`
 - Platform Behaviors
 - macOS Entitlements
 - Export State Flow
 - tvOS Handling
 - Debugging Export Failures
+- Sibling Skills — Defer When
 - References
 - Constraints
 
@@ -47,6 +51,14 @@ inside the App Sandbox without extra entitlements beyond the standard
 user-selected file read/write key. Used incorrectly, exports silently fail
 on macOS or trip sandbox violations. This skill captures the placement,
 state, and platform rules that matter.
+
+## Load References As Needed
+
+| Topic | Reference |
+|-------|-----------|
+| `FileDocument` vs. ad-hoc `Transferable`, the `document:`/`documents:`/`items:` overloads, multi-document batch export, and the iOS 27 reference-type story | [references/filedocument.md](references/filedocument.md) |
+| Configuring the save panel — `fileExporterFilenameLabel`, `fileDialogDefaultDirectory`, and the `fileDialog*` family (iOS 17+ / macOS 14+) | [references/dialog-configuration.md](references/dialog-configuration.md) |
+| One complete compilable sample — App + Scene + `@Observable` coordinator + `Commands` + entitlements | [references/cross-platform-example.md](references/cross-platform-example.md) |
 
 ## When to Use
 
@@ -127,6 +139,13 @@ FileManager.default.createFile(atPath: path, contents: data)
 
 `.fileExporter` extends the sandbox scope automatically for the chosen URL.
 
+Sample `Logger` output for the success and failure paths:
+
+```
+export: Saved export to /Users/me/Documents/Export.json
+export: Export failed: The file couldn't be saved because you don't have permission.
+```
+
 ---
 
 ## Critical Rule #3: Menu Bar Commands Route Through Observable State
@@ -159,8 +178,11 @@ CommandGroup(after: .saveItem) {
 }
 ```
 
-`exportCoordinator` is an `@Observable` (or `ObservableObject`) instance
-owned at the `App` / `Scene` level and injected via `.environment(...)`.
+`exportCoordinator` is an `@Observable @MainActor` instance owned at the `App`
+level with `@State` and injected via `.environment(...)`; the root view reads it
+with `@Environment(ExportCoordinator.self)`. See
+[references/cross-platform-example.md](references/cross-platform-example.md) for the
+full wiring.
 
 ---
 
@@ -215,6 +237,24 @@ struct DocumentExportItem: Transferable {
 
 ---
 
+## Document Export & Dialog Configuration
+
+The ad-hoc `Transferable` path above fits screens that export a data snapshot. Two
+adjacent needs have their own reference files:
+
+- **Document-based apps** — when the value *is* the app's document model, use
+  `FileDocument` and the `.fileExporter(...document:...)` overload (iOS 14+) instead of
+  an ad-hoc `Transferable`; for batch saves use the plural `documents:`/`items:`
+  overloads. Reference-type documents (`ReferenceFileDocument`) are **deprecated in the
+  iOS 27 SDK** — see [references/filedocument.md](references/filedocument.md).
+- **Observe user-cancel** — the plain `item:...onCompletion:` overload (iOS 16+) gives
+  no signal when the user cancels. The `...onCompletion:onCancellation:` variant
+  (**iOS 17+ / macOS 14+**) does. Prefer it on a modern target so a cancel is logged,
+  not silently swallowed.
+- **Customize the panel** — `fileExporterFilenameLabel`, `fileDialogDefaultDirectory`,
+  and the `fileDialog*` family tune the save dialog (iOS 17+ / macOS 14+) — see
+  [references/dialog-configuration.md](references/dialog-configuration.md).
+
 ## ShareLink vs. `.fileExporter`
 
 | Scenario                              | ShareLink | fileExporter |
@@ -248,7 +288,10 @@ HStack {
 |------------|------------------------|-------------------|
 | iOS/iPadOS | Document picker sheet  | Share sheet       |
 | macOS      | `NSSavePanel`          | Share menu        |
+| visionOS   | Document picker (1.0+) | Share sheet (1.0+)|
 | tvOS       | Not available          | Not available     |
+
+`ShareLink` is also available on watchOS 9+; `.fileExporter` is not.
 
 ---
 
@@ -278,14 +321,15 @@ already extends the sandbox to the user-chosen URL.
    `NSSavePanel` (macOS).
 6. The system extends the sandbox scope to the user-selected URL.
 7. The completion handler receives `Result<URL, Error>` — log success and
-   surface failures.
+   surface failures. On iOS 17+ / macOS 14+ also pass `onCancellation:` to
+   observe user-cancel; the `onCompletion:`-only overload gives no cancel signal.
 
 ---
 
 ## tvOS Handling
 
 `.fileExporter`, `ShareLink`, and `UIActivityViewController` are unavailable
-on tvOS. Gate export UI with `#if os(tvOS)` and either hide the entry point
+on tvOS. Gate export UI with `#if !os(tvOS)` and either hide the entry point
 or show an informational state.
 
 ```swift
@@ -310,16 +354,35 @@ cross-platform; only the presentation layer needs the gate.
 | "Operation not permitted" at save time    | Verify `com.apple.security.files.user-selected.read-write` is in the .entitlements.   |
 | Wrong file extension                      | Each `DataRepresentation` needs its own `.suggestedFileName { ... }` for that type.   |
 | `Transferable` doesn't expose a format    | Add a chained `DataRepresentation(exportedContentType: .X)` for that `UTType`.        |
+| Export "does nothing" after picking a spot| User likely cancelled — add the `onCancellation:` overload (iOS 17+/macOS 14+) to observe it. |
+| `document:` overload saves wrong type     | Passed `contentType` must be in the document's `writableContentTypes`, else SwiftUI picks the first writable type. |
 
 ---
 
+## Sibling Skills — Defer When
+
+This skill owns the **outbound** path — turning app data into a file the user saves
+or shares via `.fileExporter` / `ShareLink` / `Transferable`. Adjacent skills own
+neighboring territory; defer to them rather than re-deriving here.
+
+- Receiving dropped/pasted payloads — `DropDelegate`, `.onDrop`, `NSItemProvider`,
+  `.dropDestination(for:)` → `swiftui-drag-drop` (the inbound counterpart).
+- Where the export button/share affordance sits in the screen, sheet-vs-toolbar
+  placement, Liquid Glass → `swiftui-native-ux`.
+- App Sandbox hardening beyond the one export entitlement, Data Protection, path
+  handling → `ios-security-hardening`.
+- Accessibility identifiers / markers so a UI test can drive the export panel →
+  `xctest-ui-testing`.
+
 ## References
 
-- WWDC22 — "Meet Transferable" (Apple, 2022)
-- Apple developer docs: `Transferable`, `DataRepresentation`, `FileDocument`
-- Apple developer docs: `View.fileExporter(isPresented:item:contentTypes:defaultFilename:onCompletion:)`
-- Apple developer docs: `ShareLink`
-- Apple developer docs: App Sandbox — `com.apple.security.files.user-selected.read-write`
+- WWDC22 — "Meet Transferable": <https://developer.apple.com/videos/play/wwdc2022/10062/>
+- `Transferable`: <https://developer.apple.com/documentation/coretransferable/transferable>
+- `FileDocument`: <https://developer.apple.com/documentation/swiftui/filedocument>
+- SwiftUI *Documents* collection (reference-type successors, `DocumentGroup`): <https://developer.apple.com/documentation/swiftui/documents>
+- `View.fileExporter(...)` overloads: <https://developer.apple.com/documentation/swiftui/view/fileexporter(ispresented:item:contenttypes:defaultfilename:oncompletion:oncancellation:)>
+- `ShareLink`: <https://developer.apple.com/documentation/swiftui/sharelink>
+- App Sandbox — `com.apple.security.files.user-selected.read-write`: <https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.files.user-selected.read-write>
 
 ---
 
