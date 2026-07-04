@@ -51,6 +51,14 @@ view
 `.topBarLeading` / `.topBarTrailing` do not exist on macOS. Use `.navigation`,
 `.primaryAction`, `.automatic`, or `.principal`. Map per platform if needed.
 
+**27-SDK toolbar APIs — mind the availability split.** The new `.topBarPinnedTrailing`
+placement and the `ToolbarOverflowMenu` type ship on iOS / iPadOS / Mac Catalyst /
+visionOS 27 but are **absent on macOS and tvOS** — a "top bar" is an iOS-shaped
+navigation bar, so gate them with `#if !os(macOS) && !os(tvOS)` and fall back to
+the macOS placements above. Two sibling 27 APIs are safe cross-platform:
+`.toolbarMinimizeBehavior(_:for:)` (all platforms) and `.visibilityPriority(_:)`
+(all platforms; macOS floor is 26.1, others 27) — no gating needed.
+
 ## `@CommandsBuilder` — `ForEach` Composition
 
 Result builders for menus require explicit, statically-known children.

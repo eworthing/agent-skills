@@ -126,14 +126,19 @@ two diverge, this table follows what is useful in practice and the Notes
 column explains the gap. Each row links to the canonical Apple Developer
 documentation page for drift-checking against new SDKs.
 
+The 27-cycle rows below were verified against the 27 **beta** SDK docs (floors
+may shift before GA); existing rows unchanged this pass. Last verified: 2026-07-04.
+
 | API | iOS | iPadOS | Catalyst | macOS | tvOS | Notes | Apple Docs |
 |---|---|---|---|---|---|---|---|
 | `TabView` style `.page` | Yes | Yes | Yes | **No** | Yes | Use `.automatic` on macOS | [PageTabViewStyle](https://developer.apple.com/documentation/swiftui/pagetabviewstyle) |
 | `fullScreenCover` | Yes | Yes | Yes | **No** | Yes | Modifier is unavailable on macOS — use `.sheet` | [fullScreenCover](https://developer.apple.com/documentation/swiftui/view/fullscreencover(ispresented:ondismiss:content:)) |
 | `@Environment(\.editMode)` | Yes | Yes | Yes | **No** | **No** (functional) | Symbol exists on tvOS per Apple docs but there is no edit interface — gate with `#if os(iOS)` to avoid dead code | [editMode](https://developer.apple.com/documentation/swiftui/environmentvalues/editmode) |
 | `.topBarLeading` / `.topBarTrailing` | Yes | Yes | Yes | **No** | **No** | macOS / tvOS need different placements | [ToolbarItemPlacement](https://developer.apple.com/documentation/swiftui/toolbaritemplacement) |
-| `glassEffect` modifier | iOS 26+ | iPadOS 26+ | Catalyst 26+ | macOS 26+ | tvOS 26+ | Liquid Glass — wrap with `if #available(iOS 26, *)` for older deployment targets | [glassEffect](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:)) |
+| `.topBarPinnedTrailing` placement + `ToolbarOverflowMenu` | 27+ | 27+ | 27+ | **No** | **No** | New in the 27 SDKs (beta; also visionOS 27) — **absent on macOS/tvOS**; use existing placements there. Sibling 27 toolbar APIs `toolbarMinimizeBehavior` / `visibilityPriority(_:)` **are** cross-platform | [topBarPinnedTrailing](https://developer.apple.com/documentation/swiftui/toolbaritemplacement/topbarpinnedtrailing) |
+| `glassEffect` modifier | iOS 26+ | iPadOS 26+ | Catalyst 26+ | macOS 26+ | tvOS 26+ | Liquid Glass — wrap with `if #available(iOS 26, *)` for older deployment targets. On the 27 SDKs the `UIDesignRequiresCompatibility` opt-out is ignored (iOS/iPadOS/Catalyst/macOS/tvOS 27), so Liquid Glass is mandatory on all five | [glassEffect](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:)) |
 | Drag-and-drop **receiving** (`.onDrop`, `DropDelegate`) | Yes | Yes | Yes | Yes | **No** | tvOS has no pointer / touch drag source | [onDrop](https://developer.apple.com/documentation/swiftui/view/ondrop(of:istargeted:perform:)) |
+| Reorderable containers (`.reorderable()`, `.reorderContainer(for:isEnabled:move:)`) | 27+ | 27+ | 27+ | 27+ | **No** | New in the 27 SDKs (beta; also visionOS/watchOS 27). tvOS is **not** in the availability list — gate with `#if !os(tvOS)`, same family as drag-receiving | [reorderable()](https://developer.apple.com/documentation/swiftui/dynamicviewcontent/reorderable()) |
 | `UIImpactFeedbackGenerator` (haptics) | Yes | Yes | Yes | **No** (use `NSHapticFeedbackManager`) | **No** (no hardware) | Gate with `#if os(iOS)`, not `canImport(UIKit)` | [UIImpactFeedbackGenerator](https://developer.apple.com/documentation/uikit/uiimpactfeedbackgenerator) |
 | `@CommandsBuilder` `ForEach` composition | n/a | n/a | n/a | **Fragile** | n/a | macOS commands — flatten via `Menu` for portability across SDK versions | [CommandsBuilder](https://developer.apple.com/documentation/swiftui/commandsbuilder) |
 | `NavigationSplitView` | iOS 16+ | iPadOS 16+ | Catalyst 16+ | macOS 13+ | tvOS 16+ (adapts to single column) | macOS / Catalyst often need explicit `columnVisibility` of `.detailOnly` or `.all` | [NavigationSplitView](https://developer.apple.com/documentation/swiftui/navigationsplitview) |
@@ -142,6 +147,10 @@ When in doubt, check the Apple Developer "Availability" line in the symbol's
 documentation — SwiftUI sometimes ships the **type** on a platform but the
 **modifier or initializer** is unavailable, and sometimes the symbol exists
 but the platform offers no UI affordance to drive it.
+
+**Not divergence — all-platform 27-SDK changes** (migration, not gating): `@State`
+expands via the [`State()`](https://developer.apple.com/documentation/swiftui/state)
+macro under Xcode 27; `ReferenceFileDocument` is deprecated for new `ReadableDocument` / `WritableDocument` (27.0). Defer to `swiftui-expert-skill`.
 
 ## Per-Platform Detail
 

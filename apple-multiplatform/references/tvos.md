@@ -2,7 +2,10 @@
 
 tvOS imports `UIKit` (so `canImport(UIKit)` evaluates true) but disallows a
 long list of UIKit APIs at the symbol level. **Always prefer `#if os(...)` for
-API gating on tvOS** — `canImport(UIKit)` is insufficient.
+API gating on tvOS** — `canImport(UIKit)` is insufficient. The tvOS-excluded
+family is not only UIKit symbols (haptics, `editMode`, drag receiving): newer
+SwiftUI-native APIs land tvOS-excluded too — e.g. reorderable containers in the
+27 SDKs — so gate those with `#if !os(tvOS)` regardless of framework.
 
 For tvOS focus engine, accessibility deltas, and design regressions see the
 dedicated `apple-tvos` skill. This file covers cross-platform compatibility
@@ -13,6 +16,7 @@ gating only.
 | Topic | Pattern | Wrong | Right |
 |---|---|---|---|
 | Drag-and-drop receiving | Wrap `.onDrop`, `DropDelegate`, `NSItemProvider` extraction in `#if !os(tvOS)` | `#if canImport(UIKit) /* .onDrop */` | `#if !os(tvOS) /* .onDrop */` |
+| Reorderable containers (27 SDKs) | Wrap `.reorderable()` / `.reorderContainer(for:isEnabled:move:)` in `#if !os(tvOS)` — new in the 27 SDKs on every platform **except** tvOS | `#if !os(macOS) /* .reorderable() */` (still compiles-fails on tvOS) | `#if !os(tvOS) /* .reorderable() */` |
 | `editMode` | Wrap with `#if os(iOS)` | `#if !os(tvOS) /* @Environment editMode */` (still compiles on macOS, where editMode does not exist) | `#if os(iOS) /* @Environment editMode */` |
 | Haptics (`UIImpactFeedbackGenerator`) | Requires `#if os(iOS)` | `#if canImport(UIKit) /* UIImpactFeedbackGenerator */` — compiles on tvOS, crashes at runtime | `#if os(iOS) /* UIImpactFeedbackGenerator */` |
 | Focus | Use `.focusSection()`, `.focusable()`, `.onMoveCommand`, `.focused($state)` | Touch / hover modifiers | Focus-driven APIs |

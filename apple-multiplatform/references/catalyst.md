@@ -3,6 +3,11 @@
 Catalyst inherits the iOS API surface and renders through a UIKit variant that
 bridges to AppKit on macOS. Things that work on iPad regularly diverge here.
 
+**Status (27 cycle):** Mac Catalyst is **not deprecated** — the [Apple
+documentation](https://developer.apple.com/documentation/uikit/mac-catalyst)
+carries no deprecation notice and still presents it as a supported way to run an
+iPad app on the Mac. Keep the guards below; do not treat Catalyst as removed.
+
 ## Branching Catalyst-Specifically
 
 Catalyst is `os(iOS)` AND `targetEnvironment(macCatalyst)`. To branch Catalyst
