@@ -17,7 +17,7 @@ gating, resume routing, retry envelopes) to a finished `CURRENT_REVIEW.json` art
   the deterministic fixtures already guarantee. They are not the skill's core value, and they
   overlap the fixture layer by design. Don't read a high pass rate here as "the skill works."
 
-## Layer 2 — refactoring-judgment (`evals.json` #12–#24, `scenarios/`)
+## Layer 2 — refactoring-judgment (`evals.json` #12–#42, `scenarios/`)
 
 Does the Critic/reviewer make the **right loop decision** on a refactor that *looks* finished?
 This is where the skill's real leverage lives — severity calibration, the 9.5 acceptance
@@ -76,10 +76,16 @@ bare model approximates or omits. That gap is the lift.
 | `principal-invariant-owner-flag` (#25) | `principal-invariant-owner-restraint` (#26) | domain invariant enforced independently in two modules (split) vs. single domain method both paths call through |
 | `principal-duplicated-rule-flag` (#27) | `principal-duplicated-rule-restraint` (#28) | eligibility predicate duplicated across View + Repository + Worker with drift vs. `DiscountPolicy` already centralizes it |
 | `principal-process-owner-flag` (#29) | `principal-process-owner-restraint` (#30) | multi-step cross-module write with no process owner, no compensation vs. `PurchaseCoordinator` owns the saga + rollback |
+| `principal-consistency-boundary-flag` (#31) | `principal-consistency-boundary-restraint` (#32) | committed roadmap shears a strong consistency boundary vs. the same boundary remains grounded and required |
+| `principal-abstraction-seam-flag` (#33) | `principal-abstraction-seam-restraint` (#34) | grounded variation shears a unified seam vs. no committed variation, so unification is correct |
+| `reentrancy-reserve-flag` (#35) | `reentrancy-reserve-restraint` (#36) | check-then-claim reservation after suspension vs. await before a transactional/unique authority claim |
+| `write-only-state-flag` (#37) | `write-only-state-restraint` (#38) | stored runtime fields with writes but no authority reads vs. state that owns a real runtime decision |
+| `projection-order-flag` (#39) | `projection-order-restraint` (#40) | shaped output from unordered/non-unique ordering vs. one projection owner with stable tie-breaker |
+| `view-owned-time-flag` (#41) | `view-owned-time-restraint` (#42) | durable workflow time owned by a view task/timer vs. presentation rendering a coordinator-owned deadline |
 
 ### Layer-2 domain-grain extension
 
-`evals.json` #25–#30 extend the behavioral layer **one grain up**: from component-level
+`evals.json` #25–#34 extend the behavioral layer **one grain up**: from component-level
 defects (single-file ownership, SwiftUI state discipline) to **cross-module / domain
 principal-defect** scenarios. The same flag/restraint discipline applies — every flag has
 a legitimate twin that must not be flagged — and the same structured verdict contract is
@@ -97,6 +103,31 @@ used. The carve-outs under test are:
   sequence with no process/coordinator owner and no compensating rollback is a
   missing-process-owner defect. The restraint twin installs a coordinator that owns the
   saga and the rollback path.
+- **Grounded consistency boundary** (`principal-consistency-boundary`): a present-tense
+  correct ACID boundary can still be wrong when a committed force moves one side out of
+  the transaction and explicitly permits eventual consistency. The restraint twin keeps
+  the paired entity co-located and strongly consistent under the same roadmap.
+- **Grounded abstraction seam** (`principal-abstraction-seam`): a unified seam is wrong
+  when committed variation will split eligibility, channel, retry, and audit behavior.
+  The restraint twin keeps the unified seam where no grounded variation exists.
+
+### Layer-2 advisory-audit extension
+
+`evals.json` #35–#42 add advisory audit coverage for four recurring patterns without
+turning them into deterministic gates or project-specific rules:
+
+- **Reservation after suspension** (`reentrancy-reserve`): flag check-then-claim
+  reentrancy when a claim is recorded only after an `await`; do not flag an await that
+  precedes an atomic transactional/unique claim authority.
+- **State with no authority** (`write-only-state`): flag stored fields with writes but no
+  application/test read site or runtime decision; do not flag state that owns a clear
+  decision such as duplicate-work coalescing.
+- **Unstable shaped output** (`projection-order`): flag user-visible projection order
+  derived from unordered input or non-unique sort keys; do not flag a single projection
+  owner that uses a durable tie-breaker.
+- **Workflow time in presentation** (`view-owned-time`): flag durable workflow clocks owned
+  by view tasks/timers; do not flag purely presentational countdown rendering of a
+  coordinator-owned deadline.
 
 #### Baseline manifest and "no silent exclusion" contract
 

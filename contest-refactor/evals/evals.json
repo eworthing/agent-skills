@@ -518,6 +518,134 @@
         "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
         "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape"
       ]
+    },
+    {
+      "id": 35,
+      "name": "reentrancy-reserve-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. SeatHoldCoordinator checks heldSeats, then suspends on pricing.quote before inserting the reservation mark. Because actor methods are reentrant across await, two same-seat calls can both pass the guard and both save holds. This is reservation after suspension / check-then-claim reentrancy. concurrency < 9.5; blocks_95 true. Remedy: reserve before the first suspension with rollback on failure, or move check+claim into one actor-isolated/transactional/unique-constraint authority.",
+      "files": [
+        "scenarios/reentrancy-reserve-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags reservation after suspension / check-then-claim reentrancy as the problem",
+        "[discriminating] Maps it to concurrency with a score < 9.5",
+        "[discriminating] Recommends reserving before the first suspension or using one transactional/actor/unique-constraint authority for check+claim",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 36,
+      "name": "reentrancy-reserve-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag reservation after suspension. Pricing awaits before the durable claim, but pricing is not the claim. The actual authority is SeatHoldRepository.withTransaction plus the active-seat unique index; it rechecks and inserts the hold atomically after the await. No same-seat double reservation path exists, and a concurrent same-seat test covers the carve-out. concurrency takes no deduction for reservation-after-suspension reasons.",
+      "files": [
+        "scenarios/reentrancy-reserve-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the transactional-after-await carve-out as reservation after suspension",
+        "[restraint] Does not name a reservation-after-suspension / check-then-claim reentrancy smell",
+        "[restraint] verdict is not \"rejected\" for reservation-after-suspension reasons",
+        "[restraint] Attributes no concurrency deduction to the repository transaction / unique-constraint authority"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "write-only-state-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. UploadAdapter adds lastUploadedBatchID and lastFailureMessage, but source search shows only declarations and assignments; application code and tests read UploadAdapter.statuses instead. The new fields are state with no authority: they mirror stream events, make no runtime decision, and can drift from the actual status source. state_management < 9.5; blocks_95 true. Remedy: delete the fields or make the existing status stream/projection the single authoritative surface.",
+      "files": [
+        "scenarios/write-only-state-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags state with no authority / write-only runtime state as the problem",
+        "[discriminating] Maps it to state_management with a score < 9.5",
+        "[discriminating] Recommends deleting the fields or routing the fact through the authoritative status stream/projection",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 38,
+      "name": "write-only-state-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag state with no authority. UploadCoordinator.inFlightBatchIDs has a real read site in the guard, owns the duplicate-suppression decision, and is covered by a concurrent duplicate-trigger test. It is runtime state with clear authority, not a write-only mirror. state_management takes no deduction for this field.",
+      "files": [
+        "scenarios/write-only-state-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag inFlightBatchIDs as state with no authority because it has a read site and owns duplicate suppression",
+        "[restraint] Does not name a write-only-state / ghost-state smell",
+        "[restraint] verdict is not \"rejected\" for state-with-no-authority reasons",
+        "[restraint] Attributes no state_management deduction to the in-flight registry carve-out"
+      ]
+    },
+    {
+      "id": 39,
+      "name": "projection-order-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. DashboardViewState shapes user-visible rows from Dictionary values and sorts only by a non-unique display name. Equal names compare neither before nor after each other, so dictionary iteration order leaks into display order. This is unstable shaped output: wrong-row continuity and flaky snapshots are possible. data_flow < 9.5; blocks_95 true. Remedy: keep shaping in one projection owner and add a stable tie-breaker such as durable ID or explicit domain order.",
+      "files": [
+        "scenarios/projection-order-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags unstable shaped output / nondeterministic projection order as the problem",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends one projection owner with a stable tie-breaker such as durable ID or explicit domain order",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "projection-order-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag unstable shaped output. DashboardViewState is the single projection owner and sorts active projects by display name plus durable ID tie-breaker. Equal-name rows have deterministic order, and a projection test asserts that observable order. data_flow takes no deduction for projection ordering.",
+      "files": [
+        "scenarios/projection-order-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the by-name-then-ID projection as unstable shaped output",
+        "[restraint] Does not name a nondeterministic projection-order smell",
+        "[restraint] verdict is not \"rejected\" for projection-order reasons",
+        "[restraint] Attributes no data_flow deduction to the stable projection-order carve-out"
+      ]
+    },
+    {
+      "id": 41,
+      "name": "view-owned-time-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. HoldCountdownView owns the 10-minute expiration timer in @State and a SwiftUI .task, then calls expireHold when the countdown reaches zero. Hold expiration is a durable workflow fact; view disappearance or task recreation can cancel or restart it. This is workflow time in presentation. data_flow < 9.5; blocks_95 true. Remedy: move expiration to an application/domain coordinator, reducer effect, or clock-injected policy; the view should render an owned deadline/status.",
+      "files": [
+        "scenarios/view-owned-time-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags workflow time in presentation as the problem",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends moving expiration to an application/domain coordinator, reducer effect, or clock-injected policy while the view renders status",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "view-owned-time-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag workflow time in presentation. HoldExpirationCoordinator owns the durable expiration workflow with an injected Clock and tests; HoldCountdownView only renders the coordinator-owned deadline via TimelineView and never expires the hold. The view-owned time is purely presentational. data_flow takes no deduction for this carve-out.",
+      "files": [
+        "scenarios/view-owned-time-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag TimelineView rendering of a coordinator-owned deadline as workflow time in presentation",
+        "[restraint] Does not name a view-owned-time / presentation-owned-workflow smell",
+        "[restraint] verdict is not \"rejected\" for workflow-time-in-presentation reasons",
+        "[restraint] Attributes no data_flow deduction to the presentational countdown carve-out"
+      ]
     }
   ]
 }

@@ -126,7 +126,8 @@ targeted one?
 - Scan the changed hunks for the universal smells: ownership ambiguity, framework
   leakage, hidden state, unbound `Task { }`, parallel fields admitting impossible
   combinations, dictionary iteration for ordered output, projection sorts without
-  stable ID tie-breaker.
+  stable ID tie-breaker, reservation after suspension, state with no authority,
+  unstable shaped output, workflow time in presentation.
 - Apply the selected lens (Apple / Generic) to the changed hunks only. Stack-
   specific regressions count.
 - **Invariant preservation (risk-bearing diffs).** Treat these as review cues,

@@ -32,6 +32,8 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 - **Collection identity (correctness, not perf).** `ForEach` / `List` over **dynamic or reorderable** data needs identity that is stable, outlives the view, and is not derived from mutable content. (`.indices` / offset is acceptable for genuinely static content — not a blanket ban.) Unstable identity on dynamic data is a `state_management` finding, not a style nit.
 - **Passed-value ownership.** Declaring a parent-passed value as `@State` / `@StateObject` captures the initial value and ignores later parent updates — a bug **only when continued parent synchronization is expected**. Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent. (`state_management`.)
 - **Invalidation problems need evidence.** Surface an over-invalidation finding only from a **demonstrated** source — Instruments, `Self._printChanges()`, a measured hot path — not from heuristics. Do not assert that passing an `@Observable` object broadens invalidation (the Observation framework tracks only the properties a view actually reads), and do not turn `AnyView`, non-unary rows, or missing `Equatable` into blanket findings. Map a demonstrated case to `framework_idioms`.
+- **Unstable shaped output.** User-visible rows, sections, projections, exports, and summaries need deterministic shaping at one owner. Iterating `Dictionary` / `Set`, sorting named entities only by a non-unique display label, or resolving child data before applying the selected scope can produce flicker, flaky snapshots, or wrong-row continuity. Remedy: shape once in the projection/application boundary, then use a durable tie-breaker (`id`, explicit order, sequence) or a domain-proven unique order. Map to `state_management` or `data_flow`, not style.
+- **Workflow time in presentation.** SwiftUI `.task`, `Timer`, `Task.sleep`, and `.onReceive` are fine for visual animation, local debounce, or ephemeral UI dismissal. They are not honest owners for domain workflow time: holds, expirations, retries, grace periods, sync windows, payment timeouts, entitlement refresh, or other durable clocks. Presentation lifecycle cancellation/recreation makes those facts non-durable and hard to test. Remedy: move workflow time to an application/domain coordinator, reducer effect, or clock-injected policy; views render deadlines and status.
 
 ## Concurrency & Runtime Safety
 
@@ -53,6 +55,8 @@ Counts do not score. High or low @MainActor / async / actor count is not itself 
 TSAN findings, compiler concurrency warnings, Non-Sendable warnings are serious evidence; map each to source and behavior.
 
 Unstructured `Task` usage needs ownership proof. Treat unclear concurrency as architecture weakness, not implementation footnote.
+
+**Reservation after suspension.** Any check-then-claim flow that suspends between "this slot/resource/work item is available" and "this attempt owns it" is reentrant. Another task can pass the same check during the await and both can commit. Reserve/mark/claim before the first suspension, or perform check+claim in one actor-isolated/transactional/unique-constraint authority after the suspension. Do not flag the latter carve-out: awaiting before the claim is fine when the actual authority rechecks and atomically claims before exposing success.
 
 ### Continuation-bridge delegate audit (mandatory when adapter uses `withCheckedThrowingContinuation` + timeout)
 
@@ -140,12 +144,14 @@ Using `canImport(UIKit)` to gate a symbol the tvOS SDK lacks is a correctness bu
 - Duplicated state across view, domain, service, cache, persistence layers.
 - Navigation/presentation state that can drift out of sync with domain state.
 - Async flows that can leave UI in invalid intermediate combinations.
+- State with no authority: mutable fields that are written but never read for a runtime decision, mirror another stream/domain fact, or survive only as "last known" debug data. They are not owners; they are ghost state that can drift.
 
 Penalize state models permitting impossible combinations. Recommend explicit state-machine formalization only where it removes real ambiguity — do not force enum-heavy modeling everywhere.
 
 ## Ownership (Apple-flavored)
 
 Map actual writers. Do not infer ownership from access control alone.
+For every mutable property you treat as runtime-significant, map both writers and readers. A field with write sites but no application/test read site has no authority; delete it, emit the fact through the existing stream, or move the fact to the type that actually decides behavior.
 
 Treat as smoke (confirm before findings):
 - global mutable state
