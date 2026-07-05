@@ -646,6 +646,102 @@
         "[restraint] verdict is not \"rejected\" for workflow-time-in-presentation reasons",
         "[restraint] Attributes no data_flow deduction to the presentational countdown carve-out"
       ]
+    },
+    {
+      "id": 43,
+      "name": "stable-workflow-identity-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. The write authority receives a raw visible-row offset from a filtered/sorted projection, then applies that offset to the playlist's underlying ordered items. Projection position is not durable workflow identity: reorder, filtering, removal, or stale view state can make the same integer point at a different item. This is stable workflow identity / position-as-authority drift. data_flow < 9.5; blocks_95 true. Remedy: pass durable domain IDs, target-neighbor IDs, or validate the exact ordered ID slice at the write authority before mutating it.",
+      "files": [
+        "scenarios/stable-workflow-identity-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags stable workflow identity / projection-position-as-authority as the problem",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends durable domain IDs, target-neighbor IDs, or exact ordered-slice validation at the write authority",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 44,
+      "name": "stable-workflow-identity-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag stable workflow identity. The view sends the visible ordered ID slice plus moved IDs and target neighbor ID; the reducer recomputes the same visible slice from authoritative state and aborts if it differs before mutating. The write authority uses durable IDs and exact ordered-slice validation, so raw projection offsets are not the identity. data_flow takes no deduction for this carve-out.",
+      "files": [
+        "scenarios/stable-workflow-identity-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the durable-ID plus exact ordered-slice validation carve-out as stable workflow identity drift",
+        "[restraint] Does not name a projection-position / raw-offset-as-authority smell",
+        "[restraint] verdict is not \"rejected\" for stable-workflow-identity reasons",
+        "[restraint] Attributes no data_flow deduction to the validated ordered-ID-slice carve-out"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "causal-runtime-context-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. A completion event for an existing sync record now resolves the destination from mutable selectedFolderID instead of the record's captured request folder. Selection can change while the sync is in flight, so a result for folder A can be applied to folder B. This is causal runtime context drift: runtime events for an existing record must use the record's captured request/context, or a current-state command must validate identity/version at the write authority. state_management < 9.5; blocks_95 true.",
+      "files": [
+        "scenarios/causal-runtime-context-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags causal runtime context drift / ambient-current-state resolution as the problem",
+        "[discriminating] Maps it to state_management with a score < 9.5",
+        "[discriminating] Recommends using the runtime record's captured request/context or validating current identity/version at the write authority",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "causal-runtime-context-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag causal runtime context. The completion event carries the sync record ID, the reducer looks up that record, and the destination comes from the request captured when the record was created. selectedFolderID is used only for new user commands, not for applying an existing record's result. state_management takes no deduction for ambient-current-state reasons.",
+      "files": [
+        "scenarios/causal-runtime-context-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the record-captured request/context carve-out as causal runtime context drift",
+        "[restraint] Does not name an ambient-current-state / causal-context smell",
+        "[restraint] verdict is not \"rejected\" for causal-runtime-context reasons",
+        "[restraint] Attributes no state_management deduction to looking up the destination from the runtime record"
+      ]
+    },
+    {
+      "id": 47,
+      "name": "adapter-output-contract-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. AuthAdapter receives token.expiresAt from the SDK, while AuthClient.Session promises expiresAt for downstream refresh scheduling, but the adapter publishes expiresAt: nil. No local write-only field is needed for the defect: the seam contract promises a fact, the adapter receives it, and the published output drops it. This is adapter output contract incompleteness. data_flow < 9.5; blocks_95 true. Remedy: publish token.expiresAt through the Interface or narrow the Interface contract so another owner explicitly resolves refresh timing.",
+      "files": [
+        "scenarios/adapter-output-contract-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags adapter output contract completeness / dropped promised Interface fact as the problem",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends publishing the received fact or narrowing the Interface contract",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 48,
+      "name": "adapter-output-contract-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag adapter output contract completeness. AuthAdapter receives token.expiresAt and publishes it through AuthClient.Session; the refresh scheduler consumes that Interface value in tests. The adapter output contract is complete. data_flow takes no deduction for adapter output reasons.",
+      "files": [
+        "scenarios/adapter-output-contract-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the adapter as dropping a promised Interface fact",
+        "[restraint] Does not name an adapter-output-contract / dropped-output smell",
+        "[restraint] verdict is not \"rejected\" for adapter-output-contract reasons",
+        "[restraint] Attributes no data_flow deduction to the adapter publishing the promised expiresAt value"
+      ]
     }
   ]
 }

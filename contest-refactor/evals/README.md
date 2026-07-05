@@ -17,7 +17,7 @@ gating, resume routing, retry envelopes) to a finished `CURRENT_REVIEW.json` art
   the deterministic fixtures already guarantee. They are not the skill's core value, and they
   overlap the fixture layer by design. Don't read a high pass rate here as "the skill works."
 
-## Layer 2 — refactoring-judgment (`evals.json` #12–#42, `scenarios/`)
+## Layer 2 — refactoring-judgment (`evals.json` #12–#48, `scenarios/`)
 
 Does the Critic/reviewer make the **right loop decision** on a refactor that *looks* finished?
 This is where the skill's real leverage lives — severity calibration, the 9.5 acceptance
@@ -36,7 +36,7 @@ value. The rebuilt layer fixes that:
    The signal is the *decision fields*, not prose.
 2. **Buried trap, success-framed.** Each scenario (`scenarios/<id>/scenario.md`) is a realistic
    diff the Actor reports as *converged, tests green*. The model must **find** the problem; the
-   prompt is neutral and identical across all nine (it leaks no methodology, so a no-skill arm
+   prompt is neutral and identical across the behavioral cases (it leaks no methodology, so a no-skill arm
    gets no hints).
 3. **Flag paired with restraint.** Every "should reject" has a legitimate look-alike that must
    **not** be flagged. A maximally paranoid over-flagger passes the flag cases and **fails the
@@ -82,6 +82,9 @@ bare model approximates or omits. That gap is the lift.
 | `write-only-state-flag` (#37) | `write-only-state-restraint` (#38) | stored runtime fields with writes but no authority reads vs. state that owns a real runtime decision |
 | `projection-order-flag` (#39) | `projection-order-restraint` (#40) | shaped output from unordered/non-unique ordering vs. one projection owner with stable tie-breaker |
 | `view-owned-time-flag` (#41) | `view-owned-time-restraint` (#42) | durable workflow time owned by a view task/timer vs. presentation rendering a coordinator-owned deadline |
+| `stable-workflow-identity-flag` (#43) | `stable-workflow-identity-restraint` (#44) | raw projection position as write authority vs. durable IDs or exact ordered-slice validation |
+| `causal-runtime-context-flag` (#45) | `causal-runtime-context-restraint` (#46) | runtime event resolved from ambient current state vs. record-captured request/context |
+| `adapter-output-contract-flag` (#47) | `adapter-output-contract-restraint` (#48) | adapter drops a promised downstream fact vs. publishes it or narrows the Interface contract |
 
 ### Layer-2 domain-grain extension
 
@@ -113,7 +116,7 @@ used. The carve-outs under test are:
 
 ### Layer-2 advisory-audit extension
 
-`evals.json` #35–#42 add advisory audit coverage for four recurring patterns without
+`evals.json` #35–#48 add advisory audit coverage for recurring patterns without
 turning them into deterministic gates or project-specific rules:
 
 - **Reservation after suspension** (`reentrancy-reserve`): flag check-then-claim
@@ -128,6 +131,21 @@ turning them into deterministic gates or project-specific rules:
 - **Workflow time in presentation** (`view-owned-time`): flag durable workflow clocks owned
   by view tasks/timers; do not flag purely presentational countdown rendering of a
   coordinator-owned deadline.
+- **Stable workflow identity** (`stable-workflow-identity`): flag write authority driven by
+  raw projection offsets or cursor indexes that can drift from the ordered collection being
+  mutated; do not flag durable IDs, target-neighbor IDs, or exact ordered-slice validation.
+- **Causal runtime context** (`causal-runtime-context`): flag completion/error/progress events
+  for an existing runtime record that resolve behavior from mutable ambient current state; do
+  not flag record-captured request/context or current-state commands with identity/version
+  validation.
+- **Adapter output contract completeness** (`adapter-output-contract`): flag adapters that
+  receive an externally-owned fact promised by the Interface but publish `nil`, zero, empty,
+  or a placeholder instead; do not flag adapters that publish the promised fact or Interfaces
+  that explicitly leave the fact to another owner.
+
+IDs #43–#48 follow the same flag/restraint advisory-eval pattern as #35–#42. They are
+host-dispatched behavioral coverage in `evals.json` and `scenarios/`; they are not registered
+in `principal_baseline.json`, which remains scoped to `principal-*` domain-grain scenarios.
 
 #### Baseline manifest and "no silent exclusion" contract
 

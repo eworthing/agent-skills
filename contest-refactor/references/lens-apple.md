@@ -30,6 +30,7 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 - Previews and fixtures supported by design but not used as proof of quality.
 - Do not reward MVVM, repositories, coordinators, or protocol abstraction unless they reduce ambiguity or coupling per the architectural tests in `architecture-rubric.md`.
 - **Collection identity (correctness, not perf).** `ForEach` / `List` over **dynamic or reorderable** data needs identity that is stable, outlives the view, and is not derived from mutable content. (`.indices` / offset is acceptable for genuinely static content — not a blanket ban.) Unstable identity on dynamic data is a `state_management` finding, not a style nit.
+- **Stable workflow identity.** View/projection offsets, raw cursor indexes, and "current row" positions are not durable workflow identity once a workflow can survive reorder, filtering, removal, async delay, or scope changes. A write authority may accept positions only when it validates the exact ordered slice it will mutate. Otherwise pass durable domain IDs, target-neighbor IDs, or a versioned projection token. Map to `data_flow` or `state_management`, not style.
 - **Passed-value ownership.** Declaring a parent-passed value as `@State` / `@StateObject` captures the initial value and ignores later parent updates — a bug **only when continued parent synchronization is expected**. Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent. (`state_management`.)
 - **Invalidation problems need evidence.** Surface an over-invalidation finding only from a **demonstrated** source — Instruments, `Self._printChanges()`, a measured hot path — not from heuristics. Do not assert that passing an `@Observable` object broadens invalidation (the Observation framework tracks only the properties a view actually reads), and do not turn `AnyView`, non-unary rows, or missing `Equatable` into blanket findings. Map a demonstrated case to `framework_idioms`.
 - **Unstable shaped output.** User-visible rows, sections, projections, exports, and summaries need deterministic shaping at one owner. Iterating `Dictionary` / `Set`, sorting named entities only by a non-unique display label, or resolving child data before applying the selected scope can produce flicker, flaky snapshots, or wrong-row continuity. Remedy: shape once in the projection/application boundary, then use a durable tie-breaker (`id`, explicit order, sequence) or a domain-proven unique order. Map to `state_management` or `data_flow`, not style.
@@ -145,6 +146,7 @@ Using `canImport(UIKit)` to gate a symbol the tvOS SDK lacks is a correctness bu
 - Navigation/presentation state that can drift out of sync with domain state.
 - Async flows that can leave UI in invalid intermediate combinations.
 - State with no authority: mutable fields that are written but never read for a runtime decision, mirror another stream/domain fact, or survive only as "last known" debug data. They are not owners; they are ghost state that can drift.
+- Causal runtime context: runtime events about an existing attempt/session/record must resolve behavior from the context captured on that record, not mutable ambient "current" state that can advance before the event arrives. Commands against the current selection are fine when they validate the current identity/version at the write authority; completion/error/progress events for an existing record should use the record's captured request/context.
 
 Penalize state models permitting impossible combinations. Recommend explicit state-machine formalization only where it removes real ambiguity — do not force enum-heavy modeling everywhere.
 
@@ -152,6 +154,7 @@ Penalize state models permitting impossible combinations. Recommend explicit sta
 
 Map actual writers. Do not infer ownership from access control alone.
 For every mutable property you treat as runtime-significant, map both writers and readers. A field with write sites but no application/test read site has no authority; delete it, emit the fact through the existing stream, or move the fact to the type that actually decides behavior.
+For adapter seams, compare the Interface output contract with facts the adapter receives from the external SDK/system. If the Interface promises a value that downstream consumers need, dropping it to `nil`, zero, empty, or a placeholder is adapter output contract incompleteness; publish the fact or narrow the Interface contract. This is distinct from state with no authority: no stored field is required for the smell, because the defect is a promised seam output being discarded.
 
 Treat as smoke (confirm before findings):
 - global mutable state
