@@ -1,6 +1,7 @@
 ---
 name: contest-refactor
 description: Triggers an autonomous Actor-Critic refactoring loop against the current codebase. Aggressively refactors the current workspace to a 9.5+ standard using a strict ICA-grounded architectural rubric (deletion test, two-adapter rule, depth-as-leverage). Use when the user invokes /contest-refactor, says "contest refactor", asks for an autonomous refactor loop, wants to elevate code quality against a strict rubric, or requests Actor-Critic style iterative refactoring of the current project.
+argument-hint: "[--dry-run] [--cap <n>] [--scope <dir>] [--strictness standard|aggressive] [--test-filter <pattern>] [--incidents <path>] [--reset] [--purge [--confirm]]"
 allowed-tools:
   - Read
   - Write

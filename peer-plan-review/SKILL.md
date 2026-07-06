@@ -8,6 +8,7 @@ description: >
   review, mentions '<provider> review'
   (codex/claude/copilot/opencode/agy/antigravity/gemini), wants to validate a
   plan before executing it, or asks for peer review.
+argument-hint: "<claude|codex|agy|opencode|gemini|copilot> [fable|opus|sonnet|gpt-5.5|gpt-5.4-mini|flash|deepseek|glm|<model>] [low|medium|high|xhigh]"
 allowed-tools:
   - Read
   - Write

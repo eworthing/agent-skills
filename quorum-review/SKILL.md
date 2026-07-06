@@ -13,6 +13,7 @@ description: >
   migrations, architecture), or when the user asks for "panel review",
   "consensus review", "multi-model review", "quorum review", or a
   "second opinion across AI providers".
+argument-hint: "<artifact-file> [--reviewers claude:sonnet,codex,agy] [--mode plan|spec|code] [--threshold unanimous|super|majority] [--verifier provider:model] [--skip-verification]"
 allowed-tools:
   - Read
   - Write
