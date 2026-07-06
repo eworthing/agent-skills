@@ -60,4 +60,4 @@
  }
 ```
 
-The write authority never trusts an offset as identity. It receives durable track IDs, recomputes the authoritative visible ordered slice, and refuses to mutate if the slice changed before the action arrived. `PlaylistReducerTests.testMoveFromStaleProjectionFailsClosed` covers the stale-slice path.
+`PlaylistReducerTests.testMoveFromStaleProjectionFailsClosed` dispatches a move whose `visibleOrder` no longer matches the recomputed projection and asserts the reducer sets `presentationError = .stalePlaylistView` without mutating `playlist.items`.

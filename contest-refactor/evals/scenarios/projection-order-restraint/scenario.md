@@ -31,4 +31,4 @@
  }
 ```
 
-The projection is the single owner of dashboard row shaping. It sorts by display name for users and by durable ID for equal names. `DashboardViewStateTests.testEqualNamesSortByID` asserts the observable row order.
+`DashboardViewStateTests.testEqualNamesSortByID` builds two active projects with the same display name and asserts the observable row order.

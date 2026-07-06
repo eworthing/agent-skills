@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "description": "Baseline manifest for advisory-audit scenarios (evals.json #35-#48). Every advisory scenario directory (one of the families below) must be registered here. The selftest scripts/_advisory_baseline_selftest.py enforces this contract mechanically and also cross-checks that every evals/scenarios/* directory is referenced by an evals.json entry (global no-orphan check). expected_baseline records the PRE-REGISTERED hypothesis (flags: miss; restraints: hold); baseline_observed records the ACTUAL measured result (null until a K=5 run is recorded). Do not rewrite the hypothesis after measuring.",
+  "families": [
+    "reentrancy-reserve",
+    "write-only-state",
+    "projection-order",
+    "view-owned-time",
+    "stable-workflow-identity",
+    "causal-runtime-context",
+    "adapter-output-contract"
+  ],
+  "thresholds": {
+    "recall_target": 0.8,
+    "restraint_regression_tolerance": 0
+  },
+  "measurement": {
+    "dates": [
+      "2026-07-05"
+    ],
+    "rounds": "3 host-dispatched 3-arm/2-arm measurements: Sonnet (original scenarios), Sonnet (source-fidelity rebuild), Haiku (rebuild, no-skill vs current). K=1 draw per arm.",
+    "model": "claude-sonnet-5 and claude-haiku-4-5",
+    "method": "no-skill / pre-edit(git main) / current(this branch) Critic reviews; verdict JSON graded mechanically (flag caught iff verdict==rejected OR blocks_95 AND touched dim < 9.5; twin holds iff approved AND !blocks_95; view-owned-time graded at noticing level = smell surfaced). current-no_skill = recall lift.",
+    "grader_provenance": "Deterministic mechanical grade from the verdict JSON, no grader subagent. Grading rule committed in the workflow scripts under the session workflows/scripts dir; rule text reproduced in evals/README.md.",
+    "headline": "RECALL lift = 0 on every flag across all three rounds and both base models: bare Haiku and bare Sonnet both catch every defect unaided. These component-grain defects are not recall-discriminating for any model, and the source-fidelity rebuild did not change this. The demonstrated skill value is (a) RESTRAINT: the carve-out prose repairs >=2 over-flags that bare/old-skill reviewers make (stable-workflow-identity, adapter-output-contract twins), and (b) VOCABULARY: the current arm names the exact canon smell and cites architecture-rubric.md where bare arms use ad-hoc prose. Treat this layer as restraint + vocabulary coverage, NOT recall proof.",
+    "axis": "restraint_and_vocabulary_not_recall"
+  },
+  "scenarios": [
+    {
+      "id": "reentrancy-reserve-flag",
+      "kind": "flag",
+      "pair_id": "reentrancy-reserve",
+      "dimension": "concurrency",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_all_arms",
+      "observed_note": "expected miss; observed caught by bare Haiku(1.0) and bare Sonnet(2.0). Non-discriminating on recall."
+    },
+    {
+      "id": "reentrancy-reserve-restraint",
+      "kind": "restraint",
+      "pair_id": "reentrancy-reserve",
+      "dimension": "concurrency",
+      "category": "advisory_audit",
+      "status": "baseline_unmeasured",
+      "expected_baseline": "hold",
+      "baseline_observed": null,
+      "observed_note": "Twin rewritten after measurement: earlier version dropped the await-ordering guarantee (all Sonnet arms flagged it); now reserves the task before the suspension AND keeps startListening async awaiting the initial refresh. Needs remeasure."
+    },
+    {
+      "id": "write-only-state-flag",
+      "kind": "flag",
+      "pair_id": "write-only-state",
+      "dimension": "state_management",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_all_arms",
+      "observed_note": "expected miss; observed caught by bare Haiku(8.0) and bare Sonnet(4.0)."
+    },
+    {
+      "id": "write-only-state-restraint",
+      "kind": "restraint",
+      "pair_id": "write-only-state",
+      "dimension": "state_management",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held",
+      "observed_note": "Held on both Haiku arms and Sonnet arms. Twin fixed earlier so the coalesced caller awaits the shared task (no swallowed failure)."
+    },
+    {
+      "id": "projection-order-flag",
+      "kind": "flag",
+      "pair_id": "projection-order",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_all_arms",
+      "observed_note": "expected miss; observed caught all arms (Haiku 2.0, Sonnet 3.0)."
+    },
+    {
+      "id": "projection-order-restraint",
+      "kind": "restraint",
+      "pair_id": "projection-order",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held",
+      "observed_note": "Held across arms."
+    },
+    {
+      "id": "view-owned-time-flag",
+      "kind": "flag",
+      "pair_id": "view-owned-time",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "surfaced_all_arms",
+      "observed_note": "Noticing-level: surfaced by all arms (magic-delay / view-owned scheduling). Non-blocking smell per source F016 severity."
+    },
+    {
+      "id": "view-owned-time-restraint",
+      "kind": "restraint",
+      "pair_id": "view-owned-time",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held",
+      "observed_note": "Held on Haiku(both) and Sonnet(no_skill,current); Sonnet pre_edit(old skill) over-flagged the ephemeral toast timer, current holds."
+    },
+    {
+      "id": "stable-workflow-identity-flag",
+      "kind": "flag",
+      "pair_id": "stable-workflow-identity",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_all_arms",
+      "observed_note": "expected miss; observed caught all arms (Haiku 4.0, Sonnet 3.0)."
+    },
+    {
+      "id": "stable-workflow-identity-restraint",
+      "kind": "restraint",
+      "pair_id": "stable-workflow-identity",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held_current_only",
+      "observed_note": "RESTRAINT LIFT: bare Haiku(9,conditional) and Sonnet no_skill/pre_edit over-flag the ID-validated fail-closed reorder; the current(skill) arm holds (9.6/9.5). The carve-out prose is doing the work."
+    },
+    {
+      "id": "causal-runtime-context-flag",
+      "kind": "flag",
+      "pair_id": "causal-runtime-context",
+      "dimension": "state_management",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_all_arms",
+      "observed_note": "expected miss; observed caught all arms (Haiku 3.0, Sonnet 3.0)."
+    },
+    {
+      "id": "causal-runtime-context-restraint",
+      "kind": "restraint",
+      "pair_id": "causal-runtime-context",
+      "dimension": "state_management",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held",
+      "observed_note": "Held across arms."
+    },
+    {
+      "id": "adapter-output-contract-flag",
+      "kind": "flag",
+      "pair_id": "adapter-output-contract",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "miss",
+      "baseline_observed": "caught_all_arms",
+      "observed_note": "expected miss; observed caught all arms (Haiku 2.0, Sonnet 2.0)."
+    },
+    {
+      "id": "adapter-output-contract-restraint",
+      "kind": "restraint",
+      "pair_id": "adapter-output-contract",
+      "dimension": "data_flow",
+      "category": "advisory_audit",
+      "status": "measured",
+      "expected_baseline": "hold",
+      "baseline_observed": "held_current_only",
+      "observed_note": "RESTRAINT LIFT: bare Haiku(6.5,rejected) and Sonnet no_skill/pre_edit over-flag the complete adapter; the current(skill) arm holds (9.0/9.5)."
+    }
+  ]
+}

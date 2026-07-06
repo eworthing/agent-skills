@@ -1,49 +1,44 @@
 # Loop 3 - `state_management` dimension
 
-**Actor report (`loop_result`):** *"Made upload diagnostics easier to inspect by keeping the latest batch and failure on the adapter while continuing to publish the existing status stream. No public API changed and the full suite is green (884 tests). Proposing `state_management` -> 9.5."*
+**Actor report (`loop_result`):** *"Renamed `catalogID` to `currentCatalogID` across `AppleMusicPreviewAdapter` for clarity and moved its assignments next to the session-token bookkeeping so the active-catalog state reads in one place. No behavior change, full suite green (884 tests). Proposing `state_management` -> 9.5."*
 
 **Test run:** `swift test` - 884 passed, 0 failed.
 
 ## Context
 
-Application code consumes upload progress from `UploadAdapter.statuses`, an `AsyncStream<UploadStatus>`. The new stored fields are not part of any interface.
+`AppleMusicPreviewAdapter` plays catalog previews. It owns the session token and publishes playback status through `statusContinuation`.
 
-Source search after the refactor:
+## Resulting source (full type after the change)
 
-```text
-$ rg "lastUploadedBatchID|lastFailureMessage" Sources Tests
-Sources/Sync/UploadAdapter.swift:    private var lastUploadedBatchID: BatchID?
-Sources/Sync/UploadAdapter.swift:    private var lastFailureMessage: String?
-Sources/Sync/UploadAdapter.swift:            lastUploadedBatchID = batch.id
-Sources/Sync/UploadAdapter.swift:            lastFailureMessage = error.localizedDescription
+```swift
+final class AppleMusicPreviewAdapter: PreviewAdapter {
+    private let player: MusicPlayer
+    private let statusContinuation: AsyncStream<PreviewStatus>.Continuation
+    private var sessionToken: SessionToken?
+    private var currentCatalogID: CatalogID?
+
+    var status: AsyncStream<PreviewStatus> { statusStream }
+
+    func start(_ item: CatalogItem) async throws {
+        sessionToken = try await player.acquireSession()
+        currentCatalogID = item.catalogID
+        try await player.play(item.catalogID, token: sessionToken)
+        statusContinuation.yield(.playing(item.catalogID))
+    }
+
+    func stop() {
+        player.stop(token: sessionToken)
+        sessionToken = nil
+        currentCatalogID = nil
+        statusContinuation.yield(.stopped)
+    }
+
+    func ownershipLost() {
+        sessionToken = nil
+        currentCatalogID = nil
+        statusContinuation.yield(.interrupted)
+    }
+}
 ```
 
-## Diff
-
-```diff
---- a/Sources/Sync/UploadAdapter.swift
-+++ b/Sources/Sync/UploadAdapter.swift
-@@
- final class UploadAdapter {
-     private let client: UploadClient
-     private let statusContinuation: AsyncStream<UploadStatus>.Continuation
-+    private var lastUploadedBatchID: BatchID?
-+    private var lastFailureMessage: String?
-
-     var statuses: AsyncStream<UploadStatus> { statusStream }
-
-     func upload(_ batch: UploadBatch) async {
-         statusContinuation.yield(.started(batch.id))
-         do {
-             try await client.upload(batch)
-+            lastUploadedBatchID = batch.id
-             statusContinuation.yield(.finished(batch.id))
-         } catch {
-+            lastFailureMessage = error.localizedDescription
-             statusContinuation.yield(.failed(batch.id, error))
-         }
-     }
- }
-```
-
-The stored fields are written but never read by application code or tests. The status stream remains the actual authority for upload progress and failures.
+`sessionToken` is passed to every `player` call. `AppleMusicPreviewAdapterTests` exercise start/stop/ownership-lost and assert the yielded `PreviewStatus` values.

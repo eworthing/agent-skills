@@ -1,45 +1,42 @@
 # Loop 13 - `data_flow` dimension
 
-**Actor report (`loop_result`):** *"Simplified the auth adapter by removing token-expiry plumbing from the SDK delegate. Session updates still include the required user and token data, and the auth suite is green (688 tests). Proposing `data_flow` -> 9.5."*
+**Actor report (`loop_result`):** *"Consolidated the three `updateState` call sites in `RemoteAudioPreviewAdapter` to build `PreviewState` the same way. Less duplication, full suite green (688 tests). Proposing `data_flow` -> 9.5."*
 
 **Test run:** `swift test` - 688 passed, 0 failed.
 
 ## Context
 
-`AuthClient.Session` is the application Interface emitted by the adapter. Downstream `RefreshScheduler` reads `session.expiresAt` to schedule token renewal before expiry. The external SDK delegate provides the token expiry date on every successful authorization.
+`PreviewState` is the application Interface the adapter publishes. Downstream progress UI reads `durationSeconds` and `currentTimeSeconds` to render a progress bar (`currentTimeSeconds / durationSeconds`). The remote item's duration is available from `item.duration.seconds`.
 
-## Diff
+## Resulting source
 
-```diff
---- a/Sources/Auth/AuthClient.swift
-+++ b/Sources/Auth/AuthClient.swift
-@@
- protocol AuthClient {
-     var sessionUpdates: AsyncStream<Session> { get }
- }
+```swift
+struct PreviewState {
+    let currentTimeSeconds: Double
+    let durationSeconds: Double
+}
 
- extension AuthClient {
-     struct Session: Equatable {
-         let userID: UserID
-         let accessToken: String
-         let expiresAt: Date?
-     }
- }
---- a/Sources/Auth/LiveAuthAdapter.swift
-+++ b/Sources/Auth/LiveAuthAdapter.swift
-@@
- final class LiveAuthAdapter: SDKAuthDelegate {
-     private let updates: AsyncStream<AuthClient.Session>.Continuation
+final class RemoteAudioPreviewAdapter {
+    private let continuation: AsyncStream<PreviewState>.Continuation
+    private var item: RemoteItem?
 
-     func authSDK(_ sdk: AuthSDK, didAuthorize token: SDKToken) {
-         updates.yield(AuthClient.Session(
-             userID: UserID(rawValue: token.subject),
-             accessToken: token.value,
--            expiresAt: token.expiresAt
-+            expiresAt: nil
-         ))
-     }
- }
+    func start(_ item: RemoteItem) {
+        self.item = item
+        continuation.yield(PreviewState(currentTimeSeconds: 0, durationSeconds: 0))
+    }
+
+    func loopBack() {
+        continuation.yield(PreviewState(currentTimeSeconds: 0, durationSeconds: 0))
+    }
+
+    func advance(to time: Double) {
+        continuation.yield(PreviewState(currentTimeSeconds: time, durationSeconds: 0))
+    }
+
+    private func tickDecision(_ item: RemoteItem, at time: Double) -> TickDecision {
+        time >= item.duration.seconds ? .loop : .continue
+    }
+}
 ```
 
-The adapter receives `token.expiresAt`, and the Interface promises `expiresAt`, but the output now drops the fact. The downstream scheduler treats `nil` as "no refresh needed," so a real expiring token can be left without renewal. This is not a write-only-field issue; the defect is at the adapter output contract.
+`RemoteAudioPreviewAdapterTests` assert `currentTimeSeconds` advances across ticks and that playback loops at the end.

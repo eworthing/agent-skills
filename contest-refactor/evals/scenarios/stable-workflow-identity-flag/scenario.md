@@ -1,77 +1,43 @@
 # Loop 9 - `data_flow` dimension
 
-**Actor report (`loop_result`):** *"Deleted the row-command DTOs and simplified playlist edits by passing the SwiftUI move/delete offsets straight into the reducer. The view code is smaller, projection remains unchanged, and the full suite is green (1,186 tests). Proposing `data_flow` -> 9.5."*
+**Actor report (`loop_result`):** *"Tidied roster reorder. Pulled the order normalization into a helper and kept the reducer applying the move to the roster's ordered players. Smaller reducer method, full suite green (1,186 tests). Proposing `data_flow` -> 9.5."*
 
 **Test run:** `swift test` - 1,186 passed, 0 failed.
 
 ## Context
 
-`PlaylistViewState.visibleRows` filters archived tracks and sorts visible rows by title. The reducer mutates `Playlist.items`, whose stored order is the user's playback order. The two sequences are not guaranteed to have the same indexes.
+A roster has active and benched players interleaved by `orderIndex`. The live screen shows only the active players; the user can drag to reorder them and can move a player to the top.
 
-## Diff
+## Resulting source
 
-```diff
---- a/Sources/Playlists/PlaylistView.swift
-+++ b/Sources/Playlists/PlaylistView.swift
-@@
- struct PlaylistView: View {
-     let viewState: PlaylistViewState
-     let dispatch: (PlaylistAction) -> Void
+```swift
+// RosterLiveViewState (projection)
+var activePlayers: [PlayerRow] {
+    sortedPlayers.filter { $0.isActive }.map(PlayerRow.init)
+}
 
-     var body: some View {
-         List {
-             ForEach(viewState.visibleRows) { row in
-                 PlaylistRow(row: row)
-             }
--            .onMove { source, destination in
--                let orderedIDs = viewState.visibleRows.map(\.id)
--                let movedIDs = source.map { orderedIDs[$0] }
--                let beforeID = destination < orderedIDs.count ? orderedIDs[destination] : nil
--                dispatch(.moveVisibleRows(movedIDs: movedIDs, beforeID: beforeID, visibleOrder: orderedIDs))
--            }
--            .onDelete { offsets in
--                let ids = offsets.map { viewState.visibleRows[$0].id }
--                dispatch(.deleteTracks(ids))
--            }
-+            .onMove { source, destination in
-+                dispatch(.moveVisibleRows(source: source, destination: destination))
-+            }
-+            .onDelete { offsets in
-+                dispatch(.deleteVisibleRows(offsets))
-+            }
-         }
-     }
- }
---- a/Sources/Playlists/PlaylistReducer.swift
-+++ b/Sources/Playlists/PlaylistReducer.swift
-@@
- enum PlaylistAction {
--    case moveVisibleRows(movedIDs: [TrackID], beforeID: TrackID?, visibleOrder: [TrackID])
--    case deleteTracks([TrackID])
-+    case moveVisibleRows(source: IndexSet, destination: Int)
-+    case deleteVisibleRows(IndexSet)
- }
+// RosterLiveView (feature)
+List {
+    ForEach(viewState.activePlayers) { PlayerRowView(row: $0) }
+        .onMove { source, destination in
+            dispatch(.reorderRoster(from: source, to: destination))
+        }
+}
 
- extension PlaylistReducer {
-     mutating func reduce(_ action: PlaylistAction, state: inout PlaylistState) {
-         switch action {
--        case let .moveVisibleRows(movedIDs, beforeID, visibleOrder):
--            guard visibleOrder == PlaylistViewState.project(from: state).visibleRows.map(\.id) else {
--                state.presentationError = .stalePlaylistView
--                return
--            }
--            state.playlist.moveTracks(ids: movedIDs, before: beforeID)
--        case let .deleteTracks(ids):
--            state.playlist.removeTracks(ids: ids)
-+        case let .moveVisibleRows(source, destination):
-+            state.playlist.items.move(fromOffsets: source, toOffset: destination)
-+        case let .deleteVisibleRows(offsets):
-+            for offset in offsets.sorted(by: >) {
-+                state.playlist.items.remove(at: offset)
-+            }
-         }
-     }
- }
+// AppReducer+Workflow+Roster
+func reorderRoster(from source: IndexSet, to destination: Int, state: inout AppState) {
+    var ordered = state.players.sorted { $0.orderIndex < $1.orderIndex }
+    ordered.move(fromOffsets: source, toOffset: destination)
+    normalizeOrderIndices(&ordered, into: &state)
+}
+
+func movePlayerToTop(_ playerID: PlayerID, state: inout AppState) {
+    let index = state.players.firstIndex { $0.id == playerID } ?? 0
+    var ordered = state.players.sorted { $0.orderIndex < $1.orderIndex }
+    let player = ordered.remove(at: index)
+    ordered.insert(player, at: 0)
+    normalizeOrderIndices(&ordered, into: &state)
+}
 ```
 
-The refactor makes a projection index the write authority. A row offset from the filtered/title-sorted view can point at a different track in the stored playback order, and it can become stale after a concurrent reorder or removal. The green suite covers only a playlist whose visible order happens to match stored order.
+`state.players` contains active and benched players. `RosterReducerTests.testReorderActivePlayers` uses a roster whose players are all active.

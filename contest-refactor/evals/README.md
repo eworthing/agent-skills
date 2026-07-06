@@ -138,14 +138,49 @@ turning them into deterministic gates or project-specific rules:
   for an existing runtime record that resolve behavior from mutable ambient current state; do
   not flag record-captured request/context or current-state commands with identity/version
   validation.
-- **Adapter output contract completeness** (`adapter-output-contract`): flag adapters that
+- **Adapter output contract incompleteness** (`adapter-output-contract`): flag adapters that
   receive an externally-owned fact promised by the Interface but publish `nil`, zero, empty,
   or a placeholder instead; do not flag adapters that publish the promised fact or Interfaces
   that explicitly leave the fact to another owner.
 
-IDs #43–#48 follow the same flag/restraint advisory-eval pattern as #35–#42. They are
-host-dispatched behavioral coverage in `evals.json` and `scenarios/`; they are not registered
-in `principal_baseline.json`, which remains scoped to `principal-*` domain-grain scenarios.
+All seven patterns are drawn from validated findings in a heavily-audited source repository
+(`/code-review high`, 2026-07-05); each canon smell in `architecture-rubric.md § Vocabulary —
+Smells` maps to one or more of those findings. The scenarios are registered in
+`advisory_baseline.json` and guarded by `scripts/_advisory_baseline_selftest.py`, which also
+enforces a global no-orphan contract (every `scenarios/*` dir is referenced by an `evals.json`
+entry).
+
+#### Measured axis: restraint + vocabulary, NOT recall
+
+These advisory scenarios were measured three times (see `advisory_baseline.json § measurement`):
+Sonnet on the original scenarios, Sonnet on a source-fidelity rebuild, and Haiku on the rebuild.
+The result is consistent and load-bearing:
+
+- **Recall lift is 0 on every flag, for every base model.** Bare Haiku and bare Sonnet both catch
+  all seven defects unaided — they are real correctness bugs a competent model finds by reading the
+  code. Rebuilding the flag scenarios so the defect is a *static* property of plausible finished
+  code (rather than the visible diff delta) did **not** change this. **Do not read a passing flag
+  case as evidence the skill lifts recall here.** It doesn't; these component-grain defects are too
+  legible. (The `principal-*` layer, whose defects are cross-module, is where recall lift lives.)
+- **Restraint lift is real.** On the `stable-workflow-identity` and `adapter-output-contract`
+  twins, bare/older reviewers over-flag the legitimate carve-out; the current lens carve-out prose
+  makes the reviewer hold. That over-flag repair is the discriminating signal.
+- **Vocabulary precision is real.** The skill-equipped arm names the exact canon smell and cites
+  `architecture-rubric.md`; bare arms catch the same bug in ad-hoc prose.
+
+So this layer earns its place as **restraint (carve-out discipline) + vocabulary consistency**
+coverage. `view-owned-time` is a *noticing*-level pair (the source finding, F016, is a Noticeable
+scheduling smell, not a blocking defect): the flag is graded on surfacing the smell, not on blocking
+9.5.
+
+**Scenario-authoring rule this layer enforces on itself:** a flag scenario must not encode the
+defect as the visible diff delta, and must not hand over the audit legwork (no inlined `rg`
+read-site proof, no "these two sequences are not guaranteed equal" narration). The reviewer must do
+the read-site grep / index-provenance trace / publish-path check itself. The de-leak verification
+(below) greps both `*-flag` and `*-restraint` inputs for smell names and legwork proofs.
+
+These IDs are **not** registered in `principal_baseline.json` (which stays scoped to `principal-*`
+domain-grain scenarios); they have their own `advisory_baseline.json` + selftest.
 
 #### Baseline manifest and "no silent exclusion" contract
 

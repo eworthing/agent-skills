@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "note": "Raw K=5 per-scenario reps for the advisory-audit baseline (evals.json #35-#48). Mirrors principal_baseline_replication.json. Populated by the Phase-D 3-arm run; empty until measured. Each attempt: {scenario_id, arm (no_skill|pre_edit|current), slot_index, attempt_index, status (valid|invalid), verdict_json, host_grade (caught|held|missed|over_flagged), semantic (bool), grade_rationale, invalid_reason}. The dormant _check_replication block in _advisory_baseline_selftest.py enforces this shape once the manifest carries replication blocks.",
+  "prereg": {
+    "flags": "expected_baseline=miss (bare/pre-edit model misses the defect)",
+    "restraints": "expected_baseline=hold (bare/pre-edit model does not over-flag the twin)"
+  },
+  "captured_at": null,
+  "per_scenario": {},
+  "attempts": []
+}

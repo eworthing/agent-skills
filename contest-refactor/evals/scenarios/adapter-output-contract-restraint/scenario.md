@@ -1,41 +1,41 @@
 # Loop 14 - `data_flow` dimension
 
-**Actor report (`loop_result`):** *"Moved auth refresh scheduling behind the `AuthClient.Session` stream. The adapter now publishes the SDK token expiry directly through the Interface, and the scheduler consumes that value in tests. Full suite green (731 tests). Proposing `data_flow` -> 9.5."*
+**Actor report (`loop_result`):** *"Consolidated the three `updateState` call sites in `RemoteAudioPreviewAdapter` to build `PreviewState` the same way, threading the item duration through each. Less duplication, full suite green (731 tests). Proposing `data_flow` -> 9.5."*
 
 **Test run:** `swift test` - 731 passed, 0 failed.
 
 ## Context
 
-`AuthClient.Session` is the application Interface emitted by the adapter. Downstream `RefreshScheduler` reads `session.expiresAt` to schedule token renewal before expiry. The external SDK delegate provides the token expiry date on every successful authorization.
+`PreviewState` is the application Interface the adapter publishes. Downstream progress UI reads `durationSeconds` and `currentTimeSeconds` to render a progress bar. The remote item's duration is available from `item.duration.seconds`.
 
-## Diff
+## Resulting source
 
-```diff
---- a/Sources/Auth/LiveAuthAdapter.swift
-+++ b/Sources/Auth/LiveAuthAdapter.swift
-@@
- final class LiveAuthAdapter: SDKAuthDelegate {
-     private let updates: AsyncStream<AuthClient.Session>.Continuation
+```swift
+struct PreviewState {
+    let currentTimeSeconds: Double
+    let durationSeconds: Double
+}
 
-     func authSDK(_ sdk: AuthSDK, didAuthorize token: SDKToken) {
-         updates.yield(AuthClient.Session(
-             userID: UserID(rawValue: token.subject),
-             accessToken: token.value,
-+            expiresAt: token.expiresAt
-         ))
-     }
- }
---- a/Tests/Auth/RefreshSchedulerTests.swift
-+++ b/Tests/Auth/RefreshSchedulerTests.swift
-@@
-     @Test func schedulesRefreshBeforePublishedExpiry() async {
-         let expiry = clock.now.advanced(by: .seconds(3600))
-         authUpdates.yield(.init(userID: userID, accessToken: "abc", expiresAt: expiry))
+final class RemoteAudioPreviewAdapter {
+    private let continuation: AsyncStream<PreviewState>.Continuation
+    private var item: RemoteItem?
 
-         await scheduler.drain()
+    private func publish(currentTime: Double) {
+        continuation.yield(PreviewState(
+            currentTimeSeconds: currentTime,
+            durationSeconds: item?.duration.seconds ?? 0
+        ))
+    }
 
-         #expect(scheduler.nextRefresh == expiry.advanced(by: .seconds(-300)))
-     }
+    func start(_ item: RemoteItem) {
+        self.item = item
+        publish(currentTime: 0)
+    }
+
+    func loopBack() { publish(currentTime: 0) }
+
+    func advance(to time: Double) { publish(currentTime: time) }
+}
 ```
 
-The adapter publishes the fact that the Interface promises, and a downstream test asserts the scheduler consumes that exact value. There is no dropped SDK fact and no need for adapter-local stored state.
+`RemoteAudioPreviewAdapterTests.testPublishesDuration` asserts every emitted `PreviewState` after `start` carries the item's non-zero `durationSeconds`.

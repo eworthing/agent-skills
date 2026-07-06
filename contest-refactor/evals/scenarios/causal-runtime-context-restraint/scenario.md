@@ -6,7 +6,7 @@
 
 ## Context
 
-A user can start a folder sync, switch folders while the sync runs, and then receive the completion event later. Selection is valid for new user commands, but completion/error/progress events for an existing runtime record must use the context that started that record.
+A user can start a folder sync, switch folders while the sync runs, and then receive the completion event later. The sync record captures the request it was started with.
 
 ## Diff
 
@@ -44,4 +44,4 @@ A user can start a folder sync, switch folders while the sync runs, and then rec
  }
 ```
 
-The reducer still uses `selectedFolderID` for new "start sync" commands. Existing sync events use the captured request on the runtime record, and `SyncReducerTests.testCompletionAppliesToOriginalFolderAfterSelectionChange` covers the selection-change path.
+`SyncReducerTests.testCompletionAppliesToOriginalFolderAfterSelectionChange` starts a sync for one folder, changes `selectedFolderID`, delivers completion, and asserts which folder receives the result.
