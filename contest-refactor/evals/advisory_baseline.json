@@ -43,10 +43,10 @@
       "pair_id": "reentrancy-reserve",
       "dimension": "concurrency",
       "category": "advisory_audit",
-      "status": "baseline_unmeasured",
+      "status": "measured",
       "expected_baseline": "hold",
-      "baseline_observed": null,
-      "observed_note": "Twin rewritten after measurement: earlier version dropped the await-ordering guarantee (all Sonnet arms flagged it); now reserves the task before the suspension AND keeps startListening async awaiting the initial refresh. Needs remeasure."
+      "baseline_observed": "held",
+      "observed_note": "Rewritten to the atomic-transactional-claim carve-out (no start/stop lifecycle surface). Held by bare Sonnet(9.5) and current skill(9.5); pre_edit(old skill) over-flags on a Meta-Rule-4 evidence demand for unshown repository internals, not a real residual. Two earlier same-domain twin attempts (non-async reorder; shared init task) each carried a real residual a strong reviewer caught."
     },
     {
       "id": "write-only-state-flag",
