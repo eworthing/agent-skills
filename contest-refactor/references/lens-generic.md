@@ -8,6 +8,13 @@ Apply when stack detected is Rust, Go, Python, Node, Java, Kotlin, Ruby, etc. Us
 - Hidden control flow (globals, ambient context, thread-local mutation) called out.
 - Concurrency-safe access discipline: locks/channels/actors used consistently per language idiom.
 
+Canon smells (`architecture-rubric.md`) apply to any stack — telltales:
+- **State with no authority** — a struct field / instance var / dict entry written but never read for a decision. Map writers *and* readers.
+- **Causal runtime context** — a completion/error callback for an in-flight job that reads a mutable "current" global/selection instead of the request captured when the job started (`ctx` on the job, closure capture, correlation ID).
+- **Stable workflow identity** — a list index / cursor offset / row position used as a write key into a collection that can reorder, filter, or shrink. Prefer durable IDs or validated ordered slices.
+- **Unstable shaped output** — user-visible order shaped by iterating a hash map / set, or sorting by a non-unique key with no tie-breaker.
+- **Adapter output contract incompleteness** — an adapter drops a promised field to null/zero/empty when the external system supplied it (see Coupling & Leakage).
+
 ## Hidden State Machines
 
 - Booleans/optionals jointly encoding one logical state → collapse to discriminated enum/sum type/tagged union (per language).
@@ -22,6 +29,7 @@ Apply when stack detected is Rust, Go, Python, Node, Java, Kotlin, Ruby, etc. Us
 - **Python**: asyncio task references stored, not orphaned. `asyncio.create_task` results awaited or cancelled. GIL not assumed where `multiprocessing` is used.
 - **Node**: Promise chains awaited; no floating promises. AbortController for cancellation. No event-loop blocking sync I/O.
 - **JVM**: Coroutine scope ownership clear. No `GlobalScope.launch` outside top-level. Structured concurrency.
+- **Reservation after suspension** (canon smell, any async runtime): a check-then-claim that `await`s between "available" and "claimed" is reentrant — another task passes the same check during the suspension. Applies to asyncio, JS event loop, Go `select`, Kotlin coroutines. Claim before the suspension, or check+claim in one atomic/transactional/unique-constraint step.
 
 ## Coupling & Leakage
 

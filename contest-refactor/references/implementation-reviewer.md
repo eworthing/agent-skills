@@ -123,12 +123,13 @@ see Conditional below).
 Did the diff introduce any NEW finding at the same or higher severity than the
 targeted one?
 
-- Scan the changed hunks for the universal smells: ownership ambiguity, framework
+- Scan the changed hunks for the universal smells (defined in `architecture-rubric.md`
+  § Vocabulary — Smells; both lenses inherit them): ownership ambiguity, framework
   leakage, hidden state, unbound `Task { }`, parallel fields admitting impossible
   combinations, dictionary iteration for ordered output, projection sorts without
   stable ID tie-breaker, reservation after suspension, state with no authority,
   unstable shaped output, workflow time in presentation, stable workflow identity,
-  causal runtime context, adapter output contract completeness.
+  causal runtime context, adapter output contract incompleteness.
 - Apply the selected lens (Apple / Generic) to the changed hunks only. Stack-
   specific regressions count.
 - **Invariant preservation (risk-bearing diffs).** Treat these as review cues,
