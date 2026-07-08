@@ -26,9 +26,17 @@ Loaded unconditionally alongside the selected stack lens. These cover cross-cutt
 
 Record loaded lenses (selected + always-included) in Discovery as a list: `["lens-apple.md", "lens-security.md"]`.
 
+## Opt-in lenses (loaded only via `--force-lens <name>`)
+
+Not loaded by default. A user-supplied `--force-lens <name>` naming one of these **adds** it alongside the selected stack lens rather than replacing it (see [startup.md § flag catalog](startup.md) for the additive-vs-override distinction).
+
+| Lens | Scope |
+|---|---|
+| [lens-efficiency.md](lens-efficiency.md) | Recomputed derived values, sequential independent effects — opt-in, not loaded by default |
+
 ## Adding a new lens
 
-1. Create `lens-<name>.md` in this directory. Mirror `lens-apple.md` structure: stack-specific concurrency rules, hidden state machine signals, idiomatic checks, language-specific Core Questions. For always-included cross-cutting lenses, mirror `lens-security.md` structure (no stack-specific assumptions).
+1. Create `lens-<name>.md` in this directory. Mirror `lens-apple.md` structure: stack-specific concurrency rules, hidden state machine signals, idiomatic checks, language-specific Core Questions. For always-included cross-cutting lenses, mirror `lens-security.md` structure (no stack-specific assumptions). Opt-in lenses (loaded only via `--force-lens <name>`) mirror `lens-security.md`'s structure the same way.
 2. Reuse `architecture-rubric.md` vocabulary + tests. Lens describes language idioms or cross-cutting concerns, not architectural tests (those are universal).
-3. Add a row to the appropriate table above (Selected stack lens for stack-specific; Always-included for cross-cutting).
+3. Add a row to the appropriate table above (Selected stack lens for stack-specific; Always-included for cross-cutting; Opt-in for `--force-lens`-only lenses).
 4. Do not edit SKILL.md. Step 0 reads this registry to pick the stack lens and load always-included lenses.
