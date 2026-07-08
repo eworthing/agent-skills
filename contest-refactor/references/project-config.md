@@ -52,7 +52,7 @@ When the loop reads CLI flags + config:
 
 1. Hard-coded skill defaults (`loop_cap: 10`, lens detection per `lenses.md`).
 2. `.contest-refactor.toml` at the repo root (when present).
-3. CLI flags (`--lens`, `--cap`, `--test-filter`, etc.) override config.
+3. CLI flags (`--force-lens`, `--cap`, `--test-filter`, etc.) override config.
 4. Per-invocation flags (`--dry-run`) are invocation-scoped and not persisted.
 
 The config never raises a residual to `HALT_SUCCESS` unless the residual's `expires` date is in the future at loop start.

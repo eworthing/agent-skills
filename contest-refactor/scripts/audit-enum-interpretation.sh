@@ -34,6 +34,7 @@
 set -u
 
 ROOT="${1:-.}"
+ROOT="${ROOT%/}"
 PRUNE_RE='/(\.build|\.git|node_modules|Pods|vendor|DerivedData)(/|$)'
 CAP=200
 
