@@ -17,12 +17,25 @@ Run: python3 scripts/_audit_clones_selftest.py   (exit 0 = pass, 1 = fail)
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 AUDIT = Path(__file__).with_name("audit_clones.py")
+
+
+def _load_audit_module():
+    """Import audit_clones.py by path so fixtures can call its internal
+    tokenizer/fingerprint/jaccard stages directly, instead of eyeballing
+    similarity from source text (the CLI never prints sub-threshold scores)."""
+    spec = importlib.util.spec_from_file_location("audit_clones", AUDIT)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules["audit_clones"] = module  # dataclass decorator needs this registered first
+    spec.loader.exec_module(module)
+    return module
 
 
 def _write(root: Path, files: dict[str, str]) -> None:
@@ -122,47 +135,82 @@ def case_b_renamed_identifiers(base: Path) -> str | None:
     return None
 
 
-# --- (c) shallow structural resemblance, genuinely distinct beyond that ----
+# --- (c) genuine near-miss: shared guard-clause preamble, diverges after ---
+# Both bodies open with the *identical* five-guard validation preamble (a
+# realistic copy-paste-then-diverge shape) but each ends with distinct logic.
+# Measured against this repo's real _normalize_tokens/_fingerprint/_jaccard
+# pipeline this pair scores ~0.615 similarity: well below the 0.85 threshold,
+# but nowhere near 0 — a substantial-overlap-that-still-falls-short case,
+# not something that would pass at any threshold regardless of value.
 def case_c_shallow_resemblance_not_flagged(base: Path) -> str | None:
     root = base / "c"
+    shared_preamble = (
+        "    guard let amount = order.amount, amount > 0 else {\n"
+        "        return 0.0\n"
+        "    }\n"
+        "    guard order.customer.isActive else {\n"
+        "        return 0.0\n"
+        "    }\n"
+        "    guard !order.region.isEmpty else {\n"
+        "        return 0.0\n"
+        "    }\n"
+        "    guard order.currency.isValid else {\n"
+        "        return 0.0\n"
+        "    }\n"
+        "    guard order.items.count > 0 else {\n"
+        "        return 0.0\n"
+        "    }\n"
+        "    for discount in order.discounts {\n"
+        "        print(discount)\n"
+        "    }\n"
+    )
+    payment_text = (
+        "func chargePayment(order: Order) -> Double {\n" + shared_preamble + "    let fee = 0.029\n"
+        "    return amount * (1.0 + fee)\n"
+        "}\n"
+    )
+    shipping_text = (
+        "func estimateShipping(order: Order) -> Int {\n" + shared_preamble + "    var days = 0\n"
+        "    return days\n"
+        "}\n"
+    )
     _write(
         root,
         {
-            "Sources/ModuleA/PaymentDispatch.swift": (
-                "func chargePayment(method: PaymentMethod) -> Double {\n"
-                "    switch method {\n"
-                "    case .card:\n"
-                "        let fee = 0.029\n"
-                "        return 100.0 * (1.0 + fee)\n"
-                "    case .wallet:\n"
-                "        return 100.0 - 2.5\n"
-                "    case .bankTransfer:\n"
-                "        let delayDays = 3\n"
-                "        return 100.0 - Double(delayDays) * 0.1\n"
-                "    }\n"
-                "}\n"
-            ),
-            "Sources/ModuleB/ShippingDispatch.swift": (
-                "func estimateShipping(route: ShippingRoute) -> Int {\n"
-                "    var days = 0\n"
-                "    for leg in route.legs {\n"
-                "        days += leg.distanceKM / 500\n"
-                "    }\n"
-                "    if route.express {\n"
-                "        days = max(1, days / 2)\n"
-                "    }\n"
-                "    return days\n"
-                "}\n"
-            ),
+            "Sources/ModuleA/PaymentDispatch.swift": payment_text,
+            "Sources/ModuleB/ShippingDispatch.swift": shipping_text,
         },
     )
+
+    # Empirically verify the pair is a genuine near-miss — substantial shared
+    # structure, not the ~0.0 similarity a switch-dispatcher-vs-loop pair would
+    # produce regardless of threshold — by driving the target's own
+    # extraction/fingerprint/jaccard stages directly (not eyeballing source).
+    audit = _load_audit_module()
+    payment_body = audit._extract_swift_kotlin_functions(
+        Path("PaymentDispatch.swift"), payment_text
+    )[0]
+    shipping_body = audit._extract_swift_kotlin_functions(
+        Path("ShippingDispatch.swift"), shipping_text
+    )[0]
+    payment_fp = audit._fingerprint(audit._normalize_tokens(payment_body.text))
+    shipping_fp = audit._fingerprint(audit._normalize_tokens(shipping_body.text))
+    sim = audit._jaccard(payment_fp, shipping_fp)
+    if not (0.3 <= sim < 0.85):
+        return (
+            f"expected a genuine near-miss (0.3 <= similarity < 0.85), got {sim} — "
+            "either the shared preamble collapsed to no overlap (0.0, no evidence "
+            "the 0.85 cutoff specifically matters) or the pair drifted at/above "
+            "the reporting threshold"
+        )
+
     out, err, rc = _run(root)
     if rc != 0:
         return f"expected exit 0, got {rc}\nstderr: {err}"
     if "PaymentDispatch.swift" in out and "ShippingDispatch.swift" in out:
         return (
-            "shallow structural resemblance across different domains must not "
-            f"clear the threshold\n--- stdout ---\n{out}"
+            "a near-miss (shared preamble, diverging tail) below the 0.85 "
+            f"threshold must not be flagged\n--- stdout ---\n{out}"
         )
     return None
 
