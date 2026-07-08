@@ -63,6 +63,22 @@ Produce ONE of these, or report the verdict held:
   acceptance premise by naming a concrete subtractive fix that passes the Simplify
   Pressure Test (the residual was mis-accepted; its dimension cannot sit at 9.5+).
 
+**Arm diversity (mandatory):** across `attempts[]`, at least one arm must attack a
+**non-correctness dimension** — `simplicity` or `domain_modeling` — via a
+duplication/interpretation sweep: `rg` for repeated formatting/interpretation logic
+across leaf files (time/timecode formatting, display-name fallbacks,
+switch/`== .case` dispatch over domain enums outside the enum's home) and
+byte-similar function bodies in sibling view/leaf modules. Record it as
+`{"arm": "new_finding", "target": "simplicity", ...}`. A challenge whose every
+attempt targets correctness/security has not challenged the verdict — the
+candidate claims 9.5 on nine dimensions, not three.
+
+```
+rg -n '(==|!=)\s+\.[A-Za-z]\w*\b|case\s+\.[A-Za-z]\w*:' <leaf-roots>
+rg -n 'func .*(format|display|title)' <leaf-roots>
+rg -n '\?\?\s*"(Unknown|Untitled|N/A)"' <leaf-roots>
+```
+
 **Anti-self-referential (shared with the Step-3 self-imposed-rule audit):** a
 finding whose only evidence is "the code obeys project rule HR-X" is **not**
 Serious-or-worse and does **not** break the verdict. Project-rule compliance is the
