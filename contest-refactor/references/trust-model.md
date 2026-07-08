@@ -29,7 +29,7 @@ What the loop treats as ground truth about the codebase, highest precedence firs
 1. Current source on disk (read at this loop's Step 1).
 2. Build / test output produced this loop.
 3. Tool diagnostics produced this loop (lint, TSAN, coverage).
-4. `CONTEXT.md`, `docs/adr/`, prior `CURRENT_REVIEW.md` / `REVIEW_HISTORY.md`, prior audit/findings documents (e.g. `docs/audits/`).
+4. `CONTEXT.md`, `docs/adr/`, prior `CURRENT_REVIEW.md` / `REVIEW_HISTORY.md`, prior audit / findings documents (e.g. `docs/audits/`).
 5. Older reviews — historical claims only; require current source proof to act on.
 
 If current source contradicts an older review, current source wins.
