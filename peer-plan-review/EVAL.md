@@ -1,8 +1,8 @@
 # peer-plan-review Evaluation
 
-**Date:** 2026-06-14
+**Date:** 2026-07-13 (hygiene refresh; original eval 2026-06-14)
 **Evaluator:** skill-evaluator-1.0.0 (Claude Opus 4.8)
-**Skill version:** branch `refactor/ppr-common-migration` (+ Antigravity `agy` provider)
+**Skill version:** branch `main`
 **Automated score:** 100% (13/13 checks passed).
 
 ---
@@ -24,7 +24,7 @@
 Runtime probes:
 - `--self-check` → providers found and healthy (codex not installed in this env; gemini/claude/copilot/opencode OK).
 - `--list-models` → works.
-- `pytest test_run_review.py tests/` → **121 passed** (incl. 2 agy execution tests).
+- `pytest scripts/tests/` → **136 passed** (incl. 2 agy execution tests; 9 launcher-wrapper tests).
 - 6th provider — Antigravity (`agy`) — wired through the shared `PROVIDERS` registry + dedicated reference + `list_models_cmd`. Verified **live end-to-end**: round-1 + `--resume` round-2 through `run_review.py` (conversation id captured from the per-run `--log-file`; no workspace writes). opencode (5th) wired the same way.
 - `python3 common/scripts/sync_common.py --check` → clean (vendored `_common/` byte-identical to source).
 
@@ -33,7 +33,7 @@ Runtime probes:
 | # | Criterion | Score | Notes |
 |---|-----------|-------|-------|
 | 1.1 | Completeness | 4/4 | 6 providers (codex/gemini/claude/copilot/opencode/`agy`; agy = Antigravity, successor to the EOL Gemini CLI), standard + adversarial stances, resume w/ fallback, `--list-models`, `--self-check`, `--summary-file`, structured output parsing, plan + reviewer metadata |
-| 1.2 | Correctness | 4/4 | 118-test suite green; provider builders verified against April–June-2026 CLIs (agy v1.0.7 live round-trip incl. resume); `save_session()` is atomic (`.tmp` + rename), closes prior mid-round-crash gap; `datetime.UTC` (3.11-only) replaced with `timezone.utc` so the stated 3.9+ floor actually holds |
+| 1.2 | Correctness | 4/4 | 136-test suite green; provider builders verified against April–June-2026 CLIs (agy v1.0.7 live round-trip incl. resume); `save_session()` is atomic (`.tmp` + rename), closes prior mid-round-crash gap; `datetime.UTC` (3.11-only) replaced with `timezone.utc` so the stated 3.9+ floor actually holds |
 | 1.3 | Appropriateness | 4/4 | Python stdlib only, cross-platform (macOS/Linux/Windows), shared logic vendored from `common/` into `scripts/_common/` |
 | 2.1 | Fault Tolerance | 4/4 | Auto resume→fresh fallback (logged), graceful structured-parse degradation, process-tree kill on timeout, SIGINT/SIGTERM handlers, Gemini config clone preserves auth, per-run Codex `CODEX_HOME` isolation (fail-closed) so concurrent same-repo reviews don't collide on session capture |
 | 2.2 | Error Reporting | 3/4 | Clear stderr; structured JSONL `--error-log` retained after cleanup; still no global `--json` stdout mode, but `--summary-file` covers the machine-readable per-round case |
@@ -41,17 +41,17 @@ Runtime probes:
 | 3.1 | Token Cost | 4/4 | SKILL.md ~176 body lines. Output template, adversarial prompt, and adapter invocation details all live under `references/`. Lazy-loaded per provider |
 | 3.2 | Execution Efficiency | 4/4 | One subprocess/round, stdout streamed, no polling |
 | 4.1 | Learnability | 4/4 | SKILL.md walks the full loop concisely; provider refs lazy-loaded; `--self-check` and `--list-models` are explicit discovery paths |
-| 4.2 | Consistency | 4/4 | Uniform CLI flags across all 5 providers; fresh vs resume differs only by `--resume`; same verdict contract everywhere |
+| 4.2 | Consistency | 4/4 | Uniform CLI flags across all 6 providers; fresh vs resume differs only by `--resume`; same verdict contract everywhere |
 | 4.3 | Feedback Quality | 4/4 | Progress per round to stderr; review header shows actual (not requested) model/effort/source; `--summary-file` writes `{verdict, model, effort, finding counts}` for non-Claude hosts |
 | 4.4 | Error Prevention | 4/4 | `validate_prompt_file`, `probe_writable`, model-alias fuzzy-suggest, `--review-id` enforcement, preflight `--self-check` |
-| 5.1 | Discoverability | 4/4 | argparse `--help`; `--list-models` and `--self-check` discoverable; top-level `README.md` for GitHub browsing, refreshed for the `_common/` layout + 116-test count |
+| 5.1 | Discoverability | 4/4 | argparse `--help`; `--list-models` and `--self-check` discoverable; top-level `README.md` for GitHub browsing, refreshed for the `_common/` layout + 136-test count |
 | 5.2 | Forgiveness | 4/4 | Reviewer hard-pinned read-only; plan snapshots immutable per round; error log retained for post-mortem |
 | 6.1 | Credential Handling | 4/4 | No hardcoded creds; `CODEX_HOME`, `GEMINI_CONFIG_DIR`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` documented in `references/adapter-cli.md`; per-run Codex home copies `auth.json` (0600) into a randomized 0700 dir tracked in a symlink-proof (`O_NOFOLLOW`+`fstat`) manifest |
 | 6.2 | Input Validation | 4/4 | File existence, UTF-8, non-empty, write-probe, model-alias validation, `--review-id` enforcement, effort enum clamping |
 | 6.3 | Data Safety | 3/4 | codex `--sandbox read-only`; gemini `--sandbox`+yolo (tools only); claude `--permission-mode plan`; copilot `--deny-tool=write,shell,memory`; opencode read-only-by-prompt. **Exception: `agy`/Antigravity auto-approves file-write + shell in every flag combo — verified NOT read-only.** Mitigated (opt-in, experimental, `--sandbox` terminal containment, read-only directive prepended to the prompt, docs warn to run only on trusted/clean trees) but not guaranteed — hence −1. Transcript-share flags forbidden |
 | 7.1 | Modularity | 4/4 | Shared logic vendored from `common/` into `scripts/_common/` (`session` / `log` / `process` / `metadata` / `providers`); skill keeps `run_review.py` + a thin `ppr_paths.py` CLI wrapper. One source of truth shared with quorum-review |
-| 7.2 | Modifiability | 4/4 | Single `PROVIDERS` registry in `_common/providers/registry.py` (binary, effort_map, model_aliases, build_cmd, caps, optional `list_models_cmd`). Adding a 6th provider = one dict entry + one builder + one reference file. Edits go to `common/` source, then `sync_common.py` re-vendors |
-| 7.3 | Testability | 4/4 | ~2000-line `test_run_review.py` + `test_web_search.py`; `scripts/fixtures/` with real provider JSON samples; deterministic via subprocess mocking; patch targets point at `_common.*` modules |
+| 7.2 | Modifiability | 4/4 | Single `PROVIDERS` registry in `_common/providers/registry.py` (binary, effort_map, model_aliases, build_cmd, caps, optional `list_models_cmd`). Adding a 7th provider = one dict entry + one builder + one reference file. Edits go to `common/` source, then `sync_common.py` re-vendors |
+| 7.3 | Testability | 4/4 | 136-test `scripts/tests/` package (split from the former 2130-line `test_run_review.py`; a 17-line discovery shim remains) + `check_web_search.py` (manual per-provider headless web-fetch diagnostic reusing the production command builders); `scripts/fixtures/` with real provider JSON samples; deterministic via subprocess mocking; patch targets point at `_common.*` modules |
 | 8.1 | Trigger Precision | 4/4 | 75-word description with explicit trigger phrases ("codex review", "gemini review", "opencode review", "pressure-test", "validate a plan"). No overlap with other review skills |
 | 8.2 | Progressive Disclosure | 4/4 | Provider refs lazy-loaded; output-format/adversarial/adapter-cli each live in their own reference file; the optional domain-context authoring guide is disclosed to `references/domain-context.md`, opened only when a block is authored (env vars folded into adapter-cli). SKILL.md is a routing index |
 | 8.3 | Composability | 4/4 | Bounded (read-only, no edits, explicit STOP). `agents/openai.yaml` wires `$peer-plan-review`. `scripts/fixtures/` flattened (no orphan `evals/` dir) |
@@ -63,7 +63,7 @@ Runtime probes:
 
 **Score: 98/100 — Excellent.** The lone deduction is Data Safety (6.3): the new opt-in `agy`/Antigravity reviewer is verified *not* read-only (it auto-approves tools), shipped experimental with sandbox + prompt-preamble mitigations and explicit warnings. Structural automated checks report a true 100% (the prior two false positives are resolved: `README.md` is allow-listed, and the dependency check recognizes the vendored `_common/` package as local rather than external).
 
-The skill is structurally clean, well-tested (116 passing), defensively validated, atomic on session writes, single-edit-point for providers, lazy-loads every reference, and now shares its provider/session/process/metadata/log logic with quorum-review through the `common/` vendoring contract (no more duplicated `ppr_*` modules). There is no blocker to publishing.
+The skill is structurally clean, well-tested (136 passing), defensively validated, atomic on session writes, single-edit-point for providers, lazy-loads every reference, and now shares its provider/session/process/metadata/log logic with quorum-review through the `common/` vendoring contract (no more duplicated `ppr_*` modules). There is no blocker to publishing.
 
 ## Priority Fixes
 
@@ -88,3 +88,4 @@ The skill is structurally clean, well-tested (116 passing), defensively validate
 | 2026-06-06 | 99/100 | Bug fix + `common/` migration. (1) Fixed `datetime.UTC` (Python 3.11-only) → `timezone.utc` at the `common/` source so the stated 3.9+ floor holds; re-synced both consumers. (2) Migrated to vendored `scripts/_common/` (session/log/process/metadata/providers), deleting the 5 duplicated `ppr_*.py`; `ppr_paths.py` kept as a thin CLI wrapper. Adopted `common`'s richer default Claude reviewer system prompt (reads referenced files before judging). (3) Light-touch SKILL.md prose pass (restored dropped articles/verbs in directive fragments). (4) `eval-skill.py` dependency check now treats local package dirs (`_common/`) as siblings — structural 100% for both `_common` consumers. Tests: **116 passing**. |
 | 2026-06-29 | 98/100 | `writing-great-skills` legibility pass. Disclosed the Default-OFF domain-context authoring mechanics to `references/domain-context.md` (SKILL.md body 246→217 lines); folded `env.md` into `adapter-cli.md` (deleted `env.md`, single env-var home, env names hoisted into the adapter-cli pointer as its when-cue); **completed the `agy` read-only dedup** the prior 2026-06-29 row claimed but left at 3 SKILL copies — now single-sourced to §Rules + `antigravity.md`; renamed `references/claude.md`→`claude-code.md` to stop the `CLAUDE.md` case-collision from eager-loading the file as session memory every run; compressed the description trigger list to one `'<provider> review'` branch (provider names kept as leading words); removed committed `.DS_Store`. Domain-context disclosure micro-tested (writing-skills method): treat 5/5 INCLUDE + criteria-style + pointer-opened, 2/2 OMIT on an idiomatic plan, vs a no-guidance control that leaked plan class names — no regression. Structural 100% (13/13), tests 121 green, `sync_common --check` clean. |
 | 2026-07-04 | 98/100 | Launch/wait footgun fix (production-audit-driven; codex gpt-5.5 peer-approved plan, 2 rounds). Audit of 11 real sessions (07-03/04) found the runner 100% reliable but every failure in hand-assembled orchestration: foreground 2-min kills (incl. a foreground *poll loop* written after the 07-03 prose fix), background exit-code masking via trailing `echo $?`, 600 s timeouts on codex/gemini xhigh, dropped `--error-log`/`--review-id` coupling, ad-hoc review-id stashes, silent resume→fresh degradation, and 2 Gemini confabulated HIGH blockers. Shipped: `scripts/ppr_launch.sh` canonical launcher (path derivation, flag pairing, passthrough, tee to `-runner.log`, true exit code to `-exit.code`, mechanical resume-degradation warning); SKILL.md launch/wait/read rewritten as a positive recipe with a gated read; runner default `--timeout` 600→1200; gemini.md confabulation caveat + ≥2-provider rule. Micro-tested (writing-skills): control 0/5 gated reads vs treat 5/5, launch/wait 5/5 both arms; live dogfood via symlink incl. failure case (exit 2 surfaced, not masked) and live degradation warning. Tests 127→**136** (9 new wrapper tests); structural 100%; AGO fast audit 98 GATE=PASS. |
+| 2026-07-13 | 98/100 | Doc-hygiene refresh (codex gpt-5.6-sol peer-approved plan, 5 rounds; gpt-5.5 xhigh had approved an earlier draft in 2). Reconciled stale counts across README/EVAL: tests 116/118/119/121 → verified **136** (pytest collect), providers 5 → **6** (PROVIDERS registry), "6th provider" → 7th in Modifiability. Replaced dead `test_web_search.py` reference with `check_web_search.py` (manual per-provider headless web-fetch diagnostic, previously undocumented) and updated Testability to the `scripts/tests/` package layout. Removed untracked `.DS_Store` + orphaned `scripts/__pycache__/` bytecode (root `.gitignore` already covers `__pycache__/`). Header date/branch refreshed. No prose or behavior changes; score unchanged. |

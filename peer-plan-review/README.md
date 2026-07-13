@@ -38,7 +38,8 @@ scripts/
                       sync_common.py (session I/O, output parsing, summaries,
                       PROVIDERS registry + command builders, model/effort/
                       session extraction, JSONL event logger, process-tree kill)
-  tests/              pytest suite (119 tests)
+  tests/              pytest suite (136 tests)
+  check_web_search.py manual diagnostic: per-provider headless web-fetch check
   fixtures/           provider output samples for tests
 agents/openai.yaml    OpenAI subagent wiring
 ```
