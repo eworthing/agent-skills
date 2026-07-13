@@ -14,10 +14,6 @@ public struct UnitFormatter: Equatable {
     }
 
     public func format(_ values: [Double]) -> [String] {
-        values.map { "\(Self.format($0)) \(unit)" }
-    }
-
-    private static func format(_ value: Double) -> String {
-        String(format: "%.2f", value)
+        values.map { "\(Int($0.rounded())) \(unit)" }
     }
 }

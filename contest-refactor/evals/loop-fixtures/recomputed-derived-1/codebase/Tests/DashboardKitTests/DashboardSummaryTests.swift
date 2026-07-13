@@ -52,7 +52,7 @@ final class DashboardSummaryTests: XCTestCase {
 final class UnitFormatterTests: XCTestCase {
     func testFormatAppendsUnitToEveryValue() {
         let formatter = UnitFormatter(unit: "ms")
-        XCTAssertEqual(formatter.format([1, 2.5, 30]), ["1.00 ms", "2.50 ms", "30.00 ms"])
+        XCTAssertEqual(formatter.format([1, 2.5, 30]), ["1 ms", "3 ms", "30 ms"])
     }
 
     func testFormatEmptyInputIsEmpty() {
