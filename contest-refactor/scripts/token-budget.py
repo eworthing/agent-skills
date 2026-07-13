@@ -49,6 +49,7 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
             "SKILL.md",
             stack_lens,
             "lens-security.md",
+            "lens-efficiency.md",
             "method.md",
             "method-critic.md",
             "architecture-rubric.md",

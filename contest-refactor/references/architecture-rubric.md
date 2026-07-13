@@ -69,7 +69,7 @@ Investigate as smoke. Do not turn into findings unless source evidence proves ha
 
 Prioritize: one owner per mutable concern, explicit data flow, honest failure behavior, maintainable seams, clear async runtime behavior, tests at the right surface, Leverage, Locality.
 
-Ignore: stylistic concerns, tiny naming nits, micro-optimizations *(distinct from structural waste — recomputed derived values, sequential independent I/O — which the opt-in [lens-efficiency.md](lens-efficiency.md) surfaces when loaded)*, generic filler, unsupported speculation.
+Ignore: stylistic concerns, tiny naming nits, micro-optimizations *(distinct from structural waste — recomputed derived values, sequential independent I/O, hot-path/startup blocking work, closure-capture retention — which the always-included [lens-efficiency.md](lens-efficiency.md) surfaces)*, generic filler, unsupported speculation.
 
 ## Architectural Tests
 

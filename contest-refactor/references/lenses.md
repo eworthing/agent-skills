@@ -23,16 +23,15 @@ Loaded unconditionally alongside the selected stack lens. These cover cross-cutt
 | Lens | Scope |
 |---|---|
 | [lens-security.md](lens-security.md) | Input validation, secrets, PII in logs, Keychain, biometric, transport security, dependency hygiene |
+| [lens-efficiency.md](lens-efficiency.md) | Structural waste: recomputed derived values, sequential independent effects, hot-path/startup blocking work, closure-capture retention |
 
-Record loaded lenses (selected + always-included) in Discovery as a list: `["lens-apple.md", "lens-security.md"]`.
+Record loaded lenses (selected + always-included) in Discovery as a list: `["lens-apple.md", "lens-security.md", "lens-efficiency.md"]`.
 
 ## Opt-in lenses (loaded only via `--force-lens <name>`)
 
 Not loaded by default. A user-supplied `--force-lens <name>` naming one of these **adds** it alongside the selected stack lens rather than replacing it (see [startup.md § flag catalog](startup.md) for the additive-vs-override distinction).
 
-| Lens | Scope |
-|---|---|
-| [lens-efficiency.md](lens-efficiency.md) | Recomputed derived values, sequential independent effects — opt-in, not loaded by default |
+*None currently.* `lens-efficiency.md` was promoted to [always-included](#always-included-lenses) on 2026-07-13 (see [EVAL.md](../EVAL.md)); naming an already-always-included lens via `--force-lens` is a harmless no-op. This section stays for future opt-in lenses.
 
 ## Adding a new lens
 

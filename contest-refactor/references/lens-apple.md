@@ -101,7 +101,7 @@ Asymmetric sheet binding for a contest-relevant feature = Serious deduction (sta
 
 ### Failure modes & observability (Apple-flavored)
 
-Apple repos load only `lens-apple.md` (plus always-included `lens-security.md`); `lens-generic.md` is **not** in the Apple load set. So this subsection inlines the five generic failure-mode categories alongside Apple-specific bullets. (Canonical detailed detection rules per language live in [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) for non-Apple stacks.)
+Apple repos load only `lens-apple.md` (plus always-included `lens-security.md` and `lens-efficiency.md`); `lens-generic.md` is **not** in the Apple load set. So this subsection inlines the five generic failure-mode categories alongside Apple-specific bullets. (Canonical detailed detection rules per language live in [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) for non-Apple stacks.)
 
 **Generic categories (always check on every loop)**:
 1. **Silent-swallow audit** — Swift hits: `try?`, `catch { }`, `_ = try`, `as? T` that drops the error. Each needs an inline rationale (comment, log, compensating return).

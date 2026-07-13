@@ -36,6 +36,7 @@ GOLDEN_APPLE = {
         "SKILL.md",
         "lens-apple.md",
         "lens-security.md",
+        "lens-efficiency.md",
         "method.md",
         "method-critic.md",
         "architecture-rubric.md",
@@ -69,12 +70,14 @@ check(
     "generic lens did not swap lens-apple.md -> lens-generic.md in step1",
 )
 
-# --- The de-duped "loop" union must equal the 12-file per-loop set the audit documents
-# (A1a added output-format-json-rules.md, the emit-time carve-out, at Step 1 emit / Step 3).
+# --- The de-duped "loop" union must equal the 16-file per-loop set the audit documents
+# (A1a added output-format-json-rules.md, the emit-time carve-out, at Step 1 emit / Step 3;
+# 2026-07-13 promotion added always-included lens-efficiency.md at Step 1).
 AUDIT_PER_LOOP = {
     "SKILL.md",
     "lens-apple.md",
     "lens-security.md",
+    "lens-efficiency.md",
     "method.md",
     "method-critic.md",
     "architecture-rubric.md",
