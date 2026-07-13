@@ -387,6 +387,35 @@ def check_per_finding_evidence_chain(current_review: dict) -> list[Issue]:
     return issues
 
 
+def check_g16_registry_uniqueness(registry: dict | None) -> list[Issue]:
+    """G16: every findings_registry.json entry carries a unique stable_id.
+
+    Duplicates are silently corrupting: `_occurrences_for` returns the first
+    match and G30's disposition map (keyed on stable_id) keeps the last, so
+    retirement and oscillation run on incomplete occurrence history. G16 was a
+    manual checklist only; this is its mechanical duplicate-id enforcement.
+    """
+    if registry is None:
+        return []
+    issues: list[Issue] = []
+    first_index: dict[str, int] = {}
+    for i, entry in enumerate(registry.get("entries") or []):
+        sid = entry.get("stable_id")
+        if sid is None:
+            continue
+        if sid in first_index:
+            issues.append(
+                Issue(
+                    "G16",
+                    f"duplicate stable_id {sid!r} in findings_registry.json "
+                    f"(entries at index {first_index[sid]} and {i})",
+                )
+            )
+        else:
+            first_index[sid] = i
+    return issues
+
+
 def _occurrences_for(registry: dict | None, stable_id: str) -> list[dict]:
     if registry is None:
         return []
@@ -1865,8 +1894,12 @@ def _load_project_config(artifact_dir: Path) -> dict | None:
             try:
                 with path.open("rb") as fh:
                     return tomllib.load(fh)
-            except Exception:
-                return None
+            except tomllib.TOMLDecodeError as exc:
+                raise SystemExit(f"error: {path}: malformed .contest-refactor.toml: {exc}") from exc
+            except OSError as exc:
+                raise SystemExit(
+                    f"error: {path}: could not read .contest-refactor.toml: {exc}"
+                ) from exc
     return None
 
 
@@ -1887,6 +1920,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_schema_enums(current_review, canon))
     issues.extend(check_per_finding_evidence_chain(current_review))
     issues.extend(check_retirement_rule(current_review, registry))
+    issues.extend(check_g16_registry_uniqueness(registry))
     issues.extend(check_g30_disposition_coverage(current_review, registry))
     issues.extend(check_g31_fingerprint_integrity(registry))
     issues.extend(check_g18_review_history_append(current_review, history))
@@ -1952,7 +1986,11 @@ def main(argv: Iterable[str] | None = None) -> int:
             "issue_count": len(issues),
             "issues": [issue.to_dict() for issue in issues],
         }
-        args.json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        try:
+            args.json.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        except OSError as exc:
+            sys.stderr.write(f"error: could not write --json output to {args.json}: {exc}\n")
+            return 2
     if args.mode == "strict" and issues:
         return 1
     return 0
