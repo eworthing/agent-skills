@@ -1,0 +1,24 @@
+# Loop-replay fixture spec (Layer 4). Same harness contract as duplicated-subtotal-1.
+# Deliberate divergence: NO planted-debt marker comment anywhere in codebase/ — this
+# fixture measures DETECTION of an efficiency-category defect (RED expected while
+# lens-efficiency.md was opt-in); a marker would telegraph the answer.
+
+id = "sequential-io-1"
+
+# The planted debt and where it lives. The graded finding's evidence[] must cite this path.
+primary_file = "Sources/FeedKit/FeedRefresher.swift"
+smell = "refreshAll() awaits each independent fetchSummary(id) sequentially in a for-loop; results are keyed by id (order-independent, loop-local accumulator) so the awaits could run concurrently — lens-efficiency.md D2 (sequential independent effects)"
+
+targeted_dimension = "concurrency"
+min_severity = "Noticeable weakness"
+expected_targeted_finding_status = "resolved"
+
+# Discovery context the loop reads (mirrors a real Step-0 seed).
+lens = "lens-apple.md"
+test_command = "swift test"
+
+[notes]
+common_path = "Critic -> Architect -> Execution; not HALT/retirement tails"
+expected_refactor = "bounded concurrent fan-out (e.g. withThrowingTaskGroup) collecting into the keyed dictionary; the D2 guardrail must name bounded concurrency + preserved cancellation/error semantics — the fixture tests pin exactly those (peak in-flight <= 4, per-id error propagation, parent cancellation)"
+red_baseline = "pre-promotion the loop is expected to MISS this: rubric Ignore-list carves sequential independent I/O out as micro-optimization unless lens-efficiency.md is loaded; the transport is @Sendable and the accumulator loop-local, so no safety finding masks it"
+near_miss_control = "collectPages(from:fetchPage:) is a documented data-dependent chain (each call consumes the prior cursor) — any efficiency finding against it is a restraint failure"

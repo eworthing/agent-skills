@@ -14,6 +14,9 @@ Checks:
        expected_targeted_finding_status ∈ {resolved, carried_forward})
   (d) manifest consistency — status ∈ {baseline_unmeasured, measured}; a measured fixture
       must carry a non-null baseline_observed
+  (e) two-arm schema — when baseline_observed.arms is present (the efficiency RED->GREEN
+      fixtures), each arm is named red/green and carries the preregistered fields; a
+      measured fixture with arms must carry both arms (legacy single-arm shape stays valid)
 """
 
 from __future__ import annotations
@@ -41,6 +44,18 @@ REQUIRED_EXPECTED_KEYS = (
 )
 VALID_STATUS = {"baseline_unmeasured", "measured"}
 VALID_FINDING_STATUS = {"resolved", "carried_forward"}
+VALID_ARM_NAMES = {"red", "green"}
+REQUIRED_ARM_KEYS = (
+    "skill_commit",
+    "run_commit",
+    "observed_at",
+    "model",
+    "grader_exit",
+    "failed_invariants",
+    "planted_finding_detected",
+    "other_efficiency_findings",
+    "note",
+)
 
 
 def _load_canon_dimensions() -> set[str]:
@@ -109,6 +124,33 @@ def main() -> int:
             failures.append(f"fixture '{fid}': status '{status}' not in {sorted(VALID_STATUS)}")
         if status == "measured" and not entry.get("baseline_observed"):
             failures.append(f"fixture '{fid}': status=measured but baseline_observed is empty")
+
+        # (e) two-arm schema (efficiency RED->GREEN fixtures; legacy single-arm shape valid)
+        arms = (entry.get("baseline_observed") or {}).get("arms")
+        if arms is not None:
+            if not isinstance(arms, dict) or not arms:
+                failures.append(
+                    f"fixture '{fid}': baseline_observed.arms must be a non-empty object"
+                )
+            else:
+                for arm_name, arm in arms.items():
+                    if arm_name not in VALID_ARM_NAMES:
+                        failures.append(
+                            f"fixture '{fid}': arm '{arm_name}' not in {sorted(VALID_ARM_NAMES)}"
+                        )
+                        continue
+                    if not isinstance(arm, dict):
+                        failures.append(f"fixture '{fid}': arm '{arm_name}' is not an object")
+                        continue
+                    for key in REQUIRED_ARM_KEYS:
+                        if key not in arm:
+                            failures.append(
+                                f"fixture '{fid}': arm '{arm_name}' missing key '{key}'"
+                            )
+                if status == "measured" and not set(arms) >= VALID_ARM_NAMES:
+                    failures.append(
+                        f"fixture '{fid}': status=measured with arms requires both red and green"
+                    )
 
         # (c) expected.toml
         exp_path = fdir / "expected.toml"

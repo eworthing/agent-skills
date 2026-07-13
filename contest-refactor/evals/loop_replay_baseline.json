@@ -6,17 +6,18 @@
     "loop_prompt_source": "references/trust-model.md § Loop Isolation loop-subagent template (verbatim)",
     "grader": "scripts/loop_replay_grade.py",
     "materializer": "scripts/loop_replay_materialize.py",
-    "scope": "one fixture, the common Critic->Architect->Execution path; first smoke harness with one semantic assertion (not HALT/retirement tails)"
+    "scope": "five fixtures on the common Critic->Architect->Execution path: duplicated-subtotal-1 (smoke, one semantic assertion) + recomputed-derived-1 / sequential-io-1 / startup-blocking-1 / closure-retention-1 (efficiency-detection RED->GREEN quads for the lens-efficiency.md always-included promotion; blind-dispatch RED/GREEN protocol in loop-fixtures/MEASUREMENT-2026-07-13.md)",
+    "arm_schema": "efficiency fixtures record baseline_observed.arms.{red,green}; each arm carries skill_commit (the contest-refactor skill tree SHA the loop ran against), run_commit (the materialized loop's final fix commit, matching the duplicated-subtotal-1 run_commit convention), observed_at, model, grader_exit, failed_invariants[], planted_finding_detected (bool), other_efficiency_findings (int; counts over-flagging incl. findings against the fixture's near-miss restraint control), note. A RED arm counts as a detection miss only when the artifact validates structurally but the planted-finding semantic invariant fails; structural/schema failures are inconclusive (re-run once, then record inconclusive)."
   },
   "invariants": {
     "structural": [
       "validate-artifact.py --mode strict exits 0 on the emitted artifact tree",
-      "priority_1_finding_id is non-null",
+      "the planted finding is identified by evidence-cites-primary_file (an explicit targeted id is preferred when present; priority_1_finding_id and loop_result.targeted_finding_id are both legitimately null once the priority-1 finding is RESOLVED in the same loop)",
       "loop_result.targeted_finding_status is a valid enum value"
     ],
     "semantic": [
-      "the Priority-1 finding's evidence[] cites expected.primary_file",
-      "the Priority-1 finding's severity is >= expected.min_severity",
+      "a finding cites expected.primary_file (the planted debt was found)",
+      "that finding's severity is >= expected.min_severity",
       "loop_result.targeted_finding_status == expected.expected_targeted_finding_status (the planted debt was actually fixed)"
     ],
     "advisory": [
@@ -37,6 +38,22 @@
         "grade": "all required invariants hold (loop_replay_grade.py exit 0)",
         "note": "This harness surfaced a real schema fact during bring-up: priority_1_finding_id and loop_result.targeted_finding_id are both null once the priority-1 finding is RESOLVED in the same loop, so a grader must identify the planted finding by evidence-cites-primary_file, not by that id."
       }
+    },
+    {
+      "id": "recomputed-derived-1",
+      "status": "baseline_unmeasured"
+    },
+    {
+      "id": "sequential-io-1",
+      "status": "baseline_unmeasured"
+    },
+    {
+      "id": "startup-blocking-1",
+      "status": "baseline_unmeasured"
+    },
+    {
+      "id": "closure-retention-1",
+      "status": "baseline_unmeasured"
     }
   ]
 }

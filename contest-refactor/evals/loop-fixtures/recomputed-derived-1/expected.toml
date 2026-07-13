@@ -1,0 +1,24 @@
+# Loop-replay fixture spec (Layer 4). Same harness contract as duplicated-subtotal-1.
+# Deliberate divergence: NO planted-debt marker comment anywhere in codebase/ — this
+# fixture measures DETECTION of an efficiency-category defect (RED expected while
+# lens-efficiency.md was opt-in); a marker would telegraph the answer.
+
+id = "recomputed-derived-1"
+
+# The planted debt and where it lives. The graded finding's evidence[] must cite this path.
+primary_file = "Sources/DashboardKit/DashboardSummary.swift"
+smell = "pure `statistics` derivation (O(n) pass over samples) re-evaluated 5x within one render() chain (headline/meanLine/peakLine + two direct reads) instead of evaluated once and threaded through — lens-efficiency.md D1 (recomputed derived value)"
+
+targeted_dimension = "simplicity"
+min_severity = "Noticeable weakness"
+expected_targeted_finding_status = "resolved"
+
+# Discovery context the loop reads (mirrors a real Step-0 seed).
+lens = "lens-apple.md"
+test_command = "swift test"
+
+[notes]
+common_path = "Critic -> Architect -> Execution; not HALT/retirement tails"
+expected_refactor = "evaluate statistics once per render pass and thread it through; inputs are an immutable `let samples`, so the D1 staleness guardrail is dischargeable and must be named"
+red_baseline = "pre-promotion the loop is expected to MISS this: the rubric Ignore-list treats recomputed derived values as micro-optimization unless lens-efficiency.md is loaded; the derivation exists exactly once (no copy-paste), so the duplication sweep and clone detector cannot catch it"
+near_miss_control = "cheap O(1) accessors (`sampleCount`, `format`) read/called repeatedly with no nameable cost — any efficiency finding against them is a restraint failure"

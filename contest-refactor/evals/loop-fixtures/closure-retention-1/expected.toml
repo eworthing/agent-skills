@@ -1,0 +1,24 @@
+# Loop-replay fixture spec (Layer 4). Same harness contract as duplicated-subtotal-1.
+# Deliberate divergence: NO planted-debt marker comment anywhere in codebase/ — this
+# fixture measures DETECTION of an efficiency-category defect (RED expected while
+# lens-efficiency.md lacked the detector); a marker would telegraph the answer.
+
+id = "closure-retention-1"
+
+# The planted debt and where it lives. The graded finding's evidence[] must cite this path.
+primary_file = "Sources/HubKit/EventHub.swift"
+smell = "ImagePipeline.init subscribes an app-lifetime EventHub closure that captures self (holding the multi-megabyte frameBuffer) with no capture list while using only stageName — the whole pipeline stays alive for the hub's lifetime — lens-efficiency.md D4 (closure-capture retention)"
+
+targeted_dimension = "state_management"
+min_severity = "Noticeable weakness"
+expected_targeted_finding_status = "resolved"
+
+# Discovery context the loop reads (mirrors a real Step-0 seed).
+lens = "lens-apple.md"
+test_command = "swift test"
+
+[notes]
+common_path = "Critic -> Architect -> Execution; not HALT/retirement tails"
+expected_refactor = "narrow the capture (capture stageName by value, or [weak self] with the gone-owner behavior named); the D4 guardrail must name the retention cost (pipeline + frameBuffer alive for hub lifetime) AND the fix risk (value capture freezes at creation / weak changes gone-owner behavior)"
+red_baseline = "pre-promotion the loop is expected to MISS this: closure-capture retention has no detector anywhere in the skill; the code is behaviorally correct and safety-clean, so no other lens surfaces it"
+near_miss_control = "cropFrames(to:completion:) takes a short-lived non-stored completion closure capturing self — no long-lived home, so any efficiency finding against it is a restraint failure"

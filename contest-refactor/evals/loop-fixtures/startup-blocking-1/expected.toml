@@ -1,0 +1,24 @@
+# Loop-replay fixture spec (Layer 4). Same harness contract as duplicated-subtotal-1.
+# Deliberate divergence: NO planted-debt marker comment anywhere in codebase/ — this
+# fixture measures DETECTION of an efficiency-category defect (RED expected while
+# lens-efficiency.md lacked the detector); a marker would telegraph the answer.
+
+id = "startup-blocking-1"
+
+# The planted debt and where it lives. The graded finding's evidence[] must cite this path.
+primary_file = "Sources/BootKit/StartupConfig.swift"
+smell = "StartupConfig.loadAll() performs five synchronous Data(contentsOf:) reads + JSON decodes one-by-one on the executable's @main startup path before first output, where deferred/concurrent/batched loading exists — lens-efficiency.md D3 (hot-path/startup blocking work)"
+
+targeted_dimension = "framework_idioms"
+min_severity = "Noticeable weakness"
+expected_targeted_finding_status = "resolved"
+
+# Discovery context the loop reads (mirrors a real Step-0 seed).
+lens = "lens-apple.md"
+test_command = "swift test"
+
+[notes]
+common_path = "Critic -> Architect -> Execution; not HALT/retirement tails"
+expected_refactor = "load the five documents concurrently (or defer non-critical ones past first output); the D3 guardrail must name the startup-latency cost AND the fix risk (initialization reordering — which consumer reads the value and how readiness is awaited)"
+red_baseline = "pre-promotion the loop is expected to MISS this: startup blocking work has no detector anywhere in the skill (the ignore-list treats it as micro-optimization); the five loads decode five distinct types so the duplication sweep has no verbatim clone to catch"
+near_miss_control = "Diagnostics.loadReport(at:) does the same synchronous decode on a cold operator-invoked path (documented never-at-startup) — any efficiency finding against it is a restraint failure"
