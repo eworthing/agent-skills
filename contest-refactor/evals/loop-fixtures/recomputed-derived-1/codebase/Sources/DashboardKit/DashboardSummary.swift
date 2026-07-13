@@ -1,49 +1,54 @@
 import Foundation
 
-/// Renders the metrics dashboard summary block.
-struct DashboardSummary {
-    struct Sample: Equatable {
-        let label: String
-        let value: Double
-    }
+/// Renders a metrics dashboard summary block from a set of samples.
+public struct DashboardSummary: Equatable {
+    public struct Sample: Equatable {
+        public let label: String
+        public let value: Double
 
-    struct Statistics: Equatable {
-        let total: Double
-        let mean: Double
-        let peak: Double
-    }
-
-    let samples: [Sample]
-
-    /// Aggregate statistics over `samples`.
-    var statistics: Statistics {
-        var total = 0.0
-        var peak = 0.0
-        for sample in samples {
-            total += sample.value
-            peak = max(peak, sample.value)
+        public init(label: String, value: Double) {
+            self.label = label
+            self.value = value
         }
-        let mean = samples.isEmpty ? 0 : total / Double(samples.count)
+    }
+
+    public struct Statistics: Equatable {
+        public let total: Double
+        public let mean: Double
+        public let peak: Double
+
+        public init(total: Double, mean: Double, peak: Double) {
+            self.total = total
+            self.mean = mean
+            self.peak = peak
+        }
+    }
+
+    public let samples: [Sample]
+
+    public init(samples: [Sample]) {
+        self.samples = samples
+    }
+
+    /// Aggregate statistics over `samples`. A pure O(n) derivation of `samples`.
+    public var statistics: Statistics {
+        let values = samples.map(\.value)
+        let total = values.reduce(0, +)
+        let mean = values.isEmpty ? 0 : total / Double(values.count)
+        let peak = values.max() ?? 0
         return Statistics(total: total, mean: mean, peak: peak)
     }
 
-    /// Number of samples in this summary.
-    var sampleCount: Int { samples.count }
+    public var headline: String { "Total \(Self.format(statistics.total)) across \(samples.count) samples" }
+    public var meanLine: String { "Mean \(Self.format(statistics.mean))" }
+    public var peakLine: String { "Peak \(Self.format(statistics.peak))" }
 
-    var headline: String { "Total \(format(statistics.total)) across \(sampleCount) samples" }
-    var meanLine: String { "Mean \(format(statistics.mean))" }
-    var peakLine: String { "Peak \(format(statistics.peak))" }
-
-    /// Renders the summary block, one line per row.
-    func render() -> [String] {
-        var lines = [headline, meanLine, peakLine]
-        if sampleCount > 0 && statistics.peak > statistics.mean * 2 {
-            lines.append("Warning: spiky distribution")
-        }
-        return lines
+    /// Renders the summary block, one line per metric.
+    public func render() -> [String] {
+        [headline, meanLine, peakLine]
     }
 
-    private func format(_ value: Double) -> String {
+    private static func format(_ value: Double) -> String {
         String(format: "%.2f", value)
     }
 }

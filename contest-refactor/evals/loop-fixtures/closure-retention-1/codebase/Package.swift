@@ -4,10 +4,12 @@ import PackageDescription
 let package = Package(
     name: "HubKit",
     products: [
-        .library(name: "HubKit", targets: ["HubKit"])
+        .library(name: "HubKit", targets: ["HubKit"]),
+        .executable(name: "hub", targets: ["hub"]),
     ],
     targets: [
         .target(name: "HubKit"),
+        .executableTarget(name: "hub", dependencies: ["HubKit"]),
         .testTarget(name: "HubKitTests", dependencies: ["HubKit"]),
     ]
 )

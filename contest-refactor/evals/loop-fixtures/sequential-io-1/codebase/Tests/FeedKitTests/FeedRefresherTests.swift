@@ -73,6 +73,12 @@ final class FeedRefresherTests: XCTestCase {
         }
     }
 
+    func testEmptyIdsReturnsEmpty() async throws {
+        let refresher = FeedRefresher { id in .init(id: id, itemCount: id.count) }
+        let summaries = try await refresher.refreshAll(ids: [])
+        XCTAssertTrue(summaries.isEmpty)
+    }
+
     func testResultsIndependentOfIdOrder() async throws {
         let refresher = FeedRefresher { id in .init(id: id, itemCount: id.count) }
         let ids = (0..<12).map { "feed-\($0)" }

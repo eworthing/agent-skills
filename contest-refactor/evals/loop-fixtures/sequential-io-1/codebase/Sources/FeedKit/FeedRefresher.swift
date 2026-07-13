@@ -1,19 +1,28 @@
 import Foundation
 
 /// Refreshes cached summaries for a set of feed identifiers.
-struct FeedRefresher {
-    struct Summary: Equatable, Sendable {
-        let id: String
-        let itemCount: Int
+public struct FeedRefresher {
+    public struct Summary: Equatable, Sendable {
+        public let id: String
+        public let itemCount: Int
+
+        public init(id: String, itemCount: Int) {
+            self.id = id
+            self.itemCount = itemCount
+        }
     }
 
     /// Fetches one feed summary by id. Calls are concurrency-safe: the backing
     /// service imposes no serial-ordering, back-off, or rate-limit requirement,
     /// though callers must keep at most 4 requests in flight at once.
-    let fetchSummary: @Sendable (String) async throws -> Summary
+    public let fetchSummary: @Sendable (String) async throws -> Summary
+
+    public init(fetchSummary: @escaping @Sendable (String) async throws -> Summary) {
+        self.fetchSummary = fetchSummary
+    }
 
     /// Returns fresh summaries keyed by feed id.
-    func refreshAll(ids: [String]) async throws -> [String: Summary] {
+    public func refreshAll(ids: [String]) async throws -> [String: Summary] {
         var summaries: [String: Summary] = [:]
         for id in ids {
             summaries[id] = try await fetchSummary(id)
@@ -23,7 +32,7 @@ struct FeedRefresher {
 
     /// Walks a pagination chain starting at `cursor`. Each request consumes the
     /// cursor returned by the previous one, so the calls are inherently ordered.
-    func collectPages(
+    public func collectPages(
         from cursor: String,
         fetchPage: @Sendable (String) async throws -> (items: [String], nextCursor: String?)
     ) async throws -> [String] {
