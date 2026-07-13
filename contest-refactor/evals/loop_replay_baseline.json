@@ -42,7 +42,39 @@
     },
     {
       "id": "recomputed-derived-1",
-      "status": "baseline_unmeasured"
+      "status": "measured",
+      "baseline_observed": {
+        "arms": {
+          "red": {
+            "skill_commit": "26297a4",
+            "run_commit": "e43b781",
+            "observed_at": "2026-07-13",
+            "model": "claude-sonnet-4-6",
+            "grader_exit": 1,
+            "failed_invariants": [
+              "structural: findings[] is non-empty",
+              "structural: loop_result.targeted_finding_status valid enum",
+              "semantic: a finding cites the planted primary_file",
+              "semantic: loop_result.what_changed references primary_file",
+              "semantic: loop_result.targeted_finding_status == expected"
+            ],
+            "planted_finding_detected": false,
+            "other_efficiency_findings": 0,
+            "note": "Pre-promotion skill (lens-efficiency.md opt-in, not loaded) read from a worktree at 26297a4. Loop emitted 0 findings, verdict 'Strong contender', simplicity=10, HALT_SUCCESS_candidate — the D1 recomputed-derived pattern was out of scope. Clean detection miss (artifact validates structurally; planted-finding invariant fails). Blind dispatch; see loop-fixtures/MEASUREMENT-2026-07-13.md."
+          },
+          "green": {
+            "skill_commit": "27e5071",
+            "run_commit": "1c2ea2a",
+            "observed_at": "2026-07-13",
+            "model": "claude-sonnet-4-6",
+            "grader_exit": 0,
+            "failed_invariants": [],
+            "planted_finding_detected": true,
+            "other_efficiency_findings": 0,
+            "note": "Promoted skill (lens-efficiency.md always-included). F1 'render() recomputes statistics three times per call', Noticeable weakness, simplicity; fixed subtractively (evaluate once), swift test 7/7, output byte-identical; grader PASS on all required invariants. Restraint held: the UnitFormatter near-miss control was recognized and left untouched (0 other efficiency findings). Blind dispatch."
+          }
+        }
+      }
     },
     {
       "id": "sequential-io-1",

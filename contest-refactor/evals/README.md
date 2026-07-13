@@ -437,11 +437,27 @@ python3 contest-refactor/scripts/loop_replay_materialize.py duplicated-subtotal-
 python3 contest-refactor/scripts/loop_replay_grade.py duplicated-subtotal-1 /tmp/lr
 ```
 
-Scope: five fixtures on the common Critic→Architect→Execution path (not HALT/retirement tails) —
-the `duplicated-subtotal-1` smoke fixture plus four efficiency-detection RED→GREEN quads
+Scope: five fixture directories on the common Critic→Architect→Execution path (not HALT/retirement
+tails) — the `duplicated-subtotal-1` smoke fixture plus four efficiency-detection fixtures
 (`recomputed-derived-1`, `sequential-io-1`, `startup-blocking-1`, `closure-retention-1`) for the
-lens-efficiency.md promotion measurement (see `loop_replay_baseline.json` § prereg). Extend with
-the HALT/retirement tail as needed.
+lens-efficiency.md always-included promotion. Extend with the HALT/retirement tail as needed.
+
+#### Efficiency-detection RED→GREEN (2026-07-13, blind dispatch)
+
+Measured scope is `1 + N` fixtures: the smoke fixture plus the efficiency fixtures whose arms are
+recorded. **`recomputed-derived-1` (D1) is measured** — a clean, grader-consistent RED→GREEN pair
+on one byte-identical fixture: the **pre-promotion** skill (efficiency opt-in, read from a worktree
+at the last opt-in commit) emitted **zero** findings and rated the fixture `simplicity`=10 —
+`loop_replay_grade.py` FAILs = detection **miss**; the **promoted** skill (efficiency always-on)
+flagged the D1 recomputed-derived-value pattern at *Noticeable weakness* on `simplicity`, fixed it,
+and **grader PASSes** = detection **catch** — with the fixture's near-miss control (`UnitFormatter`,
+a stored O(1) read) correctly left untouched (restraint held). Full write-up, per-arm commits, and
+the fixture-hardening history: [`loop-fixtures/MEASUREMENT-2026-07-13.md`](loop-fixtures/MEASUREMENT-2026-07-13.md).
+`sequential-io-1` / `startup-blocking-1` / `closure-retention-1` (D2/D3/D4) are built, hardened, and
+`swift test`-green but remain `baseline_unmeasured` — their quads are deferred (loop cost + an
+account spend limit hit mid-session); the exact procedure to complete them is in the MEASUREMENT
+file. Each fixture deliberately omits the `duplicated-subtotal-1` planted-debt marker comment so the
+loop cannot read the answer.
 
 ## Layer 5 — execution-grain (`exec-fixtures/`, `exec_replay_baseline.json`)
 
