@@ -5,13 +5,13 @@
 
 id = "duplicated-subtotal-1"
 
-# The planted debt and where it lives. The Priority-1 finding's evidence[] must cite this path.
+# The planted debt and where it lives. The graded finding's evidence[] must cite this path.
 primary_file = "Sources/OrderCalculator.swift"
 smell = "subtotal accumulation loop + tax multiplication copy-pasted verbatim across subtotal(), totalWithTax(), receiptLines() — a single pricing-rule change must be made in three places"
 
 # Semantic invariants (the anti-eval-theater checks the grader enforces).
 targeted_dimension = "simplicity"            # canon scorecard dim; expected to be the docked/targeted axis
-min_severity = "Noticeable weakness"         # the Priority-1 finding must be at least this severe
+min_severity = "Noticeable weakness"         # the graded finding must be at least this severe
 expected_targeted_finding_status = "resolved" # after Step 3, the planted debt must actually be fixed
 
 # Discovery context the loop reads (mirrors a real Step-0 seed; no test command configured).

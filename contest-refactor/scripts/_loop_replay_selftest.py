@@ -15,8 +15,10 @@ Checks:
   (d) manifest consistency — status ∈ {baseline_unmeasured, measured}; a measured fixture
       must carry a non-null baseline_observed
   (e) two-arm schema — when baseline_observed.arms is present (the efficiency RED->GREEN
-      fixtures), each arm is named red/green and carries the preregistered fields; a
-      measured fixture with arms must carry both arms (legacy single-arm shape stays valid)
+      fixtures), each arm is named red/green and carries the preregistered fields with
+      their declared types; a measured fixture with arms must carry both arms (legacy
+      single-arm shape stays valid), and a measured efficiency fixture (expected.toml
+      notes.red_baseline) must use the arms shape
 """
 
 from __future__ import annotations
@@ -45,17 +47,20 @@ REQUIRED_EXPECTED_KEYS = (
 VALID_STATUS = {"baseline_unmeasured", "measured"}
 VALID_FINDING_STATUS = {"resolved", "carried_forward"}
 VALID_ARM_NAMES = {"red", "green"}
-REQUIRED_ARM_KEYS = (
-    "skill_commit",
-    "run_commit",
-    "observed_at",
-    "model",
-    "grader_exit",
-    "failed_invariants",
-    "planted_finding_detected",
-    "other_efficiency_findings",
-    "note",
-)
+# Preregistered per-arm fields WITH the types arm_schema declares (loop_replay_baseline.json
+# § prereg.arm_schema) — presence alone would let a hand-recorded planted_finding_detected
+# of "no" (truthy string) silently score as a detection in the RED-vs-GREEN comparison.
+ARM_KEY_TYPES = {
+    "skill_commit": str,
+    "run_commit": str,
+    "observed_at": str,
+    "model": str,
+    "grader_exit": int,
+    "failed_invariants": list,
+    "planted_finding_detected": bool,
+    "other_efficiency_findings": int,
+    "note": str,
+}
 
 
 def _load_canon_dimensions() -> set[str]:
@@ -72,6 +77,34 @@ def _collect_fixture_dirs() -> list[str]:
     if not FIXTURES_DIR.exists():
         return []
     return sorted(p.name for p in FIXTURES_DIR.iterdir() if p.is_dir())
+
+
+def _check_arms(fid: str, status: object, arms: object) -> list[str]:
+    """Check (e): arms named red/green, each carrying the preregistered fields with the
+    declared types (bool fields reject truthy strings; int fields reject bools)."""
+    if not isinstance(arms, dict) or not arms:
+        return [f"fixture '{fid}': baseline_observed.arms must be a non-empty object"]
+    failures: list[str] = []
+    for arm_name, arm in arms.items():
+        if arm_name not in VALID_ARM_NAMES:
+            failures.append(f"fixture '{fid}': arm '{arm_name}' not in {sorted(VALID_ARM_NAMES)}")
+            continue
+        if not isinstance(arm, dict):
+            failures.append(f"fixture '{fid}': arm '{arm_name}' is not an object")
+            continue
+        for key, want in ARM_KEY_TYPES.items():
+            if key not in arm:
+                failures.append(f"fixture '{fid}': arm '{arm_name}' missing key '{key}'")
+                continue
+            value = arm[key]
+            if not isinstance(value, want) or (want is int and isinstance(value, bool)):
+                failures.append(
+                    f"fixture '{fid}': arm '{arm_name}' key '{key}' must be "
+                    f"{want.__name__}, got {type(value).__name__}"
+                )
+    if status == "measured" and not set(arms) >= VALID_ARM_NAMES:
+        failures.append(f"fixture '{fid}': status=measured with arms requires both red and green")
+    return failures
 
 
 def main() -> int:
@@ -122,35 +155,20 @@ def main() -> int:
         status = entry.get("status")
         if status not in VALID_STATUS:
             failures.append(f"fixture '{fid}': status '{status}' not in {sorted(VALID_STATUS)}")
-        if status == "measured" and not entry.get("baseline_observed"):
+        baseline = entry.get("baseline_observed")
+        if status == "measured" and not baseline:
             failures.append(f"fixture '{fid}': status=measured but baseline_observed is empty")
+        if baseline is not None and not isinstance(baseline, dict):
+            failures.append(
+                f"fixture '{fid}': baseline_observed must be an object, "
+                f"got {type(baseline).__name__}"
+            )
+            baseline = None
 
         # (e) two-arm schema (efficiency RED->GREEN fixtures; legacy single-arm shape valid)
-        arms = (entry.get("baseline_observed") or {}).get("arms")
+        arms = (baseline or {}).get("arms")
         if arms is not None:
-            if not isinstance(arms, dict) or not arms:
-                failures.append(
-                    f"fixture '{fid}': baseline_observed.arms must be a non-empty object"
-                )
-            else:
-                for arm_name, arm in arms.items():
-                    if arm_name not in VALID_ARM_NAMES:
-                        failures.append(
-                            f"fixture '{fid}': arm '{arm_name}' not in {sorted(VALID_ARM_NAMES)}"
-                        )
-                        continue
-                    if not isinstance(arm, dict):
-                        failures.append(f"fixture '{fid}': arm '{arm_name}' is not an object")
-                        continue
-                    for key in REQUIRED_ARM_KEYS:
-                        if key not in arm:
-                            failures.append(
-                                f"fixture '{fid}': arm '{arm_name}' missing key '{key}'"
-                            )
-                if status == "measured" and not set(arms) >= VALID_ARM_NAMES:
-                    failures.append(
-                        f"fixture '{fid}': status=measured with arms requires both red and green"
-                    )
+            failures.extend(_check_arms(fid, status, arms))
 
         # (c) expected.toml
         exp_path = fdir / "expected.toml"
@@ -179,6 +197,18 @@ def main() -> int:
             failures.append(
                 f"fixture '{fid}': expected_targeted_finding_status "
                 f"'{exp.get('expected_targeted_finding_status')}' not in {sorted(VALID_FINDING_STATUS)}"
+            )
+        # Efficiency fixtures (notes.red_baseline marks the RED->GREEN protocol) must record
+        # measurements in the two-arm shape — a flat legacy baseline_observed would silently
+        # drop the RED arm the fixture exists to capture.
+        if (
+            status == "measured"
+            and "red_baseline" in exp.get("notes", {})
+            and not isinstance(arms, dict)
+        ):
+            failures.append(
+                f"fixture '{fid}': efficiency fixture (notes.red_baseline present) is "
+                f"measured without baseline_observed.arms — RED/GREEN arms required"
             )
 
     if failures:

@@ -330,7 +330,9 @@ Layers 2/3); see `analysis/contest-refactor/GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-
   - **advisory** (never gates): `scorecard[targeted_dimension]` movement vs the recorded baseline.
 - `scripts/_loop_replay_selftest.py` — mechanical guard (no model): every `loop-fixtures/<id>/`
   dir is registered (no silent exclusion), required members present, `expected.toml` enums are
-  canon-valid, and a `measured` fixture carries a non-null `baseline_observed`.
+  canon-valid, a `measured` fixture carries a non-null `baseline_observed`, and the efficiency
+  fixtures' `baseline_observed.arms.{red,green}` records carry the preregistered fields with
+  their declared types (check (e)).
 
 ### Measured outcome (2026-06-28 — built RED→GREEN)
 
@@ -351,8 +353,11 @@ python3 contest-refactor/scripts/loop_replay_materialize.py duplicated-subtotal-
 python3 contest-refactor/scripts/loop_replay_grade.py duplicated-subtotal-1 /tmp/lr
 ```
 
-Scope: one fixture, the common Critic→Architect→Execution path (not HALT/retirement tails) — a
-first smoke harness. Extend with more fixtures (and the HALT/retirement tail) as needed.
+Scope: five fixtures on the common Critic→Architect→Execution path (not HALT/retirement tails) —
+the `duplicated-subtotal-1` smoke fixture plus four efficiency-detection RED→GREEN quads
+(`recomputed-derived-1`, `sequential-io-1`, `startup-blocking-1`, `closure-retention-1`) for the
+lens-efficiency.md promotion measurement (see `loop_replay_baseline.json` § prereg). Extend with
+the HALT/retirement tail as needed.
 
 ## Layer 5 — execution-grain (`exec-fixtures/`, `exec_replay_baseline.json`)
 

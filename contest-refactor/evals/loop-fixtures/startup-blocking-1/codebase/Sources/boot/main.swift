@@ -2,7 +2,7 @@ import BootKit
 import Foundation
 
 let arguments = CommandLine.arguments
-let configPath = arguments.count > 1 ? arguments[1] : "config"
+let configPath = arguments.count > 1 && arguments[1] != "diagnose" ? arguments[1] : "config"
 let configDirectory = URL(fileURLWithPath: configPath, isDirectory: true)
 
 let config = try StartupConfig.loadAll(from: configDirectory)

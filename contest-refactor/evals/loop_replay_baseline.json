@@ -7,17 +7,18 @@
     "grader": "scripts/loop_replay_grade.py",
     "materializer": "scripts/loop_replay_materialize.py",
     "scope": "five fixtures on the common Critic->Architect->Execution path: duplicated-subtotal-1 (smoke, one semantic assertion) + recomputed-derived-1 / sequential-io-1 / startup-blocking-1 / closure-retention-1 (efficiency-detection RED->GREEN quads for the lens-efficiency.md always-included promotion; blind-dispatch RED/GREEN protocol in loop-fixtures/MEASUREMENT-2026-07-13.md)",
-    "arm_schema": "efficiency fixtures record baseline_observed.arms.{red,green}; each arm carries skill_commit (the contest-refactor skill tree SHA the loop ran against), run_commit (the materialized loop's final fix commit, matching the duplicated-subtotal-1 run_commit convention), observed_at, model, grader_exit, failed_invariants[], planted_finding_detected (bool), other_efficiency_findings (int; counts over-flagging incl. findings against the fixture's near-miss restraint control), note. A RED arm counts as a detection miss only when the artifact validates structurally but the planted-finding semantic invariant fails; structural/schema failures are inconclusive (re-run once, then record inconclusive)."
+    "arm_schema": "efficiency fixtures record baseline_observed.arms.{red,green}; each arm carries skill_commit (the contest-refactor skill tree SHA the loop ran against), run_commit (the materialized loop's final fix commit, matching the duplicated-subtotal-1 run_commit convention), observed_at, model, grader_exit, failed_invariants[], planted_finding_detected (bool), other_efficiency_findings (int; counts over-flagging incl. findings against the fixture's near-miss restraint control), note. Field names AND types are machine-enforced as ARM_KEY_TYPES in scripts/_loop_replay_selftest.py — update both together. A RED arm counts as a detection miss only when the artifact validates structurally but the finding-cites-primary_file semantic invariant fails; structural/schema failures are inconclusive (re-run once, then record inconclusive)."
   },
   "invariants": {
     "structural": [
       "validate-artifact.py --mode strict exits 0 on the emitted artifact tree",
-      "the planted finding is identified by evidence-cites-primary_file (an explicit targeted id is preferred when present; priority_1_finding_id and loop_result.targeted_finding_id are both legitimately null once the priority-1 finding is RESOLVED in the same loop)",
+      "findings[] is non-empty",
       "loop_result.targeted_finding_status is a valid enum value"
     ],
     "semantic": [
-      "a finding cites expected.primary_file (the planted debt was found)",
+      "a finding cites expected.primary_file (the planted debt was found; identification is by evidence-cites-primary_file — priority_1_finding_id and loop_result.targeted_finding_id are both legitimately null once the priority-1 finding is RESOLVED in the same loop)",
       "that finding's severity is >= expected.min_severity",
+      "loop_result.what_changed references expected.primary_file (the fix touched the planted file)",
       "loop_result.targeted_finding_status == expected.expected_targeted_finding_status (the planted debt was actually fixed)"
     ],
     "advisory": [
