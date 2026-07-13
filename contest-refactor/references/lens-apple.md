@@ -30,8 +30,11 @@ This lens specializes the meta-rules in `method.md` and the score anchors in `ar
 - Previews and fixtures supported by design but not used as proof of quality.
 - Do not reward MVVM, repositories, coordinators, or protocol abstraction unless they reduce ambiguity or coupling per the architectural tests in `architecture-rubric.md`.
 - **Collection identity (correctness, not perf).** `ForEach` / `List` over **dynamic or reorderable** data needs identity that is stable, outlives the view, and is not derived from mutable content. (`.indices` / offset is acceptable for genuinely static content — not a blanket ban.) Unstable identity on dynamic data is a `state_management` finding, not a style nit.
+- **Stable workflow identity** (canon smell — `architecture-rubric.md`). Apple telltale: `.onMove` / `.onDelete` hand the reducer raw `IndexSet` offsets from a *filtered/sorted* projection, which do not index the stored collection. Resolve offsets to durable IDs in the view, or validate the exact ordered slice at the write authority.
 - **Passed-value ownership.** Declaring a parent-passed value as `@State` / `@StateObject` captures the initial value and ignores later parent updates — a bug **only when continued parent synchronization is expected**. Seeding a local editable draft from a passed value is legitimate; flag only on evidence the child is expected to track the parent. (`state_management`.)
 - **Invalidation problems need evidence.** Surface an over-invalidation finding only from a **demonstrated** source — Instruments, `Self._printChanges()`, a measured hot path — not from heuristics. Do not assert that passing an `@Observable` object broadens invalidation (the Observation framework tracks only the properties a view actually reads), and do not turn `AnyView`, non-unary rows, or missing `Equatable` into blanket findings. Map a demonstrated case to `framework_idioms`.
+- **Unstable shaped output** (canon smell — `architecture-rubric.md`). Apple telltales: iterating `Dictionary` / `Set` `.values` into rows, sorting by a non-unique display label with no tie-breaker, or resolving child data before applying the selected scope — surfaces as flaky SwiftUI snapshots and wrong-row continuity. Shape once at the projection boundary with a durable tie-breaker (`id`, explicit order, sequence).
+- **Workflow time in presentation** (canon smell — `architecture-rubric.md`). Apple telltales: SwiftUI `.task`, `Timer`, `Task.sleep`, `.onReceive` are fine for animation, debounce, or ephemeral UI dismissal — not for durable domain clocks. Move the clock to a coordinator / reducer effect / clock-injected policy; a view may render the deadline (`TimelineView`) but must not own expiry.
 
 ## Concurrency & Runtime Safety
 
@@ -53,6 +56,8 @@ Counts do not score. High or low @MainActor / async / actor count is not itself 
 TSAN findings, compiler concurrency warnings, Non-Sendable warnings are serious evidence; map each to source and behavior.
 
 Unstructured `Task` usage needs ownership proof. Treat unclear concurrency as architecture weakness, not implementation footnote.
+
+**Reservation after suspension** (canon smell — `architecture-rubric.md`). Apple telltale: Swift actor methods are reentrant across every `await` — a call parked at `await pricing.quote(...)` lets another call enter and pass the same guard. Reserve/mark before the first suspension, or move check+claim into one actor-isolated / transactional / unique-constraint authority after it.
 
 ### Continuation-bridge delegate audit (mandatory when adapter uses `withCheckedThrowingContinuation` + timeout)
 
@@ -140,12 +145,16 @@ Using `canImport(UIKit)` to gate a symbol the tvOS SDK lacks is a correctness bu
 - Duplicated state across view, domain, service, cache, persistence layers.
 - Navigation/presentation state that can drift out of sync with domain state.
 - Async flows that can leave UI in invalid intermediate combinations.
+- State with no authority (canon smell — `architecture-rubric.md`): map writers *and* readers before treating a mutable field as an owner; a field with write sites but no application/test read site is not one.
+- Causal runtime context (canon smell — `architecture-rubric.md`): completion/error/progress events for an existing record must resolve from the record's captured request/context, not mutable ambient "current" selection. Current-selection *commands* are fine when they validate identity/version at the write authority.
 
 Penalize state models permitting impossible combinations. Recommend explicit state-machine formalization only where it removes real ambiguity — do not force enum-heavy modeling everywhere.
 
 ## Ownership (Apple-flavored)
 
 Map actual writers. Do not infer ownership from access control alone.
+For every mutable property you treat as runtime-significant, map both writers and readers (see canon smell *state with no authority*); a field with write sites but no application/test read site is not an owner — delete it, emit the fact through the existing stream, or move it to the type that decides behavior.
+For adapter seams, compare the Interface output contract with facts the adapter receives from the external SDK/system: a promised downstream value dropped to `nil`/zero/empty/placeholder is *adapter output contract incompleteness* (canon smell) — publish the fact or narrow the Interface.
 
 Treat as smoke (confirm before findings):
 - global mutable state

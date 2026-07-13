@@ -17,7 +17,7 @@ gating, resume routing, retry envelopes) to a finished `CURRENT_REVIEW.json` art
   the deterministic fixtures already guarantee. They are not the skill's core value, and they
   overlap the fixture layer by design. Don't read a high pass rate here as "the skill works."
 
-## Layer 2 — refactoring-judgment (`evals.json` #12–#24, `scenarios/`)
+## Layer 2 — refactoring-judgment (`evals.json` #12–#48, `scenarios/`)
 
 Does the Critic/reviewer make the **right loop decision** on a refactor that *looks* finished?
 This is where the skill's real leverage lives — severity calibration, the 9.5 acceptance
@@ -36,7 +36,7 @@ value. The rebuilt layer fixes that:
    The signal is the *decision fields*, not prose.
 2. **Buried trap, success-framed.** Each scenario (`scenarios/<id>/scenario.md`) is a realistic
    diff the Actor reports as *converged, tests green*. The model must **find** the problem; the
-   prompt is neutral and identical across all nine (it leaks no methodology, so a no-skill arm
+   prompt is neutral and identical across the behavioral cases (it leaks no methodology, so a no-skill arm
    gets no hints).
 3. **Flag paired with restraint.** Every "should reject" has a legitimate look-alike that must
    **not** be flagged. A maximally paranoid over-flagger passes the flag cases and **fails the
@@ -76,10 +76,19 @@ bare model approximates or omits. That gap is the lift.
 | `principal-invariant-owner-flag` (#25) | `principal-invariant-owner-restraint` (#26) | domain invariant enforced independently in two modules (split) vs. single domain method both paths call through |
 | `principal-duplicated-rule-flag` (#27) | `principal-duplicated-rule-restraint` (#28) | eligibility predicate duplicated across View + Repository + Worker with drift vs. `DiscountPolicy` already centralizes it |
 | `principal-process-owner-flag` (#29) | `principal-process-owner-restraint` (#30) | multi-step cross-module write with no process owner, no compensation vs. `PurchaseCoordinator` owns the saga + rollback |
+| `principal-consistency-boundary-flag` (#31) | `principal-consistency-boundary-restraint` (#32) | committed roadmap shears a strong consistency boundary vs. the same boundary remains grounded and required |
+| `principal-abstraction-seam-flag` (#33) | `principal-abstraction-seam-restraint` (#34) | grounded variation shears a unified seam vs. no committed variation, so unification is correct |
+| `reentrancy-reserve-flag` (#35) | `reentrancy-reserve-restraint` (#36) | check-then-claim reservation after suspension vs. await before a transactional/unique authority claim |
+| `write-only-state-flag` (#37) | `write-only-state-restraint` (#38) | stored runtime fields with writes but no authority reads vs. state that owns a real runtime decision |
+| `projection-order-flag` (#39) | `projection-order-restraint` (#40) | shaped output from unordered/non-unique ordering vs. one projection owner with stable tie-breaker |
+| `view-owned-time-flag` (#41) | `view-owned-time-restraint` (#42) | durable workflow time owned by a view task/timer vs. presentation rendering a coordinator-owned deadline |
+| `stable-workflow-identity-flag` (#43) | `stable-workflow-identity-restraint` (#44) | raw projection position as write authority vs. durable IDs or exact ordered-slice validation |
+| `causal-runtime-context-flag` (#45) | `causal-runtime-context-restraint` (#46) | runtime event resolved from ambient current state vs. record-captured request/context |
+| `adapter-output-contract-flag` (#47) | `adapter-output-contract-restraint` (#48) | adapter drops a promised downstream fact vs. publishes it or narrows the Interface contract |
 
 ### Layer-2 domain-grain extension
 
-`evals.json` #25–#30 extend the behavioral layer **one grain up**: from component-level
+`evals.json` #25–#34 extend the behavioral layer **one grain up**: from component-level
 defects (single-file ownership, SwiftUI state discipline) to **cross-module / domain
 principal-defect** scenarios. The same flag/restraint discipline applies — every flag has
 a legitimate twin that must not be flagged — and the same structured verdict contract is
@@ -97,6 +106,81 @@ used. The carve-outs under test are:
   sequence with no process/coordinator owner and no compensating rollback is a
   missing-process-owner defect. The restraint twin installs a coordinator that owns the
   saga and the rollback path.
+- **Grounded consistency boundary** (`principal-consistency-boundary`): a present-tense
+  correct ACID boundary can still be wrong when a committed force moves one side out of
+  the transaction and explicitly permits eventual consistency. The restraint twin keeps
+  the paired entity co-located and strongly consistent under the same roadmap.
+- **Grounded abstraction seam** (`principal-abstraction-seam`): a unified seam is wrong
+  when committed variation will split eligibility, channel, retry, and audit behavior.
+  The restraint twin keeps the unified seam where no grounded variation exists.
+
+### Layer-2 advisory-audit extension
+
+`evals.json` #35–#48 add advisory audit coverage for recurring patterns without
+turning them into deterministic gates or project-specific rules:
+
+- **Reservation after suspension** (`reentrancy-reserve`): flag check-then-claim
+  reentrancy when a claim is recorded only after an `await`; do not flag an await that
+  precedes an atomic transactional/unique claim authority.
+- **State with no authority** (`write-only-state`): flag stored fields with writes but no
+  application/test read site or runtime decision; do not flag state that owns a clear
+  decision such as duplicate-work coalescing.
+- **Unstable shaped output** (`projection-order`): flag user-visible projection order
+  derived from unordered input or non-unique sort keys; do not flag a single projection
+  owner that uses a durable tie-breaker.
+- **Workflow time in presentation** (`view-owned-time`): flag durable workflow clocks owned
+  by view tasks/timers; do not flag purely presentational countdown rendering of a
+  coordinator-owned deadline.
+- **Stable workflow identity** (`stable-workflow-identity`): flag write authority driven by
+  raw projection offsets or cursor indexes that can drift from the ordered collection being
+  mutated; do not flag durable IDs, target-neighbor IDs, or exact ordered-slice validation.
+- **Causal runtime context** (`causal-runtime-context`): flag completion/error/progress events
+  for an existing runtime record that resolve behavior from mutable ambient current state; do
+  not flag record-captured request/context or current-state commands with identity/version
+  validation.
+- **Adapter output contract incompleteness** (`adapter-output-contract`): flag adapters that
+  receive an externally-owned fact promised by the Interface but publish `nil`, zero, empty,
+  or a placeholder instead; do not flag adapters that publish the promised fact or Interfaces
+  that explicitly leave the fact to another owner.
+
+All seven patterns are drawn from validated findings in a heavily-audited source repository
+(`/code-review high`, 2026-07-05); each canon smell in `architecture-rubric.md § Vocabulary —
+Smells` maps to one or more of those findings. The scenarios are registered in
+`advisory_baseline.json` and guarded by `scripts/_advisory_baseline_selftest.py`, which also
+enforces a global no-orphan contract (every `scenarios/*` dir is referenced by an `evals.json`
+entry).
+
+#### Measured axis: restraint + vocabulary, NOT recall
+
+These advisory scenarios were measured three times (see `advisory_baseline.json § measurement`):
+Sonnet on the original scenarios, Sonnet on a source-fidelity rebuild, and Haiku on the rebuild.
+The result is consistent and load-bearing:
+
+- **Recall lift is 0 on every flag, for every base model.** Bare Haiku and bare Sonnet both catch
+  all seven defects unaided — they are real correctness bugs a competent model finds by reading the
+  code. Rebuilding the flag scenarios so the defect is a *static* property of plausible finished
+  code (rather than the visible diff delta) did **not** change this. **Do not read a passing flag
+  case as evidence the skill lifts recall here.** It doesn't; these component-grain defects are too
+  legible. (The `principal-*` layer, whose defects are cross-module, is where recall lift lives.)
+- **Restraint lift is real.** On the `stable-workflow-identity` and `adapter-output-contract`
+  twins, bare/older reviewers over-flag the legitimate carve-out; the current lens carve-out prose
+  makes the reviewer hold. That over-flag repair is the discriminating signal.
+- **Vocabulary precision is real.** The skill-equipped arm names the exact canon smell and cites
+  `architecture-rubric.md`; bare arms catch the same bug in ad-hoc prose.
+
+So this layer earns its place as **restraint (carve-out discipline) + vocabulary consistency**
+coverage. `view-owned-time` is a *noticing*-level pair (the source finding, F016, is a Noticeable
+scheduling smell, not a blocking defect): the flag is graded on surfacing the smell, not on blocking
+9.5.
+
+**Scenario-authoring rule this layer enforces on itself:** a flag scenario must not encode the
+defect as the visible diff delta, and must not hand over the audit legwork (no inlined `rg`
+read-site proof, no "these two sequences are not guaranteed equal" narration). The reviewer must do
+the read-site grep / index-provenance trace / publish-path check itself. The de-leak verification
+(below) greps both `*-flag` and `*-restraint` inputs for smell names and legwork proofs.
+
+These IDs are **not** registered in `principal_baseline.json` (which stays scoped to `principal-*`
+domain-grain scenarios); they have their own `advisory_baseline.json` + selftest.
 
 #### Baseline manifest and "no silent exclusion" contract
 

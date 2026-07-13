@@ -70,6 +70,10 @@ API — all receiving code must be platform-gated.
   `reorderContainer(for:)`, not a hand-rolled `DropDelegate` reorder chain. See
   [`references/internal-reorder.md`](references/internal-reorder.md).
 - macOS `NSPasteboard` paste shortcuts — different surface.
+- Dragging your *own* content or a generated file **out** to Finder or another
+  app — that is an outbound `.draggable` + `Transferable` job (`FileRepresentation`
+  for a file payload, iOS 16+/macOS 13+; `NSFilePromiseProvider` only if you need
+  AppKit-level lazy control). This skill covers *receiving* drops, not sourcing them.
 
 ## Architecture: DropDelegate vs `.onDrop`
 

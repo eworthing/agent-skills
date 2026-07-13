@@ -518,6 +518,236 @@
         "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
         "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape"
       ]
+    },
+    {
+      "id": 35,
+      "name": "reentrancy-reserve-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. Removing `isStarting` reopens a reentrancy window: `listenerTask` is assigned only AFTER `await refreshCurrentEntitlements()`, so two concurrent `startListening()` calls both pass `listenerTask == nil`, both suspend, and both create a `Transaction.updates` listener; the second assignment overwrites the first handle, leaking a listener that `stopListening()`/`deinit` can no longer cancel. This is reservation after suspension (check before the await, claim after). concurrency < 9.5; blocks_95 true. Remedy: reserve/store the task before the suspension, or serialize startup so a duplicate listener cannot be created.",
+      "files": [
+        "scenarios/reentrancy-reserve-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags reservation after suspension / reentrancy across the await (nil-guard before `await`, task stored after)",
+        "[discriminating] Identifies the leaked, uncancellable duplicate listener as the consequence",
+        "[discriminating] Maps it to concurrency with a score < 9.5",
+        "[discriminating] Recommends storing/reserving the task before the suspension or serializing startup",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 36,
+      "name": "reentrancy-reserve-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag reservation after suspension. `startListening()` is non-async and assigns `listenerTask` synchronously before any suspension point; the initial refresh moved inside the created task. A second concurrent call sees a non-nil `listenerTask` and returns, so only one listener is ever created. concurrency takes no deduction for reservation-after-suspension reasons.",
+      "files": [
+        "scenarios/reentrancy-reserve-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the startup path as reservation after suspension",
+        "[restraint] Recognizes the task is stored before any `await` (claim before suspension)",
+        "[restraint] verdict is not \"rejected\" for reentrancy reasons",
+        "[restraint] Attributes no concurrency deduction to the reserve-before-suspend startup"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "write-only-state-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. `currentCatalogID` is written in `start`, `stop`, and `ownershipLost` but never read anywhere in the type; `sessionToken` is the field actually consumed (passed to every `player` call). `currentCatalogID` is state with no authority: it owns no runtime decision and can drift. state_management < 9.5; blocks_95 true. Remedy: delete `currentCatalogID` and its assignments.",
+      "files": [
+        "scenarios/write-only-state-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags `currentCatalogID` as write-only / state with no authority (written in start/stop/ownershipLost, never read)",
+        "[discriminating] Distinguishes it from `sessionToken`, which has real read sites",
+        "[discriminating] Maps it to state_management with a score < 9.5",
+        "[discriminating] Recommends deleting the field and its assignments",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 38,
+      "name": "write-only-state-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag state with no authority. `inFlight` has a read site (`if let existing = inFlight[batch.id]`) and owns the duplicate-coalescing decision; the coalesced caller awaits `existing.value`, so it observes the shared upload's success or thrown error. It is runtime state with clear authority, not a write-only mirror. state_management takes no deduction for this field.",
+      "files": [
+        "scenarios/write-only-state-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag `inFlight` as state with no authority (has a read site and owns coalescing)",
+        "[restraint] Recognizes the coalesced caller awaits the shared task, so no failure is swallowed",
+        "[restraint] verdict is not \"rejected\" for state-with-no-authority reasons",
+        "[restraint] Attributes no state_management deduction to the in-flight registry"
+      ]
+    },
+    {
+      "id": 39,
+      "name": "projection-order-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. `project` maps user-visible `rows` directly from `projectsByID.values` (a `Dictionary`) after the refactor dropped the `.sorted { $0.sortIndex }` step. Dictionary iteration order is unspecified, so row order — which drives dashboard selection continuity and snapshot tests — is nondeterministic. `sortIndex` was the display-order authority and is now unused. data_flow < 9.5; blocks_95 true. Remedy: restore a deterministic sort (by `sortIndex`) in the single projection owner.",
+      "files": [
+        "scenarios/projection-order-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags nondeterministic user-visible order from Dictionary iteration after the sort was dropped",
+        "[discriminating] Notes `sortIndex` was the display-order authority now unused",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends restoring a deterministic sort in the projection owner",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "projection-order-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag unstable shaped output. The single projection owner sorts active projects by display name with a durable ID tie-breaker, so equal-name rows have deterministic order. data_flow takes no deduction for projection ordering.",
+      "files": [
+        "scenarios/projection-order-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the by-name-then-ID projection as unstable shaped output",
+        "[restraint] Recognizes the durable tie-breaker yields deterministic order",
+        "[restraint] verdict is not \"rejected\" for projection-order reasons",
+        "[restraint] Attributes no data_flow deduction to the stable projection order"
+      ]
+    },
+    {
+      "id": 41,
+      "name": "view-owned-time-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Surfaces a finding (need not block 9.5). A hard-coded `Task.sleep(for: .milliseconds(300))` inside a view `.task` gates domain prefetch on a magic delay that races differently across devices, and the scheduling policy lives in the view. This is workflow/scheduling time in presentation at Noticeable severity. Remedy: replace the magic literal with a named scheduling constant/policy, or move prefetch scheduling to an application effect; the view should not own the delay. Verdict may be conditional/approved-with-finding rather than a hard rejection.",
+      "files": [
+        "scenarios/view-owned-time-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Surfaces the hard-coded 300ms magic delay / view-owned prefetch scheduling as a finding",
+        "[discriminating] Names it as workflow/scheduling time in presentation (view owning a scheduling delay for a domain concern)",
+        "[discriminating] Recommends a named constant/policy or moving scheduling out of the view",
+        "[validity] flagged_smells is non-empty (the smell is surfaced even if non-blocking)"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "view-owned-time-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag workflow time in presentation. The `.task` sleeps two seconds only to auto-dismiss a transient 'Saved' toast — ephemeral presentation time, the canon carve-out. Nothing durable depends on when it disappears; if the view goes away the toast is gone anyway. No scheduling/data_flow deduction.",
+      "files": [
+        "scenarios/view-owned-time-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the toast auto-dismiss timer (ephemeral UI, canon carve-out)",
+        "[restraint] Recognizes no durable/domain clock is owned by the view here",
+        "[restraint] verdict is not \"rejected\" for view-owned-time reasons",
+        "[restraint] Attributes no deduction to the presentational timer"
+      ]
+    },
+    {
+      "id": 43,
+      "name": "stable-workflow-identity-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. The view renders active-only `activePlayers`, and `.onMove` passes those offsets into `reorderRoster`, which applies them to `state.players.sorted` — active and benched players interleaved. An offset from the active-only projection indexes a different player once benched players sit between actives. `movePlayerToTop` also mixes index provenance (`firstIndex` into `state.players`, `remove(at:)` from the separately-sorted `ordered`) and fabricates index 0 via `?? 0`. Projection offset is not durable write identity. data_flow < 9.5; blocks_95 true. Remedy: ID-address the reorder, or apply offsets to the exact active-only ordered slice the view renders; drop the nil-to-zero fallback.",
+      "files": [
+        "scenarios/stable-workflow-identity-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags a projection offset used as write identity across mismatched collections (active-only view vs active+benched reducer ordering)",
+        "[discriminating] Flags the `movePlayerToTop` index-provenance mix and `?? 0` fabrication",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends ID-addressing or validating the exact active-only ordered slice",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 44,
+      "name": "stable-workflow-identity-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag unstable workflow identity. The view resolves move offsets to durable track IDs and sends the full visible ID slice; the reducer recomputes the authoritative projection and fails closed if the slice changed before the action arrived. The write authority never trusts an offset as identity. data_flow takes no deduction.",
+      "files": [
+        "scenarios/stable-workflow-identity-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the ID-addressed reorder with ordered-slice validation",
+        "[restraint] Recognizes durable IDs plus a fail-closed stale-slice check",
+        "[restraint] verdict is not \"rejected\" for workflow-identity reasons",
+        "[restraint] Attributes no data_flow deduction to the validated write authority"
+      ]
+    },
+    {
+      "id": 45,
+      "name": "causal-runtime-context-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. `syncFinished` is a completion event for an existing in-flight record, but `apply(_:to:)` resolves its destination from ambient `state.selectedFolderID` instead of the folder the sync started for. `SyncRecord` captures no request, so if selection changes while the sync runs, a result for Folder A is applied to Folder B. This is causal runtime context resolved from mutable ambient state. state_management < 9.5; blocks_95 true. Remedy: capture the request/folder on `SyncRecord` at start and apply completion through the record's captured context.",
+      "files": [
+        "scenarios/causal-runtime-context-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags the completion event resolving from ambient `selectedFolderID` instead of the record's captured context",
+        "[discriminating] Notes `SyncRecord` captures no request, enabling wrong-folder application when selection changes",
+        "[discriminating] Maps it to state_management with a score < 9.5",
+        "[discriminating] Recommends capturing the request/context on the record and applying completion through it",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 46,
+      "name": "causal-runtime-context-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag causal runtime context. The in-flight record captures its `request`, and completion applies through `record.request.folderID`; `selectedFolderID` is used only for new start-sync commands. A result for Folder A lands on Folder A even if selection changed. state_management takes no deduction.",
+      "files": [
+        "scenarios/causal-runtime-context-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag record-captured completion resolution",
+        "[restraint] Recognizes selection is used only for new commands, not for existing-record events",
+        "[restraint] verdict is not \"rejected\" for causal-context reasons",
+        "[restraint] Attributes no state_management deduction to the captured-context path"
+      ]
+    },
+    {
+      "id": 47,
+      "name": "adapter-output-contract-flag",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Rejects or conditionals. `PreviewState` promises `durationSeconds` for the progress UI, and `item.duration.seconds` is available (used in `tickDecision`), but `start`, `loopBack`, and `advance` all publish `durationSeconds: 0`. The downstream progress bar renders `currentTime / 0`, so 0%/NaN. This is adapter output contract incompleteness: a promised fact dropped in every publish path. data_flow < 9.5; blocks_95 true. Remedy: publish the item's duration in every `PreviewState` emission.",
+      "files": [
+        "scenarios/adapter-output-contract-flag/scenario.md"
+      ],
+      "assertions": [
+        "[discriminating] Flags `durationSeconds` dropped to 0 across all publish paths despite `item.duration` being available (adapter output contract incompleteness)",
+        "[discriminating] Notes the downstream progress-UI consumer needs the promised fact",
+        "[discriminating] Maps it to data_flow with a score < 9.5",
+        "[discriminating] Recommends publishing the item duration in every emission",
+        "[validity] blocks_95 is true for the touched dimension"
+      ]
+    },
+    {
+      "id": 48,
+      "name": "adapter-output-contract-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source — do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT flag adapter output contract incompleteness. `publish(currentTime:)` threads `item.duration.seconds` into every `PreviewState`, so `start`, `loopBack`, and `advance` all carry the promised duration. A test asserts non-zero `durationSeconds` on every emission after `start`. data_flow takes no deduction.",
+      "files": [
+        "scenarios/adapter-output-contract-restraint/scenario.md"
+      ],
+      "assertions": [
+        "[restraint] Does not flag the adapter that publishes the promised `durationSeconds`",
+        "[restraint] Recognizes every publish path threads the item duration",
+        "[restraint] verdict is not \"rejected\" for output-contract reasons",
+        "[restraint] Attributes no data_flow deduction to the complete adapter"
+      ]
     }
   ]
 }
