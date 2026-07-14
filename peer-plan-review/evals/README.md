@@ -16,7 +16,8 @@ evals/
     digest-plan.answer-key.md   # ground truth + expected catch sets + domain-context block
   build_prompts.py              # fixture -> prompt variants (baseline + micro-test pairs) in _generated/
   run_reviews.py                # parallel driver over ../scripts/run_review.py
-  score.py                      # verdict/recall/format + per-battery control-vs-treat signals
+  score.py                      # verdict + finding counts + format/parse prescreen
+                                # (per-defect recall is a manual read against the answer key)
   results/                      # dated result snapshots (committed)
   _generated/, runs/            # reproducible, gitignored
 ```
@@ -34,8 +35,10 @@ python3 run_reviews.py microtest  && python3 score.py microtest
 ```
 
 Defaults to the cheapest model that proves the path (Haiku for behavioral batteries,
-Sonnet for judgment-subtle ones, Codex-mini for the cross-family check). Edit the
-`BASELINE` / `MICRO` matrices in `run_reviews.py` to change providers, models, or reps.
+Sonnet for judgment-subtle ones, Codex-mini for the cross-family check). The current
+`BASELINE` matrix is 4 jobs (std-sonnet, std-codex, domain, adversarial); dated
+snapshots in `results/` may describe older matrices. Edit the `BASELINE` / `MICRO`
+matrices in `run_reviews.py` to change providers, models, or reps.
 Requires the relevant reviewer CLIs installed (`run_review.py --self-check --reviewer X`).
 Codex must run from inside a git repo (`evals/` qualifies).
 
