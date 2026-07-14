@@ -9,15 +9,15 @@
       "halt_subtype": null,
       "halt_handoff_text": null,
       "halt_handoff": {
-        "text": "Loop 1 ended at HALT_SUCCESS \u2014 every dimension 9.5 with accepted residuals.",
+        "text": "Loop 1 ended at HALT_SUCCESS — every dimension 9.5 with accepted residuals.",
         "expected_actions": []
       },
       "re_validated_at_sha": null,
       "re_validation_context": null,
       "provider": "claude_code",
-      "loop_model": "claude-sonnet-4-6",
+      "loop_model": "claude-sonnet-5",
       "loop_model_source": "default",
-      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model": "claude-sonnet-5",
       "reviewer_model_source": "default",
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",

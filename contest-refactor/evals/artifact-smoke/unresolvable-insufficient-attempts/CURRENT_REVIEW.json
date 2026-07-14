@@ -3,9 +3,9 @@
   "loop": 5,
   "loop_cap": 10,
   "provider": "claude_code",
-  "loop_model": "claude-sonnet-4-6",
+  "loop_model": "claude-sonnet-5",
   "loop_model_source": "default",
-  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model": "claude-sonnet-5",
   "reviewer_model_source": "default",
   "spawn_isolation": "subagent",
   "state": "CONTINUE",
@@ -15,7 +15,15 @@
   "verdict": "Promising, but architecturally immature",
   "verdict_explanation": "Mid-loop CONTINUE; F-400 was retired prematurely.",
   "scorecard": {
-    "test_strategy": {"score": 8.5, "delta": "SAME", "proof": "Tests/Common/DateAssertions.swift:21", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false}
+    "test_strategy": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "Tests/Common/DateAssertions.swift:21",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    }
   },
   "authority_map": [],
   "strengths": [],
@@ -28,7 +36,14 @@
     "tests_after_fix": "Date assertions stay deterministic."
   },
   "backlog": [
-    {"priority": 1, "title": "Inject TimeProvider into test base class", "kind": "structural", "rank": "needed for winning", "why_it_matters": "Deterministic test ordering.", "score_impact": "test_strategy +0.5"}
+    {
+      "priority": 1,
+      "title": "Inject TimeProvider into test base class",
+      "kind": "structural",
+      "rank": "needed for winning",
+      "why_it_matters": "Deterministic test ordering.",
+      "score_impact": "test_strategy +0.5"
+    }
   ],
   "deepening_candidates": [],
   "builder_notes": [],

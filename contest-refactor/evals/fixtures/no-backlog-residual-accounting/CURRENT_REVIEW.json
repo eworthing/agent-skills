@@ -18,21 +18,29 @@
       {
         "action_id": "inspect-manually",
         "description": "Inspect manually - ask why a specific concern was not flagged.",
-        "match_keywords": ["inspect", "why"],
+        "match_keywords": [
+          "inspect",
+          "why"
+        ],
         "match_paths": [],
         "match_kind": "any_of"
       },
       {
         "action_id": "switch-lens",
         "description": "Switch lens using /contest-refactor --force-lens <name>.",
-        "match_keywords": ["force-lens", "lens"],
+        "match_keywords": [
+          "force-lens",
+          "lens"
+        ],
         "match_paths": [],
         "match_kind": "any_of"
       },
       {
         "action_id": "reset",
         "description": "Reset the run.",
-        "match_keywords": ["reset"],
+        "match_keywords": [
+          "reset"
+        ],
         "match_paths": [],
         "match_kind": "any_of"
       }
@@ -41,19 +49,27 @@
   "re_validated_at_sha": null,
   "re_validation_context": null,
   "provider": "claude_code",
-  "loop_model": "claude-sonnet-4-6",
+  "loop_model": "claude-sonnet-5",
   "loop_model_source": "default",
-  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model": "claude-sonnet-5",
   "reviewer_model_source": "default",
   "spawn_isolation": "subagent",
   "findings_registry_path": "./findings_registry.json",
   "discovery": {
-    "source_roots": ["src/", "tests/"],
+    "source_roots": [
+      "src/",
+      "tests/"
+    ],
     "test_command": "./scripts/run_local_gate.sh",
     "build_command": "./scripts/run_local_gate.sh",
     "lens": "Apple",
-    "adrs": ["ADR-0001 Natural completion behavior"],
-    "domain_terms": ["Playback", "Spotify observation"]
+    "adrs": [
+      "ADR-0001 Natural completion behavior"
+    ],
+    "domain_terms": [
+      "Playback",
+      "Spotify observation"
+    ]
   },
   "verdict": "Strong contender",
   "verdict_explanation": "No backlog items pass the Simplify Pressure Test. The remaining concerns were rejected as cosmetic, ADR-documented, or simpler as-is.",
@@ -141,7 +157,9 @@
     }
   },
   "authority_map": [],
-  "strengths": ["Playback ownership is source-backed."],
+  "strengths": [
+    "Playback ownership is source-backed."
+  ],
   "findings": [],
   "simplification_check": {
     "structurally_necessary": "none",

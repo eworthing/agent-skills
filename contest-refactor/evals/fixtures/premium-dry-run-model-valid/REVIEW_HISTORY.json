@@ -8,7 +8,7 @@
       "state": "HALT_DRY_RUN",
       "halt_subtype": null,
       "halt_handoff": {
-        "text": "Loop 1 ended at HALT_DRY_RUN \u2014 --dry-run was set on this invocation, so I ran Step 0 (Discovery), Step 1 (Critic), and Step 2 (Architect plan) but stopped before Step 3 (Execution). No code changes. No commit.\n\nTargeted Priority-1 finding: F1 \u2014 Navigation has two writers\n\nThe plan I would execute (in CURRENT_REVIEW.md \"Loop 1 Plan (dry-run)\" section):\n  Files to change: Core/NavigationStore.swift, App/RootView.swift\n  Files NOT to touch: Features/Auth/LoginViewModel.swift\n  Blast radius: bounded to the change list above\n  Expected scorecard impact: Architecture quality + State management each +1.0\n\nNext step options:\n  (a) Execute the plan \u2014 re-invoke \"/contest-refactor\" (no flag).\n  (b) Re-plan \u2014 edit the Improvement Backlog then re-invoke \"/contest-refactor --dry-run\".\n  (c) Abort.",
+        "text": "Loop 1 ended at HALT_DRY_RUN — --dry-run was set on this invocation, so I ran Step 0 (Discovery), Step 1 (Critic), and Step 2 (Architect plan) but stopped before Step 3 (Execution). No code changes. No commit.\n\nTargeted Priority-1 finding: F1 — Navigation has two writers\n\nThe plan I would execute (in CURRENT_REVIEW.md \"Loop 1 Plan (dry-run)\" section):\n  Files to change: Core/NavigationStore.swift, App/RootView.swift\n  Files NOT to touch: Features/Auth/LoginViewModel.swift\n  Blast radius: bounded to the change list above\n  Expected scorecard impact: Architecture quality + State management each +1.0\n\nNext step options:\n  (a) Execute the plan — re-invoke \"/contest-refactor\" (no flag).\n  (b) Re-plan — edit the Improvement Backlog then re-invoke \"/contest-refactor --dry-run\".\n  (c) Abort.",
         "expected_actions": [
           {
             "action_id": "execute-plan",
@@ -37,7 +37,7 @@
       "provider": "claude_code",
       "loop_model": "claude-fable-5",
       "loop_model_source": "user_flag",
-      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model": "claude-sonnet-5",
       "reviewer_model_source": "default",
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",

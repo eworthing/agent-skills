@@ -162,8 +162,12 @@ retention shape the base rubric genuinely ignores.
 
 ### Remaining to complete the quads (blocked on spend limit)
 
-All GREEN arms + sequential-io-1 RED v3 died mid-run (no artifacts). Procedure
-unchanged from § "To complete them" above, with these amendments:
+All GREEN arms + sequential-io-1 RED v3 died mid-run (no artifacts). Before
+paying for full loops, consider [DETECTION-PROBE.md](DETECTION-PROBE.md) — the
+detection question costs ~25–40k tokens/rep at Tier 1 or ~100k/arm at Tier 2,
+vs ~300k/arm for the full-loop procedure below, which remains the release-gate
+(Tier 3) evidence. Procedure unchanged from § "To complete them" above, with
+these amendments:
 
 1. sequential-io-1 arms must run against fixture state `223c51e` or later
    (both arms byte-identical — the GREEN probe that ran against round-1 state
@@ -175,8 +179,11 @@ unchanged from § "To complete them" above, with these amendments:
 
 ### Status
 
-All four efficiency fixtures remain `baseline_unmeasured` in
-`loop_replay_baseline.json` (no complete RED+GREEN pair at a single fixture
-state). The two completed RED arms above are durable evidence for the next
-session; their artifact directories also live in the session scratchpad
-(`lr-startup-blocking-1-red`, `lr-closure-retention-1-red`).
+The three fixtures targeted this session (sequential-io-1, startup-blocking-1,
+closure-retention-1) remain `baseline_unmeasured` in `loop_replay_baseline.json`
+— no complete RED+GREEN pair at a single fixture state; `recomputed-derived-1`
+(D1) stays `measured` from the earlier session above. The two completed RED arms above are durable evidence for the next
+session via this table and the graded invariant output recorded at commit time.
+(Their raw artifact directories lived in the session scratchpad and were lost
+to a temp-dir cleanup later the same day; the dispatching session's task
+transcripts retain the loops' full output if reconstruction is ever needed.)

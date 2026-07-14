@@ -3,9 +3,9 @@
   "loop": 7,
   "loop_cap": 10,
   "provider": "claude_code",
-  "loop_model": "claude-sonnet-4-6",
+  "loop_model": "claude-sonnet-5",
   "loop_model_source": "default",
-  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model": "claude-sonnet-5",
   "reviewer_model_source": "default",
   "spawn_isolation": "subagent",
   "state": "HALT_SUCCESS",
@@ -28,18 +28,93 @@
   "verdict": "Strong contender",
   "verdict_explanation": "Clean structural pass; every dimension grounded.",
   "scorecard": {
-    "architecture_quality":   {"score": 10,  "delta": "SAME", "proof": "Core/AppRuntime.swift:1",  "residual_blocking_10": null,  "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "state_management":       {"score": 10,  "delta": "SAME", "proof": "Core/AppState.swift:8",   "residual_blocking_10": null,  "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "domain_modeling":        {"score": 10,  "delta": "SAME", "proof": "Domain/Order.swift:1",    "residual_blocking_10": null,  "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "data_flow":              {"score": 10,  "delta": "SAME", "proof": "Core/EffectPump.swift:1", "residual_blocking_10": null,  "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "framework_idioms":       {"score": 10,  "delta": "SAME", "proof": "UI/RootView.swift:1",     "residual_blocking_10": null,  "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "concurrency":            {"score": 9.5, "delta": "UP",   "proof": "Adapters/Audio/Lease.swift:18", "residual_blocking_10": "AudioSessionConfigurator.Lease.deinit unbound Task carve-out", "residual_disposition": "accepted", "residual_rationale_or_backlog_ref": "Documented carve-out; idempotent main-actor hop; covered by AudioSessionConfiguratorLeaseDeinitTests.", "residual_expires": "2099-01-01", "unverifiable_due_to_build_failure": false},
-    "simplicity":             {"score": 10,  "delta": "SAME", "proof": "Reducer/AppReducer.swift:1", "residual_blocking_10": null, "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "test_strategy":          {"score": 10,  "delta": "SAME", "proof": "Tests/AppReducerTests.swift:1", "residual_blocking_10": null, "residual_disposition": null,    "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false},
-    "credibility":            {"score": 10,  "delta": "SAME", "proof": "Core/AppEngine.swift:1",  "residual_blocking_10": null,  "residual_disposition": null,        "residual_rationale_or_backlog_ref": null,                                                  "unverifiable_due_to_build_failure": false}
+    "architecture_quality": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Core/AppRuntime.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "state_management": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Core/AppState.swift:8",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "domain_modeling": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Domain/Order.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "data_flow": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Core/EffectPump.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "framework_idioms": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "UI/RootView.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "concurrency": {
+      "score": 9.5,
+      "delta": "UP",
+      "proof": "Adapters/Audio/Lease.swift:18",
+      "residual_blocking_10": "AudioSessionConfigurator.Lease.deinit unbound Task carve-out",
+      "residual_disposition": "accepted",
+      "residual_rationale_or_backlog_ref": "Documented carve-out; idempotent main-actor hop; covered by AudioSessionConfiguratorLeaseDeinitTests.",
+      "residual_expires": "2099-01-01",
+      "unverifiable_due_to_build_failure": false
+    },
+    "simplicity": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Reducer/AppReducer.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "test_strategy": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Tests/AppReducerTests.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "credibility": {
+      "score": 10,
+      "delta": "SAME",
+      "proof": "Core/AppEngine.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    }
   },
   "authority_map": [],
-  "strengths": ["Module graph enforced by source; no costume layers."],
+  "strengths": [
+    "Module graph enforced by source; no costume layers."
+  ],
   "findings": [],
   "simplification_check": {
     "structurally_necessary": "No structural change pending.",

@@ -23,9 +23,9 @@
       "re_validation_context": null,
       "dry_run": false,
       "provider": "claude_code",
-      "loop_model": "claude-sonnet-4-6",
+      "loop_model": "claude-sonnet-5",
       "loop_model_source": "default",
-      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model": "claude-sonnet-5",
       "reviewer_model_source": "default",
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",
@@ -138,7 +138,7 @@
           "severity": "Serious deduction",
           "adr_conflicts": [],
           "adr_reopen_justification": null,
-          "minimal_correction_path": "Done \u2014 NavigationStore is sole writer.",
+          "minimal_correction_path": "Done — NavigationStore is sole writer.",
           "blast_radius": {
             "change": [
               "Core/NavigationStore.swift",

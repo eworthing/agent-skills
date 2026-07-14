@@ -8,10 +8,11 @@ the STALE / REQUIRED sets below were verified on 2026-06-24 against the session 
 catalog (Claude Code: claude-opus-4-8 current top Opus, claude-fable-5 the Fable 5
 tier above Opus) and the Codex CLI model list (gpt-5.5 current flagship).
 
-Per-provider DEFAULTS are deliberately NOT bumped (sonnet-4-6 / gpt-5.4-mini /
-deepseek-v4-flash stay the tuned defaults); only the "When to upgrade the model"
-examples move, plus the new fable top tier. DEFAULTS_PRESENT guards against an
-accidental default change.
+DEFAULTS_PRESENT tracks the tuned per-provider defaults and guards against an
+accidental default change (claude_code moved to claude-sonnet-5 on 2026-07-13 when
+the host `sonnet` tier rolled; gpt-5.4-mini / deepseek-v4-flash stay put). Update
+this tuple in the SAME commit as provider-adapters.md + validate-artifact.py
+_PROVIDER_DEFAULTS — three copies of one fact.
 
 Run: python3 scripts/_model_catalog_selftest.py   (exit 0 = pass, 1 = fail)
 """
@@ -27,7 +28,7 @@ STALE = ("claude-opus-4-7",)
 # Strings that MUST appear after the refresh (current upgrade targets + fable tier).
 REQUIRED = ("claude-opus-4-8", "gpt-5.5", "claude-fable-5")
 # Tuned per-provider defaults that must stay put (no accidental default bump).
-DEFAULTS_PRESENT = ("claude-sonnet-4-6", "gpt-5.4-mini", "deepseek-v4-flash")
+DEFAULTS_PRESENT = ("claude-sonnet-5", "gpt-5.4-mini", "deepseek-v4-flash")
 
 
 def main() -> int:

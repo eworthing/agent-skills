@@ -13,9 +13,12 @@ tier shows separation (RED-first applied to the measurement itself).
 | 2 | Step-1-only loop replay (verbatim loop prompt, stop after Critic emit) | ~100k/arm | in-protocol confirmation, n=1 |
 | 3 | full RED→GREEN quad (MEASUREMENT-*.md protocol) | ~600k/fixture | release-gate evidence for a promotion |
 
-Salvage rule: a loop that dies mid-run still holds its detection verdict —
-grep the task transcript for the loop's own finding statements before paying
-for a re-run (both dead GREEN arms of 2026-07-13 were recovered this way).
+Salvage rule: a loop that dies mid-run still holds directional detection
+evidence — grep the task transcript for the loop's own finding statements
+before paying for a re-run. The two dead GREEN arms of 2026-07-13 yielded
+exactly that (visible engagement with the planted defect in both transcripts);
+salvage is probe-grade corroboration only, never a recordable artifact-grade
+arm (MEASUREMENT-2026-07-13.md records those arms as died-no-artifact).
 
 ## Tier 1 — decision-diff probe
 
@@ -57,13 +60,15 @@ Full-loop ground truth, banked from real runs:
 | Fixture | Arm (skill state) | Known verdict |
 |---|---|---|
 | recomputed-derived-1 | RED `26297a4` / GREEN `27e5071` | miss / catch (D1 pair, MEASUREMENT-2026-07-13.md) |
-| startup-blocking-1 | RED `26297a4` | miss (clean severity-floor signature) |
-| closure-retention-1 | RED `26297a4` | **catch** — base critic needs no lens for D4-as-planted |
+| startup-blocking-1 | RED `26297a4` | miss — clean severity-floor signature (MEASUREMENT-2026-07-13.md addendum) |
+| closure-retention-1 | RED `26297a4` | catch — base critic needs no lens for D4-as-planted (MEASUREMENT-2026-07-13.md addendum; **provisional**: the fixture stays `baseline_unmeasured` in the manifest, and the addendum leaves open rebuilding it with a subtler retention shape, which would retire this row) |
 
 A Tier-1 probe that cannot reproduce this row set (probe-RED misses
 startup-blocking, probe-RED *catches* closure-retention) is measuring
 something other than the loop's detection behavior — fix the probe, not the
-fixture.
+fixture. Each row is bound to the fixture state at the commit shown; if a
+fixture is deliberately rebuilt, re-baseline the row rather than treating the
+old verdict as ground truth.
 
 ## What tiers 1–2 cannot see
 

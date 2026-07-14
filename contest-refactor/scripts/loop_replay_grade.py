@@ -8,14 +8,19 @@ harness measure Critic *behavior* (did the loop catch and fix the planted debt),
 artifact mechanics. It runs no model.
 
 Usage:
-  loop_replay_grade.py <fixture-id> <artifact-dir> [--strict-exit]
+  loop_replay_grade.py <fixture-id> <artifact-dir>
+  loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file> --detection-only
 
-  <artifact-dir>  directory holding the emitted CURRENT_REVIEW.json (the materialized repo
-                  root, unless the loop writes artifacts elsewhere).
-  --strict-exit   exit 1 if any REQUIRED invariant fails (default). Advisory checks never
-                  affect exit status; they print as INFO.
+  <artifact-dir>    directory holding the emitted CURRENT_REVIEW.json (the materialized
+                    repo root, unless the loop writes artifacts elsewhere).
+  --detection-only  Tier-1/2 probe grading (evals/loop-fixtures/DETECTION-PROBE.md):
+                    detection verdict only, from a bare findings JSON file or a
+                    CURRENT_REVIEW.json / artifact dir.
+  --strict-exit     accepted for back-compat; strict is the only exit mode.
 
-Exit 0 = all required invariants hold; 1 = a required invariant failed or inputs missing.
+Exit codes: full mode — 0 = all required invariants hold, 1 = a required invariant
+failed or inputs missing. --detection-only — 0 = DETECTED, 3 = NOT DETECTED,
+1 = input error. Advisory checks never affect exit status; they print as INFO.
 """
 
 from __future__ import annotations
@@ -51,6 +56,43 @@ def _load_artifact(artifact_dir: Path) -> dict:
     return json.loads(p.read_text())
 
 
+def _cites(finding: dict, primary: str) -> bool:
+    """One citation rule for BOTH grading modes — a drift here would let Tier-1
+    probe grading and full Layer-4 grading disagree on what counts as a hit."""
+    return any(primary in str(e) for e in (finding.get("evidence") or []))
+
+
+def _finding_label(finding: dict) -> str:
+    """v2+ artifacts may omit the legacy `id` alias; fall back to the required IDs."""
+    return str(finding.get("id") or finding.get("loop_local_id") or finding.get("stable_id") or "?")
+
+
+def _load_probe_findings(findings_path: Path) -> list[dict]:
+    """Load untrusted probe output: tolerate a markdown code fence and a bare
+    top-level array; fail loudly (clean FAIL, exit 1) on anything else."""
+    if not findings_path.exists():
+        sys.exit(f"FAIL: no findings file at {findings_path}")
+    try:
+        text = findings_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        sys.exit(f"FAIL: could not read findings file {findings_path}: {exc}")
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        first_nl = stripped.find("\n")
+        stripped = stripped[first_nl + 1 :] if first_nl != -1 else ""
+        if stripped.rstrip().endswith("```"):
+            stripped = stripped.rstrip()[:-3]
+    try:
+        data = json.loads(stripped)
+    except json.JSONDecodeError as exc:
+        sys.exit(f"FAIL: findings file is not valid JSON: {exc}")
+    if isinstance(data, list):
+        data = {"findings": data}
+    if not isinstance(data, dict):
+        sys.exit(f"FAIL: findings JSON must be an object or array, got {type(data).__name__}")
+    return [f for f in data.get("findings", []) if isinstance(f, dict)]
+
+
 def _detection_only(fixture_id: str, findings_path: Path) -> int:
     """Tier-1/Tier-2 detection probe grading (evals/loop-fixtures/DETECTION-PROBE.md).
 
@@ -62,42 +104,48 @@ def _detection_only(fixture_id: str, findings_path: Path) -> int:
     3 = NOT DETECTED, 1 = input error.
     """
     expected = _load_expected(fixture_id)
-    if not findings_path.exists():
-        sys.exit(f"FAIL: no findings file at {findings_path}")
-    data = json.loads(findings_path.read_text())
-    findings = [f for f in data.get("findings", []) if isinstance(f, dict)]
+    findings = _load_probe_findings(findings_path)
     sev_rank = _severity_rank()
     primary = expected["primary_file"]
     floor = expected["min_severity"]
+    if floor not in sev_rank:
+        sys.exit(f"FAIL: fixture min_severity {floor!r} is not a canon severity anchor")
 
-    def _cites(f: dict) -> bool:
-        return any(primary in str(e) for e in (f.get("evidence") or []))
-
-    hits = [
-        f for f in findings if _cites(f) and sev_rank.get(f.get("severity"), -1) >= sev_rank[floor]
+    hit_flags = [
+        _cites(f, primary) and sev_rank.get(f.get("severity"), -1) >= sev_rank[floor]
+        for f in findings
     ]
     print(
         f"loop_replay_grade --detection-only: fixture '{fixture_id}' ({len(findings)} finding(s))"
     )
-    for f in findings:
+    for f, hit in zip(findings, hit_flags, strict=True):
         ev = str((f.get("evidence") or ["-"])[0])[:80]
         print(
-            f"  [{'HIT ' if f in hits else '    '}] {f.get('id')} | {f.get('severity')} | "
+            f"  [{'HIT ' if hit else '    '}] {_finding_label(f)} | {f.get('severity')} | "
             f"{str(f.get('title', ''))[:70]} | ev: {ev}"
         )
-    if hits:
+    if any(hit_flags):
         print(f"DETECTED (planted primary_file cited at >= {floor!r})")
         return 0
     print(f"NOT DETECTED (no >= {floor!r} finding cites {primary!r})")
     return 3
 
 
+KNOWN_FLAGS = {"--strict-exit", "--detection-only"}
+
+
 def main(argv: list[str]) -> int:
+    unknown = {a for a in argv if a.startswith("--")} - KNOWN_FLAGS
+    if unknown:
+        sys.exit(
+            f"FAIL: unrecognized flag(s): {', '.join(sorted(unknown))}"
+            f" (known: {', '.join(sorted(KNOWN_FLAGS))})"
+        )
     args = [a for a in argv if not a.startswith("--")]
     if len(args) != 2:
         sys.exit(
             "usage: loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file>"
-            " [--strict-exit] [--detection-only]"
+            " [--detection-only]"
         )
     if "--detection-only" in argv:
         p = Path(args[1]).resolve()
@@ -153,19 +201,37 @@ def main(argv: list[str]) -> int:
     # back to the highest-severity finding whose evidence cites the planted primary_file.
     primary = expected["primary_file"]
 
-    def _cites(f: dict) -> bool:
-        return any(primary in str(e) for e in (f.get("evidence") or []))
-
     targeted_id = loop_result.get("targeted_finding_id") or artifact.get("priority_1_finding_id")
     by_id = {f.get("id"): f for f in findings_list}
     planted = by_id.get(targeted_id) if targeted_id else None
-    if planted is None or not _cites(planted):
+    if planted is None or not _cites(planted, primary):
         citing = sorted(
-            (f for f in findings_list if _cites(f)),
+            (f for f in findings_list if _cites(f, primary)),
             key=lambda f: sev_rank.get(f.get("severity"), -1),
             reverse=True,
         )
         planted = citing[0] if citing else None
+
+    # False-GREEN guard: the fallback cannot tell the planted defect from a
+    # competing finding in the same file (both 2026-07-13 false-GREENs looked
+    # all-PASS). Surface the ambiguity on the advisory channel so an operator
+    # reads the findings before recording the arm; exit status is unaffected.
+    floor_rank = sev_rank.get(expected["min_severity"], len(sev_rank))
+    contenders = [
+        f
+        for f in findings_list
+        if _cites(f, primary) and sev_rank.get(f.get("severity"), -1) >= floor_rank
+    ]
+    if len(contenders) > 1:
+        advisory.append(
+            (
+                f"advisory: {len(contenders)} findings at/above min_severity cite "
+                f"primary_file ({', '.join(_finding_label(f) for f in contenders)}) — "
+                f"fallback cannot distinguish planted vs competing; read them before "
+                f"recording this arm",
+                "",
+            )
+        )
 
     required.append(
         (

@@ -9,14 +9,16 @@
   "re_validated_at_sha": null,
   "re_validation_context": null,
   "provider": "claude_code",
-  "loop_model": "claude-sonnet-4-6",
+  "loop_model": "claude-sonnet-5",
   "loop_model_source": "default",
-  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model": "claude-sonnet-5",
   "reviewer_model_source": "default",
   "spawn_isolation": "inline",
   "findings_registry_path": "./findings_registry.json",
   "discovery": {
-    "source_roots": ["src/"],
+    "source_roots": [
+      "src/"
+    ],
     "test_command": "pytest",
     "build_command": "pytest",
     "lens": "Generic",
@@ -108,14 +110,19 @@
       "unverifiable_due_to_build_failure": false
     }
   },
-  "strengths": ["PaymentProcessor split landed cleanly."],
+  "strengths": [
+    "PaymentProcessor split landed cleanly."
+  ],
   "findings": [
     {
       "loop_local_id": "F2",
       "stable_id": "F-002",
       "title": "User preferences have two stored owners (UserStore + ProfileCache)",
       "primary_file": "src/store/user.py",
-      "primary_evidence_lines": [42, 88],
+      "primary_evidence_lines": [
+        42,
+        88
+      ],
       "test_failed": "Single owner",
       "severity": "Noticeable weakness",
       "dependency_category": "in-process",
@@ -126,7 +133,10 @@
       "stable_id": "F-003",
       "title": "OrderHandler protocol has one production impl + zero behavior-faithful fakes",
       "primary_file": "src/orders/handler.py",
-      "primary_evidence_lines": [12, 34],
+      "primary_evidence_lines": [
+        12,
+        34
+      ],
       "test_failed": "Two-adapter rule",
       "severity": "Noticeable weakness",
       "dependency_category": "in-process",
@@ -142,8 +152,18 @@
     "tests_after_fix": "Update tests to assert UserStore as sole owner."
   },
   "backlog": [
-    {"priority": 1, "finding_id": "F2", "stable_id": "F-002", "title": "User preferences have two stored owners"},
-    {"priority": 2, "finding_id": "F3", "stable_id": "F-003", "title": "OrderHandler protocol soup"}
+    {
+      "priority": 1,
+      "finding_id": "F2",
+      "stable_id": "F-002",
+      "title": "User preferences have two stored owners"
+    },
+    {
+      "priority": 2,
+      "finding_id": "F3",
+      "stable_id": "F-003",
+      "title": "OrderHandler protocol soup"
+    }
   ],
   "unresolved_reason": null,
   "deepening_candidates": [],
@@ -159,7 +179,11 @@
   "implementation_review": {
     "verdict": "approved",
     "reason": "Diff cleanly implements the targeted finding without scope creep.",
-    "checks": {"reality": "passed", "honesty": "passed", "regression": "passed"},
+    "checks": {
+      "reality": "passed",
+      "honesty": "passed",
+      "regression": "passed"
+    },
     "regressions": [],
     "conditions": [],
     "rounds": 1

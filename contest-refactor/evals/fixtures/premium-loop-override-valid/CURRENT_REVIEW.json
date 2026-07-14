@@ -12,7 +12,7 @@
   "provider": "claude_code",
   "loop_model": "claude-fable-5",
   "loop_model_source": "user_flag",
-  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model": "claude-sonnet-5",
   "reviewer_model_source": "default",
   "spawn_isolation": "subagent",
   "findings_registry_path": "./findings_registry.json",

@@ -38,7 +38,7 @@
         "expected_actions": [
           {
             "action_id": "accept-halt",
-            "description": "Accept the halt \u2014 current source is contest-grade-enough.",
+            "description": "Accept the halt — current source is contest-grade-enough.",
             "match_keywords": [],
             "match_paths": [],
             "match_kind": "no_drift_expected"
@@ -49,9 +49,9 @@
       "re_validation_context": null,
       "dry_run": false,
       "provider": "claude_code",
-      "loop_model": "claude-sonnet-4-6",
+      "loop_model": "claude-sonnet-5",
       "loop_model_source": "default",
-      "reviewer_model": "claude-sonnet-4-6",
+      "reviewer_model": "claude-sonnet-5",
       "reviewer_model_source": "default",
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",

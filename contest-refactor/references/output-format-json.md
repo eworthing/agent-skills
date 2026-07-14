@@ -95,9 +95,9 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim โ
 
   // Provider/model state (v2+; required on every loop, not first-loop-only)
   "provider": "claude_code",                    // enum: claude_code | codex | opencode | unknown. Detected per references/provider-adapters.md ยง Detection.
-  "loop_model": "claude-sonnet-4-6",            // string, full canonical model ID. Default per provider-adapters.md loop-spawn table.
+  "loop_model": "claude-sonnet-5",              // string, full canonical model ID. Default per provider-adapters.md loop-spawn table.
   "loop_model_source": "default",               // enum: default | env_override | user_flag
-  "reviewer_model": "claude-sonnet-4-6",        // string, full canonical model ID. Default per provider-adapters.md reviewer-spawn table.
+  "reviewer_model": "claude-sonnet-5",          // string, full canonical model ID. Default per provider-adapters.md reviewer-spawn table.
   "reviewer_model_source": "default",           // enum: default | env_override | user_flag
   "spawn_isolation": "subagent",                // enum: subagent | inline. "inline" only when provider == "unknown".
   "premium_dry_run": null,                      // optional null|object. Non-null only when --premium-dry-run-model or CONTEST_REFACTOR_PREMIUM_DRY_RUN_MODEL forced dry_run. Shape: {"model": "...", "model_source": "user_flag|env_override", "activated_dry_run": true}.

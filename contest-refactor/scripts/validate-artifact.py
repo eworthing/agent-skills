@@ -150,6 +150,11 @@ def _load_json(path: Path) -> Any | None:
         # non-UTF-8 artifact file — UnicodeDecodeError is not a JSONDecodeError.
         sys.stderr.write(f"error: {path}: JSON parse failed: {exc}\n")
         raise SystemExit(2) from exc
+    except OSError as exc:
+        # path.exists() passed but the read failed (artifact path is a directory,
+        # broken symlink, permissions) — same operator-error class, same exit 2.
+        sys.stderr.write(f"error: {path}: could not read artifact file: {exc}\n")
+        raise SystemExit(2) from exc
 
 
 def _parse_iso_date(value: Any) -> date | None:

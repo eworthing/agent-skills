@@ -3,9 +3,9 @@
   "loop": 8,
   "loop_cap": 10,
   "provider": "claude_code",
-  "loop_model": "claude-sonnet-4-6",
+  "loop_model": "claude-sonnet-5",
   "loop_model_source": "default",
-  "reviewer_model": "claude-sonnet-4-6",
+  "reviewer_model": "claude-sonnet-5",
   "reviewer_model_source": "default",
   "spawn_isolation": "subagent",
   "state": "HALT_STAGNATION",
@@ -16,14 +16,25 @@
     "text": "Loop 8 ended at HALT_STAGNATION/oscillation; F-600 retired as unresolvable.",
     "expected_actions": [],
     "remaining_serious_findings_disposition": [
-      {"stable_id": "F-600", "disposition": "unresolvable"}
+      {
+        "stable_id": "F-600",
+        "disposition": "unresolvable"
+      }
     ]
   },
   "findings_registry_path": "./findings_registry.json",
   "verdict": "Promising, but architecturally immature",
   "verdict_explanation": "Loop halted at oscillation; F-600 mechanically retired so it does not block further progress.",
   "scorecard": {
-    "concurrency": {"score": 8.5, "delta": "SAME", "proof": "Adapters/Audio/RecorderAdapter.swift:88", "residual_blocking_10": null, "residual_disposition": null, "residual_rationale_or_backlog_ref": null, "unverifiable_due_to_build_failure": false}
+    "concurrency": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "Adapters/Audio/RecorderAdapter.swift:88",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    }
   },
   "authority_map": [],
   "strengths": [],
