@@ -157,6 +157,57 @@ final class FeedRefresherTests: XCTestCase {
         }
     }
 
+    /// Isolates cancellation ownership from the closure's own cooperation: this
+    /// closure never calls `Task.checkCancellation()` itself, so the only way
+    /// this test can observe a `CancellationError` is if `refreshAll` checks
+    /// cancellation on its own between iterations.
+    func testRefreshAllOwnsCancellationEvenWhenClosureDoesNot() async {
+        let gate = TransportGate()
+        let refresher = FeedRefresher { id in
+            await gate.enter()
+            await gate.hold()
+            await gate.exit()
+            return .init(id: id, itemCount: id.count)
+        }
+        let refresh = Task { try await refresher.refreshAll(ids: (0..<6).map { "feed-\($0)" }) }
+        await gate.waitUntilHeld()
+        refresh.cancel()
+        let watcher = Task {
+            _ = try? await refresh.value
+            await gate.finish()
+        }
+        while await gate.drainStep() {}
+        _ = await watcher.value
+        do {
+            _ = try await refresh.value
+            XCTFail("expected CancellationError")
+        } catch is CancellationError {
+            // expected: refreshAll's own check stops the loop, not the closure's
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    /// Pins duplicate-id behavior: every occurrence is fetched, and the result
+    /// keeps one entry per distinct id.
+    func testDuplicateIdsFetchPerOccurrenceAndKeyPerId() async throws {
+        actor CallCounter {
+            private(set) var count = 0
+            func increment() { count += 1 }
+        }
+        let counter = CallCounter()
+        let refresher = FeedRefresher { id in
+            await counter.increment()
+            return .init(id: id, itemCount: id.count)
+        }
+        let summaries = try await refresher.refreshAll(ids: ["alpha", "beta", "alpha"])
+        XCTAssertEqual(summaries.count, 2)
+        XCTAssertEqual(summaries["alpha"], .init(id: "alpha", itemCount: 5))
+        XCTAssertEqual(summaries["beta"], .init(id: "beta", itemCount: 4))
+        let calls = await counter.count
+        XCTAssertEqual(calls, 3, "each occurrence is fetched, even for duplicate ids")
+    }
+
     func testPaginationChainFollowsCursors() async throws {
         let pages: [String: (items: [String], nextCursor: String?)] = [
             "p1": (["a", "b"], "p2"),
@@ -164,8 +215,7 @@ final class FeedRefresherTests: XCTestCase {
             "p3": (["d"], nil),
         ]
         struct MissingPage: Error {}
-        let refresher = FeedRefresher { id in .init(id: id, itemCount: id.count) }
-        let items = try await refresher.collectPages(from: "p1") { cursor in
+        let items = try await FeedRefresher.collectPages(from: "p1") { cursor in
             guard let page = pages[cursor] else { throw MissingPage() }
             return page
         }

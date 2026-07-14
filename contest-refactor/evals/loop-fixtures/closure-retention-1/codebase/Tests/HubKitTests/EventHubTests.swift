@@ -19,6 +19,14 @@ final class EventHubTests: XCTestCase {
         XCTAssertEqual(second.log, ["encode flushed: cycle-2"])
     }
 
+    func testRepeatedPublishesAppendToLogInOrder() {
+        let hub = EventHub()
+        let pipeline = ImagePipeline(stageName: "resize", frameBuffer: [1], hub: hub)
+        hub.publish("flush", payload: "cycle-1")
+        hub.publish("flush", payload: "cycle-2")
+        XCTAssertEqual(pipeline.log, ["resize flushed: cycle-1", "resize flushed: cycle-2"])
+    }
+
     func testPublishUnknownEventIsNoOp() {
         let hub = EventHub()
         let pipeline = ImagePipeline(stageName: "resize", frameBuffer: [1], hub: hub)

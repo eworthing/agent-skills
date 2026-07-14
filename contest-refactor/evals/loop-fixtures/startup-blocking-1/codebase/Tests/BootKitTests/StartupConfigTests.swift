@@ -51,6 +51,15 @@ final class StartupConfigTests: XCTestCase {
         XCTAssertThrowsError(try StartupConfig.loadAll(from: configDirectory))
     }
 
+    func testMalformedDocumentThrows() throws {
+        try #"{"accent": 7}"#.write(
+            to: configDirectory.appendingPathComponent("theme.json"),
+            atomically: true,
+            encoding: .utf8
+        )
+        XCTAssertThrowsError(try StartupConfig.loadAll(from: configDirectory))
+    }
+
     func testDiagnosticsReportLoadsOnDemand() throws {
         let report = try Diagnostics.loadReport(
             at: configDirectory.appendingPathComponent("diagnostics.json")

@@ -32,33 +32,23 @@ public struct StartupConfig: Equatable {
     /// entry point before the first prompt is printed.
     public static func loadAll(from directory: URL) throws -> StartupConfig {
         let decoder = JSONDecoder()
-        let features = try decoder.decode(
-            Features.self,
-            from: Data(contentsOf: directory.appendingPathComponent("features.json"))
-        )
-        let theme = try decoder.decode(
-            Theme.self,
-            from: Data(contentsOf: directory.appendingPathComponent("theme.json"))
-        )
-        let locale = try decoder.decode(
-            LocaleSettings.self,
-            from: Data(contentsOf: directory.appendingPathComponent("locale.json"))
-        )
-        let telemetry = try decoder.decode(
-            Telemetry.self,
-            from: Data(contentsOf: directory.appendingPathComponent("telemetry.json"))
-        )
-        let shortcuts = try decoder.decode(
-            Shortcuts.self,
-            from: Data(contentsOf: directory.appendingPathComponent("shortcuts.json"))
-        )
         return StartupConfig(
-            features: features,
-            theme: theme,
-            locale: locale,
-            telemetry: telemetry,
-            shortcuts: shortcuts
+            features: try load(Features.self, "features.json", from: directory, using: decoder),
+            theme: try load(Theme.self, "theme.json", from: directory, using: decoder),
+            locale: try load(LocaleSettings.self, "locale.json", from: directory, using: decoder),
+            telemetry: try load(Telemetry.self, "telemetry.json", from: directory, using: decoder),
+            shortcuts: try load(Shortcuts.self, "shortcuts.json", from: directory, using: decoder)
         )
+    }
+
+    /// Reads and decodes one config document from `directory`.
+    private static func load<Document: Codable>(
+        _ type: Document.Type,
+        _ name: String,
+        from directory: URL,
+        using decoder: JSONDecoder
+    ) throws -> Document {
+        try decoder.decode(type, from: Data(contentsOf: directory.appendingPathComponent(name)))
     }
 
     /// One-line description shown as the first prompt output.

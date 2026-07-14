@@ -21,10 +21,13 @@ public struct FeedRefresher {
         self.fetchSummary = fetchSummary
     }
 
-    /// Returns fresh summaries keyed by feed id.
+    /// Returns fresh summaries keyed by feed id. Checks for cancellation once per
+    /// id so a cancelled parent task stops the refresh promptly regardless of
+    /// whether `fetchSummary` itself cooperates with cancellation.
     public func refreshAll(ids: [String]) async throws -> [String: Summary] {
         var summaries: [String: Summary] = [:]
         for id in ids {
+            try Task.checkCancellation()
             summaries[id] = try await fetchSummary(id)
         }
         return summaries
@@ -32,13 +35,17 @@ public struct FeedRefresher {
 
     /// Walks a pagination chain starting at `cursor`. Each request consumes the
     /// cursor returned by the previous one, so the calls are inherently ordered.
-    public func collectPages(
+    /// Static because the chain depends only on `fetchPage`, never on a
+    /// refresher instance. Checks for cancellation once per page for the same
+    /// reason as `refreshAll`.
+    public static func collectPages(
         from cursor: String,
         fetchPage: @Sendable (String) async throws -> (items: [String], nextCursor: String?)
     ) async throws -> [String] {
         var items: [String] = []
         var next: String? = cursor
         while let cursor = next {
+            try Task.checkCancellation()
             let page = try await fetchPage(cursor)
             items.append(contentsOf: page.items)
             next = page.nextCursor

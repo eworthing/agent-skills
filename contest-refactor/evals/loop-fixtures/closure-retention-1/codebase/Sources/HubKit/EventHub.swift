@@ -2,6 +2,10 @@ import Foundation
 
 /// Application-lifetime event bus. Created once at the composition root and kept
 /// for the life of the process; subscriptions are never removed.
+///
+/// Not thread-safe by design: the hub is confined to the single thread that
+/// created it (the composition root), matching the process's single-threaded
+/// event delivery. Cross-thread use is out of contract.
 public final class EventHub {
     private var subscribers: [String: [(String) -> Void]] = [:]
 
@@ -21,6 +25,10 @@ public final class EventHub {
 }
 
 /// Processes one capture session's frames and reports stage activity.
+///
+/// Pipelines self-register for `flush` at construction; the composition root
+/// owns creation order and decides which hub each pipeline joins. Same
+/// thread-confinement contract as `EventHub`.
 public final class ImagePipeline {
     public let stageName: String
     /// Raw working set for the session; sized in the tens of megabytes in production.
