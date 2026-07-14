@@ -51,10 +51,57 @@ def _load_artifact(artifact_dir: Path) -> dict:
     return json.loads(p.read_text())
 
 
+def _detection_only(fixture_id: str, findings_path: Path) -> int:
+    """Tier-1/Tier-2 detection probe grading (evals/loop-fixtures/DETECTION-PROBE.md).
+
+    Reads a bare findings file ({"findings": [...]} or a CURRENT_REVIEW.json) and
+    reports ONLY the detection verdict: does a >= min_severity finding cite the
+    planted primary_file? Empty findings are a valid miss, not an error. Every
+    finding is printed so the operator reads restraint manually (near-miss control
+    judgments stay human, per the microtest doctrine). Exit 0 = DETECTED,
+    3 = NOT DETECTED, 1 = input error.
+    """
+    expected = _load_expected(fixture_id)
+    if not findings_path.exists():
+        sys.exit(f"FAIL: no findings file at {findings_path}")
+    data = json.loads(findings_path.read_text())
+    findings = [f for f in data.get("findings", []) if isinstance(f, dict)]
+    sev_rank = _severity_rank()
+    primary = expected["primary_file"]
+    floor = expected["min_severity"]
+
+    def _cites(f: dict) -> bool:
+        return any(primary in str(e) for e in (f.get("evidence") or []))
+
+    hits = [
+        f for f in findings if _cites(f) and sev_rank.get(f.get("severity"), -1) >= sev_rank[floor]
+    ]
+    print(
+        f"loop_replay_grade --detection-only: fixture '{fixture_id}' ({len(findings)} finding(s))"
+    )
+    for f in findings:
+        ev = str((f.get("evidence") or ["-"])[0])[:80]
+        print(
+            f"  [{'HIT ' if f in hits else '    '}] {f.get('id')} | {f.get('severity')} | "
+            f"{str(f.get('title', ''))[:70]} | ev: {ev}"
+        )
+    if hits:
+        print(f"DETECTED (planted primary_file cited at >= {floor!r})")
+        return 0
+    print(f"NOT DETECTED (no >= {floor!r} finding cites {primary!r})")
+    return 3
+
+
 def main(argv: list[str]) -> int:
     args = [a for a in argv if not a.startswith("--")]
     if len(args) != 2:
-        sys.exit("usage: loop_replay_grade.py <fixture-id> <artifact-dir> [--strict-exit]")
+        sys.exit(
+            "usage: loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file>"
+            " [--strict-exit] [--detection-only]"
+        )
+    if "--detection-only" in argv:
+        p = Path(args[1]).resolve()
+        return _detection_only(args[0], p / "CURRENT_REVIEW.json" if p.is_dir() else p)
     fixture_id, artifact_dir = args[0], Path(args[1]).resolve()
 
     expected = _load_expected(fixture_id)
