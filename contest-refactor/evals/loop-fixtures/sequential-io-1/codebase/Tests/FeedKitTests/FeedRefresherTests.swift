@@ -221,4 +221,53 @@ final class FeedRefresherTests: XCTestCase {
         }
         XCTAssertEqual(items, ["a", "b", "c", "d"])
     }
+
+    /// Isolates cancellation ownership the same way
+    /// `testRefreshAllOwnsCancellationEvenWhenClosureDoesNot` does for
+    /// `refreshAll`: `fetchPage` never calls `Task.checkCancellation()` itself,
+    /// so the only way this test can observe a `CancellationError` (and the only
+    /// way it can stop the chain before "p2") is if `collectPages` checks
+    /// cancellation on its own between pages.
+    func testCancellingParentTaskStopsPaginationChain() async {
+        let gate = TransportGate()
+        actor PageCallLog {
+            private(set) var fetchedCursors: [String] = []
+            func record(_ cursor: String) { fetchedCursors.append(cursor) }
+        }
+        let log = PageCallLog()
+        let pages: [String: (items: [String], nextCursor: String?)] = [
+            "p1": (["a", "b"], "p2"),
+            "p2": (["c"], "p3"),
+            "p3": (["d"], nil),
+        ]
+        struct MissingPage: Error {}
+        let collect = Task {
+            try await FeedRefresher.collectPages(from: "p1") { cursor in
+                await log.record(cursor)
+                await gate.enter()
+                await gate.hold()
+                await gate.exit()
+                guard let page = pages[cursor] else { throw MissingPage() }
+                return page
+            }
+        }
+        await gate.waitUntilHeld()
+        collect.cancel()
+        let watcher = Task {
+            _ = try? await collect.value
+            await gate.finish()
+        }
+        while await gate.drainStep() {}
+        _ = await watcher.value
+        do {
+            _ = try await collect.value
+            XCTFail("expected CancellationError")
+        } catch is CancellationError {
+            // expected: collectPages' own check stops the chain before fetching "p2"
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        let fetched = await log.fetchedCursors
+        XCTAssertEqual(fetched, ["p1"], "cancellation must stop the pagination chain before fetching subsequent pages")
+    }
 }

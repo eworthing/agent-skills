@@ -1,5 +1,3 @@
-import Foundation
-
 /// Refreshes cached summaries for a set of feed identifiers.
 public struct FeedRefresher {
     public struct Summary: Equatable, Sendable {
