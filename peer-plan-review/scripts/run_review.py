@@ -438,7 +438,7 @@ def run_review(args, logger=None):
                 returncode = proc.returncode
             except subprocess.TimeoutExpired:
                 _kill_tree(proc)
-                proc.communicate()
+                stdout, _stderr = proc.communicate()
                 print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
                 logger.log("provider_timeout", provider=reviewer, context={"timeout": args.timeout})
                 if attempt == 0 and use_resume and session_id:
@@ -453,7 +453,25 @@ def run_review(args, logger=None):
                     session_id = None
                     fallback_used = True
                     continue  # retry as fresh exec
-                _write_failure_summary(args.summary_file, session, f"timeout: {args.timeout}s")
+
+                if reviewer == "codex" and stdout and args.events_file:
+                    Path(args.events_file).write_text(stdout, encoding="utf-8")
+                elif stdout and args.output_file:
+                    Path(args.output_file).write_text(stdout, encoding="utf-8")
+
+                if reviewer in _STRUCTURED_STDOUT_REVIEWERS and stdout and args.output_file:
+                    extract_text_from_output(args.output_file, reviewer, content=stdout)
+
+                partial_paths = [
+                    Path(path) for path in (args.output_file, args.events_file) if path
+                ]
+                partial_output = any(_path_has_content(path) for path in partial_paths)
+                _write_failure_summary(
+                    args.summary_file,
+                    session,
+                    f"timeout: {args.timeout}s",
+                    partial_output=partial_output,
+                )
                 return 1
 
             # Write stdout to output file for non-Codex providers

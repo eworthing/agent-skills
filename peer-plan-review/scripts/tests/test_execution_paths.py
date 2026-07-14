@@ -645,6 +645,95 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertIsNone(summary["verdict"])
         self.assertIn("error", summary)
         self.assertIn("timeout", summary["error"])
+        self.assertFalse(summary["partial_output"])
+
+    def test_run_review_final_opencode_timeout_preserves_partial_output(self):
+        summary_file = Path(self.tmpdir.name) / "summary.json"
+        args = make_args(
+            reviewer="opencode",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            summary_file=str(summary_file),
+            resume=False,
+        )
+        partial_review = json.dumps(
+            {
+                "type": "text",
+                "part": {
+                    "text": (
+                        "### Blocking Issues\n"
+                        "- [B1] (HIGH) Partial but useful finding\n"
+                        "  Section: Setup (lines 1-2)\n"
+                        "  Recommendation: Repair the setup step\n\n"
+                        "### Non-Blocking Issues\nNone\n\n"
+                        "VERDICT: REVISE"
+                    )
+                },
+            }
+        )
+        proc = mock.MagicMock()
+        proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd=["opencode"], timeout=args.timeout),
+            (partial_review, ""),
+        ]
+        proc.returncode = None
+        proc.poll.return_value = None
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        self.assertIn("VERDICT: REVISE", self.output_file.read_text(encoding="utf-8"))
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertIsNone(summary["verdict"])
+        self.assertTrue(summary["partial_output"])
+        self.assertIn("timeout", summary["error"])
+
+    def test_run_review_codex_timeout_preserves_partial_events(self):
+        summary_file = Path(self.tmpdir.name) / "summary.json"
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            summary_file=str(summary_file),
+            resume=False,
+        )
+        partial_events = json.dumps(
+            {
+                "type": "item.completed",
+                "item": {"type": "agent_message", "text": "partial finding"},
+            }
+        )
+        proc = mock.MagicMock()
+        proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd=["codex"], timeout=args.timeout),
+            (partial_events, ""),
+        ]
+        proc.returncode = None
+        proc.poll.return_value = None
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.setup_codex_home", return_value=(None, False)),
+            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        self.assertIn("partial finding", self.events_file.read_text(encoding="utf-8"))
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertTrue(summary["partial_output"])
 
     def test_run_review_codex_vanished_session_file_skips_not_crashes(self):
         """Regression: a codex session file that vanishes between the

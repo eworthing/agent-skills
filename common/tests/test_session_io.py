@@ -371,9 +371,27 @@ class TestWriteFailureSummary:
         sf = tmp_path / "summary.json"
         write_failure_summary(str(sf), {"round": 1}, "timeout: 600s")
         data = json.loads(sf.read_text(encoding="utf-8"))
-        # Subset of write_summary()'s keys — round/verdict/error only — so a
-        # caller can't confuse a failure summary with a completed round.
-        assert data == {"round": 2, "verdict": None, "error": "timeout: 600s"}
+        # Subset of write_summary()'s keys — round/verdict/error/partial_output
+        # only — so a caller can't confuse a failure summary with a completed round.
+        assert data == {
+            "round": 2,
+            "verdict": None,
+            "error": "timeout: 600s",
+            "partial_output": False,
+        }
+
+    def test_records_partial_output(self, tmp_path):
+        sf = tmp_path / "summary.json"
+        write_failure_summary(
+            str(sf),
+            {"round": 2},
+            "timeout: 1200s",
+            partial_output=True,
+        )
+        data = json.loads(sf.read_text(encoding="utf-8"))
+        assert data["round"] == 3
+        assert data["verdict"] is None
+        assert data["partial_output"] is True
 
     def test_no_summary_file_is_noop(self):
         write_failure_summary(None, {"round": 1}, "reason")  # must not raise

@@ -51,6 +51,16 @@ python3 <skill-dir>/scripts/run_review.py \
 - `--summary-file`: optional machine-readable JSON with verdict, model, effort,
   round, finding count, and blocking count. Useful for non-Claude hosts.
 
+## Timeout and partial output
+
+- On a terminal timeout, the runner still exits nonzero. If the killed child
+  returns captured stdout, the runner preserves it in the existing review or
+  events artifact before returning.
+- Failure summaries contain `error` and `partial_output`. When
+  `partial_output` is `true`, inspect the review/events artifact before deciding
+  whether to retry; retained text may contain usable findings even though the
+  round did not complete.
+
 ## Session file contract
 
 After each round, the session file contains:

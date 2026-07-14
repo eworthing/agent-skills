@@ -109,16 +109,24 @@ def path_has_content(path):
         return False
 
 
-def write_failure_summary(summary_file, session, reason):
-    """Best-effort minimal summary for a round that failed before normal
-    post-execution could compute session_data and call write_summary().
-    Keeps a subset of write_summary()'s keys so callers can't confuse a
-    stale or absent summary file with a completed round.
+def write_failure_summary(summary_file, session, reason, *, partial_output=False):
+    """Write a minimal summary for a round that failed before normal completion.
+
+    Best-effort: emitted when post-execution could not compute session_data and
+    call write_summary(). Keeps a subset of write_summary()'s keys so callers
+    can't confuse a stale or absent summary file with a completed round.
+    ``partial_output`` records whether a killed child still left usable text in
+    the review/events artifact.
     """
     if not summary_file:
         return
     round_num = session.get("round", 0) + 1 if isinstance(session, dict) else None
-    summary = {"round": round_num, "verdict": None, "error": reason}
+    summary = {
+        "round": round_num,
+        "verdict": None,
+        "error": reason,
+        "partial_output": bool(partial_output),
+    }
     try:
         target = Path(summary_file)
         tmp = target.with_suffix(target.suffix + ".tmp")
