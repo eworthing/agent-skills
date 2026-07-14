@@ -83,6 +83,54 @@ class TestExecutionHardening(unittest.TestCase):
         self.assertEqual(session["resume_reason"], "no_session_id")
         self.assertNotEqual(session.get("session_id"), "dead-id")
 
+    def test_codex_manifest_refresh_failure_falls_back_to_fresh_home(self):
+        """An unrefreshable manifest on the reuse path is treated like
+        stale-home replacement: drop the session binding and mint a fresh
+        home, rather than running on a home the orphan sweep may reclaim
+        mid-review."""
+        self.session_file.write_text(
+            json.dumps({"session_id": "old-id", "round": 1, "codex_home": "/fake/reusable-home"}),
+            encoding="utf-8",
+        )
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        def communicate(input=None, timeout=None):
+            self.output_file.write_text("Review text\n", encoding="utf-8")
+            return "", ""
+
+        proc.communicate.side_effect = communicate
+
+        with (
+            mock.patch("run_review.reuse_codex_home", return_value=True),
+            mock.patch("run_review.record_codex_home", side_effect=OSError("read-only fs")),
+            mock.patch(
+                "run_review.setup_codex_home",
+                return_value=("/fake/ppr-codex-home-fresh", True),
+            ) as mock_setup,
+            mock.patch("run_review.teardown_codex_home") as mock_teardown,
+            mock.patch("run_review._codex_session_files", return_value=set()),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        mock_setup.assert_called_once()
+        mock_teardown.assert_any_call("/fake/reusable-home")
+        session = json.loads(self.session_file.read_text(encoding="utf-8"))
+        self.assertNotEqual(session.get("session_id"), "old-id")
+        self.assertFalse(session["resume_attempted"])
+
     def test_timeout_error_event_includes_stderr(self):
         """The provider_timeout event must carry the drained stderr snippet —
         without it, a timeout caused by an auth/config error is

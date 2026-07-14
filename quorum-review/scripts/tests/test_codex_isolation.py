@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -161,6 +162,16 @@ def test_resume_reuses_recorded_home(tmp_path, fake_codex_env):
     assert second["codex_home"] == home1
     assert second["session_id"] == sid1
     assert second.get("round") == 2
+
+    # The reuse path refreshes the manifest mtime (record_codex_home) so the
+    # cross-review orphan sweep never mistakes a live multi-round review for
+    # a crashed one.
+    manifest = work / "R-codex-homes.list"
+    stale = time.time() - 100_000
+    os.utime(manifest, (stale, stale))
+    third = _run_adapter(adapter, work, fake_codex_env, label="R", resume=True)
+    assert third["codex_home"] == home1
+    assert manifest.stat().st_mtime > stale + 1
 
 
 def test_setup_failure_fails_closed_to_fresh_exec(tmp_path, fake_codex_env, monkeypatch):

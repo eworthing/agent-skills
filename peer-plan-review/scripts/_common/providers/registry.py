@@ -327,11 +327,13 @@ def build_agy_cmd(args, session_id=None):
     """
     cmd = ["agy", "--print", "--sandbox"]
 
-    # Keep agy's own print-mode timeout >= the adapter timeout so the adapter's
-    # process-tree kill stays the single source of truth for cancellation.
+    # Keep agy's own print-mode timeout strictly ABOVE the adapter timeout so
+    # the adapter's process-tree kill stays the single source of truth for
+    # cancellation (equal values race: agy could self-terminate first and
+    # report its own timeout shape instead of the adapter's).
     timeout = getattr(args, "timeout", None)
     if timeout:
-        cmd.extend(["--print-timeout", f"{timeout}s"])
+        cmd.extend(["--print-timeout", f"{timeout + 30}s"])
 
     if args.resume and session_id:
         cmd.extend(["--conversation", str(session_id)])
@@ -413,7 +415,14 @@ PROVIDERS = {
         "effort_default": "medium",
         "model_aliases": {},
         # Available models, sourced from peer-plan-review/references/codex.md.
-        "known_models": ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.2"],
+        "known_models": [
+            "gpt-5.6-sol",
+            "gpt-5.5",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.3-codex",
+            "gpt-5.2",
+        ],
         "resume_supported": True,
         "build_cmd": build_codex_cmd,
         "caps": {
@@ -559,5 +568,5 @@ def get_provider(name, allowed=None):
     """
     if allowed is not None and name not in allowed:
         accepted = ", ".join(sorted(allowed))
-        raise ValueError(f"unknown reviewer; accepted: {accepted}")
+        raise ValueError(f"reviewer not accepted by this consumer; accepted: {accepted}")
     return PROVIDERS[name]

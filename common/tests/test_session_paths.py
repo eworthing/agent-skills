@@ -48,6 +48,26 @@ class TestRenderShell:
         assert "'" in shell
 
 
+class TestCleanupIdPrefixValidation:
+    def test_invalid_id_prefix_rejected(self, monkeypatch, capsys):
+        """A separator-bearing prefix would escape the manifest path."""
+        monkeypatch.setattr(sys, "argv", ["paths.py", "--cleanup", "--id-prefix", "../evil"])
+        with pytest.raises(SystemExit) as exc:
+            main()
+        assert exc.value.code == 1
+        assert "invalid --id-prefix" in capsys.readouterr().err
+
+    def test_valid_id_prefix_accepted(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["paths.py", "--cleanup", "--id-prefix", "ppr-ok", "--tmpdir", str(tmp_path)],
+        )
+        with pytest.raises(SystemExit) as exc:
+            main()
+        assert exc.value.code == 0
+
+
 class TestLoadReviewIdErrors:
     class _Args:
         review_id = None

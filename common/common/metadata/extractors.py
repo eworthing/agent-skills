@@ -95,15 +95,28 @@ def extract_session_id_copilot(output_file):
 
 
 def extract_session_id_opencode(output_file):
-    """Extract sessionID from first line of opencode JSONL output."""
+    """Extract sessionID from opencode JSONL output.
+
+    Scans all lines (like the copilot extractor) rather than trusting line 1:
+    a banner/update-notice line ahead of the first event would otherwise hide
+    the id and silently break resume.
+    """
     if not output_file or not Path(output_file).exists():
         return None
     try:
         with Path(output_file).open(encoding="utf-8") as f:
-            first = json.loads(f.readline())
-            return first.get("sessionID")
-    except (json.JSONDecodeError, OSError):
-        return None
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(event, dict) and event.get("sessionID"):
+                    return event.get("sessionID")
+    except OSError:
+        pass
+    return None
 
 
 _AGY_CONVERSATION_RE = re.compile(
@@ -266,7 +279,7 @@ def _extract_opencode_metadata_via_export(session_id):
     is handled by extract_metadata().
 
     Returns dict with 'model' and optionally 'effort', or empty dict on
-    any failure (openocode not installed, timeout, malformed export, etc.).
+    any failure (opencode not installed, timeout, malformed export, etc.).
     """
     meta = {}
     try:

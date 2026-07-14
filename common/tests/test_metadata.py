@@ -69,6 +69,20 @@ class TestSessionIdOpencode:
         )
         assert extract_session_id_opencode(str(p)) == "oc-1"
 
+    def test_banner_line_tolerated(self, tmp_path):
+        """Regression: a banner/update-notice ahead of the first event used to
+        hide the id (only line 1 was read), silently breaking resume."""
+        p = tmp_path / "events.jsonl"
+        p.write_text(
+            "opencode v1.2.3 — update available\n"
+            + json.dumps({"type": "step_start"})
+            + "\n"
+            + json.dumps({"sessionID": "oc-2"})
+            + "\n",
+            encoding="utf-8",
+        )
+        assert extract_session_id_opencode(str(p)) == "oc-2"
+
 
 class TestSessionIdAgy:
     def test_extracts_print_mode_conversation(self, tmp_path):

@@ -77,6 +77,13 @@ class TestRegistry:
             assert spec["caps"]["binary"] == spec["binary"], name
             assert spec["caps"]["resume_supported"] == spec["resume_supported"], name
 
+    def test_agy_print_timeout_exceeds_adapter_timeout(self):
+        # Strictly above the adapter timeout so the adapter's kill is the
+        # single source of truth for cancellation (equal values race).
+        cmd = build_agy_cmd(_args(timeout=600))
+        idx = cmd.index("--print-timeout")
+        assert cmd[idx + 1] == "630s"
+
     def test_known_models_present_for_codex_and_copilot(self):
         # codex and copilot have no list_models_cmd (no CLI model-listing
         # command), so --list-models relies on this authored fallback.

@@ -269,6 +269,87 @@ class TestGlobalManifestSweep:
         assert not global_manifest.exists()
 
 
+class TestSiblingManifestSweep:
+    """A pre-Finalize crash orphans a review-scoped manifest (and its
+    credential-bearing homes) forever — no later cleanup call would carry its
+    review id. Any review's cleanup now age-sweeps sibling
+    ``*-codex-homes.list`` files regardless of consumer prefix."""
+
+    @staticmethod
+    def _backdate(path):
+        stale = time.time() - ch._STALE_HOME_AGE_SECONDS - 3600
+        os.utime(path, (stale, stale))
+
+    def test_stale_sibling_reclaimed(self, tmp_root, real_home):
+        m = _manifest(tmp_root, "ppr-dead")
+        home, ok = setup_codex_home(m, real_home=str(real_home))
+        assert ok
+        self._backdate(m)
+        assert cleanup_review_homes(str(tmp_root), "ppr-live") == 0
+        assert not os.path.exists(home)
+        assert not os.path.exists(m)
+
+    def test_stale_non_ppr_prefix_sibling_reclaimed(self, tmp_root, real_home):
+        # Glob generality: quorum's qr- (or any future consumer's) manifests
+        # are swept too — no hardcoded prefix enumeration.
+        m = _manifest(tmp_root, "qr-dead")
+        home, ok = setup_codex_home(m, real_home=str(real_home))
+        assert ok
+        self._backdate(m)
+        assert cleanup_review_homes(str(tmp_root), "ppr-live") == 0
+        assert not os.path.exists(home)
+        assert not os.path.exists(m)
+
+    def test_young_sibling_untouched(self, tmp_root, real_home):
+        m = _manifest(tmp_root, "ppr-concurrent")
+        home, ok = setup_codex_home(m, real_home=str(real_home))
+        assert ok
+        assert cleanup_review_homes(str(tmp_root), "ppr-live") == 0
+        assert os.path.exists(home)
+        assert os.path.exists(m)
+
+    def test_active_review_old_home_fresh_manifest_untouched(self, tmp_root, real_home):
+        # The predicate is MANIFEST mtime, refreshed by record_codex_home on
+        # every round (fresh exec and reuse alike) — an old home dir under a
+        # fresh manifest is a live long-running review, not an orphan.
+        m = _manifest(tmp_root, "qr-active")
+        home, ok = setup_codex_home(m, real_home=str(real_home))
+        assert ok
+        self._backdate(home)
+        assert cleanup_review_homes(str(tmp_root), "ppr-live") == 0
+        assert os.path.exists(home)
+        assert os.path.exists(m)
+
+    def test_current_review_manifest_processed_normally_not_swept(self, tmp_root, real_home):
+        # Even a stale own-manifest (round running >24h) goes through the
+        # normal authoritative-manifest path, not the sibling sweep.
+        m = _manifest(tmp_root, "ppr-slow")
+        home, ok = setup_codex_home(m, real_home=str(real_home))
+        assert ok
+        self._backdate(m)
+        assert cleanup_review_homes(str(tmp_root), "ppr-slow") == 0
+        assert not os.path.exists(home)
+
+    def test_symlinked_sibling_manifest_refused(self, tmp_root, tmp_path):
+        target = tmp_path / "victim.list"
+        target.write_text("/tmp/ppr-codex-home-planted\n")
+        self._backdate(target)
+        link = tmp_root / "ppr-evil-codex-homes.list"
+        link.symlink_to(target)
+        assert cleanup_review_homes(str(tmp_root), "ppr-live") == 0
+        assert link.is_symlink()  # not unlinked, not followed
+        assert target.read_text() == "/tmp/ppr-codex-home-planted\n"
+
+    def test_malformed_sibling_manifest_skipped_without_crash(self, tmp_root):
+        m = tmp_root / "ppr-junk-codex-homes.list"
+        m.write_text("not-a-real-home\n/etc\n")
+        self._backdate(m)
+        assert cleanup_review_homes(str(tmp_root), "ppr-live") == 0
+        # Entries failing the ownership gauntlet are kept, never touched.
+        assert m.exists()
+        assert "/etc" in m.read_text()
+
+
 class TestTeardownAndDefaults:
     def test_teardown_missing_is_success(self, tmp_root):
         assert teardown_codex_home(str(tmp_root / "ppr-codex-home-gone")) is True

@@ -61,6 +61,7 @@ from _common.session import (
     default_manifest,
     extract_text_from_output,
     load_session,
+    record_codex_home,
     reuse_codex_home,
     save_session,
     setup_codex_home,
@@ -221,10 +222,21 @@ def run_review(args):
     codex_capture_enabled = False
     if reviewer == "codex":
         recorded = load_session(args.session_file).get("codex_home")
+        manifest = args.codex_home_manifest or default_manifest(args.session_file)
+        reused = False
         if recorded and reuse_codex_home(recorded):
-            codex_home = recorded
-        else:
-            manifest = args.codex_home_manifest or default_manifest(args.session_file)
+            try:
+                # Refresh the manifest mtime on reuse so the orphan sweep
+                # never mistakes a live multi-round review for a crashed one.
+                record_codex_home(manifest, recorded)
+                codex_home = recorded
+                reused = True
+            except OSError as e:
+                # Unrefreshable manifest: treated like stale-home replacement
+                # (drop the binding, mint a fresh home) rather than running on
+                # a home the sweep may reclaim mid-review.
+                print(f"Warning: could not refresh codex-home manifest: {e}", file=sys.stderr)
+        if not reused:
             new_home, ok = setup_codex_home(manifest)
             if ok:
                 codex_home = new_home

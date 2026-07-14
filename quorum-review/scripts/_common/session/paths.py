@@ -7,7 +7,7 @@ emits the standard temp file locations used by a session. Keeps host-side
 shell snippets from reimplementing path construction.
 
 CLI usage (skill scripts can `eval "$(... --format shell)"` to export
-all six path env vars at once):
+all nine env vars at once — REVIEW_ID, TMPDIR, and the seven file paths):
 
     python3 -m common.session.paths --review-id <id> --format shell
 """
@@ -96,6 +96,9 @@ def build_paths(review_id, tmpdir=None):
 def render_shell(paths):
     env_map = {
         "REVIEW_ID": paths["review_id"],
+        # TMPDIR is exported deliberately: SKILL.md snippets build
+        # ${TMPDIR}/ppr-… paths, and macOS confstr temp dirs differ from the
+        # shell default, so every consumer must resolve the SAME base dir.
         "TMPDIR": paths["tmpdir"],
         "PLAN_FILE": paths["plan_file"],
         "PROMPT_FILE": paths["prompt_file"],
@@ -118,6 +121,11 @@ def main():
         from .codex_home import cleanup_review_homes
 
         if args.id_prefix:
+            if not _REVIEW_ID_RE.match(args.id_prefix):
+                # Same charset as review ids — closes the manifest-path
+                # escape a separator-bearing prefix would open.
+                print(f"Error: invalid --id-prefix: {args.id_prefix!r}", file=sys.stderr)
+                sys.exit(1)
             prefix = args.id_prefix
         else:
             try:

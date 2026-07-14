@@ -312,6 +312,55 @@ def _reclaim_stale_global_homes(global_manifest, already_seen):
     return stale_failed
 
 
+def _sweep_orphaned_sibling_manifests(base, current_manifest, global_manifest, already_seen):
+    """Reclaim review-scoped manifests orphaned by a pre-Finalize crash.
+
+    Any sibling ``*-codex-homes.list`` (any consumer prefix — ppr, qr, future
+    ones) whose **manifest mtime** is older than ``_STALE_HOME_AGE_SECONDS``
+    is treated as a dead review's. Live reviews are protected by that mtime
+    guard: both consumers refresh their manifest through ``record_codex_home``
+    on every round (fresh exec AND home reuse), so a manifest not refreshed
+    for >24 h means a crashed or idle review — or a single round running
+    >24 h, which is acceptable: its resume then falls back to a fresh exec by
+    design. Every recorded home still passes the ``_owned_real_dir`` gauntlet
+    before teardown; entries failing it are kept, never touched. Symlinked
+    manifests are refused outright.
+
+    Returns the list of validated-stale homes that failed teardown.
+    """
+    failed = []
+    try:
+        siblings = sorted(base.glob("*-codex-homes.list"))
+    except OSError:
+        return failed
+    for m in siblings:
+        if m in (current_manifest, global_manifest) or m.is_symlink():
+            continue
+        if not _is_stale(m):
+            continue
+        entries = [h for h in _read_manifest(m) if h not in already_seen]
+        if not entries:
+            with contextlib.suppress(OSError):
+                m.unlink()
+            continue
+        reclaim = [h for h in entries if _owned_real_dir(h)]
+        keep = [h for h in entries if not _owned_real_dir(h)]
+        if reclaim:
+            print(
+                f"Reclaiming {len(reclaim)} orphaned Codex home(s) from stale manifest {m}",
+                file=sys.stderr,
+            )
+        still = [h for h in reclaim if not teardown_codex_home(h)]
+        failed.extend(still)
+        survivors = keep + still
+        if survivors:
+            _rewrite_manifest(m, survivors)
+        else:
+            with contextlib.suppress(OSError):
+                m.unlink()
+    return failed
+
+
 def cleanup_review_homes(tmpdir, id_prefix):
     """Reclaim every per-run Codex home for a review. Returns the count that
     could NOT be removed (0 = fully clean; idempotent on re-run).
@@ -327,8 +376,10 @@ def cleanup_review_homes(tmpdir, id_prefix):
     review-scoped manifest of their own) for orphaned homes — those entries
     carry no review id, so any review's cleanup call may reclaim them, gated
     by an mtime age guard so a concurrent live run's home is never pulled out
-    from under it. Homes that fail that sweep are folded into the returned
-    count alongside this review's own failures.
+    from under it. Finally, age-sweeps sibling review-scoped manifests that a
+    pre-Finalize crash orphaned (see ``_sweep_orphaned_sibling_manifests``).
+    Homes that fail either sweep are folded into the returned count alongside
+    this review's own failures.
     """
     base = Path(tmpdir)
     manifest = base / f"{id_prefix}-codex-homes.list"
@@ -364,5 +415,7 @@ def cleanup_review_homes(tmpdir, id_prefix):
     global_manifest = base / _GLOBAL_MANIFEST_NAME
     if global_manifest != manifest:
         failed.extend(_reclaim_stale_global_homes(global_manifest, seen))
+
+    failed.extend(_sweep_orphaned_sibling_manifests(base, manifest, global_manifest, seen))
 
     return len(failed)
