@@ -459,7 +459,7 @@ class TestRunReviewExecution(unittest.TestCase):
             mock.patch(
                 "run_review.subprocess.Popen", side_effect=[timeout_proc, fresh_proc]
             ) as mock_popen,
-            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review._kill_tree") as mock_kill,
             mock.patch("run_review.extract_metadata", return_value={}),
             mock.patch("run_review.extract_text_from_output"),
             mock.patch("run_review.extract_session_id_json", return_value="fresh-session"),
@@ -471,6 +471,9 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(mock_popen.call_count, 2)
         self.assertEqual(self.output_file.read_text(encoding="utf-8"), '{"result":"fresh review"}')
+        # The timed-out child's whole tree must be reaped — deleting the
+        # _kill_tree call previously passed the entire suite.
+        self.assertTrue(mock_kill.called)
 
     def test_run_review_final_attempt_timeout_writes_failure_summary(self):
         """Regression: a timeout on the final (non-resumable) attempt must
@@ -496,7 +499,7 @@ class TestRunReviewExecution(unittest.TestCase):
 
         with (
             mock.patch("run_review.subprocess.Popen", return_value=proc),
-            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review._kill_tree") as mock_kill,
             mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
             mock.patch("run_review.signal.signal"),
         ):
@@ -508,6 +511,7 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertIn("error", summary)
         self.assertIn("timeout", summary["error"])
         self.assertFalse(summary["partial_output"])
+        self.assertTrue(mock_kill.called)
 
     def test_run_review_final_opencode_timeout_preserves_partial_output(self):
         summary_file = Path(self.tmpdir.name) / "summary.json"
@@ -545,7 +549,7 @@ class TestRunReviewExecution(unittest.TestCase):
 
         with (
             mock.patch("run_review.subprocess.Popen", return_value=proc),
-            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review._kill_tree") as mock_kill,
             mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
             mock.patch("run_review.signal.signal"),
         ):
@@ -557,6 +561,7 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertIsNone(summary["verdict"])
         self.assertTrue(summary["partial_output"])
         self.assertIn("timeout", summary["error"])
+        self.assertTrue(mock_kill.called)
 
     def test_run_review_codex_timeout_preserves_partial_events(self):
         summary_file = Path(self.tmpdir.name) / "summary.json"
@@ -586,7 +591,7 @@ class TestRunReviewExecution(unittest.TestCase):
         with (
             mock.patch("run_review.subprocess.Popen", return_value=proc),
             mock.patch("run_review.setup_codex_home", return_value=(None, False)),
-            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review._kill_tree") as mock_kill,
             mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
             mock.patch("run_review.signal.signal"),
         ):
@@ -596,6 +601,7 @@ class TestRunReviewExecution(unittest.TestCase):
         self.assertIn("partial finding", self.events_file.read_text(encoding="utf-8"))
         summary = json.loads(summary_file.read_text(encoding="utf-8"))
         self.assertTrue(summary["partial_output"])
+        self.assertTrue(mock_kill.called)
 
     def test_run_review_codex_vanished_session_file_skips_not_crashes(self):
         """Regression: a codex session file that vanishes between the

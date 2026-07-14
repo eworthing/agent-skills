@@ -154,7 +154,7 @@ class TestExecutionHardening(unittest.TestCase):
 
         with (
             mock.patch("run_review.subprocess.Popen", return_value=proc),
-            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review._kill_tree") as mock_kill,
             mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
             mock.patch("run_review.signal.signal"),
         ):
@@ -169,6 +169,7 @@ class TestExecutionHardening(unittest.TestCase):
         timeout_events = [e for e in events if e["event"] == "provider_timeout"]
         self.assertEqual(len(timeout_events), 1)
         self.assertIn("boom: auth token expired", timeout_events[0]["ctx"]["stderr"])
+        self.assertTrue(mock_kill.called)
 
     def test_final_timeout_byte_partial_reaches_artifact(self):
         """A drain that itself times out hands back BYTE-valued partial
@@ -197,7 +198,7 @@ class TestExecutionHardening(unittest.TestCase):
 
         with (
             mock.patch("run_review.subprocess.Popen", return_value=proc),
-            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review._kill_tree") as mock_kill,
             mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
             mock.patch("run_review.signal.signal"),
         ):
@@ -208,6 +209,204 @@ class TestExecutionHardening(unittest.TestCase):
         summary = json.loads(summary_file.read_text(encoding="utf-8"))
         self.assertIsNone(summary["verdict"])
         self.assertTrue(summary["partial_output"])
+        self.assertTrue(mock_kill.called)
+
+    def test_signal_handler_kills_active_proc_and_exits(self):
+        proc = mock.MagicMock()
+        proc.poll.return_value = None
+        with (
+            mock.patch("run_review._kill_tree") as mock_kill,
+            mock.patch.object(run_review, "_active_proc", proc),
+            self.assertRaises(SystemExit) as ctx,
+        ):
+            run_review._signal_handler(signal.SIGTERM, None)
+        mock_kill.assert_called_once_with(proc)
+        self.assertEqual(ctx.exception.code, 128 + signal.SIGTERM)
+
+    def test_resume_empty_output_sentinel_falls_back_to_fresh(self):
+        """A resume attempt that exits 0 with NO output is a silent failure:
+        the synthetic sentinel (3) must trip the fresh-exec fallback, and the
+        sentinel must never surface as the final rc when the fresh attempt
+        succeeds."""
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
+        )
+        empty_proc = self._proc(0, stdout="", stderr="quiet auth failure")
+        fresh_proc = self._proc(0, stdout='{"result":"fresh review"}')
+
+        with (
+            mock.patch(
+                "run_review.load_session",
+                return_value={"session_id": "resume-session", "round": 1},
+            ),
+            mock.patch(
+                "run_review.subprocess.Popen", side_effect=[empty_proc, fresh_proc]
+            ) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.extract_text_from_output"),
+            mock.patch("run_review.extract_session_id_json", return_value="fresh-session"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(mock_popen.call_count, 2)
+        session = json.loads(self.session_file.read_text(encoding="utf-8"))
+        self.assertTrue(session["resume_fallback_used"])
+
+    def test_binary_not_found_writes_failure_summary(self):
+        summary_file = Path(self.tmpdir.name) / "summary.json"
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            summary_file=str(summary_file),
+            resume=False,
+        )
+        with (
+            mock.patch("run_review.subprocess.Popen", side_effect=FileNotFoundError("claude")),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertIsNone(summary["verdict"])
+        self.assertIn("binary_not_found", summary["error"])
+
+    def test_post_execution_os_error_writes_failure_summary(self):
+        """An OSError past the Popen launch (stat/open race) must land in the
+        generic os_error summary, not vanish or masquerade as binary-missing."""
+        summary_file = Path(self.tmpdir.name) / "summary.json"
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            summary_file=str(summary_file),
+            resume=False,
+        )
+        proc = self._proc(0, stdout='{"result":"review"}')
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", side_effect=OSError("disk full")),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertIsNone(summary["verdict"])
+        self.assertIn("os_error: disk full", summary["error"])
+
+    def test_codex_multiple_concurrent_sessions_skip_binding(self):
+        """>1 new cwd-matching session file means the diff is ambiguous: warn
+        and bind nothing rather than guessing (run_review's concurrency
+        guard)."""
+        import os as _os
+
+        sdir = Path(self.tmpdir.name) / "codex-sessions"
+        sdir.mkdir()
+        cwd = str(Path.cwd())
+        files = []
+        for i in (1, 2):
+            f = sdir / f"rollout-2026-07-14T00-00-0{i}-uuid{i}.jsonl"
+            f.write_text(
+                json.dumps({"type": "session_meta", "payload": {"id": f"sess-{i}", "cwd": cwd}})
+                + "\n",
+                encoding="utf-8",
+            )
+            files.append(str(f))
+        _os.utime(files[0], None)
+
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        def communicate(input=None, timeout=None):
+            self.output_file.write_text("Review text\n", encoding="utf-8")
+            return "", ""
+
+        proc.communicate.side_effect = communicate
+
+        with (
+            mock.patch(
+                "run_review.setup_codex_home", return_value=("/fake/ppr-codex-home-test", True)
+            ),
+            mock.patch("run_review._codex_session_files", side_effect=[set(), set(files)]),
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        session = json.loads(self.session_file.read_text(encoding="utf-8"))
+        self.assertIsNone(session.get("session_id"))
+
+    def test_codex_round2_reuses_recorded_home(self):
+        """Round 2 must reuse the recorded per-run home (env CODEX_HOME) and
+        resume with the recorded session id — and refresh the manifest."""
+        home = Path(self.tmpdir.name) / "ppr-codex-home-keep"
+        (home / "sessions").mkdir(parents=True)
+        self.session_file.write_text(
+            json.dumps({"session_id": "sess-1", "round": 1, "codex_home": str(home)}),
+            encoding="utf-8",
+        )
+        args = make_args(
+            reviewer="codex",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=True,
+        )
+        proc = self._proc(0, stdout="", stderr="")
+
+        def communicate(input=None, timeout=None):
+            self.output_file.write_text("Review text\n", encoding="utf-8")
+            return "", ""
+
+        proc.communicate.side_effect = communicate
+
+        with (
+            mock.patch("run_review.record_codex_home") as mock_record,
+            mock.patch("run_review._codex_session_files", return_value=set()),
+            mock.patch("run_review.subprocess.Popen", return_value=proc) as mock_popen,
+            mock.patch("run_review.extract_metadata", return_value={}),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        cmd = mock_popen.call_args_list[0].args[0]
+        self.assertIn("resume", cmd)
+        self.assertIn("sess-1", cmd)
+        env = mock_popen.call_args_list[0].kwargs["env"]
+        self.assertEqual(env["CODEX_HOME"], str(home))
+        mock_record.assert_called_once()  # manifest mtime refreshed on reuse
+        session = json.loads(self.session_file.read_text(encoding="utf-8"))
+        self.assertEqual(session.get("codex_home"), str(home))
+        self.assertEqual(session.get("round"), 2)
 
 
 if __name__ == "__main__":

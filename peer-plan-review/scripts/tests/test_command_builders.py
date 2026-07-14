@@ -178,18 +178,13 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertIn("--output-format", cmd)
         self.assertIn("--max-turns", cmd)
         self.assertIn("--append-system-prompt", cmd)
-        self.assertIn(
-            "You are a code reviewer. Read the files the plan references before "
-            "judging it — do not rely on the plan text alone. Assess the plan for "
-            "correctness, completeness, missing edge cases, and risks. "
-            "If the artifact is an implementation plan or spec, also assess its "
-            "executability — whether a fresh engineer with no prior context could "
-            "implement and independently verify each task as written (flag tasks too "
-            "large or coupled to verify alone, under-specified or placeholder steps, "
-            "and references to files, functions, or signatures the plan never defines). "
-            "End with VERDICT: APPROVED or VERDICT: REVISE on the last non-empty line.",
-            cmd,
-        )
+        # Behavioral pins, not a verbatim transcript: the system prompt must
+        # carry the verdict contract and the executability clause; wording may
+        # otherwise evolve without breaking this test. Safety flags stay exact.
+        system_prompt = cmd[cmd.index("--append-system-prompt") + 1]
+        self.assertIn("code reviewer", system_prompt)
+        self.assertIn("executability", system_prompt)
+        self.assertIn("VERDICT: APPROVED or VERDICT: REVISE", system_prompt)
         self.assertIn("--model", cmd)
         self.assertIn("opus", cmd)
         self.assertIn("--effort", cmd)
