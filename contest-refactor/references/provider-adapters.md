@@ -52,12 +52,12 @@ Spawn via the `Agent` tool from the main agent:
 Agent({
   description: "Loop N execution",
   subagent_type: "general-purpose",
-  model: "claude-sonnet-4-6",
+  model: "claude-sonnet-5",
   prompt: "<verbatim prompt template from references/trust-model.md § Loop Isolation>"
 })
 ```
 
-- **Default model**: `claude-sonnet-4-6` (full canonical ID)
+- **Default model**: `claude-sonnet-5` (full canonical ID; the host `sonnet` tier — was `claude-sonnet-4-6` until 2026-07-13)
 - **Permissions**: subagent inherits parent permissions (write + shell + test execution all allowed)
 - **Resume**: not supported by Agent tool; each loop is a fresh subagent invocation. State flows via files (`CURRENT_REVIEW.md`, `findings_registry.json`, etc.)
 
@@ -108,12 +108,12 @@ Spawn via the `Agent` tool:
 Agent({
   description: "Implementation review for loop N",
   subagent_type: "general-purpose",
-  model: "claude-sonnet-4-6",
+  model: "claude-sonnet-5",
   prompt: "<verbatim prompt template from references/implementation-reviewer.md>"
 })
 ```
 
-- **Default model**: `claude-sonnet-4-6`
+- **Default model**: `claude-sonnet-5`
 - **Enforcement**: no enforcement gate available; the reviewer's prompt is the only read-only contract. The reviewer is instructed to use `Grep`, `Glob`, `Read` tools (not bash `cat`) for file reads, and to restrict `Bash` to the read-only shell allow-list.
 - **Reviewer-permitted tools**: `Grep`, `Glob`, `Read`, `Bash` (restricted by prompt to the allow-list)
 
