@@ -192,6 +192,18 @@ class TestPprLaunch(unittest.TestCase):
         self.assertIn("plan snapshot missing", result.stderr)
         self.assertFalse(self.argv_file.exists())  # runner never invoked
 
+    def test_ppr_launch_paths_failure_exits_2(self):
+        """Regression: a ppr_paths.py failure must be one clean exit 2, not a
+        downstream `set -u` unbound-variable crash (the eval'd command
+        substitution escapes `set -e`)."""
+        paths_script = self.wrapper.parent / "ppr_paths.py"
+        paths_script.write_text("import sys; sys.exit(1)\n", encoding="utf-8")
+        result = self._run("--reviewer", "codex")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("ppr_paths.py failed", result.stderr)
+        self.assertNotIn("unbound variable", result.stderr)
+        self.assertFalse(self.argv_file.exists())  # runner never invoked
+
 
 if __name__ == "__main__":
     unittest.main()

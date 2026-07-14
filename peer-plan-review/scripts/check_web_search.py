@@ -25,7 +25,9 @@ diagnostic, not a production run):
     isolated config-dir overlay.
 Neither omission changes the flags under test (sandbox/approval-mode/output
 format), only session/config isolation that doesn't matter for a single
-ad hoc run.
+ad hoc run. Safety controls are NOT omitted: opencode gets the same
+OPENCODE_PERMISSION deny policy as a production run (its --auto flag would
+otherwise run unsandboxed).
 
 Usage:
     python3 check_web_search.py                    # check all providers
@@ -47,7 +49,11 @@ SCRIPT_DIR = str(Path(__file__).resolve().parent)
 sys.path.insert(0, SCRIPT_DIR)
 import run_review  # noqa: E402 — reuse parse_args() defaults so this
 from _common.process.tree import _kill_tree, _popen_session_kwargs  # noqa: E402
-from _common.providers import PROVIDERS, build_stdin  # noqa: E402
+from _common.providers import (  # noqa: E402
+    OPENCODE_READ_ONLY_PERMISSION,
+    PROVIDERS,
+    build_stdin,
+)
 from _common.session import extract_text_from_output  # noqa: E402
 
 # diagnostic's argv construction can never hand-drift from what a real
@@ -55,7 +61,7 @@ from _common.session import extract_text_from_output  # noqa: E402
 
 TIMEOUT = 180  # seconds — URL fetch can be slow (Gemini/Copilot take 50-70s)
 
-PROVIDER_NAMES = ["claude", "codex", "gemini", "copilot", "opencode", "agy"]
+PROVIDER_NAMES = list(PROVIDERS)
 
 # The answer ("Wouters") is on the fetched page but never appears in this
 # prompt, so a match proves an actual fetch happened rather than the model
@@ -107,6 +113,8 @@ def build_env(reviewer):
     env = os.environ.copy()
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    if reviewer == "opencode":
+        env["OPENCODE_PERMISSION"] = OPENCODE_READ_ONLY_PERMISSION
     return env
 
 

@@ -57,6 +57,9 @@ python3 <skill-dir>/scripts/run_review.py \
 - On a terminal timeout, the runner still exits nonzero. If the killed child
   returns captured stdout, the runner preserves it in the existing review or
   events artifact before returning.
+- Exit code `3` is the runner's synthetic sentinel for "reviewer exited 0 but
+  produced no output" (silent model/auth/sandbox rejection). Distinct from a
+  real timeout, which exits `1`.
 - Failure summaries contain `error` and `partial_output`. When
   `partial_output` is `true`, inspect the review/events artifact before deciding
   whether to retry; retained text may contain usable findings even though the

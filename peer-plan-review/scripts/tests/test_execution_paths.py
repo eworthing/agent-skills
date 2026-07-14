@@ -359,7 +359,7 @@ class TestRunReviewExecution(unittest.TestCase):
         ):
             rc = run_review.run_review(args)
 
-        self.assertEqual(rc, 124)
+        self.assertEqual(rc, 3)  # synthetic empty-output sentinel, not timeout's 1/124
         self.assertEqual(self.events_file.read_text(encoding="utf-8"), "")
 
     def test_run_review_codex_accepts_last_message_file_without_json_stdout(self):

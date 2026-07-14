@@ -244,9 +244,14 @@ def run_review(args, logger=None):
                 if recorded:  # replaced a stale home: drop its dead session id
                     teardown_codex_home(recorded)
                     session_id = None
+                    # also drop it from the loaded dict so session provenance
+                    # (resume_attempted/reason) and the persisted session_id
+                    # reflect the never-attempted resume, not the dead id
+                    session.pop("session_id", None)
             else:  # fail closed — never fall back to shared-home capture
                 session_id = None
                 use_resume = False
+                session.pop("session_id", None)
         if codex_home:
             env["CODEX_HOME"] = codex_home
             codex_capture_enabled = True
@@ -317,9 +322,16 @@ def run_review(args, logger=None):
                 returncode = proc.returncode
             except subprocess.TimeoutExpired:
                 _kill_tree(proc)
-                stdout, _stderr = proc.communicate()
+                stdout, drain_stderr = proc.communicate()
                 print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
-                logger.log("provider_timeout", provider=reviewer, context={"timeout": args.timeout})
+                logger.log(
+                    "provider_timeout",
+                    provider=reviewer,
+                    context={
+                        "timeout": args.timeout,
+                        "stderr": (drain_stderr or "")[:500],
+                    },
+                )
                 if attempt == 0 and use_resume and session_id:
                     print("Resume timed out, falling back to fresh exec...", file=sys.stderr)
                     logger.log(
@@ -381,15 +393,17 @@ def run_review(args, logger=None):
                         f"Reviewer exited 0 but produced no output ({check_label})",
                         file=sys.stderr,
                     )
-                    if stderr:
-                        print(stderr, file=sys.stderr)
                     logger.log(
                         "empty_output",
                         provider=reviewer,
                         error="returncode=0 with empty output file",
                         context={"stderr": (stderr or "")[:2000]},
                     )
-                    returncode = 124  # trips resume_fallback if eligible
+                    # Synthetic empty-output sentinel: 3, not 124 — a real
+                    # timeout exits 1, and 124 would misread as one. Nonzero
+                    # still trips resume_fallback if eligible. Stderr prints
+                    # once, in the returncode != 0 branch below.
+                    returncode = 3
 
             # Check for resume fallback condition
             if returncode != 0:

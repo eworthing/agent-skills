@@ -63,7 +63,13 @@ SKILL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 # Export PLAN_FILE/PROMPT_FILE/OUTPUT_FILE/SESSION_FILE/EVENTS_FILE/ERROR_LOG/
 # CODEX_HOME_MANIFEST (and TMPDIR) for this review id.
-eval "$(python3 "$SKILL_DIR/scripts/ppr_paths.py" --review-id "$REVIEW_ID" --format shell)"
+# Command substitution inside eval escapes `set -e` — gate it explicitly so a
+# ppr_paths failure is one clean exit 2, not a downstream `set -u` crash.
+paths=$(python3 "$SKILL_DIR/scripts/ppr_paths.py" --review-id "$REVIEW_ID" --format shell) || {
+  echo "Error: ppr_paths.py failed for review id $REVIEW_ID" >&2
+  exit 2
+}
+eval "$paths"
 
 RUNNER_LOG="${TMPDIR}/ppr-${REVIEW_ID}-runner.log"
 EXIT_CODE_FILE="${TMPDIR}/ppr-${REVIEW_ID}-exit.code"
