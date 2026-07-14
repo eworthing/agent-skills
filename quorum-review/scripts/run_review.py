@@ -42,7 +42,7 @@ from _common.metadata.extractors import (
     _parse_codex_session_id,
     extract_metadata,
 )
-from _common.process.tree import _kill_tree, _popen_session_kwargs
+from _common.process.tree import _kill_tree, _popen_session_kwargs, drain_process
 from _common.providers import (
     PROVIDERS,
     build_stdin,
@@ -326,8 +326,11 @@ def run_review(args):
             returncode = proc.returncode
         except subprocess.TimeoutExpired:
             _kill_tree(proc)
-            # Drain pipes to avoid FD leak (process is already dead)
-            proc.communicate()
+            # Bounded drain to avoid FD leak (and a hang if a pipe fd
+            # survived the kill).
+            _, _, drain_timed_out = drain_process(proc)
+            if drain_timed_out:
+                print("WARNING: pipe drain timed out after kill", file=sys.stderr)
             print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
             return 1
 

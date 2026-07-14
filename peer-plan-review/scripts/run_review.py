@@ -37,7 +37,7 @@ from _common.metadata.extractors import (
     _extract_opencode_metadata_via_export,
     _parse_codex_session_id,
 )
-from _common.process.tree import _kill_tree, _popen_session_kwargs
+from _common.process.tree import _kill_tree, _popen_session_kwargs, drain_process
 
 # ---------------------------------------------------------------------------
 # Re-exports from submodules (preserves mock.patch("run_review.X") paths)
@@ -322,7 +322,13 @@ def run_review(args, logger=None):
                 returncode = proc.returncode
             except subprocess.TimeoutExpired:
                 _kill_tree(proc)
-                stdout, drain_stderr = proc.communicate()
+                stdout, drain_stderr, drain_timed_out = drain_process(proc)
+                if drain_timed_out:
+                    logger.log(
+                        "drain_timeout",
+                        provider=reviewer,
+                        error="pipe drain timed out after kill; partial output retained",
+                    )
                 print(f"Reviewer timed out after {args.timeout}s", file=sys.stderr)
                 logger.log(
                     "provider_timeout",

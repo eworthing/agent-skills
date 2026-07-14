@@ -122,6 +122,45 @@ class TestExecutionHardening(unittest.TestCase):
         self.assertEqual(len(timeout_events), 1)
         self.assertIn("boom: auth token expired", timeout_events[0]["ctx"]["stderr"])
 
+    def test_final_timeout_byte_partial_reaches_artifact(self):
+        """A drain that itself times out hands back BYTE-valued partial
+        stdout (truncated JSON, killed mid-write). The decoded partial must
+        reach the output artifact raw (unwrap fails soft on truncated JSON)
+        and the failure summary must say partial_output=true — pins commit
+        6a4f41b's contract for a structured provider beyond opencode/codex."""
+        summary_file = Path(self.tmpdir.name) / "summary.json"
+        args = make_args(
+            reviewer="claude",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            summary_file=str(summary_file),
+            resume=False,
+        )
+        truncated = b'{"result":"### Blocking Issues\\n- [B1] partial finding'
+        proc = mock.MagicMock()
+        proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd=["claude"], timeout=args.timeout),
+            subprocess.TimeoutExpired(cmd=["claude"], timeout=30, output=truncated, stderr=b""),
+        ]
+        proc.returncode = None
+        proc.poll.return_value = None
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc),
+            mock.patch("run_review._kill_tree"),
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 1)
+        self.assertIn("partial finding", self.output_file.read_text(encoding="utf-8"))
+        summary = json.loads(summary_file.read_text(encoding="utf-8"))
+        self.assertIsNone(summary["verdict"])
+        self.assertTrue(summary["partial_output"])
+
 
 if __name__ == "__main__":
     unittest.main()

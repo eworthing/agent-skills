@@ -48,7 +48,11 @@ from pathlib import Path
 SCRIPT_DIR = str(Path(__file__).resolve().parent)
 sys.path.insert(0, SCRIPT_DIR)
 import run_review  # noqa: E402 — reuse parse_args() defaults so this
-from _common.process.tree import _kill_tree, _popen_session_kwargs  # noqa: E402
+from _common.process.tree import (  # noqa: E402
+    _kill_tree,
+    _popen_session_kwargs,
+    drain_process,
+)
 from _common.providers import (  # noqa: E402
     OPENCODE_READ_ONLY_PERMISSION,
     PROVIDERS,
@@ -251,11 +255,14 @@ def run_test(reviewer):
         except subprocess.TimeoutExpired:
             duration = time.time() - start
             _kill_tree(proc)
-            proc.communicate()
+            _, _, drain_timed_out = drain_process(proc)
+            reason = f"Timed out after {TIMEOUT}s — likely stuck on permission prompt"
+            if drain_timed_out:
+                reason += " (pipe drain also timed out after kill)"
             return {
                 "test": test_name,
                 "status": "HUNG",
-                "reason": f"Timed out after {TIMEOUT}s — likely stuck on permission prompt",
+                "reason": reason,
                 "duration": duration,
             }
         except Exception as e:
