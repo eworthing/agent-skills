@@ -45,19 +45,22 @@ def main() -> int:
     if "G16" not in dup_rules:
         failures.append("duplicate stable_id 'F-007' did not fire G16")
 
-    # Entry missing stable_id is skipped, not crashed or flagged.
-    partial = {"entries": [{"stable_id": "F-009"}, {"title": "no id"}]}
+    # TWO entries missing stable_id must NOT collide — this proves the
+    # `if sid is None: continue` skip guard. With one id-less entry a lone None
+    # can't self-collide, so the test would pass even if the guard were deleted;
+    # two id-less entries would both map to None and false-fire G16 without it.
+    two_missing = {"entries": [{"title": "a"}, {"title": "b"}]}
     try:
-        if va.check_g16_registry_uniqueness(partial):
-            failures.append("entry without stable_id should be skipped, not flagged")
+        if va.check_g16_registry_uniqueness(two_missing):
+            failures.append("two id-less entries false-fired G16 (None-skip guard missing?)")
     except Exception as exc:
-        failures.append(f"entry without stable_id crashed: {exc!r}")
+        failures.append(f"id-less entries crashed: {exc!r}")
 
     if failures:
         for f in failures:
             print(f"FAIL: {f}")
         return 1
-    print("OK: G16 fires on duplicate stable_id, clean on unique, safe on None/partial")
+    print("OK: G16 fires on duplicate stable_id, clean on unique, id-less entries skipped")
     return 0
 
 

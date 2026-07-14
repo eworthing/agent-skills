@@ -145,8 +145,11 @@ def _load_json(path: Path) -> Any | None:
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"error: {path}: JSON parse failed: {exc}") from exc
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        # Exit 2 (operator/input error, like "not a directory"), and also catch a
+        # non-UTF-8 artifact file — UnicodeDecodeError is not a JSONDecodeError.
+        sys.stderr.write(f"error: {path}: JSON parse failed: {exc}\n")
+        raise SystemExit(2) from exc
 
 
 def _parse_iso_date(value: Any) -> date | None:
@@ -1894,12 +1897,14 @@ def _load_project_config(artifact_dir: Path) -> dict | None:
             try:
                 with path.open("rb") as fh:
                     return tomllib.load(fh)
-            except tomllib.TOMLDecodeError as exc:
-                raise SystemExit(f"error: {path}: malformed .contest-refactor.toml: {exc}") from exc
+            except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
+                # UnicodeDecodeError (a ValueError, not TOMLDecodeError/OSError)
+                # covers a non-UTF-8 config, e.g. a UTF-16/cp1252 file on Windows.
+                sys.stderr.write(f"error: {path}: malformed .contest-refactor.toml: {exc}\n")
+                raise SystemExit(2) from exc
             except OSError as exc:
-                raise SystemExit(
-                    f"error: {path}: could not read .contest-refactor.toml: {exc}"
-                ) from exc
+                sys.stderr.write(f"error: {path}: could not read .contest-refactor.toml: {exc}\n")
+                raise SystemExit(2) from exc
     return None
 
 
