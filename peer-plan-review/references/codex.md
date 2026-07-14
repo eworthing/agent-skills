@@ -1,6 +1,7 @@
 # Codex CLI Reference — peer-plan-review
 
-Source: Rust source `codex-rs/exec/src/cli.rs`, verified March 2026.
+Source: Rust source `codex-rs/exec/src/cli.rs`, verified March 2026; model list
+re-verified July 2026 against codex-cli 0.144.3 (live `codex exec` run).
 
 ## Install
 
@@ -35,7 +36,7 @@ codex exec \
 
 `-m MODEL` or `--model MODEL`
 
-**Default (no `-m`):** Last-used model from user config. On first install, defaults to OpenAI's current flagship model. Available models: `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2`.
+**Default (no `-m`):** Last-used model from user config. On first install, defaults to OpenAI's current flagship model. Available models: `gpt-5.6-sol`, `gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, `gpt-5.3-codex`, `gpt-5.2` (`gpt-5.6-sol` verified by live `codex exec` run, 2026-07-14).
 
 ## Reasoning effort
 

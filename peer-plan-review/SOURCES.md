@@ -47,7 +47,7 @@ review runs. The deny-key *enforcement* itself is not exercised by any test here
 | Codex events retained on timeout | `test_run_review_codex_timeout_preserves_partial_events` |
 | Failure-summary shape + `partial_output` | `test_writes_minimal_shape`; `test_records_partial_output` |
 | Sync (mirrors byte-identical) | `sync_common.py --check` |
-| Portability (opencode excluded from quorum surface; 3.9 stdlib-only) | `quorum-review/scripts/tests` |
+| Portability (opencode excluded from quorum surface; 3.11 stdlib-only) | `quorum-review/scripts/tests` |
 
 ## Trigger precision — intentionally unchanged
 

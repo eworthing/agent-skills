@@ -47,15 +47,14 @@ Pressure-test a plan before execution. The host agent owns the plan and revises 
   [`references/copilot.md`](references/copilot.md),
   [`references/opencode.md`](references/opencode.md),
   [`references/antigravity.md`](references/antigravity.md) (`agy` — experimental),
-  [`references/gemini.md`](references/gemini.md) (EOL 2026-06-18; enterprise-only successor is `agy`).
+  [`references/gemini.md`](references/gemini.md) (EOL 2026-06-18, retained for enterprise; successor is `agy`).
 - [`references/output-format.md`](references/output-format.md) — structured output template. Include in every prompt.
 - [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract, and the env vars the runner reads (`GEMINI_CONFIG_DIR`, `CODEX_HOME`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`).
 - [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
 
 For available models prefer:
 `python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`
-(aliases for claude/gemini, live listing for opencode/agy, known models for
-codex/copilot).
+(aliases for claude/gemini/opencode/agy; known models for codex/copilot).
 
 ## Require a plan source
 
@@ -81,10 +80,10 @@ Parsing rule: accepted forms are `reviewer`, `reviewer <effort>`, `reviewer <mod
 ## Preflight
 
 1. Resolve `<skill-dir>` relative to this `SKILL.md`.
-2. Read `references/<provider>.md` (for the `claude` provider, the file is `references/claude-code.md`).
+2. Read `references/<provider>.md` (for the `claude` provider, the file is `references/claude-code.md`; for `agy`, it is `references/antigravity.md`).
 3. Verify CLI:
    `python3 <skill-dir>/scripts/run_review.py --self-check --reviewer <provider>`.
-4. If user supplied unfamiliar shorthand model, warn once and continue — runner pass unknown values through as raw IDs.
+4. If user supplied unfamiliar shorthand model, warn once and continue — runner passes unknown values through as raw IDs.
 
 ## Create a review session
 
@@ -99,12 +98,12 @@ eval "$(
 
 Canonical temp files:
 
-- `${TMPDIR}/ppr-${REVIEW_ID}-plan.md`
-- `${TMPDIR}/ppr-${REVIEW_ID}-prompt.md`
-- `${TMPDIR}/ppr-${REVIEW_ID}-review.md`
-- `${TMPDIR}/ppr-${REVIEW_ID}-session.json`
-- `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl`
-- `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` *(retained after cleanup)*
+- `${TMPDIR}/ppr-${REVIEW_ID}-plan.md` (`$PLAN_FILE`)
+- `${TMPDIR}/ppr-${REVIEW_ID}-prompt.md` (`$PROMPT_FILE`)
+- `${TMPDIR}/ppr-${REVIEW_ID}-review.md` (`$OUTPUT_FILE`)
+- `${TMPDIR}/ppr-${REVIEW_ID}-session.json` (`$SESSION_FILE`)
+- `${TMPDIR}/ppr-${REVIEW_ID}-events.jsonl` (`$EVENTS_FILE`)
+- `${TMPDIR}/ppr-${REVIEW_ID}-errors.jsonl` (`$ERROR_LOG`) *(retained after cleanup)*
 - `${TMPDIR}/ppr-${REVIEW_ID}-codex-homes.list` *(Codex isolation manifest; reclaimed at Finalize)*
 - `${TMPDIR}/ppr-${REVIEW_ID}-runner.log` *(written by `ppr_launch.sh`; runner stdout+stderr)*
 - `${TMPDIR}/ppr-${REVIEW_ID}-exit.code` *(written by `ppr_launch.sh`; true runner exit code)*
@@ -148,6 +147,8 @@ Build prompt with:
 4. Structured output template from `references/output-format.md`. If a Domain context
    block is included, use its two-pass variant.
 
+Write the assembled prompt to `$PROMPT_FILE`.
+
 Run the round through the canonical launcher — one command, backgrounded:
 
 ```bash
@@ -190,7 +191,8 @@ Python dict corrupts it into single-quoted non-JSON. `SESSION_FILE` is already
 JSON; emit it verbatim.
 
 ```bash
-# paths must already be exported via ppr_paths.py --format shell
+# re-export paths first — env exports do not survive across Bash tool calls
+eval "$(python3 <skill-dir>/scripts/ppr_paths.py --review-id "$REVIEW_ID" --format shell)"
 if [ "$(cat "${TMPDIR}/ppr-${REVIEW_ID}-exit.code")" = "0" ] \
    && [ -s "$OUTPUT_FILE" ] && [ -s "$SESSION_FILE" ]; then
   echo "=== SESSION ==="; cat "$SESSION_FILE"
@@ -198,6 +200,7 @@ if [ "$(cat "${TMPDIR}/ppr-${REVIEW_ID}-exit.code")" = "0" ] \
 else
   echo "=== RUNNER LOG (round failed) ==="
   cat "${TMPDIR}/ppr-${REVIEW_ID}-runner.log"; cat "$ERROR_LOG"
+  [ -s "$OUTPUT_FILE" ] && { echo "=== PARTIAL REVIEW ==="; cat "$OUTPUT_FILE"; }
 fi
 ```
 
@@ -224,14 +227,14 @@ On `REVISE` (use fresh per-round finding IDs each round — `B1`, `B2`, `N1`, �
 1. Address each finding.
 2. Rewrite plan snapshot with updated full plan.
 3. Write short `Changes since last round` bullet list.
-4. Rebuild prompt in this order: verdict contract → previous reviewer feedback (with finding IDs) → `Changes since last round` → updated numbered plan.
+4. Rebuild prompt in this order: verdict contract → previous reviewer feedback (with finding IDs) → `Changes since last round` → updated numbered plan → structured output template from `references/output-format.md` (two-pass variant if a domain context block is present).
 5. Re-run the runner with `--resume` added.
 
 Stop after approval or five rounds, whichever first.
 
 ## Handle failures
 
-- `--resume` is a request, not a guarantee. The runner auto-falls back to a fresh execution once if resume fails with no usable output.
+- `--resume` is a request, not a guarantee. The runner auto-falls back to a fresh execution once if resume fails (nonzero exit, timeout, or no usable output).
   `resume_requested`, `resume_attempted`, `resume_fallback_used` record this.
   Do not submit a second manual retry on top of the automatic fallback.
 - Runner non-zero + no output: report, ask user to retry, switch reviewers, or stop.
@@ -250,8 +253,10 @@ Stop after approval or five rounds, whichever first.
 - Reclaim any per-run Codex homes (no-op for other reviewers):
   `python3 <skill-dir>/scripts/ppr_paths.py --cleanup --review-id "$REVIEW_ID"`.
   It validates each recorded home before removing it and is safe to re-run.
-- Remove five session temp files (plan, prompt, review, session, events).
-  No globs. Error log intentionally retained for post-mortem.
+- Remove seven session temp files (plan, prompt, review, session, events,
+  runner.log, exit.code). No globs. Error log intentionally retained for
+  post-mortem. If a removal fails, report the failed path and leave the rest
+  for manual removal — the files are sensitive per [Rules](#rules).
 
 ## Rules
 

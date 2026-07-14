@@ -2,8 +2,9 @@
 """
 run_review.py — Deterministic CLI adapter for peer-plan-review skill.
 
-Dispatches review requests to Codex, Gemini, Claude Code, or Copilot CLI
-with provider-specific flags for headless, read-only, no-hang operation.
+Dispatches review requests to Codex, Gemini, Claude Code, Copilot, opencode,
+or Antigravity (agy) CLI with provider-specific flags for headless, read-only,
+no-hang operation.
 Supports exec, resume, session tracking, and self-check.
 """
 

@@ -33,6 +33,9 @@ references/
   domain-context.md   how to author an optional domain-context block
 scripts/
   run_review.py       adapter CLI entrypoint
+  ppr_launch.sh       background launcher — derives paths from the review id,
+                      tees runner output, records the true exit code
+  ppr_cli.py          argument parsing + --list-models/--self-check front-end
   ppr_paths.py        thin CLI wrapper over _common/session/paths.py
   _common/            shared modules vendored from /common/common/ via
                       sync_common.py (session I/O, output parsing, summaries,
@@ -41,6 +44,7 @@ scripts/
   tests/              pytest suite
   check_web_search.py manual diagnostic: per-provider headless web-fetch check
   fixtures/           provider output samples for tests
+evals/                offline scoring harness + reviewer-run fixtures
 agents/openai.yaml    OpenAI subagent wiring
 ```
 
@@ -54,7 +58,7 @@ python3 -m pytest scripts/tests/
 
 ## Requirements
 
-- Python 3.9+ (stdlib only)
+- Python 3.11+ (stdlib only)
 - At least one of: `codex`, `claude`, `copilot`, `opencode`, `agy` (Antigravity), or `gemini` CLI on `$PATH`
 - Reviewer auth configured via each CLI's normal mechanism
 

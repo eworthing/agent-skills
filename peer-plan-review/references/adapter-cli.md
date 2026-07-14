@@ -30,8 +30,9 @@ python3 <skill-dir>/scripts/run_review.py \
   execution once if the resume attempt fails (nonzero exit, timeout, or no
   usable output).
 - `--model`: provider-specific model ID or known alias. `--list-models
-  --reviewer <provider>` prints known aliases (claude, gemini), a live
-  listing (opencode, agy), or doc-sourced known models (codex, copilot).
+  --reviewer <provider>` prints known aliases (claude, gemini, opencode, agy)
+  or doc-sourced known models (codex, copilot). Providers with aliases never
+  fall through to a live listing — the alias table short-circuits.
 - `--effort`: portable `low | medium | high | xhigh`. The adapter maps this to
   each provider's native flag or setting internally. Pass *only* this; do not
   pass provider-native effort flags. For `agy` there is no native effort flag —
@@ -67,7 +68,7 @@ After each round, the session file contains:
 
 - `session_id`, `model`, `model_requested`, `effort`, `effort_requested`,
   `effort_source`
-- `round` (incremented each run)
+- `round` (incremented per resumed run; reset to 1 on a fresh exec)
 - `resume_requested`, `resume_attempted`, `resume_fallback_used`, `resume_reason`
 - For Gemini: `thinking_tokens`
 

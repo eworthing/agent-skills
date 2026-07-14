@@ -16,6 +16,6 @@ this file only pins the invariants a change must not break.
 5. **Edit canonical `common/common/` only.** Never hand-edit a `scripts/_common/` mirror; regenerate
    with `sync_common.py` and keep `sync_common.py --check` at exit 0.
 6. **Validation gates:** focused tests, both consumer suites (`peer-plan-review`, `quorum-review`),
-   `sync_common --check`, `check_shim_contract.py`, `check_module_size.py`, Ruff (0.15.6), the
-   repository evaluator, and the skill-writer validator. Live count recorded once, in `EVAL.md`
-   Runtime probes.
+   repo-level `common/scripts/sync_common.py --check`, `common/scripts/check_shim_contract.py`,
+   `common/scripts/check_module_size.py`, Ruff (0.15.6), the repository evaluator, and the
+   skill-writer validator. Live count recorded once, in `EVAL.md` Runtime probes.
