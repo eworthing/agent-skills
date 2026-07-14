@@ -11,6 +11,7 @@ Single source of truth lives here; agent CLIs consume each skill through a symli
 - **[apple-multiplatform](apple-multiplatform/)** — Cross-platform Apple SwiftUI compatibility reference for iOS, iPadOS, macOS, Mac Catalyst, and tvOS. Platform-conditional code, `#if os()` vs `#if canImport()`, gating `editMode` / drag-receiving / haptics for tvOS, `TabView` `.page` vs `.automatic`, Mac Catalyst sidebar/window defaults, `XCUICoordinate` / `NSToolbar` UI-test divergence.
 - **[apple-tvos](apple-tvos/)** — Definitive tvOS reference for SwiftUI on Apple TV: focus engine, accessibility deltas, and design-regression checks. Settle delays, `.focusable()` container blocking, `.onExitCommand` Menu dismissal, destructive `confirmationDialog` default focus, modal focus containment, glass-on-glass on tvOS.
 - **[ios-security-hardening](ios-security-hardening/)** — Input-validation and file-handling safeguards for untrusted data: path-traversal prevention, URL scheme/domain allowlisting, multi-source image-reference resolution, CSV/JSON sanitization, AI prompt sanitization, sandbox directory usage, iOS Data Protection levels.
+- **[musickit-diagnostics](musickit-diagnostics/)** — iOS MusicKit runtime-failure diagnostics. `ICErrorDomain` -8200 / -8102 / -7007 / -7010 / -7013 triage, "Could not access Apple Music", the developer-token-on-iOS anti-pattern (no such API), `MusicLibrary` playlist empty-identifier-set failures, Speech + `ApplicationMusicPlayer` audio-session conflicts (`nullptr == Tap()`), bundle-ID MusicKit capability, iOS 27 Music Picker + `findEquivalents` (26.4) traps.
 - **[swift-file-splitting](swift-file-splitting/)** — Splits oversized Swift files into smaller units while preserving visibility and build correctness. SwiftLint `file_length` violations, type/extension extraction.
 - **[swift-linting](swift-linting/)** — Resolves repository-specific SwiftFormat / SwiftLint rule violations. `function_body_length` / `type_body_length` / `file_length` / `cyclomatic_complexity` / `line_length` fixes, justified `// swiftlint:disable:next` with rationale, reconciling SwiftFormat output with hand-formatted code.
 - **[swiftdata-persistence](swiftdata-persistence/)** — SwiftData patterns and gotchas for `@Model`, `ModelContext`, `ModelContainer`, `FetchDescriptor`, migrations, cascade-delete relationships. Bundled seed data, "data not showing" / "stale entity" / "images-show-placeholder-after-upgrade" diagnostics, auto-saving on a timer.
@@ -76,10 +77,10 @@ ln -s "$SRC/$SKILL" "$HOME/.gemini/antigravity-cli/skills/$SKILL"  # Gemini Anti
 SRC="$(pwd)"
 SKILLS=(
   apple-multiplatform apple-tvos bash-macos contest-refactor
-  doc-standardization ios-security-hardening peer-plan-review
-  swift-file-splitting swift-linting swiftdata-persistence
-  swiftui-design-tokens swiftui-drag-drop swiftui-file-export
-  swiftui-native-ux xctest-ui-testing
+  doc-standardization ios-security-hardening musickit-diagnostics
+  peer-plan-review swift-file-splitting swift-linting
+  swiftdata-persistence swiftui-design-tokens swiftui-drag-drop
+  swiftui-file-export swiftui-native-ux xctest-ui-testing
 )
 DESTS=(
   "$HOME/.claude/skills"

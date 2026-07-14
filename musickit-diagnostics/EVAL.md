@@ -1,8 +1,8 @@
 # musickit-diagnostics Evaluation
 
-**Date:** 2026-07-04 (baseline 2026-05-19)
+**Date:** 2026-07-14 (baseline 2026-05-19)
 **Evaluator:** agent (Claude Opus 4.8)
-**Skill version:** verify-facts pass — see Revision History (2026-07-04, 98/100)
+**Skill version:** iOS 27 accuracy + registration pass — see Revision History (2026-07-14, 98/100)
 **Automated score:** 100% (13/13 structural checks pass)
 
 ---
@@ -35,9 +35,9 @@ Scope demarcation:
 ## Verification
 
 - `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py musickit-diagnostics` → 100% (13/13 checks passed)
-- SKILL.md body length: 280 lines (within 10–500 band; well under the 500-line warn threshold)
-- references/ total: 607 lines across 4 files
-- All 4 references files linked from SKILL.md (eval-skill.py "References are linked" check passes)
+- SKILL.md body length: 351 lines (body = 373 total − 22 frontmatter lines through the closing `---`; within 10–500 band, under the 500-line warn threshold)
+- references/ total: 728 lines across 5 files
+- All 5 references files linked from SKILL.md (eval-skill.py "References are linked" check passes)
 - Source-fidelity grep — each named failure mode resolves to at least one path:
   ```
   ICErrorDomain        → SKILL.md, references/error-codes.md
@@ -98,7 +98,7 @@ Path: /Users/Shared/git/agent-skills/musickit-diagnostics
 | 2.1 | Fault Tolerance | 4/4 | The whole skill is fault-tolerance-oriented: diagnostic-first protocol, fallback messaging, graceful degradation pattern for post-save playback hiccup, single-flow rule for audio session. |
 | 2.2 | Error Reporting | 4/4 | Diagnostic snippet captures domain/code/description/underlying. Fallback messaging gives users an actionable hint instead of "unknown error". |
 | 2.3 | Recoverability | 4/4 | Verification checklist enables an agent to walk through six checks end-to-end. Each failure mode has both a fix and a verification step. |
-| 3.1 | Token Cost | 4/4 | SKILL.md 280 lines (within target band). Progressive disclosure pushes per-code deep dives into references/, only loaded when needed. Total skill 907 lines split across 5 files. |
+| 3.1 | Token Cost | 4/4 | SKILL.md body 351 lines (within target band). Progressive disclosure pushes per-code deep dives into references/, only loaded when needed. Total skill 1101 lines split across 6 files (SKILL.md + 5 references). |
 | 3.2 | Execution Efficiency | 4/4 | No scripts; pure documentation skill with no runtime cost. |
 | 4.1 | Learnability | 4/4 | Routing map at top lets an agent jump straight to the relevant section without reading the whole skill. Diagnostic-first protocol teaches the meta-pattern ("get the real error before guessing") before any per-code rules. |
 | 4.2 | Consistency | 4/4 | Section ordering, WRONG/CORRECT code pair pattern, and frontmatter shape mirror `apple-multiplatform` and `swiftui-file-export`. |
@@ -182,4 +182,5 @@ None at present. Re-evaluate after first real use by an agent debugging an actua
 | Date       | Score   | Notes |
 |------------|---------|-------|
 | 2026-05-19 | 97/100  | Baseline — extracted from `LEARNINGS_MUSICKIT.md` field notes; complements user's general `musickit` skill. |
+| 2026-07-14 | 98/100  | iOS 27 accuracy + registration pass (peer-reviewed by codex gpt-5.6-sol @ high, 4 rounds to APPROVED). **Correctness:** fixed a false platform-availability claim in `references/ios27-additions.md` — Music Picker was documented as "iOS / iPadOS / **Mac Catalyst** 27.0+ (visionOS — metadata only)"; canonical DocC gives **iOS / iPadOS / visionOS 27.0, Beta, no Mac Catalyst** for both `musicPicker(...)` and `PickableMusicItem`. The omission is real, not a docs gap — `findEquivalents` *does* list Catalyst, so DocC surfaces it when supported. Removed the "Mac reaches the picker via Catalyst" guidance (it does not exist there) and stopped dismissing visionOS as metadata-only. **Coverage:** new Music Picker failure mode #4 — the `selection` binding persists/accumulates across presentations (derived from Apple's own `.onChange` count-diff sample, flagged as observed-not-documented); noted Pickable ≠ Addable (`Album` conforms to `MusicPlaylistAddable` but not `PickableMusicItem`). **Surface audit:** re-verified WWDC26 s254 + the framework availability index — `PickableMusicItem` is the only Beta symbol in MusicKit and `findEquivalents` (26.4) the only other 2026-cycle addition, so the two covered items are the *complete* new surface; the session's subscription-offer material (`MusicSubscriptionOffer.Options`, `messageIdentifier`) is iOS 15+ and correctly already marked pre-existing. **Registration:** added to the README Apple-platform catalog and the `SKILLS=()` install array (was absent from both). **Bookkeeping:** corrected stale counts (body 280→351, refs "607/4 files"→728/5, total "907/5"→1101/6). 13/13 structural retained. |
 | 2026-07-04 | 98/100  | Verify-facts pass (two apple-docs research rounds + iOS 27 SDK-header probe), peer-reviewed by codex gpt-5.4-mini (2 approval cycles). **Correctness:** removed the wrong "`Album` does not conform to `MusicPlaylistAddable`" claim — SDK confirms Album/Song/Track/MusicVideo/Playlist all conform; reframed §4 + library-playlists.md on the true *runtime* empty-identifier-set cause. Added undocumented-`ICErrorDomain`-codes honesty note steering to `MusicAuthorization.Status` / `canPlayCatalogContent` / `MusicDataRequest.Error`. **Coverage:** new anti-pattern §6 (subscription / Voice Plan gotcha); new `references/ios27-additions.md` (Music Picker `@MainActor` + empty-on-cancel + Song/Track/MusicVideo-only conformance; `findEquivalents` silent partial results). **Pruning:** deduped fallback snippet to a single source (SKILL.md §3). Term-validation P2 dropped as no-op. 13/13 structural retained; body 351 lines. |

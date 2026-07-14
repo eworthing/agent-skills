@@ -3,9 +3,17 @@
 Two MusicKit surfaces added in the 2026 OS cycle are failure-prone enough to
 warrant diagnostic coverage in an iOS app. Everything else demonstrated at
 WWDC 2026 (session 254) — `ApplicationMusicPlayer` / `SystemMusicPlayer`,
-`MusicSubscription`, `.musicSubscriptionOffer`, `MusicCatalogResourceRequest`,
-authorization — is **pre-existing** (`.musicSubscriptionOffer` is iOS 15+, not
-new). This file covers only the two genuinely new/failure-prone items.
+`MusicSubscription`, `.musicSubscriptionOffer` (including
+`MusicSubscriptionOffer.Options` and its `messageIdentifier`),
+`MusicCatalogResourceRequest`, authorization — is **pre-existing**
+(`.musicSubscriptionOffer` and `MusicSubscriptionOffer.Options` are iOS 15+, not
+new; the session re-teaches them rather than introducing them). This file covers
+only the two genuinely new/failure-prone items.
+
+Surface re-verified against canonical DocC **2026-07-14**: `PickableMusicItem` is
+the *only* Beta symbol in the whole MusicKit framework, and `findEquivalents` is
+the only other 2026-cycle addition — so these two are the complete new surface, not
+a sample of it.
 
 ## Contents
 
@@ -26,7 +34,7 @@ func musicPicker<Selection>(
 ) -> some View where Selection : PickableMusicItem
 ```
 
-Three failure modes:
+Four failure modes:
 
 1. **`@MainActor` only.** The modifier is `@MainActor @preconcurrency`. Present
    it from main-actor context; driving `isPresented` off the main actor does
@@ -36,16 +44,44 @@ Three failure modes:
    it is an **empty collection**, not `nil`. Handle the empty case; never
    force-unwrap `selection.first`. Single-select is just a one-element
    collection.
-3. **`PickableMusicItem` conforms to `Song`, `Track`, `MusicVideo` only** — not
+3. **The binding is yours, and it persists — don't assume replace-semantics.**
+   `selection` is a collection you own across presentations, not a fresh result
+   handed back per sheet. Apple's own sample treats it as accumulating: it diffs
+   counts across changes rather than reading a new selection —
+
+   ```swift
+   .onChange(of: selectedSongs) { oldValue, newValue in
+       let delta = newValue.count - oldValue.count
+       print("You selected \(delta) new tracks!")
+   }
+   ```
+
+   So a stale collection is still populated the next time you present the picker.
+   Clear or pre-populate it deliberately, and derive "what did the user just pick"
+   from a diff rather than assuming the picker replaced the contents. (Observed
+   from the documented sample's shape — Apple does not spell the semantics out,
+   so verify against your own seed before depending on it.)
+4. **`PickableMusicItem` conforms to `Song`, `Track`, `MusicVideo` only** — not
    `Album`, not `Playlist`. You cannot bind `selection` to `Album`/`Playlist`;
    picking a container yields its tracks. This is a compile-time / design
-   constraint, not a runtime bug.
+   constraint, not a runtime bug. (Note the contrast with `MusicPlaylistAddable`,
+   where `Album` *does* conform — see `library-playlists.md`. Pickable ≠ addable.)
 
-**Availability.** iOS / iPadOS / Mac Catalyst 27.0+ (also visionOS 27 —
-metadata only; not a support target here). **No native macOS** — a Mac target
-reaches the picker only via Mac Catalyst, and **no tvOS / watchOS**. Gate with
-`if #available(...)`. For the native-macOS story, see the `apple-multiplatform`
-skill; this skill stays iOS-scoped.
+**Availability.** iOS / iPadOS / visionOS **27.0+, Beta** — for both
+`musicPicker(...)` and `PickableMusicItem` (verified against canonical DocC
+2026-07-14).
+
+**Not available on Mac Catalyst, macOS, tvOS, or watchOS.** The DocC availability
+array lists those three platforms and no others. That omission is real rather than
+a documentation gap: `findEquivalents` below *does* list Mac Catalyst explicitly,
+so DocC does surface Catalyst when an API supports it. Do not assume a Mac target
+reaches this picker via Catalyst — it does not exist there. (`apple-multiplatform`
+remains the skill for macOS/Catalyst MusicKit deltas generally, but it has no
+picker story to tell.)
+
+Gate with `if #available(iOS 27, *)`. visionOS 27 shares the API; this skill stays
+iOS-scoped. Because the API is **Beta**, re-check availability against live DocC
+before relying on it — beta metadata shifts between seeds.
 
 ## `findEquivalents` partial results (26.4+)
 
