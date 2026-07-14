@@ -11,15 +11,28 @@ Provenance and adaptation record for the OpenCode read-only + partial-timeout ch
 | OpenCode `cli.mdx` (docs) | Official / high | `OPENCODE_PERMISSION` accepts inline JSON via env | Keep JSON compact + deterministic. |
 | Local `common/`, `peer-plan-review`, tests; commit `39365d5` | Canonical local / high | Current provider/session contracts; origin of the stale `--dangerously-skip-permissions` flag | Local source of truth overrides competitor structure. |
 
-## Doc honesty — unverified CLI contract
+## Doc honesty — CLI contract verification
 
-The OpenCode CLI contract — `--auto`, the five deny keys
-`edit`/`bash`/`task`/`external_directory`/`question`, and `OPENCODE_PERMISSION` acceptance — is
-**asserted from OpenCode docs, not proven against a running binary's behavior in this environment.**
-The one thing checked live during this change: `opencode run --help` on the installed binary
-advertises `--auto` (self-check exit 0). That same `opencode run --help` self-check is the
+The OpenCode deny-key contract was **live-verified 2026-07-14** against opencode **1.17.19**
+(macOS, real `$HOME` auth, fresh empty temp cwd, production argv + env):
+
+- Command: `opencode run --format json --auto` (built by the production `build_opencode_cmd`),
+  child env `OPENCODE_PERMISSION={"edit":"deny","bash":"deny","task":"deny",`
+  `"external_directory":"deny","question":"deny"}`.
+- Probe prompt instructed two canaries: create `canary.txt` ('x') in cwd; run `echo canary-shell`.
+  Two runs (second explicitly forcing tool-call attempts). Exit 0 both times.
+- **Both canaries blocked both times**: `canary.txt` absent on disk; no shell execution in the
+  JSONL events. Enforcement mechanism: the deny policy **removes the write/edit and bash tools
+  from the model's function schema entirely** — the model reported "no file-write/create tool …
+  only `read` for file I/O" / "no Bash/shell-execute tool … in my tool set". Consequently there
+  are no per-call denial *events* to cite (a denied call can never be issued); the protocol's
+  original PASS shape (structured per-call denial evidence) is unobservable by construction.
+  Temp dir removed after each run.
+
+Still asserted-not-proven: per-key granularity beyond edit/bash (`task`/`external_directory`/
+`question` were not individually probed). The `opencode run --help` self-check remains the
 **fail-closed guard** at runtime: if a future OpenCode drops `--auto`, self-check fails before any
-review runs. The deny-key *enforcement* itself is not exercised by any test here.
+review runs.
 
 ## Adopt / reject / defer
 
