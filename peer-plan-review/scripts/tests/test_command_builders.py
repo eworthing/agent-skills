@@ -302,7 +302,8 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertEqual(cmd[:3], ["opencode", "run", ""])
         self.assertIn("--format", cmd)
         self.assertIn("json", cmd)
-        self.assertIn("--dangerously-skip-permissions", cmd)
+        self.assertIn("--auto", cmd)
+        self.assertNotIn("--dangerously-skip-permissions", cmd)
         self.assertIn("-m", cmd)
         self.assertIn("opencode-go/deepseek-v4-pro", cmd)
         self.assertIn("--variant", cmd)
@@ -336,7 +337,8 @@ class TestCommandBuilders(unittest.TestCase):
         self.assertEqual(cmd[:3], ["opencode", "run", ""])
         self.assertIn("--format", cmd)
         self.assertIn("json", cmd)
-        self.assertIn("--dangerously-skip-permissions", cmd)
+        self.assertIn("--auto", cmd)
+        self.assertNotIn("--dangerously-skip-permissions", cmd)
         self.assertNotIn("-m", cmd)
         self.assertNotIn("--variant", cmd)
 
@@ -350,4 +352,5 @@ class TestCommandBuilders(unittest.TestCase):
         cmd = run_review.build_opencode_cmd(args, session_id=None)
 
         self.assertNotIn("-s", cmd)
-        self.assertIn("--dangerously-skip-permissions", cmd)
+        self.assertIn("--auto", cmd)
+        self.assertNotIn("--dangerously-skip-permissions", cmd)

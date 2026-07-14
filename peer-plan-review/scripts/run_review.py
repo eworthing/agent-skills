@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# WAIVER: module-size — top-of-graph CLI driver (arg-parse + self-check + run
+# loop + post-execution metadata/session), one adapter per skill; splitting it
+# would scatter the single run flow across files without reducing complexity.
 """
 run_review.py — Deterministic CLI adapter for peer-plan-review skill.
 
@@ -44,6 +47,7 @@ from _common.process.tree import _kill_tree, _popen_session_kwargs
 # ---------------------------------------------------------------------------
 from _common.providers import (  # noqa: F401
     AGY_READONLY_PREAMBLE,
+    OPENCODE_READ_ONLY_PERMISSION,
     PROVIDERS,
     build_agy_cmd,
     build_claude_cmd,
@@ -167,15 +171,23 @@ def self_check(reviewer):
     print(f"OK: {binary} found at {path}")
 
     try:
+        help_cmd = [binary, "run", "--help"] if reviewer == "opencode" else [binary, "--help"]
         result = subprocess.run(
-            [binary, "--help"],
+            help_cmd,
             capture_output=True,
             encoding="utf-8",
             errors="replace",
             timeout=15,
         )
         if result.returncode == 0:
-            print(f"OK: {binary} --help succeeded")
+            help_text = "\n".join(filter(None, (result.stdout, result.stderr)))
+            if reviewer == "opencode" and "--auto" not in help_text:
+                print(
+                    "FAIL: opencode run --help does not advertise required --auto flag",
+                    file=sys.stderr,
+                )
+                return False
+            print(f"OK: {' '.join(help_cmd)} succeeded")
             return True
         if reviewer == "copilot" and "SecItemCopyMatching failed -50" in (result.stderr or ""):
             print(
@@ -312,6 +324,8 @@ def run_review(args, logger=None):
     env = os.environ.copy()
     if reviewer == "claude":
         env["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    if reviewer == "opencode":
+        env["OPENCODE_PERMISSION"] = OPENCODE_READ_ONLY_PERMISSION
 
     gemini_config_dir = (
         _setup_gemini_config(args, env, prefix="ppr-gemini-") if reviewer == "gemini" else None

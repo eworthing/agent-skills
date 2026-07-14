@@ -1,4 +1,7 @@
 """execution paths tests — relocated verbatim from test_run_review.py (mechanical split)."""
+# WAIVER: module-size — execution-path test suite (already split out of the
+# former 2130-line test_run_review.py); grows with per-provider execution and
+# timeout coverage. Further splitting fragments one cohesive path-test set.
 
 import argparse
 import glob
@@ -50,6 +53,32 @@ class TestSelfCheckUnit(unittest.TestCase):
         mock_run.side_effect = subprocess.TimeoutExpired(["claude", "--help"], 15)
 
         self.assertFalse(self_check("claude"))
+
+    @mock.patch("run_review.shutil.which", return_value="/fake/opencode")
+    @mock.patch("run_review.subprocess.run")
+    def test_self_check_opencode_requires_auto_flag(self, mock_run, _mock_which):
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "run", "--help"],
+            0,
+            stdout="--format json\n",
+            stderr="",
+        )
+
+        self.assertFalse(self_check("opencode"))
+        self.assertEqual(mock_run.call_args.args[0], ["opencode", "run", "--help"])
+
+    @mock.patch("run_review.shutil.which", return_value="/fake/opencode")
+    @mock.patch("run_review.subprocess.run")
+    def test_self_check_opencode_accepts_auto_flag(self, mock_run, _mock_which):
+        mock_run.return_value = subprocess.CompletedProcess(
+            ["opencode", "run", "--help"],
+            0,
+            stdout="--format json\n--auto\n",
+            stderr="",
+        )
+
+        self.assertTrue(self_check("opencode"))
+        self.assertEqual(mock_run.call_args.args[0], ["opencode", "run", "--help"])
 
 
 class TestSelfCheck(unittest.TestCase):
@@ -149,6 +178,53 @@ class TestRunReviewExecution(unittest.TestCase):
         proc.returncode = returncode
         proc.poll.return_value = returncode
         return proc
+
+    def test_run_review_opencode_sets_read_only_permissions(self):
+        args = make_args(
+            reviewer="opencode",
+            prompt_file=str(self.prompt_file),
+            output_file=str(self.output_file),
+            session_file=str(self.session_file),
+            events_file=str(self.events_file),
+            resume=False,
+        )
+        stdout = "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "text",
+                        "part": {"text": "VERDICT: APPROVED"},
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "step_finish",
+                        "part": {"reason": "stop"},
+                    }
+                ),
+            ]
+        )
+        proc = self._proc(0, stdout=stdout)
+
+        with (
+            mock.patch("run_review.subprocess.Popen", return_value=proc) as popen,
+            mock.patch("run_review.signal.getsignal", return_value=signal.SIG_DFL),
+            mock.patch("run_review.signal.signal"),
+        ):
+            rc = run_review.run_review(args)
+
+        self.assertEqual(rc, 0)
+        permission = json.loads(popen.call_args.kwargs["env"]["OPENCODE_PERMISSION"])
+        self.assertEqual(
+            permission,
+            {
+                "edit": "deny",
+                "bash": "deny",
+                "task": "deny",
+                "external_directory": "deny",
+                "question": "deny",
+            },
+        )
 
     def test_run_review_gemini_effort_overlay_preserves_existing_settings(self):
         source_dir = Path(self.tmpdir.name) / "source-config"

@@ -16,17 +16,23 @@ brew install opencode
 ## Headless exec
 
 ```bash
-opencode run "PROMPT" \
+OPENCODE_PERMISSION='{"edit":"deny","bash":"deny","task":"deny","external_directory":"deny","question":"deny"}' \
+  opencode run "" \
   --format json \
-  --dangerously-skip-permissions \
+  --auto \
   -m opencode-go/deepseek-v4-pro \
   --variant high
 ```
 
-- Prompt is a **positional argument** — NOT `-p` (that's `--password` for remote attach)
-- `--format json`: JSONL event stream to stdout — required for session ID and text extraction
-- `--dangerously-skip-permissions`: auto-approve all permissions without prompting (prevents headless hangs)
-- No `--sandbox` or `--permission-mode` flags exist — safety is handled by the `--dangerously-skip-permissions` flag combined with prompt instructions to keep the reviewer read-only
+- Prompt text is piped through stdin; the empty positional message keeps `run`
+  out of interactive mode.
+- `--format json` emits the JSONL event stream required for session and text
+  extraction.
+- `--auto` approves requests that are not explicitly denied; the adapter's
+  `OPENCODE_PERMISSION` value denies edit, shell, nested-task, external-directory,
+  and interactive-question tools.
+- OpenCode permissions are application-level controls, not an OS sandbox. Keep
+  the reviewer prompt read-only as defense in depth.
 
 ## JSONL event types
 

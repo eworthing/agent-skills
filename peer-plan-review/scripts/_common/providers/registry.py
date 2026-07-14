@@ -255,13 +255,23 @@ def build_copilot_cmd(args, session_id=None):
     return cmd
 
 
+OPENCODE_READ_ONLY_PERMISSION = json.dumps(
+    {
+        "edit": "deny",
+        "bash": "deny",
+        "task": "deny",
+        "external_directory": "deny",
+        "question": "deny",
+    },
+    separators=(",", ":"),
+)
+
+
 def build_opencode_cmd(args, session_id=None):
     """Build opencode run command."""
-    # Prompt text is piped via stdin; run still needs an empty string to avoid interactive mode
+    # Prompt text is piped via stdin; run still needs an empty string to avoid interactive mode.
     cmd = ["opencode", "run", ""]
-
-    cmd.extend(["--format", "json"])
-    cmd.append("--dangerously-skip-permissions")
+    cmd.extend(["--format", "json", "--auto"])
 
     if args.resume and session_id:
         cmd.extend(["-s", session_id])
@@ -494,7 +504,7 @@ PROVIDERS = {
             "model_flag": "-m",
             "effort_flag": "--variant {level}",
             "resume_flag_style": "flag",
-            "safety_flags": ["--dangerously-skip-permissions"],
+            "safety_flags": ["--auto"],
         },
         # opencode-go model discovery command — used by --list-models
         "list_models_cmd": ["opencode", "models", "opencode-go"],

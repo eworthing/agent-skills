@@ -2,6 +2,7 @@
 
 from .registry import (
     AGY_READONLY_PREAMBLE,
+    OPENCODE_READ_ONLY_PERMISSION,
     PROVIDERS,
     build_agy_cmd,
     build_claude_cmd,
@@ -17,6 +18,7 @@ from .registry import (
 
 __all__ = [
     "AGY_READONLY_PREAMBLE",
+    "OPENCODE_READ_ONLY_PERMISSION",
     "PROVIDERS",
     "build_agy_cmd",
     "build_claude_cmd",

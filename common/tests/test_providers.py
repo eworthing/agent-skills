@@ -6,7 +6,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from common.providers import AGY_READONLY_PREAMBLE, PROVIDERS, get_provider, read_prompt
+from common.providers import (
+    AGY_READONLY_PREAMBLE,
+    OPENCODE_READ_ONLY_PERMISSION,
+    PROVIDERS,
+    get_provider,
+    read_prompt,
+)
 from common.providers.registry import (
     build_agy_cmd,
     build_claude_cmd,
@@ -181,7 +187,16 @@ class TestBuildCmd:
         cmd = build_opencode_cmd(_args())
         assert cmd[0] == "opencode"
         assert "run" in cmd
-        assert "--dangerously-skip-permissions" in cmd
+        assert "--auto" in cmd
+        assert "--dangerously-skip-permissions" not in cmd
+        assert json.loads(OPENCODE_READ_ONLY_PERMISSION) == {
+            "edit": "deny",
+            "bash": "deny",
+            "task": "deny",
+            "external_directory": "deny",
+            "question": "deny",
+        }
+        assert PROVIDERS["opencode"]["caps"]["safety_flags"] == ["--auto"]
 
     def test_agy_safety_flag_contract(self):
         # Full safety-flag contract for the EXPERIMENTAL, not-guaranteed-read-only
