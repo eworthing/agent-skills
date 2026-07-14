@@ -57,12 +57,19 @@ def _parse_verdict(output_file, text=None):
             text = Path(output_file).read_text(encoding="utf-8", errors="replace")
         except OSError:
             return None
+    # Normalization order: trim -> strip full-line markdown wrappers
+    # (including backticks) -> case-insensitive VERDICT: prefix -> strip
+    # wrappers again from the value -> strip trailing punctuation ->
+    # validate against exactly APPROVED/REVISE. Anything else keeps
+    # scanning upward; no match at all -> None (callers treat as REVISE).
     for line in reversed([ln.strip() for ln in text.splitlines() if ln.strip()]):
         line = _strip_markdown_wrappers(line)
-        if line.startswith("VERDICT:"):
-            verdict = line.split(":", 1)[1].strip().rstrip(".,!").upper()
-            if verdict in ("APPROVED", "REVISE"):
-                return verdict
+        if not line.upper().startswith("VERDICT:"):
+            continue
+        verdict = _strip_markdown_wrappers(line.split(":", 1)[1].strip())
+        verdict = verdict.rstrip(".,!").upper()
+        if verdict in ("APPROVED", "REVISE"):
+            return verdict
     return None
 
 
@@ -220,8 +227,14 @@ def extract_text_from_output(output_file, reviewer, content=None):
             else:
                 text = raw_content
 
+        # One guard for every branch: a JSON null/empty/non-string result
+        # ("result": null on an errored run) must never overwrite the raw
+        # output — it would destroy the very diagnostics being extracted.
+        if not isinstance(text, str) or not text:
+            text = raw_content
+
         with Path(output_file).open("w", encoding="utf-8") as f:
-            f.write(text if isinstance(text, str) else json.dumps(text))
+            f.write(text)
     except (json.JSONDecodeError, OSError) as e:
         print(
             f"Warning: could not extract review text from {output_file} "
@@ -239,16 +252,16 @@ def _extract_section(text, heading):
     """Extract content under a ### heading, stopping at the next ### or end."""
     pattern = re.compile(
         rf"^###\s+{re.escape(heading)}\s*$(.+?)(?=^###\s|\Z)",
-        re.MULTILINE | re.DOTALL,
+        re.MULTILINE | re.DOTALL | re.IGNORECASE,
     )
     m = pattern.search(text)
     return m.group(1) if m else ""
 
 
 def _strip_markdown_wrappers(text):
-    """Strip balanced markdown wrappers like **text** or __text__."""
+    """Strip balanced markdown wrappers like **text**, __text__, or `text`."""
     text = text.strip()
-    for wrap in ("***", "**", "*", "___", "__", "_"):
+    for wrap in ("```", "***", "**", "*", "___", "__", "_", "`"):
         if text.startswith(wrap) and text.endswith(wrap) and len(text) >= 2 * len(wrap):
             inner = text[len(wrap) : -len(wrap)]
             # Recurse for nested wrappers

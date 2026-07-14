@@ -72,6 +72,23 @@ class TestParseVerdict:
         p.write_text("blah\nVERDICT: REVISE.\n", encoding="utf-8")
         assert _parse_verdict(str(p)) == "REVISE"
 
+    @pytest.mark.parametrize(
+        ("line", "expected"),
+        [
+            ("VERDICT: **APPROVED**", "APPROVED"),  # wrapped value
+            ("`VERDICT: APPROVED`", "APPROVED"),  # backticked line
+            ("Verdict: revise", "REVISE"),  # casing tolerance
+            ("VERDICT: APPROVED or VERDICT: REVISE", None),  # template echo
+            ("VERDICT:", None),  # bare prefix
+            ("VERDICT: REVISE.", "REVISE"),  # existing behavior preserved
+        ],
+    )
+    def test_tolerable_shapes(self, tmp_path, line, expected):
+        """Shapes real reviewers emit; None keeps the fail-safe (-> REVISE)."""
+        p = tmp_path / "review.md"
+        p.write_text(f"blah\n{line}\n", encoding="utf-8")
+        assert _parse_verdict(str(p)) == expected
+
 
 class TestExtractSection:
     def test_basic(self):
@@ -80,6 +97,13 @@ class TestExtractSection:
 
     def test_missing_returns_empty(self):
         assert _extract_section("nothing here", "Blocking Issues") == ""
+
+    def test_heading_case_insensitive(self):
+        """Reviewers emit '### Blocking issues' etc.; the finding-tag regex is
+        already case-insensitive, headings must match."""
+        text = "### BLOCKING ISSUES\nbar\n### non-blocking issues\nbaz\n"
+        assert _extract_section(text, "Blocking Issues").strip() == "bar"
+        assert _extract_section(text, "Non-Blocking Issues").strip() == "baz"
 
 
 class TestStripMarkdownWrappers:
@@ -187,6 +211,23 @@ class TestExtractTextFromOutput:
         p.write_text("null", encoding="utf-8")
         extract_text_from_output(str(p), "claude")
         assert p.read_text(encoding="utf-8") == "null"
+
+    @pytest.mark.parametrize(
+        ("reviewer", "payload"),
+        [
+            ("claude", {"result": None, "is_error": True, "error": "boom"}),
+            ("claude", {"result": "", "is_error": True}),
+            ("gemini", {"response": None, "error": "quota"}),
+        ],
+    )
+    def test_null_result_preserves_raw_output(self, tmp_path, reviewer, payload):
+        """Regression: '"result": null' (errored run) used to rewrite the file
+        to the string 'null', destroying the error diagnostics."""
+        p = tmp_path / "out.json"
+        raw = json.dumps(payload)
+        p.write_text(raw, encoding="utf-8")
+        extract_text_from_output(str(p), reviewer)
+        assert p.read_text(encoding="utf-8") == raw
 
     def _oc(self, *events):
         return "\n".join(json.dumps(e) for e in events) + "\n"
