@@ -28,6 +28,7 @@ allowed-tools:
 - [Per-Platform Detail](#per-platform-detail)
 - [Common Failure Patterns](#common-failure-patterns)
 - [Cross-Platform Visibility After File Splits](#cross-platform-visibility-after-file-splits)
+- [Narrowing a Guard Is a Behaviour Change](#narrowing-a-guard-is-a-behaviour-change)
 - [Build Validation](#build-validation)
 - [Static Audit](#static-audit)
 - [Sibling Skills](#sibling-skills)
@@ -199,6 +200,35 @@ tvOS.
 For full guidance — what to extract, how to choose visibility levels, how to
 verify after splitting — see the `swift-file-splitting` skill.
 
+## Narrowing a Guard Is a Behaviour Change
+
+Widening a guard adds a platform; **narrowing one removes code from a platform.**
+Widening only risks a build failure, which the build catches. Narrowing risks
+silent feature loss, which it does not — the build is green either way, so
+"all platforms compile" is no evidence the change was safe.
+
+The trap is reading a matrix **No** and narrowing an existing guard to match. The
+matrix answers *"does it compile / behave there?"*; narrowing asserts the
+stronger *"nothing on that platform depends on this."*
+
+> **A guard tells you where code compiles. It never tells you whether anything
+> drives it.** A dead-code claim is a claim about the whole program.
+
+Before removing a platform from a guard:
+
+1. **Find the producer.** For state channels — `@Environment` keys above all —
+   search the whole tree for what *supplies* the value, not just what reads it.
+   An app can own a key Apple ships no UI for, making every reader on that
+   platform live. Worked example: [`references/tvos.md`](references/tvos.md)
+   § *When tvOS `editMode` is NOT dead*.
+2. **Never conclude absence from a truncated search.** `rg … | head` supports
+   "X exists", never "nothing does X" — a negative needs the *whole* result set.
+   A producer missed in a truncated grep's tail is exactly how a correct guard
+   gets narrowed into a bug.
+3. **"No affordance" ≠ "no symbol".** *No edit interface on tvOS* is a design
+   fact you may override; *no `editMode` on tvOS* would be a compile error. Only
+   the second forces a guard.
+
 ## Build Validation
 
 Build every supported destination before merging. Canonical `xcodebuild`
@@ -214,13 +244,12 @@ build:
 ./scripts/audit-platform-guards.py path/to/your/swift/tree   # needs python3
 ```
 
-It tracks the `#if` guard stack and reports a symbol **only when the stack
-proves the line is compiled for the offending platform**. That distinction is
+It tracks the `#if` guard stack and reports a symbol **only when the stack proves
+the line is compiled for the offending platform** (comments stripped). That is
 the whole design: `#if os(tvOS)` excludes macOS *without naming it*, so a
 file-scoped "does `os(macOS)` appear here?" grep flags every correctly guarded
-tvOS-only file. An earlier grep-based version of this script scored **19/19
-false positives** against a shipping 4-platform app. Comments are stripped
-before matching.
+tvOS-only file — an earlier grep-based version scored **19/19 false positives**
+against a shipping 4-platform app.
 
 Build-break checks (trap code → recovery-playbook entry) — these set exit 1:
 
@@ -241,33 +270,26 @@ affect the exit code**, so they are safe in a CI gate:
 | `D1` | `editMode` compiles on tvOS **and nothing in the tree injects it** — dead code |
 | `D2` | `.topBar*` compiles on tvOS — symbol exists (tvOS 14+), but no top-bar chrome |
 
-`D1` carries a tree-level precondition worth knowing about, because it is a trap
-for human reviewers too: "tvOS has no edit interface, so `editMode` there is
-dead" holds only while **nothing supplies the value**. An app may legitimately
-own that channel — declaring `@State var editMode`, injecting it with
-`.environment(\.editMode, $editMode)`, and using it as its own multi-select mode
-on tvOS. Then every tvOS reader is live. `D1` is suppressed tree-wide when any
-tvOS-compiled line injects `\.editMode`. Before "narrowing a dead `editMode`
-guard to `#if os(iOS)`", grep for that injection — the first cut of this check
-did not, and reported a shipping app's working multi-select as dead code.
+`D1` is suppressed tree-wide when any tvOS-compiled line injects `\.editMode` —
+an app may own that channel, and then its tvOS readers are live. See
+[`references/tvos.md`](references/tvos.md) § *When tvOS `editMode` is NOT dead*.
 
 Exit code 0 = no build-break hits, 1 = at least one, 2 = usage error. Output
 matches the `APPLE-MP-FAIL <platform> <error-class> <file>:<line>: <message>`
 shape documented in `references/recovery.md`.
 
-Fixture tests live in `tests/fixtures/` and run via `./scripts/run-tests.sh`.
-The `clean-*` fixtures are the load-bearing ones — each is a real false positive
-the grep-based version produced. A fixture containing none of the audited
-symbols passes vacuously and proves nothing; every `clean-*` case here contains
-the symbol and guards it correctly.
+Fixtures live in `tests/fixtures/`, run via `./scripts/run-tests.sh`. The
+`clean-*` cases are load-bearing: each is a real false positive a previous
+version produced. A fixture with none of the audited symbols passes vacuously —
+every `clean-*` here contains the symbol and guards it correctly.
 
 ### Guards may not be in this file
 
 Platform code is routinely factored into sibling files (`Foo+tvOS.swift`) or
 custom `ViewModifier`s, so **file-scoped greps under-report**. A view can look
 like it is missing its `.onExitCommand` or its `#if` while the guard lives one
-file over. Verify by resolving the guard stack for the line, or by reading the
-sibling — not by grepping a single file.
+file over. Resolve the guard stack for the line, or read the sibling — do not
+grep a single file and conclude.
 
 ## Sibling Skills
 
@@ -293,6 +315,10 @@ sibling — not by grepping a single file.
   API availability to additional platforms (which means stale `#if` branches
   become dead code). Apple-docs URLs in the availability matrix above are
   the audit anchors.
+- **Narrowing a guard needs a producer search, not just a matrix row.** A
+  matrix **No** justifies *adding* a guard; it never by itself justifies
+  *removing* a platform from an existing one. Find what drives the code first —
+  see *Narrowing a Guard Is a Behaviour Change*.
 - When a behavior cannot be expressed on a platform at all, prefer a
   platform-specific subtype or per-file partition over deeply nested `#if`
   branches inside a shared view body.

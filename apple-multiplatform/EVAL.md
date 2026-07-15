@@ -4,7 +4,7 @@
 **Evaluator:** Claude Opus 4.8
 **Skill version:** 0.4.0 — audit rewritten as a guard-stack evaluator after a field run scored 19/19 false positives
 **Automated score:** 100% (13/13)
-**Manual score:** 100/100 (post-fix; **was 90/100** at the start of this pass — see *Field Failure* below)
+**Manual score:** 99/100 (post-fix; **was 90/100** at the start of this pass — see *Field Failure* below. 3.1 Token Cost is an honest 3/4: SKILL.md now exceeds its own ceiling.)
 
 ---
 
@@ -101,11 +101,28 @@ check must name the condition under which its premise fails, and ship the fixtur
 where it does — which is now the second entry in this file's evidence that
 positive fixtures prove nothing about discrimination.
 
+**The prose was complicit, and that is the worst finding of the pass.** The
+script was not the only thing asserting the bad premise: `references/tvos.md`
+stated *"`@Environment(\.editMode)` exists only on iOS-family platforms (iOS,
+iPadOS, Mac Catalyst)"* — **factually wrong**, it is tvOS 13+ — and its trap
+matrix prescribed `#if os(iOS)` unconditionally. An agent following the
+reference alone, with no script involved, would have made the same wrong edit.
+A bad check produces a bad report a reviewer can dismiss; a bad reference
+produces bad edits with the skill's authority behind them.
+
+Corrected, and turned into guidance rather than a one-line disclaimer: a new
+`SKILL.md` section (*Narrowing a Guard Is a Behaviour Change*) states the general
+rule — widening only risks a build failure the build catches, narrowing risks
+silent feature loss it does not, so removing a platform from a guard requires
+finding the producer and may never rest on a truncated grep. `references/tvos.md`
+carries the worked `editMode` example. `1.2 Correctness` retained at 4/4 **only**
+because this pass fixed it; on the 0.3.0 text it was a 3/4.
+
 ## File Layout (post-restructure)
 
 ```
 apple-multiplatform/
-├── SKILL.md                            275 lines — topic index + master API matrix (ceiling 275)
+├── SKILL.md                            345 lines — topic index + master API matrix (ceiling 345)
 ├── EVAL.md                             this file
 ├── references/
 │   ├── tvos.md                          76 lines — tvOS trap matrix, editMode guards, reorderable
@@ -131,7 +148,7 @@ apple-multiplatform/
 | 2.1 | Fault Tolerance | 4/4 | `references/recovery.md` provides per-error minimal repro + audit command + fix snippet for the eight highest-frequency build failures (E1–E8). |
 | 2.2 | Error Reporting | 4/4 | Standardized output format `APPLE-MP-FAIL <platform> <error-class> <file>:<line>: <message>` shared between audit script and recovery playbook. CI-greppable. |
 | 2.3 | Recoverability | 4/4 | Read-only skill; recommendations applied via Edit → git revert is trivial. |
-| 3.1 | Token Cost | 4/4 | SKILL.md is 239 lines (was 368) — well within target band. Per-platform detail loaded on demand via references/. |
+| 3.1 | Token Cost | 3/4 | **Downgraded, honestly.** SKILL.md is 345 lines against a 275 ceiling — the 0.3.0 note claiming "239 lines, well within target band" was stale the moment this pass landed. The growth is defensible (script contract now has real semantics to state: T1b + D1/D2 + the exit-code rule; plus the guard-narrowing discipline, which prevents a bug class this pass shipped twice) and the disclosure principle held — the `editMode` worked example went to `tvos.md`, not here. But 345 ≠ "well within band", and rating it 4/4 would repeat exactly the self-congratulation this pass exists to correct. Ceiling reset to 345; next pass should push the Static Audit contract into `references/` and reclaim ~40 lines. |
 | 3.2 | Execution Efficiency | 4/4 | Audit script uses ripgrep when available, falls back to grep; O(files) scan with no expensive operations. |
 | 4.1 | Learnability | 4/4 | Multiple worked examples in SKILL.md (canImport vs os, Catalyst branching) plus full code samples in references. Right/wrong contrast preserved. |
 | 4.2 | Consistency | 4/4 | Tables across files share column shape (platform columns or Topic / Pattern). Code examples uniformly use `// WRONG` / `// CORRECT` headers. Standardized error format across audit + recovery + build-matrix. |
@@ -150,7 +167,7 @@ apple-multiplatform/
 | 8.3 | Composability | 4/4 | Cross-links six sibling skills (`swift-file-splitting`, `swiftui-drag-drop`, `apple-tvos`, `xctest-ui-testing`, `swiftui-expert-skill`, `swift-concurrency`) where their coverage is more authoritative. Audit script output format is CI-grep-compatible. |
 | 8.4 | Idempotency | 4/4 | Reference content; reading it repeatedly produces the same outcome. Build commands are themselves idempotent. Audit script is a pure read scan. |
 | 8.5 | Escape Hatches | 4/4 | "Do NOT use when" list scopes it out of doc-only / single-platform / off-topic changes. Build invocations are noted as lowest-common-denominator with "prefer your wrapper script if you have one". **New "Escape Hatches" section** explicitly defers to `apple-tvos` / `swift-file-splitting` / `xctest-ui-testing` / `swiftui-expert-skill` / project wrapper scripts when scopes overlap. |
-| | **TOTAL** | **100/100** | **Perfect** — publishable. |
+| | **TOTAL** | **99/100** | Publishable. Not perfect — 3.1 is 3/4 and stays there until SKILL.md is back under its ceiling. A 100/100 on this file is what let a 19/19-false-positive script ship unquestioned; the missing point is doing more work than the round number would. |
 
 ## Priority Fixes
 
@@ -204,8 +221,11 @@ neither exercised correctly-guarded code containing the audited symbols.
   Note: "Liquid Glass" now appears **intentionally** (the `glassEffect` row's
   mandatory-on-27-SDK note and the Modal/Toolbar guidance) — it is no longer a
   forbidden token.
-- SKILL.md line count: 275 (this-pass ceiling ≤ 275; original ≤250 target
-  relaxed by 25 lines to absorb the iOS-27 matrix rows + baseline + defer note)
+- SKILL.md line count: **345 — over the previous 275 ceiling**; ceiling reset to
+  345 and 3.1 downgraded to 3/4 rather than quietly restating the target. Growth
+  is the audit contract (T1b, D1/D2, exit-code rule) plus the guard-narrowing
+  section; the `editMode` worked example went to `tvos.md`, so progressive
+  disclosure held. Next pass: move the Static Audit contract to `references/`.
 
 ## Manual Spot-Check (0.3.0 pass)
 
@@ -214,7 +234,7 @@ Re-scored only the four dimensions this pass touches (rest unchanged from 100/10
 | Dimension | Score | Notes |
 |---|---|---|
 | 1.2 Correctness | 4/4 | Every new claim (C1–C6) verified against live developer.apple.com DocC docs on the 27 **beta** SDKs. Unverifiable items dropped, not hedged: `ContentBuilder` recovery entry (E9) skipped (overlay/ShapeStyle failure mode not Apple-stated; `ContentBuilder` is a `typealias` of `ViewBuilder`, not a layer under it); the "NSToolbar remap" toolbar sub-claim dropped (`topBarPinnedTrailing` is simply absent on macOS); "source-break" framing on `@State`/Document swap dropped (Apple states the macro + `ReferenceFileDocument` deprecation, not a break). |
-| 3.1 Token Cost / 8.2 Progressive Disclosure | 4/4 | SKILL.md held to the 275 ceiling; narrative detail pushed to `tvos.md`/`macos.md`/`catalyst.md`, matrix rows kept terse. |
+| 3.1 Token Cost / 8.2 Progressive Disclosure | 4/4 *(0.3.0 pass — superseded; 3.1 is 3/4 as of 0.4.0)* | SKILL.md held to the 275 ceiling; narrative detail pushed to `tvos.md`/`macos.md`/`catalyst.md`, matrix rows kept terse. |
 | 8.1 Trigger Precision | 4/4 | New symbols (`reorderable`, `topBarPinnedTrailing`, `toolbarMinimizeBehavior`) are named in-body; description unchanged and still accurate. |
 | 4.2 Consistency | 4/4 | New matrix rows follow the existing column shape + Apple-doc-URL convention; tvos.md trap row matches the Wrong/Right format. |
 
@@ -222,7 +242,7 @@ Re-scored only the four dimensions this pass touches (rest unchanged from 100/10
 
 | Date | Score | Notes |
 |------|-------|-------|
-| 2026-07-15 | 100% structural / 100 manual (was 90 pre-fix) | **Audit-script correctness pass (v0.4.0).** Field run against a shipping 4-platform app scored **19/19 false positives** — see *Field Failure*. Root cause: T3/T4/T5 tested for the literal string `os(macOS)`, but `#if os(tvOS)` excludes macOS without naming it; T1 ignored enclosing scope and matched doc comments. Root cause of the eval miss: verification used a synthetic all-traps file + a *vacuously* clean file, so the false-positive quadrant (symbol present, correctly guarded) was never tested. **Rewrote** `audit-platform-guards.sh` → `audit-platform-guards.py`: recursive-descent `#if` parser + guard-stack evaluation per line, comment stripping, no `eval()` (conditions are untrusted input). Portability contract changed Bash 3.2 → python3 (ships with Xcode CLT; Apple-only skill). **Added** `tests/fixtures/` (7 `clean-*` = the field FPs, 6 `fail-*`, 2 `info-*`) + `scripts/run-tests.sh`; negative control verified. **Checks:** T1 reframed from "canImport co-location" to "tvOS-unavailable symbol on a tvOS-compiled line" (category fix — `.onDrop`/`DropDelegate` are SwiftUI, not UIKit → split out as T1b; `onDrop` has no tvOS per Apple docs); T2 generalised from the bare-`#if !os(tvOS)` special case to "editMode compiles on macOS"; new info-severity D1/D2 dead-code checks that never affect exit code. **Docs:** `.topBar*` tvOS cell annotated symbol-exists-but-no-affordance (tvOS 14+, verified); `navigationBarLeading` 27.0 deprecation added to the all-platform note; new "Guards may not be in this file" subsection (sibling-file / ViewModifier factoring defeats file-scoped greps); E1's manual `rg` marked as a lead, not a verdict — it is the exact heuristic that produced the 19 FPs. |
+| 2026-07-15 | 100% structural / 99 manual (was 90 pre-fix) | **Audit-script correctness pass (v0.4.0).** Field run against a shipping 4-platform app scored **19/19 false positives** — see *Field Failure*. Root cause: T3/T4/T5 tested for the literal string `os(macOS)`, but `#if os(tvOS)` excludes macOS without naming it; T1 ignored enclosing scope and matched doc comments. Root cause of the eval miss: verification used a synthetic all-traps file + a *vacuously* clean file, so the false-positive quadrant (symbol present, correctly guarded) was never tested. **Rewrote** `audit-platform-guards.sh` → `audit-platform-guards.py`: recursive-descent `#if` parser + guard-stack evaluation per line, comment stripping, no `eval()` (conditions are untrusted input). Portability contract changed Bash 3.2 → python3 (ships with Xcode CLT; Apple-only skill). **Added** `tests/fixtures/` (7 `clean-*` = the field FPs, 6 `fail-*`, 2 `info-*`) + `scripts/run-tests.sh`; negative control verified. **Checks:** T1 reframed from "canImport co-location" to "tvOS-unavailable symbol on a tvOS-compiled line" (category fix — `.onDrop`/`DropDelegate` are SwiftUI, not UIKit → split out as T1b; `onDrop` has no tvOS per Apple docs); T2 generalised from the bare-`#if !os(tvOS)` special case to "editMode compiles on macOS"; new info-severity D1/D2 dead-code checks that never affect exit code. **Docs:** `.topBar*` tvOS cell annotated symbol-exists-but-no-affordance (tvOS 14+, verified); `navigationBarLeading` 27.0 deprecation added to the all-platform note; new "Guards may not be in this file" subsection (sibling-file / ViewModifier factoring defeats file-scoped greps); E1's manual `rg` marked as a lead, not a verdict — it is the exact heuristic that produced the 19 FPs. **Prose correction, the worst finding of the pass:** `references/tvos.md` claimed `editMode` "exists only on iOS-family platforms (iOS, iPadOS, Mac Catalyst)" — factually wrong (tvOS 13+) — and its trap matrix prescribed `#if os(iOS)` unconditionally, so an agent following the reference alone would make the same wrong edit with no script involved. Corrected, plus new § *When tvOS `editMode` is NOT dead* (the producer check) and a new SKILL.md § *Narrowing a Guard Is a Behaviour Change*: widening risks a build failure the build catches, narrowing risks silent feature loss it does not, so removing a platform from a guard needs a producer search and may never rest on a truncated grep. **Scores:** 3.1 downgraded 4/4 → 3/4 (SKILL.md 345 vs its 275 ceiling; ceiling reset to 345, reclaim deferred to next pass); total 100 → **99**. |
 | 2026-05-12 | 100% structural / 93 manual | Initial extraction from Tiercade `cross-platform-build` (260 lines). Reframed as compatibility reference, not validation workflow. Tiercade-specific build script + evidence commits + `applyTo` glob + `metadata` block all rejected. Generic `xcodebuild` examples per platform. iPadOS and Mac Catalyst columns added to availability matrix. `canImport(UIKit)` vs `os(iOS)` rule promoted to its own section. Cross-linked five sibling skills. |
 | 2026-05-13 (am) | 100% structural / 93 manual | Re-eval after correctness audit. `fullScreenCover` macOS row was Yes; Apple docs and HackingWithSwift confirm modifier is unavailable on macOS (iOS / iPadOS / Catalyst / tvOS / watchOS / visionOS only). Table row and `macOS Gotchas` bullet rewritten to state unavailability rather than HIG preference. `editMode` tvOS claim and `@CommandsBuilder` ForEach claim audited but not changed — sources mixed, deferring to skill author's empirical build tests. |
 | 2026-05-13 (pm) | 100% structural / 100 manual | Restructure for top-band scoring. SKILL.md split from 368 → 239 lines; per-platform detail moved to `references/{tvos,macos,catalyst,ui-tests,build-matrix,recovery}.md`. Apple Developer doc URLs added per API matrix row. New `scripts/audit-platform-guards.sh` covers five highest-frequency guard mistakes with standardized `APPLE-MP-FAIL` output format. Recovery playbook (`references/recovery.md`) provides per-error minimal repro + audit + fix for E1–E8. `@CommandsBuilder` ForEach row downgraded from "No" to "Fragile" — `Menu` workaround stays correct either way. Explicit "Escape Hatches" section added with defer-to-sibling clauses. visionOS coverage explicitly deferred per user request. |

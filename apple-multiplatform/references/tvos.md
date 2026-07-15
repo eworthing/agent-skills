@@ -17,7 +17,7 @@ gating only.
 |---|---|---|---|
 | Drag-and-drop receiving | Wrap `.onDrop`, `DropDelegate`, `NSItemProvider` extraction in `#if !os(tvOS)` | `#if canImport(UIKit) /* .onDrop */` | `#if !os(tvOS) /* .onDrop */` |
 | Reorderable containers (27 SDKs) | Wrap `.reorderable()` / `.reorderContainer(for:isEnabled:move:)` in `#if !os(tvOS)` — new in the 27 SDKs on every platform **except** tvOS | `#if !os(macOS) /* .reorderable() */` (still compiles-fails on tvOS) | `#if !os(tvOS) /* .reorderable() */` |
-| `editMode` | Wrap with `#if os(iOS)` | `#if !os(tvOS) /* @Environment editMode */` (still compiles on macOS, where editMode does not exist) | `#if os(iOS) /* @Environment editMode */` |
+| `editMode` | Wrap with `#if os(iOS)` — **unless the app injects it on tvOS**, see below | `#if !os(tvOS) /* @Environment editMode */` (still compiles on macOS, where editMode does not exist) | `#if os(iOS) /* @Environment editMode */` |
 | Haptics (`UIImpactFeedbackGenerator`) | Requires `#if os(iOS)` | `#if canImport(UIKit) /* UIImpactFeedbackGenerator */` — compiles on tvOS, crashes at runtime | `#if os(iOS) /* UIImpactFeedbackGenerator */` |
 | Focus | Use `.focusSection()`, `.focusable()`, `.onMoveCommand`, `.focused($state)` | Touch / hover modifiers | Focus-driven APIs |
 | Pointer | No mouse / trackpad APIs | `.onHover`, `.cursor` | Skip; gate with `#if !os(tvOS)` |
@@ -39,8 +39,13 @@ UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
 ## editMode — Inline vs File-Level Guard
 
-`@Environment(\.editMode)` exists only on iOS-family platforms (iOS, iPadOS,
-Mac Catalyst). Pick one style consistently per file.
+`@Environment(\.editMode)` is unavailable on **macOS** (hard compile error) and
+available on iOS, iPadOS, Mac Catalyst **and tvOS 13+**. On tvOS it compiles;
+what Apple does not ship there is an *edit interface* (no `EditButton`, no
+swipe-to-edit). So the default guard is `#if os(iOS)` — but read
+"When tvOS `editMode` is NOT dead" below before narrowing an existing one.
+
+Pick one style consistently per file.
 
 ```swift
 // Inline guard — keeps the property only on iOS
@@ -66,9 +71,52 @@ struct ItemList: View {
 **Audit checklist** when a file references `editMode`:
 1. File-level `#if os(iOS)` or `#if !os(tvOS) && !os(macOS)` wraps the type, **or**
 2. Inline `#if os(iOS)` wraps the `@Environment` declaration AND every read site
+3. **macOS is excluded either way** — `#if !os(tvOS)` alone still compiles
+   `editMode` on macOS, where it does not exist. That is the build break.
 
-Watch out for `#if !os(tvOS)` alone — that still compiles `editMode` on macOS,
-where it does not exist.
+## When tvOS `editMode` is NOT dead
+
+You will find `#if os(iOS) || os(tvOS)` around `editMode` and want to narrow it
+to `#if os(iOS)`, reasoning that tvOS has no edit interface so the branch is
+unreachable. **Check for a producer first.** That reasoning is only sound if
+nothing supplies the value.
+
+An app may own the channel deliberately — declaring the state, injecting it, and
+using `editMode` as its own multi-select mode, reusing SwiftUI's environment key
+instead of inventing one:
+
+```swift
+// The app is the producer. Every tvOS reader below is LIVE.
+struct MainAppView: View {
+    #if os(iOS) || os(tvOS)
+    @State var editMode: EditMode = .inactive
+    #endif
+
+    var body: some View {
+        content
+        #if os(iOS) || os(tvOS)
+            .environment(\.editMode, $editMode)   // <- producer
+        #endif
+    }
+}
+```
+
+Then `#if os(iOS) || os(tvOS)` is **correct as written**, and narrowing it
+deletes working tvOS behaviour — typically multi-select, its action bar, and the
+Menu-button path that exits it.
+
+**The check**, before narrowing any `editMode` guard:
+
+```bash
+rg -n '\.environment\(\s*\\\.editMode' --type swift   # do NOT pipe to head
+```
+
+Any hit on a tvOS-reachable line ⇒ the guard stays. No hits anywhere ⇒ the tvOS
+branch really is dead and `#if os(iOS)` is right. `scripts/audit-platform-guards.py`
+encodes exactly this as `D1`'s precondition and stays silent when a producer exists.
+
+This is a specific case of a general rule — see **"Narrowing a Guard Is a
+Behaviour Change"** in `SKILL.md`.
 
 ## Related Skills
 
