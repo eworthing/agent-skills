@@ -32,15 +32,23 @@ let gen = UIImpactFeedbackGenerator(style: .medium)  // tvOS: error
 #endif
 ```
 
-**Audit**: run `scripts/audit-platform-guards.sh` from this skill, or:
+**Audit**: run `scripts/audit-platform-guards.py` from this skill, or, as a
+coarse fallback:
 
 ```bash
 rg -n 'canImport\(UIKit\)' --type swift | xargs -I{} echo {}
 rg -n 'UIImpactFeedback|UISelectionFeedback|UINotificationFeedback' --type swift
 ```
 
-If a file appears in both lists, the symbol is gated by `canImport(UIKit)` but
-needs `os(iOS)`.
+If a file appears in both lists, the symbol *may* be gated by `canImport(UIKit)`
+where it needs `os(iOS)`.
+
+⚠️ **This grep is a lead, not a verdict.** "Both symbols appear in one file" is
+exactly the file-scoped heuristic that produced 19/19 false positives before the
+audit script was rewritten: it flags the *correct* pattern (`canImport(UIKit)`
+wrapping only the `import`, uses inside `#if os(iOS)`) and it matches doc
+comments. Confirm by resolving the guard stack around the use — that is what
+`audit-platform-guards.py` does.
 
 **Fix**: replace the framework-level guard with an OS-level guard.
 
@@ -124,7 +132,8 @@ struct MyView: View {
 Compiles on tvOS, but `UIImpactFeedbackGenerator` is unavailable; running on
 tvOS Simulator the app crashes on tap.
 
-**Audit**: same as E1 — `audit-platform-guards.sh` flags this co-location.
+**Audit**: same as E1 — `audit-platform-guards.py` reports this as `T1` when the
+guard stack shows the line reaching a tvOS compile.
 
 **Fix**: tighten the guard to `#if os(iOS)`. Replaces compile-time-permissive
 guard with strict per-OS guard.
@@ -254,5 +263,6 @@ APPLE-MP-FAIL tvOS E4-canImport-runtime Haptics.swift:14: UIImpactFeedbackGenera
 APPLE-MP-FAIL macOS E2-no-member Toolbar.swift:22: ToolbarItemPlacement has no member topBarLeading
 ```
 
-`scripts/audit-platform-guards.sh` follows this format on output for static
-audit hits.
+`scripts/audit-platform-guards.py` follows this format on output for static
+audit hits. Informational dead-code hits use the parallel `APPLE-MP-INFO
+<platform> <code> <file>:<line>: <message>` shape and do not affect exit code.

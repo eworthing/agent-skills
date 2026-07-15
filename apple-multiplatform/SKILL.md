@@ -134,7 +134,7 @@ may shift before GA); existing rows unchanged this pass. Last verified: 2026-07-
 | `TabView` style `.page` | Yes | Yes | Yes | **No** | Yes | Use `.automatic` on macOS | [PageTabViewStyle](https://developer.apple.com/documentation/swiftui/pagetabviewstyle) |
 | `fullScreenCover` | Yes | Yes | Yes | **No** | Yes | Modifier is unavailable on macOS — use `.sheet` | [fullScreenCover](https://developer.apple.com/documentation/swiftui/view/fullscreencover(ispresented:ondismiss:content:)) |
 | `@Environment(\.editMode)` | Yes | Yes | Yes | **No** | **No** (functional) | Symbol exists on tvOS per Apple docs but there is no edit interface — gate with `#if os(iOS)` to avoid dead code | [editMode](https://developer.apple.com/documentation/swiftui/environmentvalues/editmode) |
-| `.topBarLeading` / `.topBarTrailing` | Yes | Yes | Yes | **No** | **No** | macOS / tvOS need different placements | [ToolbarItemPlacement](https://developer.apple.com/documentation/swiftui/toolbaritemplacement) |
+| `.topBarLeading` / `.topBarTrailing` | Yes | Yes | Yes | **No** | **No** (functional) | macOS needs a different placement (hard compile error). Symbol exists on tvOS (14+) per Apple docs and compiles, but there is no top-bar chrome — gate with `#if os(iOS)` to avoid dead code | [ToolbarItemPlacement](https://developer.apple.com/documentation/swiftui/toolbaritemplacement) |
 | `.topBarPinnedTrailing` placement + `ToolbarOverflowMenu` | 27+ | 27+ | 27+ | **No** | **No** | New in the 27 SDKs (beta; also visionOS 27) — **absent on macOS/tvOS**; use existing placements there. Sibling 27 toolbar APIs `toolbarMinimizeBehavior` / `visibilityPriority(_:)` **are** cross-platform | [topBarPinnedTrailing](https://developer.apple.com/documentation/swiftui/toolbaritemplacement/topbarpinnedtrailing) |
 | `glassEffect` modifier | iOS 26+ | iPadOS 26+ | Catalyst 26+ | macOS 26+ | tvOS 26+ | Liquid Glass — wrap with `if #available(iOS 26, *)` for older deployment targets. On the 27 SDKs the `UIDesignRequiresCompatibility` opt-out is ignored (iOS/iPadOS/Catalyst/macOS/tvOS 27), so Liquid Glass is mandatory on all five | [glassEffect](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:)) |
 | Drag-and-drop **receiving** (`.onDrop`, `DropDelegate`) | Yes | Yes | Yes | Yes | **No** | tvOS has no pointer / touch drag source | [onDrop](https://developer.apple.com/documentation/swiftui/view/ondrop(of:istargeted:perform:)) |
@@ -150,7 +150,10 @@ but the platform offers no UI affordance to drive it.
 
 **Not divergence — all-platform 27-SDK changes** (migration, not gating): `@State`
 expands via the [`State()`](https://developer.apple.com/documentation/swiftui/state)
-macro under Xcode 27; `ReferenceFileDocument` is deprecated for new `ReadableDocument` / `WritableDocument` (27.0). Defer to `swiftui-expert-skill`.
+macro under Xcode 27; `ReferenceFileDocument` is deprecated for new `ReadableDocument` / `WritableDocument` (27.0);
+[`navigationBarLeading`](https://developer.apple.com/documentation/swiftui/toolbaritemplacement/navigationbarleading) / `navigationBarTrailing`
+are deprecated 27.0 in favour of `topBarLeading` / `topBarTrailing` (same availability — iOS/iPadOS/Catalyst/tvOS/visionOS, no macOS —
+so this is a rename, not a re-gate). Defer to `swiftui-expert-skill`.
 
 ## Per-Platform Detail
 
@@ -204,26 +207,67 @@ template live in [`references/build-matrix.md`](references/build-matrix.md).
 
 ## Static Audit
 
-A static audit catches the five highest-frequency guard mistakes without
-running a build:
+A static audit catches the highest-frequency guard mistakes without running a
+build:
 
 ```bash
-./scripts/audit-platform-guards.sh path/to/your/swift/tree
+./scripts/audit-platform-guards.py path/to/your/swift/tree   # needs python3
 ```
 
-Detects (script trap code → corresponding recovery-playbook entry):
+It tracks the `#if` guard stack and reports a symbol **only when the stack
+proves the line is compiled for the offending platform**. That distinction is
+the whole design: `#if os(tvOS)` excludes macOS *without naming it*, so a
+file-scoped "does `os(macOS)` appear here?" grep flags every correctly guarded
+tvOS-only file. An earlier grep-based version of this script scored **19/19
+false positives** against a shipping 4-platform app. Comments are stripped
+before matching.
+
+Build-break checks (trap code → recovery-playbook entry) — these set exit 1:
 
 | Script | Detects | Recovery |
 |---|---|---|
-| `T1` | `canImport(UIKit)` gating UIKit symbols that crash at runtime on tvOS | `E1`, `E4` |
-| `T2` | `@Environment(\.editMode)` wrapped by bare `#if !os(tvOS)` (macOS also lacks the edit interface) | `E2` (analogous) |
-| `T3` | `.tabViewStyle(.page)` without an `os(macOS)` branch | `E6` |
-| `T4` | `.topBarLeading` / `.topBarTrailing` without an `os(macOS)` branch | `E2` |
-| `T5` | `.fullScreenCover` without an `os(macOS)` branch | `E8` |
+| `T1` | Haptics / `UIPasteboard` on a **tvOS-compiled** line — the `canImport(UIKit)` trap | `E1`, `E4` |
+| `T1b` | `.onDrop` / `DropDelegate` on a **tvOS-compiled** line (SwiftUI, not UIKit — no tvOS) | `E1` (analogous) |
+| `T2` | `@Environment(\.editMode)` on a **macOS-compiled** line | `E2` (analogous) |
+| `T3` | `.tabViewStyle(.page)` on a **macOS-compiled** line | `E6` |
+| `T4` | `.topBarLeading` / `.topBarTrailing` on a **macOS-compiled** line | `E2` |
+| `T5` | `.fullScreenCover` on a **macOS-compiled** line | `E8` |
 
-Exit code 0 = clean, 1 = at least one hit. Output format matches the
-`APPLE-MP-FAIL <platform> <error-class> <file>:<line>: <message>` line shape
-documented in `references/recovery.md`.
+Dead-code checks — informational, emitted as `APPLE-MP-INFO`, and they **do not
+affect the exit code**, so they are safe in a CI gate:
+
+| Script | Detects |
+|---|---|
+| `D1` | `editMode` compiles on tvOS **and nothing in the tree injects it** — dead code |
+| `D2` | `.topBar*` compiles on tvOS — symbol exists (tvOS 14+), but no top-bar chrome |
+
+`D1` carries a tree-level precondition worth knowing about, because it is a trap
+for human reviewers too: "tvOS has no edit interface, so `editMode` there is
+dead" holds only while **nothing supplies the value**. An app may legitimately
+own that channel — declaring `@State var editMode`, injecting it with
+`.environment(\.editMode, $editMode)`, and using it as its own multi-select mode
+on tvOS. Then every tvOS reader is live. `D1` is suppressed tree-wide when any
+tvOS-compiled line injects `\.editMode`. Before "narrowing a dead `editMode`
+guard to `#if os(iOS)`", grep for that injection — the first cut of this check
+did not, and reported a shipping app's working multi-select as dead code.
+
+Exit code 0 = no build-break hits, 1 = at least one, 2 = usage error. Output
+matches the `APPLE-MP-FAIL <platform> <error-class> <file>:<line>: <message>`
+shape documented in `references/recovery.md`.
+
+Fixture tests live in `tests/fixtures/` and run via `./scripts/run-tests.sh`.
+The `clean-*` fixtures are the load-bearing ones — each is a real false positive
+the grep-based version produced. A fixture containing none of the audited
+symbols passes vacuously and proves nothing; every `clean-*` case here contains
+the symbol and guards it correctly.
+
+### Guards may not be in this file
+
+Platform code is routinely factored into sibling files (`Foo+tvOS.swift`) or
+custom `ViewModifier`s, so **file-scoped greps under-report**. A view can look
+like it is missing its `.onExitCommand` or its `#if` while the guard lives one
+file over. Verify by resolving the guard stack for the line, or by reading the
+sibling — not by grepping a single file.
 
 ## Sibling Skills
 
