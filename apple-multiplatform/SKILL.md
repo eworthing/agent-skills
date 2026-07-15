@@ -134,7 +134,7 @@ may shift before GA); existing rows unchanged this pass. Last verified: 2026-07-
 |---|---|---|---|---|---|---|---|
 | `TabView` style `.page` | Yes | Yes | Yes | **No** | Yes | Use `.automatic` on macOS | [PageTabViewStyle](https://developer.apple.com/documentation/swiftui/pagetabviewstyle) |
 | `fullScreenCover` | Yes | Yes | Yes | **No** | Yes | Modifier is unavailable on macOS — use `.sheet` | [fullScreenCover](https://developer.apple.com/documentation/swiftui/view/fullscreencover(ispresented:ondismiss:content:)) |
-| `@Environment(\.editMode)` | Yes | Yes | Yes | **No** | **No** (functional) | Symbol exists on tvOS per Apple docs but there is no edit interface — gate with `#if os(iOS)` to avoid dead code | [editMode](https://developer.apple.com/documentation/swiftui/environmentvalues/editmode) |
+| `@Environment(\.editMode)` | Yes | Yes | Yes | **No** | **No** (functional) | macOS: hard compile error. tvOS: symbol exists (13+), compiles, but no edit interface — gate `#if os(iOS)` to avoid dead code **unless the app injects `\.editMode` itself**, which makes every tvOS reader live; before narrowing an existing guard see [`references/tvos.md`](references/tvos.md) § *When tvOS `editMode` is NOT dead* | [editMode](https://developer.apple.com/documentation/swiftui/environmentvalues/editmode) |
 | `.topBarLeading` / `.topBarTrailing` | Yes | Yes | Yes | **No** | **No** (functional) | macOS needs a different placement (hard compile error). Symbol exists on tvOS (14+) per Apple docs and compiles, but there is no top-bar chrome — gate with `#if os(iOS)` to avoid dead code | [ToolbarItemPlacement](https://developer.apple.com/documentation/swiftui/toolbaritemplacement) |
 | `.topBarPinnedTrailing` placement + `ToolbarOverflowMenu` | 27+ | 27+ | 27+ | **No** | **No** | New in the 27 SDKs (beta; also visionOS 27) — **absent on macOS/tvOS**; use existing placements there. Sibling 27 toolbar APIs `toolbarMinimizeBehavior` / `visibilityPriority(_:)` **are** cross-platform | [topBarPinnedTrailing](https://developer.apple.com/documentation/swiftui/toolbaritemplacement/topbarpinnedtrailing) |
 | `glassEffect` modifier | iOS 26+ | iPadOS 26+ | Catalyst 26+ | macOS 26+ | tvOS 26+ | Liquid Glass — wrap with `if #available(iOS 26, *)` for older deployment targets. On the 27 SDKs the `UIDesignRequiresCompatibility` opt-out is ignored (iOS/iPadOS/Catalyst/macOS/tvOS 27), so Liquid Glass is mandatory on all five | [glassEffect](https://developer.apple.com/documentation/swiftui/view/glasseffect(_:in:)) |
@@ -148,6 +148,12 @@ When in doubt, check the Apple Developer "Availability" line in the symbol's
 documentation — SwiftUI sometimes ships the **type** on a platform but the
 **modifier or initializer** is unavailable, and sometimes the symbol exists
 but the platform offers no UI affordance to drive it.
+
+⚠️ **A row in this table justifies *adding* a guard. It never by itself justifies
+*removing* a platform from an existing one** — a **No** means Apple ships no
+symbol or no affordance there, not that your app has nothing depending on it.
+Read *Narrowing a Guard Is a Behaviour Change* before acting on a **No** by
+deleting code.
 
 **Not divergence — all-platform 27-SDK changes** (migration, not gating): `@State`
 expands via the [`State()`](https://developer.apple.com/documentation/swiftui/state)

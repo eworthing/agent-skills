@@ -1,0 +1,109 @@
+{
+  "skill_name": "apple-multiplatform",
+  "schema_version": 1,
+  "description": "Agent-facing evals. `tests/fixtures` proves the SCRIPT discriminates; this file proves the PROSE does. Both failures this skill has shipped were false positives — flagging correct code — and one of them (references/tvos.md wrongly stating editMode is iOS-family-only) was pure prose that no script test could ever catch. So: **a verdict of 'violation' on a clean-* fixture is a FAILURE, not a near-miss.** Most cases here are deliberately clean; the paired dirty variants exist only to prove the agent still discriminates rather than learning 'always say clean'. Fixtures are referenced from ../tests/fixtures/ rather than copied, so the script suite and these evals cannot drift apart. Run without the skill first: an agent that answers these correctly cold does not need the guidance, and an agent that fails them the same way with the skill loaded means the prose, not the reader, is wrong.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "editmode-narrow-with-producer-clean",
+      "prompt": "In fixtures/editmode-multifile/TierMoveSheet.swift, `@Environment(\\.editMode)` and its read in `defaultFocusTier` are guarded `#if os(iOS) || os(tvOS)`. tvOS ships no edit interface — no EditButton, no swipe-to-edit — so the tvOS half of that guard looks like dead code. Should it be narrowed to `#if os(iOS)`? Answer yes or no and justify. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md answers NO, having found the producer in a DIFFERENT file: MainAppView.swift owns `@State var editMode` and injects it via `.environment(\\.editMode, $editMode)` under `#if os(iOS) || os(tvOS)`, and TVToolbarView receives the binding — so the value is driven on tvOS and TierMoveSheet's read is live. Must recognise 'tvOS has no edit interface' as a claim about affordances, not about whether the symbol resolves or whether anything drives it. Answering YES is a failure, and so is answering NO on TierMoveSheet.swift alone without locating the injection — the file in question contains no evidence either way, which is the whole point.",
+      "files": [
+        "fixtures/editmode-multifile/TierMoveSheet.swift",
+        "fixtures/editmode-multifile/MainAppView.swift",
+        "fixtures/editmode-multifile/TVActionBar.swift"
+      ],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 1,
+      "name": "editmode-narrow-no-producer-dirty",
+      "prompt": "In ../tests/fixtures/info-editmode-tvos-deadcode/TierMoveSheet.swift, `editMode` and its reader are guarded `#if os(iOS) || os(tvOS)`. Nothing else in the directory supplies the value. Should the guard be narrowed to `#if os(iOS)`? Answer yes or no and justify. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md answers YES and says why the answer differs from the injected case: no `.environment(\\.editMode, …)` exists anywhere in the tree, so nothing can ever set it on tvOS and the branch is unreachable. Cites D1. Answering NO is a failure — the discrimination partner to eval 0; an agent that has merely learned 'never narrow an editMode guard' fails here.",
+      "files": [
+        "../tests/fixtures/info-editmode-tvos-deadcode/TierMoveSheet.swift"
+      ],
+      "expected_rule_ids": [
+        "D1"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "editmode-tvos-availability-fact",
+      "prompt": "Is `@Environment(\\.editMode)` available on tvOS? Is it available on macOS? Answer for each platform and state what, if anything, tvOS lacks. Save the answer to ./verdict.md.",
+      "expected_output": "verdict.md states editMode IS available on tvOS (13+) and is NOT available on macOS. What tvOS lacks is the edit *interface* (no EditButton / swipe-to-edit), not the symbol — referencing it on tvOS compiles. Only macOS is a hard compile error. A verdict claiming editMode is unavailable on tvOS, or 'iOS-family only', is a failure: that exact sentence shipped in references/tvos.md and led to a wrong edit with no script involved. This eval guards a prose claim, which is why it has no fixture.",
+      "files": [],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 3,
+      "name": "fullscreencover-file-wrapped-clean",
+      "prompt": "Does ../tests/fixtures/clean-file-wrapped-tvos/TierHeaderMenu.swift break the macOS build? `.fullScreenCover` is unavailable on macOS. Answer and justify. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md says NO / clean: the whole file sits inside `#if os(tvOS)`, which excludes macOS without ever naming it, so the type never enters a macOS compile. Must not demand an explicit `os(macOS)` branch. Flagging this is a failure — the file-scoped 'does os(macOS) appear here?' heuristic produced 10 such false positives in the field.",
+      "files": [
+        "../tests/fixtures/clean-file-wrapped-tvos/TierHeaderMenu.swift"
+      ],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 4,
+      "name": "fullscreencover-else-sheet-clean",
+      "prompt": "Review ../tests/fixtures/clean-else-sheet-branch/ThemeCreatorOverlay.swift for macOS build breaks. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md says clean: `.fullScreenCover` is inside `#if os(tvOS)` and macOS takes the `#else` branch, which uses `.sheet`. This is the fix the skill itself prescribes; flagging it is a failure. The `#else` names no platform, which is why a string-matching check mis-reports it.",
+      "files": [
+        "../tests/fixtures/clean-else-sheet-branch/ThemeCreatorOverlay.swift"
+      ],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 5,
+      "name": "elseif-else-resolves-to-ios-clean",
+      "prompt": "In ../tests/fixtures/clean-elseif-else-is-ios/CardConfigEditor.swift, which platform compiles the `.topBarLeading` toolbar and the `EditButton` in the `#else` branch? Does this file break the macOS build? Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md says the `#else` compiles on iOS only — it follows `#if os(tvOS)` / `#elseif os(macOS)`, so it means 'neither tvOS nor macOS'. No macOS break; clean. Answering 'macOS' (treating `#else` as negating only the immediately preceding `#elseif`) is a failure: a hand-rolled scanner made exactly that mistake during the field review.",
+      "files": [
+        "../tests/fixtures/clean-elseif-else-is-ios/CardConfigEditor.swift"
+      ],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 6,
+      "name": "haptics-os-ios-gated-clean",
+      "prompt": "Review ../tests/fixtures/clean-os-ios-gated-haptics/Haptics.swift for tvOS problems. `UIImpactFeedbackGenerator` is unavailable on tvOS and `canImport(UIKit)` is true on tvOS. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md says clean: `canImport(UIKit)` wraps only the `import`, every generator use is inside `#if os(iOS)`, and tvOS falls through to NoOpHapticFeedback. This is the canonical correct pattern the skill documents. Flagging it — including matching the generator names in the doc comment — is a failure; the grep-based script did both, 8 times in one file.",
+      "files": [
+        "../tests/fixtures/clean-os-ios-gated-haptics/Haptics.swift"
+      ],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 7,
+      "name": "haptics-canimport-gated-dirty",
+      "prompt": "Review ../tests/fixtures/fail-t1-haptics-canimport/Haptics.swift for tvOS problems. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md flags T1/E1: `UIImpactFeedbackGenerator` sits under `#if canImport(UIKit)`, which is true on tvOS, so it reaches a tvOS compile where the symbol does not exist. Fix is `#if os(iOS)`. Discrimination partner to eval 6 — same symbol, same framework guard, opposite verdict, decided only by whether an `os(iOS)` scope encloses the use.",
+      "files": [
+        "../tests/fixtures/fail-t1-haptics-canimport/Haptics.swift"
+      ],
+      "expected_rule_ids": [
+        "T1"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "doc-comment-not-code-clean",
+      "prompt": "Review ../tests/fixtures/clean-doc-comment-only/TestIdentifiers.swift for macOS build breaks. Save verdict + rationale to ./verdict.md.",
+      "expected_output": "verdict.md says clean: every occurrence of `.fullScreenCover`, `.tabViewStyle(.page)`, `editMode` and `.topBarLeading` is inside a `//` doc comment or a `/* */` block. No modifier is called. Flagging prose as a build break is a failure.",
+      "files": [
+        "../tests/fixtures/clean-doc-comment-only/TestIdentifiers.swift"
+      ],
+      "expected_rule_ids": []
+    },
+    {
+      "id": 9,
+      "name": "narrowing-is-a-behaviour-change",
+      "prompt": "A reviewer proposes narrowing `#if os(iOS) || os(tvOS)` to `#if os(iOS)` around a state property, and reports that all four platforms still build cleanly afterwards. Is the green build evidence that the change is safe? What would actually establish safety? Save the answer to ./verdict.md.",
+      "expected_output": "verdict.md says NO: narrowing removes code from a platform, so the build is green either way — a passing build cannot detect the loss. Safety requires finding the producer (what supplies the value on that platform), searching the whole tree with an un-truncated grep, since a negative claim ('nothing drives this') needs the complete result set. Should note the asymmetry: widening only risks a build failure the build catches; narrowing risks silent feature loss it does not. A verdict treating the green build as sufficient is a failure — that reasoning shipped a wrong edit in the field.",
+      "files": [],
+      "expected_rule_ids": []
+    }
+  ]
+}

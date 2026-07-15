@@ -103,6 +103,62 @@ run_case info-topbar-tvos-deadcode   0 'APPLE-MP-INFO tvOS D2-topbar-tvos-deadco
 refuse_case info-editmode-tvos-deadcode APPLE-MP-FAIL
 refuse_case info-topbar-tvos-deadcode   APPLE-MP-FAIL
 
+# --- evals.json integrity -------------------------------------------------
+# The agent-facing evals reference fixtures by relative path. An eval pointing
+# at a moved or renamed fixture is silently useless — it still "passes" by never
+# running. Assert the JSON parses and every referenced file resolves.
+evals_json="$skill_dir/evals/evals.json"
+if ! python3 - "$evals_json" <<'PY'
+import json, pathlib, sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    data = json.loads(path.read_text())
+except (OSError, json.JSONDecodeError) as exc:
+    print(f"[FAIL] evals.json does not parse: {exc}")
+    sys.exit(1)
+
+bad = 0
+names = set()
+for ev in data.get("evals", []):
+    name = ev.get("name", f"id={ev.get('id')}")
+    if name in names:
+        print(f"[FAIL] evals.json: duplicate eval name {name}")
+        bad += 1
+    names.add(name)
+    for key in ("id", "name", "prompt", "expected_output"):
+        if key not in ev:
+            print(f"[FAIL] evals.json: {name} missing '{key}'")
+            bad += 1
+    for rel in ev.get("files", []):
+        if not (path.parent / rel).resolve().is_file():
+            print(f"[FAIL] evals.json: {name} references missing fixture {rel}")
+            bad += 1
+
+# Eval fixtures must not explain themselves. tests/fixtures headers document the
+# regression they pin — correct there, disqualifying here: an agent reading
+# "Every tvOS reader below is live" is doing comprehension, not judgment. That
+# contamination made eval 0 pass cold, proving nothing, until it was caught by
+# actually running it.
+TELLS = ("Expect:", "false positive", "Regression:", "Field false positive", "Info D")
+for fixture in sorted((path.parent / "fixtures").rglob("*.swift")):
+    head = "\n".join(fixture.read_text().splitlines()[:20])
+    hit = next((t for t in TELLS if t in head), None)
+    if hit:
+        print(f"[FAIL] evals/fixtures: {fixture.name} leaks its answer ({hit!r} in header)")
+        bad += 1
+
+if bad:
+    sys.exit(1)
+print(
+    f"[OK] evals.json: {len(data.get('evals', []))} evals, all fixtures resolve, "
+    "no eval fixture leaks its answer"
+)
+PY
+then
+  failures=$((failures + 1))
+fi
+
 if [ "$failures" -eq 0 ]; then
   printf '== apple-multiplatform tests: PASS ==\n'
   exit 0

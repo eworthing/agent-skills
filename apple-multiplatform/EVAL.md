@@ -73,9 +73,17 @@ The fix is therefore two-part, and the second part is the durable one:
    `apple-tvos/evals/evals.json` already states *"False positives … are
    failures"*; this skill now enforces it.
 
-**Rule for future passes:** a detection script may not score above 3/4 on 7.3
-Testability without negative fixtures — correctly-guarded code that must stay
-silent. Positive fixtures only prove the regex fires, never that it discriminates.
+**Rules for future passes**, both earned the hard way:
+
+1. **No score above 3/4 on 7.3 without negative cases.** Positive fixtures prove
+   only that the check fires, never that it discriminates. Correctly-guarded code
+   that must stay silent is the test that bites.
+2. **Test the prose, not just the script.** Every normative claim a reader could
+   act on — an availability fact, a "gate it with X" prescription — is a testable
+   assertion, and `evals/evals.json` is where it gets tested. A skill whose only
+   tests run its scripts has verified the part that files a report and left
+   unverified the part that changes code. The 0.4.0 prose bug passed a green
+   script suite.
 
 ### The new check reproduced the same bug within the hour
 
@@ -122,7 +130,7 @@ because this pass fixed it; on the 0.3.0 text it was a 3/4.
 
 ```
 apple-multiplatform/
-├── SKILL.md                            345 lines — topic index + master API matrix (ceiling 345)
+├── SKILL.md                            351 lines — topic index + master API matrix (ceiling 355)
 ├── EVAL.md                             this file
 ├── references/
 │   ├── tvos.md                          76 lines — tvOS trap matrix, editMode guards, reorderable
@@ -132,11 +140,114 @@ apple-multiplatform/
 │   ├── build-matrix.md                 160 lines — xcodebuild invocations + pass/fail samples
 │   └── recovery.md                     258 lines — per-error playbook (E1–E8)
 ├── scripts/
-│   ├── audit-platform-guards.py       ~300 lines — guard-stack audit (T1–T5, T1b, D1–D2)
-│   └── run-tests.sh                    ~95 lines — fixture runner (Bash 3.2)
-└── tests/
-    └── fixtures/                       16 cases — 8 clean-* (the field FPs), 6 fail-*, 2 info-*
+│   ├── audit-platform-guards.py       ~330 lines — guard-stack audit (T1–T5, T1b, D1–D2)
+│   └── run-tests.sh                   ~140 lines — fixture runner + evals integrity (Bash 3.2)
+├── tests/
+│   └── fixtures/                       16 cases — 8 clean-* (the field FPs), 6 fail-*, 2 info-*
+└── evals/
+    └── evals.json                      10 agent-facing evals — 7 clean, 2 dirty partners, 2 prose-only
 ```
+
+**Two test layers, because the skill can fail in two ways.**
+
+| Layer | Asks | Catches |
+|---|---|---|
+| `tests/fixtures` + `run-tests.sh` | does the **script** discriminate? | a check that fires on correct code |
+| `evals/evals.json` | does the **prose** lead a reader to the right call? | a reference that is simply wrong |
+
+The second layer exists because the worst finding of the 0.4.0 pass was
+untestable by the first: `references/tvos.md` asserted a false availability fact,
+and an agent following it made a wrong edit **with no script involved**. Script
+fixtures cannot fail that. Eval 2 (`editmode-tvos-availability-fact`) has no
+fixture at all — it interrogates a sentence.
+
+Most evals reference `../tests/fixtures/` rather than copying, so the layers
+cannot drift; `run-tests.sh` asserts every referenced fixture resolves, since an
+eval pointing at a renamed file passes by never running (verified by breaking a
+path and watching the suite go red).
+
+**Where sharing fails, and why `evals/fixtures/` exists.** The first cut of eval 0
+pointed at `tests/fixtures/clean-app-injects-editmode-tvos/`, and a subagent
+answered it correctly *cold, with no skill loaded* — so the eval proved nothing.
+Two causes, both fatal to an agent-facing test:
+
+1. **Script fixtures document themselves.** Every one opens with a header
+   explaining the regression it pins — including, verbatim, "Every tvOS reader
+   below is live." The agent was reading my answer, not deriving it. Good for a
+   script fixture, disqualifying for an eval.
+2. **Single-file fixtures are the wrong geometry.** A script's guard-stack
+   evaluator works per file, so one file suffices. But the field failure only
+   happened *because* the producer (`MainAppView`) lived several files away from
+   the readers and was missed by a truncated grep. Put producer and reader in one
+   40-line file and there is no problem left to fail.
+
+So `evals/fixtures/editmode-multifile/` carries comment-free, realistically
+separated code (producer, toolbar, and the sheet under review in three files),
+and eval 0 asks about the file that contains *no* evidence either way. The two
+layers need different artifacts because they test different things — the "don't
+duplicate" instinct was wrong here, and running the eval is what proved it.
+
+`run-tests.sh` now also fails if any `evals/fixtures/` file leaks its answer in
+its header (`Expect:`, `Regression:`, `false positive`, …) — the contamination
+that made the first cut worthless, mechanised so it cannot creep back. Verified
+by planting a giveaway comment and watching the suite go red.
+
+### RED baseline: eval 0 does not discriminate (open)
+
+Per `analysis/contest-refactor/SKILL-TDD-FIXTURES-GAP.md`, quoting superpowers:
+*"If you didn't watch an agent fail without the skill, you don't know if the
+skill prevents the right failures."* So eval 0 was run against a subagent with no
+skill loaded. **It answered correctly — NO — cold. Twice, across both fixture
+designs.** The second run located the producer in a sibling file unprompted,
+named the `EditButton`-vs-`\.editMode` distinction unaided, and volunteered that
+a consuming app's "editMode ❌ tvOS" table row was itself the trap.
+
+There is no RED. Stating the consequence plainly rather than banking the eval as
+a win: **eval 0 is not evidence that this skill's guidance adds capability here.**
+A capable agent, asked the question sharply with three files in front of it, does
+not need the prose.
+
+Two things follow, and only the first is comfortable:
+
+1. **The eval's real job is do-no-harm, not uplift.** If a capable agent gets
+   this right cold, the live risk is the skill *talking it out of* the right
+   answer — which is exactly what the 0.4.0 `references/tvos.md` sentence
+   ("editMode exists only on iOS-family platforms") was equipped to do. The pass
+   condition that matters is therefore *with* the skill loaded, and the failure
+   mode it guards is the skill being net-negative. That is a real function, and
+   it is the one this file's history says is needed. It is not the function the
+   eval was written to claim.
+
+2. **The eval does not reproduce the conditions of the actual failure.** The
+   field mistake was not made while contemplating three files under a pointed
+   question. It was made mid-review across ~440 files, from a `grep | head` whose
+   truncated tail contained the producer, with the wrong conclusion then
+   labelled "(empty = nothing activates editMode)" in the reviewer's own output.
+   That is an attention-under-breadth failure, not a reasoning failure, and a
+   3-file fixture cannot elicit it. Eval 9 attacks the discipline directly
+   ("is a green build evidence?"), but nothing here simulates review-at-scale.
+   Until something does, this suite tests whether an agent *can* reason
+   correctly, not whether it *will* under load — and the field says the gap
+   between those is where the bug lived.
+
+**GREEN check (skill loaded): passes, and earned its keep by being criticised.**
+The same eval run *with* SKILL.md + tvos.md returned NO, cited the producer, and
+was asked to say plainly whether the skill helped, misled, or did nothing. It
+reported the guidance decisive — naming "a guard tells you where code compiles,
+never whether anything drives it" and "no affordance ≠ no symbol" as the two
+distinctions that did the work — and then flagged a real defect:
+
+> "The availability matrix says tvOS **No (functional)** and recommends
+> `#if os(iOS)` — read alone, that row argues YES and walks straight into the
+> bug. … A reader who skims to the table and stops gets the wrong answer. The
+> `D1` audit check has this right in code; the table hasn't caught up to it."
+
+Correct, and fixed this pass: the `editMode` row now carries the injection
+caveat inline rather than delegating it to prose three sections away, and the
+matrix preface states that a **No** justifies *adding* a guard, never by itself
+*removing* a platform from one. The lesson is that the do-no-harm framing above
+is not hypothetical — the skill's own table was one skim away from arguing for
+the bug it documents.
 
 ## Manual Assessment
 
@@ -161,7 +272,7 @@ apple-multiplatform/
 | 6.3 | Data Safety | 4/4 | `allowed-tools`: Read / Bash / Glob / Grep — no Write or Edit. Audit script does not mutate. |
 | 7.1 | Modularity | 4/4 | SKILL.md → six topic-keyed references + one audit script. Each reference is independently consultable. Failure-pattern table cross-links to recovery.md. |
 | 7.2 | Modifiability | 4/4 | Adding a new platform-divergent API = one table row in SKILL.md + (optional) detail in references/. Adding a new trap = one entry in audit script + one row in recovery.md. Apple docs URLs make SDK drift detection cheap. |
-| 7.3 | Testability | 4/4 | **Was 4/4 in 0.3.0 on a verification that could not detect false positives (synthetic all-traps file + a vacuously clean file); the field run then scored 19/19 FP → 2/4.** Restored to 4/4 only now that `tests/fixtures/` carries 7 `clean-*` negative cases (each a real field FP), 6 `fail-*` positives, and 2 `info-*`, run by `scripts/run-tests.sh` and verified to go red when a fixture guard is deliberately widened. |
+| 7.3 | Testability | 4/4 | **Was 4/4 in 0.3.0 on a verification that could not detect false positives (synthetic all-traps file + a vacuously clean file); the field run then scored 19/19 FP → 2/4.** Restored only with both layers present: `tests/fixtures/` (8 `clean-*` negatives, each a real field FP; 6 `fail-*`; 2 `info-*`) proves the script discriminates, and `evals/evals.json` (10 agent-facing cases, 7 clean, with dirty partners) proves the prose does — the layer the 0.4.0 prose failure proved was missing. Both carry negative controls: widening a fixture guard turns the suite red; so does breaking an eval's fixture path. Dirty partners exist so "always answer clean" fails as loudly as the original false positives. |
 | 8.1 | Trigger Precision | 4/4 | Description names specific symbols (`editMode`, `TabView .page` / `.automatic`, `@CommandsBuilder`, `XCUICoordinate`, `NSToolbar`, `#if os()`, `#if canImport()`) and lists nine distinct "Use when" contexts. |
 | 8.2 | Progressive Disclosure | 4/4 | SKILL.md (topic index, master matrix, summary tables) → references/ (per-platform detail, build matrix, recovery playbook) → script (static audit). Three-tier progression. |
 | 8.3 | Composability | 4/4 | Cross-links six sibling skills (`swift-file-splitting`, `swiftui-drag-drop`, `apple-tvos`, `xctest-ui-testing`, `swiftui-expert-skill`, `swift-concurrency`) where their coverage is more authoritative. Audit script output format is CI-grep-compatible. |
@@ -185,7 +296,10 @@ None.
 3. ~~Expand the audit script to cover keyboard-shortcut collision detection~~
    — **deferred indefinitely.** Adding checks was what got 0.3.0 into trouble;
    breadth is not the constraint, trustworthiness is. Any new check ships with
-   `clean-*` fixtures proving it stays silent on correct code, or it does not ship.
+   `clean-*` fixtures proving it stays silent on correct code, and any new
+   normative claim ships with an eval — or it does not ship.
+4. Reproduce the field failure's *conditions* in an eval. See **RED baseline:
+   eval 0 does not discriminate** below — the honest open problem.
 4. Capture screenshots of the canonical pass/fail xcodebuild output for
    reference; current text samples are sufficient but a visual aid helps
    newcomers.
@@ -194,9 +308,13 @@ None.
 
 - `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py apple-multiplatform`
   → 100% structural (13/13 passed, 0 warn, 0 fail)
-- `./scripts/run-tests.sh` → **20/20 pass**. Every `clean-*` fixture emits zero
+- `./scripts/run-tests.sh` → **23/23 pass**. Every `clean-*` fixture emits zero
   hits and exits 0; every `fail-*` emits its trap code and exits 1; both `info-*`
-  emit `APPLE-MP-INFO` and exit 0 (dead-code hits must never fail a gate).
+  emit `APPLE-MP-INFO` and exit 0 (dead-code hits must never fail a gate); and
+  `evals.json` parses with all 10 fixture paths resolving.
+- **Eval integrity negative control:** repointing an eval at a nonexistent
+  fixture turns the suite red. Without that check an eval can rot into a no-op
+  and still look green — the same vacuous-pass failure mode as 0.3.0's clean file.
 - `python3 -m py_compile scripts/audit-platform-guards.py` → clean.
 - **Negative control:** widening a `clean-*` fixture's guard
   (`#if os(tvOS)` → `#if !os(iOS)`) makes the suite go red with
