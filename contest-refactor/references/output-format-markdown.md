@@ -118,7 +118,7 @@ For each finding:
 
 For each item:
 - why it matters
-- score impact
+- score impact — name each affected dimension by its canon machine id plus the projected move (`data_flow +0.5; framework_idioms +0.5`), so the item is rankable by the dimension it moves rather than by how it reads. Enforced by G39.
 - structural / simplification / polish
 - needed for winning / helpful / minor
 

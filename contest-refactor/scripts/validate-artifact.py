@@ -1885,6 +1885,80 @@ def check_continue_backlog(current_review: dict) -> list[Issue]:
     return issues
 
 
+_G39_ENTRY_RE = re.compile(r"^([a-z_]+)\s+([+-]\d+(?:\.\d+)?)$")
+
+
+def check_g39_backlog_score_impact(current_review: dict, canon) -> list[Issue]:
+    """G39: every backlog item names the dimensions it moves, machine-readably.
+
+    `score_impact` was a required field that no rule read, so it drifted into prose
+    ("Architecture quality + State management each +1.0") that nothing could act on.
+    The shape is `<canon_dim_id> <signed delta>`, semicolon-joined for multi-dimension
+    items, so the Backlog Prioritization Pass and the priority probe grader can both
+    attribute an item to a dimension without parsing English.
+
+    Shape only: the gate never judges whether the projected move is *right*, which is
+    the Critic's call and not mechanically decidable.
+    """
+    issues: list[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+
+    backlog = current_review.get("backlog") or []
+    if not backlog:
+        return issues
+
+    known = set(getattr(canon, "scorecard_dimensions", ()) or ())
+    scorecard = current_review.get("scorecard") or {}
+
+    for idx, item in enumerate(backlog):
+        ctx = f"backlog[{idx}] (priority {item.get('priority')})"
+        raw = item.get("score_impact")
+        if not isinstance(raw, str) or not raw.strip():
+            issues.append(
+                Issue("G39", "score_impact is required and must be a non-empty string", ctx)
+            )
+            continue
+
+        entries = [part.strip() for part in raw.split(";") if part.strip()]
+        if not entries:
+            issues.append(Issue("G39", f"score_impact has no entries: {raw!r}", ctx))
+            continue
+
+        for entry in entries:
+            m = _G39_ENTRY_RE.match(entry)
+            if not m:
+                issues.append(
+                    Issue(
+                        "G39",
+                        f"score_impact entry {entry!r} is not "
+                        f"'<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); "
+                        f"join multiple dimensions with ';'",
+                        ctx,
+                    )
+                )
+                continue
+            dim = m.group(1)
+            if known and dim not in known:
+                issues.append(
+                    Issue(
+                        "G39",
+                        f"score_impact names unknown dimension {dim!r}; "
+                        f"must be a canon/scorecard-dimensions.toml id",
+                        ctx,
+                    )
+                )
+            elif scorecard and dim not in scorecard:
+                issues.append(
+                    Issue(
+                        "G39",
+                        f"score_impact names {dim!r}, absent from this loop's scorecard",
+                        ctx,
+                    )
+                )
+    return issues
+
+
 def _load_project_config(artifact_dir: Path) -> dict | None:
     """Load `.contest-refactor.toml` from the artifact dir or its repo root."""
     candidates: list[Path] = [
@@ -1948,6 +2022,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g36_required_state(current_review, canon))
     issues.extend(check_g37_residual_blocker_coherence(current_review))
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
+    issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

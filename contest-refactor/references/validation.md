@@ -195,6 +195,14 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   *Source:* [`provider-adapters.md § Premium model budget policy`](provider-adapters.md#premium-model-budget-policy) + [`resume-detection.md § Step 0.5 — Provider detection`](resume-detection.md#step-05--provider-detection); mechanized by `validate-artifact.py check_g38_premium_model_budget_guard`.
 
+- [ ] **G39 Backlog score_impact dimension attribution (pre-emit, schema_version >= 4)** — Every `backlog[]` item's `score_impact` names the dimensions it moves as `<canon_dim_id> <signed delta>`, semicolon-joined for a multi-dimension item (`data_flow +0.5; framework_idioms +0.5`). Each id must be a `canon/scorecard-dimensions.toml` id **and** present in this loop's `scorecard`. Display labels (`Data flow +0.5`), trailing prose (`data_flow +0.5 once verified`), unsigned deltas, and free text (`Architecture quality + State management each +1.0`) all fail. Fires only when `backlog[]` is non-empty; the v1-v3 corpus is below the floor and unaffected.
+
+  Why a required field needed a gate: `score_impact` was required but read by nothing, so it drifted into prose. A 15-loop production run carried `"Concurrency +0.5, Framework idioms +0.5"` on the same backlog item for all 15 loops — the field was naming the two lowest, most-stalled dimensions on the board every loop, and no rule could act on it. Machine-readable attribution is what lets a prioritization rule rank by distance-to-target and stall rather than by whichever item reads cheapest.
+
+  **Shape only.** G39 never judges whether the projected move is *right* — that is the Critic's call and is not mechanically decidable. Run G39 at Step 1 emit and again at Step 3 pre-commit. Failure → rewrite the field; do not weaken the shape.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #31; mechanized by `validate-artifact.py check_g39_backlog_score_impact` + `scripts/_g39_selftest.py`.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

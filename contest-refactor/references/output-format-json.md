@@ -226,7 +226,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
       "kind": "structural",                                                            // enum: structural | simplification | polish
       "rank": "needed for winning",                                                    // enum: needed for winning | helpful | minor
       "why_it_matters": "...",                                                         // required
-      "score_impact": "Architecture quality + State management each +1.0"              // required
+      "score_impact": "data_flow +0.5; framework_idioms +0.5"                          // required; `<canon_dim_id> <signed delta>`, ';'-joined (G39, v4+)
     }
   ],
   // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP}; null otherwise.
