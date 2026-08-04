@@ -44,11 +44,19 @@ FIXTURES = SKILL_ROOT / "evals" / "priority-fixtures"
 MANIFEST = SKILL_ROOT / "evals" / "priority_replay_baseline.json"
 GRADER = HERE / "loop_replay_grade.py"
 
+FIXTURE_KINDS = {"rank", "residual_disposition"}
+
 ROLE_KEYS = (
     "expected_priority_1_dimension",
     "decoy_dimension",
     "restraint_dimension",
     "blocked_dimension",
+)
+
+RESIDUAL_KEYS = (
+    "off_path_dimension",
+    "off_path_file",
+    "legitimate_dimension",
 )
 
 failures: list[str] = []
@@ -128,17 +136,27 @@ def main() -> int:
             spec.get("id") == name, f"{name}: expected.toml id {spec.get('id')!r} != directory name"
         )
 
-        # 3) spec validity — four DISTINCT canon dimensions
+        # 3) spec validity, per kind. `rank` fixtures ask which of several candidates
+        # goes first; `residual_disposition` fixtures ask where a single off-path gap
+        # lands. They need different keys, so validating one shape against the other
+        # would reject a legitimate fixture.
+        kind = spec.get("kind", "rank")
+        check(
+            kind in FIXTURE_KINDS,
+            f"{name}: kind={kind!r} not in {sorted(FIXTURE_KINDS)}",
+        )
+        required = ROLE_KEYS if kind == "rank" else RESIDUAL_KEYS
         roles = {}
-        for key in ROLE_KEYS:
+        for key in required:
             val = spec.get(key)
-            check(bool(val), f"{name}: expected.toml missing {key}")
-            if val:
+            check(bool(val), f"{name}: kind={kind} expected.toml missing {key}")
+            if val and key.endswith("dimension"):
                 check(val in known_dims, f"{name}: {key}={val!r} is not a canon scorecard id")
                 roles[key] = val
-        if len(roles) == len(ROLE_KEYS):
+        dim_keys = [k for k in required if k.endswith("dimension")]
+        if len(roles) == len(dim_keys):
             check(
-                len(set(roles.values())) == len(ROLE_KEYS),
+                len(set(roles.values())) == len(dim_keys),
                 f"{name}: role dimensions must be distinct, got {roles} — "
                 "a fixture whose candidates share a dimension cannot discriminate",
             )

@@ -1,0 +1,350 @@
+{
+  "schema_version": 4,
+  "_provenance": "Synthetic 8-loop history for the residual-disposition probe. test_strategy climbs honestly to 9.5 (the suite is comprehensive except one off-primary-flow boundary, which is the whole question); simplicity stays at 6.0 and unmoved for all 8 loops, carrying the duplicated remainder rule that gives the backlog a legitimate P1.",
+  "loops": [
+    {
+      "loop": 1,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 2,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 7.5,
+          "delta": "UP"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 3,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7.5,
+          "delta": "UP"
+        },
+        "state_management": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.0,
+          "delta": "UP"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "UP"
+        },
+        "domain_modeling": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 4,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 8.0,
+          "delta": "UP"
+        },
+        "concurrency": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "UP"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.5,
+          "delta": "UP"
+        },
+        "data_flow": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 5,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "UP"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 8.0,
+          "delta": "UP"
+        },
+        "framework_idioms": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 6,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 8.0,
+          "delta": "UP"
+        },
+        "state_management": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "UP"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.5,
+          "delta": "UP"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 7,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 8.0,
+          "delta": "UP"
+        },
+        "domain_modeling": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 8,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.5,
+          "delta": "UP"
+        },
+        "credibility": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 6.0,
+          "delta": "SAME"
+        }
+      }
+    }
+  ]
+}

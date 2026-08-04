@@ -1,26 +1,30 @@
 {
   "layer": "1P",
   "name": "prioritization probe harness",
-  "description": "Tier-1P: a Critic-only probe that measures RANK, not detection. The existing loop-replay grader answers 'was the planted defect found?' — set membership over findings[]. This answers 'given several simultaneously valid candidates, which one did the Critic put at Priority 1?' A competent Critic is expected to find all of them; the measurement is what it does with them. Runs Step 1 only, so it costs roughly a third of a full loop; grading is deterministic via scripts/loop_replay_grade.py --priority-only and runs no model.",
+  "description": "Tier-1P: a Critic-only probe that measures RANK, not detection. The existing loop-replay grader answers 'was the planted defect found?' \u2014 set membership over findings[]. This answers 'given several simultaneously valid candidates, which one did the Critic put at Priority 1?' A competent Critic is expected to find all of them; the measurement is what it does with them. Runs Step 1 only, so it costs roughly a third of a full loop; grading is deterministic via scripts/loop_replay_grade.py --priority-only and runs no model.",
   "prereg": {
     "motivation": "A real 15-loop run (steamgriddb-xbox, 2026-08) spent 6 loops on test coverage while domain_modeling and framework_idioms never moved once. Every individual choice was defensible; the aggregate was a cheap-win ratchet. Nothing in the committed suite could see it, because no gate or grader reads rank.",
     "grader": "scripts/loop_replay_grade.py --priority-only",
     "fixtures_dir": "evals/priority-fixtures",
-    "output_contract": "{\"findings\": [...], \"backlog\": [{priority, title, score_impact}]} — score_impact must be G39-shaped (`<canon_dim_id> <signed delta>`, ';'-joined) or the item is unattributable and the probe is ungradable. This is why G39 landed before the RED arm.",
+    "output_contract": "{\"findings\": [...], \"backlog\": [{priority, title, score_impact}]} \u2014 score_impact must be G39-shaped (`<canon_dim_id> <signed delta>`, ';'-joined) or the item is unattributable and the probe is ungradable. This is why G39 landed before the RED arm.",
     "discrimination": "by dimension, not by file text: the four candidates sit on four different dimensions by construction",
-    "decision_rule": "Reused verbatim from evals/loop-fixtures/DETECTION-PROBE.md — improvement iff treat prioritizes correctly in >=4/5 reps AND control in <=2/5, with zero restraint failures in treat. Overlapping distributions are lateral; do not ship on lateral.",
+    "decision_rule": "Reused verbatim from evals/loop-fixtures/DETECTION-PROBE.md \u2014 improvement iff treat prioritizes correctly in >=4/5 reps AND control in <=2/5, with zero restraint failures in treat. Overlapping distributions are lateral; do not ship on lateral.",
     "arms": {
       "red": "skill prose at the commit before the M1..M6 behavioral change, with G39 already landed so both arms emit attributable score_impact",
       "green": "skill prose after M1 (mutation-clause third branch) + M3 (Backlog Prioritization Pass) + M4 (Stalled-Dimension Sweep)"
     },
     "reps_per_arm": 5,
     "restraint_tolerance": 0,
-    "cost_estimate": "~35-55k tokens/rep; 5 reps x 2 arms ~= 400-550k total, roughly 1.5-2 full loops"
+    "cost_estimate": "~35-55k tokens/rep; 5 reps x 2 arms ~= 400-550k total, roughly 1.5-2 full loops",
+    "kinds": {
+      "rank": "which of several simultaneously valid candidates gets Priority 1 (--priority-only)",
+      "residual_disposition": "where a single off-primary-flow gap lands: queued as backlog work, or accepted as a residual (--residual-only)"
+    }
   },
   "invariants": [
-    "Every evals/priority-fixtures/<id>/ directory is registered here — no silent exclusion.",
+    "Every evals/priority-fixtures/<id>/ directory is registered here \u2014 no silent exclusion.",
     "Each fixture ships codebase/, seed/REVIEW_HISTORY.json and expected.toml.",
-    "expected_priority_1_dimension, decoy_dimension, restraint_dimension and blocked_dimension are four DISTINCT canon scorecard ids — a fixture whose candidates share a dimension cannot discriminate.",
+    "expected_priority_1_dimension, decoy_dimension, restraint_dimension and blocked_dimension are four DISTINCT canon scorecard ids \u2014 a fixture whose candidates share a dimension cannot discriminate.",
     "status is baseline_unmeasured until both arms are recorded; measured requires non-null baseline_observed with both arms.",
     "expected_baseline records the pre-registered hypothesis and is never rewritten after measuring; baseline_observed records what actually happened."
   ],
@@ -29,8 +33,8 @@
       "id": "stalled-domain-1",
       "status": "baseline_unmeasured",
       "expected_baseline": {
-        "red": "misprioritized — ranks the decoy (test_strategy, already at 9.5) first. The Step-8 mutation clause forces the off-path badge() boundary to a Noticeable-or-worse finding with no clean exit, and nothing in the selection path prefers a dimension further from target or longer stalled.",
-        "green": "correctly prioritized — target (domain_modeling, distance 4.0, stalled 15 loops) first; decoy demoted to an accepted residual at 9.5 by M1's off-primary-flow branch; blocked concurrency item named in the Priority-1 accounting rather than silently skipped."
+        "red": "misprioritized \u2014 ranks the decoy (test_strategy, already at 9.5) first. The Step-8 mutation clause forces the off-path badge() boundary to a Noticeable-or-worse finding with no clean exit, and nothing in the selection path prefers a dimension further from target or longer stalled.",
+        "green": "correctly prioritized \u2014 target (domain_modeling, distance 4.0, stalled 15 loops) first; decoy demoted to an accepted residual at 9.5 by M1's off-primary-flow branch; blocked concurrency item named in the Priority-1 accounting rather than silently skipped."
       },
       "baseline_observed": {
         "red": {
@@ -42,7 +46,7 @@
           "restraint_failures": 1,
           "verdict": "DOES NOT DISCRIMINATE",
           "detail": "Target first in 4/5 (reps 1,2,4,5); rep 3 ranked the pure framework_idioms decoding consolidation at P2, the one restraint failure. The pre-registered decision rule requires control <= 2/5; at 4/5 there is no headroom, so this fixture cannot demonstrate an improvement in single-loop selection no matter what the GREEN arm does. Recorded as measured rather than re-tuned: adjusting the fixture until the control fails would be fitting the instrument to the hypothesis.",
-          "reading": "With an honest test suite present, domain_modeling at 5.5 with a 15-loop stall is unambiguous enough that the current prose already picks it. This is consistent with the Tier-0 desk check, which found selection-only reordering fixes 4 of the real run's 15 loops and the rest are supply. The production ratchet appears to be a multi-loop supply phenomenon — the backlog refilling with test findings via the Step-8 mutation clause — which a single-loop, clean-scorecard probe cannot observe.",
+          "reading": "With an honest test suite present, domain_modeling at 5.5 with a 15-loop stall is unambiguous enough that the current prose already picks it. This is consistent with the Tier-0 desk check, which found selection-only reordering fixes 4 of the real run's 15 loops and the rest are supply. The production ratchet appears to be a multi-loop supply phenomenon \u2014 the backlog refilling with test findings via the Step-8 mutation clause \u2014 which a single-loop, clean-scorecard probe cannot observe.",
           "secondary_signal": "2/5 reps (1 and 3) put the off-primary-flow badge boundary in the BACKLOG rather than dispositioning it as an accepted residual, which is exactly the behaviour M1 changes. That is a real but weak signal at n=5.",
           "blocked_item_handling": "No rep ranked the sequential-fetch item; most dispositioned it as an accepted residual naming the standing constraint. Criterion 0's production failure mode (carrying a blocked top-ranked item for many loops without naming it) did not reproduce in a single loop."
         },
@@ -54,10 +58,39 @@
           "arm": "red (first attempt)",
           "reps": 5,
           "result": "2/5 correctly prioritized",
-          "discarded_because": "INVALID FIXTURE — codebase/ shipped no tests at all, so three reps correctly re-derived test_strategy to its 3-anchor under Method Step 1's anchor-to-source rule, making the decoy the honest furthest-from-target dimension. The grader marked protocol-correct behaviour wrong. A fixture whose seeded scorecard contradicts its own source measures anchor-to-source discipline, not rank. Fixed by adding Tests/ covering everything except badge's 999 boundary; _priority_replay_selftest.py now fails any fixture that seeds test_strategy >= 9 with no tests on disk."
+          "discarded_because": "INVALID FIXTURE \u2014 codebase/ shipped no tests at all, so three reps correctly re-derived test_strategy to its 3-anchor under Method Step 1's anchor-to-source rule, making the decoy the honest furthest-from-target dimension. The grader marked protocol-correct behaviour wrong. A fixture whose seeded scorecard contradicts its own source measures anchor-to-source discipline, not rank. Fixed by adding Tests/ covering everything except badge's 999 boundary; _priority_replay_selftest.py now fails any fixture that seeds test_strategy >= 9 with no tests on disk."
         }
       ],
-      "notes": "Stall signature transcribed verbatim from the real 15-loop run; only finding titles and paths were rewritten for the synthetic BookingKit codebase. The discrimination margin is deliberately tight: the target beats the restraint control by 0.5 distance at equal stall (both 15), so a pass reflects judgment rather than arithmetic. The restraint control is the strongest available trap — second on the numbers and equally overdue, but its two decoding idioms coexist for a documented platform reason, so it fails SPT at Q1/Q2. It is also the only element that discriminated in the RED arm."
-      }
+      "notes": "Stall signature transcribed verbatim from the real 15-loop run; only finding titles and paths were rewritten for the synthetic BookingKit codebase. The discrimination margin is deliberately tight: the target beats the restraint control by 0.5 distance at equal stall (both 15), so a pass reflects judgment rather than arithmetic. The restraint control is the strongest available trap \u2014 second on the numbers and equally overdue, but its two decoding idioms coexist for a documented platform reason, so it fails SPT at Q1/Q2. It is also the only element that discriminated in the RED arm.",
+      "kind": "rank"
+    },
+    {
+      "id": "off-path-residual-1",
+      "kind": "residual_disposition",
+      "status": "baseline_unmeasured",
+      "expected_baseline": {
+        "red": "QUEUED \u2014 method.md:79's mutation clause offers only 'name one -> Noticeable-or-worse finding' or 'score 10', with no disposition that acknowledges an off-primary-flow gap while keeping it out of the backlog. Corroborating prior: 2/5 stalled-domain-1 RED reps queued the equivalent badge boundary.",
+        "green": "ACCEPTED \u2014 M1's third branch routes it to test_strategy 9.5 with residual_disposition accepted, residual_blocking_10 naming the site, and a rationale naming which primary flow it is off."
+      },
+      "baseline_observed": {
+        "red": {
+          "observed_at": "2026-08-04",
+          "run_commit": "6403c30",
+          "arm": "skill prose before M1..M6, model claude-sonnet-5",
+          "reps": 5,
+          "queued": 0,
+          "accepted": 1,
+          "unclear": 1,
+          "absent": 3,
+          "verdict": "DOES NOT DISCRIMINATE \u2014 the hypothesised failure mode did not occur",
+          "detail": "Pre-registered hypothesis was QUEUED (the mutation clause forcing the off-path boundary into the backlog). Observed zero QUEUED. Three of five reps never mentioned MoneyFormatter.compact at all, so the disposition question was never asked; one cited it with no disposition; one correctly dispositioned it as an accepted residual. The clause is 'mandatory before scoring test_strategy >= 9' and a cold Critic-only probe evidently does not reliably reach that branch.",
+          "reading": "Taken with stalled-domain-1's arm, two independently designed fixtures and ~2.1M tokens failed to reproduce the ratchet in a single loop. The production evidence came from full loops with accumulated context, an Authority Map the Critic had produced in that same loop, and a scorecard it had just written itself \u2014 loop 11 of the real run states outright that the >=9 cross-check 'surfaced a genuinely new gap (FixLog.cs)'. None of that context exists in a cold single-loop probe. The honest conclusion is that the ratchet is a multi-loop supply phenomenon and Tier-1P cannot observe it, not that the mechanism is absent.",
+          "grader_correction": "First pass scored QUEUED=4. That was a grader defect, not a result: the legitimate Priority-1 fix routinely claims test_strategy as a secondary effect because landing it includes writing a test, and keying QUEUED on the dimension claim alone read that as the off-path gap being queued. QUEUED now additionally requires the item to mention the off-path file or symbol. Same lesson the restraint check in --priority-only had already learned.",
+          "fixture_weakness": "3/5 ABSENT means the planted gap is too inconspicuous to reliably drive the question. A future attempt should make the off-path boundary more salient (a named TODO, or a symbol the suite visibly half-covers) so disposition is actually exercised."
+        },
+        "green": null
+      },
+      "notes": "Built after stalled-domain-1's RED arm showed no headroom on rank (4/5 already correct) but real headroom on disposition. Isolates the supply mechanism: one off-path uncaught boundary, test_strategy honestly at 9.5, plus one legitimate simplicity item so the backlog is never empty (an empty backlog would route to HALT_STAGNATION/no_backlog and confound the reading). ABSENT is graded as its own outcome (exit 4) so the change cannot be credited for the Critic simply missing the gap."
+    }
   ]
 }

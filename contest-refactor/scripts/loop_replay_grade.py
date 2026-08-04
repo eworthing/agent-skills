@@ -21,12 +21,20 @@ Usage:
                     reading `backlog[]` rather than `findings[]`. Detection asks "was
                     it found?"; this asks "of several valid candidates, which was
                     ranked first?" Fixtures resolve from evals/priority-fixtures/.
+  --residual-only   Tier-1P probe grading (evals/priority-fixtures/, kind =
+                    residual_disposition): where a single off-primary-flow gap
+                    landed — queued as backlog work, or accepted as a residual.
   --strict-exit     accepted for back-compat; strict is the only exit mode.
+
+The three probe modes are mutually exclusive.
 
 Exit codes: full mode — 0 = all required invariants hold, 1 = a required invariant
 failed or inputs missing. --detection-only — 0 = DETECTED, 3 = NOT DETECTED,
 1 = input error. --priority-only — 0 = correctly prioritized, 3 = misprioritized,
-1 = input error. Advisory checks never affect exit status; they print as INFO.
+1 = input error. --residual-only — 0 = ACCEPTED, 3 = QUEUED (or cited with no
+disposition), 4 = ABSENT, 1 = input error; ABSENT is graded apart from QUEUED so a
+Critic that simply never found the gap cannot be scored as having dispositioned it
+correctly. Advisory checks never affect exit status; they print as INFO.
 """
 
 from __future__ import annotations
@@ -279,7 +287,86 @@ def _priority_only(fixture_id: str, path: Path) -> int:
     return 0
 
 
-KNOWN_FLAGS = {"--strict-exit", "--detection-only", "--priority-only"}
+def _residual_only(fixture_id: str, path: Path) -> int:
+    """Tier-1P residual-disposition probe grading.
+
+    Isolates the supply mechanism rather than rank. With `test_strategy` honestly at
+    its 9.5 ceiling and one remaining untested boundary that sits off every primary
+    flow, does the Critic QUEUE it as backlog work or ACCEPT it as a residual?
+
+    Three outcomes, not two. ABSENT is graded separately on purpose: never mentioning
+    the gap also leaves the backlog clean, and crediting that as a pass would let the
+    change take credit for the Critic simply missing something. Silence is not an
+    honest accepted residual. Exit 0 = ACCEPTED, 3 = QUEUED, 4 = ABSENT,
+    1 = input error.
+    """
+    expected = _load_expected(fixture_id, PRIORITY_FIXTURES_DIR)
+    payload = _load_probe_payload(path)
+    findings = [f for f in payload.get("findings", []) if isinstance(f, dict)]
+    backlog = [b for b in payload.get("backlog", []) if isinstance(b, dict)]
+
+    dim = expected["off_path_dimension"]
+    off_file = expected["off_path_file"]
+    symbol = expected.get("off_path_symbol", "")
+    legit = expected["legitimate_dimension"]
+
+    def _mentions(obj: dict) -> bool:
+        blob = json.dumps(obj)
+        return off_file in blob or (bool(symbol) and symbol in blob)
+
+    # QUEUED requires the item to be ABOUT the off-path gap, not merely to claim the
+    # dimension. The legitimate Priority-1 fix routinely claims test_strategy as a
+    # secondary effect because landing it includes writing a test — reading that as
+    # "the off-path gap was queued" produced four false QUEUEDs on the first pass.
+    # Same lesson the restraint check in --priority-only already learned.
+    queued = [b for b in backlog if dim in _item_dimensions(b) and _mentions(b)]
+    dimension_only = [b for b in backlog if dim in _item_dimensions(b) and not _mentions(b)]
+    cited = [f for f in findings if _mentions(f)]
+    accepted = [f for f in cited if f.get("residual_disposition")]
+
+    print(f"loop_replay_grade --residual-only: fixture '{fixture_id}'")
+    print(f"  backlog ({len(backlog)}):")
+    for b in sorted(backlog, key=lambda x: x.get("priority", 10**6)):
+        dims = sorted(_item_dimensions(b))
+        flag = "<-- claims the off-path dimension" if dim in dims else ""
+        print(f"    P{b.get('priority')} {dims or '?'} {str(b.get('title', ''))[:56]} {flag}")
+    print(f"  findings citing {off_file}: {len(cited)}")
+    for f in cited:
+        disp = f.get("residual_disposition")
+        print(
+            f"    {_finding_label(f)} | {f.get('severity')} | "
+            f"residual_disposition={'set' if disp else 'NULL'} | "
+            f"{str(f.get('title', ''))[:56]}"
+        )
+
+    if dimension_only:
+        at = [b.get("priority") for b in dimension_only]
+        print(
+            f"  [INFO] backlog item(s) at priority {at} claim {dim!r} without mentioning "
+            f"{off_file} — a fix that ships its own test, not the off-path gap; not QUEUED"
+        )
+    if not any(legit in _item_dimensions(b) for b in backlog):
+        print(
+            f"  [INFO] no backlog item claims the legitimate dimension {legit!r} — "
+            "the fixture expects one so the off-path item is never the only candidate; "
+            "read the backlog before trusting this rep"
+        )
+
+    if queued:
+        at = [b.get("priority") for b in queued]
+        print(f"  QUEUED at priority {at} — the off-path gap became backlog work")
+        return 3
+    if accepted:
+        print("  ACCEPTED — cited as a finding with a residual disposition, not queued")
+        return 0
+    if cited:
+        print("  QUEUED/UNCLEAR — cited but with no residual_disposition and not in the backlog")
+        return 3
+    print(f"  ABSENT — {off_file} never mentioned; under-detection, not a disposition")
+    return 4
+
+
+KNOWN_FLAGS = {"--strict-exit", "--detection-only", "--priority-only", "--residual-only"}
 
 
 def main(argv: list[str]) -> int:
@@ -295,14 +382,18 @@ def main(argv: list[str]) -> int:
             "usage: loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file>"
             " [--detection-only]"
         )
-    if "--detection-only" in argv and "--priority-only" in argv:
-        sys.exit("FAIL: --detection-only and --priority-only are mutually exclusive")
+    modes = [m for m in ("--detection-only", "--priority-only", "--residual-only") if m in argv]
+    if len(modes) > 1:
+        sys.exit(f"FAIL: {', '.join(modes)} are mutually exclusive")
     if "--detection-only" in argv:
         p = Path(args[1]).resolve()
         return _detection_only(args[0], p / "CURRENT_REVIEW.json" if p.is_dir() else p)
     if "--priority-only" in argv:
         p = Path(args[1]).resolve()
         return _priority_only(args[0], p / "CURRENT_REVIEW.json" if p.is_dir() else p)
+    if "--residual-only" in argv:
+        p = Path(args[1]).resolve()
+        return _residual_only(args[0], p / "CURRENT_REVIEW.json" if p.is_dir() else p)
     fixture_id, artifact_dir = args[0], Path(args[1]).resolve()
 
     expected = _load_expected(fixture_id)
