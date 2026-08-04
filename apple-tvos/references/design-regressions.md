@@ -114,6 +114,52 @@ ring spacing, clipping prevention, and (on tvOS 26+) Liquid Glass focus
 treatment are all handled automatically. The plain-style escape hatch is
 only safe for non-focusable content rows.
 
+### `.plain` is not the custom-visuals escape hatch
+
+General SwiftUI style guides describe `.plain` as "no visual focus
+feedback — use it when you are providing custom styling." That holds on
+iOS / macOS and for non-focusable tvOS rows. It does **not** hold for a
+focusable tvOS view: the focus ring is not merely a visual the system
+draws for you, it is geometry the system manages against enclosing
+`ScrollView` clipping. `.plain` opts out of the management, not just the
+appearance.
+
+Custom focus visuals on tvOS go in a `ButtonStyle` that reads
+`@Environment(\.isFocused)` — the style owns rendering deliberately and
+the focus engine still drives the state:
+
+```swift
+// WRONG — .plain + styling bolted onto the Button
+Button(action: tap) { CardContent() }
+    .buttonStyle(.plain)
+    .background(.regularMaterial, in: .rect(cornerRadius: 14))
+
+// CORRECT — a style that owns rendering
+struct CardStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Body(configuration: configuration)
+    }
+
+    private struct Body: View {
+        @Environment(\.isFocused) private var isFocused
+        let configuration: ButtonStyle.Configuration
+
+        var body: some View {
+            configuration.label
+                .background(.regularMaterial, in: .rect(cornerRadius: 14))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(.white, lineWidth: isFocused ? 4 : 0)
+                }
+        }
+    }
+}
+```
+
+Keep any `.animation()` inside `configuration.label`, scoped to child
+content — see [focus-engine.md](focus-engine.md#tvos-f03--animation-focus-hover-conflict)
+(tvOS-F03).
+
 ### Button-Style Selection Matrix
 
 Joint reference for tvOS-D02 (glass-on-glass) and tvOS-D03 (plain on
@@ -151,6 +197,11 @@ expect to control themselves.
 Rule lives in [accessibility.md](accessibility.md#tvos-a03--no-manual-focus-reassertion);
 repeated here because it surfaces during design review as a tempting
 "quick fix."
+
+Before flagging one: deferring a focus assignment by a single runloop
+tick because the target view is *created by the same state change* is
+restoration, not reassertion, and is not what this rule prohibits. See
+[Reassertion vs. deferred restoration](accessibility.md#reassertion-vs-deferred-restoration).
 
 ## tvOS-D04 — tvOS Focus Traversal QA Checklist
 

@@ -28,7 +28,6 @@ Machine-readable variant: [evals/rules.json](../evals/rules.json).
 | tvOS-F04 | Use token-based settle delay for focus-driven animations | 2 |
 | tvOS-F05 | `ScrollView` needs focusable children to be scrollable | 1 |
 | tvOS-F06 | Prefer `.scrollTargetBehavior(.viewAligned)` over `.paging` | 3 |
-| tvOS-F07 | Verify focus animations on real Apple TV hardware | 2 |
 
 **tvOS-F01.** No `.focusable()` on container wrappers. Focus stops at
 the outer view; children never receive focus.
@@ -62,10 +61,10 @@ single-screen content that fits without scrolling.
 *Bypass / N/A:* True full-screen pager UX (onboarding, slideshow) where
 page boundaries are part of the design intent.
 
-**tvOS-F07.** Verify focus animations on real Apple TV hardware —
-Simulator does not replicate the hover curve.
-*Bypass / N/A:* Animations that do not interact with focus (data-driven
-content transitions). Still smoke-test once on hardware before shipping.
+Hardware verification of focus animations is **not** an `apple-tvos`
+rule — the community `swift-focusengine-pro` skill owns Simulator-vs-
+hardware divergence and the `UIFocusDebugger` tooling. It still applies;
+it is just not enforced here.
 
 ## Accessibility — [accessibility.md](accessibility.md)
 
@@ -90,8 +89,13 @@ safe. Never bypass for destructive (`role: .destructive`) actions.
 
 **tvOS-A03 (severity-1).** Never manually reassert focus via
 `DispatchQueue.main.asyncAfter` — hijacks VoiceOver and Switch Control.
-*Bypass / N/A:* None. Use focus containment (`.fullScreenCover()`,
-scoped `@FocusState`) instead.
+*Bypass / N/A:* None for reassertion. Overriding where the engine already
+placed focus, on a delay, is always wrong. **Distinct case, not a
+bypass:** a one-runloop-tick deferral when the target view is *created by
+the same state change* (hand-rolled `ZStack` overlay dismissal) is
+restoration, not reassertion — but prefer `.fullScreenCover()`
+(tvOS-D01), which restores focus automatically and removes the need. See
+[accessibility.md](accessibility.md#tvos-a03--no-manual-focus-reassertion).
 
 **tvOS-A04.** Hide non-actionable focus helpers
 (`Rectangle().fill(.clear)`) with `.accessibilityHidden(true)`, not

@@ -67,15 +67,6 @@
       "reference": "references/focus-engine.md#tvos-f06--scroll-viewaligned-over-paging"
     },
     {
-      "id": "tvOS-F07",
-      "area": "focus",
-      "severity": 2,
-      "summary": "Verify focus animations on real Apple TV hardware.",
-      "rationale": "Simulator does not replicate the hover curve, perspective lift, or specular shine.",
-      "bypass": "Animations not interacting with focus — still smoke-test on hardware before shipping.",
-      "reference": "references/focus-engine.md#tvos-f07--animation-simulator-vs-hardware"
-    },
-    {
       "id": "tvOS-A01",
       "area": "accessibility",
       "severity": 2,
@@ -99,7 +90,7 @@
       "severity": 1,
       "summary": "Never manually reassert focus via DispatchQueue.main.asyncAfter.",
       "rationale": "Hijacks events VoiceOver and Switch Control expect to handle themselves.",
-      "bypass": "None. Use focus containment (.fullScreenCover, scoped @FocusState).",
+      "bypass": "None for reassertion — overriding where the engine placed focus, on a delay, is always wrong. Distinct case (not a bypass): a one-runloop-tick deferral when the target view is created by the same state change (hand-rolled ZStack overlay dismissal) is restoration, not reassertion. Prefer .fullScreenCover() (tvOS-D01), which restores focus automatically.",
       "reference": "references/accessibility.md#tvos-a03--no-manual-focus-reassertion"
     },
     {
