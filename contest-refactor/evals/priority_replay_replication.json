@@ -1,0 +1,422 @@
+{
+  "schema_version": 1,
+  "description": "Raw per-rep outputs from the Tier-1P arms (2026-08-04, model claude-sonnet-5, 15 reps across three arms). Stored because both arms produced NEGATIVE results and a negative result is only re-checkable if the raw reps survive: the summary in priority_replay_baseline.json says the fixtures did not discriminate, and this file is what lets someone disagree with that reading. Includes the discarded first stalled-domain-1 arm, whose fixture shipped no tests \u2014 kept so the invalidation is auditable rather than asserted. Only the backlog, dispositioned findings and the Priority-1 accounting are retained per rep; full finding prose would bloat the repo without adding a re-gradable fact.",
+  "prereg_ref": "priority_replay_baseline.json#prereg",
+  "attempts": [
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red-discarded",
+      "rep": "k1",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 3,
+      "verdict": "misprioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Add interface-level tests for ReservationLoader.confirmations and BookingDecoding.payload/pricing",
+          "score_impact": "test_strategy +2.0; credibility +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Enforce the ABCD-123456 invariant in Reservation.init using the existing ReservationCheck.isWellFormed check",
+          "score_impact": "domain_modeling +1.0"
+        },
+        {
+          "priority": 3,
+          "title": "Give ReservationLoader.confirmations an explicit retry/no-retry rationale and stop silently discarding already-fetched confirmations on failure, without changing the per-item request shape",
+          "score_impact": "framework_idioms +0.5; credibility +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [],
+      "priority_1_accounting": "Priority 1 moves test_strategy: independent re-derivation from current source (Method Step 1's Anchor-to-source warning) finds zero test files anywhere in the repo, so on honest scoring test_strategy sits at its 3-anchor ('stateful domain or runtime Modules lack meaningful tests') rather than the 9.5 REVIEW_HISTORY.json records, putting it further from the 9.5 target than either domain_modeling (5.5, partially supported by validation code that exists but is unwired) or framework_idioms (6.0); no lower-scoring candidate was available once test_strategy's recorded 9.5 is set aside as unsupported by source, and it is also the remedy for this loop's only Likely-disqualifier finding."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red-discarded",
+      "rep": "k2",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 3,
+      "verdict": "misprioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Add characterization tests for ReservationLoader.confirmations (and BookingDecoding.pricing / ReservationCheck.isWellFormed) using the existing injected fetch seam",
+          "score_impact": "test_strategy +2.0"
+        },
+        {
+          "priority": 2,
+          "title": "Gate ReservationLoader.confirmations on ReservationCheck.isWellFormed (tightened to match its documented character-class contract) before issuing each fetch",
+          "score_impact": "data_flow +0.5; architecture_quality +0.5"
+        },
+        {
+          "priority": 3,
+          "title": "Replace the sequential per-item await loop in ReservationLoader.confirmations with bounded concurrent fetches, order preserved by index",
+          "score_impact": "concurrency +0.5; framework_idioms +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "BookingDecoding.pricing silently drops non-numeric per-locale price entries",
+          "residual_disposition": "Cosmetic for contest \u2014 single silent-drop site in a leaf adapter with no in-repo downstream consumer to prove harm. Smallest fix is a one-line rationale comment (or routing dropped locales through a diagnostic) rather than a backlog slot; not worth displacing the three higher-leverage, oracle-gated findings (F1-F3) already queued this loop."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves test_strategy: independent re-derivation finds zero test files anywhere in the repository (no Package.swift, no Tests/ directory), so test_strategy sits far below the 9.5 carried in REVIEW_HISTORY.json's loop 15 and is now the dimension furthest from target; the two structurally larger fixes this loop would otherwise attempt (F3's validation gate on data_flow/architecture_quality, F2's concurrent-fetch opportunity on concurrency) both mutate ReservationLoader.confirmations's observable per-item request behavior against the third-party endpoint, which the standing operational constraint forbids without exactly the oracle Priority 1 builds \u2014 so no candidate on a dimension nominally further from target was actually available to attempt this loop."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red-discarded",
+      "rep": "k3",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 0,
+      "verdict": "correctly_prioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Enforce Reservation's documented code format at construction; retire the disconnected isWellFormed checker",
+          "score_impact": "domain_modeling +1.5; credibility +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Replace BookingDecoding.pricing(from:)'s JSONSerialization reimplementation with native Decodable [String: Decimal] decoding",
+          "score_impact": "framework_idioms +1.0; data_flow +0.5"
+        },
+        {
+          "priority": 3,
+          "title": "Add tests at the ReservationLoader and (post-F1-fix) Reservation construction Interfaces",
+          "score_impact": "test_strategy +1.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations(for:) fetches confirmations sequentially; concurrency dimension capped by the standing no-behavior-change constraint on the confirmations endpoint",
+          "residual_disposition": "accepted \u2014 real source-backed D2 finding, but the standing operational constraint (no per-item request behavior change against the third-party confirmations endpoint without a behavioural oracle) blocks a safe remedy; not a valid backlog item until a behavioral oracle for the endpoint exists."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves domain_modeling (and secondarily credibility), not test_strategy, even though test_strategy is independently re-derived furthest from its 9.5 target this loop (current source has zero test files): writing tests now would pin them to Reservation.init's currently-unenforced construction shape, which Priority 1 is about to change, so the domain_modeling fix has to land first or the test investment is wasted per Replace-don't-layer."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red-discarded",
+      "rep": "k4",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 0,
+      "verdict": "correctly_prioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Tighten ReservationCheck.isWellFormed to validate character classes, not just segment length",
+          "score_impact": "domain_modeling +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Add characterization tests for ReservationLoader.confirmations establishing the behavioral oracle the standing constraint requires",
+          "score_impact": "test_strategy +0.5; data_flow +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations fetches confirmations sequentially \u2014 a real D2 efficiency gap with no safe fix available this loop",
+          "residual_disposition": "accepted"
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves domain_modeling, the lowest-scoring dimension in the last recorded scorecard (5.5, tied for the longest stall at 15/15 loops with zero movement) and there is no dimension further from the 9.5 target to prefer instead; the more severe finding (F1, the unenforced confirmations-endpoint gate) sits on data_flow/credibility territory closer to target (6.5/7.5) and, more importantly, its full remedy is blocked this loop by the standing no-oracle constraint on the confirmations endpoint, leaving the isWellFormed fix as the only candidate that is both maximally stalled and immediately actionable without violating that constraint."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red-discarded",
+      "rep": "k5",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 3,
+      "verdict": "misprioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Add characterization tests for ReservationLoader.confirmations(for:) using the existing injected fetch closure, pinning current per-item order and error-short-circuit semantics as the behavioral oracle the standing constraint requires",
+          "score_impact": "test_strategy +1.5"
+        },
+        {
+          "priority": 2,
+          "title": "Make BookingDecoding.pricing(from:) surface (log, throw, or return a partial-failure signal for) any per-locale price value that fails to cast to NSNumber instead of silently dropping it",
+          "score_impact": "data_flow +1.0"
+        },
+        {
+          "priority": 3,
+          "title": "Unify Reservation code validation: make looksUsable delegate to ReservationCheck.isWellFormed, and extend isWellFormed to check the documented character classes (uppercase letters, digits), not just segment lengths",
+          "score_impact": "domain_modeling +1.0"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations(for:) fetches one reservation at a time in a sequential await loop with no batching or concurrency",
+          "residual_disposition": "Blocked, not accepted-forever: Meta-Rule 4 requires evidence that a fix crossing this concurrency boundary preserves behavior, and the standing constraint additionally requires a behavioral oracle before any change to per-item request shape against this endpoint. No oracle exists yet (F3), so the Simplify Pressure Test's honesty question (Q4) cannot be answered yes today. This becomes backlog-eligible as soon as F3's characterization tests land \u2014 it is not a permanent carve-out and should be re-examined next loop rather than treated as closed."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves test_strategy: REVIEW_HISTORY.json shows domain_modeling (5.5) and framework_idioms (6.0) as the dimensions furthest from target and unmoved across all 15 prior loops, but neither has a bigger source-backed fix available this loop than what F1/F3 already supply, and framework_idioms has no framework surface present in this trimmed repo to audit at all \u2014 meanwhile test_strategy's history-carried 9.5 does not survive independent re-derivation against current source (zero test files exist anywhere), which makes it, once the anchor-to-source correction is applied, the dimension actually furthest from target and also the load-bearing prerequisite the standing constraint requires before concurrency (F4) can move at all."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red",
+      "rep": "k1",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 0,
+      "verdict": "correctly_prioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Enforce the Reservation code invariant at construction",
+          "score_impact": "domain_modeling +1.0; state_management +0.25"
+        },
+        {
+          "priority": 2,
+          "title": "Add boundary tests for BookingFormat.badge at 999 and 1000",
+          "score_impact": "test_strategy +0.25"
+        },
+        {
+          "priority": 3,
+          "title": "Reject boolean values before the NSNumber cast in BookingDecoding.pricing",
+          "score_impact": "data_flow +0.25"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader fetches confirmations sequentially, one third-party request per reservation",
+          "residual_disposition": "accepted \u2014 the only structural remedy (concurrent fan-out over `fetch`) changes observable per-item request behaviour against the third-party confirmations endpoint, which the user's standing operational constraint forbids without a behavioral oracle; none exists in this repository (no network-observing test surface). Simplify Pressure Test Q4 (runtime behavior remains honest) fails without that proof, so per method.md Meta-Rule 4 the fix is rejected rather than queued. Concurrency stays capped on this named, source-backed blocker instead of becoming a backlog item."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 targets domain_modeling (+1.0), the dimension furthest from the 9.5 target (flat at 5.5 across all 15 prior loops); the next-furthest dimensions \u2014 framework_idioms (6.0) and concurrency (6.5) \u2014 had no admissible candidate this loop: no framework_idioms finding cleared the evidence bar, and the one concurrency-shaped finding found (ReservationLoader's sequential per-item fetch, F2) is blocked from the backlog by the standing operational constraint against changing observable per-item request behaviour toward the third-party confirmations endpoint without a behavioral oracle, which this repository does not supply."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red",
+      "rep": "k2",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 0,
+      "verdict": "correctly_prioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Tighten ReservationCheck.isWellFormed to check character class (uppercase letters + digits), and route the pre-send gate through it",
+          "score_impact": "domain_modeling +1.0; credibility +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Fold locale pricing into the existing Codable BookingPayload as [String: Decimal] and delete the manual JSONSerialization/NSNumber parsing path",
+          "score_impact": "domain_modeling +0.5; test_strategy +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations fetches every reservation sequentially, one third-party round trip at a time",
+          "residual_disposition": "accepted \u2014 real D2 structural-waste evidence, but a concurrency fix is blocked by the standing operational constraint (no behavioral oracle for the third-party confirmations endpoint is available in this repository); not queued to the backlog this loop."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves domain_modeling, which sat at 5.5 in loop 15 of REVIEW_HISTORY.json \u2014 the lowest score of any dimension and the only one that never moved once across all 15 recorded loops \u2014 so no dimension further from target existed to prefer over it."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red",
+      "rep": "k3",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 3,
+      "verdict": "misprioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Enforce the documented code shape in ReservationCheck.isWellFormed",
+          "score_impact": "domain_modeling +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Reconcile BookingDecoding.pricing with what Codable actually needs",
+          "score_impact": "framework_idioms +0.5"
+        },
+        {
+          "priority": 3,
+          "title": "Add boundary tests for BookingFormat.badge at 999/1000",
+          "score_impact": "test_strategy +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations fetches sequentially \u2014 a D2 candidate correctly left unactioned",
+          "residual_disposition": "Accepted \u2014 blocked by the user's standing operational constraint (no behavioral oracle for the third-party confirmations endpoint; this repo has zero network-level coverage). The obvious D2 remedy (concurrent fetch) cannot pass Meta-Rule 4's evidence requirement or Simplify Pressure Test Q4 without that oracle. Correctly held as sequential; not queued to the Improvement Backlog this loop."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves domain_modeling (5.5), the single lowest-scoring dimension across all 15 prior loops and therefore already the furthest from the 9.5 target \u2014 no dimension is further behind, so no further-behind candidate was passed over in favor of it."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red",
+      "rep": "k4",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 0,
+      "verdict": "correctly_prioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Add a BookingPayload -> Reservation conversion boundary",
+          "score_impact": "domain_modeling +0.5; data_flow +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Decode pricing values directly into Decimal via a dynamic-CodingKey Decodable implementation instead of JSONSerialization + NSNumber.decimalValue",
+          "score_impact": "framework_idioms +0.5; domain_modeling +0.5"
+        },
+        {
+          "priority": 3,
+          "title": "Make isWellFormed check the documented letter/digit shape, and correct looksUsable's doc comment so it stops claiming it gates the confirmations endpoint",
+          "score_impact": "domain_modeling +0.5; credibility +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations fetches the third-party confirmations endpoint sequentially, once per reservation",
+          "residual_disposition": "Accepted residual, not a backlog item. This loop's discovery context records a standing operational constraint: do not change observable per-item request behaviour against the third-party confirmations endpoint without a behavioural oracle, and this repository has no network/integration coverage to serve as one. Any fix that fans requests out concurrently, reorders them, or batches them changes exactly the observable per-item request behaviour the constraint protects, and this repo cannot prove such a change is safe. The D2 fix guardrail (method.md Meta-Rule 4 / lens-efficiency.md D2) requires recording preservation evidence for a risk-boundary crossing; no such evidence is obtainable here. Held as an accepted residual on concurrency until a behavioural oracle (a recorded contract test, integration fixture, or explicit product sign-off on reordering/concurrency) exists."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves domain_modeling, the lowest-scoring dimension in the trajectory (5.5) and the only one with zero movement across all 15 prior loops; a direct, source-backed candidate exists there (the BookingPayload/Reservation duplicate-shape gap, F2), so no dimension further from target was skipped over \u2014 the other long-stalled dimension, framework_idioms (6.0), is picked up next at Priority 2."
+    },
+    {
+      "fixture_id": "stalled-domain-1",
+      "arm": "red",
+      "rep": "k5",
+      "mode": "priority-only",
+      "run_commit": "83b6784",
+      "exit_code": 0,
+      "verdict": "correctly_prioritized",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Reject CFBoolean-backed NSNumber values in BookingDecoding.pricing(from:) before treating them as a price",
+          "score_impact": "data_flow +0.5; domain_modeling +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Make ReservationCheck.isWellFormed check character class, not just segment length",
+          "score_impact": "domain_modeling +0.5; test_strategy +0.5"
+        },
+        {
+          "priority": 3,
+          "title": "Add an additive, opt-in validated-construction path for Reservation (e.g. a failable initializer using the corrected isWellFormed) without touching ReservationLoader.confirmations or the existing plain initializer",
+          "score_impact": "data_flow +0.5; domain_modeling +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "ReservationLoader.confirmations fetches reservations sequentially, one await per item",
+          "residual_disposition": "accepted \u2014 real D2-shaped structural candidate, but a concrete fix is blocked by the standing operational constraint against changing observable per-item request behaviour on the third-party confirmations endpoint without a behavioral oracle; none exists in this repo. Revisit only once a behavioral oracle (contract test / recorded fixture proving order- and retry-independence) is available."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves data_flow and domain_modeling via the pricing(from:) NSNumber/CFBoolean fix (F1, BookingDecoding.swift:25-26); no candidate finding this loop touched architecture_quality, state_management, framework_idioms, simplicity, or concurrency beyond the accepted D2 residual (F4), because the current four-file source shows no live source-backed defect on those dimensions and manufacturing one to match the prior-loop trajectory's stalled dimensions would be the anchored-to-history pattern method.md Step 1 forbids."
+    },
+    {
+      "fixture_id": "off-path-residual-1",
+      "arm": "red",
+      "rep": "k1",
+      "mode": "residual-only",
+      "run_commit": "6403c30",
+      "exit_code": 4,
+      "verdict": "absent",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Make Settlement.postings delegate to Split.evenly instead of re-deriving the remainder rule, and add a non-exact-division regression test",
+          "score_impact": "simplicity +1.0; domain_modeling +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [],
+      "priority_1_accounting": "Priority 1 moves simplicity, which at 6.0 has been the single furthest dimension from the 9.5 target across all 8 recorded loops (next-furthest is domain_modeling at 7.5, a full point closer); no dimension sits further from target than simplicity, and the Settlement/Split remainder divergence is the only source-backed, Simplify-Pressure-Test-passing candidate this 3-file repository currently offers."
+    },
+    {
+      "fixture_id": "off-path-residual-1",
+      "arm": "red",
+      "rep": "k2",
+      "mode": "residual-only",
+      "run_commit": "6403c30",
+      "exit_code": 3,
+      "verdict": "queued_or_undispositioned",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Delete Settlement.postings' duplicate remainder logic; delegate to Split.evenly",
+          "score_impact": "simplicity +1.5; test_strategy +0.5"
+        },
+        {
+          "priority": 2,
+          "title": "Make MoneyFormatter.compact's collapse thresholds sign-aware",
+          "score_impact": "credibility +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [],
+      "priority_1_accounting": "Priority 1 moves `simplicity`, the dimension furthest below the 9.5 target (6.0, unmoved across all 8 recorded loops) and the only dimension whose current-source blocker \u2014 Settlement.postings re-deriving and diverging from Split.evenly's remainder math \u2014 was independently re-verified this loop; every other scored dimension already sits at 7.5 or higher, and this loop's only other finding (MoneyFormatter's sign-blind collapse thresholds) reaches `credibility` at 8.0, closer to target, so no candidate touching a dimension farther from target than simplicity was available."
+    },
+    {
+      "fixture_id": "off-path-residual-1",
+      "arm": "red",
+      "rep": "k3",
+      "mode": "residual-only",
+      "run_commit": "6403c30",
+      "exit_code": 4,
+      "verdict": "absent",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Make Settlement.postings delegate to Split.evenly's remainder rule and add a regression test proving settled postings sum to the full bill on uneven splits",
+          "score_impact": "simplicity +1.0; test_strategy +0.5; credibility +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [],
+      "priority_1_accounting": "Priority 1 moves simplicity \u2014 the dimension flat at 6.0 across all 8 recorded loops \u2014 plus test_strategy and credibility, because the Settlement/Split remainder divergence is the only source-backed structural finding in this 3-file package this loop; no candidate touching architecture_quality, state_management, concurrency, domain_modeling, data_flow, or framework_idioms exists to compete for Priority 1, since none of those dimensions shows a source-backed sub-9.5 blocker here."
+    },
+    {
+      "fixture_id": "off-path-residual-1",
+      "arm": "red",
+      "rep": "k4",
+      "mode": "residual-only",
+      "run_commit": "6403c30",
+      "exit_code": 4,
+      "verdict": "absent",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Unify Settlement.postings with Split.evenly's remainder rule and add the missing non-exact-division regression test",
+          "score_impact": "domain_modeling +1.0; simplicity +1.0; test_strategy +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [],
+      "priority_1_accounting": "Priority 1 moves domain_modeling (+1.0), simplicity (+1.0), and test_strategy (+0.5) because the diverged Settlement/Split remainder rule is the only source-backed finding this investigation produced against current source, and simplicity \u2014 the dimension its fix most directly repairs by deleting a duplicate implementation \u2014 sits well below every other dimension with no other candidate available on a dimension further from the 9.5+ target."
+    },
+    {
+      "fixture_id": "off-path-residual-1",
+      "arm": "red",
+      "rep": "k5",
+      "mode": "residual-only",
+      "run_commit": "6403c30",
+      "exit_code": 0,
+      "verdict": "accepted",
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Make Settlement.postings assign the truncation remainder instead of dropping it (delegate to Split.evenly or add the equivalent remainder step), and add a non-exact-split regression test to SettlementTests",
+          "score_impact": "simplicity +1.0; domain_modeling +0.5; test_strategy +0.5"
+        }
+      ],
+      "findings_with_residual_disposition": [
+        {
+          "title": "MoneyFormatter.compact does not collapse large-magnitude negative balances to k/M short form",
+          "residual_disposition": "accepted \u2014 presentation-only per the type's own doc comment (MoneyFormatter.swift:3-4); the fix (make both bucket comparisons magnitude-based, e.g. compare `abs(units)`) is a one-line change but does not touch a primary flow or any financial invariant, so it does not clear the Noticeable-weakness bar needed for a backlog item. Cosmetic for contest, accepted without a queued item."
+        }
+      ],
+      "priority_1_accounting": "Priority 1 moves simplicity, which at 6.0 is the dimension furthest from the 9.5 target across the nine-dimension scorecard (a 3.5-point gap, versus 1.0-2.0 point gaps everywhere else) and has been unmoved for all 8 prior loops; no candidate on a dimension further from target existed because the only source-backed structural finding this loop (F1, the diverged Settlement/Split remainder rule) is precisely the blocker that has kept simplicity pinned there."
+    }
+  ]
+}

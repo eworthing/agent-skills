@@ -42,6 +42,7 @@ from _canon import load_canon
 
 FIXTURES = SKILL_ROOT / "evals" / "priority-fixtures"
 MANIFEST = SKILL_ROOT / "evals" / "priority_replay_baseline.json"
+REPLICATION = SKILL_ROOT / "evals" / "priority_replay_replication.json"
 GRADER = HERE / "loop_replay_grade.py"
 
 FIXTURE_KINDS = {"rank", "residual_disposition"}
@@ -254,6 +255,31 @@ def main() -> int:
                         f"{name}: status=measured but the {arm!r} arm is null/absent — "
                         "a half-measured fixture stays baseline_unmeasured",
                     )
+
+    # 7) the replication file must agree with the summary it backs. A recorded arm
+    # whose raw reps say something else is worse than no raw reps at all, and these
+    # arms are NEGATIVE results — the only way to disagree with the reading is to
+    # re-grade the reps, so the counts have to be checkable.
+    if REPLICATION.is_file():
+        rep = json.loads(REPLICATION.read_text(encoding="utf-8"))
+        attempts = rep.get("attempts", [])
+        for name, entry in registered.items():
+            obs = (entry.get("baseline_observed") or {}).get("red")
+            if not isinstance(obs, dict) or "reps" not in obs:
+                continue
+            got = sum(1 for a in attempts if a.get("fixture_id") == name and a.get("arm") == "red")
+            check(
+                got == obs["reps"],
+                f"{name}: baseline_observed.red records {obs['reps']} reps but "
+                f"priority_replay_replication.json holds {got} for arm 'red'",
+            )
+    else:
+        for name, entry in registered.items():
+            if isinstance((entry.get("baseline_observed") or {}).get("red"), dict):
+                failures.append(
+                    f"{name}: an arm is recorded but priority_replay_replication.json is "
+                    "missing — a measured arm keeps its raw reps"
+                )
 
     # 5) grader discrimination (only meaningful once the reference fixture exists)
     if "stalled-domain-1" in on_disk:
