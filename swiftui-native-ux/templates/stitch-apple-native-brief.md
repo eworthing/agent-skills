@@ -6,7 +6,7 @@ Substitute the `{{PLACEHOLDER}}` tokens before sending to Stitch. The format spe
 Create a high-fidelity native iOS/iPadOS app screen concept.
 
 Platform:
-- Target iOS 26 and iPadOS 26.
+- Target iOS 27 and iPadOS 27.
 - Design for native SwiftUI implementation.
 - Use Apple-native layout, interaction, accessibility, and navigation patterns.
 

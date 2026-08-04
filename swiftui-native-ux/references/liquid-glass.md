@@ -165,7 +165,7 @@ Risky uses:
 
 ## Minimal Examples
 
-Scope: these snippets show *where* glass belongs in iOS 26 SwiftUI. For full API surface (`GlassEffectContainer`, `glassEffectID` morph, tint/interactive variants, layer-order rules), defer to `swiftui-expert-skill` `references/liquid-glass.md`.
+Scope: these snippets show *where* glass belongs in iOS 27 SwiftUI. For full API surface (`GlassEffectContainer`, `glassEffectID` morph, tint/interactive variants, layer-order rules), defer to `swiftui-expert-skill` `references/liquid-glass.md`.
 
 ### Floating Toolbar / Control Bar
 
