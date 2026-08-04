@@ -1,11 +1,71 @@
 # Critic Method — convergence passes + guardrails (Step 1, Critic only)
 
-The Residual Accounting Pass, the Adversarial Pass on Accepted Residuals, and the State/Domain, Concurrency, and Test guardrails. Used by the **Critic** (Step 1, Method step 10) to decide HALT vs CONTINUE and to guard scoring. Carved out of [method.md](method.md) so the Step-3 implementation reviewer — which checks a diff against the Simplify Pressure Test + Evidence Chain + Meta-Rule 4 (all kept in [method.md](method.md)) and does **not** converge or score — does not carry it. The Critic reads both files per the `SKILL.md` Reference Load Matrix.
+The Backlog Prioritization Pass, the Stalled-Dimension Sweep, the Residual Accounting Pass, the Adversarial Pass on Accepted Residuals, and the State/Domain, Concurrency, and Test guardrails. Used by the **Critic** (Step 1, Method step 10) to decide HALT vs CONTINUE and to guard scoring. Carved out of [method.md](method.md) so the Step-3 implementation reviewer — which checks a diff against the Simplify Pressure Test + Evidence Chain + Meta-Rule 4 (all kept in [method.md](method.md)) and does **not** converge or score — does not carry it. The Critic reads both files per the `SKILL.md` Reference Load Matrix.
+
+## Backlog Prioritization Pass
+
+Run before the Residual Accounting Pass. It assigns `priority`, and nothing downstream
+corrects it: the Step-2 tiebreak fires only on a *shared* priority, and the Actor takes
+`priority: 1` verbatim.
+
+Rank by **expected marginal contest gain**, not confidence of completion. The two
+invert routinely — the cheapest, most certain item is usually the one on the dimension
+already nearest target — and always taking it ratchets one dimension to 9.5 while the
+rest stand still.
+
+0. **Actionability.** An item blocked by a recorded user constraint or a product
+   decision is not silently demoted: rank it on merit, and if it would be Priority 1,
+   name the blocker in the accounting sentence and take the next actionable item.
+   Escalate to `user_decision` only when it is the *sole* candidate — on a real
+   15-loop run, halting at the first blocked top-rank fires at loop 4 and forfeits
+   eleven loops of work. The failure to prevent is the opposite: carrying a blocked
+   top-ranked item at Priority 2 for fifteen loops without ever naming it.
+1. **Distance to target.** +0.5 at 5.5 buys progress toward an anchor; +0.5 at 9.0
+   buys a residual. Not the same gain.
+2. **Stall.** Consecutive prior loops with `delta != "UP"`, from `REVIEW_HISTORY.json`.
+   A dimension unmoved for three or more loops is not being investigated, whatever its
+   scorecard reason says. Break near-ties toward it.
+3. **Severity** ([architecture-rubric.md § Severity Anchors](architecture-rubric.md#severity-anchors)).
+4. **Honesty plus simplicity, then runtime safety** — at equal gain, subtractive beats
+   additive (Meta-Rule 5).
+5. **Anti-overengineering, then Leverage and Locality.**
+
+Rank by distance, never by dimension identity: the same test-coverage item correctly
+wins at 3.0 and correctly loses at 9.5.
+
+**Priority-1 accounting** (one sentence, Builder Notes). Name the dimension Priority 1
+moves and why no candidate further from target was available — the candidate you
+rejected and the SPT question it failed, or that the sweep found none, or the blocker
+under criterion 0. Accounting, not a quota: "the only `domain_modeling` candidate
+fails SPT Q1" is complete. Priority 1 landing on the nearest-target dimension for
+three consecutive loops without that sentence is the ratchet, and it is a defect in
+this pass rather than in the individual choices, each of which was defensible.
+
+## Stalled-Dimension Sweep
+
+Run before the Residual Accounting Pass, from loop 4 on. Trigger: any dimension below
+9.5 whose `delta` has been `SAME` for three or more loops. A dimension parked at 9.5
+on an accepted residual is supposed to be still.
+
+One Builder Notes line per triggered dimension — either **a named candidate**
+(`file:line` plus the claim, emitted as a finding through the normal evidence chain,
+so Builder Notes carries only the ID and G11 holds), or **an explicit clean** naming
+the source surface you actually walked and why nothing on it passes the Simplify
+Pressure Test. "Walked `Domain/` (7 types); every field that could carry a
+construction-time invariant already does" is a clean; "nothing found" is fake-clean
+reward.
+
+Does NOT obligate net-new findings — coverage check, not finding-fishing; G3 evidence
+chain still required. Same contract as [method.md Step 1.7](method.md#method-10-steps-in-order).
+No quota, and a dimension whose ceiling is honest should collect the same clean every
+loop. The output is a record of where the loop looked, so a `SAME` running ten loops
+is either a decision someone made or a hole someone can see.
 
 ## Residual Accounting Pass
 
-Run this after candidate findings are accepted, rejected, or downgraded, and
-before choosing `HALT_SUCCESS`, `HALT_STAGNATION`, or `HALT_LOOP_CAP`. The cap is a
+Run this after candidate findings are accepted, rejected, or downgraded, the
+Backlog Prioritization Pass has assigned priority, the Stalled-Dimension Sweep has
+run, and before choosing `HALT_SUCCESS`, `HALT_STAGNATION`, or `HALT_LOOP_CAP`. The cap is a
 terminal too: when the loop ends with an empty backlog and any sub-9.5 dimension, run
 this pass before emitting `HALT_LOOP_CAP`, exactly as for `no_backlog` (enforced by G37).
 

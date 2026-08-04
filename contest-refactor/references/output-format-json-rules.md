@@ -28,6 +28,7 @@ Field rules:
 - `<green|red|n/a>` — test status: `green` if Step 1 build/tests passed, `red` if failed (build-failure path), `n/a` for HALT_DRY_RUN (Step 1 ran but no claim emitted).
 - `<approved|rejected|conditional|n/a>` — `implementation_review.verdict` from the loop. `n/a` for HALT_DRY_RUN / HALT_SUCCESS / HALT_LOOP_CAP / HALT_STAGNATION (no refactor executed).
 - `<duration>` — wall-clock seconds from Step 1 start to Step 3 step 11 commit (or to halt emit, when no commit). Integer.
+- `stalled: <dim> <n>` — **optional trailing field.** The dimension with the largest `loops_since_up` (consecutive prior loops with `delta != "UP"`, computed from `REVIEW_HISTORY.json`) when that count is >= 3; omitted otherwise. Ties alphabetical. Derived, never stored — persisting it would buy a recompute-vs-stored integrity gate and nothing else. This is the only place a ratchet becomes visible *during* a 13-28 minute loop, while the run is still interruptible; by the cap handoff it is history.
 
 ### Variants
 

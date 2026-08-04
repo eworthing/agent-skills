@@ -139,9 +139,9 @@ Each Coupling & Leakage finding tags the dependency category. Determines correct
 
 ## Severity Anchors
 
-Use these anchors to assign finding severity. Drives backlog priority and verdict.
+Use these anchors to assign finding severity. Feeds criterion 3 of the [Backlog Prioritization Pass](method-critic.md#backlog-prioritization-pass), and the verdict.
 
-- **Likely disqualifier** — A core architectural property the contest rewards is broken at runtime AND the harm is reachable from a primary user flow. Examples: multi-writer authority over a primary domain concern; racing async flows that can corrupt user-visible state; durable state written from multiple places with no owner; domain-policy framework leakage propagating through the codebase; **test absence around central mutable runtime behavior with realistic regression risk** (e.g. reducer/engine, persistence writer, cancellation logic, navigation owner). Untested helper code or off-path utilities are not disqualifying — keep this severity for the modules whose breakage would change product behavior on a primary flow.
+- **Likely disqualifier** — A core architectural property the contest rewards is broken at runtime AND the harm is reachable from a primary user flow. Examples: multi-writer authority over a primary domain concern; racing async flows that can corrupt user-visible state; durable state written from multiple places with no owner; domain-policy framework leakage propagating through the codebase; test absence around central mutable runtime behavior with realistic regression risk (e.g. reducer/engine, persistence writer, cancellation logic, navigation owner). Untested helper code or off-path utilities are not disqualifying — keep this severity for the modules whose breakage would change product behavior on a primary flow.
 - **Serious deduction** — A real ownership, Seam, state, data-flow, or concurrency hazard exists in a meaningful Module, but it is contained or local. A reasonable judge could still rank the entry highly with this present.
 - **Noticeable weakness** — A source-backed concern that does not threaten contest standing on its own but reduces credibility, Leverage, Locality, or regression resistance when combined with other issues.
 - **Cosmetic for contest** — Real but minor. Worth fixing, but it will not affect verdict or score unless part of a larger pattern.

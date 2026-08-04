@@ -120,6 +120,7 @@ polishes the surface without changing structure. Forcing more loops would
 over-engineer without raising scores.
 
 Current scorecard: <list dimensions and scores>
+Never moved: <dimensions with loops_since_up >= 3, each with its count — e.g. "domain_modeling (10 loops), framework_idioms (10 loops)" — or "none">
 
 Remaining backlog (carried forward):
   - <Priority 1 finding ID + title> — <one-line why it stopped me>
@@ -331,6 +332,7 @@ Loop N ended at HALT_LOOP_CAP — I made <N> loops, the configured maximum, and 
 backlog still has items I didn't reach.
 
 Progress so far: <delta from loop 1 scorecard to loop N scorecard, summarized>
+Never moved: <dimensions with loops_since_up >= 3, each with its count — e.g. "domain_modeling (10 loops), framework_idioms (10 loops)" — or "none">
 
 Current Priority 1 (carried forward):
   - F<id>: <title> — <one-line why>
@@ -354,6 +356,7 @@ named structural ceiling, not an open finding. This is convergence, not budget
 exhaustion.
 
 Progress so far: <delta from loop 1 scorecard to loop N scorecard, summarized>
+Never moved: <dimensions with loops_since_up >= 3, each with its count — e.g. "domain_modeling (10 loops), framework_idioms (10 loops)" — or "none">
 
 Why not HALT_SUCCESS: <name the structural ceiling holding the score below 9.5 —
   e.g. "domain_modeling 6.5: approx_source is stringly-typed; no construction-time
