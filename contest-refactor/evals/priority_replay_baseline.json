@@ -1,0 +1,39 @@
+{
+  "layer": "1P",
+  "name": "prioritization probe harness",
+  "description": "Tier-1P: a Critic-only probe that measures RANK, not detection. The existing loop-replay grader answers 'was the planted defect found?' — set membership over findings[]. This answers 'given several simultaneously valid candidates, which one did the Critic put at Priority 1?' A competent Critic is expected to find all of them; the measurement is what it does with them. Runs Step 1 only, so it costs roughly a third of a full loop; grading is deterministic via scripts/loop_replay_grade.py --priority-only and runs no model.",
+  "prereg": {
+    "motivation": "A real 15-loop run (steamgriddb-xbox, 2026-08) spent 6 loops on test coverage while domain_modeling and framework_idioms never moved once. Every individual choice was defensible; the aggregate was a cheap-win ratchet. Nothing in the committed suite could see it, because no gate or grader reads rank.",
+    "grader": "scripts/loop_replay_grade.py --priority-only",
+    "fixtures_dir": "evals/priority-fixtures",
+    "output_contract": "{\"findings\": [...], \"backlog\": [{priority, title, score_impact}]} — score_impact must be G39-shaped (`<canon_dim_id> <signed delta>`, ';'-joined) or the item is unattributable and the probe is ungradable. This is why G39 landed before the RED arm.",
+    "discrimination": "by dimension, not by file text: the four candidates sit on four different dimensions by construction",
+    "decision_rule": "Reused verbatim from evals/loop-fixtures/DETECTION-PROBE.md — improvement iff treat prioritizes correctly in >=4/5 reps AND control in <=2/5, with zero restraint failures in treat. Overlapping distributions are lateral; do not ship on lateral.",
+    "arms": {
+      "red": "skill prose at the commit before the M1..M6 behavioral change, with G39 already landed so both arms emit attributable score_impact",
+      "green": "skill prose after M1 (mutation-clause third branch) + M3 (Backlog Prioritization Pass) + M4 (Stalled-Dimension Sweep)"
+    },
+    "reps_per_arm": 5,
+    "restraint_tolerance": 0,
+    "cost_estimate": "~35-55k tokens/rep; 5 reps x 2 arms ~= 400-550k total, roughly 1.5-2 full loops"
+  },
+  "invariants": [
+    "Every evals/priority-fixtures/<id>/ directory is registered here — no silent exclusion.",
+    "Each fixture ships codebase/, seed/REVIEW_HISTORY.json and expected.toml.",
+    "expected_priority_1_dimension, decoy_dimension, restraint_dimension and blocked_dimension are four DISTINCT canon scorecard ids — a fixture whose candidates share a dimension cannot discriminate.",
+    "status is baseline_unmeasured until both arms are recorded; measured requires non-null baseline_observed with both arms.",
+    "expected_baseline records the pre-registered hypothesis and is never rewritten after measuring; baseline_observed records what actually happened."
+  ],
+  "fixtures": [
+    {
+      "id": "stalled-domain-1",
+      "status": "baseline_unmeasured",
+      "expected_baseline": {
+        "red": "misprioritized — ranks the decoy (test_strategy, already at 9.5) first. The Step-8 mutation clause forces the off-path badge() boundary to a Noticeable-or-worse finding with no clean exit, and nothing in the selection path prefers a dimension further from target or longer stalled.",
+        "green": "correctly prioritized — target (domain_modeling, distance 4.0, stalled 15 loops) first; decoy demoted to an accepted residual at 9.5 by M1's off-primary-flow branch; blocked concurrency item named in the Priority-1 accounting rather than silently skipped."
+      },
+      "baseline_observed": null,
+      "notes": "Stall signature transcribed verbatim from the real 15-loop run; only finding titles and paths were rewritten for the synthetic BookingKit codebase. The discrimination margin is deliberately tight: the target beats the restraint control by 0.5 distance at equal stall (both 15), so a pass reflects judgment rather than arithmetic. The restraint control is the strongest available trap — second on the numbers and equally overdue, but its two decoding idioms coexist for a documented platform reason, so it fails SPT at Q1/Q2."
+      }
+  ]
+}
