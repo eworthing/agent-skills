@@ -13,7 +13,6 @@ macOS.
 - [tvOS-F04 — Animation: Focus Settle Delay](#tvos-f04--animation-focus-settle-delay)
 - [tvOS-F05 — Scroll: Focus-Driven Scrolling](#tvos-f05--scroll-focus-driven-scrolling)
 - [tvOS-F06 — Scroll: `.viewAligned` over `.paging`](#tvos-f06--scroll-viewaligned-over-paging)
-- [tvOS-F07 — Animation: Simulator vs Hardware](#tvos-f07--animation-simulator-vs-hardware)
 - [Motion Tokens](#motion-tokens)
 - [Cross-References](#cross-references)
 
@@ -173,13 +172,6 @@ ScrollView(.horizontal) {
 .scrollTargetBehavior(.viewAligned)   // preferred on tvOS
 ```
 
-## tvOS-F07 — Animation: Simulator vs Hardware
-
-The tvOS Simulator does **not** replicate focus animations faithfully —
-the hover effect curve, perspective lift, and specular shine all behave
-differently than on Apple TV hardware. Always verify focus animations on
-real hardware before declaring an animation issue solved.
-
 ## Motion Tokens
 
 Use the motion tokens from the `swiftui-design-tokens` skill rather than
@@ -198,3 +190,8 @@ reduce-motion alternatives live there.
   conventions; `AccessibilityMarkerView` for tvOS root markers
 - `swiftui-design-tokens` `references/motion-tokens.md` —
   platform-branched spring tokens and reduce-motion alternatives
+- `swift-focusengine-pro` (community) `references/debugging.md` —
+  Simulator-vs-hardware focus divergence, `UIFocusDebugger`,
+  `_whyIsThisViewNotFocusable`, `-UIFocusLoggingEnabled`. Focus
+  animations must be verified on real Apple TV hardware; that skill owns
+  the divergence list and the diagnostic tooling.

@@ -16,7 +16,7 @@ Five worked examples of Apple-native Stitch briefs. Use as patterns when filling
 Create a high-fidelity native iOS settings screen concept.
 
 Platform:
-Target iOS 26. Design for native SwiftUI implementation.
+Target iOS 27. Design for native SwiftUI implementation.
 
 Screen:
 Account Settings.
@@ -63,7 +63,7 @@ Generate 3 variants:
 Create a high-fidelity native iPadOS app screen concept.
 
 Platform:
-Target iPadOS 26. Design for native SwiftUI implementation.
+Target iPadOS 27. Design for native SwiftUI implementation.
 
 Screen:
 Document Library.
@@ -116,7 +116,7 @@ Generate 3 variants:
 Create a high-fidelity native iOS playback control screen concept.
 
 Platform:
-Target iOS 26. Design for native SwiftUI implementation.
+Target iOS 27. Design for native SwiftUI implementation.
 
 Screen:
 Live Playback Controls.
@@ -170,7 +170,7 @@ Generate 3 variants:
 Create a high-fidelity native iOS app screen concept.
 
 Platform:
-Target iOS 26. Design for native SwiftUI implementation.
+Target iOS 27. Design for native SwiftUI implementation.
 
 Screen:
 Empty Project Library.
@@ -221,7 +221,7 @@ Generate 3 variants:
 Create a high-fidelity native iOS/iPadOS app screen concept.
 
 Platform:
-Target iOS 26 and iPadOS 26. Design for native SwiftUI implementation.
+Target iOS 27 and iPadOS 27. Design for native SwiftUI implementation.
 
 Screen:
 AI-assisted document review.

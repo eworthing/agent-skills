@@ -201,7 +201,7 @@ Reject:
 | ---: | ----------------------------------------- | -------------------------- | ---------------------------------------------------------------- | --------------------------------------------------- | ---------: |
 |    1 | Apple HIG                                 | Apple-native               | Platform conventions, navigation, accessibility, materials       | Sometimes prescriptive without explaining tradeoffs |          5 |
 |    2 | Apple Developer docs                      | Apple-native/API           | SwiftUI APIs, Liquid Glass, Observation, SwiftData, navigation   | Docs can require current SDK context                |          5 |
-|    3 | WWDC design sessions                      | Apple-native/current       | iOS 26 design system, Liquid Glass, controls                     | Promotional framing                                 |          5 |
+|    3 | WWDC design sessions                      | Apple-native/current       | iOS 27 design system, Liquid Glass, controls                     | Promotional framing                                 |          5 |
 |    4 | Apple SwiftUI sample code                 | Apple-native/API           | Navigation/state structure, split-view patterns                  | Sample scope may be narrow                          |          5 |
 |    5 | UICoder / CrowdGenUI / AlignUI            | AI/UI research             | Why LLM UI output needs strong preference grounding              | Does not cover every coding-agent workflow          |          5 |
 |    6 | Nielsen Norman Group / Nielsen heuristics | UX critique                | Usability heuristics, legibility skepticism, critique vocabulary | Conservative bias                                   |          5 |
@@ -301,7 +301,7 @@ GLASS001,liquid_glass,text over material,opaque or tinted readable surface,thin 
 
 Do not say:
 
-- macOS 27 is current
+- macOS 26 Tahoe is current
 - Anderson/Shah/Kreminski proves LLMs generate generic UI
 - NavigationSplitView is mandatory for all iPad apps
 - ObservableObject is forbidden
@@ -311,7 +311,7 @@ Do not say:
 
 Say:
 
-- macOS 26 Tahoe is current baseline
+- macOS 27 is current baseline; macOS 26 Tahoe is the prior generation
 - Anderson/Shah/Kreminski supports broader homogenization
 - use NavigationSplitView for collection/detail and hierarchy
 - prefer Observation for new UI state

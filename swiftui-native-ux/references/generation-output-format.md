@@ -47,7 +47,7 @@ Then generate code.
 
 ## Default Code Assumptions
 
-For new iOS 26 / iPadOS 26 code, prefer:
+For new iOS 27 / iPadOS 27 code, prefer:
 
 - SwiftUI
 - Observation

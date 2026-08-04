@@ -5,8 +5,8 @@ description: >-
   accessibility deltas, and design-regression checks. Use when building
   or debugging tvOS focus behavior (settle delays, `.focusable()`
   container blocking children, focus identity loss across redraws,
-  `ScrollView` with no focusable children, `.viewAligned` vs `.paging`,
-  Simulator vs hardware divergence), applying tvOS accessibility patterns
+  `ScrollView` with no focusable children, `.viewAligned` vs `.paging`),
+  applying tvOS accessibility patterns
   (`.onExitCommand` Menu dismissal, destructive `confirmationDialog` /
   `alert` default focus — severity-1 on tvOS, VoiceOver traversal), or
   auditing tvOS design regressions (modal focus containment leakage,
@@ -47,6 +47,7 @@ Owns three tvOS topic areas not covered by the authoritative community
 | Drag-and-drop (tvOS gating) | `swiftui-drag-drop` |
 | File export (tvOS gating) | `swiftui-file-export` |
 | UI testing patterns + `AccessibilityMarkerView` + identifier conventions + tvOS XCUITest divergence | `xctest-ui-testing` |
+| Focus diagnostics (`UIFocusDebugger`, `_whyIsThisViewNotFocusable`, Simulator-vs-hardware divergence), UIKit focus APIs (`UIFocusGuide`, `preferredFocusEnvironments`), focus on non-tvOS platforms | `swift-focusengine-pro` (community) |
 
 ## Headline Rules
 
@@ -64,7 +65,6 @@ Severity 1 = data loss or focus break; 2 = UX regression; 3 = polish.
 - **tvOS-F04 (2).** Token-based settle delay for focus-driven animations.
 - **tvOS-F05 (1).** `ScrollView` needs focusable children to be scrollable.
 - **tvOS-F06 (3).** Prefer `.viewAligned` over `.paging`.
-- **tvOS-F07 (2).** Verify focus animations on real Apple TV hardware.
 
 ### Accessibility — [references/accessibility.md](references/accessibility.md)
 
@@ -89,7 +89,6 @@ Severity 1 = data loss or focus break; 2 = UX regression; 3 = polish.
 - [ ] tvOS-F04 — Long focus-change animations use token-based settle delay
 - [ ] tvOS-F05 — All `ScrollView` content contains focusable children
 - [ ] tvOS-F06 — `.viewAligned` preferred over `.paging`
-- [ ] tvOS-F07 — Focus animations verified on real Apple TV hardware
 
 ### Accessibility
 - [ ] tvOS-A01 — Modals dismiss via `.onExitCommand { dismiss() }`; visible Close buttons gated `#if !os(tvOS)`
@@ -107,7 +106,7 @@ Severity 1 = data loss or focus break; 2 = UX regression; 3 = polish.
 ## References
 
 - [references/rules.md](references/rules.md) — Full rule index + per-rule *Bypass / N/A* contexts (source of truth)
-- [references/focus-engine.md](references/focus-engine.md) — Focus engine patterns: container `.focusable()` rule, POD + `@FocusState`, hover conflict, settle delay, focus-driven scroll, `.viewAligned` vs `.paging`, simulator vs hardware
+- [references/focus-engine.md](references/focus-engine.md) — Focus engine patterns: container `.focusable()` rule, POD + `@FocusState`, hover conflict, settle delay, focus-driven scroll, `.viewAligned` vs `.paging`
 - [references/accessibility.md](references/accessibility.md) — Menu dismissal, destructive dialog default focus (severity-1), cross-platform dismiss pattern, VoiceOver-on-tvOS rules
 - [references/design-regressions.md](references/design-regressions.md) — Glass-on-glass anti-pattern, `.buttonStyle(.plain)` focus-ring issue, modal focus containment, manual focus reassertion anti-pattern, tvOS focus-traversal QA checklist
 - [evals/rules.json](evals/rules.json) — Machine-readable rule index for agent ingestion

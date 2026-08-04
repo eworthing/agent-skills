@@ -107,6 +107,39 @@ focus containment (modals via `.fullScreenCover()`, scoped
 [references/design-regressions.md](design-regressions.md#anti-pattern-manual-focus-reassertion-tvos-a03)
 for the full anti-pattern callout.
 
+#### Reassertion vs. deferred restoration
+
+These look alike and are not the same thing. The predicate is **whether
+the target view existed when the engine placed focus.**
+
+| | Reassertion (prohibited) | Deferred restoration (not this rule) |
+|---|---|---|
+| Target view | Already in the hierarchy | Created by the same state change |
+| Engine's placement | Correct, being overridden | Never had a valid answer — hierarchy was rebuilt |
+| Shape | Timer/delay chosen to "win" a race | One runloop tick, because a synchronous set is dropped |
+
+```swift
+// PROHIBITED (tvOS-A03) — the engine already placed focus; this overrides it
+.onAppear {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        isPrimaryFocused = true
+    }
+}
+
+// NOT reassertion — a hand-rolled ZStack overlay rebuilds the screen on
+// dismiss, so the target button does not exist yet and a synchronous set
+// is dropped. One tick, no delay value.
+Button("Close") {
+    showingOverlay = false
+    Task { @MainActor in focusedAction = .readFullStory }
+}
+```
+
+Prefer `.fullScreenCover()` (tvOS-D01) over a hand-rolled `ZStack`
+overlay — it restores focus to the presenting view automatically, so the
+second case never arises. If you find yourself reaching for a delay
+*value*, you are in the first case.
+
 ### tvOS-A04 — Hide Non-Actionable Focus Helpers from VoiceOver
 
 A zero-size `Rectangle().fill(.clear)` used purely to capture focus
