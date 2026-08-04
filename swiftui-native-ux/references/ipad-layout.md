@@ -97,6 +97,12 @@ Use `TabView` when:
 - there is no persistent collection/detail relationship
 - the iPhone and iPad mental model should stay aligned
 
+Reach for `.tabViewStyle(.sidebarAdaptable)` (iPadOS 18+) in this case. The tab
+bar floats at the top on iPad and becomes a sidebar at regular width, so one
+declaration serves both size classes; group related destinations with
+`TabSection`. This is Apple's own iPad navigation direction — a `TabView` root
+is not a compact-device compromise carried over from iPhone.
+
 Reject forced `NavigationSplitView` when tabs better match the product.
 
 ## Inspectors
