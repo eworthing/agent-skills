@@ -34,6 +34,11 @@
 set -u
 
 ROOT="${1:-.}"
+# Normalize Windows separators before anything downstream sees the path. Git Bash
+# accepts `C:/x` wherever it accepts `C:\x`, but `awk -v root="$ROOT/"` processes
+# escape sequences in the value, so `C:\Users\jerem` arrives as `C:Usersjerem` and
+# emits `escape sequence \U treated as plain U`. No-op on POSIX paths.
+ROOT="${ROOT//\\//}"
 ROOT="${ROOT%/}"
 PRUNE_RE='/(\.build|\.git|node_modules|Pods|vendor|DerivedData)(/|$)'
 CAP=200
@@ -137,7 +142,16 @@ fi
 
 while IFS= read -r rawline; do
   [ -z "$rawline" ] && continue
-  ef="${rawline%%:*}"
+  # `grep -nH` yields FILE:LINE:CONTENT. On Windows FILE carries a drive letter
+  # (`C:/Users/...`), whose colon reads as the FILE/LINE separator — `ef` became
+  # `C` and every downstream `awk ... "$ef"` died with "cannot open file `C'",
+  # leaving the audit silently reporting "no domain enums found". Peel the drive
+  # prefix before splitting, then restore it. No-op on POSIX paths.
+  drive=""
+  case "$rawline" in
+    [A-Za-z]:[/\\]*) drive="${rawline%%:*}:"; rawline="${rawline#??}" ;;
+  esac
+  ef="${drive}${rawline%%:*}"
   rest="${rawline#*:}"
   el="${rest%%:*}"
   content="${rest#*:}"

@@ -29,6 +29,20 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_ROOT = SCRIPT_DIR.parent
 SKELETON = SKILL_ROOT / "assets" / "report-skeleton.html"
 
+
+def _force_utf8_stdout() -> None:
+    """Emit UTF-8 regardless of the console code page.
+
+    The report renders score deltas with `Δ`; on Windows stdout defaults to cp1252,
+    which cannot encode it, so `--output` worked (it passes encoding="utf-8") while
+    the default stdout path died with UnicodeEncodeError. Writing to a file and
+    writing to a pipe should not disagree about which characters are legal.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
 _DELTAS = {"UP", "DOWN", "SAME"}
 
 
@@ -219,6 +233,7 @@ def render_markdown(
 
 
 def main(argv: list[str] | None = None) -> int:
+    _force_utf8_stdout()
     parser = argparse.ArgumentParser(
         description="Render a contest-refactor review as HTML or markdown."
     )

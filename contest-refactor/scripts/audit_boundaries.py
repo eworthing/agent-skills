@@ -37,6 +37,22 @@ import ast
 import sys
 from pathlib import Path
 
+
+def _force_utf8_stdout() -> None:
+    """Emit UTF-8 regardless of the console code page.
+
+    The findings table uses `↔` for a cycle; on Windows stdout defaults to cp1252,
+    which cannot encode it, so the script died with UnicodeEncodeError partway
+    through printing rows — after the header, so callers that read stdout and
+    ignore the exit code (the selftest did) saw an empty table and read it as
+    "no cycles found". A crash that looks like a clean result is the dangerous
+    shape here, not the crash itself.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
 # Directory names never scanned: VCS/build/cache/vendor + test + generated trees.
 # `tests`/`test` are excluded so a back-edge that lives only in a test file does not
 # manufacture a production cycle (a documented restraint).
@@ -190,6 +206,7 @@ def _cycles(graph: dict[str, set[str]]) -> list[list[str]]:
 
 
 def main(argv: list[str]) -> int:
+    _force_utf8_stdout()
     root = Path(argv[1]).resolve() if len(argv) > 1 else Path.cwd()
     if not root.is_dir():
         print(f"audit-boundaries: not a directory: {root}", file=sys.stderr)
