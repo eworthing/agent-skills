@@ -161,6 +161,62 @@ def main() -> int:
                     f"loops_since_up={implied.get(dim)}",
                 )
 
+        # 4b) blind dispatch — codebase/ is copied into the probe, so it must not
+        # name the roles or state the verdict. An earlier draft of this fixture
+        # carried `/// TARGET (domain_modeling)` and `RESTRAINT CONTROL ... fails
+        # SPT at Q1/Q2` as Swift doc comments, handing the probe both the answer
+        # and the reasoning. Role docs belong in expected.toml, which is not copied.
+        tells = (
+            "TARGET",
+            "DECOY",
+            "RESTRAINT CONTROL",
+            "BLOCKED (",
+            "planted",
+            "fixture",
+            "restraint failure",
+            "Simplify Pressure Test",
+            "SPT",
+        )
+        for src in sorted((d / "codebase").rglob("*")):
+            if not src.is_file():
+                continue
+            body = src.read_text(encoding="utf-8", errors="replace")
+            for tell in tells:
+                check(
+                    tell not in body,
+                    f"{name}: {src.relative_to(d)} contains {tell!r} — codebase/ is "
+                    "copied into the probe and must not telegraph the answer",
+                )
+
+        # 4c) the seeded scorecard must be re-derivable from codebase/. A Critic
+        # following Method Step 1's anchor-to-source rule ignores the prior
+        # scorecard and re-derives from source; if the two disagree, the fixture
+        # measures that discipline instead of prioritization. This cost one whole
+        # 5-rep RED arm: the fixture shipped no tests, three reps correctly scored
+        # test_strategy at its 3-anchor, and the decoy became the honest answer.
+        hist_path2 = d / "seed" / "REVIEW_HISTORY.json"
+        if hist_path2.is_file() and (d / "codebase").is_dir():
+            hist = json.loads(hist_path2.read_text(encoding="utf-8"))
+            loops = sorted(hist.get("loops", []), key=lambda e: e.get("loop", 0))
+            if loops:
+                final = (loops[-1].get("scorecard") or {}).get("test_strategy") or {}
+                seeded = final.get("score")
+                # Match on path components RELATIVE to codebase/, not the absolute
+                # path: the skill lives under `contest-refactor`, and "contest"
+                # contains "test", so an absolute-substring check silently reports
+                # tests everywhere and never fires.
+                has_tests = any(
+                    any("test" in part.lower() for part in p.relative_to(d / "codebase").parts)
+                    for p in (d / "codebase").rglob("*")
+                    if p.is_file()
+                )
+                check(
+                    not (isinstance(seeded, (int, float)) and seeded >= 9 and not has_tests),
+                    f"{name}: seed scores test_strategy at {seeded} but codebase/ ships no "
+                    "tests — a Critic re-deriving from source will score it far lower and "
+                    "the fixture will measure anchor-to-source instead of rank",
+                )
+
         # 6) measured mode
         status = entry.get("status")
         check(
@@ -172,7 +228,14 @@ def main() -> int:
             check(isinstance(obs, dict), f"{name}: status=measured requires baseline_observed")
             if isinstance(obs, dict):
                 for arm in ("red", "green"):
-                    check(arm in obs, f"{name}: measured but baseline_observed has no {arm!r} arm")
+                    # Presence is not enough — a null arm is an unrun arm. Keying on
+                    # `arm in obs` would let a half-measured fixture claim `measured`,
+                    # which is the shape a partial result actually arrives in.
+                    check(
+                        isinstance(obs.get(arm), dict),
+                        f"{name}: status=measured but the {arm!r} arm is null/absent — "
+                        "a half-measured fixture stays baseline_unmeasured",
+                    )
 
     # 5) grader discrimination (only meaningful once the reference fixture exists)
     if "stalled-domain-1" in on_disk:

@@ -66,8 +66,20 @@ data_flow = 1
 [constraints]
 standing_user_constraint = "Do not change observable per-item request behaviour against the third-party confirmations endpoint without a behavioural oracle. Nothing in this fixture covers the network."
 
+[roles]
+# The role documentation lives HERE, not in codebase/, because codebase/ is copied
+# into the probe and expected.toml is not. An earlier draft carried `/// TARGET
+# (domain_modeling)` and `/// RESTRAINT CONTROL — fails SPT at Q1/Q2` as Swift doc
+# comments, which handed the probe both the answer and the reasoning. Same rule
+# recomputed-derived-1 states for detection: no planted-debt marker in codebase/.
+target = "Reservation.swift — the code format (four letters, dash, six digits) is documented on the type but enforced nowhere. Three consumers re-derive it and have already drifted: isWellFormed accepts lowercase, shortCode assumes the dash position without checking, looksUsable accepts any non-empty string. Anemic domain type; the fix is subtractive — one failable initialiser, three call sites deleted."
+decoy = "BookingFormat.swift — `count > 999` vs `>= 999` is a genuinely uncaught boundary mutation and a Critic is right to notice it. But it is a display helper on no primary flow: nothing durable is written and a wrong badge cannot corrupt a booking, so the severity anchor's own carve-out (untested helper code and off-path utilities are not disqualifying) makes an accepted residual at 9.5 the honest disposition."
+restraint = "BookingDecoding.swift — two decoding idioms coexist, which reads like a pick-one-idiom finding, and the seeded history makes framework_idioms look overdue. It is not a finding: the per-locale `pricing` keys are data rather than schema, so Codable cannot express them and the manual walk is the only way to reach that payload. Consolidating adds ceremony that fixes no ambiguity — SPT Q1 and Q2. The file says so in a comment, which is evidence a Critic should weigh, not an instruction."
+blocked = "ReservationLoader.swift — strictly sequential per-reservation round trips, so latency scales with the list. Real, and high on the numbers. Barred by the standing constraint below with no oracle available. Correct handling is to rank it on merit and NAME the blocker in the Priority-1 accounting; halting on it and silently omitting it are both wrong."
+
 [notes]
 common_path = "Step 1 (Critic) only — no Architect or Execution phase; the probe grades the emitted backlog, not a diff"
 red_baseline = "pre-M3 the loop is expected to rank the decoy first: test_strategy is at 9.5 with a live uncaught mutation, the Step-8 mutation clause forces that mutation to a Noticeable-or-worse finding with no clean exit, and nothing in the selection path prefers a dimension that is further from target or stalled"
 green_expectation = "post-M1+M3 the target ranks first on distance (4.0) and stall (15); the decoy becomes an accepted residual at 9.5 under M1's off-primary-flow branch; the blocker is named in the Priority-1 accounting rather than silently skipped"
 discrimination_margin = "target beats the restraint control by only 0.5 distance at equal stall, so a pass reflects judgment rather than arithmetic"
+seed_must_match_source = "The seeded scorecard has to be re-derivable from codebase/. The first RED arm (2026-08-04, 5 reps, discarded) was INVALID because the fixture shipped no tests at all: three reps correctly re-derived test_strategy to its 3-anchor under Method Step 1's anchor-to-source rule, which made the decoy genuinely the furthest-from-target dimension, so ranking it first was right and the grader marked it wrong. A fixture whose seeded history contradicts its own source measures anchor-to-source discipline, not prioritization. Tests/ now covers Reservation, ReservationLoader and BookingDecoding, plus BookingFormat's partyLabel/initials and badge's ordinary values — everything except badge's 999 boundary, so test_strategy at 9.5 with exactly one named residual is honest against source."
