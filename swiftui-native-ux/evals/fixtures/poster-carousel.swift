@@ -1,14 +1,16 @@
 import SwiftUI
 
-/// Poster carousel. The fixed height constrains the *artwork box only* — no
-/// text lives inside that frame, so Dynamic Type is unaffected. The caption
-/// sits outside the constrained frame and grows freely.
+/// Poster carousel. The fixed dimensions constrain the *artwork box*. The
+/// caption shares the column width but is never height-capped nor line-limited,
+/// so it wraps and grows with Dynamic Type rather than truncating.
 struct PosterCarousel: View {
     let posters: [Poster]
 
+    private let artworkWidth: CGFloat = 120
+
     var body: some View {
         ScrollView(.horizontal) {
-            LazyHStack(spacing: 12) {
+            LazyHStack(alignment: .top, spacing: 12) {
                 ForEach(posters) { poster in
                     VStack(alignment: .leading, spacing: 6) {
                         AsyncImage(url: poster.artworkURL) { image in
@@ -16,14 +18,14 @@ struct PosterCarousel: View {
                         } placeholder: {
                             Rectangle().fill(.quaternary)
                         }
-                        .frame(width: 120, height: 180)
+                        .frame(width: artworkWidth, height: artworkWidth * 1.5)
                         .clipShape(.rect(cornerRadius: 8))
 
                         Text(poster.title)
                             .font(.caption)
-                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .frame(width: 120)
+                    .frame(width: artworkWidth, alignment: .leading)
                 }
             }
             .padding(.horizontal, 16)

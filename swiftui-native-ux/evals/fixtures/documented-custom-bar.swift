@@ -1,14 +1,17 @@
 import SwiftUI
 
-// DESIGN TRADEOFF — approved by product 2026-07-20, revisit if TabView gains
-// non-Tab content hosting.
+// DESIGN TRADEOFF — approved by product 2026-07-20.
 //
-// This screen ships a custom bar instead of TabView because it is a live game
-// HUD: the bar must stay visible through a full-screen drag session, animate
-// its height with the drag, and host a running score readout. TabView was
-// prototyped first and rejected — it dismisses on drag and cannot host
-// non-Tab content. Accessibility parity with a real tab bar is maintained
-// explicitly below (selection traits + labelled controls).
+// This is a live game HUD section switcher, not app-level navigation, and the
+// bar must animate its own height from an in-progress DragGesture. SwiftUI
+// exposes no control over the system tab bar's height and no way to drive it
+// from a gesture, so TabView cannot express this regardless of styling or
+// accessory placement. TabView was prototyped first and rejected on that
+// height-control constraint alone.
+//
+// Accessibility parity with a real tab bar is maintained explicitly below:
+// a visible selected state that does not rely on color alone, selection
+// traits, and a score exposed as a labelled value.
 struct GameHUDBar: View {
     @Binding var selection: HUDSection
     let score: Int
@@ -18,16 +21,18 @@ struct GameHUDBar: View {
             ForEach(HUDSection.allCases) { section in
                 Button { selection = section } label: {
                     Label(section.title, systemImage: section.symbol)
-                        .frame(maxWidth: .infinity)
+                        .symbolVariant(selection == section ? .fill : .none)
+                        .foregroundStyle(selection == section ? Color.accentColor : Color.secondary)
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .accessibilityAddTraits(selection == section ? [.isSelected] : [])
             }
-        }
-        .overlay(alignment: .trailing) {
+
             Text(score, format: .number)
                 .monospacedDigit()
                 .accessibilityLabel("Score")
-                .padding(.trailing)
+                .accessibilityValue(Text(score, format: .number))
+                .padding(.horizontal)
         }
     }
 }
