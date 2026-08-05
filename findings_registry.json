@@ -192,10 +192,10 @@
           "sha": "3e51000",
           "idempotency_key": "loop4-F-004-open",
           "fingerprint": {
-            "claim_consequence_hash": "sha256:164f889824b5c0c076f50a02f15f447c83a76422a4b48765c525fc9959f40222",
-            "evidence_paths_hash": "sha256:0eca906567d3a13236f859b16a2219377dc42d5924fe98f661b064ef46522d35"
+            "claim_consequence_hash": "sha256:d4130839d260493ae8dfd3fb596fea7f4640e2bd1541a9efaceb9abf0a4a72b7",
+            "evidence_paths_hash": "sha256:a700fe6e434a5b96d9479ae72f8a775f997fed30369ad34cf1c1ce479a321c66"
           },
-          "attempted_remedy_hash": "sha256:3d86ff1d8197dc4549d0fd9abdd9ba4395761e12658ff35425da0070bcc5510f",
+          "attempted_remedy_hash": "sha256:690ced3c74423e7723bd6f0d1e40e001dde26790558a3fd9288cefbbd945263d",
           "finding_snapshot": {
             "title": "G32 accepts a terminal challenge that skipped mandatory arm diversity",
             "why_it_matters": "The terminal trust gate can certify HALT_SUCCESS without any simplicity or domain-modeling attack.",
