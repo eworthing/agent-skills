@@ -117,6 +117,7 @@ For each finding:
 1–3 fixes in strict priority order. Priority 1 is focus of next loop. Derived only from Findings + Simplification Check; introduces no new concerns.
 
 For each item:
+- stable_id — the `F-NNN` id of the Finding this item derives from, so the item carries an identity a rule can follow across loops instead of one buried in the title prose. Enforced by G42.
 - why it matters
 - score impact — name each affected dimension by its canon machine id plus the projected move (`data_flow +0.5; framework_idioms +0.5`), so the item is rankable by the dimension it moves rather than by how it reads. Enforced by G39.
 - structural / simplification / polish

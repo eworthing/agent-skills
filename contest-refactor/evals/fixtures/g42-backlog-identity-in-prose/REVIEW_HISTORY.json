@@ -128,12 +128,11 @@
       "backlog": [
         {
           "priority": 1,
-          "title": "Share the per-key cache skeleton across the store lookups",
+          "title": "Share the per-key cache skeleton across the store lookups (Finding F-001)",
           "kind": "structural",
           "rank": "needed for winning",
           "why_it_matters": "Four hand-copied lazy-load skeletons; one shared type removes three.",
-          "score_impact": "data_flow +0.5; framework_idioms +0.5",
-          "stable_id": "F-001"
+          "score_impact": "data_flow +0.5; framework_idioms +0.5"
         }
       ],
       "deepening_candidates": [],

@@ -1,0 +1,13 @@
+id = "g41-cap-loop-not-executed"
+purpose = "Negative v4 fixture: the cap loop emitted HALT_LOOP_CAP with a non-empty backlog and no loop_result, i.e. it ran Critic-only and skipped the work the cap budgeted. Must FAIL on G41."
+expected_result = "fail"
+aspirational = false
+notes = "Reproduces the shape a real 10-loop production run emitted. Before G41 that artifact passed strict validation with ZERO issues, which is why prose alone was insufficient: two runs of this skill read 'loop counter reached cap' oppositely, and the one that read it as a Step-1 halt spent its final loop on a read-only pass, discovered a Serious finding it was then forbidden to fix, and validated clean. Uses loop == loop_cap == 1 — the --cap 1 case, where the misreading is most costly because it turns a single-loop refactor request into a review that changes nothing. Derived from halt-loop-cap-clean bumped to schema_version 4 with loop_cap set to loop and a one-item backlog added, REVIEW_HISTORY.json.loops[-1] re-synced for G18. G41 must be the ONLY gate that fires; its exemptions (loop > loop_cap, empty backlog, loop < loop_cap, reviewer-rejected loops) live in scripts/_g41_selftest.py."
+
+[[tested_rules]]
+kind = "gate"
+id = "G41"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_LOOP_CAP"

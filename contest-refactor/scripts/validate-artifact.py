@@ -2002,6 +2002,130 @@ def check_g40_discovery_persistence(current_review: dict) -> list[Issue]:
     return issues
 
 
+def check_g41_cap_loop_executed(current_review: dict) -> list[Issue]:
+    """G41: the loop that spends the cap does the work the cap bought.
+
+    The cap gates the NEXT dispatch, not the current loop's execution, so a loop at
+    loop == loop_cap with a non-empty backlog must have run Steps 2-3 and left a
+    loop_result. The clarifying prose landed first; this gate exists because the
+    artifact from the run that got it wrong passes strict validation with zero issues.
+
+    Exemptions, each a legitimate no-work terminal:
+      - loop > loop_cap : Step-1 emit on a resumed/misconfigured run; nothing to execute.
+      - empty backlog   : Steps 2-3 are skipped by the protocol, so a converged cap
+                          terminal honestly has no loop_result. That case is G37's.
+      - loop < loop_cap : not policed here. It is an odd state under the clarified
+                          semantics, but 13 v1-v3 fixtures carry loop=1/cap=10 while
+                          testing unrelated things, and failing them would be noise.
+    """
+    issues: list[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    if current_review.get("state") != "HALT_LOOP_CAP":
+        return issues
+
+    loop = current_review.get("loop")
+    cap = current_review.get("loop_cap")
+    # bool is an int subclass; exclude it so a stray True cannot be read as loop 1.
+    if isinstance(loop, bool) or isinstance(cap, bool):
+        return issues
+    if not isinstance(loop, int) or not isinstance(cap, int) or loop != cap:
+        return issues
+
+    if not (current_review.get("backlog") or []):
+        return issues
+
+    loop_result = current_review.get("loop_result")
+    if isinstance(loop_result, dict) and loop_result:
+        return issues
+
+    issues.append(
+        Issue(
+            "G41",
+            f"loop {loop} == loop_cap with a non-empty backlog but no loop_result: the "
+            f"cap loop emitted HALT_LOOP_CAP without executing Steps 2-3. The cap gates "
+            f"the NEXT dispatch, not this loop's execution — run the Priority 1 item, "
+            f"then emit HALT_LOOP_CAP in the Step-3 wrap-up. (A reviewer-rejected "
+            f"attempt still satisfies this: the revert path writes loop_result with "
+            f"targeted_finding_status 'carried_forward'.)",
+            f"state=HALT_LOOP_CAP loop={loop} loop_cap={cap}",
+        )
+    )
+    return issues
+
+
+_G42_STABLE_ID_RE = re.compile(r"^F-\d{3,}$")
+
+
+def check_g42_backlog_stable_id(current_review: dict) -> list[Issue]:
+    """G42: a backlog item carries the identity of the Finding it came from.
+
+    After G39 an item says what it MOVES (score_impact) and priority/rank say where it
+    RANKS, but nothing said which finding it IS. The id lived only inside the free-text
+    title -- "Collapse the duplicated dialog ceremony (Finding F-003)" -- so following
+    one item across loops meant regex-scraping English out of prose, the same
+    anti-pattern G39 was written to remove.
+
+    Not substitutable by the registry: findings_registry.json records an occurrence per
+    loop while a finding is OPEN, which is not the same as being in the backlog. A
+    production run carried a Cosmetic off-path finding as open for all ten loops while
+    it never appeared in a backlog once, so a deferral count taken from open-streaks
+    would escalate exactly the items that should stay parked.
+
+    The findings link is conditional: membership in this loop's findings[] is required
+    only when findings[] is non-empty. Minimal single-gate fixtures legitimately carry
+    no findings, and a v4 artifact with a backlog and zero findings is malformed for a
+    different reason that is not this gate's business.
+    """
+    issues: list[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+
+    backlog = current_review.get("backlog") or []
+    if not backlog:
+        return issues
+
+    known = {
+        f.get("stable_id")
+        for f in (current_review.get("findings") or [])
+        if isinstance(f, dict) and f.get("stable_id")
+    }
+
+    for idx, item in enumerate(backlog):
+        ctx = f"backlog[{idx}] (priority {item.get('priority') if isinstance(item, dict) else '?'})"
+        if not isinstance(item, dict):
+            issues.append(Issue("G42", "backlog item must be an object", ctx))
+            continue
+        raw = item.get("stable_id")
+        if not isinstance(raw, str) or not raw.strip():
+            issues.append(
+                Issue(
+                    "G42",
+                    "stable_id is required on every backlog item — the F-NNN id of the "
+                    "Finding it derives from. Without it the item has no identity a rule "
+                    "can follow across loops, and its id survives only inside the title prose",
+                    ctx,
+                )
+            )
+            continue
+        stable_id = raw.strip()
+        if not _G42_STABLE_ID_RE.match(stable_id):
+            issues.append(Issue("G42", f"stable_id {stable_id!r} is not of the form 'F-NNN'", ctx))
+            continue
+        if known and stable_id not in known:
+            issues.append(
+                Issue(
+                    "G42",
+                    f"stable_id {stable_id!r} is not among this loop's findings "
+                    f"({', '.join(sorted(known))}). The backlog is derived only from "
+                    f"Findings + the Simplification Check and introduces no new concerns, "
+                    f"so an item pointing at nothing is a concern introduced at backlog time",
+                    ctx,
+                )
+            )
+    return issues
+
+
 def _load_project_config(artifact_dir: Path) -> dict | None:
     """Load `.contest-refactor.toml` from the artifact dir or its repo root."""
     candidates: list[Path] = [
@@ -2067,6 +2191,8 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
+    issues.extend(check_g41_cap_loop_executed(current_review))
+    issues.extend(check_g42_backlog_stable_id(current_review))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

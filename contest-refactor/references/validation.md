@@ -209,6 +209,26 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   **Presence and shape only.** G40 does not compare against a prior loop's `discovery`: a legitimate Step-0 re-run (fresh run, `--reset`, `--purge`) may change it, and cross-loop equality would fail those honest cases. Carrying it forward *faithfully* is rule #32's obligation. Failure → repopulate from the prior loop's artifact or a real Step-0 re-run; never from invented values, which would substitute a plausible test command for the verified one.
 
+- [ ] **G41 Cap loop executes its budgeted work (pre-commit, schema_version >= 4)** — when `state == "HALT_LOOP_CAP"` AND `loop == loop_cap` AND `backlog` is non-empty, `loop_result` must be present. The cap gates the *next* dispatch, not the current loop's execution (see [SKILL.md § Halting Conditions](../SKILL.md#halting-conditions)), so a loop that spends the budget has to do the work the budget bought.
+
+  Why prose was not enough: "loop counter reached cap" is ambiguous at exactly `N == loop_cap`, and two runs of this skill resolved it in opposite directions — one executed its cap loop and committed a refactor, the other ran Critic-only, discovered a Serious finding on that final pass and was structurally forbidden from acting on it. The clarifying prose landed first; this gate exists because the artifact from the losing run passes strict validation with **zero issues**, so nothing would catch a regression. Every sibling halt-tail rule (G21, G34, G35, G37) exists for the same reason.
+
+  **Three exemptions, each a legitimate no-work terminal.** `loop > loop_cap` — a resumed or misconfigured run with nothing left to do, which emits from Step 1 and never runs Steps 2-3. An **empty backlog** — Steps 2 and 3 are skipped when the backlog is empty, so a converged cap terminal honestly has no `loop_result`; that case is G37's, not this one. And `loop < loop_cap`, which this gate does not police at all: it is an odd state under the clarified semantics, but 13 v1-v3 fixtures carry `loop=1, cap=10` while testing unrelated things, and firing there would fail them for a reason that is not theirs.
+
+  A reviewer-rejected cap loop still satisfies G41 — the revert path writes `loop_result` with `targeted_finding_status: "carried_forward"`, which is a loop that did its work and had it declined, not a loop that skipped it.
+
+  *Source:* [`SKILL.md § Halting Conditions`](../SKILL.md#halting-conditions) + [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #33; mechanized by `validate-artifact.py check_g41_cap_loop_executed` + `scripts/_g41_selftest.py`.
+
+- [ ] **G42 Backlog item identity (pre-emit, schema_version >= 4)** — every `backlog[]` item carries `stable_id` matching `^F-\d{3,}$`. When this loop's `findings[]` is non-empty, the id must be one of them. Fires only when `backlog[]` is non-empty; the v1-v3 corpus is below the floor and unaffected.
+
+  Why a backlog item needed an identity: after G39 an item says what it **moves** (`score_impact`), and `priority` / `rank` say where it **ranks** — but nothing said *which finding it is*. The id lived only inside free-text `title` ("Collapse the duplicated dialog ceremony (Finding F-003)"), so following one item across loops meant regex-scraping English out of prose, which is the exact anti-pattern G39 exists to remove. Every cross-loop question about the backlog — how many loops has this been queued, was it deferred or is it newly raised, did the item that just won displace the same item three loops running — is unanswerable without it. The Backlog Prioritization Pass's item-deferral criterion ([method-critic.md](method-critic.md#backlog-prioritization-pass)) asks exactly those questions and currently has to answer them by eye.
+
+  **Do not substitute the registry.** `findings_registry.json` records an occurrence per loop while a finding is *open*, which is not the same as being *in the backlog* — a production run carried a Cosmetic off-path finding as `open` for all ten loops while it never appeared in a backlog once. Deferral counted from `open` streaks would escalate exactly the items that should stay parked.
+
+  **The findings link is conditional by design.** Requiring membership only when `findings[]` is non-empty keeps minimal single-gate fixtures (which legitimately carry no findings) out of scope. A v4 artifact with a backlog and zero findings is malformed for a different reason, and that is not this gate's business.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #34 + [`output-format-markdown.md § Improvement Backlog`](output-format-markdown.md); mechanized by `validate-artifact.py check_g42_backlog_stable_id` + `scripts/_g42_selftest.py`.
+
   *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #32 + [`trust-model.md § Boundary`](trust-model.md#boundary); mechanized by `validate-artifact.py check_g40_discovery_persistence` + `scripts/_g40_selftest.py`.
 
 ## Quality Pass (improve if cheap; never block emit)
