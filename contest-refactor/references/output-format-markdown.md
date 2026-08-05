@@ -12,7 +12,7 @@ JSON mirror schemas (`CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, `findings_reg
 ## CURRENT_REVIEW.md Structure
 
 ```
-### Discovery (first loop only)
+### Discovery (Markdown: first loop only — the JSON copy persists every loop, see below)
 - Source roots:
 - Test command:
 - Build command:
@@ -118,17 +118,14 @@ For each finding:
 
 For each item:
 - why it matters
-- score impact
+- score impact — name each affected dimension by its canon machine id plus the projected move (`data_flow +0.5; framework_idioms +0.5`), so the item is rankable by the dimension it moves rather than by how it reads. Enforced by G39.
 - structural / simplification / polish
 - needed for winning / helpful / minor
 
-Prioritize:
-1. biggest contest gain
-2. honesty plus simplicity
-3. runtime safety
-4. regression resistance
-5. anti-overengineering
-6. Leverage and Locality gains
+Priority is assigned during Step 10 by
+[method-critic.md § Backlog Prioritization Pass](method-critic.md#backlog-prioritization-pass),
+before emit. The ranking criteria are not restated here: this file is read at Step-1
+emit, and a rule that arrives after the decision cannot change it.
 
 ## Deepening Candidates
 0–3 candidates derived only from Findings or Simplification Check. For refactors where a Module could gain Depth, Leverage, or Locality. Do not invent new concerns. Do not propose a new Seam unless friction was already proven.

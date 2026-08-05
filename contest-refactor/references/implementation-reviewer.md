@@ -77,7 +77,7 @@ If the targeted pattern persists in current source → reject.
 
 ## Check 2 — Honesty
 
-Did the diff pass Simplify Pressure Test on the actual code (not the plan)?
+Did the diff pass Simplify Pressure Test on the actual code (not the plan)? Answer Q5 as the base question only — "does the product improve" — and skip its comparative half, which is scoped to whoever holds the backlog (see [method.md § Simplify Pressure Test](method.md#simplify-pressure-test-step-2-gate)). You see a diff, not the backlog or the registry, so what this change displaced is not yours to judge; rejecting on it would be guessing.
 
 - **Deletion test** for any Module the diff removed: complexity must vanish, not
   redistribute across N callers.

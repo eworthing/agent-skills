@@ -106,7 +106,9 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
   // Findings registry (v2+)
   "findings_registry_path": "./findings_registry.json", // string. Path to external registry. Never embedded in CURRENT_REVIEW.json.
 
-  // Discovery (required first loop only; null on later loops)
+  // Discovery (required EVERY loop at schema_version >= 4; carried forward verbatim by later
+  // loops, rewritten only when Step 0 genuinely re-ran). Pre-v4 this said "first loop only";
+  // why that was wrong: validation.md Â§ G40.
   "discovery": {
     "source_roots": ["BenchHypeKit/Sources/"],
     "test_command": "cd BenchHypeKit && swift test",
@@ -226,7 +228,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
       "kind": "structural",                                                            // enum: structural | simplification | polish
       "rank": "needed for winning",                                                    // enum: needed for winning | helpful | minor
       "why_it_matters": "...",                                                         // required
-      "score_impact": "Architecture quality + State management each +1.0"              // required
+      "score_impact": "data_flow +0.5; framework_idioms +0.5"                          // required; `<canon_dim_id> <signed delta>`, ';'-joined (G39, v4+)
     }
   ],
   // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP}; null otherwise.

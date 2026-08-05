@@ -25,7 +25,9 @@
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",
       "discovery": {
+        "source_roots": ["Sources/"],
         "test_command": "swift test",
+        "lens": "Apple",
         "test_scope": "full",
         "test_filter": null
       },

@@ -1,0 +1,12 @@
+id = "g40-discovery-dropped"
+purpose = "Negative v4 fixture whose `discovery` is null; protects G40 against regression to the pre-v4 schema rule that told loops to null the Step-0 handoff after the first loop."
+expected_result = "fail"
+notes = "Reproduces the exact shape a real 10-loop run emitted while obeying the pre-v4 schema comment; why that was wrong is in references/validation.md, G40. Derived from g39-score-impact-valid with `discovery` nulled in BOTH CURRENT_REVIEW.json and REVIEW_HISTORY.json.loops[-1] so G18's verbatim-equality check still holds and G40 is the only gate that fires. Positive coverage is carried by every other v4 fixture; field-level cases and the later-loop regression shape live in scripts/_g40_selftest.py."
+
+[[tested_rules]]
+kind = "gate"
+id = "G40"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

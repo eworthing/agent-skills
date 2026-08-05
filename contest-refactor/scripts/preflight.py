@@ -26,6 +26,7 @@ stderr); 2 = usage error.
 from __future__ import annotations
 
 import argparse
+import os
 import shlex
 import shutil
 import subprocess
@@ -37,17 +38,31 @@ def _test_command_resolves(test_cmd: str) -> tuple[bool, str]:
     """The leading token of the test command must be a binary on PATH or an
     existing executable file. We check only the launcher, not the whole pipeline —
     this is a sanity gate, not a shell."""
+    # posix=False on Windows: POSIX mode treats `\` as an escape, so a quoted
+    # `"C:\Program Files\...\MSBuild.exe"` collapses to `C:Program Files...`. Non-POSIX
+    # mode keeps the separators but leaves the surrounding quotes on the token, so
+    # strip them back off.
+    posix = os.name != "nt"
     try:
-        tokens = shlex.split(test_cmd)
+        tokens = shlex.split(test_cmd, posix=posix)
     except ValueError as exc:
         return False, f"test command is not parseable: {exc}"
     if not tokens:
         return False, "test command is empty"
     launcher = tokens[0]
+    if not posix and len(launcher) >= 2 and launcher[0] == launcher[-1] and launcher[0] in "\"'":
+        launcher = launcher[1:-1]
     if "/" in launcher or "\\" in launcher:
-        p = Path(launcher)
-        if p.is_file():
+        if Path(launcher).is_file():
             return True, ""
+        # An unquoted launcher path containing spaces — `C:\Program Files\Python311\
+        # python.exe -m pytest` — splits across several tokens, so tokens[0] is a
+        # prefix that never resolves. Rejoin greedily until a real file appears.
+        joined = launcher
+        for extra in tokens[1:]:
+            joined = f"{joined} {extra}"
+            if Path(joined).is_file():
+                return True, ""
         return False, f"test command launcher not found: {launcher}"
     if shutil.which(launcher):
         return True, ""

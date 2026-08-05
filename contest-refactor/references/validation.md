@@ -195,6 +195,22 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   *Source:* [`provider-adapters.md § Premium model budget policy`](provider-adapters.md#premium-model-budget-policy) + [`resume-detection.md § Step 0.5 — Provider detection`](resume-detection.md#step-05--provider-detection); mechanized by `validate-artifact.py check_g38_premium_model_budget_guard`.
 
+- [ ] **G39 Backlog score_impact dimension attribution (pre-emit, schema_version >= 4)** — Every `backlog[]` item's `score_impact` names the dimensions it moves as `<canon_dim_id> <signed delta>`, semicolon-joined for a multi-dimension item (`data_flow +0.5; framework_idioms +0.5`). Each id must be a `canon/scorecard-dimensions.toml` id **and** present in this loop's `scorecard`. Display labels (`Data flow +0.5`), trailing prose (`data_flow +0.5 once verified`), unsigned deltas, and free text (`Architecture quality + State management each +1.0`) all fail. Fires only when `backlog[]` is non-empty; the v1-v3 corpus is below the floor and unaffected.
+
+  Why a required field needed a gate: `score_impact` was required but read by nothing, so it drifted into prose. A 15-loop production run carried `"Concurrency +0.5, Framework idioms +0.5"` on the same backlog item for all 15 loops — the field was naming the two lowest, most-stalled dimensions on the board every loop, and no rule could act on it. Machine-readable attribution is what lets a prioritization rule rank by distance-to-target and stall rather than by whichever item reads cheapest.
+
+  **Shape only.** G39 never judges whether the projected move is *right* — that is the Critic's call and is not mechanically decidable. Run G39 at Step 1 emit and again at Step 3 pre-commit. Failure → rewrite the field; do not weaken the shape.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #31; mechanized by `validate-artifact.py check_g39_backlog_score_impact` + `scripts/_g39_selftest.py`.
+
+- [ ] **G40 Discovery persistence across loops (pre-emit, schema_version >= 4)** — `discovery` is non-null on **every** loop and carries non-empty `source_roots`, `test_command` and `lens`. Step 0 runs once per invocation; later loops copy the object forward verbatim. Fires on every loop including loop 1; the v1-v3 corpus is below the floor and unaffected.
+
+  Why the durable handoff needed a gate: the schema said "required first loop only; null on later loops" while three consumers were already written against the opposite assumption — rule #27 reads `discovery.test_scope`, this file's own G21 incremental→full reverify reads it on the HALT_SUCCESS-emitting loop (never loop 1), and `candidate_fingerprint.py` binds `discovery.lens` + `discovery.source_roots`. A 10-loop production run nulled it from loop 2 on, obeying the schema, and nothing noticed because nothing checked. The operational failure is the one that matters: `build_command` lives here, so a loop that loses it has only the test command left and will take a green suite as full ground truth — on a repo whose test target and build target compile different file sets, a false green on the gate the loop believes it ran.
+
+  **Presence and shape only.** G40 does not compare against a prior loop's `discovery`: a legitimate Step-0 re-run (fresh run, `--reset`, `--purge`) may change it, and cross-loop equality would fail those honest cases. Carrying it forward *faithfully* is rule #32's obligation. Failure → repopulate from the prior loop's artifact or a real Step-0 re-run; never from invented values, which would substitute a plausible test command for the verified one.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #32 + [`trust-model.md § Boundary`](trust-model.md#boundary); mechanized by `validate-artifact.py check_g40_discovery_persistence` + `scripts/_g40_selftest.py`.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

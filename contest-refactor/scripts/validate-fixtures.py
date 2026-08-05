@@ -314,7 +314,11 @@ def _run_artifact_check(
             env["CONTEST_REFACTOR_NOW"] = reference_now
         result = subprocess.run(
             [
-                "python3",
+                # sys.executable, not "python3": on Windows the bare name resolves to an
+                # App Execution Alias stub that exits 9009, so every cross-check reported
+                # expected-pass/wrong-gate-fired for an environment reason. Matches the
+                # convention already used by _smoke_check.py.
+                sys.executable,
                 str(ARTIFACT_VALIDATOR),
                 str(fixture_dir),
                 "--mode",

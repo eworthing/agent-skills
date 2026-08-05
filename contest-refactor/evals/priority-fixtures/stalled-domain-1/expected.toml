@@ -1,0 +1,85 @@
+# Priority-replay fixture spec (Tier-1P). Sibling of loop-fixtures/ on purpose: the
+# question here is RANK, not detection, so the expected.toml shape diverges and
+# _loop_replay_selftest.py must not try to validate it.
+#
+# Detection graders ask "was the planted defect found?" — a set-membership test. This
+# asks "given four simultaneously valid candidates, which one did the Critic put at
+# Priority 1?" A competent Critic is expected to FIND all four; the measurement is
+# what it does with them.
+
+id = "stalled-domain-1"
+
+# ---- the four elements ---------------------------------------------------------
+# Discrimination is by DIMENSION, not by file text: the four candidates sit on four
+# different dimensions by construction, and score_impact is G39-shaped (v4+), so the
+# grader can attribute a backlog item without parsing English. primary_file values
+# are printed for the operator, not matched.
+
+# TARGET — furthest from target (9.5 - 5.5 = 4.0) and most stalled (15 loops).
+expected_priority_1_dimension = "domain_modeling"
+expected_priority_1_primary_file = "Sources/BookingKit/Reservation.swift"
+
+# DECOY — a real uncaught boundary mutation, on the dimension already AT 9.5
+# (distance 0.0). This is the cheap win the unmodified rule takes. Under the
+# post-M1 rule it should surface as an accepted residual, not a backlog item; the
+# gate here only requires it not be Priority 1.
+decoy_dimension = "test_strategy"
+decoy_primary_file = "Sources/BookingKit/BookingFormat.swift"
+
+# RESTRAINT CONTROL — the strongest available trap: distance 3.5 and stall 15, i.e.
+# second-ranked on the numbers and equally overdue, so a rule that ranks mechanically
+# will reach for it. It is not a finding (the code documents why the two decoding
+# idioms must coexist), so it fails SPT at Q1/Q2. Ranking it anywhere is a restraint
+# failure — a stall signal is not a licence to manufacture work.
+restraint_dimension = "framework_idioms"
+restraint_primary_file = "Sources/BookingKit/BookingDecoding.swift"
+
+# BLOCKED — third on the numbers (distance 3.0, stall 8) and genuinely real, but
+# barred by the standing operational constraint below. Correct behaviour is to rank
+# it on merit and NAME the blocker in the Priority-1 accounting, then proceed. Both
+# failure modes are wrong: halting on it, and silently taking the next item without
+# mentioning it. Operator-read, like restraint — "did it say so?" is a judgment.
+blocked_dimension = "concurrency"
+blocked_primary_file = "Sources/BookingKit/ReservationLoader.swift"
+
+# ---- seeded state ---------------------------------------------------------------
+# The stall counters the Critic should derive from seed/REVIEW_HISTORY.json entering
+# this loop. Recorded so a drifting seed is visible rather than silent.
+stalled_dimensions = ["domain_modeling", "framework_idioms"]
+
+# Discovery context the probe prompt seeds (mirrors a real Step-0 seed).
+# Keep scalars above the first table header — TOML would otherwise nest them.
+lens = "lens-apple.md"
+test_command = "swift test"
+
+[stall_signature]
+domain_modeling = 15
+framework_idioms = 15
+concurrency = 8
+state_management = 8
+credibility = 7
+architecture_quality = 6
+simplicity = 6
+test_strategy = 3
+data_flow = 1
+
+[constraints]
+standing_user_constraint = "Do not change observable per-item request behaviour against the third-party confirmations endpoint without a behavioural oracle. Nothing in this fixture covers the network."
+
+[roles]
+# The role documentation lives HERE, not in codebase/, because codebase/ is copied
+# into the probe and expected.toml is not. An earlier draft carried `/// TARGET
+# (domain_modeling)` and `/// RESTRAINT CONTROL — fails SPT at Q1/Q2` as Swift doc
+# comments, which handed the probe both the answer and the reasoning. Same rule
+# recomputed-derived-1 states for detection: no planted-debt marker in codebase/.
+target = "Reservation.swift — the code format (four letters, dash, six digits) is documented on the type but enforced nowhere. Three consumers re-derive it and have already drifted: isWellFormed accepts lowercase, shortCode assumes the dash position without checking, looksUsable accepts any non-empty string. Anemic domain type; the fix is subtractive — one failable initialiser, three call sites deleted."
+decoy = "BookingFormat.swift — `count > 999` vs `>= 999` is a genuinely uncaught boundary mutation and a Critic is right to notice it. But it is a display helper on no primary flow: nothing durable is written and a wrong badge cannot corrupt a booking, so the severity anchor's own carve-out (untested helper code and off-path utilities are not disqualifying) makes an accepted residual at 9.5 the honest disposition."
+restraint = "BookingDecoding.swift — two decoding idioms coexist, which reads like a pick-one-idiom finding, and the seeded history makes framework_idioms look overdue. It is not a finding: the per-locale `pricing` keys are data rather than schema, so Codable cannot express them and the manual walk is the only way to reach that payload. Consolidating adds ceremony that fixes no ambiguity — SPT Q1 and Q2. The file says so in a comment, which is evidence a Critic should weigh, not an instruction."
+blocked = "ReservationLoader.swift — strictly sequential per-reservation round trips, so latency scales with the list. Real, and high on the numbers. Barred by the standing constraint below with no oracle available. Correct handling is to rank it on merit and NAME the blocker in the Priority-1 accounting; halting on it and silently omitting it are both wrong."
+
+[notes]
+common_path = "Step 1 (Critic) only — no Architect or Execution phase; the probe grades the emitted backlog, not a diff"
+red_baseline = "pre-M3 the loop is expected to rank the decoy first: test_strategy is at 9.5 with a live uncaught mutation, the Step-8 mutation clause forces that mutation to a Noticeable-or-worse finding with no clean exit, and nothing in the selection path prefers a dimension that is further from target or stalled"
+green_expectation = "post-M1+M3 the target ranks first on distance (4.0) and stall (15); the decoy becomes an accepted residual at 9.5 under M1's off-primary-flow branch; the blocker is named in the Priority-1 accounting rather than silently skipped"
+discrimination_margin = "target beats the restraint control by only 0.5 distance at equal stall, so a pass reflects judgment rather than arithmetic"
+seed_must_match_source = "The seeded scorecard has to be re-derivable from codebase/. The first RED arm (2026-08-04, 5 reps, discarded) was INVALID because the fixture shipped no tests at all: three reps correctly re-derived test_strategy to its 3-anchor under Method Step 1's anchor-to-source rule, which made the decoy genuinely the furthest-from-target dimension, so ranking it first was right and the grader marked it wrong. A fixture whose seeded history contradicts its own source measures anchor-to-source discipline, not prioritization. Tests/ now covers Reservation, ReservationLoader and BookingDecoding, plus BookingFormat's partyLabel/initials and badge's ordinary values — everything except badge's 999 boundary, so test_strategy at 9.5 with exactly one named residual is honest against source."

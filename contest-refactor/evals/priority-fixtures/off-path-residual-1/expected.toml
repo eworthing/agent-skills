@@ -1,0 +1,59 @@
+# Residual-disposition fixture (Tier-1P, kind = residual_disposition).
+#
+# Different question from stalled-domain-1's rank test. That fixture asked which of
+# several candidates gets Priority 1, and the RED arm showed the current prose
+# already answers it correctly 4/5 — no headroom. This one isolates the SUPPLY
+# mechanism instead, which is where the RED arm did show headroom (2/5 got it wrong
+# as a secondary observation):
+#
+#   Given test_strategy honestly at its 9.5 ceiling and exactly one remaining
+#   untested boundary that sits off every primary flow — does the Critic queue it as
+#   a backlog item, or disposition it as an accepted residual?
+#
+# method.md:79's mutation clause currently forces the first: "Can name one -> that
+# mutation is a Noticeable-or-worse finding", with no clean exit. That contradicts
+# architecture-rubric.md:144, whose Likely-disqualifier anchor explicitly excludes
+# "untested helper code or off-path utilities". M1 adds the missing third branch.
+
+id = "off-path-residual-1"
+kind = "residual_disposition"
+
+# ---- the off-path gap under test ------------------------------------------------
+# MoneyFormatter.compact's `units >= 1_000_000` boundary is genuinely uncaught: the
+# suite tests 0, 12, 999, 1k and 2k but never crosses a million. It is also as far
+# off a primary flow as this package gets — a header chip label. Nothing is
+# persisted, posted, or balanced on it.
+off_path_dimension = "test_strategy"
+off_path_file = "Sources/LedgerKit/MoneyFormatter.swift"
+off_path_symbol = "MoneyFormatter.compact"
+
+# ---- the legitimate Priority 1 --------------------------------------------------
+# Present so the backlog is non-empty and the off-path item is never the only
+# candidate — otherwise M1's correct behaviour would empty the backlog and route to
+# HALT_STAGNATION/no_backlog, which is a different code path and would confound the
+# reading. Settlement.postings re-implements Split.evenly's remainder rule and has
+# already diverged: it drops the remainder, so settled postings can sum to less than
+# the bill. Duplication with divergence, on the lowest and longest-stalled dimension.
+legitimate_dimension = "simplicity"
+legitimate_file = "Sources/LedgerKit/Posting.swift"
+
+lens = "lens-apple.md"
+test_command = "swift test"
+
+[stall_signature]
+simplicity = 8
+domain_modeling = 4
+state_management = 4
+data_flow = 3
+concurrency = 3
+architecture_quality = 2
+framework_idioms = 2
+credibility = 1
+test_strategy = 0
+
+[notes]
+common_path = "Step 1 (Critic) only; the probe grades where the off-path gap landed, not a diff"
+outcomes = "QUEUED = a backlog item claims test_strategy (the M1 failure mode). ACCEPTED = a finding cites the off-path file and carries a non-null residual_disposition, and no backlog item claims test_strategy (the M1 target). ABSENT = never mentioned at all, which is under-detection rather than mis-disposition and is reported separately so it cannot be mistaken for a pass."
+red_baseline = "pre-M1 the mutation clause's two-branch dilemma (name one -> Noticeable-or-worse finding, or score 10) has no disposition that both acknowledges the gap and keeps it out of the backlog, so QUEUED is expected"
+green_expectation = "post-M1 the third branch routes it to test_strategy 9.5 with residual_disposition accepted, residual_blocking_10 naming the site, and a rationale naming which primary flow it is off"
+why_not_absent = "ABSENT would also technically keep the backlog clean, which is why it is graded as its own outcome: silence is not the same as an honest accepted residual, and M1 must not be credited for the Critic simply missing the gap"
