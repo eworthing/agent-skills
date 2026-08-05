@@ -6,32 +6,30 @@ provider: unknown; running inline; Loop Isolation unavailable
 - Lens: Generic + Security + Efficiency
 
 ### Loop Counter
-Loop 13 of 15.
+Loop 14 of 15.
 
 ### System Flag
-[STATE: CONTINUE]
+[STATE: HALT_SUCCESS_candidate]
 
 ## Contest Verdict
 
-The canonical sequence is coherent, but progressive-disclosure routing still points at obsolete sub-steps.
+Contest-grade architecture; terminal success awaits independent challenge.
 
 ## Scorecard (1-10)
 
-State management 8, Test strategy 8, and Credibility 8. Architecture quality, domain modeling, data flow, framework idioms, and simplicity remain 9.5 accepted; Concurrency remains 10.
+Test strategy and Concurrency are 10. Architecture quality, state management, domain modeling, data flow, framework idioms, simplicity, and credibility are 9.5 with source-backed accepted residuals.
 
 ## Findings
 
-### Finding #1: Step-3 routing references are stale and omit G17
-
-Stable ID `F-010`; Serious deduction. Six instruction files route registry, archive, review-gate, or commit work to obsolete sub-steps, while `SKILL.md:210` omits required G17 from the canonical hard-gate list.
+None.
 
 ## Simplification Check
 
-Correct the existing references in place and restore G17 to step 8. Do not add a second sequence table, aliases, or validator exceptions.
+No further structural correction survives current-source review. Keep the bounded validator modules and one canonical Step-3 sequence.
 
 ## Improvement Backlog
 
-1. `F-010` — align Step-3 routed references and restore G17.
+Empty.
 
 ## Deepening Candidates
 
@@ -39,20 +37,10 @@ None.
 
 ## Builder Notes
 
-- Priority 1 moves state management, test strategy, and credibility.
-- Keep `SKILL.md` as the single sequencing authority.
-- Refresh only the preregistered Step-3 section hash after the intended text change.
+- Commits `0206eb4`, `eebad9b`, and `ffa9d59` close the three reproduced workflow defects.
+- Full committed-source gate: repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, structural evaluation, and Ruff pass.
+- Candidate identity: run `7341a32b-a4cd-40ad-9ba5-4a148c42a7f1`; source `ffa9d599646c1d57a43e5b3c21575bc6de134f73`; fingerprint `fp-sha256-b2992fa80620c269b5103b023f8e62d0`.
 
 ## Final Judge Narrative
 
-F-010 is the sole Noticeable-or-worse correction. Update existing routed clauses in place; do not introduce another numbering authority.
-
-## Loop 13 Result
-
-Restored G17 to the canonical Step-3 hard-gate list and aligned six stale routed clauses with steps 6, 8, 9, 10, and 11. Repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, the refreshed preregistration hash, the 92% structural evaluator, and Ruff pass. `F-010` is resolved with no unintended regression.
-
-## Loop 13 Implementation Review
-
-reviewer ran inline; verdict requires manual confirmation
-
-Approved. Reality, honesty, and regression checks passed: only stale routed clauses changed, G17 was already required by its canonical gate contract, and the refreshed preregistration hash matches the current Step-3 text.
+Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; no finding or backlog remains. Independent challenge is required before terminal success.

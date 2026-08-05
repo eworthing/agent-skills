@@ -1,8 +1,8 @@
 {
   "schema_version": 4,
-  "loop": 13,
+  "loop": 14,
   "loop_cap": 15,
-  "state": "CONTINUE",
+  "state": "HALT_SUCCESS_candidate",
   "halt_subtype": null,
   "halt_handoff_text": null,
   "halt_handoff": null,
@@ -13,9 +13,9 @@
   "loop_metrics": {
     "lint_count": 0
   },
-  "run_id": null,
-  "source_rev": null,
-  "candidate_fingerprint": null,
+  "run_id": "7341a32b-a4cd-40ad-9ba5-4a148c42a7f1",
+  "source_rev": "ffa9d599646c1d57a43e5b3c21575bc6de134f73",
+  "candidate_fingerprint": "fp-sha256-b2992fa80620c269b5103b023f8e62d0",
   "halt_success_challenge": null,
   "provider": "unknown",
   "loop_model": null,
@@ -47,8 +47,8 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "The canonical sequence is coherent, but progressive-disclosure routing still points at obsolete sub-steps",
-  "verdict_explanation": "Five linked contracts misnumber registry, archive, review-gate, or commit work; the Step-3 hard-gate list also omits G17 despite the validation contract requiring it.",
+  "verdict": "Contest-grade architecture; terminal success awaits independent challenge",
+  "verdict_explanation": "Current source has no Noticeable-or-worse finding: canonical routing, persisted state, runtime validators, fixtures, self-tests, and documentation now agree, and the full gate is green.",
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
@@ -61,12 +61,12 @@
       "residual_blocker_kind": "cosmetic"
     },
     "state_management": {
-      "score": 8.0,
-      "delta": "SAME",
-      "proof": "contest-refactor/references/method.md:49 and implementation-reviewer.md:198 route persistence to obsolete steps",
-      "residual_blocking_10": null,
-      "residual_disposition": null,
-      "residual_rationale_or_backlog_ref": null,
+      "score": 9.5,
+      "delta": "UP",
+      "proof": "Commits eebad9b and ffa9d59 align archive, registry, reviewer, gate, and commit checkpoints across the canonical sequence and every routed reference.",
+      "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as interoperable JSON",
+      "residual_disposition": "accepted",
+      "residual_rationale_or_backlog_ref": "The single-writer checkpoint authority is explicit; replacing the JSON Interface solely to make invalid construction impossible would add ceremony without measured failures.",
       "unverifiable_due_to_build_failure": false,
       "residual_blocker_kind": "cosmetic"
     },
@@ -120,21 +120,21 @@
       "residual_blocker_kind": "cosmetic"
     },
     "test_strategy": {
-      "score": 8.0,
-      "delta": "SAME",
-      "proof": "contest-refactor/SKILL.md:210 omits required G17 from the canonical pre-commit hard-gate list",
+      "score": 10,
+      "delta": "UP",
+      "proof": "54 strict fixtures, 11 smoke fixtures, all standalone gate selftests, seven recurrence-key assertions, preregistered replay checks, failure-path config tests, and import/re-export checks pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
       "unverifiable_due_to_build_failure": false
     },
     "credibility": {
-      "score": 8.0,
-      "delta": "SAME",
-      "proof": "Seven stale or missing Step-3 route clauses remain across six instruction files",
-      "residual_blocking_10": null,
-      "residual_disposition": null,
-      "residual_rationale_or_backlog_ref": null,
+      "score": 9.5,
+      "delta": "UP",
+      "proof": "Commits 0206eb4, eebad9b, and ffa9d59 close the three reproduced workflow defects; strict artifacts and all 54 fixtures pass.",
+      "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
+      "residual_disposition": "accepted",
+      "residual_rationale_or_backlog_ref": "The existing 800-line hard cap enforces the trust gate; further splitting has no current source-backed authority or behavior gain.",
       "unverifiable_due_to_build_failure": false,
       "residual_blocker_kind": "cosmetic"
     }
@@ -194,67 +194,16 @@
     "G32 validates complete challenger evidence and focused negative fixtures cover independent failure clauses \u2014 contest-refactor/scripts/_artifact_halt.py.",
     "Candidate recurrence uses structured architecture evidence plus source_rev and is invariant to rationale rephrasing \u2014 contest-refactor/scripts/candidate_fingerprint.py."
   ],
-  "findings": [
-    {
-      "loop_local_id": "F1",
-      "stable_id": "F-010",
-      "title": "Step-3 routing references are stale and omit G17",
-      "why_it_matters": "Progressive-disclosure files are executable instructions; they must route agents to the same checkpoint steps as the canonical sequence.",
-      "what_is_wrong": "method.md says the registry writes at step 8 instead of 10; implementation-reviewer.md routes approval to obsolete archive/commit steps 6/7; provider-adapters.md says commit is step 9 instead of 11; validation.md misroutes G15, G16, G17, and G27; resume-detection.md cites an unrelated sub-step 4 for idempotency. SKILL.md step 8 does not list required G17 at all.",
-      "evidence": [
-        "contest-refactor/SKILL.md:210",
-        "contest-refactor/references/method.md:49",
-        "contest-refactor/references/implementation-reviewer.md:198-200",
-        "contest-refactor/references/provider-adapters.md:45",
-        "contest-refactor/references/validation.md:76-82,111",
-        "contest-refactor/references/resume-detection.md:140"
-      ],
-      "test_failed": "Interface-as-test-surface",
-      "dependency_category": null,
-      "leverage_impact": "A small cross-reference sweep restores one deterministic path through reviewer approval, gates, archive, registry, and commit.",
-      "locality_impact": "The canonical owner is SKILL.md; five progressive-disclosure readers have drifted from it.",
-      "metric_signal": "Seven definite stale or missing route clauses across six instruction files.",
-      "why_weakens_submission": "An agent loading the routed references can skip G17, write the registry at the wrong checkpoint, or believe archive/commit occurs before the canonical sequence permits it.",
-      "severity": "Serious deduction",
-      "adr_conflicts": [],
-      "adr_reopen_justification": null,
-      "minimal_correction_path": "Add G17 to Step 3 step 8 and update only the stale sub-step references to the canonical 6/8/9/10/11 sequence; refresh the existing Step-3 preregistration hash.",
-      "blast_radius": {
-        "change": [
-          "contest-refactor/SKILL.md",
-          "contest-refactor/references/method.md",
-          "contest-refactor/references/implementation-reviewer.md",
-          "contest-refactor/references/provider-adapters.md",
-          "contest-refactor/references/validation.md",
-          "contest-refactor/references/resume-detection.md",
-          "contest-refactor/evals/exec_replay_baseline.json"
-        ],
-        "avoid": [
-          "contest-refactor/scripts/validate-artifact.py",
-          "contest-refactor/references/output-format-json.md"
-        ]
-      }
-    }
-  ],
+  "findings": [],
   "simplification_check": {
-    "structurally_necessary": "Every routed instruction must name the canonical checkpoint that performs the work.",
+    "structurally_necessary": "No further structural correction survives current-source review.",
     "new_seam_justified": false,
     "new_seam_adapters": [],
-    "helpful_simplification": "Correct the stale numbers in place and restore the one omitted gate identifier.",
-    "should_not_be_done": "Do not add a second sequence table, aliases, or validator exceptions.",
-    "tests_after_fix": "Run the reference-tree lint, exec replay preregistration selftest, strict fixtures, repository validation, and Ruff."
+    "helpful_simplification": "Keep the current bounded validator modules and one canonical Step-3 sequence.",
+    "should_not_be_done": "Do not split soft-cap modules or add numbering machinery without runtime authority or measured drift.",
+    "tests_after_fix": "Full repository, fixture, smoke, standalone-selftest, preregistration, structural-evaluator, and Ruff gates passed on source_rev."
   },
-  "backlog": [
-    {
-      "priority": 1,
-      "stable_id": "F-010",
-      "title": "Align Step-3 routed references and restore G17",
-      "kind": "structural",
-      "rank": "needed for winning",
-      "why_it_matters": "The canonical workflow must remain consistent under progressive disclosure.",
-      "score_impact": "state_management +0.5; test_strategy +0.5; credibility +0.5"
-    }
-  ],
+  "backlog": [],
   "unresolved_reason": null,
   "deepening_candidates": [],
   "builder_notes": [
@@ -279,43 +228,7 @@
       "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "F-010 is the sole Noticeable-or-worse correction. Update existing routed clauses in place; do not introduce another numbering authority.",
-  "loop_result": {
-    "what_changed": "Restored G17 to the canonical Step-3 hard-gate list and aligned six stale routed clauses with steps 6, 8, 9, 10, and 11.",
-    "evidence_change_is_honest": "Repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests including the refreshed preregistration hash, the 92% structural evaluator, and Ruff pass.",
-    "risk_boundary_evidence": null,
-    "targeted_finding_status": "resolved",
-    "unintended_regression": null,
-    "changed_paths": [
-      "contest-refactor/SKILL.md",
-      "contest-refactor/references/method.md",
-      "contest-refactor/references/implementation-reviewer.md",
-      "contest-refactor/references/provider-adapters.md",
-      "contest-refactor/references/validation.md",
-      "contest-refactor/references/resume-detection.md",
-      "contest-refactor/evals/exec_replay_baseline.json"
-    ],
-    "interface_test_coverage_path": null
-  },
-  "implementation_review": {
-    "verdict": "approved",
-    "reason": "The diff updates only stale routed clauses, restores the already-required G17 gate, and refreshes the existing preregistered hash; canonical step behavior is unchanged.",
-    "checks": {
-      "reality": "passed",
-      "honesty": "passed",
-      "regression": "passed"
-    },
-    "regressions": [],
-    "conditions": [],
-    "retry_count": 1,
-    "retry_cause": null,
-    "retry_attempts": [
-      {
-        "attempt": 1,
-        "outcome": "ok",
-        "error": null,
-        "duration_ms": null
-      }
-    ]
-  }
+  "narrative": "Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; no finding or backlog remains. Independent challenge is required before terminal success.",
+  "loop_result": null,
+  "implementation_review": null
 }
