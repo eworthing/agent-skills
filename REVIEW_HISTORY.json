@@ -4034,7 +4034,7 @@
       "schema_version": 4,
       "loop": 14,
       "loop_cap": 15,
-      "state": "HALT_SUCCESS_candidate",
+      "state": "CONTINUE",
       "halt_subtype": null,
       "halt_handoff_text": null,
       "halt_handoff": null,
@@ -4045,9 +4045,9 @@
       "loop_metrics": {
         "lint_count": 0
       },
-      "run_id": "7341a32b-a4cd-40ad-9ba5-4a148c42a7f1",
-      "source_rev": "ffa9d599646c1d57a43e5b3c21575bc6de134f73",
-      "candidate_fingerprint": "fp-sha256-b2992fa80620c269b5103b023f8e62d0",
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
       "halt_success_challenge": null,
       "provider": "unknown",
       "loop_model": null,
@@ -4079,8 +4079,8 @@
         "test_filter": null,
         "working_tree_dirty_paths": []
       },
-      "verdict": "Contest-grade architecture; terminal success awaits independent challenge",
-      "verdict_explanation": "Current source has no Noticeable-or-worse finding: canonical routing, persisted state, runtime validators, fixtures, self-tests, and documentation now agree, and the full gate is green.",
+      "verdict": "Independent challenge broke the candidate on reviewer-rejection recovery",
+      "verdict_explanation": "A direct temporary-repository reproduction confirms the documented blob-as-tree-ish restore exits 128 and leaves rejected content in place.",
       "scorecard": {
         "architecture_quality": {
           "score": 9.5,
@@ -4093,12 +4093,12 @@
           "residual_blocker_kind": "cosmetic"
         },
         "state_management": {
-          "score": 9.5,
-          "delta": "UP",
-          "proof": "Commits eebad9b and ffa9d59 align archive, registry, reviewer, gate, and commit checkpoints across the canonical sequence and every routed reference.",
-          "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as interoperable JSON",
-          "residual_disposition": "accepted",
-          "residual_rationale_or_backlog_ref": "The single-writer checkpoint authority is explicit; replacing the JSON Interface solely to make invalid construction impossible would add ceremony without measured failures.",
+          "score": 8.0,
+          "delta": "DOWN",
+          "proof": "contest-refactor/SKILL.md:196-207 records a blob then uses it as a checkout tree-ish; direct reproduction exits 128",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
           "unverifiable_due_to_build_failure": false,
           "residual_blocker_kind": "cosmetic"
         },
@@ -4152,21 +4152,21 @@
           "residual_blocker_kind": "cosmetic"
         },
         "test_strategy": {
-          "score": 10,
-          "delta": "UP",
-          "proof": "54 strict fixtures, 11 smoke fixtures, all standalone gate selftests, seven recurrence-key assertions, preregistered replay checks, failure-path config tests, and import/re-export checks pass.",
+          "score": 8.0,
+          "delta": "DOWN",
+          "proof": "The full gate passes but no selftest executes the load-bearing tracked-file rejection restore command",
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
-          "score": 9.5,
-          "delta": "UP",
-          "proof": "Commits 0206eb4, eebad9b, and ffa9d59 close the three reproduced workflow defects; strict artifacts and all 54 fixtures pass.",
-          "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
-          "residual_disposition": "accepted",
-          "residual_rationale_or_backlog_ref": "The existing 800-line hard cap enforces the trust gate; further splitting has no current source-backed authority or behavior gain.",
+          "score": 8.0,
+          "delta": "DOWN",
+          "proof": "Candidate 1677db4 claimed complete recovery coverage, but the documented tracked restore fails in a temporary repository",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
           "unverifiable_due_to_build_failure": false,
           "residual_blocker_kind": "cosmetic"
         }
@@ -4226,16 +4226,66 @@
         "G32 validates complete challenger evidence and focused negative fixtures cover independent failure clauses \u2014 contest-refactor/scripts/_artifact_halt.py.",
         "Candidate recurrence uses structured architecture evidence plus source_rev and is invariant to rationale rephrasing \u2014 contest-refactor/scripts/candidate_fingerprint.py."
       ],
-      "findings": [],
+      "findings": [
+        {
+          "loop_local_id": "F1",
+          "stable_id": "F-011",
+          "title": "Reviewer rejection cannot restore tracked files",
+          "why_it_matters": "The reviewer-rejection path must reliably remove rejected source changes before audit artifacts are committed and the next loop begins.",
+          "what_is_wrong": "Step 3 records each tracked path as a blob SHA, then routes `git checkout <blob-sha> -- <path>`. Git checkout resolves that position as a tree-ish, so it exits 128 with `fatal: unable to read tree` and leaves the rejected change intact.",
+          "evidence": [
+            "contest-refactor/SKILL.md:196-207",
+            "contest-refactor/references/implementation-reviewer.md:200",
+            "contest-refactor/evals/evals.json:100",
+            "direct reproduction: git checkout <HEAD:path blob> -- tracked.txt exited 128 and retained changed content",
+            "candidate_commit_sha:1677db46fd7f93d34ac710869f4e59eed79c9b56"
+          ],
+          "test_failed": "Interface-as-test-surface",
+          "dependency_category": null,
+          "leverage_impact": "One valid Git restore command fixes every tracked rejection path.",
+          "locality_impact": "The canonical Step-3 rejection route and its reviewer/evaluation mirrors repeat the same invalid command.",
+          "metric_signal": "Direct temporary-repository reproduction exits 128; no current selftest executes the restore command.",
+          "why_weakens_submission": "A rejected refactor can remain in the worktree, corrupting the promised commit-only-artifacts outcome and subsequent checkpoint state.",
+          "severity": "Serious deduction",
+          "adr_conflicts": [],
+          "adr_reopen_justification": null,
+          "minimal_correction_path": "Replace the invalid blob checkout with `git restore --source=HEAD --staged --worktree -- <path>` in the canonical route and mirrors, retain null-path deletion, and add one temporary-repository selftest that proves a tracked staged+unstaged change returns to clean HEAD state.",
+          "blast_radius": {
+            "change": [
+              "contest-refactor/SKILL.md",
+              "contest-refactor/references/implementation-reviewer.md",
+              "contest-refactor/references/output-format-state-schemas.md",
+              "contest-refactor/references/resume-detection.md",
+              "contest-refactor/evals/evals.json",
+              "contest-refactor/scripts/_exec_replay_selftest.py",
+              "contest-refactor/evals/exec_replay_baseline.json"
+            ],
+            "avoid": [
+              "contest-refactor/scripts/validate-artifact.py",
+              "contest-refactor/canon/"
+            ]
+          }
+        }
+      ],
       "simplification_check": {
-        "structurally_necessary": "No further structural correction survives current-source review.",
+        "structurally_necessary": "Rejected tracked changes must be restored before artifact-only commit.",
         "new_seam_justified": false,
         "new_seam_adapters": [],
-        "helpful_simplification": "Keep the current bounded validator modules and one canonical Step-3 sequence.",
-        "should_not_be_done": "Do not split soft-cap modules or add numbering machinery without runtime authority or measured drift.",
-        "tests_after_fix": "Full repository, fixture, smoke, standalone-selftest, preregistration, structural-evaluator, and Ruff gates passed on source_rev."
+        "helpful_simplification": "Use Git restore from unchanged HEAD and exercise it once in a temporary repository.",
+        "should_not_be_done": "Do not add a custom blob materializer or another checkpoint field.",
+        "tests_after_fix": "Modify and stage a tracked file, run the documented restore, and assert clean status plus original content; then run the full suite."
       },
-      "backlog": [],
+      "backlog": [
+        {
+          "priority": 1,
+          "stable_id": "F-011",
+          "title": "Make tracked-file reviewer rejection restorable",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Rejected source must not survive the review boundary.",
+          "score_impact": "state_management +0.5; test_strategy +0.5; credibility +0.5"
+        }
+      ],
       "unresolved_reason": null,
       "deepening_candidates": [],
       "builder_notes": [
@@ -4260,9 +4310,39 @@
           "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
         }
       ],
-      "narrative": "Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; no finding or backlog remains. Independent challenge is required before terminal success.",
-      "loop_result": null,
-      "implementation_review": null
+      "narrative": "The bound Loop 14 challenger broke the candidate on F-011. The final budgeted loop must fix and executable-spec the tracked-file rejection path.",
+      "loop_result": {
+        "what_changed": "No source correction was applied; Loop 14 emitted candidate 1677db4 and the independent challenger discovered F-011 afterward.",
+        "evidence_change_is_honest": "Candidate identity held, while a direct temporary-repository probe reproduced exit 128 and unchanged rejected content for the documented restore command.",
+        "risk_boundary_evidence": null,
+        "targeted_finding_status": "carried_forward",
+        "unintended_regression": "The independent challenger rejected the candidate because the tracked-file narrow-revert command passes a blob object where Git requires a tree-ish.",
+        "changed_paths": [],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "rejected",
+        "reason": "The independent challenger rejected the candidate because the tracked-file narrow-revert command passes a blob object where Git requires a tree-ish.",
+        "checks": {
+          "reality": "failed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [
+          "Tracked reviewer-rejected changes cannot be restored by the documented blob-as-tree-ish command."
+        ],
+        "conditions": [],
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
     }
   ]
 }

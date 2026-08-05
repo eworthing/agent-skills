@@ -946,27 +946,29 @@ provider: unknown; running inline; Loop Isolation unavailable
 Loop 14 of 15.
 
 ### System Flag
-[STATE: HALT_SUCCESS_candidate]
+[STATE: CONTINUE]
 
 ## Contest Verdict
 
-Contest-grade architecture; terminal success awaits independent challenge.
+Independent challenge broke the candidate on reviewer-rejection recovery.
 
 ## Scorecard (1-10)
 
-Test strategy and Concurrency are 10. Architecture quality, state management, domain modeling, data flow, framework idioms, simplicity, and credibility are 9.5 with source-backed accepted residuals.
+State management 8; Test strategy 8; Credibility 8. Architecture quality, domain modeling, data flow, framework idioms, and simplicity remain 9.5 accepted; Concurrency remains 10.
 
 ## Findings
 
-None.
+### Finding #1: Reviewer rejection cannot restore tracked files
+
+Stable ID `F-011`; Serious deduction. Step 3 records a blob SHA, then routes `git checkout <blob-sha> -- <path>`. A direct temporary-repository probe exited 128 with `fatal: unable to read tree` and left the rejected content intact.
 
 ## Simplification Check
 
-No further structural correction survives current-source review. Keep the bounded validator modules and one canonical Step-3 sequence.
+Use `git restore --source=HEAD --staged --worktree -- <path>` while HEAD is still unchanged, and exercise the command once in a temporary repository. Do not add a custom blob materializer or checkpoint field.
 
 ## Improvement Backlog
 
-Empty.
+1. `F-011` — make tracked-file reviewer rejection restorable.
 
 ## Deepening Candidates
 
@@ -974,10 +976,18 @@ None.
 
 ## Builder Notes
 
-- Commits `0206eb4`, `eebad9b`, and `ffa9d59` close the three reproduced workflow defects.
-- Full committed-source gate: repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, structural evaluation, and Ruff pass.
-- Candidate identity: run `7341a32b-a4cd-40ad-9ba5-4a148c42a7f1`; source `ffa9d599646c1d57a43e5b3c21575bc6de134f73`; fingerprint `fp-sha256-b2992fa80620c269b5103b023f8e62d0`.
+- Candidate identity held: commit `1677db46fd7f93d34ac710869f4e59eed79c9b56`, run `7341a32b-a4cd-40ad-9ba5-4a148c42a7f1`, source `ffa9d599646c1d57a43e5b3c21575bc6de134f73`.
+- The full suite remained green, proving the restore path is currently unexecuted rather than contradicting the direct failure.
+- Loop 15 is the final configured loop and must execute normally.
 
 ## Final Judge Narrative
 
-Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; no finding or backlog remains. Independent challenge is required before terminal success.
+The bound Loop 14 challenger broke the candidate on F-011. The final budgeted loop must fix and executable-spec the tracked-file rejection path.
+
+## Loop 14 Result
+
+No source correction was applied after candidate `1677db4`; the independent challenger discovered F-011. Candidate identity held, while a direct temporary-repository probe reproduced exit 128 and retained rejected content for the documented restore command. The finding is carried forward to Loop 15.
+
+## Loop 14 Implementation Review
+
+Rejected for continuation purposes: the bound independent challenge proved the tracked-file rejection path cannot restore its target. No source diff was reverted.
