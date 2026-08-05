@@ -1,0 +1,8 @@
+id = "halt-terminal-no-diversity"
+purpose = "Terminal HALT_SUCCESS whose held challenge skips the mandatory non-correctness arm. G32 must fail."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G32"

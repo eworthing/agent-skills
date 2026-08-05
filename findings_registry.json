@@ -183,7 +183,7 @@
       "severity": "Serious deduction",
       "first_seen_loop": 4,
       "first_seen_sha": "3e51000",
-      "last_seen_loop": 4,
+      "last_seen_loop": 5,
       "occurrences": [
         {
           "loop": 4,
@@ -191,6 +191,31 @@
           "status": "open",
           "sha": "3e51000",
           "idempotency_key": "loop4-F-004-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d4130839d260493ae8dfd3fb596fea7f4640e2bd1541a9efaceb9abf0a4a72b7",
+            "evidence_paths_hash": "sha256:a700fe6e434a5b96d9479ae72f8a775f997fed30369ad34cf1c1ce479a321c66"
+          },
+          "attempted_remedy_hash": "sha256:690ced3c74423e7723bd6f0d1e40e001dde26790558a3fd9288cefbbd945263d",
+          "finding_snapshot": {
+            "title": "G32 accepts a terminal challenge that skipped mandatory arm diversity",
+            "why_it_matters": "The terminal trust gate can certify HALT_SUCCESS without any simplicity or domain-modeling attack.",
+            "what_is_wrong": "halt-verifier.md requires a simplicity/domain_modeling challenge arm, but check_g32_halt_success_challenge validates only that attempts is non-empty; the positive held fixture uses only data_flow.",
+            "evidence": [
+              "contest-refactor/references/halt-verifier.md:66-74",
+              "contest-refactor/scripts/_artifact_halt.py:251-257",
+              "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:147-158",
+              "candidate_commit_sha:3e51000"
+            ],
+            "why_weakens_submission": "A reachable terminal path can bypass a required dimension of independent scrutiny, leaving the success claim structurally under-validated.",
+            "minimal_correction_path": "Extend G32 to validate attempt shape and require one new_finding attempt targeting simplicity or domain_modeling; add that arm to the valid fixture and a failing no-diversity fixture."
+          }
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop5-F-004-resolved",
           "fingerprint": {
             "claim_consequence_hash": "sha256:d4130839d260493ae8dfd3fb596fea7f4640e2bd1541a9efaceb9abf0a4a72b7",
             "evidence_paths_hash": "sha256:a700fe6e434a5b96d9479ae72f8a775f997fed30369ad34cf1c1ce479a321c66"

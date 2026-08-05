@@ -145,18 +145,12 @@
       "source_rev": "def5678abc"
     },
     "attempts": [
-            {
-                "arm": "new_finding",
-                "target": "data_flow",
-                "what_tried": "Looked for a Serious-or-worse seam break.",
-                "why_failed": "Every candidate fix failed the Simplify Pressure Test."
-            },
-            {
-                "arm": "new_finding",
-                "target": "simplicity",
-                "what_tried": "Swept leaf scripts for duplication and repeated interpretation logic.",
-                "why_failed": "Every candidate was Cosmetic or failed the Simplify Pressure Test."
-            }
+      {
+        "arm": "new_finding",
+        "target": "data_flow",
+        "what_tried": "Looked for a Serious-or-worse seam break.",
+        "why_failed": "Every candidate fix failed the Simplify Pressure Test."
+      }
     ],
     "reason": "No Serious-or-worse finding and no accepted-residual refutation survives SPT."
   }

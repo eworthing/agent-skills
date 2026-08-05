@@ -141,7 +141,8 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
     - halt_success_challenge must be non-null.
     - .outcome must be "held" (outcome "broke" with terminal HALT_SUCCESS is illegal).
     - .challenger_model must be non-empty.
-    - .attempts must be a non-empty list.
+    - .attempts must be a non-empty list of shaped attempts.
+    - .attempts must include a new_finding arm targeting simplicity or domain_modeling.
     - .binding.run_id must equal top-level run_id.
     - .binding.source_rev must equal top-level source_rev.
     - .binding.candidate_commit_sha must be non-empty.
@@ -255,6 +256,40 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
                 "(challenger must make at least one arm attempt)",
             )
         )
+    else:
+        has_diversity_arm = False
+        for index, attempt in enumerate(attempts):
+            if not isinstance(attempt, dict):
+                issues.append(
+                    Issue(
+                        "G32",
+                        f"halt_success_challenge.attempts[{index}] must be an object",
+                    )
+                )
+                continue
+            for field in ("arm", "target", "what_tried"):
+                value = attempt.get(field)
+                if not isinstance(value, str) or not value.strip():
+                    issues.append(
+                        Issue(
+                            "G32",
+                            f"halt_success_challenge.attempts[{index}].{field} "
+                            "must be a non-empty string",
+                        )
+                    )
+            if attempt.get("arm") == "new_finding" and attempt.get("target") in {
+                "simplicity",
+                "domain_modeling",
+            }:
+                has_diversity_arm = True
+        if not has_diversity_arm:
+            issues.append(
+                Issue(
+                    "G32",
+                    "halt_success_challenge.attempts must include a new_finding arm "
+                    "targeting simplicity or domain_modeling",
+                )
+            )
 
     binding = challenge.get("binding")
     if not isinstance(binding, dict):

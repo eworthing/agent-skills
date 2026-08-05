@@ -1,5 +1,5 @@
 ### Loop Counter
-Loop 4 of 10.
+Loop 5 of 10.
 
 ### System Flag
 [STATE: CONTINUE]
@@ -37,3 +37,16 @@ The challenger successfully exercised the trust model: a documented mandatory ar
 ## Final Judge Narrative
 
 The candidate was correctly demoted. G32 must enforce the verifier contract before terminal success can be trusted.
+
+
+## Loop 5 Plan
+
+Add attempt-shape and mandatory simplicity/domain-modeling-arm checks to existing G32. Update the held fixture and add one no-diversity failing fixture. Do not touch the verifier contract or CLI.
+
+## Loop 5 Result
+
+G32 now requires shaped attempts and a `new_finding` arm targeting `simplicity` or `domain_modeling`. All 51 fixtures pass, and the new no-diversity fixture fails specifically at G32. F-004 is resolved.
+
+## Loop 5 Implementation Review
+
+Reviewer ran inline because provider detection was `unknown`; verdict requires manual confirmation. Approved: the existing terminal-validation Interface now enforces the documented contract without a new layer, and direct positive/negative fixtures cover it.
