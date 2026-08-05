@@ -161,3 +161,7 @@ title = "Backlog score_impact dimension attribution (machine-readable shape)"
 [[validation_gates]]
 id = "G40"
 title = "Discovery persistence across loops (durable Step-0 handoff, schema_version >= 4)"
+
+[[validation_gates]]
+id = "G41"
+title = "Cap loop executes its budgeted work (loop == loop_cap with a non-empty backlog, schema_version >= 4)"

@@ -2002,6 +2002,58 @@ def check_g40_discovery_persistence(current_review: dict) -> list[Issue]:
     return issues
 
 
+def check_g41_cap_loop_executed(current_review: dict) -> list[Issue]:
+    """G41: the loop that spends the cap does the work the cap bought.
+
+    The cap gates the NEXT dispatch, not the current loop's execution, so a loop at
+    loop == loop_cap with a non-empty backlog must have run Steps 2-3 and left a
+    loop_result. The clarifying prose landed first; this gate exists because the
+    artifact from the run that got it wrong passes strict validation with zero issues.
+
+    Exemptions, each a legitimate no-work terminal:
+      - loop > loop_cap : Step-1 emit on a resumed/misconfigured run; nothing to execute.
+      - empty backlog   : Steps 2-3 are skipped by the protocol, so a converged cap
+                          terminal honestly has no loop_result. That case is G37's.
+      - loop < loop_cap : not policed here. It is an odd state under the clarified
+                          semantics, but 13 v1-v3 fixtures carry loop=1/cap=10 while
+                          testing unrelated things, and failing them would be noise.
+    """
+    issues: list[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    if current_review.get("state") != "HALT_LOOP_CAP":
+        return issues
+
+    loop = current_review.get("loop")
+    cap = current_review.get("loop_cap")
+    # bool is an int subclass; exclude it so a stray True cannot be read as loop 1.
+    if isinstance(loop, bool) or isinstance(cap, bool):
+        return issues
+    if not isinstance(loop, int) or not isinstance(cap, int) or loop != cap:
+        return issues
+
+    if not (current_review.get("backlog") or []):
+        return issues
+
+    loop_result = current_review.get("loop_result")
+    if isinstance(loop_result, dict) and loop_result:
+        return issues
+
+    issues.append(
+        Issue(
+            "G41",
+            f"loop {loop} == loop_cap with a non-empty backlog but no loop_result: the "
+            f"cap loop emitted HALT_LOOP_CAP without executing Steps 2-3. The cap gates "
+            f"the NEXT dispatch, not this loop's execution — run the Priority 1 item, "
+            f"then emit HALT_LOOP_CAP in the Step-3 wrap-up. (A reviewer-rejected "
+            f"attempt still satisfies this: the revert path writes loop_result with "
+            f"targeted_finding_status 'carried_forward'.)",
+            f"state=HALT_LOOP_CAP loop={loop} loop_cap={cap}",
+        )
+    )
+    return issues
+
+
 def _load_project_config(artifact_dir: Path) -> dict | None:
     """Load `.contest-refactor.toml` from the artifact dir or its repo root."""
     candidates: list[Path] = [
@@ -2067,6 +2119,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
+    issues.extend(check_g41_cap_loop_executed(current_review))
     issues.extend(check_continue_backlog(current_review))
     return issues
 
