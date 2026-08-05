@@ -33,7 +33,7 @@ fi
 # Accumulate status across dirs — never `|| true`, which would discard the
 # hard-cap exit code and let a violation pass silently.
 size_rc=0
-for d in quorum-review/scripts peer-plan-review/scripts; do
+for d in quorum-review/scripts peer-plan-review/scripts contest-refactor/scripts; do
   [[ -d $d ]] || continue
   python3 common/scripts/check_module_size.py "$d" || size_rc=1
 done

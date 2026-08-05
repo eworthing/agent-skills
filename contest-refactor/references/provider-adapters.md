@@ -42,7 +42,7 @@ Any shell command outside this list → reviewer returns `verdict: rejected` wit
 
 ## Loop-spawn profile (Step 0 onward)
 
-The loop subagent runs the Critic / Architect / Execution loop. It must edit code (Step 3 step 1), run tests (Step 3 step 3), and commit (Step 3 step 9). No read-only restriction applies.
+The loop subagent runs the Critic / Architect / Execution loop. It must edit code (Step 3 step 1), run tests (Step 3 step 3), and commit (Step 3 step 11). No read-only restriction applies.
 
 ### claude_code (verified 2026-05-09)
 

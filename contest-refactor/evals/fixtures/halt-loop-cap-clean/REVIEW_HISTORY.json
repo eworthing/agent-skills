@@ -10,7 +10,7 @@
       "halt_handoff": {
         "state": "HALT_LOOP_CAP",
         "halt_subtype": null,
-        "text": "Loop cap reached; best next move recorded.",
+        "text": "Loop cap reached with the backlog cleared and every score at least 9.5; a fresh post-fix G32 challenge is still pending.",
         "expected_actions": []
       },
       "halt_handoff_text": null,
@@ -29,11 +29,11 @@
         "test_scope": "full",
         "test_filter": null
       },
-      "verdict": "Promising, but architecturally immature",
-      "verdict_explanation": "Loop 1: clean v3 CONTINUE; vanilla retry_count=1 (no retries); single backlog item carried.",
+      "verdict": "Strong contender",
+      "verdict_explanation": "The backlog is empty and every score meets the 9.5 bar; only a fresh post-fix G32 challenge remains.",
       "scorecard": {
         "architecture_quality": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Core/AppEngine.swift:1",
           "residual_blocking_10": null,
@@ -42,7 +42,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "state_management": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Core/AppState.swift:8",
           "residual_blocking_10": null,
@@ -51,7 +51,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "domain_modeling": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Domain/Order.swift:1",
           "residual_blocking_10": null,
@@ -60,7 +60,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "data_flow": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Core/Effects.swift:1",
           "residual_blocking_10": null,
@@ -69,7 +69,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "framework_idioms": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "App/RootView.swift:1",
           "residual_blocking_10": null,
@@ -78,7 +78,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "concurrency": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Adapters/Spotify.swift:18",
           "residual_blocking_10": null,
@@ -87,7 +87,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "simplicity": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Core/Reducer.swift:1",
           "residual_blocking_10": null,
@@ -96,7 +96,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "test_strategy": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "Tests/AppEngineTests.swift:1",
           "residual_blocking_10": null,
@@ -105,7 +105,7 @@
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
-          "score": 8.5,
+          "score": 9.5,
           "delta": "SAME",
           "proof": "App/AppEngine.swift:1",
           "residual_blocking_10": null,
@@ -129,8 +129,8 @@
       "backlog": [],
       "deepening_candidates": [],
       "builder_notes": [],
-      "narrative": "Clean v3 CONTINUE; vanilla loop; all v3 invariants satisfied (G18/G19/G27/G28 N/A or pass).",
-      "unresolved_reason": "Reached loop cap 10; one backlog item remains for the next session."
+      "narrative": "Certification-pending cap halt: the final fix cleared the backlog and met the score bar after the latest held challenge.",
+      "unresolved_reason": "loop counter reached cap of 10; backlog cleared — post-fix independent challenge not run within configured loop budget"
     }
   ]
 }

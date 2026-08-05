@@ -9,7 +9,7 @@
       "halt_subtype": null,
       "halt_handoff_text": null,
       "halt_handoff": {
-        "text": "Loop 1 ended at HALT_SUCCESS — every dimension 9.5 with accepted residuals.",
+        "text": "Loop 1 ended at HALT_SUCCESS \u2014 every dimension 9.5 with accepted residuals.",
         "expected_actions": []
       },
       "re_validated_at_sha": null,
@@ -138,7 +138,7 @@
       "narrative": "Terminal contest-grade state; residuals all accepted.",
       "run_id": "run-2026-06-21-001",
       "source_rev": "def5678abc",
-      "candidate_fingerprint": "fp-sha256-architecture-payload-0001",
+      "candidate_fingerprint": "fp-sha256-a2ec84c8545aefaf922599de07005f45",
       "halt_success_challenge": null
     }
   ]

@@ -7,7 +7,8 @@ Execution-unfuse). This selftest guards fixture well-formedness mechanically (no
 measurement is defensible. It mirrors `_loop_replay_selftest.py` (dir discovery / members /
 canon enums) + `_reviewer_baseline_selftest.py` (measured-mode arm gate), with net-new checks:
 `kind`, conditional keys, the `seed/` tree, the dual-sha drift guard, and the
-safety_tolerance-0 arm_b gate keyed on `kind`.
+safety_tolerance-0 arm_b gate keyed on `kind`. It also executes the tracked-file reviewer
+rejection restore command in a temporary Git repository.
 
 Checks:
   (a) no silent exclusion — every evals/exec-fixtures/<id>/ dir is registered in the manifest
@@ -36,7 +37,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -181,6 +184,51 @@ def _check_seed(fid: str, seed_dir: Path, canon, failures: list[str]) -> None:
         failures.append(f"fixture '{fid}': seed scorecard missing canon dims: {missing}")
 
 
+def _check_reviewer_revert(failures: list[str]) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp)
+        tracked = repo / "tracked file.txt"
+
+        def git(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                ["git", "-C", str(repo), *args],
+                check=check,
+                capture_output=True,
+                text=True,
+            )
+
+        try:
+            git("init", "-q")
+            git("config", "user.email", "contest-refactor.invalid")
+            git("config", "user.name", "contest-refactor selftest")
+            tracked.write_text("original\n", encoding="utf-8")
+            git("add", "--", tracked.name)
+            git("commit", "-qm", "base")
+            tracked.write_text("staged\n", encoding="utf-8")
+            git("add", "--", tracked.name)
+            tracked.write_text("worktree\n", encoding="utf-8")
+            restored = git(
+                "restore",
+                "--source=HEAD",
+                "--staged",
+                "--worktree",
+                "--",
+                tracked.name,
+                check=False,
+            )
+            status = git("status", "--porcelain").stdout
+        except (OSError, subprocess.CalledProcessError) as exc:
+            failures.append(f"reviewer rejection restore setup failed: {exc}")
+            return
+
+        if restored.returncode != 0:
+            failures.append(f"reviewer rejection restore failed: {restored.stderr.strip()}")
+        elif status:
+            failures.append(f"reviewer rejection restore left dirty state: {status!r}")
+        elif tracked.read_text(encoding="utf-8") != "original\n":
+            failures.append("reviewer rejection restore did not recover HEAD content")
+
+
 def main(argv: list[str]) -> int:
     canon = load_canon(SKILL_ROOT)
 
@@ -297,6 +345,8 @@ def main(argv: list[str]) -> int:
                 f"measured fixture '{fid}' (kind={kind}): arm_b.safety_violation is truthy "
                 "— violates safety_tolerance=0 (cheaper executor left a bad change committed)"
             )
+
+    _check_reviewer_revert(failures)
 
     if failures:
         print(f"_exec_replay_selftest: FAIL ({len(failures)} issue(s))")

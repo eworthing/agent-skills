@@ -132,9 +132,11 @@ The challenger is **read-only** (identical enforcement to the reviewer — it ca
 
 ## Oscillation
 
-A recurring candidate with the same **`candidate_fingerprint`** (the canonical
-content hash owned by [`scripts/candidate_fingerprint.py`](../scripts/candidate_fingerprint.py),
-which excludes volatile commit/run/loop/timestamp metadata) routes through the
-existing Step-1.6 oscillation handling instead of re-invoking the challenger. The
-`candidate_commit_sha` is **not** the recurrence key — it changes on every
-recommit; the fingerprint is.
+A recurring candidate with the same **`candidate_fingerprint` and `source_rev`**
+(the canonical pair owned by
+[`scripts/candidate_fingerprint.py`](../scripts/candidate_fingerprint.py)) routes
+through the existing Step-1.6 oscillation handling instead of re-invoking the
+challenger. The same fingerprint against a changed source revision is a fresh
+candidate and must be challenged again. `candidate_commit_sha` is **not** part of
+the recurrence key — artifact-only recommits change it without changing the
+analyzed source.

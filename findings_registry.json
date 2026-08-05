@@ -1,0 +1,619 @@
+{
+  "registry_schema_version": 3,
+  "next_serial": 12,
+  "entries": [
+    {
+      "stable_id": "F-001",
+      "title": "Artifact validation is a 2,255-line unchecked monolith",
+      "category_hint": "module-depth",
+      "primary_file": "contest-refactor/scripts/validate-artifact.py",
+      "primary_evidence_lines": [
+        143,
+        2255
+      ],
+      "test_failed": "Shallow module",
+      "severity": "Serious deduction",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop1-F-001-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:fe268a51846bb5ef5e303cc21b1874c574709ef54b2d0fc9fab8b57fe1ee77e9",
+            "evidence_paths_hash": "sha256:d9283c5e53eac278de0ada4cc4f6dd26a1b8f0a11cb15c60504f280a7fe91c2c"
+          },
+          "attempted_remedy_hash": "sha256:6bdc953e283946c33e97eee3a53a83ed79ec7671df29b5614326fd385669c340",
+          "finding_snapshot": {
+            "title": "Artifact validation is a 2,255-line unchecked monolith",
+            "why_it_matters": "The skill's trust gate must remain locally understandable as new halt and history rules are added.",
+            "what_is_wrong": "validate-artifact.py owns JSON loading, registry retirement, history checks, provider attribution, checkpoint freshness, halt semantics, scorecard rules, and CLI output in one 2,255-line file, while the repository's module-size gate scans only quorum-review and peer-plan-review.",
+            "evidence": [
+              "contest-refactor/scripts/validate-artifact.py:143-2255",
+              "contest-refactor/scripts/validate-artifact.py:2157-2196",
+              ".githooks/pre-commit:30-39",
+              "common/scripts/check_module_size.py:60-83"
+            ],
+            "why_weakens_submission": "The skill enforces structural rigor on targets while exempting its own most change-prone correctness module from the same guard, increasing cross-gate regression risk.",
+            "minimal_correction_path": "Move existing pure checks unchanged into three private modules grouped by core schema, registry/history, and halt/runtime concerns; keep validate-artifact.py as the thin re-exporting CLI expected by selftests; add contest-refactor/scripts to the existing pre-commit module-size loop. Do not add classes, a plugin registry, or generated validators."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-002",
+      "title": "Unused fixture files contract accepts paths outside the fixture",
+      "category_hint": "dead-validation",
+      "primary_file": "contest-refactor/scripts/validate-fixtures.py",
+      "primary_evidence_lines": [
+        265,
+        294
+      ],
+      "test_failed": "Deletion test",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+      "last_seen_loop": 2,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+          "idempotency_key": "loop1-F-002-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:99ef464d168fec86b72c2ce7da1bc02b39de5c98409c349d41c89a755d56fbc1",
+            "evidence_paths_hash": "sha256:b4088a7906f8d2e487cca5ca5fbc6d63a7c0cb3d9d31f48cdc9abf3b602a1cbd"
+          },
+          "attempted_remedy_hash": "sha256:cfd8c9f293b382b408588b78d628b0816ed4d7d38084a5a99d30409592a9d99c",
+          "finding_snapshot": {
+            "title": "Unused fixture files contract accepts paths outside the fixture",
+            "why_it_matters": "A deterministic fixture validator should not contain an unexercised path rule that can be satisfied by unrelated filesystem content.",
+            "what_is_wrong": "The optional files array is absent from every fixture.toml, yet _validate_one_fixture joins each supplied value directly to fixture_dir and checks only exists(), so absolute paths and parent traversal are accepted as declared fixture files.",
+            "evidence": [
+              "contest-refactor/scripts/validate-fixtures.py:265-294",
+              "contest-refactor/evals/fixtures/*/fixture.toml: no files field in the current corpus"
+            ],
+            "why_weakens_submission": "Dead validation code both enlarges the parser and advertises a guarantee it does not safely enforce.",
+            "minimal_correction_path": "Delete the optional files branch and its comment. Do not add path-normalization machinery until a real fixture needs this contract."
+          }
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop2-F-002-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:99ef464d168fec86b72c2ce7da1bc02b39de5c98409c349d41c89a755d56fbc1",
+            "evidence_paths_hash": "sha256:b4088a7906f8d2e487cca5ca5fbc6d63a7c0cb3d9d31f48cdc9abf3b602a1cbd"
+          },
+          "attempted_remedy_hash": "sha256:cfd8c9f293b382b408588b78d628b0816ed4d7d38084a5a99d30409592a9d99c",
+          "finding_snapshot": {
+            "title": "Unused fixture files contract accepts paths outside the fixture",
+            "why_it_matters": "A deterministic fixture validator should not contain an unexercised path rule that can be satisfied by unrelated filesystem content.",
+            "what_is_wrong": "The optional files array is absent from every fixture.toml, yet _validate_one_fixture joins each supplied value directly to fixture_dir and checks only exists(), so absolute paths and parent traversal are accepted as declared fixture files.",
+            "evidence": [
+              "contest-refactor/scripts/validate-fixtures.py:265-294",
+              "contest-refactor/evals/fixtures/*/fixture.toml: no files field in the current corpus"
+            ],
+            "why_weakens_submission": "Dead validation code both enlarges the parser and advertises a guarantee it does not safely enforce.",
+            "minimal_correction_path": "Delete the optional files branch and its comment. Do not add path-normalization machinery until a real fixture needs this contract."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-003",
+      "title": "Replication contract is copy-pasted across two baseline validators",
+      "category_hint": "clone",
+      "primary_file": "contest-refactor/scripts/_advisory_baseline_selftest.py",
+      "primary_evidence_lines": [
+        98,
+        189
+      ],
+      "test_failed": "Two-adapter rule",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+      "last_seen_loop": 2,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+          "idempotency_key": "loop1-F-003-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:0965c5fb607ce4c82553a74749c11f886a79b8e7166865c877e3c0c020364832",
+            "evidence_paths_hash": "sha256:e15a446f7f114a1a5c80718d41a41a1554ae3f6ae7fcd5502182b5406888c7ce"
+          },
+          "attempted_remedy_hash": "sha256:25b251b7aac075c847b893ff440ab79df79a66dccd9529a0fd6351b0602a2012",
+          "finding_snapshot": {
+            "title": "Replication contract is copy-pasted across two baseline validators",
+            "why_it_matters": "Measured evaluation evidence is only credible when its shared artifact rules have one implementation.",
+            "what_is_wrong": "The advisory and principal baseline selftests independently implement the same replication-block fields, five-slot accounting, invalid-count check, floor ordering, and valid-result requirements; the clone detector reports 0.89 similarity across roughly 92 lines, while arm and contamination rules are the only material differences.",
+            "evidence": [
+              "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
+              "contest-refactor/scripts/_principal_baseline_selftest.py:52-156"
+            ],
+            "why_weakens_submission": "The evaluation layer can disagree with itself about whether recorded measurements are valid, weakening the evidence used to judge the skill.",
+            "minimal_correction_path": "Extract only the shared replication shape and terminal-attempt checks into one private helper used by both selftests; leave advisory arm selection and principal contamination/retry policies local."
+          }
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F2",
+          "status": "withdrawn",
+          "sha": "<pending>",
+          "idempotency_key": "loop2-F-003-withdrawn",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:0965c5fb607ce4c82553a74749c11f886a79b8e7166865c877e3c0c020364832",
+            "evidence_paths_hash": "sha256:e15a446f7f114a1a5c80718d41a41a1554ae3f6ae7fcd5502182b5406888c7ce"
+          },
+          "attempted_remedy_hash": "sha256:25b251b7aac075c847b893ff440ab79df79a66dccd9529a0fd6351b0602a2012",
+          "finding_snapshot": {
+            "title": "Replication contract is copy-pasted across two baseline validators",
+            "why_it_matters": "Measured evaluation evidence is only credible when its shared artifact rules have one implementation.",
+            "what_is_wrong": "The advisory and principal baseline selftests independently implement the same replication-block fields, five-slot accounting, invalid-count check, floor ordering, and valid-result requirements; the clone detector reports 0.89 similarity across roughly 92 lines, while arm and contamination rules are the only material differences.",
+            "evidence": [
+              "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
+              "contest-refactor/scripts/_principal_baseline_selftest.py:52-156"
+            ],
+            "why_weakens_submission": "The evaluation layer can disagree with itself about whether recorded measurements are valid, weakening the evidence used to judge the skill.",
+            "minimal_correction_path": "Extract only the shared replication shape and terminal-attempt checks into one private helper used by both selftests; leave advisory arm selection and principal contamination/retry policies local."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-004",
+      "title": "G32 accepts a terminal challenge that skipped mandatory arm diversity",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/_artifact_halt.py",
+      "primary_evidence_lines": [
+        251,
+        257
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 4,
+      "first_seen_sha": "3e51000",
+      "last_seen_loop": 5,
+      "occurrences": [
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "3e51000",
+          "idempotency_key": "loop4-F-004-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d4130839d260493ae8dfd3fb596fea7f4640e2bd1541a9efaceb9abf0a4a72b7",
+            "evidence_paths_hash": "sha256:a700fe6e434a5b96d9479ae72f8a775f997fed30369ad34cf1c1ce479a321c66"
+          },
+          "attempted_remedy_hash": "sha256:690ced3c74423e7723bd6f0d1e40e001dde26790558a3fd9288cefbbd945263d",
+          "finding_snapshot": {
+            "title": "G32 accepts a terminal challenge that skipped mandatory arm diversity",
+            "why_it_matters": "The terminal trust gate can certify HALT_SUCCESS without any simplicity or domain-modeling attack.",
+            "what_is_wrong": "halt-verifier.md requires a simplicity/domain_modeling challenge arm, but check_g32_halt_success_challenge validates only that attempts is non-empty; the positive held fixture uses only data_flow.",
+            "evidence": [
+              "contest-refactor/references/halt-verifier.md:66-74",
+              "contest-refactor/scripts/_artifact_halt.py:251-257",
+              "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:147-158",
+              "candidate_commit_sha:3e51000"
+            ],
+            "why_weakens_submission": "A reachable terminal path can bypass a required dimension of independent scrutiny, leaving the success claim structurally under-validated.",
+            "minimal_correction_path": "Extend G32 to validate attempt shape and require one new_finding attempt targeting simplicity or domain_modeling; add that arm to the valid fixture and a failing no-diversity fixture."
+          }
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop5-F-004-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d4130839d260493ae8dfd3fb596fea7f4640e2bd1541a9efaceb9abf0a4a72b7",
+            "evidence_paths_hash": "sha256:a700fe6e434a5b96d9479ae72f8a775f997fed30369ad34cf1c1ce479a321c66"
+          },
+          "attempted_remedy_hash": "sha256:690ced3c74423e7723bd6f0d1e40e001dde26790558a3fd9288cefbbd945263d",
+          "finding_snapshot": {
+            "title": "G32 accepts a terminal challenge that skipped mandatory arm diversity",
+            "why_it_matters": "The terminal trust gate can certify HALT_SUCCESS without any simplicity or domain-modeling attack.",
+            "what_is_wrong": "halt-verifier.md requires a simplicity/domain_modeling challenge arm, but check_g32_halt_success_challenge validates only that attempts is non-empty; the positive held fixture uses only data_flow.",
+            "evidence": [
+              "contest-refactor/references/halt-verifier.md:66-74",
+              "contest-refactor/scripts/_artifact_halt.py:251-257",
+              "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:147-158",
+              "candidate_commit_sha:3e51000"
+            ],
+            "why_weakens_submission": "A reachable terminal path can bypass a required dimension of independent scrutiny, leaving the success claim structurally under-validated.",
+            "minimal_correction_path": "Extend G32 to validate attempt shape and require one new_finding attempt targeting simplicity or domain_modeling; add that arm to the valid fixture and a failing no-diversity fixture."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-005",
+      "title": "G32 accepts incomplete held-challenge evidence",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/_artifact_halt.py",
+      "primary_evidence_lines": [
+        250,
+        331
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 6,
+      "first_seen_sha": "6c80090",
+      "last_seen_loop": 7,
+      "occurrences": [
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "6c80090",
+          "idempotency_key": "loop6-F-005-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:66e9d1a50184375b15c315364fcf2b3373dbda3e95ee997cdf7bd4c553fbf6cb",
+            "evidence_paths_hash": "sha256:a60c2f7ab521e014b95a5afe8a6b4677673c1f267aaac9b305ede8952a87cb17"
+          },
+          "attempted_remedy_hash": "sha256:bb6ff5c98d06a58bc7512a7f620c2bf7cef9f99cea3fdad683d15e24e3428682",
+          "finding_snapshot": {
+            "title": "G32 accepts incomplete held-challenge evidence",
+            "why_it_matters": "G32 is the sole terminal trust gate preventing HALT_SUCCESS without a substantive independent challenge.",
+            "what_is_wrong": "The declared challenge schema restricts arm to new_finding or residual_refutation and requires each attempt's why_failed plus a top-level reason, but G32 validates only arm, target, what_tried, diversity, and binding.",
+            "evidence": [
+              "contest-refactor/references/output-format-json.md:34-54",
+              "contest-refactor/scripts/_artifact_halt.py:250-331",
+              "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:139-162",
+              "candidate_commit_sha:6c80090"
+            ],
+            "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
+            "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations."
+          }
+        },
+        {
+          "loop": 7,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop7-F-005-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:66e9d1a50184375b15c315364fcf2b3373dbda3e95ee997cdf7bd4c553fbf6cb",
+            "evidence_paths_hash": "sha256:a60c2f7ab521e014b95a5afe8a6b4677673c1f267aaac9b305ede8952a87cb17"
+          },
+          "attempted_remedy_hash": "sha256:bb6ff5c98d06a58bc7512a7f620c2bf7cef9f99cea3fdad683d15e24e3428682",
+          "finding_snapshot": {
+            "title": "G32 accepts incomplete held-challenge evidence",
+            "why_it_matters": "G32 is the sole terminal trust gate preventing HALT_SUCCESS without a substantive independent challenge.",
+            "what_is_wrong": "The declared challenge schema restricts arm to new_finding or residual_refutation and requires each attempt's why_failed plus a top-level reason, but G32 validates only arm, target, what_tried, diversity, and binding.",
+            "evidence": [
+              "contest-refactor/references/output-format-json.md:34-54",
+              "contest-refactor/scripts/_artifact_halt.py:250-331",
+              "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:139-162",
+              "candidate_commit_sha:6c80090"
+            ],
+            "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
+            "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-006",
+      "title": "Candidate recurrence ignores changed source revisions",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/references/halt-verifier.md",
+      "primary_evidence_lines": [
+        135,
+        141
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 8,
+      "first_seen_sha": "88ca449",
+      "last_seen_loop": 8,
+      "occurrences": [
+        {
+          "loop": 8,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop8-F-006-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d1614eabbab079d077ddafaff69af2fb5fbf833c3d9d192e3ff1c685f1e540b0",
+            "evidence_paths_hash": "sha256:8e7ebeb4e5e08195f383940896a97a1f7ab5e0f287ecc75c63cc61dbfe3a6f16"
+          },
+          "attempted_remedy_hash": "sha256:ae9e7bc0b6efcfef456b44de9cc5a43572a860ef5c7344e69a34aabca9d574cb",
+          "finding_snapshot": {
+            "title": "Candidate recurrence ignores changed source revisions",
+            "why_it_matters": "A corrected source tree must receive a fresh independent challenge instead of being misrouted to a finding-only oscillation halt.",
+            "what_is_wrong": "The verifier treated candidate_fingerprint alone as the recurrence key even though that hash intentionally excludes source_rev; materially different source revisions with the same scorecard therefore looked recurrent, while Step 1.6 oscillation is defined around reappearing findings.",
+            "evidence": [
+              "contest-refactor/references/halt-verifier.md:135-141",
+              "contest-refactor/scripts/candidate_fingerprint.py:55-92",
+              "contest-refactor/references/method.md:49-68",
+              "contest-refactor/references/halt-handoff.md:146-174",
+              "candidate_commits:3e51000,6c80090 shared fp-sha256-017e5293b7c197debf077123abf537b4 across changed source_rev"
+            ],
+            "why_weakens_submission": "The documented route can falsely halt after a successful correction, preventing the loop from ever proving terminal success even though the source materially changed.",
+            "minimal_correction_path": "Pair candidate_fingerprint with source_rev for recurrence, retain candidate_commit_sha only as freshness binding, and executable-spec the pair in candidate_fingerprint.py."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-007",
+      "title": "Free-form residual wording defeats candidate recurrence",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/candidate_fingerprint.py",
+      "primary_evidence_lines": [
+        25,
+        39
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 9,
+      "first_seen_sha": "38879be",
+      "last_seen_loop": 9,
+      "occurrences": [
+        {
+          "loop": 9,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop9-F-007-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d916fd2628319ff7a3310fbc2872652ecff72d7270ca6164e841445b4d230ccc",
+            "evidence_paths_hash": "sha256:3ade0476750f9cba412fa79cc2e224ed4878e3a274fc6fbb2683294a815953f2"
+          },
+          "attempted_remedy_hash": "sha256:7418818094ef59d68ca4a5e73f2fa90f4b16f03e7d58472f1a9b7c4ddcff5d7b",
+          "finding_snapshot": {
+            "title": "Free-form residual wording defeats candidate recurrence",
+            "why_it_matters": "Artifact-only prose edits must not create a fresh architecture identity and re-enable an otherwise recurrent challenge loop.",
+            "what_is_wrong": "candidate_fingerprint hashed residual_rationale_or_backlog_ref verbatim, so changing only \u201cnow enforces\u201d to \u201cenforces\u201d changed the candidate fingerprint even though every structured score, disposition, blocker, finding, lens, and source root was identical.",
+            "evidence": [
+              "contest-refactor/scripts/candidate_fingerprint.py:_architecture_payload",
+              "contest-refactor/references/output-format-json.md:candidate_fingerprint schema",
+              "candidate_payload_diff:6c80090 vs uncommitted Loop 9 changed one rationale word and fp-sha256-017e5293b7c197debf077123abf537b4 became fp-sha256-305232e26357cfed65fca75de17fc784"
+            ],
+            "why_weakens_submission": "The loop can evade its recurrence guard through harmless prose rewording and repeatedly spend independent-challenge cycles on the same architecture.",
+            "minimal_correction_path": "Hash residual_blocker_kind instead of free-form rationale, retain the structured score/disposition/blocker fields, and assert rationale rephrasing is invariant while blocker-kind changes are not."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-008",
+      "title": "G32 accepts non-canonical candidate fingerprints",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/_artifact_halt.py",
+      "primary_evidence_lines": [
+        165,
+        201
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 10,
+      "first_seen_sha": "b483d55",
+      "last_seen_loop": 11,
+      "occurrences": [
+        {
+          "loop": 10,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "b483d55",
+          "idempotency_key": "loop10-F-008-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:cf56a5e99e256a8117bf4914d80008f4f2b0c5822285079c24dd7f05dc23c888",
+            "evidence_paths_hash": "sha256:55be135dfb86b182031e4085e746cb39f9824fcce639b27d2ea0054af535919f"
+          },
+          "attempted_remedy_hash": "sha256:802f4ff3e102f7b37611699367a530a5deea447b2e7a14576d39438fde0932a6",
+          "finding_snapshot": {
+            "title": "G32 accepts non-canonical candidate fingerprints",
+            "why_it_matters": "The recurrence guard must derive candidate identity from the review payload instead of trusting an agent-supplied string.",
+            "what_is_wrong": "G32 checks only that candidate_fingerprint is non-empty and never recomputes the canonical digest; a positive candidate fixture passes the placeholder fp-sha256-architecture-payload-0001.",
+            "evidence": [
+              "contest-refactor/scripts/candidate_fingerprint.py:53-61",
+              "contest-refactor/scripts/_artifact_halt.py:165-201",
+              "contest-refactor/scripts/validate-artifact.py:140-143",
+              "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json:133-136",
+              "contest-refactor/evals/fixtures/halt-candidate-no-challenge/fixture.toml:1-3",
+              "candidate_commit_sha:b483d55"
+            ],
+            "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
+            "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture."
+          }
+        },
+        {
+          "loop": 11,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop11-F-008-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:cf56a5e99e256a8117bf4914d80008f4f2b0c5822285079c24dd7f05dc23c888",
+            "evidence_paths_hash": "sha256:55be135dfb86b182031e4085e746cb39f9824fcce639b27d2ea0054af535919f"
+          },
+          "attempted_remedy_hash": "sha256:802f4ff3e102f7b37611699367a530a5deea447b2e7a14576d39438fde0932a6",
+          "finding_snapshot": {
+            "title": "G32 accepts non-canonical candidate fingerprints",
+            "why_it_matters": "The recurrence guard must derive candidate identity from the review payload instead of trusting an agent-supplied string.",
+            "what_is_wrong": "G32 checks only that candidate_fingerprint is non-empty and never recomputes the canonical digest; a positive candidate fixture passes the placeholder fp-sha256-architecture-payload-0001.",
+            "evidence": [
+              "contest-refactor/scripts/candidate_fingerprint.py:53-61",
+              "contest-refactor/scripts/_artifact_halt.py:165-201",
+              "contest-refactor/scripts/validate-artifact.py:140-143",
+              "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json:133-136",
+              "contest-refactor/evals/fixtures/halt-candidate-no-challenge/fixture.toml:1-3",
+              "candidate_commit_sha:b483d55"
+            ],
+            "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
+            "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-009",
+      "title": "G18 is ordered before its required history append",
+      "category_hint": "workflow-ordering",
+      "primary_file": "contest-refactor/SKILL.md",
+      "primary_evidence_lines": [
+        210,
+        211
+      ],
+      "test_failed": "Leverage",
+      "severity": "Serious deduction",
+      "first_seen_loop": 12,
+      "first_seen_sha": "0206eb4",
+      "last_seen_loop": 12,
+      "occurrences": [
+        {
+          "loop": 12,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop12-F-009-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:fdfd5cbcd9f83450eeff09dcf507668939c25577e7486088e8275cfc9bfa6096",
+            "evidence_paths_hash": "sha256:b82be6f03ccefdd9bb424e7bebe17b25975a34a0e30ff6633d7967e712d9de34"
+          },
+          "attempted_remedy_hash": "sha256:396100f1c5d26ddbcc6d1907e27dfb56fdcf300ea4cc4da88f439c572a924455",
+          "finding_snapshot": {
+            "title": "G18 is ordered before its required history append",
+            "why_it_matters": "The autonomous loop must have one executable persistence order; a mandatory gate cannot precede the write that makes it pass.",
+            "what_is_wrong": "SKILL.md sub-step 8 requires G18, while sub-step 9 performs the REVIEW_HISTORY append. validation.md and output-format-state-schemas.md also retain stale step-8 append references. A literal Loop 11 run failed G18 with 10 history entries until Loop 11 was archived ahead of the documented step.",
+            "evidence": [
+              "contest-refactor/SKILL.md:210-211",
+              "contest-refactor/references/validation.md:82",
+              "contest-refactor/references/output-format-state-schemas.md:213",
+              "contest-refactor/scripts/_artifact_history.py:269-301",
+              "reproduction: Loop 11 strict validation failed only G18 before archive and passed immediately after archive"
+            ],
+            "why_weakens_submission": "Agents following the skill literally must either stop on a false gate failure or silently violate checkpoint ordering, undermining deterministic resume and audit claims.",
+            "minimal_correction_path": "Remove G18 from the pre-archive gate list, run it immediately after sub-step 9 appends both history artifacts, and update the two stale step-8 archive references to step 9."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-010",
+      "title": "Step-3 routing references are stale and omit G17",
+      "category_hint": "workflow-ordering",
+      "primary_file": "contest-refactor/SKILL.md",
+      "primary_evidence_lines": [
+        210,
+        210
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 13,
+      "first_seen_sha": "eebad9b",
+      "last_seen_loop": 13,
+      "occurrences": [
+        {
+          "loop": 13,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop13-F-010-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:c95b87ccc1a3730731287a50a03bcada66d5505b651b0d4c7246975dec1403de",
+            "evidence_paths_hash": "sha256:39245fab613e2ef8fe3f40ccff9c4b3fd7cf8097b1dc5ec9b2bff7b561aab6d7"
+          },
+          "attempted_remedy_hash": "sha256:2d9231806333eac7fd0f107e524b4b39f2a2751643e2f7c6de9ea9dfe968ffcb",
+          "finding_snapshot": {
+            "title": "Step-3 routing references are stale and omit G17",
+            "why_it_matters": "Progressive-disclosure files are executable instructions; they must route agents to the same checkpoint steps as the canonical sequence.",
+            "what_is_wrong": "method.md says the registry writes at step 8 instead of 10; implementation-reviewer.md routes approval to obsolete archive/commit steps 6/7; provider-adapters.md says commit is step 9 instead of 11; validation.md misroutes G15, G16, G17, and G27; resume-detection.md cites an unrelated sub-step 4 for idempotency. SKILL.md step 8 does not list required G17 at all.",
+            "evidence": [
+              "contest-refactor/SKILL.md:210",
+              "contest-refactor/references/method.md:49",
+              "contest-refactor/references/implementation-reviewer.md:198-200",
+              "contest-refactor/references/provider-adapters.md:45",
+              "contest-refactor/references/validation.md:76-82,111",
+              "contest-refactor/references/resume-detection.md:140"
+            ],
+            "why_weakens_submission": "An agent loading the routed references can skip G17, write the registry at the wrong checkpoint, or believe archive/commit occurs before the canonical sequence permits it.",
+            "minimal_correction_path": "Add G17 to Step 3 step 8 and update only the stale sub-step references to the canonical 6/8/9/10/11 sequence; refresh the existing Step-3 preregistration hash."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-011",
+      "title": "Reviewer rejection cannot restore tracked files",
+      "category_hint": "recovery-path",
+      "primary_file": "contest-refactor/SKILL.md",
+      "primary_evidence_lines": [
+        196,
+        207
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 14,
+      "first_seen_sha": "1677db4",
+      "last_seen_loop": 15,
+      "occurrences": [
+        {
+          "loop": 14,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "1677db4",
+          "idempotency_key": "loop14-F-011-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:6de616d0ca541a89760f44c0ef30398feda54ff90f04e0fc7357e8adf38ffcc1",
+            "evidence_paths_hash": "sha256:a1d37be11f5683e41b9e0c3c111c5e75bf5ac62d777f46b4bee6bd3f28531a4f"
+          },
+          "attempted_remedy_hash": "sha256:747cc73415978d1c7c0e686373e2fd2b1bac2d4540a6b3176e502ac1a8e0e198",
+          "finding_snapshot": {
+            "title": "Reviewer rejection cannot restore tracked files",
+            "why_it_matters": "The reviewer-rejection path must reliably remove rejected source changes before audit artifacts are committed and the next loop begins.",
+            "what_is_wrong": "Step 3 records each tracked path as a blob SHA, then routes `git checkout <blob-sha> -- <path>`. Git checkout resolves that position as a tree-ish, so it exits 128 with `fatal: unable to read tree` and leaves the rejected change intact.",
+            "evidence": [
+              "contest-refactor/SKILL.md:196-207",
+              "contest-refactor/references/implementation-reviewer.md:200",
+              "contest-refactor/evals/evals.json:100",
+              "direct reproduction: git checkout <HEAD:path blob> -- tracked.txt exited 128 and retained changed content",
+              "candidate_commit_sha:1677db46fd7f93d34ac710869f4e59eed79c9b56"
+            ],
+            "why_weakens_submission": "A rejected refactor can remain in the worktree, corrupting the promised commit-only-artifacts outcome and subsequent checkpoint state.",
+            "minimal_correction_path": "Replace the invalid blob checkout with `git restore --source=HEAD --staged --worktree -- <path>` in the canonical route and mirrors, retain null-path deletion, and add one temporary-repository selftest that proves a tracked staged+unstaged change returns to clean HEAD state."
+          }
+        },
+        {
+          "loop": 15,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop15-F-011-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:6de616d0ca541a89760f44c0ef30398feda54ff90f04e0fc7357e8adf38ffcc1",
+            "evidence_paths_hash": "sha256:a1d37be11f5683e41b9e0c3c111c5e75bf5ac62d777f46b4bee6bd3f28531a4f"
+          },
+          "attempted_remedy_hash": "sha256:747cc73415978d1c7c0e686373e2fd2b1bac2d4540a6b3176e502ac1a8e0e198",
+          "finding_snapshot": {
+            "title": "Reviewer rejection cannot restore tracked files",
+            "why_it_matters": "The reviewer-rejection path must reliably remove rejected source changes before audit artifacts are committed and the next loop begins.",
+            "what_is_wrong": "Step 3 records each tracked path as a blob SHA, then routes `git checkout <blob-sha> -- <path>`. Git checkout resolves that position as a tree-ish, so it exits 128 with `fatal: unable to read tree` and leaves the rejected change intact.",
+            "evidence": [
+              "contest-refactor/SKILL.md:196-207",
+              "contest-refactor/references/implementation-reviewer.md:200",
+              "contest-refactor/evals/evals.json:100",
+              "direct reproduction: git checkout <HEAD:path blob> -- tracked.txt exited 128 and retained changed content",
+              "candidate_commit_sha:1677db46fd7f93d34ac710869f4e59eed79c9b56"
+            ],
+            "why_weakens_submission": "A rejected refactor can remain in the worktree, corrupting the promised commit-only-artifacts outcome and subsequent checkpoint state.",
+            "minimal_correction_path": "Replace the invalid blob checkout with `git restore --source=HEAD --staged --worktree -- <path>` in the canonical route and mirrors, retain null-path deletion, and add one temporary-repository selftest that proves a tracked staged+unstaged change returns to clean HEAD state."
+          }
+        }
+      ]
+    }
+  ]
+}

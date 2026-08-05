@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Canonical candidate_fingerprint for contest-refactor HALT_SUCCESS candidates.
+"""Canonical candidate fingerprint and recurrence key for HALT_SUCCESS candidates.
 
-The fingerprint is the OSCILLATION equivalence key (see G32 in validation.md and
-halt-verifier.md): two candidates whose architecture-relevant payload is
-identical must share a fingerprint even when volatile metadata (commit sha,
-run_id, loop counter, timestamps, schema_version, state, narrative prose)
-differs. It is DISTINCT from the candidate commit SHA, which is the G32 freshness
-binding and changes on every recommit — so the SHA can never detect recurrence.
+The fingerprint identifies an architecture-relevant payload. Recurrence pairs it
+with source_rev so a materially changed source tree can be challenged again while
+artifact-only recommits remain equivalent. candidate_commit_sha is the separate
+G32 freshness binding and changes on every recommit.
 
 Owned here; referenced by references/output-format-json.md and halt-verifier.md.
 Run directly to execute the stability self-test:  python3 scripts/candidate_fingerprint.py
@@ -21,7 +19,7 @@ import json
 def _architecture_payload(review: dict) -> dict:
     """The architecture-relevant subset that defines a candidate's identity.
 
-    Includes scorecard scores + residual dispositions/rationales, findings
+    Includes scorecard scores + residual dispositions/blocker kinds, findings
     (title + evidence + severity), and the analyzed source identity (lens +
     source roots). Excludes everything volatile by simply not reading it.
     """
@@ -32,7 +30,7 @@ def _architecture_payload(review: dict) -> dict:
                 "score": entry.get("score"),
                 "residual_disposition": entry.get("residual_disposition"),
                 "residual_blocking_10": entry.get("residual_blocking_10"),
-                "residual_rationale_or_backlog_ref": entry.get("residual_rationale_or_backlog_ref"),
+                "residual_blocker_kind": entry.get("residual_blocker_kind"),
             }
     findings = [
         {
@@ -58,6 +56,11 @@ def candidate_fingerprint(review: dict) -> str:
     return "fp-sha256-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
 
 
+def candidate_recurrence_key(review: dict) -> tuple[str, object]:
+    """Return the oscillation key: architecture payload plus analyzed source revision."""
+    return candidate_fingerprint(review), review.get("source_rev")
+
+
 def _selftest() -> None:
     base = {
         "schema_version": 4,
@@ -72,6 +75,7 @@ def _selftest() -> None:
                 "residual_disposition": "accepted",
                 "residual_blocking_10": "x",
                 "residual_rationale_or_backlog_ref": "y",
+                "residual_blocker_kind": "cosmetic",
             }
         },
         "findings": [],
@@ -91,6 +95,24 @@ def _selftest() -> None:
     assert candidate_fingerprint(base) == candidate_fingerprint(other), (
         "volatile metadata must not change the fingerprint"
     )
+    assert candidate_recurrence_key(base) != candidate_recurrence_key(other), (
+        "a changed source revision must be eligible for a fresh challenge"
+    )
+    same_source = json.loads(json.dumps(other))
+    same_source["source_rev"] = base["source_rev"]
+    assert candidate_recurrence_key(base) == candidate_recurrence_key(same_source), (
+        "artifact-only metadata must not defeat recurrence detection"
+    )
+    rephrased = json.loads(json.dumps(base))
+    rephrased["scorecard"]["data_flow"]["residual_rationale_or_backlog_ref"] = "new wording"
+    assert candidate_fingerprint(base) == candidate_fingerprint(rephrased), (
+        "free-form rationale wording must not defeat recurrence detection"
+    )
+    changed_kind = json.loads(json.dumps(base))
+    changed_kind["scorecard"]["data_flow"]["residual_blocker_kind"] = "structural"
+    assert candidate_fingerprint(base) != candidate_fingerprint(changed_kind), (
+        "a changed structured blocker kind must change the fingerprint"
+    )
     # Meaningful scorecard change -> DIFFERENT fingerprint.
     changed = json.loads(json.dumps(base))
     changed["scorecard"]["data_flow"]["score"] = 9.0
@@ -105,7 +127,7 @@ def _selftest() -> None:
     assert candidate_fingerprint(base) != candidate_fingerprint(changed2), (
         "a findings change must change the fingerprint"
     )
-    print("candidate_fingerprint self-test: OK (3 assertions passed)")
+    print("candidate_fingerprint self-test: OK (7 assertions passed)")
 
 
 if __name__ == "__main__":
