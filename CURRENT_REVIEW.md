@@ -4,7 +4,7 @@
 - Lens: Generic + Security + Efficiency
 
 ### Loop Counter
-Loop 3 of 10.
+Loop 4 of 10.
 
 ### System Flag
 [STATE: HALT_SUCCESS_candidate]

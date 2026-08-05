@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "loop": 3,
+  "loop": 4,
   "loop_cap": 10,
   "state": "HALT_SUCCESS_candidate",
   "halt_subtype": null,
@@ -13,8 +13,8 @@
   "loop_metrics": {
     "lint_count": 0
   },
-  "run_id": "bdc8a9ec-e498-47a9-b9f6-07f70dbd60fa",
-  "source_rev": "9919880",
+  "run_id": "8dfd45dd-6652-4af2-ac1e-bda8b57177fb",
+  "source_rev": "236c04f",
   "candidate_fingerprint": "fp-sha256-017e5293b7c197debf077123abf537b4",
   "halt_success_challenge": null,
   "provider": "unknown",
@@ -52,7 +52,7 @@
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
       "residual_blocking_10": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
       "residual_disposition": "accepted",
@@ -62,7 +62,7 @@
     },
     "state_management": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
       "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
       "residual_disposition": "accepted",
@@ -72,7 +72,7 @@
     },
     "domain_modeling": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
       "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
       "residual_disposition": "accepted",
@@ -82,7 +82,7 @@
     },
     "data_flow": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
       "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
       "residual_disposition": "accepted",
@@ -92,7 +92,7 @@
     },
     "framework_idioms": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
       "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
       "residual_disposition": "accepted",
@@ -102,7 +102,7 @@
     },
     "concurrency": {
       "score": 10,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "All production paths are sequential CLIs; no async tasks or shared mutable runtime authority exist.",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -111,7 +111,7 @@
     },
     "simplicity": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
       "residual_blocking_10": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
       "residual_disposition": "accepted",
@@ -121,7 +121,7 @@
     },
     "test_strategy": {
       "score": 10,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "50 strict fixtures, 11 smoke fixtures, standalone gate selftests, failure-path config tests, and import/re-export regression checks all pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -130,7 +130,7 @@
     },
     "credibility": {
       "score": 9.5,
-      "delta": "UP",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
       "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
       "residual_disposition": "accepted",
