@@ -1,6 +1,6 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 5,
+  "next_serial": 6,
   "entries": [
     {
       "stable_id": "F-001",
@@ -233,6 +233,48 @@
             ],
             "why_weakens_submission": "A reachable terminal path can bypass a required dimension of independent scrutiny, leaving the success claim structurally under-validated.",
             "minimal_correction_path": "Extend G32 to validate attempt shape and require one new_finding attempt targeting simplicity or domain_modeling; add that arm to the valid fixture and a failing no-diversity fixture."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-005",
+      "title": "G32 accepts incomplete held-challenge evidence",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/_artifact_halt.py",
+      "primary_evidence_lines": [
+        250,
+        331
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 6,
+      "first_seen_sha": "6c80090",
+      "last_seen_loop": 6,
+      "occurrences": [
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "6c80090",
+          "idempotency_key": "loop6-F-005-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:66e9d1a50184375b15c315364fcf2b3373dbda3e95ee997cdf7bd4c553fbf6cb",
+            "evidence_paths_hash": "sha256:a60c2f7ab521e014b95a5afe8a6b4677673c1f267aaac9b305ede8952a87cb17"
+          },
+          "attempted_remedy_hash": "sha256:bb6ff5c98d06a58bc7512a7f620c2bf7cef9f99cea3fdad683d15e24e3428682",
+          "finding_snapshot": {
+            "title": "G32 accepts incomplete held-challenge evidence",
+            "why_it_matters": "G32 is the sole terminal trust gate preventing HALT_SUCCESS without a substantive independent challenge.",
+            "what_is_wrong": "The declared challenge schema restricts arm to new_finding or residual_refutation and requires each attempt's why_failed plus a top-level reason, but G32 validates only arm, target, what_tried, diversity, and binding.",
+            "evidence": [
+              "contest-refactor/references/output-format-json.md:34-54",
+              "contest-refactor/scripts/_artifact_halt.py:250-331",
+              "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:139-162",
+              "candidate_commit_sha:6c80090"
+            ],
+            "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
+            "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations."
           }
         }
       ]

@@ -443,7 +443,7 @@ G32 now requires shaped attempts and a `new_finding` arm targeting `simplicity` 
 Reviewer ran inline because provider detection was `unknown`; verdict requires manual confirmation. Approved: the existing terminal-validation Interface now enforces the documented contract without a new layer, and direct positive/negative fixtures cover it.
 
 
---- Loop 6 (UTC 2026-08-05T15:31:32.113313Z) ---
+--- Loop 6 (UTC 2026-08-05T15:37:48.070658Z) ---
 
 ### Discovery
 - Source roots: `contest-refactor/`
@@ -454,37 +454,29 @@ Reviewer ran inline because provider detection was `unknown`; verdict requires m
 Loop 6 of 10.
 
 ### System Flag
-[STATE: HALT_SUCCESS_candidate]
+[STATE: CONTINUE]
 
 ## Contest Verdict
 
-Contest-grade architecture; terminal success awaits independent challenge.
+Functionally solid, but terminal challenge evidence remains under-validated.
 
 ## Scorecard (1-10)
 
-Architecture quality 9.5 accepted; State management 9.5 accepted; Domain modeling 9.5 accepted; Data flow 9.5 accepted; Framework idioms 9.5 accepted; Concurrency 10; Simplicity 9.5 accepted; Test strategy 10; Credibility 9.5 accepted.
-
-## Authority Map
-
-Review artifacts, finding identity, canon values, and validator gate families each have one explicit writer/owner and one persisted or import Interface.
-
-## Strengths That Matter
-
-- The full gate is green across 51 strict fixtures, 11 smoke fixtures, every standalone selftest, and Ruff.
-- G32 now enforces the challenger attempt shape and mandatory simplicity/domain-modeling arm.
-- The validator CLI remains stable while private Modules are enforced below the 800-line hard cap.
+Test strategy 8; Credibility 8. Other dimensions retain the source-derived 9.5/10 scores.
 
 ## Findings
 
-None.
+### Finding #1: G32 accepts incomplete held-challenge evidence
+
+Stable ID `F-005`; Serious deduction. The schema requires the challenge arm enum, per-attempt `why_failed`, and top-level `reason`; `_artifact_halt.py:250-331` does not enforce them. Candidate `6c80090` was demoted.
 
 ## Simplification Check
 
-No Noticeable-or-worse correction remains. The two-site replication helper proposal fails SPT Q3/Q5 because it adds a layer without current drift or measurable Leverage.
+Extend the existing G32 check and fixtures. No new Seam.
 
 ## Improvement Backlog
 
-None.
+1. `F-005` — enforce the complete held-challenge evidence schema at G32.
 
 ## Deepening Candidates
 
@@ -492,14 +484,8 @@ None.
 
 ## Builder Notes
 
-- The remaining soft-cap warnings are enforced and locally coherent.
-- JSON runtime validation is an accepted language/serialization constraint, not missing ownership.
-- Narrative verifier requirements must be enforced at the terminal trust gate.
-
-### Scorecard humility check
-
-Architecture 9.5 depends on the 779-line history Module remaining coherent; test strategy 10 assumes the full fixture and selftest suite covers every behavior-bearing gate; domain modeling 9.5 accepts runtime JSON validation at the persisted Interface.
+The challenger again exercised the terminal trust boundary: documented audit evidence is not real until G32 rejects its absence.
 
 ## Final Judge Narrative
 
-Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; G32 enforces challenger arm diversity; no finding or backlog remains. Independent challenge is required before terminal success.
+The candidate was correctly demoted. G32 must enforce the complete challenge schema before terminal success can be trusted.

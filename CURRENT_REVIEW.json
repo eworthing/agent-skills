@@ -2,7 +2,7 @@
   "schema_version": 4,
   "loop": 6,
   "loop_cap": 10,
-  "state": "HALT_SUCCESS_candidate",
+  "state": "CONTINUE",
   "halt_subtype": null,
   "halt_handoff_text": null,
   "halt_handoff": null,
@@ -13,9 +13,9 @@
   "loop_metrics": {
     "lint_count": 0
   },
-  "run_id": "e7699fa8-76b6-493e-8ef7-3e2e31f76443",
-  "source_rev": "9bd94ef8c9b5302963a8453d60604df1f76cfa83",
-  "candidate_fingerprint": "fp-sha256-017e5293b7c197debf077123abf537b4",
+  "run_id": null,
+  "source_rev": null,
+  "candidate_fingerprint": null,
   "halt_success_challenge": null,
   "provider": "unknown",
   "loop_model": null,
@@ -47,8 +47,8 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "Contest-grade architecture; terminal success awaits independent challenge",
-  "verdict_explanation": "All gates are green. The validator is split into bounded private Modules, the unused fixture contract is deleted, and G32 now enforces the challenger arm-diversity contract with positive and negative fixtures.",
+  "verdict": "Functionally solid, but terminal challenge evidence remains under-validated",
+  "verdict_explanation": "Independent challenge broke the success candidate because G32 accepts invalid arm values and held challenges without why_failed or a top-level reason.",
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
@@ -120,8 +120,8 @@
       "residual_blocker_kind": "cosmetic"
     },
     "test_strategy": {
-      "score": 10,
-      "delta": "UP",
+      "score": 8.0,
+      "delta": "DOWN",
       "proof": "51 strict fixtures, 11 smoke fixtures, standalone gate selftests, failure-path config tests, and import/re-export regression checks all pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -129,12 +129,12 @@
       "unverifiable_due_to_build_failure": false
     },
     "credibility": {
-      "score": 9.5,
-      "delta": "UP",
+      "score": 8.0,
+      "delta": "DOWN",
       "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
-      "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
-      "residual_disposition": "accepted",
-      "residual_rationale_or_backlog_ref": "The existing 800-line hard cap now enforces the trust gate; further splitting has no current source-backed authority or behavior gain.",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
       "unverifiable_due_to_build_failure": false,
       "residual_blocker_kind": "cosmetic"
     }
@@ -194,16 +194,61 @@
     "G32 now validates challenger attempt shape and requires a new_finding simplicity/domain_modeling arm \u2014 contest-refactor/scripts/_artifact_halt.py.",
     "Finding hashes have one algorithm owner and the live validator recomputes snapshots instead of trusting stored digests \u2014 contest-refactor/scripts/_fingerprint.py:65-83."
   ],
-  "findings": [],
+  "findings": [
+    {
+      "loop_local_id": "F1",
+      "stable_id": "F-005",
+      "title": "G32 accepts incomplete held-challenge evidence",
+      "why_it_matters": "G32 is the sole terminal trust gate preventing HALT_SUCCESS without a substantive independent challenge.",
+      "what_is_wrong": "The declared challenge schema restricts arm to new_finding or residual_refutation and requires each attempt's why_failed plus a top-level reason, but G32 validates only arm, target, what_tried, diversity, and binding.",
+      "evidence": [
+        "contest-refactor/references/output-format-json.md:34-54",
+        "contest-refactor/scripts/_artifact_halt.py:250-331",
+        "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:139-162",
+        "candidate_commit_sha:6c80090"
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "dependency_category": null,
+      "leverage_impact": "The existing G32 Interface can enforce the complete challenge record for every terminal run.",
+      "locality_impact": "The documented schema and terminal validator disagree inside the same trust boundary.",
+      "metric_signal": "Strict validation accepts a held challenge with an invalid arm, missing why_failed, and missing reason.",
+      "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
+      "severity": "Serious deduction",
+      "adr_conflicts": [],
+      "adr_reopen_justification": null,
+      "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations.",
+      "blast_radius": {
+        "change": [
+          "contest-refactor/scripts/_artifact_halt.py",
+          "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/",
+          "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/"
+        ],
+        "avoid": [
+          "contest-refactor/references/output-format-json.md",
+          "contest-refactor/scripts/validate-artifact.py"
+        ]
+      }
+    }
+  ],
   "simplification_check": {
-    "structurally_necessary": "No Noticeable-or-worse correction remains.",
+    "structurally_necessary": "G32 must reject hollow held-challenge records before terminal promotion.",
     "new_seam_justified": false,
     "new_seam_adapters": [],
-    "helpful_simplification": "none",
-    "should_not_be_done": "Do not extract the two-site replication similarity without current drift or duplicated runtime authority.",
-    "tests_after_fix": "No fix pending; full suite is the terminal oracle."
+    "helpful_simplification": "Extend the existing G32 checks; add no new validator layer.",
+    "should_not_be_done": "Do not redesign the challenge schema or add another verifier abstraction.",
+    "tests_after_fix": "Focused invalid-arm and missing-explanation fixtures, then the full suite."
   },
-  "backlog": [],
+  "backlog": [
+    {
+      "priority": 1,
+      "stable_id": "F-005",
+      "title": "Enforce complete G32 held-challenge evidence",
+      "kind": "structural",
+      "rank": "needed for winning",
+      "why_it_matters": "Terminal success must mechanically require the complete documented independent-challenge record.",
+      "score_impact": "test_strategy +0.5; credibility +0.5"
+    }
+  ],
   "unresolved_reason": null,
   "deepening_candidates": [],
   "builder_notes": [
@@ -228,7 +273,7 @@
       "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "Win candidate. Every scorecard dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; G32 enforces challenger arm diversity; no finding or backlog remains. Independent challenge is required before terminal success.",
+  "narrative": "The candidate was correctly demoted. G32 must enforce the complete challenge schema before terminal success can be trusted.",
   "loop_result": null,
   "implementation_review": null
 }
