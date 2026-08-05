@@ -4343,6 +4343,304 @@
           }
         ]
       }
+    },
+    {
+      "schema_version": 4,
+      "loop": 15,
+      "loop_cap": 15,
+      "state": "HALT_LOOP_CAP",
+      "halt_subtype": null,
+      "halt_handoff_text": null,
+      "halt_handoff": {
+        "state": "HALT_LOOP_CAP",
+        "halt_subtype": null,
+        "text": "Loop 15 ended at HALT_LOOP_CAP \u2014 I made 15 loops, the configured maximum, and the backlog is cleared: there is no carried-forward work. All scorecard dimensions now reach 10 or 9.5 with accepted residuals. Terminal HALT_SUCCESS is not claimed because the cap was reached immediately after fixing F-011, before a fresh candidate could be committed and independently challenged against the post-fix source. This is cap convergence, not an open finding.\n\nProgress so far: architecture quality 7\u21929.5; state management 9\u21929.5; domain modeling 9\u21929.5; data flow 8\u21929.5; framework idioms 9\u21929.5; concurrency 9\u219210; simplicity 7\u21929.5; test strategy 8\u219210; credibility 8\u21929.5.\nNever moved recently: architecture_quality (12 loops), domain_modeling (12 loops), data_flow (12 loops), framework_idioms (12 loops), concurrency (12 loops), simplicity (12 loops).\n\nWhy not HALT_SUCCESS: the post-fix Loop 15 source has not yet been committed as a bound HALT_SUCCESS_candidate and cold-challenged; G32 forbids promoting on the prior broken candidate.\n\nNext step options:\n  (a) Accept current state \u2014 all known Noticeable-or-worse findings are resolved and the full gate is green.\n  (b) Bump cap and resume \u2014 `$contest-refactor --scope contest-refactor --cap 20` runs a fresh post-fix critic and, if it holds, the required independent challenge.\n  (c) Reset \u2014 `$contest-refactor --scope contest-refactor --reset`.",
+        "expected_actions": [
+          {
+            "action_id": "accept-current-state",
+            "description": "Accept the resolved, fully validated source as the new baseline.",
+            "match_keywords": [],
+            "match_paths": [],
+            "match_kind": "no_drift_expected"
+          },
+          {
+            "action_id": "bump-cap-resume",
+            "description": "Resume with cap 20 for a fresh post-fix candidate and independent challenge.",
+            "match_keywords": [],
+            "match_paths": [],
+            "match_kind": "no_drift_expected"
+          },
+          {
+            "action_id": "reset-review",
+            "description": "Reset contest-refactor review state.",
+            "match_keywords": [],
+            "match_paths": [],
+            "match_kind": "no_drift_expected"
+          }
+        ]
+      },
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "strictness": "standard",
+      "loop_metrics": {
+        "lint_count": 0
+      },
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": null,
+      "provider": "unknown",
+      "loop_model": null,
+      "loop_model_source": "default",
+      "reviewer_model": null,
+      "reviewer_model_source": "default",
+      "spawn_isolation": "inline",
+      "premium_dry_run": null,
+      "premium_loop_override": false,
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "contest-refactor/"
+        ],
+        "test_command": "python3 contest-refactor/scripts/validate-repo.py; python3 contest-refactor/scripts/validate-fixtures.py contest-refactor/evals/fixtures; python3 contest-refactor/scripts/_smoke_check.py; run every contest-refactor/scripts/_*_selftest.py; ruff check contest-refactor; ruff format --check contest-refactor",
+        "build_command": "none (stdlib-only Python skill; no separate build step)",
+        "lens": "Generic",
+        "adrs": [],
+        "domain_terms": [
+          "Critic",
+          "Architect",
+          "Actor",
+          "finding",
+          "halt",
+          "gate",
+          "canon"
+        ],
+        "test_scope": "full",
+        "test_filter": null,
+        "working_tree_dirty_paths": []
+      },
+      "verdict": "Loop cap reached with F-011 resolved and no carried-forward work",
+      "verdict_explanation": "The tracked rejection route now has an executable proof and the full gate is green; cap routing prevents claiming terminal success without a new post-fix candidate and independent challenge.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
+          "residual_blocking_10": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q5: another split would add a Module without separate runtime authority or measurable Leverage.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "state_management": {
+          "score": 9.5,
+          "delta": "UP",
+          "proof": "The tracked reviewer-rejection route restores staged and unstaged changes from unchanged HEAD, and _exec_replay_selftest.py executes the command in a temporary repository.",
+          "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md persists checkpoint transitions as interoperable JSON",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "Making every invalid JSON construction impossible would replace the interoperable artifact Interface without a current failure or Leverage gain.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "domain_modeling": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
+          "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "Named Python/JSON constraint: construction-time types cannot cross the persisted artifact Interface without a new serialization layer.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "data_flow": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
+          "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q3: packaging this standalone script solely to remove local import setup would add distribution ceremony.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "framework_idioms": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
+          "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "The local sys.path setup is the documented Python standalone-script constraint and keeps the zero-dependency CLI directly executable.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "concurrency": {
+          "score": 10,
+          "delta": "SAME",
+          "proof": "All production paths are sequential CLIs; no async tasks or shared mutable runtime authority exist.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
+          "residual_blocking_10": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q3/Q5: two behavior-bearing sites intentionally retain distinct arm and contamination policy; a helper would add a duplicate layer without current drift.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "test_strategy": {
+          "score": 10,
+          "delta": "UP",
+          "proof": "54 strict fixtures, 11 smoke cases, every standalone selftest, the real tracked-file restore proof, preregistration guard, repository validator, and Ruff pass.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 9.5,
+          "delta": "UP",
+          "proof": "The candidate-breaking command was reproduced red, corrected at every route, and proven green through an actual temporary Git repository.",
+          "residual_blocking_10": "Three validator modules remain above the 600-line soft warning but below the enforced 800-line hard cap",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "Further splitting has no current source-backed authority or behavior gain and fails the Simplify Pressure Test.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        }
+      },
+      "authority_map": [
+        {
+          "concern": "Current loop review state",
+          "owner": "CURRENT_REVIEW.json under the output-format schema",
+          "allowed_writers": [
+            "Step 1 Critic emit",
+            "Step 3 result and implementation-review update"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "scripts/render_report.py",
+            "resume routing"
+          ],
+          "persistence_seam": "Repository-root CURRENT_REVIEW.json and REVIEW_HISTORY.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Finding identity and occurrence history",
+          "owner": "findings_registry.json under scripts/_fingerprint.py hashes",
+          "allowed_writers": [
+            "Step 1 stable-id assignment",
+            "Step 3 registry append"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "resume routing",
+            "SARIF export"
+          ],
+          "persistence_seam": "Repository-root findings_registry.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Canonical states, enums, and gate identifiers",
+          "owner": "contest-refactor/canon/*.toml loaded by scripts/_canon.py",
+          "allowed_writers": [
+            "Maintainer edits to canon TOML"
+          ],
+          "readers": [
+            "validate-artifact.py",
+            "validate-repo.py",
+            "validate-fixtures.py",
+            "selftests"
+          ],
+          "persistence_seam": "contest-refactor/canon/*.toml",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        }
+      ],
+      "strengths": [
+        "Canonical vocabulary has one frozen loader used by repository, artifact, fixture, and halt-tail checks \u2014 contest-refactor/scripts/_canon.py:72-222.",
+        "G32 validates complete challenger evidence and focused negative fixtures cover independent failure clauses \u2014 contest-refactor/scripts/_artifact_halt.py.",
+        "Candidate recurrence uses structured architecture evidence plus source_rev and is invariant to rationale rephrasing \u2014 contest-refactor/scripts/candidate_fingerprint.py."
+      ],
+      "findings": [],
+      "simplification_check": {
+        "structurally_necessary": "Rejected tracked changes must be restored before artifact-only commit.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "helpful_simplification": "Use Git restore from unchanged HEAD and exercise it once in a temporary repository.",
+        "should_not_be_done": "Do not add a custom blob materializer or another checkpoint field.",
+        "tests_after_fix": "Modify and stage a tracked file, run the documented restore, and assert clean status plus original content; then run the full suite."
+      },
+      "backlog": [],
+      "unresolved_reason": "loop counter reached cap of 15; backlog cleared \u2014 post-fix independent challenge not run within configured loop budget",
+      "deepening_candidates": [],
+      "builder_notes": [
+        {
+          "pattern": "Dormant optional contract",
+          "how_to_recognize": "No fixture supplies files[], yet the parser carries a full validation branch.",
+          "smallest_coding_rule": "Delete unused input contracts until a real caller needs them."
+        },
+        {
+          "pattern": "Candidate clone without severity evidence",
+          "how_to_recognize": "Two similar scripts agree today and share no runtime authority.",
+          "smallest_coding_rule": "Keep clone output Cosmetic unless current source proves drift, authority duplication, or three-site synchronized maintenance."
+        },
+        {
+          "pattern": "Bounded private validation Modules",
+          "how_to_recognize": "Each gate family now fits under the existing hard cap and the CLI remains the Interface.",
+          "smallest_coding_rule": "Split by existing responsibility; do not add registries or protocols."
+        },
+        {
+          "pattern": "Narrative-only verifier requirement",
+          "how_to_recognize": "The verifier requires an arm that the terminal artifact gate does not inspect.",
+          "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
+        }
+      ],
+      "narrative": "Loop 15 resolved F-011 and cleared the backlog. The run stops at the configured cap; a higher cap is needed only to perform a fresh candidate/challenge cycle.",
+      "loop_result": {
+        "what_changed": "Corrected tracked-file reviewer rejection to restore index and worktree from unchanged HEAD, aligned every routed contract, and added a real temporary-repository proof.",
+        "evidence_change_is_honest": "The focused proof restores staged and unstaged changes to clean original content; the invalid command has no active references; repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, the 92% structural evaluator, and Ruff pass.",
+        "risk_boundary_evidence": null,
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "contest-refactor/SKILL.md",
+          "contest-refactor/references/implementation-reviewer.md",
+          "contest-refactor/references/output-format-state-schemas.md",
+          "contest-refactor/references/output-format-migrations.md",
+          "contest-refactor/references/output-format-json.md",
+          "contest-refactor/evals/evals.json",
+          "contest-refactor/scripts/_exec_replay_selftest.py",
+          "contest-refactor/evals/exec_replay_baseline.json"
+        ],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "The tracked rejection route now restores both index and worktree from unchanged HEAD, every routed contract agrees, and the temporary-repository proof exercises the real Git command.",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
     }
   ]
 }

@@ -29,6 +29,6 @@ Historical schema-version migration notes for `CURRENT_REVIEW.json` / `REVIEW_HI
 - New top-level field `dry_run` (boolean, audit only — re-invocation reads the user's CLI flag, not this field).
 - New discovery fields `test_scope`, `test_filter`, `working_tree_dirty_paths`.
 - New `implementation_review` fields `retry_count`, `retry_cause`, `retry_attempts[]` (transient retry metadata; substantive verdict stays in `reason`).
-- New `loop_result.changed_paths[]` (paths the loop touched; restore source for narrow revert in conjunction with `LOOP_STATE.pre_step3_blob_shas`).
+- New `loop_result.changed_paths[]` (paths the loop touched; narrow-revert targets classified as tracked/untracked by `LOOP_STATE.pre_step3_blob_shas`).
 - New `LOOP_STATE.json` artifact for mid-Step-3 checkpointing.
 - New gates G27 (retry envelope), G28 (checkpoint freshness), G29 (schema v3 invariants); new quality pass Q8 (per-loop progress line).

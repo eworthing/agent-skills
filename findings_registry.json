@@ -559,7 +559,7 @@
       "severity": "Serious deduction",
       "first_seen_loop": 14,
       "first_seen_sha": "1677db4",
-      "last_seen_loop": 14,
+      "last_seen_loop": 15,
       "occurrences": [
         {
           "loop": 14,
@@ -567,6 +567,32 @@
           "status": "open",
           "sha": "1677db4",
           "idempotency_key": "loop14-F-011-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:6de616d0ca541a89760f44c0ef30398feda54ff90f04e0fc7357e8adf38ffcc1",
+            "evidence_paths_hash": "sha256:a1d37be11f5683e41b9e0c3c111c5e75bf5ac62d777f46b4bee6bd3f28531a4f"
+          },
+          "attempted_remedy_hash": "sha256:747cc73415978d1c7c0e686373e2fd2b1bac2d4540a6b3176e502ac1a8e0e198",
+          "finding_snapshot": {
+            "title": "Reviewer rejection cannot restore tracked files",
+            "why_it_matters": "The reviewer-rejection path must reliably remove rejected source changes before audit artifacts are committed and the next loop begins.",
+            "what_is_wrong": "Step 3 records each tracked path as a blob SHA, then routes `git checkout <blob-sha> -- <path>`. Git checkout resolves that position as a tree-ish, so it exits 128 with `fatal: unable to read tree` and leaves the rejected change intact.",
+            "evidence": [
+              "contest-refactor/SKILL.md:196-207",
+              "contest-refactor/references/implementation-reviewer.md:200",
+              "contest-refactor/evals/evals.json:100",
+              "direct reproduction: git checkout <HEAD:path blob> -- tracked.txt exited 128 and retained changed content",
+              "candidate_commit_sha:1677db46fd7f93d34ac710869f4e59eed79c9b56"
+            ],
+            "why_weakens_submission": "A rejected refactor can remain in the worktree, corrupting the promised commit-only-artifacts outcome and subsequent checkpoint state.",
+            "minimal_correction_path": "Replace the invalid blob checkout with `git restore --source=HEAD --staged --worktree -- <path>` in the canonical route and mirrors, retain null-path deletion, and add one temporary-repository selftest that proves a tracked staged+unstaged change returns to clean HEAD state."
+          }
+        },
+        {
+          "loop": 15,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop15-F-011-resolved",
           "fingerprint": {
             "claim_consequence_hash": "sha256:6de616d0ca541a89760f44c0ef30398feda54ff90f04e0fc7357e8adf38ffcc1",
             "evidence_paths_hash": "sha256:a1d37be11f5683e41b9e0c3c111c5e75bf5ac62d777f46b4bee6bd3f28531a4f"

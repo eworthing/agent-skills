@@ -31,7 +31,7 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
   "changed_paths": [                            // copy of loop_result.changed_paths once Step 3 step 4 has run (the diff is final at that point). Empty before step 4.
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"
   ],
-  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 (pre-edit). path → blob sha; null = untracked. Narrow-revert source: `git checkout <sha> -- <path>` per recorded sha, `git rm --cached <path>` per null.
+  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 (pre-edit). path → blob sha; null = untracked. Narrow-revert classification: non-null → `git restore --source=HEAD --staged --worktree -- <path>`; null → unstage if needed, then delete the loop-created file.
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift": "9b2a13c4...",
     "BenchHypeKit/Tests/AppReducerWorkflowTests.swift": null
   },

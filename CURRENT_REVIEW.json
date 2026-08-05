@@ -1,11 +1,38 @@
 {
   "schema_version": 4,
-  "loop": 14,
+  "loop": 15,
   "loop_cap": 15,
-  "state": "CONTINUE",
+  "state": "HALT_LOOP_CAP",
   "halt_subtype": null,
   "halt_handoff_text": null,
-  "halt_handoff": null,
+  "halt_handoff": {
+    "state": "HALT_LOOP_CAP",
+    "halt_subtype": null,
+    "text": "Loop 15 ended at HALT_LOOP_CAP \u2014 I made 15 loops, the configured maximum, and the backlog is cleared: there is no carried-forward work. All scorecard dimensions now reach 10 or 9.5 with accepted residuals. Terminal HALT_SUCCESS is not claimed because the cap was reached immediately after fixing F-011, before a fresh candidate could be committed and independently challenged against the post-fix source. This is cap convergence, not an open finding.\n\nProgress so far: architecture quality 7\u21929.5; state management 9\u21929.5; domain modeling 9\u21929.5; data flow 8\u21929.5; framework idioms 9\u21929.5; concurrency 9\u219210; simplicity 7\u21929.5; test strategy 8\u219210; credibility 8\u21929.5.\nNever moved recently: architecture_quality (12 loops), domain_modeling (12 loops), data_flow (12 loops), framework_idioms (12 loops), concurrency (12 loops), simplicity (12 loops).\n\nWhy not HALT_SUCCESS: the post-fix Loop 15 source has not yet been committed as a bound HALT_SUCCESS_candidate and cold-challenged; G32 forbids promoting on the prior broken candidate.\n\nNext step options:\n  (a) Accept current state \u2014 all known Noticeable-or-worse findings are resolved and the full gate is green.\n  (b) Bump cap and resume \u2014 `$contest-refactor --scope contest-refactor --cap 20` runs a fresh post-fix critic and, if it holds, the required independent challenge.\n  (c) Reset \u2014 `$contest-refactor --scope contest-refactor --reset`.",
+    "expected_actions": [
+      {
+        "action_id": "accept-current-state",
+        "description": "Accept the resolved, fully validated source as the new baseline.",
+        "match_keywords": [],
+        "match_paths": [],
+        "match_kind": "no_drift_expected"
+      },
+      {
+        "action_id": "bump-cap-resume",
+        "description": "Resume with cap 20 for a fresh post-fix candidate and independent challenge.",
+        "match_keywords": [],
+        "match_paths": [],
+        "match_kind": "no_drift_expected"
+      },
+      {
+        "action_id": "reset-review",
+        "description": "Reset contest-refactor review state.",
+        "match_keywords": [],
+        "match_paths": [],
+        "match_kind": "no_drift_expected"
+      }
+    ]
+  },
   "re_validated_at_sha": null,
   "re_validation_context": null,
   "dry_run": false,
@@ -47,8 +74,8 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "Independent challenge broke the candidate on reviewer-rejection recovery",
-  "verdict_explanation": "A direct temporary-repository reproduction confirms the documented blob-as-tree-ish restore exits 128 and leaves rejected content in place.",
+  "verdict": "Loop cap reached with F-011 resolved and no carried-forward work",
+  "verdict_explanation": "The tracked rejection route now has an executable proof and the full gate is green; cap routing prevents claiming terminal success without a new post-fix candidate and independent challenge.",
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
@@ -61,12 +88,12 @@
       "residual_blocker_kind": "cosmetic"
     },
     "state_management": {
-      "score": 8.0,
-      "delta": "DOWN",
-      "proof": "contest-refactor/SKILL.md:196-207 records a blob then uses it as a checkout tree-ish; direct reproduction exits 128",
-      "residual_blocking_10": null,
-      "residual_disposition": null,
-      "residual_rationale_or_backlog_ref": null,
+      "score": 9.5,
+      "delta": "UP",
+      "proof": "The tracked reviewer-rejection route restores staged and unstaged changes from unchanged HEAD, and _exec_replay_selftest.py executes the command in a temporary repository.",
+      "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md persists checkpoint transitions as interoperable JSON",
+      "residual_disposition": "accepted",
+      "residual_rationale_or_backlog_ref": "Making every invalid JSON construction impossible would replace the interoperable artifact Interface without a current failure or Leverage gain.",
       "unverifiable_due_to_build_failure": false,
       "residual_blocker_kind": "cosmetic"
     },
@@ -120,21 +147,21 @@
       "residual_blocker_kind": "cosmetic"
     },
     "test_strategy": {
-      "score": 8.0,
-      "delta": "DOWN",
-      "proof": "The full gate passes but no selftest executes the load-bearing tracked-file rejection restore command",
+      "score": 10,
+      "delta": "UP",
+      "proof": "54 strict fixtures, 11 smoke cases, every standalone selftest, the real tracked-file restore proof, preregistration guard, repository validator, and Ruff pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
       "unverifiable_due_to_build_failure": false
     },
     "credibility": {
-      "score": 8.0,
-      "delta": "DOWN",
-      "proof": "Candidate 1677db4 claimed complete recovery coverage, but the documented tracked restore fails in a temporary repository",
-      "residual_blocking_10": null,
-      "residual_disposition": null,
-      "residual_rationale_or_backlog_ref": null,
+      "score": 9.5,
+      "delta": "UP",
+      "proof": "The candidate-breaking command was reproduced red, corrected at every route, and proven green through an actual temporary Git repository.",
+      "residual_blocking_10": "Three validator modules remain above the 600-line soft warning but below the enforced 800-line hard cap",
+      "residual_disposition": "accepted",
+      "residual_rationale_or_backlog_ref": "Further splitting has no current source-backed authority or behavior gain and fails the Simplify Pressure Test.",
       "unverifiable_due_to_build_failure": false,
       "residual_blocker_kind": "cosmetic"
     }
@@ -194,47 +221,7 @@
     "G32 validates complete challenger evidence and focused negative fixtures cover independent failure clauses \u2014 contest-refactor/scripts/_artifact_halt.py.",
     "Candidate recurrence uses structured architecture evidence plus source_rev and is invariant to rationale rephrasing \u2014 contest-refactor/scripts/candidate_fingerprint.py."
   ],
-  "findings": [
-    {
-      "loop_local_id": "F1",
-      "stable_id": "F-011",
-      "title": "Reviewer rejection cannot restore tracked files",
-      "why_it_matters": "The reviewer-rejection path must reliably remove rejected source changes before audit artifacts are committed and the next loop begins.",
-      "what_is_wrong": "Step 3 records each tracked path as a blob SHA, then routes `git checkout <blob-sha> -- <path>`. Git checkout resolves that position as a tree-ish, so it exits 128 with `fatal: unable to read tree` and leaves the rejected change intact.",
-      "evidence": [
-        "contest-refactor/SKILL.md:196-207",
-        "contest-refactor/references/implementation-reviewer.md:200",
-        "contest-refactor/evals/evals.json:100",
-        "direct reproduction: git checkout <HEAD:path blob> -- tracked.txt exited 128 and retained changed content",
-        "candidate_commit_sha:1677db46fd7f93d34ac710869f4e59eed79c9b56"
-      ],
-      "test_failed": "Interface-as-test-surface",
-      "dependency_category": null,
-      "leverage_impact": "One valid Git restore command fixes every tracked rejection path.",
-      "locality_impact": "The canonical Step-3 rejection route and its reviewer/evaluation mirrors repeat the same invalid command.",
-      "metric_signal": "Direct temporary-repository reproduction exits 128; no current selftest executes the restore command.",
-      "why_weakens_submission": "A rejected refactor can remain in the worktree, corrupting the promised commit-only-artifacts outcome and subsequent checkpoint state.",
-      "severity": "Serious deduction",
-      "adr_conflicts": [],
-      "adr_reopen_justification": null,
-      "minimal_correction_path": "Replace the invalid blob checkout with `git restore --source=HEAD --staged --worktree -- <path>` in the canonical route and mirrors, retain null-path deletion, and add one temporary-repository selftest that proves a tracked staged+unstaged change returns to clean HEAD state.",
-      "blast_radius": {
-        "change": [
-          "contest-refactor/SKILL.md",
-          "contest-refactor/references/implementation-reviewer.md",
-          "contest-refactor/references/output-format-state-schemas.md",
-          "contest-refactor/references/resume-detection.md",
-          "contest-refactor/evals/evals.json",
-          "contest-refactor/scripts/_exec_replay_selftest.py",
-          "contest-refactor/evals/exec_replay_baseline.json"
-        ],
-        "avoid": [
-          "contest-refactor/scripts/validate-artifact.py",
-          "contest-refactor/canon/"
-        ]
-      }
-    }
-  ],
+  "findings": [],
   "simplification_check": {
     "structurally_necessary": "Rejected tracked changes must be restored before artifact-only commit.",
     "new_seam_justified": false,
@@ -243,18 +230,8 @@
     "should_not_be_done": "Do not add a custom blob materializer or another checkpoint field.",
     "tests_after_fix": "Modify and stage a tracked file, run the documented restore, and assert clean status plus original content; then run the full suite."
   },
-  "backlog": [
-    {
-      "priority": 1,
-      "stable_id": "F-011",
-      "title": "Make tracked-file reviewer rejection restorable",
-      "kind": "structural",
-      "rank": "needed for winning",
-      "why_it_matters": "Rejected source must not survive the review boundary.",
-      "score_impact": "state_management +0.5; test_strategy +0.5; credibility +0.5"
-    }
-  ],
-  "unresolved_reason": null,
+  "backlog": [],
+  "unresolved_reason": "loop counter reached cap of 15; backlog cleared \u2014 post-fix independent challenge not run within configured loop budget",
   "deepening_candidates": [],
   "builder_notes": [
     {
@@ -278,27 +255,34 @@
       "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "The bound Loop 14 challenger broke the candidate on F-011. The final budgeted loop must fix and executable-spec the tracked-file rejection path.",
+  "narrative": "Loop 15 resolved F-011 and cleared the backlog. The run stops at the configured cap; a higher cap is needed only to perform a fresh candidate/challenge cycle.",
   "loop_result": {
-    "what_changed": "No source correction was applied; Loop 14 emitted candidate 1677db4 and the independent challenger discovered F-011 afterward.",
-    "evidence_change_is_honest": "Candidate identity held, while a direct temporary-repository probe reproduced exit 128 and unchanged rejected content for the documented restore command.",
+    "what_changed": "Corrected tracked-file reviewer rejection to restore index and worktree from unchanged HEAD, aligned every routed contract, and added a real temporary-repository proof.",
+    "evidence_change_is_honest": "The focused proof restores staged and unstaged changes to clean original content; the invalid command has no active references; repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, the 92% structural evaluator, and Ruff pass.",
     "risk_boundary_evidence": null,
-    "targeted_finding_status": "carried_forward",
-    "unintended_regression": "The independent challenger rejected the candidate because the tracked-file narrow-revert command passes a blob object where Git requires a tree-ish.",
-    "changed_paths": [],
+    "targeted_finding_status": "resolved",
+    "unintended_regression": null,
+    "changed_paths": [
+      "contest-refactor/SKILL.md",
+      "contest-refactor/references/implementation-reviewer.md",
+      "contest-refactor/references/output-format-state-schemas.md",
+      "contest-refactor/references/output-format-migrations.md",
+      "contest-refactor/references/output-format-json.md",
+      "contest-refactor/evals/evals.json",
+      "contest-refactor/scripts/_exec_replay_selftest.py",
+      "contest-refactor/evals/exec_replay_baseline.json"
+    ],
     "interface_test_coverage_path": null
   },
   "implementation_review": {
-    "verdict": "rejected",
-    "reason": "The independent challenger rejected the candidate because the tracked-file narrow-revert command passes a blob object where Git requires a tree-ish.",
+    "verdict": "approved",
+    "reason": "The tracked rejection route now restores both index and worktree from unchanged HEAD, every routed contract agrees, and the temporary-repository proof exercises the real Git command.",
     "checks": {
-      "reality": "failed",
+      "reality": "passed",
       "honesty": "passed",
       "regression": "passed"
     },
-    "regressions": [
-      "Tracked reviewer-rejected changes cannot be restored by the documented blob-as-tree-ish command."
-    ],
+    "regressions": [],
     "conditions": [],
     "retry_count": 1,
     "retry_cause": null,

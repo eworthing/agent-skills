@@ -6,32 +6,30 @@ provider: unknown; running inline; Loop Isolation unavailable
 - Lens: Generic + Security + Efficiency
 
 ### Loop Counter
-Loop 14 of 15.
+Loop 15 of 15.
 
 ### System Flag
-[STATE: CONTINUE]
+[STATE: HALT_LOOP_CAP]
 
 ## Contest Verdict
 
-Independent challenge broke the candidate on reviewer-rejection recovery.
+Loop cap reached with F-011 resolved and no carried-forward work.
 
 ## Scorecard (1-10)
 
-State management 8; Test strategy 8; Credibility 8. Architecture quality, domain modeling, data flow, framework idioms, and simplicity remain 9.5 accepted; Concurrency remains 10.
+Test strategy and Concurrency are 10. Architecture quality, state management, domain modeling, data flow, framework idioms, simplicity, and credibility are 9.5 with accepted residuals.
 
 ## Findings
 
-### Finding #1: Reviewer rejection cannot restore tracked files
-
-Stable ID `F-011`; Serious deduction. Step 3 records a blob SHA, then routes `git checkout <blob-sha> -- <path>`. A direct temporary-repository probe exited 128 with `fatal: unable to read tree` and left the rejected content intact.
+None. F-011 was resolved in this loop.
 
 ## Simplification Check
 
-Use `git restore --source=HEAD --staged --worktree -- <path>` while HEAD is still unchanged, and exercise the command once in a temporary repository. Do not add a custom blob materializer or checkpoint field.
+No further structural correction survives the completed Loop 15 source and full gate.
 
 ## Improvement Backlog
 
-1. `F-011` — make tracked-file reviewer rejection restorable.
+Empty.
 
 ## Deepening Candidates
 
@@ -39,18 +37,34 @@ None.
 
 ## Builder Notes
 
-- Candidate identity held: commit `1677db46fd7f93d34ac710869f4e59eed79c9b56`, run `7341a32b-a4cd-40ad-9ba5-4a148c42a7f1`, source `ffa9d599646c1d57a43e5b3c21575bc6de134f73`.
-- The full suite remained green, proving the restore path is currently unexecuted rather than contradicting the direct failure.
-- Loop 15 is the final configured loop and must execute normally.
+- F-011 reproduced red, then passed through the real Git command after correction.
+- The full repository, fixture, smoke, standalone-selftest, structural-evaluator, and Ruff gates are green.
+- A fresh post-fix candidate/challenge cycle would require a higher loop cap.
 
 ## Final Judge Narrative
 
-The bound Loop 14 challenger broke the candidate on F-011. The final budgeted loop must fix and executable-spec the tracked-file rejection path.
+Loop 15 resolved F-011 and cleared the backlog. The run stops at the configured cap; a higher cap is needed only to perform a fresh candidate/challenge cycle.
 
-## Loop 14 Result
+## Loop 15 Result
 
-No source correction was applied after candidate `1677db4`; the independent challenger discovered F-011. Candidate identity held, while a direct temporary-repository probe reproduced exit 128 and retained rejected content for the documented restore command. The finding is carried forward to Loop 15.
+Corrected tracked-file reviewer rejection to restore index and worktree from unchanged HEAD, aligned every routed contract, and added a real temporary-repository proof. The focused proof restores staged and unstaged changes to clean original content; the invalid command has no active references; repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, the 92% structural evaluator, and Ruff pass. `F-011` is resolved with no unintended regression.
 
-## Loop 14 Implementation Review
+## Loop 15 Implementation Review
 
-Rejected for continuation purposes: the bound independent challenge proved the tracked-file rejection path cannot restore its target. No source diff was reverted.
+reviewer ran inline; verdict requires manual confirmation
+
+Approved. Reality, honesty, and regression checks passed: the tracked rejection route restores both index and worktree from unchanged HEAD, every routed contract agrees, and the temporary-repository proof executes the real Git command.
+
+## Halt Handoff
+
+Loop 15 ended at HALT_LOOP_CAP — I made 15 loops, the configured maximum, and the backlog is cleared: there is no carried-forward work. All scorecard dimensions now reach 10 or 9.5 with accepted residuals. Terminal HALT_SUCCESS is not claimed because the cap was reached immediately after fixing F-011, before a fresh candidate could be committed and independently challenged against the post-fix source. This is cap convergence, not an open finding.
+
+Progress so far: architecture quality 7→9.5; state management 9→9.5; domain modeling 9→9.5; data flow 8→9.5; framework idioms 9→9.5; concurrency 9→10; simplicity 7→9.5; test strategy 8→10; credibility 8→9.5.
+
+Why not HALT_SUCCESS: the post-fix Loop 15 source has not yet been committed as a bound HALT_SUCCESS_candidate and cold-challenged; G32 forbids promoting on the prior broken candidate.
+
+Next step options:
+
+- Accept current state — all known Noticeable-or-worse findings are resolved and the full gate is green.
+- Bump cap and resume — `$contest-refactor --scope contest-refactor --cap 20` runs a fresh post-fix critic and, if it holds, the required independent challenge.
+- Reset — `$contest-refactor --scope contest-refactor --reset`.
