@@ -1,6 +1,6 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 9,
+  "next_serial": 10,
   "entries": [
     {
       "stable_id": "F-001",
@@ -455,6 +455,49 @@
             ],
             "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
             "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-009",
+      "title": "G18 is ordered before its required history append",
+      "category_hint": "workflow-ordering",
+      "primary_file": "contest-refactor/SKILL.md",
+      "primary_evidence_lines": [
+        210,
+        211
+      ],
+      "test_failed": "Leverage",
+      "severity": "Serious deduction",
+      "first_seen_loop": 12,
+      "first_seen_sha": "0206eb4",
+      "last_seen_loop": 12,
+      "occurrences": [
+        {
+          "loop": 12,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop12-F-009-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:fdfd5cbcd9f83450eeff09dcf507668939c25577e7486088e8275cfc9bfa6096",
+            "evidence_paths_hash": "sha256:b82be6f03ccefdd9bb424e7bebe17b25975a34a0e30ff6633d7967e712d9de34"
+          },
+          "attempted_remedy_hash": "sha256:396100f1c5d26ddbcc6d1907e27dfb56fdcf300ea4cc4da88f439c572a924455",
+          "finding_snapshot": {
+            "title": "G18 is ordered before its required history append",
+            "why_it_matters": "The autonomous loop must have one executable persistence order; a mandatory gate cannot precede the write that makes it pass.",
+            "what_is_wrong": "SKILL.md sub-step 8 requires G18, while sub-step 9 performs the REVIEW_HISTORY append. validation.md and output-format-state-schemas.md also retain stale step-8 append references. A literal Loop 11 run failed G18 with 10 history entries until Loop 11 was archived ahead of the documented step.",
+            "evidence": [
+              "contest-refactor/SKILL.md:210-211",
+              "contest-refactor/references/validation.md:82",
+              "contest-refactor/references/output-format-state-schemas.md:213",
+              "contest-refactor/scripts/_artifact_history.py:269-301",
+              "reproduction: Loop 11 strict validation failed only G18 before archive and passed immediately after archive"
+            ],
+            "why_weakens_submission": "Agents following the skill literally must either stop on a false gate failure or silently violate checkpoint ordering, undermining deterministic resume and audit claims.",
+            "minimal_correction_path": "Remove G18 from the pre-archive gate list, run it immediately after sub-step 9 appends both history artifacts, and update the two stale step-8 archive references to step 9."
           }
         }
       ]

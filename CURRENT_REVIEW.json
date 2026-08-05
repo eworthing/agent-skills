@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "loop": 11,
+  "loop": 12,
   "loop_cap": 15,
   "state": "CONTINUE",
   "halt_subtype": null,
@@ -47,8 +47,8 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "Functionally solid, but canonical candidate identity is not enforced",
-  "verdict_explanation": "Current source still lets G32 accept any non-empty candidate_fingerprint. Eight v4 success fixtures carry the same non-canonical placeholder, directly reproducing F-008.",
+  "verdict": "The runtime gates are sound, but the documented G18 sequence is impossible to follow literally",
+  "verdict_explanation": "Step 3 sub-step 8 requires G18 before sub-step 9 appends the current review to history. The strict validator reproduced the contradiction by failing only G18 until the archive was written early.",
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
@@ -63,7 +63,7 @@
     "state_management": {
       "score": 8.0,
       "delta": "SAME",
-      "proof": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
+      "proof": "contest-refactor/SKILL.md:210-211 orders G18 before the history append it validates",
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
@@ -122,7 +122,7 @@
     "test_strategy": {
       "score": 8.0,
       "delta": "SAME",
-      "proof": "53 strict fixtures, 11 smoke fixtures, standalone gate selftests, seven recurrence-key assertions, failure-path config tests, and import/re-export regression checks all pass.",
+      "proof": "54 strict fixtures, 11 smoke fixtures, standalone gate selftests, seven recurrence-key assertions, failure-path config tests, and import/re-export regression checks all pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
@@ -131,7 +131,7 @@
     "credibility": {
       "score": 8.0,
       "delta": "SAME",
-      "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
+      "proof": "Loop 11 strict validation reproduced the documented G18 ordering contradiction",
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
@@ -197,59 +197,57 @@
   "findings": [
     {
       "loop_local_id": "F1",
-      "stable_id": "F-008",
-      "title": "G32 accepts non-canonical candidate fingerprints",
-      "why_it_matters": "The recurrence guard must derive candidate identity from the review payload instead of trusting an agent-supplied string.",
-      "what_is_wrong": "G32 checks only that candidate_fingerprint is non-empty and never recomputes the canonical digest; a positive candidate fixture passes the placeholder fp-sha256-architecture-payload-0001.",
+      "stable_id": "F-009",
+      "title": "G18 is ordered before its required history append",
+      "why_it_matters": "The autonomous loop must have one executable persistence order; a mandatory gate cannot precede the write that makes it pass.",
+      "what_is_wrong": "SKILL.md sub-step 8 requires G18, while sub-step 9 performs the REVIEW_HISTORY append. validation.md and output-format-state-schemas.md also retain stale step-8 append references. A literal Loop 11 run failed G18 with 10 history entries until Loop 11 was archived ahead of the documented step.",
       "evidence": [
-        "contest-refactor/scripts/candidate_fingerprint.py:53-61",
-        "contest-refactor/scripts/_artifact_halt.py:165-201",
-        "contest-refactor/scripts/validate-artifact.py:140-143",
-        "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json:133-136",
-        "contest-refactor/evals/fixtures/halt-candidate-no-challenge/fixture.toml:1-3",
-        "candidate_commit_sha:b483d55"
+        "contest-refactor/SKILL.md:210-211",
+        "contest-refactor/references/validation.md:82",
+        "contest-refactor/references/output-format-state-schemas.md:213",
+        "contest-refactor/scripts/_artifact_history.py:269-301",
+        "reproduction: Loop 11 strict validation failed only G18 before archive and passed immediately after archive"
       ],
-      "test_failed": "Interface-as-test-surface",
+      "test_failed": "Leverage",
       "dependency_category": null,
-      "leverage_impact": "One existing G32 check can protect recurrence identity for candidate and terminal states.",
-      "locality_impact": "The canonical digest owner exists, but its sole trust-boundary consumer does not call it.",
-      "metric_signal": "A strict positive G32 fixture passes a human-readable placeholder instead of a computed digest.",
-      "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
+      "leverage_impact": "One ordering correction makes the documented checkpoint flow executable for every schema-v2+ loop.",
+      "locality_impact": "The canonical Step 3 sequence and two progressive-disclosure references disagree about the same archive boundary.",
+      "metric_signal": "validate-artifact strict: 2 G18 failures before archive; 0 issues after archive.",
+      "why_weakens_submission": "Agents following the skill literally must either stop on a false gate failure or silently violate checkpoint ordering, undermining deterministic resume and audit claims.",
       "severity": "Serious deduction",
       "adr_conflicts": [],
       "adr_reopen_justification": null,
-      "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture.",
+      "minimal_correction_path": "Remove G18 from the pre-archive gate list, run it immediately after sub-step 9 appends both history artifacts, and update the two stale step-8 archive references to step 9.",
       "blast_radius": {
         "change": [
-          "contest-refactor/scripts/_artifact_halt.py",
-          "contest-refactor/evals/fixtures/*/CURRENT_REVIEW.json",
-          "contest-refactor/evals/fixtures/*/REVIEW_HISTORY.json",
-          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/"
+          "contest-refactor/SKILL.md",
+          "contest-refactor/references/validation.md",
+          "contest-refactor/references/output-format-state-schemas.md"
         ],
         "avoid": [
-          "contest-refactor/scripts/candidate_fingerprint.py",
-          "contest-refactor/references/halt-verifier.md"
+          "contest-refactor/scripts/_artifact_history.py",
+          "contest-refactor/scripts/validate-artifact.py"
         ]
       }
     }
   ],
   "simplification_check": {
-    "structurally_necessary": "G32 must recompute the canonical fingerprint it gates.",
+    "structurally_necessary": "The written execution order must make the required G18 invariant satisfiable.",
     "new_seam_justified": false,
     "new_seam_adapters": [],
-    "helpful_simplification": "Call the existing candidate_fingerprint function from G32.",
-    "should_not_be_done": "Do not add another digest algorithm, field, or Module.",
-    "tests_after_fix": "Canonicalize existing fixtures, add one mismatch fixture, and run the full suite."
+    "helpful_simplification": "Move one gate invocation after the existing archive write and correct two step labels.",
+    "should_not_be_done": "Do not weaken G18, add a pre-archive exception, or change validator behavior.",
+    "tests_after_fix": "Run strict artifact validation against a complete archived loop plus the repository, fixture, and reference-link gates."
   },
   "backlog": [
     {
       "priority": 1,
-      "stable_id": "F-008",
-      "title": "Recompute canonical candidate fingerprints at G32",
+      "stable_id": "F-009",
+      "title": "Run G18 after the history append",
       "kind": "structural",
       "rank": "needed for winning",
-      "why_it_matters": "Recurrence identity must not be agent-controlled unchecked input.",
-      "score_impact": "state_management +0.5; test_strategy +0.5; credibility +0.5"
+      "why_it_matters": "The documented persistence sequence must be literally executable.",
+      "score_impact": "state_management +0.5; credibility +0.5"
     }
   ],
   "unresolved_reason": null,
@@ -276,43 +274,24 @@
       "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "F-008 remains the sole Noticeable-or-worse correction. Reuse the existing digest owner at G32, preserve every other failure fixture, and re-score after the full gate.",
+  "narrative": "F-009 is the sole Noticeable-or-worse correction. Preserve G18 strength and move its invocation behind the write it validates.",
   "loop_result": {
-    "what_changed": "Reused the canonical candidate fingerprint function at G32, canonicalized the existing v4 success fixtures, and added one mismatched-digest negative fixture.",
-    "evidence_change_is_honest": "The focused mismatch fixture fails only on G32 canonical-digest equality; all 54 fixtures, 11 smoke cases, standalone self-tests, repository validation, and Ruff checks pass.",
+    "what_changed": "Moved G18 behind the existing history append, corrected the two stale archive-step references, and refreshed the preregistered Step-3 section hash.",
+    "evidence_change_is_honest": "The original strict failure disappeared once the archive preceded G18; repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, the 92% structural evaluator, and Ruff pass.",
     "risk_boundary_evidence": null,
     "targeted_finding_status": "resolved",
     "unintended_regression": null,
     "changed_paths": [
-      "contest-refactor/scripts/_artifact_halt.py",
-      "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-candidate-no-challenge/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-candidate-with-handoff/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-candidate-with-handoff/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-binding-mismatch/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-binding-mismatch/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-held/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-no-challenge/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-no-challenge/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-no-diversity/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-no-diversity/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/CURRENT_REVIEW.md",
-      "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/REVIEW_HISTORY.md",
-      "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/findings_registry.json",
-      "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/fixture.toml"
+      "contest-refactor/SKILL.md",
+      "contest-refactor/references/validation.md",
+      "contest-refactor/references/output-format-state-schemas.md",
+      "contest-refactor/evals/exec_replay_baseline.json"
     ],
     "interface_test_coverage_path": null
   },
   "implementation_review": {
     "verdict": "approved",
-    "reason": "The shared G32 trust-boundary check now recomputes the existing canonical digest, the focused mismatch proof isolates the new failure, and the full gate shows no regression.",
+    "reason": "The correction preserves G18 exactly, changes only its invocation order and stale labels, and refreshes the existing preregistered hash after the intended Step-3 text change.",
     "checks": {
       "reality": "passed",
       "honesty": "passed",

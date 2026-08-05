@@ -210,7 +210,7 @@ If 2+ entries match the candidate via M2 and 0 via M1 → emit `open_question_fo
 
 ## REVIEW_HISTORY.json schema
 
-Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_REVIEW.json is appended to the top-level `loops[]` array on Step 3 step 8.
+Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_REVIEW.json is appended to the top-level `loops[]` array on Step 3 step 9.
 
 ```jsonc
 {

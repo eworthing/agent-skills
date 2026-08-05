@@ -2,36 +2,36 @@ provider: unknown; running inline; Loop Isolation unavailable
 
 ### Discovery
 - Source roots: `contest-refactor/`
-- Test command: full validator, fixture, smoke, standalone-selftest, recurrence-key, and Ruff suite
+- Test command: full validator, fixture, smoke, standalone-selftest, reference-link, and Ruff suite
 - Lens: Generic + Security + Efficiency
 
 ### Loop Counter
-Loop 11 of 15.
+Loop 12 of 15.
 
 ### System Flag
 [STATE: CONTINUE]
 
 ## Contest Verdict
 
-Functionally solid, but canonical candidate identity is not enforced.
+The runtime gates are sound, but the documented G18 sequence is impossible to follow literally.
 
 ## Scorecard (1-10)
 
-State management 8; Test strategy 8; Credibility 8. Architecture quality, domain modeling, data flow, framework idioms, and simplicity remain 9.5 accepted; Concurrency remains 10.
+State management 8 and Credibility 8. Test strategy remains 8; Architecture quality, domain modeling, data flow, framework idioms, and simplicity remain 9.5 accepted; Concurrency remains 10.
 
 ## Findings
 
-### Finding #1: G32 accepts non-canonical candidate fingerprints
+### Finding #1: G18 is ordered before its required history append
 
-Stable ID `F-008`; Serious deduction. `_artifact_halt.py:165-201` checks only non-emptiness, while eight v4 success fixtures carry the placeholder `fp-sha256-architecture-payload-0001` and still match their expected result.
+Stable ID `F-009`; Serious deduction. `SKILL.md:210-211` requires G18 before the sub-step that appends `CURRENT_REVIEW.json` to history. Loop 11 reproduced the contradiction: strict validation failed only G18 before the archive and passed immediately after the archive was written early.
 
 ## Simplification Check
 
-Call the existing canonical fingerprint function from G32, canonicalize existing fixtures, and add one mismatch fixture. No new algorithm, field, or Module.
+Move the G18 invocation after the existing archive write and correct the two stale step labels. Do not weaken G18 or add a pre-archive exception.
 
 ## Improvement Backlog
 
-1. `F-008` — recompute canonical candidate fingerprints at G32.
+1. `F-009` — run G18 after the history append.
 
 ## Deepening Candidates
 
@@ -39,24 +39,20 @@ None.
 
 ## Builder Notes
 
-- Priority 1 moves the three sub-target dimensions; no candidate further from target survives current-source review.
-- Re-derived Loop 11 from `_artifact_halt.py`, `candidate_fingerprint.py`, and every v4 success fixture.
-- Existing negative fixtures must retain their original failure clause after canonicalization.
+- Priority 1 moves state management and credibility; no broader validator change is justified.
+- Preserve the strict equality and exact-entry-count checks in `_artifact_history.py`.
+- Align `validation.md` and `output-format-state-schemas.md` with the canonical Step 3 sequence.
 
 ## Final Judge Narrative
 
-F-008 remains the sole Noticeable-or-worse correction. Reuse the existing digest owner at G32, preserve every other failure fixture, and re-score after the full gate.
+F-009 is the sole Noticeable-or-worse correction. Preserve G18 strength and move its invocation behind the write it validates.
 
-## Loop 11 Result
+## Loop 12 Result
 
-- Reused `candidate_fingerprint()` in G32 for both candidate and terminal success states.
-- Canonicalized all existing v4 success fixtures and added one mismatched-digest negative fixture.
-- Focused proof: the mismatch fixture fails only on canonical-digest equality.
-- Full proof: 54 fixtures, 11 smoke cases, all standalone self-tests, repository validation, and Ruff checks pass.
-- Targeted finding: `F-008` resolved.
+Moved G18 behind the existing history append, corrected the two stale archive-step references, and refreshed only the preregistered Step-3 section hash. Repository validation, 54 fixtures, 11 smoke cases, all standalone self-tests, the 92% structural evaluator, and Ruff pass. `F-009` is resolved with no unintended regression.
 
-## Loop 11 Implementation Review
+## Loop 12 Implementation Review
 
 reviewer ran inline; verdict requires manual confirmation
 
-Approved. Reality, honesty, and regression checks passed: G32 owns the trust-boundary comparison, the focused mismatch fixture isolates it, and the full suite remains green.
+Approved. Reality, honesty, and regression checks passed: G18 itself is unchanged, its invocation now follows the archive it validates, the two linked references agree, and the preregistered hash matches the current Step-3 text.
