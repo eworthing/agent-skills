@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "loop": 1,
+  "loop": 2,
   "loop_cap": 10,
   "state": "CONTINUE",
   "halt_subtype": null,
@@ -47,12 +47,12 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "Functionally solid, but structurally compromised",
-  "verdict_explanation": "The deterministic gate suite is green and the core vocabularies have clear owners. The skill still exempts its own 2,255-line trust gate from the repository's module-size enforcement, carries one dead validation branch, and duplicates a measured-eval contract across two scripts.",
+  "verdict": "Functionally solid, with one small subtractive weakness remaining",
+  "verdict_explanation": "The full gate is green and Loop 1 replaced the oversized validator with bounded private Modules. The dormant fixture files contract is the only Noticeable subtractive item; the two-site replication similarity is Cosmetic because current source shows no behavioral drift or duplicated runtime authority.",
   "scorecard": {
     "architecture_quality": {
-      "score": 7.0,
-      "delta": "SAME",
+      "score": 9.0,
+      "delta": "UP",
       "proof": "contest-refactor/scripts/validate-artifact.py:143-2255; .githooks/pre-commit:30-39",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -78,8 +78,8 @@
       "unverifiable_due_to_build_failure": false
     },
     "data_flow": {
-      "score": 8.0,
-      "delta": "SAME",
+      "score": 9.0,
+      "delta": "UP",
       "proof": "contest-refactor/scripts/validate-artifact.py:2157-2197; contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -105,8 +105,8 @@
       "unverifiable_due_to_build_failure": false
     },
     "simplicity": {
-      "score": 7.0,
-      "delta": "SAME",
+      "score": 8.0,
+      "delta": "UP",
       "proof": "contest-refactor/scripts/validate-artifact.py:1-2255; contest-refactor/scripts/validate-fixtures.py:265-294; contest-refactor/scripts/_advisory_baseline_selftest.py:98-189; contest-refactor/scripts/_principal_baseline_selftest.py:52-156",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -123,8 +123,8 @@
       "unverifiable_due_to_build_failure": false
     },
     "credibility": {
-      "score": 8.0,
-      "delta": "SAME",
+      "score": 9.0,
+      "delta": "UP",
       "proof": "common/scripts/check_module_size.py:60-83; .githooks/pre-commit:30-39; contest-refactor/scripts/validate-artifact.py:1-2255",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -190,44 +190,6 @@
   "findings": [
     {
       "loop_local_id": "F1",
-      "stable_id": "F-001",
-      "title": "Artifact validation is a 2,255-line unchecked monolith",
-      "why_it_matters": "The skill's trust gate must remain locally understandable as new halt and history rules are added.",
-      "what_is_wrong": "validate-artifact.py owns JSON loading, registry retirement, history checks, provider attribution, checkpoint freshness, halt semantics, scorecard rules, and CLI output in one 2,255-line file, while the repository's module-size gate scans only quorum-review and peer-plan-review.",
-      "evidence": [
-        "contest-refactor/scripts/validate-artifact.py:143-2255",
-        "contest-refactor/scripts/validate-artifact.py:2157-2196",
-        ".githooks/pre-commit:30-39",
-        "common/scripts/check_module_size.py:60-83"
-      ],
-      "test_failed": "Shallow module",
-      "dependency_category": null,
-      "leverage_impact": "Every selftest that imports a gate depends on the same oversized module even though the gate families are independent.",
-      "locality_impact": "Each new rule edits the same hotspot and requires reasoning across unrelated registry, provider, halt, and CLI code.",
-      "metric_signal": "2,255 physical lines; 25 commits in current history; the repository checker reports one hard-cap violation at 800 lines when applied to contest-refactor/scripts.",
-      "why_weakens_submission": "The skill enforces structural rigor on targets while exempting its own most change-prone correctness module from the same guard, increasing cross-gate regression risk.",
-      "severity": "Serious deduction",
-      "adr_conflicts": [],
-      "adr_reopen_justification": null,
-      "minimal_correction_path": "Move existing pure checks unchanged into three private modules grouped by core schema, registry/history, and halt/runtime concerns; keep validate-artifact.py as the thin re-exporting CLI expected by selftests; add contest-refactor/scripts to the existing pre-commit module-size loop. Do not add classes, a plugin registry, or generated validators.",
-      "blast_radius": {
-        "change": [
-          ".githooks/pre-commit",
-          "contest-refactor/scripts/validate-artifact.py",
-          "contest-refactor/scripts/_artifact_core.py",
-          "contest-refactor/scripts/_artifact_history.py",
-          "contest-refactor/scripts/_artifact_halt.py"
-        ],
-        "avoid": [
-          "contest-refactor/SKILL.md",
-          "contest-refactor/references/",
-          "contest-refactor/canon/",
-          "contest-refactor/evals/"
-        ]
-      }
-    },
-    {
-      "loop_local_id": "F2",
       "stable_id": "F-002",
       "title": "Unused fixture files contract accepts paths outside the fixture",
       "why_it_matters": "A deterministic fixture validator should not contain an unexercised path rule that can be satisfied by unrelated filesystem content.",
@@ -255,48 +217,15 @@
           "contest-refactor/scripts/validate-artifact.py"
         ]
       }
-    },
-    {
-      "loop_local_id": "F3",
-      "stable_id": "F-003",
-      "title": "Replication contract is copy-pasted across two baseline validators",
-      "why_it_matters": "Measured evaluation evidence is only credible when its shared artifact rules have one implementation.",
-      "what_is_wrong": "The advisory and principal baseline selftests independently implement the same replication-block fields, five-slot accounting, invalid-count check, floor ordering, and valid-result requirements; the clone detector reports 0.89 similarity across roughly 92 lines, while arm and contamination rules are the only material differences.",
-      "evidence": [
-        "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
-        "contest-refactor/scripts/_principal_baseline_selftest.py:52-156"
-      ],
-      "test_failed": "Two-adapter rule",
-      "dependency_category": null,
-      "leverage_impact": "Both callers must understand and maintain the same low-level replication shape.",
-      "locality_impact": "Changing a shared replication invariant requires synchronized edits in two standalone scripts and can silently diverge.",
-      "metric_signal": "audit_clones.py reports similarity 0.89 across the two functions.",
-      "why_weakens_submission": "The evaluation layer can disagree with itself about whether recorded measurements are valid, weakening the evidence used to judge the skill.",
-      "severity": "Noticeable weakness",
-      "adr_conflicts": [],
-      "adr_reopen_justification": null,
-      "minimal_correction_path": "Extract only the shared replication shape and terminal-attempt checks into one private helper used by both selftests; leave advisory arm selection and principal contamination/retry policies local.",
-      "blast_radius": {
-        "change": [
-          "contest-refactor/scripts/_replication_validation.py",
-          "contest-refactor/scripts/_advisory_baseline_selftest.py",
-          "contest-refactor/scripts/_principal_baseline_selftest.py"
-        ],
-        "avoid": [
-          "contest-refactor/evals/advisory_baseline.json",
-          "contest-refactor/evals/principal_baseline.json",
-          "contest-refactor/evals/*_replication.json"
-        ]
-      }
     }
   ],
   "simplification_check": {
-    "structurally_necessary": "Split the validator without changing gate behavior so the existing Shallow module failure is removed and the repository's 800-line policy covers this skill.",
+    "structurally_necessary": "Deleting the unused files[] branch passes the Deletion test.",
     "new_seam_justified": false,
     "new_seam_adapters": [],
-    "helpful_simplification": "Delete the unused files branch; later consolidate only the genuinely shared replication assertions.",
-    "should_not_be_done": "Do not build a validator class hierarchy, gate plugin registry, code generator, or generic path-sandbox abstraction.",
-    "tests_after_fix": "Keep the existing 31 standalone selftests and strict fixture/smoke runs; add no parallel replacement suite. Run the existing module-size checker against contest-refactor/scripts."
+    "helpful_simplification": "Remove the dormant optional contract and its path semantics.",
+    "should_not_be_done": "Do not add path-normalization machinery for a contract no fixture uses.",
+    "tests_after_fix": "Existing fixture corpus and validator selftests remain the Interface check."
   },
   "backlog": [
     {
@@ -305,86 +234,44 @@
       "title": "Delete the dormant fixture files contract",
       "kind": "simplification",
       "rank": "helpful",
-      "why_it_matters": "Deletion removes unused parser code and its unsafe path semantics without reducing current coverage.",
+      "why_it_matters": "Deletion removes unused parser code and its unsafe path semantics without reducing current fixture coverage.",
       "score_impact": "simplicity +0.5; test_strategy +0.5; credibility +0.5"
-    },
-    {
-      "priority": 2,
-      "stable_id": "F-003",
-      "title": "Share the common replication validation rules",
-      "kind": "simplification",
-      "rank": "helpful",
-      "why_it_matters": "One implementation prevents the two measured baseline validators from drifting on shared evidence rules.",
-      "score_impact": "simplicity +0.5; test_strategy +0.5"
     }
   ],
   "unresolved_reason": null,
-  "deepening_candidates": [
-    {
-      "candidate_module": "validate-artifact.py gate cluster",
-      "source_friction_proven": "Finding F1: 2,255 lines, 26 direct run_checks callees, and a failing 800-line module check.",
-      "why_shallow_or_misplaced": "One importable script exposes unrelated schema, history, provider, checkpoint, and halt policies through a single file.",
-      "behavior_to_move_behind_interface": "Move cohesive pure check families behind the existing validate-artifact.py CLI and preserve its exported function names for current selftests.",
-      "dependency_category": "in-process",
-      "test_surface_after_change": "Existing gate selftests import the compatibility surface; validate-fixtures and smoke exercise the CLI.",
-      "smallest_first_step": "Move the registry/history checks as a behavior-preserving slice, then move the remaining families until every module is below 800 lines.",
-      "what_not_to_do": "Do not introduce gate objects, registration decorators, or generated code."
-    },
-    {
-      "candidate_module": "replication validation helper",
-      "source_friction_proven": "Finding F3: two measured-baseline validators carry a 0.89-similar replication check.",
-      "why_shallow_or_misplaced": "Shared attempt-shape rules live in each caller instead of one named helper, while caller-specific policies are interleaved with them.",
-      "behavior_to_move_behind_interface": "Centralize required fields, terminal-slot selection, invalid counts, and valid-result presence; return failure strings to each caller.",
-      "dependency_category": "in-process",
-      "test_surface_after_change": "_advisory_baseline_selftest.py and _principal_baseline_selftest.py remain the two interface-level consumers.",
-      "smallest_first_step": "Extract the byte-for-byte common assertions and keep every divergent rule local.",
-      "what_not_to_do": "Do not merge the two baseline formats or invent a generalized evaluation framework."
-    }
-  ],
+  "deepening_candidates": [],
   "builder_notes": [
     {
-      "pattern": "A policy gate exempted its own largest target",
-      "how_to_recognize": "Run the repository's structural checker against every sibling tool directory, not only the directories listed in the hook.",
-      "smallest_coding_rule": "Apply an existing limit uniformly before adding a waiver or a new checker.",
-      "stack_example": "The current checker already reports validate-artifact.py at 2,255 lines; the hook simply never passes contest-refactor/scripts to it."
+      "pattern": "Dormant optional contract",
+      "how_to_recognize": "No fixture supplies files[], yet the parser carries a full validation branch.",
+      "smallest_coding_rule": "Delete unused input contracts until a real caller needs them."
     },
     {
-      "pattern": "An optional validation feature had no users",
-      "how_to_recognize": "Search every producer before hardening a parser branch; zero producers means deletion is the first remedy.",
-      "smallest_coding_rule": "Delete dormant contracts; add them back with their first real fixture and one negative check.",
-      "stack_example": "No fixture.toml defines files, so path containment code would be machinery for a feature that does not exist."
+      "pattern": "Candidate clone without severity evidence",
+      "how_to_recognize": "Two similar scripts agree today and share no runtime authority.",
+      "smallest_coding_rule": "Keep clone output Cosmetic unless current source proves drift, authority duplication, or three-site synchronized maintenance."
     },
     {
-      "pattern": "Scorecard humility check",
-      "how_to_recognize": "state_management 9.0 at output-format-state-schemas.md:81-222 may over-credit a state machine still orchestrated in prose; concurrency 9.0 at validate-fixtures.py:298-357 is mostly an applicability judgment and was not stress-tested under parallel invocations; F3's Noticeable severity at the two replication selftests may be high if their formats intentionally continue diverging.",
-      "smallest_coding_rule": "Treat these three claims as the first challenge targets on a non-dry-run follow-up.",
-      "stack_example": "No score was raised to 9.5 on these uncertain claims."
+      "pattern": "Bounded private validation Modules",
+      "how_to_recognize": "Each gate family now fits under the existing hard cap and the CLI remains the Interface.",
+      "smallest_coding_rule": "Split by existing responsibility; do not add registries or protocols."
     }
   ],
-  "narrative": "Place, not win. The baseline is green and runtime state ownership is mostly trustworthy, but the skill's central trust gate is an unenforced 2,255-line hotspot and the evaluation layer retains avoidable dead and duplicated validation. Concurrency risk is low in these sequential CLIs; tests reduce regressions strongly but miss the module-policy and dormant-path gaps. The next change should be a mechanical split, not a new validation framework.",
+  "narrative": "Place, close to the bar. The validator split is honest and fully covered; one dead fixture-input branch remains a cheap subtractive fix. F-003 is withdrawn from the backlog because similarity alone does not establish Noticeable severity.",
   "loop_result": {
-    "what_changed": "Split the artifact validator into core, history, and halt Modules while retaining the existing CLI and re-export Interface; extended the existing module-size hook to contest-refactor/scripts.",
-    "evidence_change_is_honest": "validate-repo passed; 50 strict fixtures, 11 smoke fixtures, every standalone selftest, Ruff check/format, and the 800-line module-size gate passed.",
-    "risk_boundary_evidence": {
-      "boundary_kind": "cross_file_visibility",
-      "verification": "focused_test",
-      "detail": "All standalone selftests that import validate-artifact.py through its file Interface passed after the move, along with validate-fixtures and smoke coverage.",
-      "mechanically_testable": true
-    },
+    "what_changed": "Deleted the unused optional fixture files contract and its unchecked path-join branch.",
+    "evidence_change_is_honest": "validate-repo passed; 50 strict fixtures, 11 smoke fixtures, every standalone selftest, and Ruff check/format passed.",
+    "risk_boundary_evidence": null,
     "targeted_finding_status": "resolved",
     "unintended_regression": null,
     "changed_paths": [
-      ".githooks/pre-commit",
-      "contest-refactor/scripts/validate-artifact.py",
-      "contest-refactor/scripts/_artifact_core.py",
-      "contest-refactor/scripts/_artifact_history.py",
-      "contest-refactor/scripts/_artifact_halt.py"
+      "contest-refactor/scripts/validate-fixtures.py"
     ],
     "interface_test_coverage_path": null
   },
   "implementation_review": {
     "verdict": "approved",
-    "reason": "All three checks passed; the 2,255-line validator is replaced by bounded private Modules while the CLI and imported test Interface remain behaviorally intact.",
+    "reason": "All three checks passed; the dormant branch is gone without adding a replacement layer or changing any used fixture contract.",
     "checks": {
       "reality": "passed",
       "honesty": "passed",

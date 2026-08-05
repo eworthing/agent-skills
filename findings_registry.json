@@ -57,7 +57,7 @@
       "severity": "Noticeable weakness",
       "first_seen_loop": 1,
       "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
-      "last_seen_loop": 1,
+      "last_seen_loop": 2,
       "occurrences": [
         {
           "loop": 1,
@@ -65,6 +65,29 @@
           "status": "open",
           "sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
           "idempotency_key": "loop1-F-002-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:99ef464d168fec86b72c2ce7da1bc02b39de5c98409c349d41c89a755d56fbc1",
+            "evidence_paths_hash": "sha256:b4088a7906f8d2e487cca5ca5fbc6d63a7c0cb3d9d31f48cdc9abf3b602a1cbd"
+          },
+          "attempted_remedy_hash": "sha256:cfd8c9f293b382b408588b78d628b0816ed4d7d38084a5a99d30409592a9d99c",
+          "finding_snapshot": {
+            "title": "Unused fixture files contract accepts paths outside the fixture",
+            "why_it_matters": "A deterministic fixture validator should not contain an unexercised path rule that can be satisfied by unrelated filesystem content.",
+            "what_is_wrong": "The optional files array is absent from every fixture.toml, yet _validate_one_fixture joins each supplied value directly to fixture_dir and checks only exists(), so absolute paths and parent traversal are accepted as declared fixture files.",
+            "evidence": [
+              "contest-refactor/scripts/validate-fixtures.py:265-294",
+              "contest-refactor/evals/fixtures/*/fixture.toml: no files field in the current corpus"
+            ],
+            "why_weakens_submission": "Dead validation code both enlarges the parser and advertises a guarantee it does not safely enforce.",
+            "minimal_correction_path": "Delete the optional files branch and its comment. Do not add path-normalization machinery until a real fixture needs this contract."
+          }
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop2-F-002-resolved",
           "fingerprint": {
             "claim_consequence_hash": "sha256:99ef464d168fec86b72c2ce7da1bc02b39de5c98409c349d41c89a755d56fbc1",
             "evidence_paths_hash": "sha256:b4088a7906f8d2e487cca5ca5fbc6d63a7c0cb3d9d31f48cdc9abf3b602a1cbd"
@@ -97,7 +120,7 @@
       "severity": "Noticeable weakness",
       "first_seen_loop": 1,
       "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
-      "last_seen_loop": 1,
+      "last_seen_loop": 2,
       "occurrences": [
         {
           "loop": 1,
@@ -105,6 +128,29 @@
           "status": "open",
           "sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
           "idempotency_key": "loop1-F-003-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:0965c5fb607ce4c82553a74749c11f886a79b8e7166865c877e3c0c020364832",
+            "evidence_paths_hash": "sha256:e15a446f7f114a1a5c80718d41a41a1554ae3f6ae7fcd5502182b5406888c7ce"
+          },
+          "attempted_remedy_hash": "sha256:25b251b7aac075c847b893ff440ab79df79a66dccd9529a0fd6351b0602a2012",
+          "finding_snapshot": {
+            "title": "Replication contract is copy-pasted across two baseline validators",
+            "why_it_matters": "Measured evaluation evidence is only credible when its shared artifact rules have one implementation.",
+            "what_is_wrong": "The advisory and principal baseline selftests independently implement the same replication-block fields, five-slot accounting, invalid-count check, floor ordering, and valid-result requirements; the clone detector reports 0.89 similarity across roughly 92 lines, while arm and contamination rules are the only material differences.",
+            "evidence": [
+              "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
+              "contest-refactor/scripts/_principal_baseline_selftest.py:52-156"
+            ],
+            "why_weakens_submission": "The evaluation layer can disagree with itself about whether recorded measurements are valid, weakening the evidence used to judge the skill.",
+            "minimal_correction_path": "Extract only the shared replication shape and terminal-attempt checks into one private helper used by both selftests; leave advisory arm selection and principal contamination/retry policies local."
+          }
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F2",
+          "status": "withdrawn",
+          "sha": "<pending>",
+          "idempotency_key": "loop2-F-003-withdrawn",
           "fingerprint": {
             "claim_consequence_hash": "sha256:0965c5fb607ce4c82553a74749c11f886a79b8e7166865c877e3c0c020364832",
             "evidence_paths_hash": "sha256:e15a446f7f114a1a5c80718d41a41a1554ae3f6ae7fcd5502182b5406888c7ce"

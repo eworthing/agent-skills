@@ -406,6 +406,299 @@
           }
         ]
       }
+    },
+    {
+      "schema_version": 4,
+      "loop": 2,
+      "loop_cap": 10,
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff_text": null,
+      "halt_handoff": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "strictness": "standard",
+      "loop_metrics": {
+        "lint_count": 0
+      },
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": null,
+      "provider": "unknown",
+      "loop_model": null,
+      "loop_model_source": "default",
+      "reviewer_model": null,
+      "reviewer_model_source": "default",
+      "spawn_isolation": "inline",
+      "premium_dry_run": null,
+      "premium_loop_override": false,
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "contest-refactor/"
+        ],
+        "test_command": "python3 contest-refactor/scripts/validate-repo.py; python3 contest-refactor/scripts/validate-fixtures.py contest-refactor/evals/fixtures; python3 contest-refactor/scripts/_smoke_check.py; run every contest-refactor/scripts/_*_selftest.py; ruff check contest-refactor; ruff format --check contest-refactor",
+        "build_command": "none (stdlib-only Python skill; no separate build step)",
+        "lens": "Generic",
+        "adrs": [],
+        "domain_terms": [
+          "Critic",
+          "Architect",
+          "Actor",
+          "finding",
+          "halt",
+          "gate",
+          "canon"
+        ],
+        "test_scope": "full",
+        "test_filter": null,
+        "working_tree_dirty_paths": []
+      },
+      "verdict": "Functionally solid, with one small subtractive weakness remaining",
+      "verdict_explanation": "The full gate is green and Loop 1 replaced the oversized validator with bounded private Modules. The dormant fixture files contract is the only Noticeable subtractive item; the two-site replication similarity is Cosmetic because current source shows no behavioral drift or duplicated runtime authority.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 9.0,
+          "delta": "UP",
+          "proof": "contest-refactor/scripts/validate-artifact.py:143-2255; .githooks/pre-commit:30-39",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 9.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/references/output-format-state-schemas.md:81-222; contest-refactor/scripts/validate-artifact.py:666-703",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 9.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/canon/scorecard-dimensions.toml:1-29; contest-refactor/scripts/_canon.py:72-222",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 9.0,
+          "delta": "UP",
+          "proof": "contest-refactor/scripts/validate-artifact.py:2157-2197; contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 9.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_canon.py:1-255; contest-refactor/scripts/validate-artifact.py:2200-2255",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 9.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:185-230; contest-refactor/scripts/validate-fixtures.py:298-357",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 8.0,
+          "delta": "UP",
+          "proof": "contest-refactor/scripts/validate-artifact.py:1-2255; contest-refactor/scripts/validate-fixtures.py:265-294; contest-refactor/scripts/_advisory_baseline_selftest.py:98-189; contest-refactor/scripts/_principal_baseline_selftest.py:52-156",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 8.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/evals/README.md:6-18; contest-refactor/scripts/validate-fixtures.py:265-294; .githooks/pre-commit:30-39",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 9.0,
+          "delta": "UP",
+          "proof": "common/scripts/check_module_size.py:60-83; .githooks/pre-commit:30-39; contest-refactor/scripts/validate-artifact.py:1-2255",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [
+        {
+          "concern": "Current loop review state",
+          "owner": "CURRENT_REVIEW.json under the output-format schema",
+          "allowed_writers": [
+            "Step 1 Critic emit",
+            "Step 3 result and implementation-review update"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "scripts/render_report.py",
+            "resume routing"
+          ],
+          "persistence_seam": "Repository-root CURRENT_REVIEW.json and REVIEW_HISTORY.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Finding identity and occurrence history",
+          "owner": "findings_registry.json under scripts/_fingerprint.py hashes",
+          "allowed_writers": [
+            "Step 1 stable-id assignment",
+            "Step 3 registry append"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "resume routing",
+            "SARIF export"
+          ],
+          "persistence_seam": "Repository-root findings_registry.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Canonical states, enums, and gate identifiers",
+          "owner": "contest-refactor/canon/*.toml loaded by scripts/_canon.py",
+          "allowed_writers": [
+            "Maintainer edits to canon TOML"
+          ],
+          "readers": [
+            "validate-artifact.py",
+            "validate-repo.py",
+            "validate-fixtures.py",
+            "selftests"
+          ],
+          "persistence_seam": "contest-refactor/canon/*.toml",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        }
+      ],
+      "strengths": [
+        "Canonical vocabulary has one frozen loader used by the repository, artifact, fixture, and halt-tail checks \u2014 contest-refactor/scripts/_canon.py:72-222.",
+        "The strict path composes independently named gates in one deterministic run and the full documented baseline passed \u2014 contest-refactor/scripts/validate-artifact.py:2157-2197.",
+        "Finding hashes have one algorithm owner and the live validator recomputes snapshots instead of trusting stored digests \u2014 contest-refactor/scripts/_fingerprint.py:65-83; contest-refactor/scripts/validate-artifact.py:611-665."
+      ],
+      "findings": [
+        {
+          "loop_local_id": "F1",
+          "stable_id": "F-002",
+          "title": "Unused fixture files contract accepts paths outside the fixture",
+          "why_it_matters": "A deterministic fixture validator should not contain an unexercised path rule that can be satisfied by unrelated filesystem content.",
+          "what_is_wrong": "The optional files array is absent from every fixture.toml, yet _validate_one_fixture joins each supplied value directly to fixture_dir and checks only exists(), so absolute paths and parent traversal are accepted as declared fixture files.",
+          "evidence": [
+            "contest-refactor/scripts/validate-fixtures.py:265-294",
+            "contest-refactor/evals/fixtures/*/fixture.toml: no files field in the current corpus"
+          ],
+          "test_failed": "Deletion test",
+          "dependency_category": null,
+          "leverage_impact": "No current caller receives value from the optional contract.",
+          "locality_impact": "Keeping it creates a new input-validation obligation inside the fixture parser without serving the current corpus.",
+          "metric_signal": "0 fixture.toml files define files; 30 lines implement the dormant branch.",
+          "why_weakens_submission": "Dead validation code both enlarges the parser and advertises a guarantee it does not safely enforce.",
+          "severity": "Noticeable weakness",
+          "adr_conflicts": [],
+          "adr_reopen_justification": null,
+          "minimal_correction_path": "Delete the optional files branch and its comment. Do not add path-normalization machinery until a real fixture needs this contract.",
+          "blast_radius": {
+            "change": [
+              "contest-refactor/scripts/validate-fixtures.py"
+            ],
+            "avoid": [
+              "contest-refactor/evals/fixtures/",
+              "contest-refactor/scripts/validate-artifact.py"
+            ]
+          }
+        }
+      ],
+      "simplification_check": {
+        "structurally_necessary": "Deleting the unused files[] branch passes the Deletion test.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "helpful_simplification": "Remove the dormant optional contract and its path semantics.",
+        "should_not_be_done": "Do not add path-normalization machinery for a contract no fixture uses.",
+        "tests_after_fix": "Existing fixture corpus and validator selftests remain the Interface check."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "stable_id": "F-002",
+          "title": "Delete the dormant fixture files contract",
+          "kind": "simplification",
+          "rank": "helpful",
+          "why_it_matters": "Deletion removes unused parser code and its unsafe path semantics without reducing current fixture coverage.",
+          "score_impact": "simplicity +0.5; test_strategy +0.5; credibility +0.5"
+        }
+      ],
+      "unresolved_reason": null,
+      "deepening_candidates": [],
+      "builder_notes": [
+        {
+          "pattern": "Dormant optional contract",
+          "how_to_recognize": "No fixture supplies files[], yet the parser carries a full validation branch.",
+          "smallest_coding_rule": "Delete unused input contracts until a real caller needs them."
+        },
+        {
+          "pattern": "Candidate clone without severity evidence",
+          "how_to_recognize": "Two similar scripts agree today and share no runtime authority.",
+          "smallest_coding_rule": "Keep clone output Cosmetic unless current source proves drift, authority duplication, or three-site synchronized maintenance."
+        },
+        {
+          "pattern": "Bounded private validation Modules",
+          "how_to_recognize": "Each gate family now fits under the existing hard cap and the CLI remains the Interface.",
+          "smallest_coding_rule": "Split by existing responsibility; do not add registries or protocols."
+        }
+      ],
+      "narrative": "Place, close to the bar. The validator split is honest and fully covered; one dead fixture-input branch remains a cheap subtractive fix. F-003 is withdrawn from the backlog because similarity alone does not establish Noticeable severity.",
+      "loop_result": {
+        "what_changed": "Deleted the unused optional fixture files contract and its unchecked path-join branch.",
+        "evidence_change_is_honest": "validate-repo passed; 50 strict fixtures, 11 smoke fixtures, every standalone selftest, and Ruff check/format passed.",
+        "risk_boundary_evidence": null,
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "contest-refactor/scripts/validate-fixtures.py"
+        ],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "All three checks passed; the dormant branch is gone without adding a replacement layer or changing any used fixture contract.",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
     }
   ]
 }

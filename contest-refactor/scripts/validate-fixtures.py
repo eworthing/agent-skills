@@ -262,36 +262,6 @@ def _validate_one_fixture(
                     toml_path,
                 )
             )
-    # Cross-check: every artifact file the fixture references in fixture.toml
-    # (a `files:` array, optional) actually exists. The plan's "Every file the
-    # fixture lists exists" bullet covers this. fixture.toml doesn't have a
-    # mandatory files[] field today; if present, validate it.
-    listed_files = data.get("files")
-    if listed_files is not None:
-        if not isinstance(listed_files, list):
-            violations.append(
-                Violation("schema", "files must be a list of relative paths", toml_path)
-            )
-        else:
-            for rel in listed_files:
-                if not isinstance(rel, str):
-                    violations.append(
-                        Violation(
-                            "schema",
-                            f"files[] entry {rel!r} must be a string path",
-                            toml_path,
-                        )
-                    )
-                    continue
-                candidate = fixture_dir / rel
-                if not candidate.exists():
-                    violations.append(
-                        Violation(
-                            "files",
-                            f"declared fixture file does not exist: {rel}",
-                            toml_path,
-                        )
-                    )
     return violations
 
 
