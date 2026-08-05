@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "loop": 6,
+  "loop": 7,
   "loop_cap": 10,
   "state": "CONTINUE",
   "halt_subtype": null,
@@ -121,7 +121,7 @@
     },
     "test_strategy": {
       "score": 8.0,
-      "delta": "DOWN",
+      "delta": "SAME",
       "proof": "51 strict fixtures, 11 smoke fixtures, standalone gate selftests, failure-path config tests, and import/re-export regression checks all pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -130,7 +130,7 @@
     },
     "credibility": {
       "score": 8.0,
-      "delta": "DOWN",
+      "delta": "SAME",
       "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
       "residual_blocking_10": null,
       "residual_disposition": null,
@@ -273,7 +273,39 @@
       "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "The candidate was correctly demoted. G32 must enforce the complete challenge schema before terminal success can be trusted.",
-  "loop_result": null,
-  "implementation_review": null
+  "narrative": "G32 now enforces complete held-challenge evidence. F-005 is resolved; the next loop must re-score from current source before another success candidate.",
+  "loop_result": {
+    "what_changed": "Extended G32 to enforce the declared challenge arm enum, per-attempt why_failed, and top-level reason; added independent negative fixtures for invalid arm and missing explanations.",
+    "evidence_change_is_honest": "53 fixtures passed; the invalid-arm fixture fails only on the arm enum, the missing-explanation fixture fails on why_failed and reason, and validate-repo, smoke, every standalone selftest, and Ruff passed.",
+    "risk_boundary_evidence": null,
+    "targeted_finding_status": "resolved",
+    "unintended_regression": null,
+    "changed_paths": [
+      "contest-refactor/scripts/_artifact_halt.py",
+      "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/",
+      "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/"
+    ],
+    "interface_test_coverage_path": null
+  },
+  "implementation_review": {
+    "verdict": "approved",
+    "reason": "All three checks passed; the existing G32 Interface now enforces the complete documented held-challenge evidence without a new layer.",
+    "checks": {
+      "reality": "passed",
+      "honesty": "passed",
+      "regression": "passed"
+    },
+    "regressions": [],
+    "conditions": [],
+    "retry_count": 1,
+    "retry_cause": null,
+    "retry_attempts": [
+      {
+        "attempt": 1,
+        "outcome": "ok",
+        "error": null,
+        "duration_ms": null
+      }
+    ]
+  }
 }

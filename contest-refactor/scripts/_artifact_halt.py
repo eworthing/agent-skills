@@ -267,7 +267,7 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
                     )
                 )
                 continue
-            for field in ("arm", "target", "what_tried"):
+            for field in ("arm", "target", "what_tried", "why_failed"):
                 value = attempt.get(field)
                 if not isinstance(value, str) or not value.strip():
                     issues.append(
@@ -277,6 +277,15 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
                             "must be a non-empty string",
                         )
                     )
+            arm = attempt.get("arm")
+            if isinstance(arm, str) and arm not in {"new_finding", "residual_refutation"}:
+                issues.append(
+                    Issue(
+                        "G32",
+                        f"halt_success_challenge.attempts[{index}].arm={arm!r} must be "
+                        "'new_finding' or 'residual_refutation'",
+                    )
+                )
             if attempt.get("arm") == "new_finding" and attempt.get("target") in {
                 "simplicity",
                 "domain_modeling",
@@ -290,6 +299,15 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
                     "targeting simplicity or domain_modeling",
                 )
             )
+
+    reason = challenge.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        issues.append(
+            Issue(
+                "G32",
+                "halt_success_challenge.reason must be a non-empty string",
+            )
+        )
 
     binding = challenge.get("binding")
     if not isinstance(binding, dict):

@@ -1791,6 +1791,317 @@
       "narrative": "The candidate was correctly demoted. G32 must enforce the complete challenge schema before terminal success can be trusted.",
       "loop_result": null,
       "implementation_review": null
+    },
+    {
+      "schema_version": 4,
+      "loop": 7,
+      "loop_cap": 10,
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff_text": null,
+      "halt_handoff": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "strictness": "standard",
+      "loop_metrics": {
+        "lint_count": 0
+      },
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": null,
+      "provider": "unknown",
+      "loop_model": null,
+      "loop_model_source": "default",
+      "reviewer_model": null,
+      "reviewer_model_source": "default",
+      "spawn_isolation": "inline",
+      "premium_dry_run": null,
+      "premium_loop_override": false,
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "contest-refactor/"
+        ],
+        "test_command": "python3 contest-refactor/scripts/validate-repo.py; python3 contest-refactor/scripts/validate-fixtures.py contest-refactor/evals/fixtures; python3 contest-refactor/scripts/_smoke_check.py; run every contest-refactor/scripts/_*_selftest.py; ruff check contest-refactor; ruff format --check contest-refactor",
+        "build_command": "none (stdlib-only Python skill; no separate build step)",
+        "lens": "Generic",
+        "adrs": [],
+        "domain_terms": [
+          "Critic",
+          "Architect",
+          "Actor",
+          "finding",
+          "halt",
+          "gate",
+          "canon"
+        ],
+        "test_scope": "full",
+        "test_filter": null,
+        "working_tree_dirty_paths": []
+      },
+      "verdict": "Functionally solid, but terminal challenge evidence remains under-validated",
+      "verdict_explanation": "Independent challenge broke the success candidate because G32 accepts invalid arm values and held challenges without why_failed or a top-level reason.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
+          "residual_blocking_10": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q5: another split would add a Module without separate runtime authority or measurable Leverage.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "state_management": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
+          "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "The single-writer checkpoint authority is explicit; making invalid JSON states unrepresentable would require replacing the interoperable file Interface.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "domain_modeling": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
+          "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "Named Python/JSON constraint: construction-time types cannot cross the persisted artifact Interface without a new serialization layer.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "data_flow": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
+          "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q3: packaging this standalone script solely to remove local import setup would add distribution ceremony.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "framework_idioms": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
+          "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "The local sys.path setup is the documented Python standalone-script constraint and keeps the zero-dependency CLI directly executable.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "concurrency": {
+          "score": 10,
+          "delta": "SAME",
+          "proof": "All production paths are sequential CLIs; no async tasks or shared mutable runtime authority exist.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
+          "residual_blocking_10": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q3/Q5: two behavior-bearing sites intentionally retain distinct arm and contamination policy; a helper would add a duplicate layer without current drift.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "test_strategy": {
+          "score": 8.0,
+          "delta": "SAME",
+          "proof": "51 strict fixtures, 11 smoke fixtures, standalone gate selftests, failure-path config tests, and import/re-export regression checks all pass.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        }
+      },
+      "authority_map": [
+        {
+          "concern": "Current loop review state",
+          "owner": "CURRENT_REVIEW.json under the output-format schema",
+          "allowed_writers": [
+            "Step 1 Critic emit",
+            "Step 3 result and implementation-review update"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "scripts/render_report.py",
+            "resume routing"
+          ],
+          "persistence_seam": "Repository-root CURRENT_REVIEW.json and REVIEW_HISTORY.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Finding identity and occurrence history",
+          "owner": "findings_registry.json under scripts/_fingerprint.py hashes",
+          "allowed_writers": [
+            "Step 1 stable-id assignment",
+            "Step 3 registry append"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "resume routing",
+            "SARIF export"
+          ],
+          "persistence_seam": "Repository-root findings_registry.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Canonical states, enums, and gate identifiers",
+          "owner": "contest-refactor/canon/*.toml loaded by scripts/_canon.py",
+          "allowed_writers": [
+            "Maintainer edits to canon TOML"
+          ],
+          "readers": [
+            "validate-artifact.py",
+            "validate-repo.py",
+            "validate-fixtures.py",
+            "selftests"
+          ],
+          "persistence_seam": "contest-refactor/canon/*.toml",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        }
+      ],
+      "strengths": [
+        "Canonical vocabulary has one frozen loader used by the repository, artifact, fixture, and halt-tail checks \u2014 contest-refactor/scripts/_canon.py:72-222.",
+        "G32 now validates challenger attempt shape and requires a new_finding simplicity/domain_modeling arm \u2014 contest-refactor/scripts/_artifact_halt.py.",
+        "Finding hashes have one algorithm owner and the live validator recomputes snapshots instead of trusting stored digests \u2014 contest-refactor/scripts/_fingerprint.py:65-83."
+      ],
+      "findings": [
+        {
+          "loop_local_id": "F1",
+          "stable_id": "F-005",
+          "title": "G32 accepts incomplete held-challenge evidence",
+          "why_it_matters": "G32 is the sole terminal trust gate preventing HALT_SUCCESS without a substantive independent challenge.",
+          "what_is_wrong": "The declared challenge schema restricts arm to new_finding or residual_refutation and requires each attempt's why_failed plus a top-level reason, but G32 validates only arm, target, what_tried, diversity, and binding.",
+          "evidence": [
+            "contest-refactor/references/output-format-json.md:34-54",
+            "contest-refactor/scripts/_artifact_halt.py:250-331",
+            "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:139-162",
+            "candidate_commit_sha:6c80090"
+          ],
+          "test_failed": "Interface-as-test-surface",
+          "dependency_category": null,
+          "leverage_impact": "The existing G32 Interface can enforce the complete challenge record for every terminal run.",
+          "locality_impact": "The documented schema and terminal validator disagree inside the same trust boundary.",
+          "metric_signal": "Strict validation accepts a held challenge with an invalid arm, missing why_failed, and missing reason.",
+          "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
+          "severity": "Serious deduction",
+          "adr_conflicts": [],
+          "adr_reopen_justification": null,
+          "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations.",
+          "blast_radius": {
+            "change": [
+              "contest-refactor/scripts/_artifact_halt.py",
+              "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/",
+              "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/"
+            ],
+            "avoid": [
+              "contest-refactor/references/output-format-json.md",
+              "contest-refactor/scripts/validate-artifact.py"
+            ]
+          }
+        }
+      ],
+      "simplification_check": {
+        "structurally_necessary": "G32 must reject hollow held-challenge records before terminal promotion.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "helpful_simplification": "Extend the existing G32 checks; add no new validator layer.",
+        "should_not_be_done": "Do not redesign the challenge schema or add another verifier abstraction.",
+        "tests_after_fix": "Focused invalid-arm and missing-explanation fixtures, then the full suite."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "stable_id": "F-005",
+          "title": "Enforce complete G32 held-challenge evidence",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Terminal success must mechanically require the complete documented independent-challenge record.",
+          "score_impact": "test_strategy +0.5; credibility +0.5"
+        }
+      ],
+      "unresolved_reason": null,
+      "deepening_candidates": [],
+      "builder_notes": [
+        {
+          "pattern": "Dormant optional contract",
+          "how_to_recognize": "No fixture supplies files[], yet the parser carries a full validation branch.",
+          "smallest_coding_rule": "Delete unused input contracts until a real caller needs them."
+        },
+        {
+          "pattern": "Candidate clone without severity evidence",
+          "how_to_recognize": "Two similar scripts agree today and share no runtime authority.",
+          "smallest_coding_rule": "Keep clone output Cosmetic unless current source proves drift, authority duplication, or three-site synchronized maintenance."
+        },
+        {
+          "pattern": "Bounded private validation Modules",
+          "how_to_recognize": "Each gate family now fits under the existing hard cap and the CLI remains the Interface.",
+          "smallest_coding_rule": "Split by existing responsibility; do not add registries or protocols."
+        },
+        {
+          "pattern": "Narrative-only verifier requirement",
+          "how_to_recognize": "The verifier requires an arm that the terminal artifact gate does not inspect.",
+          "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
+        }
+      ],
+      "narrative": "G32 now enforces complete held-challenge evidence. F-005 is resolved; the next loop must re-score from current source before another success candidate.",
+      "loop_result": {
+        "what_changed": "Extended G32 to enforce the declared challenge arm enum, per-attempt why_failed, and top-level reason; added independent negative fixtures for invalid arm and missing explanations.",
+        "evidence_change_is_honest": "53 fixtures passed; the invalid-arm fixture fails only on the arm enum, the missing-explanation fixture fails on why_failed and reason, and validate-repo, smoke, every standalone selftest, and Ruff passed.",
+        "risk_boundary_evidence": null,
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "contest-refactor/scripts/_artifact_halt.py",
+          "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/",
+          "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/"
+        ],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "All three checks passed; the existing G32 Interface now enforces the complete documented held-challenge evidence without a new layer.",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
     }
   ]
 }
