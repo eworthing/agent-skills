@@ -1,8 +1,8 @@
 {
   "schema_version": 4,
-  "loop": 5,
+  "loop": 6,
   "loop_cap": 10,
-  "state": "CONTINUE",
+  "state": "HALT_SUCCESS_candidate",
   "halt_subtype": null,
   "halt_handoff_text": null,
   "halt_handoff": null,
@@ -13,9 +13,9 @@
   "loop_metrics": {
     "lint_count": 0
   },
-  "run_id": null,
-  "source_rev": null,
-  "candidate_fingerprint": null,
+  "run_id": "e7699fa8-76b6-493e-8ef7-3e2e31f76443",
+  "source_rev": "9bd94ef8c9b5302963a8453d60604df1f76cfa83",
+  "candidate_fingerprint": "fp-sha256-017e5293b7c197debf077123abf537b4",
   "halt_success_challenge": null,
   "provider": "unknown",
   "loop_model": null,
@@ -47,8 +47,8 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "Functionally solid, but terminal challenge enforcement is structurally incomplete",
-  "verdict_explanation": "Independent challenge broke the success candidate because G32 accepts held challenges that omit the mandatory simplicity/domain-modeling arm.",
+  "verdict": "Contest-grade architecture; terminal success awaits independent challenge",
+  "verdict_explanation": "All gates are green. The validator is split into bounded private Modules, the unused fixture contract is deleted, and G32 now enforces the challenger arm-diversity contract with positive and negative fixtures.",
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
@@ -120,21 +120,21 @@
       "residual_blocker_kind": "cosmetic"
     },
     "test_strategy": {
-      "score": 8.0,
-      "delta": "DOWN",
-      "proof": "50 strict fixtures, 11 smoke fixtures, standalone gate selftests, failure-path config tests, and import/re-export regression checks all pass.",
+      "score": 10,
+      "delta": "UP",
+      "proof": "51 strict fixtures, 11 smoke fixtures, standalone gate selftests, failure-path config tests, and import/re-export regression checks all pass.",
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
       "unverifiable_due_to_build_failure": false
     },
     "credibility": {
-      "score": 8.0,
-      "delta": "DOWN",
+      "score": 9.5,
+      "delta": "UP",
       "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
-      "residual_blocking_10": null,
-      "residual_disposition": null,
-      "residual_rationale_or_backlog_ref": null,
+      "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
+      "residual_disposition": "accepted",
+      "residual_rationale_or_backlog_ref": "The existing 800-line hard cap now enforces the trust gate; further splitting has no current source-backed authority or behavior gain.",
       "unverifiable_due_to_build_failure": false,
       "residual_blocker_kind": "cosmetic"
     }
@@ -191,46 +191,10 @@
   ],
   "strengths": [
     "Canonical vocabulary has one frozen loader used by the repository, artifact, fixture, and halt-tail checks \u2014 contest-refactor/scripts/_canon.py:72-222.",
-    "The strict path composes independently named gates in one deterministic run and the full documented baseline passed \u2014 contest-refactor/scripts/validate-artifact.py:2157-2197.",
-    "Finding hashes have one algorithm owner and the live validator recomputes snapshots instead of trusting stored digests \u2014 contest-refactor/scripts/_fingerprint.py:65-83; contest-refactor/scripts/validate-artifact.py:611-665."
+    "G32 now validates challenger attempt shape and requires a new_finding simplicity/domain_modeling arm \u2014 contest-refactor/scripts/_artifact_halt.py.",
+    "Finding hashes have one algorithm owner and the live validator recomputes snapshots instead of trusting stored digests \u2014 contest-refactor/scripts/_fingerprint.py:65-83."
   ],
-  "findings": [
-    {
-      "loop_local_id": "F1",
-      "stable_id": "F-004",
-      "title": "G32 accepts a terminal challenge that skipped mandatory arm diversity",
-      "why_it_matters": "The terminal trust gate can certify HALT_SUCCESS without any simplicity or domain-modeling attack.",
-      "what_is_wrong": "halt-verifier.md requires a simplicity/domain_modeling challenge arm, but check_g32_halt_success_challenge validates only that attempts is non-empty; the positive held fixture uses only data_flow.",
-      "evidence": [
-        "contest-refactor/references/halt-verifier.md:66-74",
-        "contest-refactor/scripts/_artifact_halt.py:251-257",
-        "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:147-158",
-        "candidate_commit_sha:3e51000"
-      ],
-      "test_failed": "Interface-as-test-surface",
-      "dependency_category": null,
-      "leverage_impact": "The existing G32 Interface can enforce the documented challenge contract for every terminal run.",
-      "locality_impact": "The rule and fixture currently disagree with the validator that owns terminal promotion.",
-      "metric_signal": "One positive terminal fixture omits the mandatory non-correctness arm.",
-      "why_weakens_submission": "A reachable terminal path can bypass a required dimension of independent scrutiny, leaving the success claim structurally under-validated.",
-      "severity": "Serious deduction",
-      "adr_conflicts": [],
-      "adr_reopen_justification": null,
-      "minimal_correction_path": "Extend G32 to validate attempt shape and require one new_finding attempt targeting simplicity or domain_modeling; add that arm to the valid fixture and a failing no-diversity fixture.",
-      "blast_radius": {
-        "change": [
-          "contest-refactor/scripts/_artifact_halt.py",
-          "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json",
-          "contest-refactor/evals/fixtures/halt-terminal-no-diversity/fixture.toml",
-          "contest-refactor/evals/fixtures/halt-terminal-no-diversity/CURRENT_REVIEW.json"
-        ],
-        "avoid": [
-          "contest-refactor/references/halt-verifier.md",
-          "contest-refactor/scripts/validate-artifact.py"
-        ]
-      }
-    }
-  ],
+  "findings": [],
   "simplification_check": {
     "structurally_necessary": "No Noticeable-or-worse correction remains.",
     "new_seam_justified": false,
@@ -239,17 +203,7 @@
     "should_not_be_done": "Do not extract the two-site replication similarity without current drift or duplicated runtime authority.",
     "tests_after_fix": "No fix pending; full suite is the terminal oracle."
   },
-  "backlog": [
-    {
-      "priority": 1,
-      "stable_id": "F-004",
-      "title": "Enforce G32 challenger arm diversity",
-      "kind": "structural",
-      "rank": "needed for winning",
-      "why_it_matters": "Terminal success must mechanically require the documented non-correctness attack.",
-      "score_impact": "test_strategy +0.5; credibility +0.5"
-    }
-  ],
+  "backlog": [],
   "unresolved_reason": null,
   "deepening_candidates": [],
   "builder_notes": [
@@ -267,43 +221,14 @@
       "pattern": "Bounded private validation Modules",
       "how_to_recognize": "Each gate family now fits under the existing hard cap and the CLI remains the Interface.",
       "smallest_coding_rule": "Split by existing responsibility; do not add registries or protocols."
+    },
+    {
+      "pattern": "Narrative-only verifier requirement",
+      "how_to_recognize": "The verifier requires an arm that the terminal artifact gate does not inspect.",
+      "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "The candidate was correctly demoted. G32 must enforce the verifier contract before terminal success can be trusted.",
-  "loop_result": {
-    "what_changed": "Extended G32 to validate challenger attempt shape and require a simplicity/domain_modeling new_finding arm; added positive and negative fixture coverage.",
-    "evidence_change_is_honest": "51 fixtures passed; the no-diversity fixture fails specifically on G32; validate-repo, every standalone selftest, and Ruff passed.",
-    "risk_boundary_evidence": null,
-    "targeted_finding_status": "resolved",
-    "unintended_regression": null,
-    "changed_paths": [
-      "contest-refactor/scripts/_artifact_halt.py",
-      "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-held/REVIEW_HISTORY.json",
-      "contest-refactor/evals/fixtures/halt-terminal-no-diversity/CURRENT_REVIEW.json",
-      "contest-refactor/evals/fixtures/halt-terminal-no-diversity/fixture.toml"
-    ],
-    "interface_test_coverage_path": null
-  },
-  "implementation_review": {
-    "verdict": "approved",
-    "reason": "All three checks passed; the existing G32 Interface now enforces the documented arm-diversity contract with direct positive and negative fixtures.",
-    "checks": {
-      "reality": "passed",
-      "honesty": "passed",
-      "regression": "passed"
-    },
-    "regressions": [],
-    "conditions": [],
-    "retry_count": 1,
-    "retry_cause": null,
-    "retry_attempts": [
-      {
-        "attempt": 1,
-        "outcome": "ok",
-        "error": null,
-        "duration_ms": null
-      }
-    ]
-  }
+  "narrative": "Win candidate. Every scorecard dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; G32 enforces challenger arm diversity; no finding or backlog remains. Independent challenge is required before terminal success.",
+  "loop_result": null,
+  "implementation_review": null
 }
