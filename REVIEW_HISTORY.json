@@ -2727,10 +2727,37 @@
       "schema_version": 4,
       "loop": 10,
       "loop_cap": 10,
-      "state": "HALT_SUCCESS_candidate",
+      "state": "HALT_LOOP_CAP",
       "halt_subtype": null,
       "halt_handoff_text": null,
-      "halt_handoff": null,
+      "halt_handoff": {
+        "state": "HALT_LOOP_CAP",
+        "halt_subtype": null,
+        "text": "Loop 10 ended at HALT_LOOP_CAP \u2014 I made 10 loops, the configured maximum, and the\nbacklog still has items I didn't reach.\n\nProgress so far: architecture quality 7\u21929.5; state management 9\u21928; domain modeling 9\u21929.5; data flow 8\u21929.5; framework idioms 9\u21929.5; concurrency 9\u219210; simplicity 7\u21929.5; test strategy 8\u21928; credibility 8\u21928.\nNever moved: architecture_quality (7 loops), state_management (7 loops), domain_modeling (7 loops), data_flow (7 loops), framework_idioms (7 loops), concurrency (7 loops), simplicity (7 loops).\n\nCurrent Priority 1 (carried forward):\n  - F-008: G32 accepts non-canonical candidate fingerprints \u2014 the recurrence guard trusts unchecked input, so unchanged architecture can vary the field and evade recurrence.\n\nNext step options:\n  (a) Bump cap and resume \u2014 `$contest-refactor --scope contest-refactor --cap 15` continues from here.\n  (b) Accept current state \u2014 10 loops landed substantial improvements; current source is the new baseline.\n  (c) Reset \u2014 `$contest-refactor --scope contest-refactor --reset`.",
+        "expected_actions": [
+          {
+            "action_id": "bump-cap-resume",
+            "description": "Resume contest-refactor with cap 15 to fix F-008.",
+            "match_keywords": [],
+            "match_paths": [],
+            "match_kind": "no_drift_expected"
+          },
+          {
+            "action_id": "accept-current-state",
+            "description": "Accept the current source as the new baseline.",
+            "match_keywords": [],
+            "match_paths": [],
+            "match_kind": "no_drift_expected"
+          },
+          {
+            "action_id": "reset-review",
+            "description": "Reset contest-refactor review state.",
+            "match_keywords": [],
+            "match_paths": [],
+            "match_kind": "no_drift_expected"
+          }
+        ]
+      },
       "re_validated_at_sha": null,
       "re_validation_context": null,
       "dry_run": false,
@@ -2738,9 +2765,9 @@
       "loop_metrics": {
         "lint_count": 0
       },
-      "run_id": "f8396ebc-d850-4e0e-917b-31b1b84175e5",
-      "source_rev": "b630146b795f3906e111a6ffa11b1af8aa4ba722",
-      "candidate_fingerprint": "fp-sha256-a7bde85ef55c7d4671006c794b10c373",
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
       "halt_success_challenge": null,
       "provider": "unknown",
       "loop_model": null,
@@ -2772,8 +2799,8 @@
         "test_filter": null,
         "working_tree_dirty_paths": []
       },
-      "verdict": "Contest-grade architecture; terminal success awaits independent challenge",
-      "verdict_explanation": "All gates are green. Terminal challenge evidence and recurrence identity now match their declared contracts, and no Noticeable-or-worse finding remains.",
+      "verdict": "Loop cap reached with one terminal-validation finding carried forward",
+      "verdict_explanation": "The final independent challenge proved G32 trusts rather than recomputes candidate_fingerprint; no loop remains to apply the correction.",
       "scorecard": {
         "architecture_quality": {
           "score": 9.5,
@@ -2786,12 +2813,12 @@
           "residual_blocker_kind": "cosmetic"
         },
         "state_management": {
-          "score": 9.5,
-          "delta": "SAME",
+          "score": 8.0,
+          "delta": "DOWN",
           "proof": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
-          "residual_blocking_10": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
-          "residual_disposition": "accepted",
-          "residual_rationale_or_backlog_ref": "The single-writer checkpoint authority is explicit; making invalid JSON states unrepresentable would require replacing the interoperable file Interface.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
           "unverifiable_due_to_build_failure": false,
           "residual_blocker_kind": "cosmetic"
         },
@@ -2845,8 +2872,8 @@
           "residual_blocker_kind": "cosmetic"
         },
         "test_strategy": {
-          "score": 10,
-          "delta": "UP",
+          "score": 8.0,
+          "delta": "DOWN",
           "proof": "53 strict fixtures, 11 smoke fixtures, standalone gate selftests, seven recurrence-key assertions, failure-path config tests, and import/re-export regression checks all pass.",
           "residual_blocking_10": null,
           "residual_disposition": null,
@@ -2854,12 +2881,12 @@
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
-          "score": 9.5,
-          "delta": "UP",
+          "score": 8.0,
+          "delta": "DOWN",
           "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
-          "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
-          "residual_disposition": "accepted",
-          "residual_rationale_or_backlog_ref": "The existing 800-line hard cap enforces the trust gate; further splitting has no current source-backed authority or behavior gain.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
           "unverifiable_due_to_build_failure": false,
           "residual_blocker_kind": "cosmetic"
         }
@@ -2919,17 +2946,65 @@
         "G32 validates complete challenger evidence and focused negative fixtures cover independent failure clauses \u2014 contest-refactor/scripts/_artifact_halt.py.",
         "Candidate recurrence uses structured architecture evidence plus source_rev and is invariant to rationale rephrasing \u2014 contest-refactor/scripts/candidate_fingerprint.py."
       ],
-      "findings": [],
+      "findings": [
+        {
+          "loop_local_id": "F1",
+          "stable_id": "F-008",
+          "title": "G32 accepts non-canonical candidate fingerprints",
+          "why_it_matters": "The recurrence guard must derive candidate identity from the review payload instead of trusting an agent-supplied string.",
+          "what_is_wrong": "G32 checks only that candidate_fingerprint is non-empty and never recomputes the canonical digest; a positive candidate fixture passes the placeholder fp-sha256-architecture-payload-0001.",
+          "evidence": [
+            "contest-refactor/scripts/candidate_fingerprint.py:53-61",
+            "contest-refactor/scripts/_artifact_halt.py:165-201",
+            "contest-refactor/scripts/validate-artifact.py:140-143",
+            "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json:133-136",
+            "contest-refactor/evals/fixtures/halt-candidate-no-challenge/fixture.toml:1-3",
+            "candidate_commit_sha:b483d55"
+          ],
+          "test_failed": "Interface-as-test-surface",
+          "dependency_category": null,
+          "leverage_impact": "One existing G32 check can protect recurrence identity for candidate and terminal states.",
+          "locality_impact": "The canonical digest owner exists, but its sole trust-boundary consumer does not call it.",
+          "metric_signal": "A strict positive G32 fixture passes a human-readable placeholder instead of a computed digest.",
+          "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
+          "severity": "Serious deduction",
+          "adr_conflicts": [],
+          "adr_reopen_justification": null,
+          "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture.",
+          "blast_radius": {
+            "change": [
+              "contest-refactor/scripts/_artifact_halt.py",
+              "contest-refactor/evals/fixtures/*/CURRENT_REVIEW.json",
+              "contest-refactor/evals/fixtures/*/REVIEW_HISTORY.json",
+              "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/"
+            ],
+            "avoid": [
+              "contest-refactor/scripts/candidate_fingerprint.py",
+              "contest-refactor/references/halt-verifier.md"
+            ]
+          }
+        }
+      ],
       "simplification_check": {
-        "structurally_necessary": "No Noticeable-or-worse correction remains.",
+        "structurally_necessary": "G32 must recompute the canonical fingerprint it gates.",
         "new_seam_justified": false,
         "new_seam_adapters": [],
-        "helpful_simplification": "none",
-        "should_not_be_done": "Do not extract the two-site replication similarity without current drift or duplicated runtime authority.",
-        "tests_after_fix": "No fix pending; the full suite and independent challenge are the terminal oracles."
+        "helpful_simplification": "Call the existing candidate_fingerprint function from G32.",
+        "should_not_be_done": "Do not add another digest algorithm or persisted field.",
+        "tests_after_fix": "Add one mismatched-digest negative fixture, repair positive digests, then run the full suite."
       },
-      "backlog": [],
-      "unresolved_reason": null,
+      "backlog": [
+        {
+          "priority": 1,
+          "stable_id": "F-008",
+          "title": "Recompute canonical candidate fingerprints at G32",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Recurrence identity must not be agent-controlled unchecked input.",
+          "score_impact": "state_management +0.5; test_strategy +0.5; credibility +0.5"
+        }
+      ],
+      "unresolved_reason": "loop counter reached cap of 10",
       "deepening_candidates": [],
       "builder_notes": [
         {
@@ -2953,9 +3028,39 @@
           "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
         }
       ],
-      "narrative": "Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; no finding or backlog remains. Independent challenge is required before terminal success.",
-      "loop_result": null,
-      "implementation_review": null
+      "narrative": "Loop 10 exhausted the configured cap. F-008 is validated and carried forward; resume with a larger cap to fix it.",
+      "loop_result": {
+        "what_changed": "No source correction was applied; Loop 10 emitted candidate b483d55 and the independent challenger discovered F-008 afterward.",
+        "evidence_change_is_honest": "The candidate commit is preserved, the challenger binding is exact, and the passing placeholder fixture directly reproduces the unchecked-input path.",
+        "risk_boundary_evidence": null,
+        "targeted_finding_status": "carried_forward",
+        "unintended_regression": "The independent challenger rejected the cap-loop candidate after commit; no correction can execute without exceeding the configured cap.",
+        "changed_paths": [],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "rejected",
+        "reason": "The independent challenger rejected the cap-loop candidate after commit; no correction can execute without exceeding the configured cap.",
+        "checks": {
+          "reality": "failed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [
+          "G32 accepts an arbitrary non-empty candidate_fingerprint."
+        ],
+        "conditions": [],
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
     }
   ]
 }

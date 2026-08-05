@@ -1,6 +1,6 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 8,
+  "next_serial": 9,
   "entries": [
     {
       "stable_id": "F-001",
@@ -384,6 +384,50 @@
             ],
             "why_weakens_submission": "The loop can evade its recurrence guard through harmless prose rewording and repeatedly spend independent-challenge cycles on the same architecture.",
             "minimal_correction_path": "Hash residual_blocker_kind instead of free-form rationale, retain the structured score/disposition/blocker fields, and assert rationale rephrasing is invariant while blocker-kind changes are not."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-008",
+      "title": "G32 accepts non-canonical candidate fingerprints",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/_artifact_halt.py",
+      "primary_evidence_lines": [
+        165,
+        201
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 10,
+      "first_seen_sha": "b483d55",
+      "last_seen_loop": 10,
+      "occurrences": [
+        {
+          "loop": 10,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "b483d55",
+          "idempotency_key": "loop10-F-008-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:cf56a5e99e256a8117bf4914d80008f4f2b0c5822285079c24dd7f05dc23c888",
+            "evidence_paths_hash": "sha256:55be135dfb86b182031e4085e746cb39f9824fcce639b27d2ea0054af535919f"
+          },
+          "attempted_remedy_hash": "sha256:802f4ff3e102f7b37611699367a530a5deea447b2e7a14576d39438fde0932a6",
+          "finding_snapshot": {
+            "title": "G32 accepts non-canonical candidate fingerprints",
+            "why_it_matters": "The recurrence guard must derive candidate identity from the review payload instead of trusting an agent-supplied string.",
+            "what_is_wrong": "G32 checks only that candidate_fingerprint is non-empty and never recomputes the canonical digest; a positive candidate fixture passes the placeholder fp-sha256-architecture-payload-0001.",
+            "evidence": [
+              "contest-refactor/scripts/candidate_fingerprint.py:53-61",
+              "contest-refactor/scripts/_artifact_halt.py:165-201",
+              "contest-refactor/scripts/validate-artifact.py:140-143",
+              "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json:133-136",
+              "contest-refactor/evals/fixtures/halt-candidate-no-challenge/fixture.toml:1-3",
+              "candidate_commit_sha:b483d55"
+            ],
+            "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
+            "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture."
           }
         }
       ]
