@@ -1,32 +1,20 @@
 #!/usr/bin/env python3
-"""Self-test for G40 — Discovery persistence across loops.
+"""Self-test for G40 — Discovery persistence across loops. (Why G40 exists: validation.md.)
 
-Step-0 Discovery is the durable handoff: it carries the source roots, the lens, and —
-critically — the test AND build commands that every later loop re-runs as ground truth.
-The schema used to say "required first loop only; null on later loops" while three
-consumers were already written against the opposite assumption (rule #27's test_scope
-coherence, G21's incremental->full reverify, and candidate_fingerprint.py's binding of
-lens + source_roots). A 10-loop production run nulled it from loop 2 on, obeying the
-schema, and nothing caught it because nothing checked.
+Pinned against the REAL gate function in validate-artifact.py, which has three branches
+(the object itself, source_roots, and the shared test_command/lens check) — the case table
+covers both sides of each branch's `or` rather than enumerating every shape:
 
-This test pins five things against the REAL gate function in validate-artifact.py:
-
-  1. TRIGGER    — G40 fires on a null/absent/empty discovery and on each individual
-                  load-bearing field being missing, blank, or the wrong type.
-  2. REGRESSION — the exact production shape (schema_version 4, loop > 1, discovery
-                  null) fires. This is the case the old schema comment actively
-                  instructed loops to produce, so it gets its own guard rather than
-                  hiding inside the generic TRIGGER set.
-  3. BYPASS     — G40 stays silent on a fully populated discovery at loop 1 AND at a
-                  later loop (the carry-forward case this change exists to make legal),
-                  tolerates extra/unknown discovery keys, and stays below the
-                  schema_version 4 floor. The v1-v3 corpus has 13 artifacts with
-                  late-loop null discovery; retroactively failing them would be a
-                  regression in this gate, not a finding about them.
-  4. ISOLATION  — a discovery value never changes an unrelated gate's verdict,
-                  mirroring _g39_selftest.py / _metric_isolation_selftest.py.
-  5. VACUITY    — at least one TRIGGER case exists, so a gate that silently stopped
-                  firing cannot pass by doing nothing.
+  1. TRIGGER    — each branch fires, on both the isinstance side and the empty side.
+  2. REGRESSION — the exact production shape (schema_version 4, loop > 1, discovery null)
+                  fires. The pre-G40 schema actively instructed loops to emit this, so it
+                  is pinned by identity (REGRESSION_CASE) and guarded against deletion.
+  3. BYPASS     — silent on a populated discovery at loop 1 AND at a later loop (the
+                  carry-forward case this change makes legal), on extra unknown keys, on
+                  an absent build_command (not every stack has one), and below the v4
+                  floor — 13 v1-v3 artifacts carry late-loop null discovery legitimately.
+  4. ISOLATION  — a discovery value never changes an unrelated gate's verdict.
+  5. VACUITY    — a gate that silently stopped firing cannot pass by doing nothing.
 
 No pytest in this repo -> standalone _*.py helper.
 
@@ -43,6 +31,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+from _canon import load_canon
+
 
 def _load_validator():
     path = Path(__file__).with_name("validate-artifact.py")
@@ -52,17 +42,10 @@ def _load_validator():
     return module
 
 
-DIMS = (
-    "architecture_quality",
-    "state_management",
-    "concurrency",
-    "test_strategy",
-    "credibility",
-    "domain_modeling",
-    "data_flow",
-    "framework_idioms",
-    "simplicity",
-)
+# Sourced from canon rather than hardcoded: the scorecard here only exists so the
+# isolation harness has a realistic artifact, and a second hardcoded copy of the
+# dimension list would be one more thing to update if canon ever changes.
+DIMS = tuple(load_canon(HERE.parent).scorecard_dimensions)
 
 
 def _discovery(**overrides):
@@ -105,34 +88,31 @@ def _art(discovery, *, schema_version=4, loop=1):
     }
 
 
+# The exact shape the pre-G40 schema instructed loops to emit. Pinned by identity, not
+# by label text, so renaming it cannot silently disable the vacuity guard in main().
+REGRESSION_CASE = ("REGRESSION: v4 later loop with null discovery", _art(None, loop=7), True)
+
+
 # (label, artifact, expect_fire)
 def _cases():
     cases = [
-        # --- TRIGGER: the object itself ---
+        # --- TRIGGER: branch 1, the object itself (both sides of the `or`) ---
         ("discovery null", _art(None), True),
-        ("discovery absent", {"schema_version": 4, "state": "CONTINUE", "loop": 3}, True),
         ("discovery empty dict", _art({}), True),
         ("discovery not a dict", _art("see loop 1"), True),
-        ("discovery is a list", _art([{"source_roots": ["src/"]}]), True),
-        # --- TRIGGER: individual load-bearing fields ---
+        # --- TRIGGER: branch 2, source_roots (absent, empty, and blank-after-filter) ---
         ("source_roots absent", _art(_discovery(source_roots=...)), True),
         ("source_roots empty list", _art(_discovery(source_roots=[])), True),
         ("source_roots all blank", _art(_discovery(source_roots=["", "  "])), True),
-        ("source_roots not a list", _art(_discovery(source_roots="src/")), True),
-        ("test_command absent", _art(_discovery(test_command=...)), True),
+        # --- TRIGGER: branch 3, the shared test_command/lens check. One case per side
+        # of the `or`, split across the two fields so neither is left uncovered.
         ("test_command blank", _art(_discovery(test_command="   ")), True),
-        ("test_command not a string", _art(_discovery(test_command=["make", "test"])), True),
         ("lens absent", _art(_discovery(lens=...)), True),
-        ("lens blank", _art(_discovery(lens="")), True),
         ("lens not a string", _art(_discovery(lens=0)), True),
-        # --- REGRESSION: the exact production failure ---
-        # schema_version 4, loop > 1, discovery null. The pre-G40 schema comment told
-        # loops to emit precisely this, so it must fire loudly and unambiguously.
-        ("REGRESSION: v4 later loop with null discovery", _art(None, loop=7), True),
+        REGRESSION_CASE,
         # --- BYPASS: the valid shape, at both loop positions ---
         ("populated at loop 1", _art(_discovery()), False),
         ("populated at a later loop (carry-forward)", _art(_discovery(), loop=7), False),
-        ("populated at the loop cap", _art(_discovery(), loop=10), False),
         (
             "incremental scope still passes",
             _art(_discovery(test_scope="incremental", test_filter="ArtworkTests")),
@@ -195,11 +175,9 @@ def main() -> int:
     va = _load_validator()
     failures = []
     triggers = 0
-    saw_regression_case = False
+    cases = _cases()
 
-    for label, art, expect_fire in _cases():
-        if label.startswith("REGRESSION:"):
-            saw_regression_case = True
+    for label, art, expect_fire in cases:
         issues = va.check_g40_discovery_persistence(copy.deepcopy(art))
         fired = bool(issues)
         if expect_fire:
@@ -220,17 +198,17 @@ def main() -> int:
     # production regression case must not be quietly deleted from the corpus.
     if triggers == 0:
         failures.append("vacuity: no TRIGGER case present")
-    if not saw_regression_case:
+    if REGRESSION_CASE not in cases:
         failures.append(
-            "vacuity: the 'REGRESSION: v4 later loop with null discovery' case is gone — "
-            "that is the exact shape the pre-G40 schema produced and it must stay covered"
+            "vacuity: REGRESSION_CASE is no longer in the case table — that is the exact "
+            "shape the pre-G40 schema produced and it must stay covered"
         )
 
     if failures:
         for f in failures:
             print(f"FAIL: {f}")
         return 1
-    print(f"OK: G40 selftest — {len(_cases())} cases ({triggers} trigger), isolation clean")
+    print(f"OK: G40 selftest — {len(cases)} cases ({triggers} trigger), isolation clean")
     return 0
 
 

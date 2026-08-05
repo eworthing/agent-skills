@@ -35,16 +35,14 @@ rest stand still.
      queue will never drain on its own. In the second case, break the tie toward the
      deferred item. Carry it or drop it; do not defer it indefinitely.
 
-   Why item deferral needs its own criterion: a real 10-loop run wrote the same
-   `simplicity` item into the backlog as Priority 1 for the next loop at loops 3, 4, 5
-   and 6, and each following loop overrode it for a Serious finding its own Step 1 had
-   just turned up in one large file. Every single override was defensible — severity
-   (criterion 3) genuinely outranked distance (criterion 1) each time — and every one was
-   correctly named in the Priority-1 accounting sentence, so nothing was hidden. The
-   defect was that nothing escalates on repetition, so "correctly deferred" repeated
-   until the file finally ran out of Serious findings at loop 7. This is the cheap-win
-   ratchet rotated: there one *dimension* always won, here one *severity tier* always
-   won. Both starve the queue, and neither is visible from inside a single loop.
+   Why this needs its own criterion: in a 10-loop run the same item was written as
+   next-loop Priority 1 at loops 3-6 and overridden each time by a Serious finding that
+   loop's own Step 1 had just turned up in one large file. Every override was defensible
+   and every one was named in the accounting sentence — nothing was hidden. What was
+   missing is escalation on repetition, so "correctly deferred" repeated until the file
+   ran out of Serious findings. This is the cheap-win ratchet rotated: there one
+   *dimension* always won, here one *severity tier* did. Neither is visible from inside
+   a single loop, which is why it belongs in the pass that reads `REVIEW_HISTORY.json`.
 3. **Severity** ([architecture-rubric.md § Severity Anchors](architecture-rubric.md#severity-anchors)).
 4. **Honesty plus simplicity, then runtime safety** — at equal gain, subtractive beats
    additive (Meta-Rule 5).
@@ -148,13 +146,12 @@ This cuts both ways, and the correction is not to lean the other way. Do not ove
 into UP to compensate for a run of DOWNs, or into DOWN because the scores look generous.
 UP, SAME and DOWN each have to be reachable on their merits every loop.
 
-Observed cost: in a 10-loop run, one loop marked two dimensions DOWN on finding a deeper
-instance of a defect class — arguably right, and its own humility check conceded a reviewer
-could defend SAME. The next two loops inherited the pattern rather than re-deriving it, and
-the scorecard fell 2.0 points across three loops *while seven genuine race conditions were
-being fixed and both gates stayed green*. The code was strictly safer at the end of that
-stretch than at its start. A scorecard that moves opposite to the source it is scoring has
-stopped measuring the source.
+Observed cost: one loop marked two dimensions DOWN on finding a deeper instance of a known
+defect class — arguably right, and its own humility check conceded SAME was defensible. The
+next two loops inherited that pattern instead of re-deriving, and the scorecard fell 2.0
+points across three loops *while seven genuine race conditions were fixed and both gates
+stayed green*. A scorecard that moves opposite to the source it is scoring has stopped
+measuring the source.
 
 ## State / Domain Guardrails
 

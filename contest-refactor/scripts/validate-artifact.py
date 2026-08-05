@@ -1962,22 +1962,11 @@ def check_g39_backlog_score_impact(current_review: dict, canon) -> list[Issue]:
 def check_g40_discovery_persistence(current_review: dict) -> list[Issue]:
     """G40: Step-0 Discovery survives every loop, not just the first.
 
-    The schema used to say "required first loop only; null on later loops" while three
-    consumers were already written against the opposite assumption: rule #27 reads
-    `discovery.test_scope`, G21's incremental->full reverify reads it on the
-    HALT_SUCCESS-emitting loop, and `candidate_fingerprint.py` binds `discovery.lens`
-    and `discovery.source_roots`. A 10-loop production run nulled it from loop 2 on,
-    obeying the schema, and nothing noticed because nothing checked.
+    Presence and shape only -- deliberately NOT compared against a prior loop's
+    discovery, since a legitimate Step-0 re-run (--reset, --purge) may change it.
+    Carrying the object forward faithfully is rule #32's obligation, not the gate's.
 
-    The operational failure is the one worth gating. `build_command` lives here, so once
-    discovery is dropped a loop has only the test command left and will treat a green
-    suite as full ground truth. Where the test target and the build target compile
-    different file sets, that is a false green on the gate the loop believes it ran.
-
-    Presence and shape only. This deliberately does NOT compare against a prior loop's
-    discovery: a legitimate Step-0 re-run (fresh run, --reset, --purge) may change these
-    values, and a cross-loop equality check would fail those honest cases. Carrying the
-    object forward faithfully is the loop's obligation under rule #32, not the gate's.
+    Full rationale: references/validation.md, G40.
     """
     issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 4:
