@@ -100,11 +100,15 @@ For every proposed fix, answer:
 2. Is it the smallest honest fix?
 3. Does it avoid duplicate layers?
 4. Does runtime behavior remain honest?
-5. Does the product improve?
+5. Does the product improve — measurably, and by more than the item you are declining?
 
 Plus the structural gate: Friction proven, Deletion test passes for any Module being removed, [Unified Seam Policy](architecture-rubric.md#unified-seam-policy) passes for any new Seam, Tests after the refactor live at the new Interface (per [Replace, don't layer](architecture-rubric.md#5-replace-dont-layer)).
 
 Any "no" → downgrade to simpler truthful alternative or pick next backlog item. If a clean-looking fix adds ceremony without fixing ownership, failure behavior, or Locality, reject it.
+
+**Q5 is the leverage question.** The other four ask whether a fix is honest; Q5 asks whether it is worth doing *now*, and it fails two ways. The gain is not nameable — say which dimension moves and by how much in the `score_impact` shape (G39); "it is tidier" is not a product improvement. Or the gain is real but smaller than what you are declining, and the concrete case there is repetition: when prior fixes of the **same defect class in the same file** moved the target dimension zero, one more instance samples the class instead of closing it. Downgrade to closing it — sweep that file for the shape and fix the instances together, or take the systemic fix — or take the higher-gain backlog item. Key that on the class (`category_hint` + `primary_file` in the registry), never on `stable_id`: each instance is a fresh finding with a fresh id, so an id-keyed check never fires. This is not a bar on small fixes; it is a bar on the *fifth* small fix that has stopped moving anything.
+
+The **Step-3 reviewer answers Q5 without the comparison.** It sees a diff, not the backlog or `findings_registry.json`, so it can judge whether this change improves the product and cannot judge what it displaced — asking it to would be asking it to guess. The comparative half belongs to whoever holds the backlog: Step 2, and the Critic's Adversarial Pass.
 
 **Fake-clean fix anti-examples** (each fails SPT; all observed in production loops):
 
