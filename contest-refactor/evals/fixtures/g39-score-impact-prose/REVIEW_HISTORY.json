@@ -20,7 +20,9 @@
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",
       "discovery": {
-        "source_roots": ["Sources/"],
+        "source_roots": [
+          "Sources/"
+        ],
         "test_command": "swift test",
         "lens": "Apple",
         "test_scope": "full",
@@ -130,7 +132,8 @@
           "kind": "structural",
           "rank": "needed for winning",
           "why_it_matters": "Four hand-copied lazy-load skeletons; one shared type removes three.",
-          "score_impact": "Architecture quality + State management each +1.0"
+          "score_impact": "Architecture quality + State management each +1.0",
+          "stable_id": "F-001"
         }
       ],
       "deepening_candidates": [],

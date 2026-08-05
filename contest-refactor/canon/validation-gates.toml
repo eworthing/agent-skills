@@ -165,3 +165,7 @@ title = "Discovery persistence across loops (durable Step-0 handoff, schema_vers
 [[validation_gates]]
 id = "G41"
 title = "Cap loop executes its budgeted work (loop == loop_cap with a non-empty backlog, schema_version >= 4)"
+
+[[validation_gates]]
+id = "G42"
+title = "Backlog item identity (stable_id present and derived from a Finding, schema_version >= 4)"

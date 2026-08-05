@@ -27,7 +27,12 @@ rest stand still.
      `REVIEW_HISTORY.json`. A dimension unmoved for three or more loops is not being
      investigated, whatever its scorecard reason says. Break near-ties toward it.
    - *Item deferral.* Consecutive prior loops in which an item sat in the backlog and
-     was not executed, from the registry's `occurrences[]` chain. An item deferred three
+     was not executed. Count it by matching `backlog[].stable_id` across
+     `REVIEW_HISTORY.json.loops[]` (v4+, required by **G42**) — **not** from the
+     registry's `occurrences[]` chain, which records a loop while a finding is *open*,
+     a different thing: a production run carried a Cosmetic off-path finding as open for
+     all ten loops while it never appeared in a backlog once, so open-streaks would
+     escalate exactly the items that should stay parked. An item deferred three
      or more times is telling you something, and it is one of exactly two things: either
      it is genuinely worth less than its position claims — in which case **drop it from
      the backlog and say why**, rather than carrying it as permanent furniture — or the

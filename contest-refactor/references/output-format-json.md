@@ -224,6 +224,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
   "backlog": [
     {
       "priority": 1,                                                                   // required int, 1-based
+      "stable_id": "F-007",                                                            // required (v4+); "F-NNN", the id of the Finding this item is derived from (G42)
       "title": "Collapse navigation duplicate authority",                              // required
       "kind": "structural",                                                            // enum: structural | simplification | polish
       "rank": "needed for winning",                                                    // enum: needed for winning | helpful | minor

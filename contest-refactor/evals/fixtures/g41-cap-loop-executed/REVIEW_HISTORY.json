@@ -137,7 +137,8 @@
           "title": "Collapse the duplicated confirmation-dialog ceremony (Finding F2)",
           "kind": "structural",
           "why_it_matters": "three near-identical dialog bodies drift apart",
-          "score_impact": "simplicity +0.5"
+          "score_impact": "simplicity +0.5",
+          "stable_id": "F-001"
         }
       ],
       "deepening_candidates": [],
