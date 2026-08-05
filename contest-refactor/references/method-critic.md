@@ -1,6 +1,6 @@
 # Critic Method — convergence passes + guardrails (Step 1, Critic only)
 
-The Backlog Prioritization Pass, the Stalled-Dimension Sweep, the Residual Accounting Pass, the Adversarial Pass on Accepted Residuals, and the State/Domain, Concurrency, and Test guardrails. Used by the **Critic** (Step 1, Method step 10) to decide HALT vs CONTINUE and to guard scoring. Carved out of [method.md](method.md) so the Step-3 implementation reviewer — which checks a diff against the Simplify Pressure Test + Evidence Chain + Meta-Rule 4 (all kept in [method.md](method.md)) and does **not** converge or score — does not carry it. The Critic reads both files per the `SKILL.md` Reference Load Matrix.
+The Backlog Prioritization Pass, the Stalled-Dimension Sweep, the Residual Accounting Pass, the Adversarial Pass on Accepted Residuals, and the Delta Derivation, State/Domain, Concurrency, and Test guardrails. Used by the **Critic** (Step 1, Method step 10) to decide HALT vs CONTINUE and to guard scoring. Carved out of [method.md](method.md) so the Step-3 implementation reviewer — which checks a diff against the Simplify Pressure Test + Evidence Chain + Meta-Rule 4 (all kept in [method.md](method.md)) and does **not** converge or score — does not carry it. The Critic reads both files per the `SKILL.md` Reference Load Matrix.
 
 ## Backlog Prioritization Pass
 
@@ -22,9 +22,29 @@ rest stand still.
    top-ranked item at Priority 2 for fifteen loops without ever naming it.
 1. **Distance to target.** +0.5 at 5.5 buys progress toward an anchor; +0.5 at 9.0
    buys a residual. Not the same gain.
-2. **Stall.** Consecutive prior loops with `delta != "UP"`, from `REVIEW_HISTORY.json`.
-   A dimension unmoved for three or more loops is not being investigated, whatever its
-   scorecard reason says. Break near-ties toward it.
+2. **Stall — at two granularities.**
+   - *Dimension stall.* Consecutive prior loops with `delta != "UP"`, from
+     `REVIEW_HISTORY.json`. A dimension unmoved for three or more loops is not being
+     investigated, whatever its scorecard reason says. Break near-ties toward it.
+   - *Item deferral.* Consecutive prior loops in which an item sat in the backlog and
+     was not executed, from the registry's `occurrences[]` chain. An item deferred three
+     or more times is telling you something, and it is one of exactly two things: either
+     it is genuinely worth less than its position claims — in which case **drop it from
+     the backlog and say why**, rather than carrying it as permanent furniture — or the
+     ranking is being dominated by a renewable supply of higher-severity findings and the
+     queue will never drain on its own. In the second case, break the tie toward the
+     deferred item. Carry it or drop it; do not defer it indefinitely.
+
+   Why item deferral needs its own criterion: a real 10-loop run wrote the same
+   `simplicity` item into the backlog as Priority 1 for the next loop at loops 3, 4, 5
+   and 6, and each following loop overrode it for a Serious finding its own Step 1 had
+   just turned up in one large file. Every single override was defensible — severity
+   (criterion 3) genuinely outranked distance (criterion 1) each time — and every one was
+   correctly named in the Priority-1 accounting sentence, so nothing was hidden. The
+   defect was that nothing escalates on repetition, so "correctly deferred" repeated
+   until the file finally ran out of Serious findings at loop 7. This is the cheap-win
+   ratchet rotated: there one *dimension* always won, here one *severity tier* always
+   won. Both starve the queue, and neither is visible from inside a single loop.
 3. **Severity** ([architecture-rubric.md § Severity Anchors](architecture-rubric.md#severity-anchors)).
 4. **Honesty plus simplicity, then runtime safety** — at equal gain, subtractive beats
    additive (Meta-Rule 5).
@@ -109,6 +129,32 @@ For each `residual_disposition: "accepted"` entry:
 
 **Loop 1 exempt** when no prior `residual_disposition: "accepted"` exists in `findings_registry.json` or this loop's draft scorecard. Otherwise applies every loop.
 
+
+## Delta Derivation Guardrail
+
+The anchor-to-source rule ([method.md](method.md) Step 1, G26) says re-derive each score
+from current source rather than trusting the prior scorecard. Read it as binding on prior
+loops' **reasoning patterns** too, not only their numbers.
+
+A convention that emerges across loops — "we found a new instance of a known defect class,
+so the dimension moves DOWN", or its mirror "we closed one, so it moves UP" — is a fact
+about how recent loops argued, not a fact about current source, and it carries no authority
+over your delta. Judge each dimension against its own anchor in
+[architecture-rubric-scoring.md](architecture-rubric-scoring.md) as the code stands today
+and let the delta fall out of that comparison. If your stated reason for a delta is
+"consistent with what recent loops did", that is anchoring, not derivation.
+
+This cuts both ways, and the correction is not to lean the other way. Do not over-correct
+into UP to compensate for a run of DOWNs, or into DOWN because the scores look generous.
+UP, SAME and DOWN each have to be reachable on their merits every loop.
+
+Observed cost: in a 10-loop run, one loop marked two dimensions DOWN on finding a deeper
+instance of a defect class — arguably right, and its own humility check conceded a reviewer
+could defend SAME. The next two loops inherited the pattern rather than re-deriving it, and
+the scorecard fell 2.0 points across three loops *while seven genuine race conditions were
+being fixed and both gates stayed green*. The code was strictly safer at the end of that
+stretch than at its start. A scorecard that moves opposite to the source it is scoring has
+stopped measuring the source.
 
 ## State / Domain Guardrails
 
