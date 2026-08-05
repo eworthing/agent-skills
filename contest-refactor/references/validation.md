@@ -203,6 +203,14 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #31; mechanized by `validate-artifact.py check_g39_backlog_score_impact` + `scripts/_g39_selftest.py`.
 
+- [ ] **G40 Discovery persistence across loops (pre-emit, schema_version >= 4)** — `discovery` is non-null on **every** loop and carries non-empty `source_roots`, `test_command` and `lens`. Step 0 runs once per invocation; later loops copy the object forward verbatim. Fires on every loop including loop 1; the v1-v3 corpus is below the floor and unaffected.
+
+  Why the durable handoff needed a gate: the schema comment used to say "required first loop only; null on later loops", and three consumers had already been written against the opposite assumption — rule #27 reads `discovery.test_scope`, this file's own G21 incremental→full reverify reads it on the HALT_SUCCESS-emitting loop, and `candidate_fingerprint.py` binds `discovery.lens` + `discovery.source_roots`. A 10-loop production run nulled it from loop 2 on, obeying the schema, and the contradiction was invisible because nothing checked. The operational failure is the one that matters: `build_command` vanishes after loop 1, so a loop can take a green test suite as full ground truth. On a repo whose test target and build target compile different file sets that is a false green on the real gate — the loop believes it verified something it never ran.
+
+  **Presence and shape only.** G40 does not compare this loop's `discovery` against a prior loop's; a legitimate re-run of Step 0 (fresh run, `--reset`, `--purge`) is allowed to change it, and cross-loop equality would fail those honestly. Carrying the object forward *faithfully* is the loop's obligation, stated in rule #32. Failure → repopulate from the prior loop's artifact or from a real Step-0 re-run; never satisfy the gate with invented values, which would substitute a plausible test command for the verified one.
+
+  *Source:* [`output-format-json-rules.md § Schema validation rules`](output-format-json-rules.md#schema-validation-rules-enforced-by-the-validation-hard-gates) rule #32 + [`trust-model.md § Boundary`](trust-model.md#boundary); mechanized by `validate-artifact.py check_g40_discovery_persistence` + `scripts/_g40_selftest.py`.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

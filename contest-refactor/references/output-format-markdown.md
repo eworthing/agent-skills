@@ -12,7 +12,7 @@ JSON mirror schemas (`CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, `findings_reg
 ## CURRENT_REVIEW.md Structure
 
 ```
-### Discovery (first loop only)
+### Discovery (Markdown: first loop only — the JSON copy persists every loop, see below)
 - Source roots:
 - Test command:
 - Build command:

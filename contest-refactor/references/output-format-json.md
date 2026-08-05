@@ -106,7 +106,24 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   // Findings registry (v2+)
   "findings_registry_path": "./findings_registry.json", // string. Path to external registry. Never embedded in CURRENT_REVIEW.json.
 
-  // Discovery (required first loop only; null on later loops)
+  // Discovery (required EVERY loop at schema_version >= 4 — carried forward verbatim)
+  //
+  // Through v3 this read "required first loop only; null on later loops", which contradicted
+  // every consumer already built on top of it:
+  //   - trust-model.md § Boundary calls Discovery "the durable handoff for every subsequent loop"
+  //   - rule #27 (test_scope coherence) reads `discovery.test_scope` on any loop
+  //   - G21's incremental -> full reverify reads it on the HALT_SUCCESS-emitting loop
+  //   - candidate_fingerprint.py binds `discovery.lens` + `discovery.source_roots`, so a null
+  //     discovery fingerprints a success candidate as {lens: null, source_roots: null}
+  // A 10-loop production run nulled it from loop 2 on, exactly as the old comment instructed.
+  // The cost is quiet: `build_command` disappears after loop 1, so a loop can run a green test
+  // suite and never learn the build is broken. Where the test target and the build target compile
+  // different file sets — a globbing test project against a non-globbing app project, say — that
+  // is a false green on the actual gate, not a missing nicety.
+  //
+  // Step 0 still runs exactly once per invocation. Later loops copy this object forward unchanged
+  // rather than re-deriving it, and rewrite it only when Step 0 genuinely re-ran (fresh run,
+  // --reset, --purge). Enforced by G40.
   "discovery": {
     "source_roots": ["BenchHypeKit/Sources/"],
     "test_command": "cd BenchHypeKit && swift test",

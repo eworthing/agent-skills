@@ -219,7 +219,7 @@ A11y findings are `framework_idioms` dimension (platform best practices); persis
 
 ## Incremental Test Scoping
 
-Used when `--test-filter <pattern>` is set on the invocation. Step 0 records `test_scope: "incremental"` and `test_filter: "<pattern>"` in CURRENT_REVIEW.json discovery (first loop only). Per-stack patterns:
+Used when `--test-filter <pattern>` is set on the invocation. Step 0 records `test_scope: "incremental"` and `test_filter: "<pattern>"` in the `CURRENT_REVIEW.json` discovery object once per invocation; later loops carry it forward verbatim (G40). Per-stack patterns:
 
 - XCTest: `swift test --filter <ModuleTests>.<TestClass>/<testMethod>`
 - Module-level: `swift test --filter <ModuleTests>`

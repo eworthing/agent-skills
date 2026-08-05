@@ -48,7 +48,7 @@ Each loop reads many files (gate stdout, refactor diffs, source under inspection
 
 ### Boundary
 
-- **Step 0** (Discovery) runs **once in the main agent**. Discovery output lands in `CURRENT_REVIEW.md` and is the durable handoff for every subsequent loop.
+- **Step 0** (Discovery) runs **once in the main agent**. Discovery output lands in `CURRENT_REVIEW.json.discovery` — the machine handoff, carried forward verbatim by every subsequent loop and enforced by **G40** — and is additionally rendered into `CURRENT_REVIEW.md` on the first loop as the human summary. Read it from the JSON: the Markdown section is emitted once and is gone from `CURRENT_REVIEW.md` by loop 2 (the archive in `REVIEW_HISTORY.md` keeps it). This split matters because `discovery` carries the **build** command as well as the test command, and a loop that lost it would still see a green test suite while an unbuilt target quietly broke.
 - **Each loop after Step 0** (Step 1 + Step 2 + Step 3 as one unit) runs in a **fresh `Agent` invocation** (`subagent_type: general-purpose`, same CWD, no worktree isolation — commits land on the active branch).
 - Subagent receives only the loop number and a pointer to read the persisted artifacts. State flows via files, not conversation.
 - Subagent returns a terse summary to main: system flag, Priority 1 finding ID, scorecard deltas, loop_result outcome. Main holds ~300 tokens of state per loop.
@@ -59,7 +59,7 @@ Each loop reads many files (gate stdout, refactor diffs, source under inspection
 You are loop N of an autonomous /contest-refactor run.
 
 CWD: <repo root>
-Read first: 1. <skill-dir>/SKILL.md (the protocol). 2. the lens + Discovery section in CURRENT_REVIEW.md (Discovery only — NOT the prior verdict/scorecard). 3. CONTEXT.md and docs/adr/ if present, and the Discovery-listed `prior_audit_docs[]` if present (tier-4 payload evidence — adopt-or-falsify per method.md Step 1, AFTER your independent scorecard draft, never pre-scored findings).
+Read first: 1. <skill-dir>/SKILL.md (the protocol). 2. the lens + `CURRENT_REVIEW.json.discovery` (Discovery only — NOT the prior verdict/scorecard). Read Discovery from the JSON, not the Markdown: the `### Discovery` section is emitted on loop 1 only, so from loop 2 on it exists only in the `REVIEW_HISTORY.md` archive, while the JSON object is carried forward every loop (G40). It holds the build command as well as the test command — run both. 3. CONTEXT.md and docs/adr/ if present, and the Discovery-listed `prior_audit_docs[]` if present (tier-4 payload evidence — adopt-or-falsify per method.md Step 1, AFTER your independent scorecard draft, never pre-scored findings).
 
 Blind-critic ordering: on a fresh / --purge / --reset run, write your independent per-dimension scorecard from current source FIRST (there is no prior verdict to read). On a CONTINUE loop (N>1), AFTER writing your independent scores, read ./CURRENT_REVIEW.md (prior backlog/delta) and ./REVIEW_HISTORY.md tail (last 2 loops) for delta basis + oscillation memory — never to anchor your scores (method.md:48 Anchor-to-source).
 

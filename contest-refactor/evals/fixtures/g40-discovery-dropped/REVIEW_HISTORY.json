@@ -19,13 +19,7 @@
       "reviewer_model_source": "default",
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",
-      "discovery": {
-        "source_roots": ["Sources/"],
-        "test_command": "swift test",
-        "lens": "Apple",
-        "test_scope": "full",
-        "test_filter": null
-      },
+      "discovery": null,
       "verdict": "Promising, but architecturally immature",
       "verdict_explanation": "Loop 1: clean v3 CONTINUE; vanilla retry_count=1 (no retries); single backlog item carried.",
       "scorecard": {
@@ -130,7 +124,7 @@
           "kind": "structural",
           "rank": "needed for winning",
           "why_it_matters": "Four hand-copied lazy-load skeletons; one shared type removes three.",
-          "score_impact": "Architecture quality + State management each +1.0"
+          "score_impact": "data_flow +0.5; framework_idioms +0.5"
         }
       ],
       "deepening_candidates": [],
