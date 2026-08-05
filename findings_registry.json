@@ -1,6 +1,6 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 7,
+  "next_serial": 8,
   "entries": [
     {
       "stable_id": "F-001",
@@ -343,6 +343,47 @@
             ],
             "why_weakens_submission": "The documented route can falsely halt after a successful correction, preventing the loop from ever proving terminal success even though the source materially changed.",
             "minimal_correction_path": "Pair candidate_fingerprint with source_rev for recurrence, retain candidate_commit_sha only as freshness binding, and executable-spec the pair in candidate_fingerprint.py."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-007",
+      "title": "Free-form residual wording defeats candidate recurrence",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/scripts/candidate_fingerprint.py",
+      "primary_evidence_lines": [
+        25,
+        39
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 9,
+      "first_seen_sha": "38879be",
+      "last_seen_loop": 9,
+      "occurrences": [
+        {
+          "loop": 9,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop9-F-007-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d916fd2628319ff7a3310fbc2872652ecff72d7270ca6164e841445b4d230ccc",
+            "evidence_paths_hash": "sha256:3ade0476750f9cba412fa79cc2e224ed4878e3a274fc6fbb2683294a815953f2"
+          },
+          "attempted_remedy_hash": "sha256:7418818094ef59d68ca4a5e73f2fa90f4b16f03e7d58472f1a9b7c4ddcff5d7b",
+          "finding_snapshot": {
+            "title": "Free-form residual wording defeats candidate recurrence",
+            "why_it_matters": "Artifact-only prose edits must not create a fresh architecture identity and re-enable an otherwise recurrent challenge loop.",
+            "what_is_wrong": "candidate_fingerprint hashed residual_rationale_or_backlog_ref verbatim, so changing only \u201cnow enforces\u201d to \u201cenforces\u201d changed the candidate fingerprint even though every structured score, disposition, blocker, finding, lens, and source root was identical.",
+            "evidence": [
+              "contest-refactor/scripts/candidate_fingerprint.py:_architecture_payload",
+              "contest-refactor/references/output-format-json.md:candidate_fingerprint schema",
+              "candidate_payload_diff:6c80090 vs uncommitted Loop 9 changed one rationale word and fp-sha256-017e5293b7c197debf077123abf537b4 became fp-sha256-305232e26357cfed65fca75de17fc784"
+            ],
+            "why_weakens_submission": "The loop can evade its recurrence guard through harmless prose rewording and repeatedly spend independent-challenge cycles on the same architecture.",
+            "minimal_correction_path": "Hash residual_blocker_kind instead of free-form rationale, retain the structured score/disposition/blocker fields, and assert rationale rephrasing is invariant while blocker-kind changes are not."
           }
         }
       ]

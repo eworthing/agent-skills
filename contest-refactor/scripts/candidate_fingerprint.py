@@ -19,7 +19,7 @@ import json
 def _architecture_payload(review: dict) -> dict:
     """The architecture-relevant subset that defines a candidate's identity.
 
-    Includes scorecard scores + residual dispositions/rationales, findings
+    Includes scorecard scores + residual dispositions/blocker kinds, findings
     (title + evidence + severity), and the analyzed source identity (lens +
     source roots). Excludes everything volatile by simply not reading it.
     """
@@ -30,7 +30,7 @@ def _architecture_payload(review: dict) -> dict:
                 "score": entry.get("score"),
                 "residual_disposition": entry.get("residual_disposition"),
                 "residual_blocking_10": entry.get("residual_blocking_10"),
-                "residual_rationale_or_backlog_ref": entry.get("residual_rationale_or_backlog_ref"),
+                "residual_blocker_kind": entry.get("residual_blocker_kind"),
             }
     findings = [
         {
@@ -75,6 +75,7 @@ def _selftest() -> None:
                 "residual_disposition": "accepted",
                 "residual_blocking_10": "x",
                 "residual_rationale_or_backlog_ref": "y",
+                "residual_blocker_kind": "cosmetic",
             }
         },
         "findings": [],
@@ -102,6 +103,16 @@ def _selftest() -> None:
     assert candidate_recurrence_key(base) == candidate_recurrence_key(same_source), (
         "artifact-only metadata must not defeat recurrence detection"
     )
+    rephrased = json.loads(json.dumps(base))
+    rephrased["scorecard"]["data_flow"]["residual_rationale_or_backlog_ref"] = "new wording"
+    assert candidate_fingerprint(base) == candidate_fingerprint(rephrased), (
+        "free-form rationale wording must not defeat recurrence detection"
+    )
+    changed_kind = json.loads(json.dumps(base))
+    changed_kind["scorecard"]["data_flow"]["residual_blocker_kind"] = "structural"
+    assert candidate_fingerprint(base) != candidate_fingerprint(changed_kind), (
+        "a changed structured blocker kind must change the fingerprint"
+    )
     # Meaningful scorecard change -> DIFFERENT fingerprint.
     changed = json.loads(json.dumps(base))
     changed["scorecard"]["data_flow"]["score"] = 9.0
@@ -116,7 +127,7 @@ def _selftest() -> None:
     assert candidate_fingerprint(base) != candidate_fingerprint(changed2), (
         "a findings change must change the fingerprint"
     )
-    print("candidate_fingerprint self-test: OK (5 assertions passed)")
+    print("candidate_fingerprint self-test: OK (7 assertions passed)")
 
 
 if __name__ == "__main__":
