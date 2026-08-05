@@ -1,0 +1,128 @@
+{
+  "registry_schema_version": 3,
+  "next_serial": 4,
+  "entries": [
+    {
+      "stable_id": "F-001",
+      "title": "Artifact validation is a 2,255-line unchecked monolith",
+      "category_hint": "module-depth",
+      "primary_file": "contest-refactor/scripts/validate-artifact.py",
+      "primary_evidence_lines": [
+        143,
+        2255
+      ],
+      "test_failed": "Shallow module",
+      "severity": "Serious deduction",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop1-F-001-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:fe268a51846bb5ef5e303cc21b1874c574709ef54b2d0fc9fab8b57fe1ee77e9",
+            "evidence_paths_hash": "sha256:d9283c5e53eac278de0ada4cc4f6dd26a1b8f0a11cb15c60504f280a7fe91c2c"
+          },
+          "attempted_remedy_hash": "sha256:6bdc953e283946c33e97eee3a53a83ed79ec7671df29b5614326fd385669c340",
+          "finding_snapshot": {
+            "title": "Artifact validation is a 2,255-line unchecked monolith",
+            "why_it_matters": "The skill's trust gate must remain locally understandable as new halt and history rules are added.",
+            "what_is_wrong": "validate-artifact.py owns JSON loading, registry retirement, history checks, provider attribution, checkpoint freshness, halt semantics, scorecard rules, and CLI output in one 2,255-line file, while the repository's module-size gate scans only quorum-review and peer-plan-review.",
+            "evidence": [
+              "contest-refactor/scripts/validate-artifact.py:143-2255",
+              "contest-refactor/scripts/validate-artifact.py:2157-2196",
+              ".githooks/pre-commit:30-39",
+              "common/scripts/check_module_size.py:60-83"
+            ],
+            "why_weakens_submission": "The skill enforces structural rigor on targets while exempting its own most change-prone correctness module from the same guard, increasing cross-gate regression risk.",
+            "minimal_correction_path": "Move existing pure checks unchanged into three private modules grouped by core schema, registry/history, and halt/runtime concerns; keep validate-artifact.py as the thin re-exporting CLI expected by selftests; add contest-refactor/scripts to the existing pre-commit module-size loop. Do not add classes, a plugin registry, or generated validators."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-002",
+      "title": "Unused fixture files contract accepts paths outside the fixture",
+      "category_hint": "dead-validation",
+      "primary_file": "contest-refactor/scripts/validate-fixtures.py",
+      "primary_evidence_lines": [
+        265,
+        294
+      ],
+      "test_failed": "Deletion test",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+          "idempotency_key": "loop1-F-002-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:99ef464d168fec86b72c2ce7da1bc02b39de5c98409c349d41c89a755d56fbc1",
+            "evidence_paths_hash": "sha256:b4088a7906f8d2e487cca5ca5fbc6d63a7c0cb3d9d31f48cdc9abf3b602a1cbd"
+          },
+          "attempted_remedy_hash": "sha256:cfd8c9f293b382b408588b78d628b0816ed4d7d38084a5a99d30409592a9d99c",
+          "finding_snapshot": {
+            "title": "Unused fixture files contract accepts paths outside the fixture",
+            "why_it_matters": "A deterministic fixture validator should not contain an unexercised path rule that can be satisfied by unrelated filesystem content.",
+            "what_is_wrong": "The optional files array is absent from every fixture.toml, yet _validate_one_fixture joins each supplied value directly to fixture_dir and checks only exists(), so absolute paths and parent traversal are accepted as declared fixture files.",
+            "evidence": [
+              "contest-refactor/scripts/validate-fixtures.py:265-294",
+              "contest-refactor/evals/fixtures/*/fixture.toml: no files field in the current corpus"
+            ],
+            "why_weakens_submission": "Dead validation code both enlarges the parser and advertises a guarantee it does not safely enforce.",
+            "minimal_correction_path": "Delete the optional files branch and its comment. Do not add path-normalization machinery until a real fixture needs this contract."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-003",
+      "title": "Replication contract is copy-pasted across two baseline validators",
+      "category_hint": "clone",
+      "primary_file": "contest-refactor/scripts/_advisory_baseline_selftest.py",
+      "primary_evidence_lines": [
+        98,
+        189
+      ],
+      "test_failed": "Two-adapter rule",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "3d220c535ba4834779f40657c8e6942792a7aac9",
+          "idempotency_key": "loop1-F-003-open",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:0965c5fb607ce4c82553a74749c11f886a79b8e7166865c877e3c0c020364832",
+            "evidence_paths_hash": "sha256:e15a446f7f114a1a5c80718d41a41a1554ae3f6ae7fcd5502182b5406888c7ce"
+          },
+          "attempted_remedy_hash": "sha256:25b251b7aac075c847b893ff440ab79df79a66dccd9529a0fd6351b0602a2012",
+          "finding_snapshot": {
+            "title": "Replication contract is copy-pasted across two baseline validators",
+            "why_it_matters": "Measured evaluation evidence is only credible when its shared artifact rules have one implementation.",
+            "what_is_wrong": "The advisory and principal baseline selftests independently implement the same replication-block fields, five-slot accounting, invalid-count check, floor ordering, and valid-result requirements; the clone detector reports 0.89 similarity across roughly 92 lines, while arm and contamination rules are the only material differences.",
+            "evidence": [
+              "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189",
+              "contest-refactor/scripts/_principal_baseline_selftest.py:52-156"
+            ],
+            "why_weakens_submission": "The evaluation layer can disagree with itself about whether recorded measurements are valid, weakening the evidence used to judge the skill.",
+            "minimal_correction_path": "Extract only the shared replication shape and terminal-attempt checks into one private helper used by both selftests; leave advisory arm selection and principal contamination/retry policies local."
+          }
+        }
+      ]
+    }
+  ]
+}
