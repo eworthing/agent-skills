@@ -2,46 +2,42 @@
 - Source roots: `contest-refactor/`
 - Test command: full validator, fixture, smoke, standalone-selftest, and Ruff suite
 - Lens: Generic + Security + Efficiency
-- Working-tree dirty paths: `contest-refactor/references/method.md` (non-overlapping user edit)
 
 ### Loop Counter
-Loop 2 of 10.
+Loop 3 of 10.
 
 ### System Flag
-[STATE: CONTINUE]
+[STATE: HALT_SUCCESS_candidate]
 
 ## Contest Verdict
 
-Functionally solid, with one small subtractive weakness remaining.
+Contest-grade architecture; terminal success awaits independent challenge.
 
 ## Scorecard (1-10)
 
-Architecture quality 9; State management 9; Domain modeling 9; Data flow 9; Framework idioms 9; Concurrency 9; Simplicity 8; Test strategy 8; Credibility 9.
+Architecture quality 9.5 accepted; State management 9.5 accepted; Domain modeling 9.5 accepted; Data flow 9.5 accepted; Framework idioms 9.5 accepted; Concurrency 10; Simplicity 9.5 accepted; Test strategy 10; Credibility 9.5 accepted.
 
 ## Authority Map
 
-Review artifacts, finding identity, and canon values each retain one documented writer and persisted Interface. The validator split changes locality, not authority.
+Review artifacts, finding identity, canon values, and validator gate families each have one explicit writer/owner and one persisted or import Interface.
 
 ## Strengths That Matter
 
-- The full gate is green after the split.
-- The CLI remains the stable Interface while private gate families are bounded by the existing 800-line policy.
+- The full gate is green across 50 strict fixtures, 11 smoke fixtures, every standalone selftest, and Ruff.
+- The validator CLI remains stable while private Modules are enforced below the 800-line hard cap.
+- F-003 is correctly constrained to Cosmetic: two similar sites, no behavioral drift, no duplicated runtime/domain authority.
 
 ## Findings
 
-### Finding #1: Unused fixture files contract accepts paths outside the fixture
-
-Stable ID: `F-002`. Severity: Noticeable weakness. `validate-fixtures.py:265-294` implements an optional `files[]` contract that no current fixture uses, and joins supplied values directly to the fixture directory. The smallest honest remedy is deletion, not path-normalization machinery.
-
-F-003 disposition: withdrawn from the Improvement Backlog. Current source has two similar baseline validators but no behavioral drift, duplicated runtime/domain authority, or three-site synchronized maintenance; under `method.md` this is Cosmetic, not Noticeable.
+None.
 
 ## Simplification Check
 
-Deleting the dormant branch passes the Deletion test and adds no Seam. Do not touch fixtures or add path handling.
+No Noticeable-or-worse correction remains. The two-site replication helper proposal fails SPT Q3/Q5 because it adds a layer without current drift or measurable Leverage.
 
 ## Improvement Backlog
 
-1. `F-002` — delete the dormant fixture `files[]` contract. Expected impact: `simplicity +0.5; test_strategy +0.5; credibility +0.5`.
+None.
 
 ## Deepening Candidates
 
@@ -49,22 +45,14 @@ None.
 
 ## Builder Notes
 
-- Dormant optional contract: no fixture supplies `files[]`; delete unused input contracts until a real caller needs them.
-- Candidate clone without severity evidence: two similar sites with no current drift remain Cosmetic.
-- Bounded private validation Modules: split by existing responsibility; do not add registries or protocols.
+- The remaining soft-cap warnings are enforced and locally coherent.
+- JSON runtime validation is an accepted language/serialization constraint, not missing ownership.
+- Similarity is candidate evidence, never severity by itself.
 
 ### Scorecard humility check
 
-`test_strategy` 8 may under-credit the complete fixture corpus; `domain_modeling` 9 depends on validator-enforced JSON invariants rather than construction-time types; `architecture_quality` 9 assumes the 779-line history Module remains locally coherent.
+Architecture 9.5 depends on the 779-line history Module remaining coherent; test strategy 10 assumes the full fixture and selftest suite covers every behavior-bearing gate; domain modeling 9.5 accepts runtime JSON validation at the persisted Interface.
 
 ## Final Judge Narrative
 
-Place, close to the bar. The validator split is honest and fully covered; one dead fixture-input branch remains a cheap subtractive fix. F-003 is withdrawn from the backlog because similarity alone does not establish Noticeable severity.
-
-## Loop 2 Result
-
-Deleted the unused optional fixture `files[]` contract. The full validator, fixture, smoke, standalone-selftest, and Ruff suite passed; F-002 is resolved with no unintended regression.
-
-## Loop 2 Implementation Review
-
-Reviewer ran inline because provider detection was `unknown`; verdict requires manual confirmation. Approved: Reality, Honesty, and Regression checks passed. The dormant branch is gone, no replacement layer was added, and no used fixture contract changed.
+Win candidate. Every dimension reaches 10 or 9.5 with a source-backed accepted residual; the full gate is green; no finding or backlog remains. Independent challenge is required before terminal success.
