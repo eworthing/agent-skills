@@ -137,7 +137,7 @@ Commit was attempted but interrupted before HEAD updated (`git commit` did not r
 
 ### Case D — `step_started > step_completed` (any k in 1..10)
 
-Step `step_started` was interrupted mid-execution. Replay step `step_started` from the beginning. The idempotency rules in SKILL.md Step 3 sub-step 4 (Step 6 reviewer is stateless and the existing `implementation_review` is honored on resume; Step 9 archive uses divider marker dedup; Step 10 registry write uses `idempotency_key` per pending entry) guarantee no duplication.
+Step `step_started` was interrupted mid-execution. Replay step `step_started` from the beginning. The Step 3 idempotency rules (Step 6 reviewer is stateless and the existing `implementation_review` is honored on resume; Step 9 archive uses divider marker dedup; Step 10 registry write uses `idempotency_key` per pending entry) guarantee no duplication.
 
 ### Case E — `step_started == step_completed` (any k in 0..10)
 

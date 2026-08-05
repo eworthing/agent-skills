@@ -195,7 +195,7 @@ The reviewer is **strictly read-only** (see [provider-adapters.md § Reviewer re
 
 | verdict | action |
 |---|---|
-| `approved` | Proceed to Step 3 step 6 (archive) + step 7 (commit code + artifacts). |
+| `approved` | Proceed to Step 3 step 7; the canonical sequence archives at step 9 and commits at step 11. |
 | `conditional` (1st pass) | Apply each item in `conditions[]` to the diff. Re-spawn reviewer. If 2nd pass also `conditional` or `rejected`, treat as rejected. |
 | `rejected` | **Narrow revert (schema_version >= 3)**: for each path in `loop_result.changed_paths[]`, look up its blob sha in `LOOP_STATE.pre_step3_blob_shas`; restore via `git checkout <blob-sha> -- <path>` per file. For paths whose recorded blob sha is `null` (path was untracked at Step 3 sub-step 0), use `git rm --cached <path>` and delete the working-tree file. **Do NOT** use the broad `git checkout -- <changed-paths>` (could overwrite pre-existing unstaged user edits in those files; the dirty-tree precondition in Step 0 should prevent that case but the per-blob restore is the canonical safe path). Update `loop_result`: `targeted_finding_status: "carried_forward"`, `unintended_regression: "<reviewer.reason>"`. Append reviewer's `regressions[]` and `reason` as a new section `## Loop N Implementation Review` in `CURRENT_REVIEW.md`. Commit ONLY the review artifacts (no code). Continue to next loop with the same finding promoted to Priority 1 + reviewer reason as added context. |
 
