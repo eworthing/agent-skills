@@ -3061,6 +3061,340 @@
           }
         ]
       }
+    },
+    {
+      "schema_version": 4,
+      "loop": 11,
+      "loop_cap": 15,
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff_text": null,
+      "halt_handoff": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "strictness": "standard",
+      "loop_metrics": {
+        "lint_count": 0
+      },
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": null,
+      "provider": "unknown",
+      "loop_model": null,
+      "loop_model_source": "default",
+      "reviewer_model": null,
+      "reviewer_model_source": "default",
+      "spawn_isolation": "inline",
+      "premium_dry_run": null,
+      "premium_loop_override": false,
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "contest-refactor/"
+        ],
+        "test_command": "python3 contest-refactor/scripts/validate-repo.py; python3 contest-refactor/scripts/validate-fixtures.py contest-refactor/evals/fixtures; python3 contest-refactor/scripts/_smoke_check.py; run every contest-refactor/scripts/_*_selftest.py; ruff check contest-refactor; ruff format --check contest-refactor",
+        "build_command": "none (stdlib-only Python skill; no separate build step)",
+        "lens": "Generic",
+        "adrs": [],
+        "domain_terms": [
+          "Critic",
+          "Architect",
+          "Actor",
+          "finding",
+          "halt",
+          "gate",
+          "canon"
+        ],
+        "test_scope": "full",
+        "test_filter": null,
+        "working_tree_dirty_paths": []
+      },
+      "verdict": "Functionally solid, but canonical candidate identity is not enforced",
+      "verdict_explanation": "Current source still lets G32 accept any non-empty candidate_fingerprint. Eight v4 success fixtures carry the same non-canonical placeholder, directly reproducing F-008.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
+          "residual_blocking_10": "contest-refactor/scripts/_artifact_history.py:1-779 remains above the 600-line soft warning",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q5: another split would add a Module without separate runtime authority or measurable Leverage.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "state_management": {
+          "score": 8.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/references/output-format-state-schemas.md:16-66 persists checkpoint transitions as JSON",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "domain_modeling": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
+          "residual_blocking_10": "contest-refactor/scripts/_artifact_core.py:246 validates dynamic JSON dictionaries at runtime",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "Named Python/JSON constraint: construction-time types cannot cross the persisted artifact Interface without a new serialization layer.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "data_flow": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
+          "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 adjusts sys.path before sibling imports",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q3: packaging this standalone script solely to remove local import setup would add distribution ceremony.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "framework_idioms": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
+          "residual_blocking_10": "contest-refactor/scripts/validate-artifact.py:34-74 uses standalone-script sibling imports",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "The local sys.path setup is the documented Python standalone-script constraint and keeps the zero-dependency CLI directly executable.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "concurrency": {
+          "score": 10,
+          "delta": "SAME",
+          "proof": "All production paths are sequential CLIs; no async tasks or shared mutable runtime authority exist.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
+          "residual_blocking_10": "contest-refactor/scripts/_advisory_baseline_selftest.py:98-189 and _principal_baseline_selftest.py:52-156 remain similar",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "SPT-rejected on Q3/Q5: two behavior-bearing sites intentionally retain distinct arm and contamination policy; a helper would add a duplicate layer without current drift.",
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        },
+        "test_strategy": {
+          "score": 8.0,
+          "delta": "SAME",
+          "proof": "53 strict fixtures, 11 smoke fixtures, standalone gate selftests, seven recurrence-key assertions, failure-path config tests, and import/re-export regression checks all pass.",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8.0,
+          "delta": "SAME",
+          "proof": "contest-refactor/scripts/_artifact_core.py, _artifact_halt.py, and _artifact_history.py remain above the 600-line soft warning",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false,
+          "residual_blocker_kind": "cosmetic"
+        }
+      },
+      "authority_map": [
+        {
+          "concern": "Current loop review state",
+          "owner": "CURRENT_REVIEW.json under the output-format schema",
+          "allowed_writers": [
+            "Step 1 Critic emit",
+            "Step 3 result and implementation-review update"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "scripts/render_report.py",
+            "resume routing"
+          ],
+          "persistence_seam": "Repository-root CURRENT_REVIEW.json and REVIEW_HISTORY.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Finding identity and occurrence history",
+          "owner": "findings_registry.json under scripts/_fingerprint.py hashes",
+          "allowed_writers": [
+            "Step 1 stable-id assignment",
+            "Step 3 registry append"
+          ],
+          "readers": [
+            "scripts/validate-artifact.py",
+            "resume routing",
+            "SARIF export"
+          ],
+          "persistence_seam": "Repository-root findings_registry.json",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        },
+        {
+          "concern": "Canonical states, enums, and gate identifiers",
+          "owner": "contest-refactor/canon/*.toml loaded by scripts/_canon.py",
+          "allowed_writers": [
+            "Maintainer edits to canon TOML"
+          ],
+          "readers": [
+            "validate-artifact.py",
+            "validate-repo.py",
+            "validate-fixtures.py",
+            "selftests"
+          ],
+          "persistence_seam": "contest-refactor/canon/*.toml",
+          "async_mutation_entry_points": [],
+          "verdict": "Single and clear"
+        }
+      ],
+      "strengths": [
+        "Canonical vocabulary has one frozen loader used by repository, artifact, fixture, and halt-tail checks \u2014 contest-refactor/scripts/_canon.py:72-222.",
+        "G32 validates complete challenger evidence and focused negative fixtures cover independent failure clauses \u2014 contest-refactor/scripts/_artifact_halt.py.",
+        "Candidate recurrence uses structured architecture evidence plus source_rev and is invariant to rationale rephrasing \u2014 contest-refactor/scripts/candidate_fingerprint.py."
+      ],
+      "findings": [
+        {
+          "loop_local_id": "F1",
+          "stable_id": "F-008",
+          "title": "G32 accepts non-canonical candidate fingerprints",
+          "why_it_matters": "The recurrence guard must derive candidate identity from the review payload instead of trusting an agent-supplied string.",
+          "what_is_wrong": "G32 checks only that candidate_fingerprint is non-empty and never recomputes the canonical digest; a positive candidate fixture passes the placeholder fp-sha256-architecture-payload-0001.",
+          "evidence": [
+            "contest-refactor/scripts/candidate_fingerprint.py:53-61",
+            "contest-refactor/scripts/_artifact_halt.py:165-201",
+            "contest-refactor/scripts/validate-artifact.py:140-143",
+            "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json:133-136",
+            "contest-refactor/evals/fixtures/halt-candidate-no-challenge/fixture.toml:1-3",
+            "candidate_commit_sha:b483d55"
+          ],
+          "test_failed": "Interface-as-test-surface",
+          "dependency_category": null,
+          "leverage_impact": "One existing G32 check can protect recurrence identity for candidate and terminal states.",
+          "locality_impact": "The canonical digest owner exists, but its sole trust-boundary consumer does not call it.",
+          "metric_signal": "A strict positive G32 fixture passes a human-readable placeholder instead of a computed digest.",
+          "why_weakens_submission": "An unchanged candidate can vary the unchecked field and evade same-fingerprint recurrence routing, defeating the loop-control invariant.",
+          "severity": "Serious deduction",
+          "adr_conflicts": [],
+          "adr_reopen_justification": null,
+          "minimal_correction_path": "Reuse candidate_fingerprint(review) inside G32, require exact equality for candidate and terminal states, replace positive-fixture placeholders with computed digests, and add one mismatched-digest negative fixture.",
+          "blast_radius": {
+            "change": [
+              "contest-refactor/scripts/_artifact_halt.py",
+              "contest-refactor/evals/fixtures/*/CURRENT_REVIEW.json",
+              "contest-refactor/evals/fixtures/*/REVIEW_HISTORY.json",
+              "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/"
+            ],
+            "avoid": [
+              "contest-refactor/scripts/candidate_fingerprint.py",
+              "contest-refactor/references/halt-verifier.md"
+            ]
+          }
+        }
+      ],
+      "simplification_check": {
+        "structurally_necessary": "G32 must recompute the canonical fingerprint it gates.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "helpful_simplification": "Call the existing candidate_fingerprint function from G32.",
+        "should_not_be_done": "Do not add another digest algorithm, field, or Module.",
+        "tests_after_fix": "Canonicalize existing fixtures, add one mismatch fixture, and run the full suite."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "stable_id": "F-008",
+          "title": "Recompute canonical candidate fingerprints at G32",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Recurrence identity must not be agent-controlled unchecked input.",
+          "score_impact": "state_management +0.5; test_strategy +0.5; credibility +0.5"
+        }
+      ],
+      "unresolved_reason": null,
+      "deepening_candidates": [],
+      "builder_notes": [
+        {
+          "pattern": "Dormant optional contract",
+          "how_to_recognize": "No fixture supplies files[], yet the parser carries a full validation branch.",
+          "smallest_coding_rule": "Delete unused input contracts until a real caller needs them."
+        },
+        {
+          "pattern": "Candidate clone without severity evidence",
+          "how_to_recognize": "Two similar scripts agree today and share no runtime authority.",
+          "smallest_coding_rule": "Keep clone output Cosmetic unless current source proves drift, authority duplication, or three-site synchronized maintenance."
+        },
+        {
+          "pattern": "Bounded private validation Modules",
+          "how_to_recognize": "Each gate family now fits under the existing hard cap and the CLI remains the Interface.",
+          "smallest_coding_rule": "Split by existing responsibility; do not add registries or protocols."
+        },
+        {
+          "pattern": "Narrative-only verifier requirement",
+          "how_to_recognize": "The verifier requires an arm that the terminal artifact gate does not inspect.",
+          "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
+        }
+      ],
+      "narrative": "F-008 remains the sole Noticeable-or-worse correction. Reuse the existing digest owner at G32, preserve every other failure fixture, and re-score after the full gate.",
+      "loop_result": {
+        "what_changed": "Reused the canonical candidate fingerprint function at G32, canonicalized the existing v4 success fixtures, and added one mismatched-digest negative fixture.",
+        "evidence_change_is_honest": "The focused mismatch fixture fails only on G32 canonical-digest equality; all 54 fixtures, 11 smoke cases, standalone self-tests, repository validation, and Ruff checks pass.",
+        "risk_boundary_evidence": null,
+        "targeted_finding_status": "resolved",
+        "unintended_regression": null,
+        "changed_paths": [
+          "contest-refactor/scripts/_artifact_halt.py",
+          "contest-refactor/evals/fixtures/halt-candidate-no-challenge/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-candidate-no-challenge/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-candidate-with-handoff/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-candidate-with-handoff/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-terminal-binding-mismatch/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-terminal-binding-mismatch/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-terminal-held/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-terminal-no-challenge/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-terminal-no-challenge/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-terminal-no-diversity/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-terminal-no-diversity/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/CURRENT_REVIEW.json",
+          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/CURRENT_REVIEW.md",
+          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/REVIEW_HISTORY.json",
+          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/REVIEW_HISTORY.md",
+          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/findings_registry.json",
+          "contest-refactor/evals/fixtures/halt-candidate-fingerprint-mismatch/fixture.toml"
+        ],
+        "interface_test_coverage_path": null
+      },
+      "implementation_review": {
+        "verdict": "approved",
+        "reason": "The shared G32 trust-boundary check now recomputes the existing canonical digest, the focused mismatch proof isolates the new failure, and the full gate shows no regression.",
+        "checks": {
+          "reality": "passed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [],
+        "conditions": [],
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": null
+          }
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,8 @@
+id = "halt-candidate-fingerprint-mismatch"
+purpose = "HALT_SUCCESS_candidate with a non-canonical candidate_fingerprint. G32 must fail."
+expected_result = "fail"
+aspirational = false
+
+[[tested_rules]]
+kind = "gate"
+id = "G32"

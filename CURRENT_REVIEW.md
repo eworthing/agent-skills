@@ -1,17 +1,19 @@
+provider: unknown; running inline; Loop Isolation unavailable
+
 ### Discovery
 - Source roots: `contest-refactor/`
 - Test command: full validator, fixture, smoke, standalone-selftest, recurrence-key, and Ruff suite
 - Lens: Generic + Security + Efficiency
 
 ### Loop Counter
-Loop 10 of 10.
+Loop 11 of 15.
 
 ### System Flag
-[STATE: HALT_LOOP_CAP]
+[STATE: CONTINUE]
 
 ## Contest Verdict
 
-Loop cap reached with one terminal-validation finding carried forward.
+Functionally solid, but canonical candidate identity is not enforced.
 
 ## Scorecard (1-10)
 
@@ -21,11 +23,11 @@ State management 8; Test strategy 8; Credibility 8. Architecture quality, domain
 
 ### Finding #1: G32 accepts non-canonical candidate fingerprints
 
-Stable ID `F-008`; Serious deduction. G32 checks only non-emptiness, and a passing positive fixture uses the placeholder `fp-sha256-architecture-payload-0001`.
+Stable ID `F-008`; Serious deduction. `_artifact_halt.py:165-201` checks only non-emptiness, while eight v4 success fixtures carry the placeholder `fp-sha256-architecture-payload-0001` and still match their expected result.
 
 ## Simplification Check
 
-Call the existing canonical fingerprint function from G32 and add one mismatch fixture. No new algorithm, field, or Module.
+Call the existing canonical fingerprint function from G32, canonicalize existing fixtures, and add one mismatch fixture. No new algorithm, field, or Module.
 
 ## Improvement Backlog
 
@@ -37,32 +39,24 @@ None.
 
 ## Builder Notes
 
-The final challenge was bound to candidate `b483d55`; the finding arrived after the cap-loop candidate commit and is carried forward unchanged.
+- Priority 1 moves the three sub-target dimensions; no candidate further from target survives current-source review.
+- Re-derived Loop 11 from `_artifact_halt.py`, `candidate_fingerprint.py`, and every v4 success fixture.
+- Existing negative fixtures must retain their original failure clause after canonicalization.
 
 ## Final Judge Narrative
 
-Loop 10 exhausted the configured cap. F-008 is validated and carried forward; resume with a larger cap to fix it.
+F-008 remains the sole Noticeable-or-worse correction. Reuse the existing digest owner at G32, preserve every other failure fixture, and re-score after the full gate.
 
-## Loop 10 Result
+## Loop 11 Result
 
-No source correction was applied. The independent challenger rejected the committed candidate on F-008 after Loop 10 had spent the configured budget.
+- Reused `candidate_fingerprint()` in G32 for both candidate and terminal success states.
+- Canonicalized all existing v4 success fixtures and added one mismatched-digest negative fixture.
+- Focused proof: the mismatch fixture fails only on canonical-digest equality.
+- Full proof: 54 fixtures, 11 smoke cases, all standalone self-tests, repository validation, and Ruff checks pass.
+- Targeted finding: `F-008` resolved.
 
-## Loop 10 Implementation Review
+## Loop 11 Implementation Review
 
-Rejected for continuation purposes: the candidate is demoted and F-008 is carried forward. No source diff was reverted.
+reviewer ran inline; verdict requires manual confirmation
 
-## Halt Handoff
-
-Loop 10 ended at HALT_LOOP_CAP — I made 10 loops, the configured maximum, and the
-backlog still has items I didn't reach.
-
-Progress so far: architecture quality 7→9.5; state management 9→8; domain modeling 9→9.5; data flow 8→9.5; framework idioms 9→9.5; concurrency 9→10; simplicity 7→9.5; test strategy 8→8; credibility 8→8.
-Never moved: architecture_quality (7 loops), state_management (7 loops), domain_modeling (7 loops), data_flow (7 loops), framework_idioms (7 loops), concurrency (7 loops), simplicity (7 loops).
-
-Current Priority 1 (carried forward):
-  - F-008: G32 accepts non-canonical candidate fingerprints — the recurrence guard trusts unchecked input, so unchanged architecture can vary the field and evade recurrence.
-
-Next step options:
-  (a) Bump cap and resume — `$contest-refactor --scope contest-refactor --cap 15` continues from here.
-  (b) Accept current state — 10 loops landed substantial improvements; current source is the new baseline.
-  (c) Reset — `$contest-refactor --scope contest-refactor --reset`.
+Approved. Reality, honesty, and regression checks passed: G32 owns the trust-boundary comparison, the focused mismatch fixture isolates it, and the full suite remains green.

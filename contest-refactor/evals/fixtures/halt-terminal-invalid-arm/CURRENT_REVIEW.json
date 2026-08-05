@@ -135,7 +135,7 @@
   "narrative": "Terminal contest-grade state; residuals all accepted.",
   "run_id": "run-2026-06-21-001",
   "source_rev": "def5678abc",
-  "candidate_fingerprint": "fp-sha256-architecture-payload-0001",
+  "candidate_fingerprint": "fp-sha256-a2ec84c8545aefaf922599de07005f45",
   "halt_success_challenge": {
     "challenger_model": "claude-opus-4-8",
     "outcome": "held",

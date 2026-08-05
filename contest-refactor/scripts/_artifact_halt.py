@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 
 from _artifact_core import SERIOUS_OR_WORSE, Issue, _parse_iso_date
+from candidate_fingerprint import candidate_fingerprint
 
 
 def check_halt_success_gating(current_review: dict, project_config: dict | None) -> list[Issue]:
@@ -151,6 +152,8 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
     - halt_success_challenge must be null.
     - run_id, source_rev, candidate_fingerprint must all be non-null.
 
+    For either v4+ success state, candidate_fingerprint must equal the canonical digest.
+
     When schema_version < 4: G32 does not fire.
     """
     issues: list[Issue] = []
@@ -166,6 +169,16 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
     top_source_rev = current_review.get("source_rev")
     top_fingerprint = current_review.get("candidate_fingerprint")
     challenge = current_review.get("halt_success_challenge")
+
+    expected_fingerprint = candidate_fingerprint(current_review)
+    if top_fingerprint != expected_fingerprint:
+        issues.append(
+            Issue(
+                "G32",
+                f"candidate_fingerprint={top_fingerprint!r} must equal canonical digest "
+                f"{expected_fingerprint!r}",
+            )
+        )
 
     if state == "HALT_SUCCESS_candidate":
         # Candidate is exempt from challenge but must carry identity fields.
