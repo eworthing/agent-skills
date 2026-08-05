@@ -4,14 +4,14 @@
 - Lens: Generic + Security + Efficiency
 
 ### Loop Counter
-Loop 7 of 10.
+Loop 8 of 10.
 
 ### System Flag
 [STATE: CONTINUE]
 
 ## Contest Verdict
 
-Functionally solid; F-005 is resolved and current source awaits convergence scoring.
+Contest-grade source; F-006 is resolved and current source awaits convergence scoring.
 
 ## Scorecard (1-10)
 
@@ -19,17 +19,17 @@ Test strategy 8; Credibility 8. Other dimensions retain the source-derived 9.5/1
 
 ## Findings
 
-### Finding #1: G32 accepts incomplete held-challenge evidence
+### Finding #1: Candidate recurrence ignores changed source revisions
 
-Stable ID `F-005`; Serious deduction; resolved in this loop.
+Stable ID `F-006`; Serious deduction; resolved in this loop. Candidate commits `3e51000` and `6c80090` shared one fingerprint across materially changed source revisions, which the verifier incorrectly routed to finding-based oscillation.
 
 ## Simplification Check
 
-The fix extends existing G32 and adds direct negative fixtures. No new Seam or validator layer.
+Pair the existing fingerprint with `source_rev`. No source digest, new field, or new validator layer.
 
 ## Improvement Backlog
 
-1. `F-005` — resolved; re-score on the next loop.
+1. `F-006` — resolved; re-score on the next loop.
 
 ## Deepening Candidates
 
@@ -37,20 +37,20 @@ None.
 
 ## Builder Notes
 
-The terminal trust gate now rejects unknown arms, missing `why_failed`, and missing top-level `reason`.
+`candidate_commit_sha` remains the freshness binding; `(candidate_fingerprint, source_rev)` is the recurrence key.
 
 ## Final Judge Narrative
 
-G32 now enforces complete held-challenge evidence. F-005 is resolved; the next loop must re-score from current source before another success candidate.
+Candidate recurrence now distinguishes corrected source from artifact-only recommits. F-006 is resolved; the next loop must re-score current source.
 
-## Loop 7 Plan
+## Loop 8 Plan
 
-Extend existing G32 with the missing schema checks and add two independent negative fixtures. Do not add a new validator abstraction.
+Pair the existing architecture fingerprint with `source_rev`, document the changed-source challenge rule, and executable-spec the pair. Do not add a source-tree digest.
 
-## Loop 7 Result
+## Loop 8 Result
 
-G32 now restricts challenge arms and requires per-attempt `why_failed` plus top-level `reason`. All 53 fixtures and every full-suite gate pass.
+The recurrence key now changes for a changed source revision and stays stable for artifact-only metadata changes.
 
-## Loop 7 Implementation Review
+## Loop 8 Implementation Review
 
-Approved: the change closes the documented terminal-contract gap at its existing owner, and the two negative fixtures fail independently on the intended messages.
+Approved: the fix reuses both existing fields and directly covers the reproduced false-oscillation path.

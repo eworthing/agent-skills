@@ -27,7 +27,7 @@ Persistent state file schemas (`LOOP_STATE.json`, `findings_registry.json`, `REV
 - New halt_subtype value `verification_blocked` (applies when `state == "HALT_STAGNATION"` and challenge infrastructure is unavailable).
 - New top-level field `run_id` (string, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. Identifies the loop run that produced the candidate.
 - New top-level field `source_rev` (string sha, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. HEAD sha of the analyzed source tree at emit time.
-- New top-level field `candidate_fingerprint` (string, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. Canonical hash of the architecture-relevant payload (scorecard scores + dispositions, findings evidence, residual rationales, lens, source-tree identity), EXCLUDING volatile metadata (commit sha, run_id, loop counter, timestamps, schema_version, state). This is the oscillation equivalence key — two candidates with identical architecture-relevant payload share a fingerprint even when commit/run/loop/timestamp metadata differs.
+- New top-level field `candidate_fingerprint` (string, v4+): required non-null when `state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}`. Canonical hash of the architecture-relevant payload (scorecard scores + dispositions, findings evidence, residual rationales, lens, source roots), EXCLUDING volatile metadata (commit sha, run_id, loop counter, timestamps, schema_version, state). Paired with `source_rev`, this is the oscillation recurrence key: artifact-only recommits remain equivalent, while materially changed source is eligible for a fresh challenge.
 - New top-level field `halt_success_challenge` (object|null, v4+): required non-null **only** when `state == "HALT_SUCCESS"` (terminal); must be `null` for `HALT_SUCCESS_candidate` and all other states. See schema below.
 - New gate G32 (HALT_SUCCESS independent challenge); new quality-pass behaviour on candidate state.
 
@@ -90,7 +90,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   // v4+ challenge fields (required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS})
   "run_id": null,                               // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Identifies the loop run that produced the candidate.
   "source_rev": null,                           // (v4+) string sha | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. HEAD sha of analyzed source tree at emit time.
-  "candidate_fingerprint": null,                // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Canonical hash of architecture-relevant payload excluding volatile metadata. Oscillation equivalence key.
+  "candidate_fingerprint": null,                // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Canonical architecture payload hash; paired with source_rev for oscillation recurrence.
   "halt_success_challenge": null,               // (v4+) object | null. Required non-null ONLY when state == "HALT_SUCCESS" (terminal). Null for HALT_SUCCESS_candidate and all other states. Schema: see § Schema version 4 changelog.
 
   // Provider/model state (v2+; required on every loop, not first-loop-only)

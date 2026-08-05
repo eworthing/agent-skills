@@ -1,6 +1,6 @@
 {
   "schema_version": 4,
-  "loop": 7,
+  "loop": 8,
   "loop_cap": 10,
   "state": "CONTINUE",
   "halt_subtype": null,
@@ -47,8 +47,8 @@
     "test_filter": null,
     "working_tree_dirty_paths": []
   },
-  "verdict": "Functionally solid, but terminal challenge evidence remains under-validated",
-  "verdict_explanation": "Independent challenge broke the success candidate because G32 accepts invalid arm values and held challenges without why_failed or a top-level reason.",
+  "verdict": "Contest-grade source, but candidate recurrence could falsely halt after correction",
+  "verdict_explanation": "Two materially different source revisions produced the same architecture fingerprint; pairing it with source_rev preserves artifact-only recurrence while allowing a corrected source tree to be challenged again.",
   "scorecard": {
     "architecture_quality": {
       "score": 9.5,
@@ -197,55 +197,56 @@
   "findings": [
     {
       "loop_local_id": "F1",
-      "stable_id": "F-005",
-      "title": "G32 accepts incomplete held-challenge evidence",
-      "why_it_matters": "G32 is the sole terminal trust gate preventing HALT_SUCCESS without a substantive independent challenge.",
-      "what_is_wrong": "The declared challenge schema restricts arm to new_finding or residual_refutation and requires each attempt's why_failed plus a top-level reason, but G32 validates only arm, target, what_tried, diversity, and binding.",
+      "stable_id": "F-006",
+      "title": "Candidate recurrence ignores changed source revisions",
+      "why_it_matters": "A corrected source tree must receive a fresh independent challenge instead of being misrouted to a finding-only oscillation halt.",
+      "what_is_wrong": "The verifier treated candidate_fingerprint alone as the recurrence key even though that hash intentionally excludes source_rev; materially different source revisions with the same scorecard therefore looked recurrent, while Step 1.6 oscillation is defined around reappearing findings.",
       "evidence": [
-        "contest-refactor/references/output-format-json.md:34-54",
-        "contest-refactor/scripts/_artifact_halt.py:250-331",
-        "contest-refactor/evals/fixtures/halt-terminal-held/CURRENT_REVIEW.json:139-162",
-        "candidate_commit_sha:6c80090"
+        "contest-refactor/references/halt-verifier.md:135-141",
+        "contest-refactor/scripts/candidate_fingerprint.py:55-92",
+        "contest-refactor/references/method.md:49-68",
+        "contest-refactor/references/halt-handoff.md:146-174",
+        "candidate_commits:3e51000,6c80090 shared fp-sha256-017e5293b7c197debf077123abf537b4 across changed source_rev"
       ],
       "test_failed": "Interface-as-test-surface",
       "dependency_category": null,
-      "leverage_impact": "The existing G32 Interface can enforce the complete challenge record for every terminal run.",
-      "locality_impact": "The documented schema and terminal validator disagree inside the same trust boundary.",
-      "metric_signal": "Strict validation accepts a held challenge with an invalid arm, missing why_failed, and missing reason.",
-      "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
+      "leverage_impact": "One canonical recurrence key governs every post-correction success candidate.",
+      "locality_impact": "The fingerprint owner and verifier prose disagreed about whether changed source is recurrent.",
+      "metric_signal": "Two candidates with different source_rev values produced the same fingerprint and the second was still eligible for a productive challenge.",
+      "why_weakens_submission": "The documented route can falsely halt after a successful correction, preventing the loop from ever proving terminal success even though the source materially changed.",
       "severity": "Serious deduction",
       "adr_conflicts": [],
       "adr_reopen_justification": null,
-      "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations.",
+      "minimal_correction_path": "Pair candidate_fingerprint with source_rev for recurrence, retain candidate_commit_sha only as freshness binding, and executable-spec the pair in candidate_fingerprint.py.",
       "blast_radius": {
         "change": [
-          "contest-refactor/scripts/_artifact_halt.py",
-          "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/",
-          "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/"
+          "contest-refactor/scripts/candidate_fingerprint.py",
+          "contest-refactor/references/halt-verifier.md",
+          "contest-refactor/references/output-format-json.md"
         ],
         "avoid": [
-          "contest-refactor/references/output-format-json.md",
-          "contest-refactor/scripts/validate-artifact.py"
+          "contest-refactor/references/method.md",
+          "contest-refactor/references/halt-handoff.md"
         ]
       }
     }
   ],
   "simplification_check": {
-    "structurally_necessary": "G32 must reject hollow held-challenge records before terminal promotion.",
+    "structurally_necessary": "Changed source must remain eligible for a fresh terminal challenge.",
     "new_seam_justified": false,
     "new_seam_adapters": [],
-    "helpful_simplification": "Extend the existing G32 checks; add no new validator layer.",
-    "should_not_be_done": "Do not redesign the challenge schema or add another verifier abstraction.",
-    "tests_after_fix": "Focused invalid-arm and missing-explanation fixtures, then the full suite."
+    "helpful_simplification": "Use the existing fingerprint and source_rev as a pair.",
+    "should_not_be_done": "Do not add a source-tree digest or another persisted field.",
+    "tests_after_fix": "Run candidate_fingerprint.py plus the full repository suite."
   },
   "backlog": [
     {
       "priority": 1,
-      "stable_id": "F-005",
-      "title": "Enforce complete G32 held-challenge evidence",
+      "stable_id": "F-006",
+      "title": "Bind candidate recurrence to source revision",
       "kind": "structural",
       "rank": "needed for winning",
-      "why_it_matters": "Terminal success must mechanically require the complete documented independent-challenge record.",
+      "why_it_matters": "Corrected source must not be mistaken for an unchanged recurring candidate.",
       "score_impact": "test_strategy +0.5; credibility +0.5"
     }
   ],
@@ -273,23 +274,23 @@
       "smallest_coding_rule": "Enforce the existing verifier contract at its terminal trust gate with one positive and one negative fixture."
     }
   ],
-  "narrative": "G32 now enforces complete held-challenge evidence. F-005 is resolved; the next loop must re-score from current source before another success candidate.",
+  "narrative": "Candidate recurrence now pairs architecture fingerprint with source_rev. F-006 is resolved; the next loop must re-score current source.",
   "loop_result": {
-    "what_changed": "Extended G32 to enforce the declared challenge arm enum, per-attempt why_failed, and top-level reason; added independent negative fixtures for invalid arm and missing explanations.",
-    "evidence_change_is_honest": "53 fixtures passed; the invalid-arm fixture fails only on the arm enum, the missing-explanation fixture fails on why_failed and reason, and validate-repo, smoke, every standalone selftest, and Ruff passed.",
+    "what_changed": "Defined candidate recurrence as the pair of candidate_fingerprint and source_rev, documented the fresh-challenge rule for changed source, and added a five-assertion executable spec.",
+    "evidence_change_is_honest": "candidate_fingerprint.py proves changed source_rev changes the recurrence key while artifact-only metadata does not; full validation remains pending before commit.",
     "risk_boundary_evidence": null,
     "targeted_finding_status": "resolved",
     "unintended_regression": null,
     "changed_paths": [
-      "contest-refactor/scripts/_artifact_halt.py",
-      "contest-refactor/evals/fixtures/halt-terminal-invalid-arm/",
-      "contest-refactor/evals/fixtures/halt-terminal-missing-explanation/"
+      "contest-refactor/scripts/candidate_fingerprint.py",
+      "contest-refactor/references/halt-verifier.md",
+      "contest-refactor/references/output-format-json.md"
     ],
-    "interface_test_coverage_path": null
+    "interface_test_coverage_path": "contest-refactor/scripts/candidate_fingerprint.py"
   },
   "implementation_review": {
     "verdict": "approved",
-    "reason": "All three checks passed; the existing G32 Interface now enforces the complete documented held-challenge evidence without a new layer.",
+    "reason": "The existing fingerprint remains stable; source_rev supplies the missing material-source distinction without a new field or digest.",
     "checks": {
       "reality": "passed",
       "honesty": "passed",

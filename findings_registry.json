@@ -1,6 +1,6 @@
 {
   "registry_schema_version": 3,
-  "next_serial": 6,
+  "next_serial": 7,
   "entries": [
     {
       "stable_id": "F-001",
@@ -300,6 +300,49 @@
             ],
             "why_weakens_submission": "A terminal artifact can pass with a nominal diversity arm but no explanation of why attempts failed or why the candidate held, leaving the independent-review audit trail structurally hollow.",
             "minimal_correction_path": "Restrict G32 arm values, require non-empty why_failed on held attempts and a non-empty top-level reason, and add focused negative fixtures for invalid arm and missing explanations."
+          }
+        }
+      ]
+    },
+    {
+      "stable_id": "F-006",
+      "title": "Candidate recurrence ignores changed source revisions",
+      "category_hint": "terminal-validation",
+      "primary_file": "contest-refactor/references/halt-verifier.md",
+      "primary_evidence_lines": [
+        135,
+        141
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 8,
+      "first_seen_sha": "88ca449",
+      "last_seen_loop": 8,
+      "occurrences": [
+        {
+          "loop": 8,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "idempotency_key": "loop8-F-006-resolved",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d1614eabbab079d077ddafaff69af2fb5fbf833c3d9d192e3ff1c685f1e540b0",
+            "evidence_paths_hash": "sha256:8e7ebeb4e5e08195f383940896a97a1f7ab5e0f287ecc75c63cc61dbfe3a6f16"
+          },
+          "attempted_remedy_hash": "sha256:ae9e7bc0b6efcfef456b44de9cc5a43572a860ef5c7344e69a34aabca9d574cb",
+          "finding_snapshot": {
+            "title": "Candidate recurrence ignores changed source revisions",
+            "why_it_matters": "A corrected source tree must receive a fresh independent challenge instead of being misrouted to a finding-only oscillation halt.",
+            "what_is_wrong": "The verifier treated candidate_fingerprint alone as the recurrence key even though that hash intentionally excludes source_rev; materially different source revisions with the same scorecard therefore looked recurrent, while Step 1.6 oscillation is defined around reappearing findings.",
+            "evidence": [
+              "contest-refactor/references/halt-verifier.md:135-141",
+              "contest-refactor/scripts/candidate_fingerprint.py:55-92",
+              "contest-refactor/references/method.md:49-68",
+              "contest-refactor/references/halt-handoff.md:146-174",
+              "candidate_commits:3e51000,6c80090 shared fp-sha256-017e5293b7c197debf077123abf537b4 across changed source_rev"
+            ],
+            "why_weakens_submission": "The documented route can falsely halt after a successful correction, preventing the loop from ever proving terminal success even though the source materially changed.",
+            "minimal_correction_path": "Pair candidate_fingerprint with source_rev for recurrence, retain candidate_commit_sha only as freshness binding, and executable-spec the pair in candidate_fingerprint.py."
           }
         }
       ]
