@@ -308,20 +308,21 @@ Next step options:
 
 Triggered when loop counter reaches cap (default 10; override via env var or directive).
 
-A cap halt has two meanings the user must not confuse: **exhausted** (budget ran out with work still queued → bump the cap) versus **converged** (the backlog is cleared; the scorecard settled below 9.5 on accepted residuals / named structural ceilings → accept). Both carry `halt_subtype: null`, so the handoff — not a new state — must distinguish them. The discriminator is the already-present `backlog`: empty ⇒ converged.
+A cap halt has three meanings the user must not confuse: **exhausted** (budget ran out with work still queued → bump the cap), **converged** (the backlog is cleared; the scorecard settled below 9.5 on accepted residuals / named structural ceilings → accept), or **certification pending** (the backlog is cleared and every score reaches 9.5, but the cap was spent fixing source after the most recent held G32 challenge → accept without certification or bump the cap). All carry `halt_subtype: null`, so the handoff — not a new state — must distinguish them. Use the already-present state: non-empty backlog ⇒ exhausted; empty backlog plus any sub-9.5 score ⇒ converged; empty backlog plus every score at least 9.5 ⇒ certification pending.
 
 ### Subagent records
 - `system_flag: "HALT_LOOP_CAP"`
 - `halt_subtype: null` — the `canon/halt-subtypes.toml` "subtype only on HALT_STAGNATION" invariant holds; convergence is read from `backlog` + scorecard, not a new subtype.
 - `unresolved_reason` — branches on whether the backlog was cleared at the cap:
   - **Exhausted** (`backlog` non-empty): `"loop counter reached cap of <N>"`.
-  - **Converged** (`backlog == []`): `"loop counter reached cap of <N>; backlog cleared — converged below the 9.5 bar (residuals accepted per G23/G37)"`.
+  - **Converged** (`backlog == []` and any score `< 9.5`): `"loop counter reached cap of <N>; backlog cleared — converged below the 9.5 bar (residuals accepted per G23/G37)"`.
+  - **Certification pending** (`backlog == []` and every score `>= 9.5`): `"loop counter reached cap of <N>; backlog cleared — post-fix independent challenge not run within configured loop budget"`.
 
-  (G34 requires only that `unresolved_reason` be non-null for `HALT_LOOP_CAP`; both strings satisfy it. A converged cap also undergoes G23/G37 residual accounting — every sub-9.5 dimension is an accepted residual or carries `residual_blocker_kind: "structural_anchor_unmet"`.)
+  (G34 requires only that `unresolved_reason` be non-null for `HALT_LOOP_CAP`; all three strings satisfy it. A converged cap also undergoes G23/G37 residual accounting — every sub-9.5 dimension is an accepted residual or carries `residual_blocker_kind: "structural_anchor_unmet"`.)
 
 ### Handoff template
 
-Branch on the same `backlog`-empty test; emit the matching template. The menu options of whichever you emit become `halt_handoff.expected_actions[]` (per [Schema](#schema-pr-4-schema_version--2)).
+Branch on backlog emptiness and then the scorecard threshold; emit the matching template. The menu options of whichever you emit become `halt_handoff.expected_actions[]` (per [Schema](#schema-pr-4-schema_version--2)).
 
 #### Exhausted — `backlog` non-empty (work still queued)
 
@@ -374,6 +375,30 @@ Next step options:
       the backlog clear and residuals accepted, more loops yield diminishing returns
       (expect polish, not structural gains).
   (d) Reset — "/contest-refactor --reset".
+```
+
+#### Certification pending — `backlog == []` and every score `>= 9.5`
+
+The cap loop cleared the final finding and met the score bar, but its source is newer than the most recent held G32 challenge. This is not an open finding and not terminal success: G32 still requires a fresh candidate bound to the post-fix source and an independent challenge. Keep the cap hard; do not reuse the stale candidate or grant an unbudgeted certification loop.
+
+```
+Loop N ended at HALT_LOOP_CAP — I made <N> loops, the configured maximum, and the
+backlog is cleared: there is no carried-forward work. Every scorecard dimension
+reaches at least 9.5, but the final fix used the remaining loop budget.
+
+Progress so far: <delta from loop 1 scorecard to loop N scorecard, summarized>
+Never moved: <dimensions with loops_since_up >= 3, each with its count — or "none">
+
+Why not HALT_SUCCESS: the post-fix source has not been committed as a bound
+HALT_SUCCESS_candidate and independently challenged; G32 forbids promoting the prior
+candidate after source changes.
+
+Next step options:
+  (a) Accept current state — all known Noticeable-or-worse findings are resolved and
+      the recorded gate is green, but terminal certification was not run.
+  (b) Bump cap and resume — "/contest-refactor --cap <N+5>" runs a fresh critic and,
+      if it holds, the required post-fix candidate challenge.
+  (c) Reset — "/contest-refactor --reset".
 ```
 
 ---

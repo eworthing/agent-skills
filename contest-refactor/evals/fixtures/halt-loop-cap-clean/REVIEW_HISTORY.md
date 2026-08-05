@@ -1,2 +1,2 @@
 --- Loop 1 (UTC 2026-06-28T00:00:00Z) ---
-Loop 1: halt-loop-cap-clean.
+Loop 1: certification-pending halt-loop-cap-clean.

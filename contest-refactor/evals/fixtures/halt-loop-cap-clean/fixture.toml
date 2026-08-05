@@ -1,5 +1,5 @@
 id = "halt-loop-cap-clean"
-purpose = "Valid HALT_LOOP_CAP terminal: halt_subtype null, unresolved_reason + halt_handoff present. Must PASS."
+purpose = "Valid certification-pending HALT_LOOP_CAP: empty backlog, all scores at least 9.5, fresh challenge pending. Must PASS."
 expected_result = "pass"
 aspirational = false
 
