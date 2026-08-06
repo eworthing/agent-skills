@@ -26,6 +26,13 @@ rest stand still.
    - *Dimension stall.* Consecutive prior loops with `delta != "UP"`, from
      `REVIEW_HISTORY.json`. A dimension unmoved for three or more loops is not being
      investigated, whatever its scorecard reason says. Break near-ties toward it.
+     **The escalation carries into Step 2**: an item whose `score_impact` names a stalled
+     dimension is exempt from [SKILL.md](../SKILL.md) sub-step 2's blast-radius tiebreak.
+     Structural, not preferential — the fix for a stalled dimension is usually the
+     decomposition of the file that stalled it, by construction the largest blast radius on
+     the board, so a blast-radius tiebreak alone guarantees the largest architectural item
+     can never reach Priority 1 while one-fix-per-loop and a renewable supply of
+     higher-severity findings in that same file keep re-winning on severity.
    - *Item deferral.* Consecutive prior loops in which an item sat in the backlog and
      was not executed. Count it by matching `backlog[].stable_id` across
      `REVIEW_HISTORY.json.loops[]` (v4+, required by **G42**) — **not** from the
