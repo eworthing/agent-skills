@@ -540,3 +540,34 @@ python3 contest-refactor/scripts/exec_replay_grade.py apply-duplicated-helper-1 
 at K≥5; then the **Execution-unfuse** structural change itself (this harness is its prerequisite); HALT/
 retirement tails. *(The structured `loop_result.risk_boundary_evidence` field — once listed here — shipped
 2026-06-28: risk-boundary grading is now field-based, not token-based.)*
+
+## Layer 6 — scorecard coupling (`scorecard-coupling/`, `scorecard_coupling_baseline.json`)
+
+Layers 1–5 all measure a **judgment**: does the Critic flag this defect, does the reviewer approve this
+diff, does a loop replay to the same place, does an executor produce the same edit. None measures the
+**scorecard numbers** — the skill's headline output, the thing `HALT_SUCCESS` is defined against, and the
+thing every scoring gate (G5, G6, G21, G37) tests per-dimension.
+
+Two probes, failing in opposite directions, both observed in production:
+
+- **Repeatability** — same source, independent Critic passes. Two runs whose scorecards described the same
+  source against byte-identical Score Anchors disagreed by a mean of **1.33** per dimension and a max of
+  **3.0**; `test_strategy`, the `HALT_SUCCESS` bar, was certified **9.5** by one Critic and **6.5** by the
+  next. The *averages* agreed to 0.22 — a good aggregate signal and a poor per-dimension one, which is the
+  opposite of how the gates use it.
+- **Sensitivity** — source genuinely improved, do the scores move? Across eleven loops that resolved
+  **seven Serious structural findings**, the scorecard produced **zero UP deltas** on any of nine dimensions.
+
+Supporting mechanism (evidence, not a probe): across 40 loops, **189 of 360 emitted scores (52.5%)** sat at
+values the rubric defines no anchor for. It anchors 10/9/7/5/3; the runs emitted 7.5, 6.5, 5.5, 6 and 8.5
+constantly. The two most-used *anchored* values, 9.5 and 10, are exactly the ones carrying rule pressure.
+
+**Deliberately measurement-only.** Writing anchor text for the intermediate values is a guess until the
+variance is attributed, so a value-domain gate on off-anchor scores — and publishing the noise floor beside
+the scorecard — are both gated on this layer reading out. The seeded `attempt 0` in each probe is marked
+`controlled: false`: it is harvested from real runs so the layer starts from evidence, not a designed
+replication. Controlled attempts must pin `skill_rev` (G19), run with no prior artifacts on disk, and record
+every attempt including invalid ones — the Layer-3 no-silent-exclusion contract applies unchanged, because
+an attempt dropped without a reason turns a variance measurement into a selection effect.
+
+Full protocol: [`scorecard-coupling/README.md`](scorecard-coupling/README.md).

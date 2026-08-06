@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "note": "Layer 6 — scorecard coupling. Measures whether the per-dimension scorecard tracks the source it scores, in BOTH directions: repeatability (same source => same score) and sensitivity (changed source => moved score). Every other eval layer measures a judgment (flag/no-flag, approve/reject, replay equivalence); the scorecard numbers are the skill's headline output and were unmeasured. attempt 0 in each probe is OBSERVATIONAL — harvested from production runs, not a designed replication — and is seeded so the layer starts from real evidence rather than an empty file. Controlled attempts (>= 1) must pin skill_rev, which G19 records as of the commit that added this layer.",
+  "prereg": {
+    "repeatability": "N >= 3 independent Critic passes over one corpus at a pinned source SHA, fresh context each, no prior artifacts on disk, skill_rev pinned and identical across attempts. Report per-dimension mean, spread, and max pairwise gap. PREDICTION: max pairwise gap <= 1.0 on every dimension. The observational attempt 0 measured 3.0, so a controlled run reproducing >= 2.0 CONFIRMS the defect rather than refuting the design.",
+    "sensitivity": "Critic passes immediately before and after a commit known to resolve a Serious-or-worse structural finding, same skill_rev, same corpus otherwise. PREDICTION: the dimension the finding was filed under moves UP. attempt 0 measured seven consecutive Serious resolutions with zero UP deltas across nine dimensions and eleven loops.",
+    "interpretation": "The two probes fail in opposite directions and a fix for one can worsen the other: tightening anchors to raise repeatability can flatten sensitivity, and vice versa. Neither number alone licenses a rubric change — 2b (a value-domain gate on off-anchor scores) is explicitly gated on BOTH reading out."
+  },
+  "captured_at": null,
+  "per_dimension": {},
+  "attempts": [
+    {
+      "attempt_index": 0,
+      "probe": "repeatability",
+      "controlled": false,
+      "status": "observational",
+      "skill_rev": null,
+      "source": "Two production runs against one C#/UWP repo. Run B began at Run A's HEAD, so both scorecards describe the same source, at most one loop's refactor apart. Score Anchors were byte-identical: references/architecture-rubric-scoring.md has exactly one commit in its history and was untouched between the runs. Other skill files DID change between them, which is why this is observational and not controlled.",
+      "drift": {
+        "test_strategy": {"a": 9.5, "b": 6.5, "delta": -3.0},
+        "domain_modeling": {"a": 5.5, "b": 8.5, "delta": 3.0},
+        "framework_idioms": {"a": 6.0, "b": 8.0, "delta": 2.0},
+        "simplicity": {"a": 8.5, "b": 7.0, "delta": -1.5},
+        "architecture_quality": {"a": 7.0, "b": 8.0, "delta": 1.0},
+        "data_flow": {"a": 6.5, "b": 7.5, "delta": 1.0},
+        "state_management": {"a": 7.0, "b": 6.5, "delta": -0.5},
+        "concurrency": {"a": 6.5, "b": 6.5, "delta": 0.0},
+        "credibility": {"a": 7.5, "b": 7.5, "delta": 0.0}
+      },
+      "mean_abs_drift": 1.33,
+      "max_abs_drift": 3.0,
+      "mean_a": 7.11,
+      "mean_b": 7.33,
+      "mean_shift": 0.22,
+      "finding": "The aggregate is stable (averages agree to 0.22) while per-dimension attribution is close to arbitrary. test_strategy — the HALT_SUCCESS bar — was certified 9.5 by one Critic and 6.5 by the next on the same code. No single loop's refactor raises domain_modeling 3.0 while lowering test_strategy 3.0."
+    },
+    {
+      "attempt_index": 0,
+      "probe": "sensitivity",
+      "controlled": false,
+      "status": "observational",
+      "skill_rev": null,
+      "source": "A 15-loop production run of this skill against its own repo, loops 4-14.",
+      "serious_findings_resolved": 7,
+      "resolved_on_loops": [5, 7, 8, 9, 11, 12, 13],
+      "loops_observed": 11,
+      "dimensions_observed": 9,
+      "up_deltas": 0,
+      "finding": "Seven Serious structural defects in the validator, the gates and the routing were resolved across eleven consecutive loops, and the scorecard produced zero UP deltas on any of nine dimensions. Same source => different scores (repeatability probe); different source => same scores (this probe). Both are failures of the same coupling."
+    }
+  ],
+  "anchor_coverage": {
+    "note": "Supporting evidence for the mechanism, not a probe. Counted across 40 production loops on one repo (360 emitted scores). references/architecture-rubric-scoring.md supplies anchor text at 10/9/7/5/3 only.",
+    "total_scores": 360,
+    "off_anchor_scores": 189,
+    "off_anchor_pct": 52.5,
+    "histogram": {
+      "9.5": 67, "7.5": 55, "6.5": 44, "7": 37, "5.5": 35,
+      "6": 30, "8": 30, "8.5": 25, "10": 24, "3": 6, "9": 4, "5": 3
+    },
+    "off_anchor_values": [5.5, 6, 6.5, 7.5, 8.5],
+    "finding": "More than half of all emitted scores sit at values the rubric never defines. The two most-used ANCHORED values, 9.5 and 10, are exactly the ones carrying rule pressure (G5, G6, G21, the residual machinery); the unstable middle has neither anchor text nor a gate. A fourth run that converged used only 9.5 and 10 — no off-anchor values at all."
+  }
+}
