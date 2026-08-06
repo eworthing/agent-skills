@@ -316,10 +316,28 @@ def check_g19_provider_model(current_review: dict) -> list[Issue]:
       both sources == "default" (per provider-adapters.md § unknown explicit text).
     - Known providers (claude_code, codex, opencode) ⇒ both models are non-null strings.
     - Reject placeholder literal "inline-current-model".
+    - schema_version >= 4: skill_rev is `string | null` when present (identifies the ruleset).
+
+    skill_rev is validated for TYPE only, not presence. A validator reading an artifact
+    cannot distinguish "the emitting version omitted it" from "this run predates the
+    field", so presence is a Step -1 emit obligation (startup.md) rather than a read-time
+    rejection. Same treatment as premium_loop_override's absent-means-default.
     """
     issues: list[Issue] = []
-    if (current_review.get("schema_version") or 1) < 2:
+    schema_version = current_review.get("schema_version") or 1
+    if schema_version < 2:
         return issues
+
+    if schema_version >= 4 and "skill_rev" in current_review:
+        skill_rev = current_review["skill_rev"]
+        if skill_rev is not None and (not isinstance(skill_rev, str) or not skill_rev):
+            issues.append(
+                Issue(
+                    "G19",
+                    f"skill_rev={skill_rev!r} must be a non-empty string or null "
+                    f"(short SHA of $SKILL_DIR HEAD, captured in Step -1)",
+                )
+            )
 
     provider = current_review.get("provider")
     loop_model = current_review.get("loop_model")

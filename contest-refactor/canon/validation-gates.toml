@@ -76,7 +76,7 @@ title = "REVIEW_HISTORY.json append"
 
 [[validation_gates]]
 id = "G19"
-title = "Provider+model recorded"
+title = "Provider+model+skill_rev recorded"
 
 [[validation_gates]]
 id = "G20"
