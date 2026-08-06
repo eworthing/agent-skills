@@ -103,11 +103,11 @@ def check_g5_sub95_residual_fields(current_review: dict) -> list[Issue]:
                     f"residual_blocker_kind",
                 )
             )
-        else:  # score == 10
+        else:  # score >= 10
             issues.append(
                 Issue(
                     "G5",
-                    f"dimension {dim!r} score=10 carries {', '.join(populated)}; a 10 means no "
+                    f"dimension {dim!r} score={score} carries {', '.join(populated)}; a 10 means no "
                     f"source-backed residual exists (G6). A named residual and a 10 cannot both be true",
                 )
             )
@@ -243,7 +243,12 @@ def _records_by_dim(review: dict) -> dict[str, dict]:
 
 
 def _clean_streak(dim: str, current: dict, priors: list[dict]) -> int:
-    """Consecutive loops ending at this one whose record for `dim` was a clean."""
+    """Consecutive loops ending at this one whose record for `dim` was a clean.
+
+    Bounded by the two-loop lookback, so it saturates at 3 and never reports the true
+    length of a longer streak -- hence "at least N" in the messages. Widening the lookback
+    would buy a bigger number and no extra discrimination: the threshold is 3.
+    """
     streak = 0
     for review in [current, *reversed(priors)]:
         record = _records_by_dim(review).get(dim)
@@ -341,7 +346,7 @@ def check_g43_convergence_pass(
             issues.append(
                 Issue(
                     "G43",
-                    f"dimension {dim!r} has answered 'clean' for {streak} consecutive loops; "
+                    f"dimension {dim!r} has answered 'clean' for at least {streak} consecutive loops; "
                     f"the record must carry a structured proposed_fix (fix_kind, target_path, "
                     f"target_symbol) naming what was tried and rejected. A clean repeated without "
                     f"a fresh proposal is a restatement, not an investigation",
