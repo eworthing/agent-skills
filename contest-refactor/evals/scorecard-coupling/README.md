@@ -54,15 +54,64 @@ finding — the archives are full of them — and run a Critic pass immediately 
 at identical `skill_rev`. The prediction is that the dimension the finding was filed under moves
 UP; attempt 0 recorded seven such commits producing no movement at all.
 
+## What attempt 1 measured — repeatability, controlled, N=3
+
+Three blind Critic passes at `source_rev 1bdec1a`, `skill_rev 23bea47`.
+
+| | attempt 0 (observational) | attempt 1 (controlled) |
+|---|---|---|
+| max per-dimension gap | 3.0 | **2.0** (`credibility`) |
+| mean per-dimension gap | 1.33 | **1.22** |
+| spread of the **averages** | 0.22 | **1.22** |
+
+The pre-registered prediction was max gap ≤ 1.0: **refuted**. The pre-registered confirm-the-defect
+bar was ≥ 2.0: **met**. The scorecard is not per-dimension repeatable.
+
+**But attempt 0's headline does not survive, and it was the more interesting half.** Attempt 0 read
+as compensating swings around a stable mean — `test_strategy` −3.0 against `domain_modeling` +3.0,
+averages agreeing to 0.22 — which supported "good aggregate signal, poor per-dimension signal."
+Attempt 1 is the opposite shape:
+
+- Pass B scored **strictly lower than both other passes on 9 of 9 dimensions**.
+- Passes A and C were **identical on 7 of 9** (mean absolute difference 0.167).
+- So the averages were *not* stable: they spread 1.22, five times attempt 0's figure.
+
+Per-dimension **attribution** is substantially reproducible. Overall **severity calibration** is what
+drifts, and it drags every dimension with it. Those two call for different fixes, which is why this
+had to be measured rather than reasoned about.
+
+The honest limit: N=3 with one deviant rater cannot separate a two-mode distribution from a single
+draw off a wide continuum. "Uniform offset" describes this sample, not the population.
+
+**The findings repeated even though the numbers did not.** All three passes independently named the
+same defects — `PrimaryWidget.xaml.cs` at 1987 lines as the ceiling, the `"Unknown"` string sentinel
+threaded across modules, `StoreNameLookup`'s unlocked reads outside its own gates, `CancellationToken`
+plumbed everywhere and supplied by nobody, the untested session guard at `PrimaryWidget.xaml.cs:1442`.
+That is this skill's own thesis measured directly: structured source-anchored claims reproduce,
+free-form scalar judgment does not.
+
+### The anchored grid is not the scale in use
+
+Across attempt 1's 27 scores, **81.5% sat off-anchor** and **7 was the only anchored value any pass
+emitted** — 9, 10, 5 and 3 never appeared. Every pass scored inside a 6.5–8.5 band that
+`architecture-rubric-scoring.md` describes at exactly one point.
+
+This answers 2a's question, though not in the form the plan posed it. The plan asked whether variance
+concentrates on off-anchor values *versus* anchored ones; that comparison cannot be made, because
+there is effectively no anchored comparison group. The finding is simpler and stronger.
+
+### Operational note for the next attempt
+
+In `steamgriddb-xbox` the five artifact files are **tracked**, so they materialize in any pinned
+worktree and must be deleted before dispatch. Do not assume a fresh checkout is artifact-free —
+check. Attempt 1 verified this explicitly; had it not, three "blind" passes would have been reading
+the very scorecard they were meant to reproduce.
+
 ## Interpreting the result
 
-The averages were **stable** across the observational attempt (7.11 vs 7.33, a 0.22 shift) while
-per-dimension attribution moved by a mean of 1.33 and a max of 3.0. That asymmetry is the useful
-part: it says the scorecard is a reasonable aggregate signal and a poor per-dimension one, which
-is the opposite of how the rubric's gates use it. Every threshold in the skill — G5's 9.5, G6's
-10, G21's HALT_SUCCESS bar, G37's sub-9.5 accounting — is a **per-dimension** test.
-
-That does not make the thresholds wrong. It makes them worth knowing the noise floor of, which
-is what this layer is for.
+Every threshold in the skill — G5's 9.5, G6's 10, G21's `HALT_SUCCESS` bar, G37's sub-9.5
+accounting — is a **per-dimension** test. That does not make the thresholds wrong. It makes them
+worth knowing the noise floor of, which is what this layer is for. As of attempt 1 that floor is
+**1.0 or worse on five of nine dimensions**, so a half-point move on a single dimension is not signal.
 
 Baseline: [`../scorecard_coupling_baseline.json`](../scorecard_coupling_baseline.json).

@@ -570,4 +570,34 @@ replication. Controlled attempts must pin `skill_rev` (G19), run with no prior a
 every attempt including invalid ones — the Layer-3 no-silent-exclusion contract applies unchanged, because
 an attempt dropped without a reason turns a variance measurement into a selection effect.
 
+### Attempt 1 — repeatability, controlled, N=3 (2026-08-06)
+
+Three blind Critic passes, `source_rev 1bdec1a`, `skill_rev 23bea47`, byte-identical prompts.
+
+**Measured noise floor: max per-dimension gap 2.0 (`credibility`), mean 1.22, five of nine dimensions
+over 1.0.** Prediction (≤ 1.0) refuted; the pre-registered confirm-the-defect bar (≥ 2.0) met.
+
+Attempt 0's *headline* did not survive, and it was the load-bearing half. Where attempt 0 showed
+compensating swings around a stable mean (0.22), attempt 1 shows the opposite: one pass scored strictly
+lower than both others on **9 of 9** dimensions while the other two were **identical on 7 of 9**, so the
+averages spread **1.22**. Per-dimension *attribution* reproduces; overall *severity calibration* is what
+drifts, and it moves every dimension together. Those need different fixes — the reason this was measured
+rather than reasoned about. At N=3 with one deviant rater, that shape describes the sample, not the
+population.
+
+Two results worth carrying forward:
+
+- **The findings repeated even though the numbers did not.** All three passes independently named the same
+  defects (the 1987-line UI class, an `"Unknown"` string sentinel threaded across modules, unlocked reads
+  outside their own gates, cancellation plumbed and never supplied). Structured source-anchored claims
+  reproduce; free-form scalar judgment does not — this skill's thesis, measured directly.
+- **The anchored grid is not the scale in use.** 81.5% of attempt 1's scores were off-anchor and `7` was the
+  only anchored value any pass emitted; 9, 10, 5 and 3 never appeared. The plan's framing — does variance
+  concentrate on off-anchor values *versus* anchored ones — has no anchored comparison group to test against.
+
+Recorded as a lead, not a result: on this same SHA the production Critic (holding its own history and
+registry) scored **1.69 higher** than the blind mean and exceeded *every* blind pass on 8 of 9 dimensions.
+Consistent with a ratchet — G8 blocks unproven increases but nothing re-baselines downward — and confounded
+at least three ways, so it needs its own design.
+
 Full protocol: [`scorecard-coupling/README.md`](scorecard-coupling/README.md).

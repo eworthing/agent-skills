@@ -6,8 +6,19 @@
     "sensitivity": "Critic passes immediately before and after a commit known to resolve a Serious-or-worse structural finding, same skill_rev, same corpus otherwise. PREDICTION: the dimension the finding was filed under moves UP. attempt 0 measured seven consecutive Serious resolutions with zero UP deltas across nine dimensions and eleven loops.",
     "interpretation": "The two probes fail in opposite directions and a fix for one can worsen the other: tightening anchors to raise repeatability can flatten sensitivity, and vice versa. Neither number alone licenses a rubric change — 2b (a value-domain gate on off-anchor scores) is explicitly gated on BOTH reading out."
   },
-  "captured_at": null,
-  "per_dimension": {},
+  "captured_at": "2026-08-06T17:53:57Z",
+  "per_dimension": {
+    "note": "Controlled attempt 1, repeatability probe. mean and max_pairwise_gap over N=3 blind Critic passes at source_rev 1bdec1a, skill_rev 23bea47. These are the measured noise floors per dimension.",
+    "architecture_quality": {"mean": 8.0, "max_pairwise_gap": 1.5},
+    "state_management": {"mean": 7.67, "max_pairwise_gap": 1.0},
+    "domain_modeling": {"mean": 7.17, "max_pairwise_gap": 1.5},
+    "data_flow": {"mean": 7.33, "max_pairwise_gap": 0.5},
+    "framework_idioms": {"mean": 7.83, "max_pairwise_gap": 0.5},
+    "concurrency": {"mean": 7.33, "max_pairwise_gap": 1.5},
+    "simplicity": {"mean": 7.5, "max_pairwise_gap": 1.5},
+    "test_strategy": {"mean": 7.67, "max_pairwise_gap": 1.0},
+    "credibility": {"mean": 7.83, "max_pairwise_gap": 2.0}
+  },
   "attempts": [
     {
       "attempt_index": 0,
@@ -47,6 +58,62 @@
       "dimensions_observed": 9,
       "up_deltas": 0,
       "finding": "Seven Serious structural defects in the validator, the gates and the routing were resolved across eleven consecutive loops, and the scorecard produced zero UP deltas on any of nine dimensions. Same source => different scores (repeatability probe); different source => same scores (this probe). Both are failures of the same coupling."
+    },
+    {
+      "attempt_index": 1,
+      "probe": "repeatability",
+      "controlled": true,
+      "status": "complete",
+      "captured_at": "2026-08-06T17:53:57Z",
+      "skill_rev": "23bea47",
+      "source_rev": "1bdec1a",
+      "corpus": "steamgriddb-xbox (C#/UWP Game Bar widget), 58 C#/XAML files, ~429k chars, pinned in a detached git worktree outside the repo root. Stack lens fixed to lens-generic.md (the 'Anything else' row) so lens choice could not become a confound.",
+      "n": 3,
+      "model": "session default (Opus 5) for all three passes; subagent_type general-purpose; byte-identical dispatch prompts pointing at one on-disk harness spec.",
+      "invalid_attempts": 0,
+      "scores": {
+        "architecture_quality": [8.5, 7.0, 8.5],
+        "state_management": [8.0, 7.0, 8.0],
+        "domain_modeling": [8.0, 6.5, 7.0],
+        "data_flow": [7.5, 7.0, 7.5],
+        "framework_idioms": [8.0, 7.5, 8.0],
+        "concurrency": [8.0, 6.5, 7.5],
+        "simplicity": [8.0, 6.5, 8.0],
+        "test_strategy": [8.0, 7.0, 8.0],
+        "credibility": [8.5, 6.5, 8.5]
+      },
+      "max_pairwise_gap": 2.0,
+      "mean_pairwise_gap": 1.22,
+      "dims_over_1_point": 5,
+      "pass_means": {"A": 8.056, "B": 6.833, "C": 7.889},
+      "aggregate_spread": 1.222,
+      "prereg_verdict": "PREDICTION REFUTED (max gap 2.0 > 1.0); CONFIRM-DEFECT BAR MET (>= 2.0). The scorecard is not per-dimension repeatable at this skill_rev.",
+      "finding": "The defect reproduces under control, but its STRUCTURE is not what attempt 0 suggested and attempt 0's headline does not survive. Attempt 0 read as compensating per-dimension swings around a stable average (mean shift 0.22 while individual dimensions moved 3.0). Attempt 1 is the opposite shape: pass B scored strictly lower than BOTH other passes on 9 of 9 dimensions — a uniform rater-severity offset — while passes A and C were identical on 7 of 9 (mean absolute difference 0.167). The aggregate was therefore NOT stable here: pass means spread 1.222, five times attempt 0's 0.22. Per-dimension ATTRIBUTION is substantially reproducible; overall SEVERITY calibration is what drifts, and it drags every dimension together.",
+      "caveat": "N=3 with a single deviant rater cannot distinguish a two-mode distribution from one draw off a wide continuum. The 'uniform offset' claim describes this sample; it is not established as the population shape. A higher-N attempt is the way to settle it.",
+      "adjunct_finding": "Independent of the probe: all three blind passes converged on the SAME structural defects in prose (PrimaryWidget.xaml.cs at 1987 lines as the ceiling, the 'Unknown' string sentinel threaded across modules, StoreNameLookup's unlocked Dictionary reads outside its own gates, CancellationToken plumbed through SteamGridDbClient and supplied by no caller, LibraryOperationGuard.TryBegin's non-atomic check-then-set, the untested session guard at PrimaryWidget.xaml.cs:1442, the dead InverseBooleanToVisibilityConverter). The FINDINGS repeat; only the NUMBERS do not. That is the skill's own unifying thesis measured directly: structured, source-anchored claims reproduce, free-form scalar judgment does not.",
+      "deviations": [
+        "Lean scoring harness: validation.md and the output-format trio were NOT loaded (~33k tokens/pass). G4, G5 and G6 were inlined verbatim so score-shaping pressure was preserved; G8 is inert with no history. This measures a Critic that scores under the anchors but emits no protocol artifact.",
+        "Build and tests were not re-run per pass. 'Build passes; 206 tests passing' was supplied identically to all three passes, so it cannot be a source of variance, but credibility was therefore scored on structure rather than on an observed run.",
+        "Five artifact files (CURRENT_REVIEW.{json,md}, REVIEW_HISTORY.{json,md}, findings_registry.json) are TRACKED in the target repo and materialized in the pinned worktree. They were deleted to satisfy the no-prior-artifacts requirement; `git status` in the corpus consequently showed five deletions, which the harness disclosed as setup rather than as a finding.",
+        "PURGE_LOG.jsonl was retained. It carries no scores but discloses that a prior 15-loop run ended HALT_LOOP_CAP. Constant across all three passes.",
+        "CODE-REVIEW.md was retained: a genuine 2026-08-03 developer document (commit fd90da6) carrying no scorecard, and part of the real corpus."
+      ]
+    },
+    {
+      "attempt_index": 1,
+      "probe": "blind_vs_history",
+      "controlled": false,
+      "status": "observational adjunct",
+      "skill_rev": "23bea47",
+      "source_rev": "1bdec1a",
+      "note": "Not a pre-registered probe. Falls out for free from attempt 1: the production Run C loop-15 terminal scorecard describes this exact SHA, and was produced by a Critic WITH REVIEW_HISTORY.json, findings_registry.json and its own prior scorecard on disk.",
+      "blind_grand_mean": 7.593,
+      "production_terminal_mean": 9.278,
+      "gap": 1.685,
+      "dims_where_production_exceeds_every_blind_pass": 8,
+      "examples": {"state_management": {"blind": [8.0, 7.0, 8.0], "production": 10.0}, "simplicity": {"blind": [8.0, 6.5, 8.0], "production": 10.0}, "credibility": {"blind": [8.5, 6.5, 8.5], "production": 10.0}},
+      "finding": "On identical source, a Critic holding its own history scored 1.69 higher than the mean of three blind Critics, and exceeded EVERY blind pass on 8 of 9 dimensions. data_flow (7.5) is the sole dimension where production and blind agree — and it is the one dimension production never ratcheted. This is consistent with the ratchet hypothesis: G8 blocks unproven INCREASES but nothing re-baselines a score downward, so fifteen individually-justified upward steps compound.",
+      "caveat": "NOT a controlled test of the ratchet. Confounded at least three ways: the production Critic ran the full protocol including the emit gates this harness omits; it had a findings registry supplying candidate evidence; and it re-ran the build itself. Establishing the ratchet needs its own design, and this entry is recorded as a lead, not a result."
     }
   ],
   "anchor_coverage": {
@@ -59,6 +126,16 @@
       "6": 30, "8": 30, "8.5": 25, "10": 24, "3": 6, "9": 4, "5": 3
     },
     "off_anchor_values": [5.5, 6, 6.5, 7.5, 8.5],
-    "finding": "More than half of all emitted scores sit at values the rubric never defines. The two most-used ANCHORED values, 9.5 and 10, are exactly the ones carrying rule pressure (G5, G6, G21, the residual machinery); the unstable middle has neither anchor text nor a gate. A fourth run that converged used only 9.5 and 10 — no off-anchor values at all."
+    "finding": "More than half of all emitted scores sit at values the rubric never defines. The two most-used ANCHORED values, 9.5 and 10, are exactly the ones carrying rule pressure (G5, G6, G21, the residual machinery); the unstable middle has neither anchor text nor a gate. A fourth run that converged used only 9.5 and 10 — no off-anchor values at all.",
+    "controlled_attempt_1": {
+      "note": "Same count over the 27 scores emitted by the three blind passes of controlled attempt 1.",
+      "total_scores": 27,
+      "off_anchor_scores": 22,
+      "off_anchor_pct": 81.5,
+      "histogram": {"8.5": 4, "8": 10, "7.5": 4, "7": 5, "6.5": 4},
+      "anchored_values_used": [7],
+      "finding": "Blind Critics used the anchored grid even less than production did: 81.5% off-anchor, and 7 was the ONLY anchored value any pass emitted — 9, 10, 5 and 3 were never used once. Every pass scored inside a 6.5-8.5 band that architecture-rubric-scoring.md describes at exactly one point. This resolves the 2a question the plan posed, though not the way the plan framed it: the plan asked whether variance concentrates on off-anchor values versus anchored ones, and that comparison cannot be made, because there is effectively no anchored comparison group. The finding is stronger and simpler — the anchored grid is not the scale raters are actually using.",
+      "implication_for_2b": "Supports extending anchor text to the 6.5-8.5 band, but for a DIFFERENT reason than the plan argued. The measured failure is level calibration (a whole-scorecard severity offset), not dimension attribution, so anchor text is aimed at the right target only if it pins what 'met' means at each half-point. Still gated on the sensitivity probe per prereg: tightening the middle anchors is exactly the change that could flatten sensitivity, which is already at zero UP deltas."
+    }
   }
 }
