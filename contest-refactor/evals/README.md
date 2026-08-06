@@ -598,6 +598,37 @@ Two results worth carrying forward:
 Recorded as a lead, not a result: on this same SHA the production Critic (holding its own history and
 registry) scored **1.69 higher** than the blind mean and exceeded *every* blind pass on 8 of 9 dimensions.
 Consistent with a ratchet — G8 blocks unproven increases but nothing re-baselines downward — and confounded
-at least three ways, so it needs its own design.
+at least three ways, so it needs its own design. **Attempt 2 supplied that design; see below.**
+
+### Attempt 2 — ratchet probe, controlled, N=3 per arm (2026-08-06)
+
+Does a prior *score* move a Critic's judgment of unchanged source? Three arms at one SHA, primed harnesses
+generated from the blind one and verified to differ from each other by the corpus path alone. G8 deliberately
+inert and declared so, making this the conservative direction.
+
+| arm | primed with | grand mean | displacement | % of available gap |
+|---|---|---|---|---|
+| BLIND | — | 7.593 | — | — |
+| HIGH | 9.278 | 8.426 | +0.833 | 49% |
+| LOW | 5.778 | 7.296 | −0.296 | 16% |
+
+**Pre-registered verdict: REFUTED.** The bar was ≥ 1.0 in *both* arms; neither cleared it. Anchoring at the
+predicted strength is not established, and attempt 1's 1.685 production-vs-blind gap is **not** reproduced by
+priming alone — most of it stays with the recorded confounds.
+
+Post hoc, and labelled as such: both arms moved toward their prime and never away (HIGH up on 9/9 dimensions,
+LOW down on 7/9); per dimension the HIGH arm closed 40–55% of whatever gap was available, with `data_flow` —
+whose prime equalled its blind score — as the internal control that moved +0.17; the pull was 2.81× stronger
+upward than downward. **The largest effect was on spread, not level:** HIGH-arm pass means spread 0.222
+against blind's 1.222, so a high prior made three independent Critics agree ~6× more tightly. If that holds
+at higher N, a prior scorecard buys apparent repeatability without buying accuracy.
+
+The registered threshold was the wrong statistic — absolute grand-mean displacement cannot separate "did not
+anchor" from "had nowhere to go" when available gaps range 0.17–2.50. Fraction-of-available-gap is registered
+for future attempts and deliberately **not** applied to this verdict.
+
+One rater invented a mitigation unprompted: it scored the source first and read the prior only afterwards,
+landing closest of any primed pass to the blind mean. Score-then-read is a cheap candidate fix awaiting its
+own attempt.
 
 Full protocol: [`scorecard-coupling/README.md`](scorecard-coupling/README.md).

@@ -114,7 +114,39 @@
       "dims_where_production_exceeds_every_blind_pass": 8,
       "examples": {"state_management": {"blind": [8.0, 7.0, 8.0], "production": 10.0}, "simplicity": {"blind": [8.0, 6.5, 8.0], "production": 10.0}, "credibility": {"blind": [8.5, 6.5, 8.5], "production": 10.0}},
       "finding": "On identical source, a Critic holding its own history scored 1.69 higher than the mean of three blind Critics, and exceeded EVERY blind pass on 8 of 9 dimensions. data_flow (7.5) is the sole dimension where production and blind agree — and it is the one dimension production never ratcheted. This is consistent with the ratchet hypothesis: G8 blocks unproven INCREASES but nothing re-baselines a score downward, so fifteen individually-justified upward steps compound.",
-      "caveat": "NOT a controlled test of the ratchet. Confounded at least three ways: the production Critic ran the full protocol including the emit gates this harness omits; it had a findings registry supplying candidate evidence; and it re-ran the build itself. Establishing the ratchet needs its own design, and this entry is recorded as a lead, not a result."
+      "caveat": "NOT a controlled test of the ratchet. Confounded at least three ways: the production Critic ran the full protocol including the emit gates this harness omits; it had a findings registry supplying candidate evidence; and it re-ran the build itself. Establishing the ratchet needs its own design, and this entry is recorded as a lead, not a result.",
+      "superseded_by": "attempt 2 (probe: ratchet) tested this causally. The 1.685 gap is NOT reproduced by priming alone: a prior score displaces a Critic by at most 0.833. Most of the production/blind gap is therefore still unexplained and is likely the confounds above."
+    },
+    {
+      "attempt_index": 2,
+      "probe": "ratchet",
+      "controlled": true,
+      "status": "complete",
+      "captured_at": "2026-08-06T18:41:00Z",
+      "skill_rev": "23bea47",
+      "source_rev": "1bdec1a",
+      "n_per_arm": 3,
+      "invalid_attempts": 0,
+      "design": "Three arms at one SHA. BLIND is attempt 1's data reused unchanged. HIGH and LOW each got one terse CURRENT_REVIEW.json holding nine scores and no proof prose. The two primed harnesses were GENERATED from the blind harness and verified to differ from each other by the corpus path alone (2 diff lines) and from blind only by title, path and the prior-review block. G8 was deliberately inert and the harness said so outright ('you are not bound by the prior review'), making this the conservative direction: with G8 active the effect could only be larger.",
+      "arm_means": {"blind": 7.593, "high": 8.426, "low": 7.296},
+      "primes": {"high": 9.278, "low": 5.778},
+      "displacement": {"high": 0.833, "low": -0.296},
+      "fraction_of_available_gap": {"high": 0.49, "low": 0.16},
+      "prereg_verdict": "REFUTED. The registered bar was a >= 1.0 grand-mean displacement toward the prime in BOTH arms. HIGH reached +0.833, LOW only -0.296; neither cleared it, so outcome (3) applies as written. Anchoring at the strength predicted is not established, and the 1.685 production-vs-blind gap is NOT reproduced by priming alone — most of it remains attributable to the three recorded confounds.",
+      "post_hoc": {
+        "warning": "Everything in this block is POST HOC and was not registered. It is recorded because it is systematic, not because it rescues the prediction. The pre-registered verdict above stands unchanged.",
+        "direction": "Both arms moved TOWARD their prime, neither away. HIGH rose on 9/9 dimensions; LOW fell on 7/9.",
+        "partial_adjustment": "Per dimension, the HIGH arm consistently closed 40-55% of the gap between the blind score and the prime, and the size of the move tracked the size of the gap available: state_management (gap 2.33) +1.17, simplicity (2.50) +1.33, credibility (2.17) +1.17, concurrency (2.17) +1.17, domain_modeling (2.33) +0.83, framework_idioms (1.67) +0.67, architecture_quality (1.00) +0.67, test_strategy (0.83) +0.33. The internal control is data_flow, the one dimension whose prime (7.5) essentially equalled the blind value (7.33): it moved +0.17. A dimension with no room to move did not move.",
+        "asymmetry": "The upward pull was 2.81x the downward pull (+0.833 vs -0.296; 49% vs 16% of available gap). Directionally consistent with the ratchet claim — priors pull up far harder than down — but the magnitudes are below the registered bar.",
+        "variance_collapse": "The clearest effect was not on the mean. HIGH-arm pass means were 8.333/8.556/8.389, a spread of 0.222 (sd 0.094), against blind's 1.222 (sd 0.541) and LOW's 1.389 (sd 0.585). A high prior made three independent Critics agree with each other roughly six times more tightly. If that holds up, a prior scorecard buys apparent repeatability without buying accuracy — which would make a converging run's stability partly an artifact of its own history. At N=3 a variance ratio is very unstable; this needs a higher-N attempt before it is claimed.",
+        "threshold_was_wrong": "The registered metric — absolute grand-mean displacement — averages across dimensions whose available gap ranges from 0.17 to 2.50, so it cannot distinguish 'did not anchor' from 'had nowhere to go'. Fraction-of-available-gap is the better statistic and is registered here for any future attempt. Switching metrics after seeing the data would be exactly the move this layer exists to prevent, so it is NOT applied to this attempt's verdict."
+      },
+      "behavioral_observation": "One LOW-arm pass (L1) volunteered that it 'read the prior review only after my independent scorecard was written'. It scored 7.889 — the closest of any primed pass to the blind grand mean of 7.593, and 1.389 above its own arm's lowest pass. Self-blinding was invented by one rater unprompted and appears to have worked. That is a cheap candidate mitigation (score first, read the prior only to compute the delta) and it needs its own attempt before it is believed off a single observation.",
+      "deviations": [
+        "Inherits every deviation of attempt 1's lean harness: validation.md and the output-format trio not loaded, G4/G5/G6 inlined, build/test state supplied rather than run.",
+        "The primed prior carries nine scores and NO proof prose. This isolates the number from the argument for it, but it is therefore not a replica of production, where the prior arrives with justifications, a findings registry and a 15-loop history.",
+        "The BLIND arm was not re-run; attempt 1's three passes are reused. Same harness, same SHA, same skill_rev, same model, ~40 minutes earlier."
+      ]
     }
   ],
   "anchor_coverage": {

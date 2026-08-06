@@ -100,6 +100,53 @@ This answers 2a's question, though not in the form the plan posed it. The plan a
 concentrates on off-anchor values *versus* anchored ones; that comparison cannot be made, because
 there is effectively no anchored comparison group. The finding is simpler and stronger.
 
+## What attempt 2 measured — the ratchet probe (controlled, N=3 per arm)
+
+Does a prior *score* move a Critic's judgment of unchanged source? Three arms at one SHA; the two
+primed harnesses were generated from the blind one and verified to differ from each other by the
+corpus path alone.
+
+| arm | primed with | grand mean | displacement | % of available gap |
+|---|---|---|---|---|
+| BLIND | — | 7.593 | — | — |
+| HIGH | 9.278 | **8.426** | +0.833 | 49% |
+| LOW | 5.778 | **7.296** | −0.296 | 16% |
+
+**Pre-registered verdict: REFUTED.** The registered bar was ≥ 1.0 displacement in *both* arms.
+Neither cleared it. Anchoring at the predicted strength is not established, and the 1.685
+production-vs-blind gap from attempt 1 is **not** reproduced by priming alone — most of it remains
+attributable to the recorded confounds, not to the prior number.
+
+### Post hoc — recorded, not registered
+
+The verdict above stands. These observations are systematic enough to record and are flagged as
+post hoc because they are:
+
+- Both arms moved **toward** their prime, never away. HIGH rose on 9/9 dimensions, LOW fell on 7/9.
+- Per dimension the HIGH arm closed **40–55% of whatever gap was available**, and the size of the
+  move tracked the size of the gap. The internal control is `data_flow`, the one dimension whose
+  prime (7.5) essentially equalled the blind value (7.33) — it moved +0.17. A dimension with
+  nowhere to go did not go anywhere.
+- The pull was **2.81× stronger upward than downward**, which is the direction the ratchet claim
+  predicts, at magnitudes below the registered bar.
+- **The clearest effect was not on the mean.** HIGH-arm pass means spread **0.222** against blind's
+  1.222 — a high prior made three independent Critics agree with each other roughly six times more
+  tightly. If that survives a higher-N test, a prior scorecard buys *apparent* repeatability without
+  buying accuracy, and a converging run's stability is partly an artifact of its own history.
+
+**The registered threshold was the wrong statistic** and that is the design lesson. Absolute
+grand-mean displacement averages over dimensions whose available gap ranges from 0.17 to 2.50, so it
+cannot tell "did not anchor" from "had nowhere to go." Fraction-of-available-gap is registered for
+any future attempt — and deliberately *not* applied to this one's verdict, since switching metrics
+after seeing data is precisely what this layer exists to catch.
+
+### A mitigation one rater invented
+
+One LOW-arm pass volunteered that it "read the prior review only after my independent scorecard was
+written." It landed at 7.889 — closest of any primed pass to the blind mean, and 1.389 above its own
+arm's lowest pass. Score first, read the prior only to compute the delta. Cheap, and it needs its
+own attempt before anyone believes it off one observation.
+
 ### Operational note for the next attempt
 
 In `steamgriddb-xbox` the five artifact files are **tracked**, so they materialize in any pinned
