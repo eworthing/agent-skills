@@ -1,0 +1,17 @@
+id = "g43-clean-streak-fresh-target"
+purpose = "Positive v4 fixture: a third consecutive clean carrying a genuinely different proposed_fix target plus the SPT question that rejected it. Must PASS."
+expected_result = "pass"
+aspirational = false
+notes = "The over-rejection guard, and required rather than optional: it is the only end-to-end exercise of the convergence_pass[] field, and the only proof G43 does not make an honest ceiling unreportable. method-critic.md is explicit that 'a dimension whose ceiling is honest should collect the same clean every loop' -- the obligation added is to keep proposing something new to have found nothing about, not to manufacture findings. Here the target_symbol changes between loops 3 and 4, so the streak is satisfied. Built from g39-score-impact-valid replicated across 4 loops -- the first v4 fixtures at loop >= 4, which G43's floor requires (loop 1's delta is SAME by definition, so at loop 4 the three observations are loops 4/3/2 and loop 2's is the first real one). REVIEW_HISTORY.json carries 4 entries with loops[-1] equal to CURRENT_REVIEW.json (G18) and REVIEW_HISTORY.md one divider per loop (G22). Only architecture_quality is left stalled; every other sub-9.5 dimension carries delta UP on the current loop so it is not owed a pass, keeping exactly one dimension in scope. Verified: strict mode exits 0."
+
+[[tested_rules]]
+kind = "gate"
+id = "G43"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"
+
+[[tested_rules]]
+kind = "scorecard-dimension"
+id = "architecture_quality"

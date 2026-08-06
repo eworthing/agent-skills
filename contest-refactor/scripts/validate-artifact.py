@@ -74,6 +74,7 @@ from _artifact_history import (  # noqa: E402
 from _artifact_residual import (  # noqa: E402
     check_g5_sub95_residual_fields,
     check_g37_terminal_residual_accounting,
+    check_g43_convergence_pass,
 )
 
 SKILL_ROOT = SCRIPT_DIR.parent
@@ -154,6 +155,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g40_discovery_persistence(current_review))
     issues.extend(check_g41_cap_loop_executed(current_review))
     issues.extend(check_g42_backlog_stable_id(current_review))
+    issues.extend(check_g43_convergence_pass(current_review, history, canon))
     issues.extend(check_continue_backlog(current_review))
     return issues
 

@@ -169,3 +169,7 @@ title = "Cap loop executes its budgeted work (loop == loop_cap with a non-empty 
 [[validation_gates]]
 id = "G42"
 title = "Backlog item identity (stable_id present and derived from a Finding, schema_version >= 4)"
+
+[[validation_gates]]
+id = "G43"
+title = "Convergence-pass coverage — a repeated clean must propose anew (loop >= 4, schema_version >= 4)"

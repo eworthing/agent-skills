@@ -252,6 +252,30 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
     }
   ],
 
+  // Convergence passes (v4+; optional array, absent ⇒ []). One entry per dimension this loop
+  // re-tested via the Stalled-Dimension Sweep (sub-9.5, delta SAME for 3+ loops) or the
+  // Adversarial Pass on Accepted Residuals (9.5 + accepted, every loop). See
+  // references/method-critic.md. G43 enforces coverage, record shape, and — from the third
+  // consecutive clean on a dimension — that the proposal is genuinely new. The Builder Notes
+  // line is the human mirror of this record, not its source.
+  "convergence_pass": [
+    {
+      "dimension": "architecture_quality",        // required; a canon/scorecard-dimensions.toml id present in this scorecard
+      "pass": "stalled_sweep",                    // required enum: stalled_sweep | adversarial
+      "outcome": "clean",                         // required enum: candidate | clean
+      "surface_walked": "PrimaryWidget.xaml.cs (2092 lines) + Services/ (11 files)",  // required, non-empty — the source you actually read
+      "finding_stable_id": null,                  // required non-null when outcome == "candidate"; must resolve in this loop's findings[]. Null on a clean.
+      "proposed_fix": {                           // required from the 3rd consecutive clean; optional otherwise. STRUCTURED — identity lives here, not in prose.
+        "fix_kind": "extract",                    //   enum, canon/fix-kinds.toml: extract | inline | delete | merge | move | gate
+        "target_path": "SteamGridDB.Xbox/PrimaryWidget.xaml.cs",  //   what the fix would change
+        "target_symbol": "PopulateGridSelectionPanelAsync",       //   the method/type it would act on
+        "note": "..."                             //   free prose. Deliberately NOT part of the novelty comparison.
+      },
+      "spt_question_failed": "Q5",                // required alongside proposed_fix: "Q1".."Q5" | "structural_gate" — which SPT question rejected it
+      "clean_rationale": "the extraction needs GameEntry to shed its UI-bound members first"  // required non-empty when outcome == "clean". "nothing found" is fake-clean, not a rationale.
+    }
+  ],
+
   // Builder Notes (required; exactly 3 items unless verdict is HALT_SUCCESS or scope-limited)
   "builder_notes": [
     {

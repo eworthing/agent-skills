@@ -88,7 +88,26 @@ reward.
 Does NOT obligate net-new findings — coverage check, not finding-fishing; G3 evidence
 chain still required. Same contract as [method.md Step 1.7](method.md#method-10-steps-in-order).
 No quota, and a dimension whose ceiling is honest should collect the same clean every
-loop. The output is a record of where the loop looked, so a `SAME` running ten loops
+loop — but it must keep proposing something new to have found nothing about. **From the
+third consecutive clean on a dimension, the record must name a `proposed_fix` whose
+`(fix_kind, target_path, target_symbol)` differs from the prior loop's, plus the SPT
+question that rejected it** — the same obligation the [Adversarial Pass on Accepted
+Residuals](#adversarial-pass-on-accepted-residuals) already carries, and for the same
+reason. Rewording the rationale is not a new proposal.
+
+**Machine record.** Each triggered dimension emits one `convergence_pass[]` entry
+(schema in [output-format-json.md](output-format-json.md)) with `pass: "stalled_sweep"`,
+the `surface_walked`, and either `outcome: "candidate"` plus a `finding_stable_id`
+resolving into this loop's `findings[]`, or `outcome: "clean"` plus a `clean_rationale`.
+The candidate branch is representable *only* as a finding id, which is why the Builder
+Notes line carries only the ID and **G11** holds. Enforced by **G43**.
+
+Why the obligation exists: this pass was permission to restate a conclusion, and across
+55 production loops it was used that way. One run's cleans went from a real rationale to
+*"same conclusion as loops 1-5"* to a bare *"explicit clean."* while the file it was
+clearing stayed the named blocker for 40 of 40 loops. Both runs that had this pass ran it
+on every eligible loop and were fully compliant — the contract, not the compliance, was
+the defect. The output is a record of where the loop looked, so a `SAME` running ten loops
 is either a decision someone made or a hole someone can see.
 
 ## Residual Accounting Pass
@@ -138,6 +157,8 @@ For each `residual_disposition: "accepted"` entry:
 **Oscillation guard**: any finding re-opened by the Adversarial Pass still flows through Step 1.5 registry lookup AND Step 1.6 retirement rules. If the same `stable_id` was previously surfaced via Adversarial Pass and resolved/rejected, Branch A (3-way hash equality) or Branch B (2-way hash equality with intervening `resolved`) will retire it as `unresolvable`, blocking infinite re-open / re-accept cycles. The Adversarial Pass does not bypass G30 retirement precedence.
 
 **Loop 1 exempt** when no prior `residual_disposition: "accepted"` exists in `findings_registry.json` or this loop's draft scorecard. Otherwise applies every loop.
+
+**Machine record.** Each accepted residual re-tested this loop emits one `convergence_pass[]` entry (schema in [output-format-json.md](output-format-json.md)) with `pass: "adversarial"`, the `surface_walked`, and the step-1 proposal as a structured `proposed_fix` — `(fix_kind, target_path, target_symbol)` plus a free-prose `note` — with step 4's rejection as `spt_question_failed`. **G43** enforces both the record's presence and, on a repeated clean, that the target triple actually changed: novelty is judged structurally, never on the prose, so rewording the `note` or the rationale does not make a proposal new. This pass is the model the [Stalled-Dimension Sweep](#stalled-dimension-sweep) was brought up to — demanding a *newly proposed fix* is what kept it producing distinct candidates across loops where the Sweep's permission to restate produced none. Its one observed lapse was silent: a loop owing this pass on two accepted dimensions recorded neither, and nothing noticed.
 
 
 ## Delta Derivation Guardrail

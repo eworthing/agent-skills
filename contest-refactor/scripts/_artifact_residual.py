@@ -1,5 +1,8 @@
 """Residual and scorecard-coherence gates: G5 (converse), G37, G43.
 
+G43's convergence-pass record is the third: a dimension that keeps reporting "nothing
+to do" must keep proposing something new to have found nothing about.
+
 Carved out of _artifact_halt.py when G37's trigger widened past that module's LoC
 headroom. The split is independently correct: these three gates all answer "is this
 scorecard internally coherent about what it is NOT claiming", which is a different
@@ -181,4 +184,279 @@ def check_g37_terminal_residual_accounting(current_review: dict) -> list[Issue]:
                 )
             )
         # any other non-null value is an unknown enum token -- owned by check_schema_enums
+    return issues
+
+
+# --- G43: convergence-pass coverage -------------------------------------------------
+
+_G43_STATES = ("CONTINUE", "HALT_LOOP_CAP", "HALT_STAGNATION")
+_G43_LOOP_FLOOR = 4  # loop 1's delta is "SAME" by definition; see the gate docstring
+_CLEAN_STREAK_OWING_A_FRESH_PROPOSAL = 3
+_SPT_QUESTIONS = {"Q1", "Q2", "Q3", "Q4", "Q5", "structural_gate"}
+
+
+def _prior_loops(current_review: dict, history: dict | None) -> list[dict]:
+    """The two most recent archived loops strictly older than this one.
+
+    Filtering on `e.loop < current.loop` and prepending the current artifact's own delta
+    reads correctly under BOTH timings with no branch: at Step-1 emit the history holds
+    loops 1..N-1, and against a completed artifact G18 requires it to hold 1..N with
+    loops[-1] == CURRENT_REVIEW.json.
+    """
+    loops = (history or {}).get("loops") or []
+    try:
+        current_loop = int(current_review.get("loop"))
+    except (TypeError, ValueError):
+        return []
+    older = [
+        entry
+        for entry in loops
+        if isinstance(entry, dict)
+        and isinstance(entry.get("loop"), int)
+        and entry["loop"] < current_loop
+    ]
+    older.sort(key=lambda e: e["loop"])
+    return older[-2:]
+
+
+def _proposal_target(record: dict) -> tuple | None:
+    """The structured identity of a proposed fix: (fix_kind, target_path, target_symbol).
+
+    Deliberately NOT a hash of the prose. A production finding -- "Free-form residual
+    wording defeats candidate recurrence" -- established that hashing free-form text is
+    defeatable, because a reword yields a new hash while meaning the same thing. `note`
+    and `clean_rationale` are excluded for exactly that reason: a loop obliged to propose
+    something new must change the target or the kind, not the wording.
+    """
+    fix = record.get("proposed_fix")
+    if not isinstance(fix, dict):
+        return None
+    return (fix.get("fix_kind"), fix.get("target_path"), fix.get("target_symbol"))
+
+
+def _records_by_dim(review: dict) -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for record in review.get("convergence_pass") or []:
+        if isinstance(record, dict) and isinstance(record.get("dimension"), str):
+            out.setdefault(record["dimension"], record)
+    return out
+
+
+def _clean_streak(dim: str, current: dict, priors: list[dict]) -> int:
+    """Consecutive loops ending at this one whose record for `dim` was a clean."""
+    streak = 0
+    for review in [current, *reversed(priors)]:
+        record = _records_by_dim(review).get(dim)
+        if record is None or record.get("outcome") != "clean":
+            break
+        streak += 1
+    return streak
+
+
+def check_g43_convergence_pass(
+    current_review: dict, history: dict | None, canon=None
+) -> list[Issue]:
+    """G43: a convergence pass must be recorded, and a repeated clean must propose anew.
+
+    Two passes re-test a stalled dimension each loop -- the Stalled-Dimension Sweep (for a
+    sub-9.5 dimension whose delta has been SAME for three or more loops) and the Adversarial
+    Pass on Accepted Residuals (for a 9.5-accepted dimension, every loop). Both were prose
+    obligations with no gate, and their outcomes across 55 production loops tracked their
+    contracts exactly: the Adversarial Pass demands a newly proposed smallest fix plus the
+    SPT question it failed, and produced three structurally distinct candidates; the Sweep
+    permits "a named candidate OR an explicit clean", and decayed to a bare "explicit clean."
+    while the same file stayed the named blocker for 40 of 40 loops with no movement.
+
+    Both runs that had the Sweep were fully COMPLIANT with it. That is why this gate keys on
+    repetition, not presence: a gate that merely required the record would have passed every
+    failing loop.
+
+    A dimension is owed a record when it is stalled sub-9.5 or 9.5-accepted. It is accounted
+    by a convergence_pass[] record naming it, or by a backlog[] item whose score_impact names
+    it (it was filed, so the failure mode cannot apply). Once a dimension has answered "clean"
+    for three consecutive loops, its record must also carry a `proposed_fix` whose
+    (fix_kind, target_path, target_symbol) differs from the prior loop's, plus the
+    `spt_question_failed` that rejected it. Rewording `note` or `clean_rationale` changes
+    nothing.
+
+    Floor: schema_version >= 4 AND loop >= 4. Loop 1's delta is "SAME" by definition, so at
+    loop 4 the three observations are loops 4/3/2 and loop 2's is the first real one -- firing
+    at loop 3 would count a definitional SAME as evidence of a stall.
+    """
+    issues: list[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    loop = current_review.get("loop")
+    if isinstance(loop, bool) or not isinstance(loop, int) or loop < _G43_LOOP_FLOOR:
+        return issues
+    if current_review.get("state") not in _G43_STATES:
+        return issues
+
+    scorecard = current_review.get("scorecard") or {}
+    if not isinstance(scorecard, dict):
+        return issues
+
+    priors = _prior_loops(current_review, history)
+    records = _records_by_dim(current_review)
+    fix_kinds = set((canon.extra.get("fix_kinds") if canon is not None else None) or ())
+
+    # --- shape check: every record present must be well-formed, trigger or not ---
+    for record in current_review.get("convergence_pass") or []:
+        issues.extend(_check_record_shape(record, scorecard, current_review, fix_kinds))
+
+    if len(priors) < 2:
+        return issues  # history shape is G18's business; too little to judge a stall
+
+    backlog_dims = _dims_named_by_backlog(current_review.get("backlog"))
+
+    for dim, score, entry in _scored_dimensions(scorecard):
+        stalled_sweep = score < 9.5 and _all_same(dim, current_review, priors)
+        adversarial = score >= 9.5 and entry.get("residual_disposition") == "accepted"
+        if not (stalled_sweep or adversarial):
+            continue
+        if dim in backlog_dims:
+            continue  # it was filed; the restatement failure mode cannot apply
+
+        record = records.get(dim)
+        if record is None:
+            pass_name = "stalled_sweep" if stalled_sweep else "adversarial"
+            issues.append(
+                Issue(
+                    "G43",
+                    f"dimension {dim!r} is owed a {pass_name} convergence pass "
+                    f"({'sub-9.5 and SAME for 3 loops' if stalled_sweep else '9.5 with an accepted residual'}) "
+                    f"but convergence_pass[] carries no record for it, and no backlog item names it",
+                )
+            )
+            continue
+
+        if record.get("outcome") != "clean":
+            continue
+        streak = _clean_streak(dim, current_review, priors)
+        if streak < _CLEAN_STREAK_OWING_A_FRESH_PROPOSAL:
+            continue
+
+        target = _proposal_target(record)
+        if target is None or not all(target):
+            issues.append(
+                Issue(
+                    "G43",
+                    f"dimension {dim!r} has answered 'clean' for {streak} consecutive loops; "
+                    f"the record must carry a structured proposed_fix (fix_kind, target_path, "
+                    f"target_symbol) naming what was tried and rejected. A clean repeated without "
+                    f"a fresh proposal is a restatement, not an investigation",
+                )
+            )
+            continue
+        if record.get("spt_question_failed") not in _SPT_QUESTIONS:
+            issues.append(
+                Issue(
+                    "G43",
+                    f"dimension {dim!r} proposed a fix on a {streak}-loop clean streak but did not "
+                    f"name the Simplify Pressure Test question that rejected it "
+                    f"(spt_question_failed ∈ {sorted(_SPT_QUESTIONS)})",
+                )
+            )
+        prior_record = _records_by_dim(priors[-1]).get(dim) or {}
+        prior_target = _proposal_target(prior_record)
+        if prior_target is not None and prior_target == target:
+            issues.append(
+                Issue(
+                    "G43",
+                    f"dimension {dim!r} repeated the SAME proposed_fix target as the prior loop "
+                    f"{prior_target!r} on a {streak}-loop clean streak. Novelty is judged on "
+                    f"(fix_kind, target_path, target_symbol), never on the prose: rewording `note` "
+                    f"or `clean_rationale` does not make a proposal new",
+                )
+            )
+    return issues
+
+
+def _all_same(dim: str, current_review: dict, priors: list[dict]) -> bool:
+    """True when `dim`'s delta is 'SAME' across this loop and both priors."""
+    for review in [current_review, *priors]:
+        entry = (review.get("scorecard") or {}).get(dim)
+        if not isinstance(entry, dict) or entry.get("delta") != "SAME":
+            return False
+    return True
+
+
+def _check_record_shape(
+    record, scorecard: dict, current_review: dict, fix_kinds: set[str]
+) -> list[Issue]:
+    """Shape of one convergence_pass[] record, independent of whether it was owed."""
+    issues: list[Issue] = []
+    if not isinstance(record, dict):
+        return [
+            Issue("G43", f"convergence_pass[] entry must be an object, got {type(record).__name__}")
+        ]
+
+    dim = record.get("dimension")
+    if not isinstance(dim, str) or dim not in scorecard:
+        issues.append(
+            Issue(
+                "G43", f"convergence_pass[] dimension {dim!r} is not a dimension of this scorecard"
+            )
+        )
+    if record.get("pass") not in ("stalled_sweep", "adversarial"):
+        issues.append(
+            Issue(
+                "G43",
+                f"convergence_pass[] entry for {dim!r} has pass={record.get('pass')!r}; "
+                f"expected 'stalled_sweep' or 'adversarial'",
+            )
+        )
+    outcome = record.get("outcome")
+    if outcome not in ("candidate", "clean"):
+        issues.append(
+            Issue(
+                "G43",
+                f"convergence_pass[] entry for {dim!r} has outcome={outcome!r}; "
+                f"expected 'candidate' or 'clean'",
+            )
+        )
+    surface = record.get("surface_walked")
+    if not isinstance(surface, str) or not surface.strip():
+        issues.append(
+            Issue(
+                "G43",
+                f"convergence_pass[] entry for {dim!r} must name the surface_walked it actually "
+                f"read; an unnamed surface is the fake-clean the Sweep's own prose rejects",
+            )
+        )
+    if outcome == "candidate":
+        stable_id = record.get("finding_stable_id")
+        known = {
+            f.get("stable_id")
+            for f in (current_review.get("findings") or [])
+            if isinstance(f, dict)
+        }
+        if stable_id not in known:
+            issues.append(
+                Issue(
+                    "G43",
+                    f"convergence_pass[] entry for {dim!r} claims a candidate but "
+                    f"finding_stable_id={stable_id!r} is not in this loop's findings[]. A named "
+                    f"candidate routes through the evidence chain, not through prose",
+                )
+            )
+    elif outcome == "clean":
+        rationale = record.get("clean_rationale")
+        if not isinstance(rationale, str) or not rationale.strip():
+            issues.append(
+                Issue(
+                    "G43",
+                    f"convergence_pass[] entry for {dim!r} is a clean with no clean_rationale; "
+                    f"'nothing found' is fake-clean reward, not a rationale",
+                )
+            )
+    fix = record.get("proposed_fix")
+    if isinstance(fix, dict) and fix_kinds and fix.get("fix_kind") not in fix_kinds:
+        issues.append(
+            Issue(
+                "G43",
+                f"convergence_pass[] entry for {dim!r} has fix_kind={fix.get('fix_kind')!r}; "
+                f"expected one of {sorted(fix_kinds)} (canon/fix-kinds.toml)",
+            )
+        )
     return issues

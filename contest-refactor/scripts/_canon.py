@@ -202,6 +202,10 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         extra["premium_models"] = _require_list(
             premium_models_data, "premium_models", premium_models_path
         )
+    fix_kinds_path = canon_dir / "fix-kinds.toml"
+    if fix_kinds_path.exists():
+        fix_kinds_data = _load_toml(fix_kinds_path)
+        extra["fix_kinds"] = _require_list(fix_kinds_data, "fix_kinds", fix_kinds_path)
 
     return Canon(
         states=states,

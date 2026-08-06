@@ -1,0 +1,21 @@
+# Canonical kinds of structural fix a convergence pass may propose.
+# Source of truth. Referenced by scripts/_canon.py, scripts/validate-artifact.py (G43),
+# references/validation.md (G43), references/method-critic.md (Stalled-Dimension Sweep +
+# Adversarial Pass on Accepted Residuals), references/output-format-json.md.
+#
+# Why this is an enum rather than prose: G43 judges whether a repeated "clean" verdict
+# proposed something NEW, and it must do so rephrase-invariantly. A production finding
+# ("Free-form residual wording defeats candidate recurrence") established that hashing
+# free-form prose is defeatable -- a reword yields a different hash while meaning the same
+# thing, so a loop obliged to produce something new each loop can satisfy the check by
+# rewording. Novelty is therefore judged on the structured triple
+# (fix_kind, target_path, target_symbol); the accompanying `note` is free prose and is
+# deliberately NOT part of the comparison.
+fix_kinds = [
+    "extract",  # move a cohesive concern out into its own Module with its own Interface
+    "inline",   # remove a shallow indirection by folding it back into its only caller
+    "delete",   # remove the thing outright (the deletion test passes)
+    "merge",    # collapse two or more near-identical Modules into one
+    "move",     # relocate a concern to the Module that already owns its state
+    "gate",     # add a guard/check at an existing Seam rather than a new Module
+]
