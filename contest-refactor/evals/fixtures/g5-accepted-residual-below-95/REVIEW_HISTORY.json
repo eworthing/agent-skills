@@ -5,14 +5,9 @@
       "schema_version": 4,
       "loop": 1,
       "loop_cap": 10,
-      "state": "HALT_STAGNATION",
-      "halt_subtype": "verification_blocked",
-      "halt_handoff": {
-        "state": "HALT_STAGNATION",
-        "halt_subtype": "verification_blocked",
-        "text": "Loop 1 fail-closed: challenger unavailable.",
-        "expected_actions": []
-      },
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff": null,
       "halt_handoff_text": null,
       "re_validated_at_sha": null,
       "re_validation_context": null,
@@ -25,7 +20,9 @@
       "spawn_isolation": "subagent",
       "findings_registry_path": "./findings_registry.json",
       "discovery": {
-        "source_roots": ["Sources/"],
+        "source_roots": [
+          "Sources/"
+        ],
         "test_command": "swift test",
         "lens": "Apple",
         "test_scope": "full",
@@ -41,7 +38,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "state_management": {
@@ -51,7 +47,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "domain_modeling": {
@@ -61,7 +56,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "data_flow": {
@@ -71,7 +65,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "framework_idioms": {
@@ -81,7 +74,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "concurrency": {
@@ -91,7 +83,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "simplicity": {
@@ -101,17 +92,15 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         },
         "test_strategy": {
           "score": 8.5,
           "delta": "SAME",
           "proof": "Tests/AppEngineTests.swift:1",
-          "residual_blocking_10": null,
-          "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
+          "residual_blocking_10": "PrimaryWidget session IDs have no direct test file",
+          "residual_disposition": "accepted",
+          "residual_rationale_or_backlog_ref": "platform constraint: no desktop XAML projection",
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
@@ -121,7 +110,6 @@
           "residual_blocking_10": null,
           "residual_disposition": null,
           "residual_rationale_or_backlog_ref": null,
-          "residual_blocker_kind": "structural_anchor_unmet",
           "unverifiable_due_to_build_failure": false
         }
       },
@@ -137,15 +125,21 @@
         "should_not_be_done": "Force a new protocol return.",
         "tests_after_fix": "Existing tests pass."
       },
-      "backlog": [],
+      "backlog": [
+        {
+          "priority": 1,
+          "title": "Share the per-key cache skeleton across the store lookups",
+          "kind": "structural",
+          "rank": "needed for winning",
+          "why_it_matters": "Four hand-copied lazy-load skeletons; one shared type removes three.",
+          "score_impact": "data_flow +0.5; framework_idioms +0.5",
+          "stable_id": "F-001"
+        }
+      ],
       "deepening_candidates": [],
       "builder_notes": [],
       "narrative": "Clean v3 CONTINUE; vanilla loop; all v3 invariants satisfied (G18/G19/G27/G28 N/A or pass).",
-      "unresolved_reason": "HALT_SUCCESS challenger unavailable after the retry envelope; candidate held in limbo.",
-      "run_id": null,
-      "source_rev": null,
-      "candidate_fingerprint": null,
-      "halt_success_challenge": null
+      "unresolved_reason": null
     }
   ]
 }

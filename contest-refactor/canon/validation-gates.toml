@@ -92,7 +92,7 @@ title = "Commit + archive divider format (pre-commit)"
 
 [[validation_gates]]
 id = "G23"
-title = "Residual accounting before no_backlog / converged HALT_LOOP_CAP (pre-emit; mechanized by G37)"
+title = "Residual accounting at every terminal (pre-emit; mechanized by G37)"
 
 [[validation_gates]]
 id = "G24"
@@ -148,7 +148,7 @@ title = "Required non-null state (presence; membership ∈ canon owned by the sc
 
 [[validation_gates]]
 id = "G37"
-title = "Residual-blocker-kind coherence at converged empty-backlog terminals (no_backlog + HALT_LOOP_CAP empty-backlog, schema_version >= 4)"
+title = "Terminal residual accounting — no sub-9.5 dimension stranded (HALT_LOOP_CAP + HALT_STAGNATION, any subtype/backlog, schema_version >= 4)"
 
 [[validation_gates]]
 id = "G38"

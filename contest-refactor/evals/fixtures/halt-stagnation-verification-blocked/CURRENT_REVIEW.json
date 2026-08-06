@@ -38,6 +38,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "state_management": {
@@ -47,6 +48,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "domain_modeling": {
@@ -56,6 +58,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "data_flow": {
@@ -65,6 +68,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "framework_idioms": {
@@ -74,6 +78,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "concurrency": {
@@ -83,6 +88,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "simplicity": {
@@ -92,6 +98,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "test_strategy": {
@@ -101,6 +108,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     },
     "credibility": {
@@ -110,6 +118,7 @@
       "residual_blocking_10": null,
       "residual_disposition": null,
       "residual_rationale_or_backlog_ref": null,
+      "residual_blocker_kind": "structural_anchor_unmet",
       "unverifiable_due_to_build_failure": false
     }
   },

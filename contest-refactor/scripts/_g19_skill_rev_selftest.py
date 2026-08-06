@@ -48,9 +48,7 @@ def _base(**overrides) -> dict:
 
 
 def _skill_rev_issues(va, artifact: dict) -> list[str]:
-    return [
-        i.message for i in va.check_g19_provider_model(artifact) if "skill_rev" in i.message
-    ]
+    return [i.message for i in va.check_g19_provider_model(artifact) if "skill_rev" in i.message]
 
 
 def main() -> int:

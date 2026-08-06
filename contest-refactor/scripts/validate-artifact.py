@@ -54,7 +54,6 @@ from _artifact_halt import (  # noqa: E402
     check_g34_halt_tail_invariants,
     check_g35_halt_handoff_shape,
     check_g36_required_state,
-    check_g37_residual_blocker_coherence,
     check_g38_premium_model_budget_guard,
     check_halt_success_gating,
 )
@@ -71,6 +70,10 @@ from _artifact_history import (  # noqa: E402
     check_g30_disposition_coverage,
     check_g31_fingerprint_integrity,
     check_retirement_rule,
+)
+from _artifact_residual import (  # noqa: E402
+    check_g5_sub95_residual_fields,
+    check_g37_terminal_residual_accounting,
 )
 
 SKILL_ROOT = SCRIPT_DIR.parent
@@ -139,12 +142,13 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g28_loop_state_freshness(artifact_dir, current_review, project_config))
     issues.extend(check_halt_success_gating(current_review, project_config))
     issues.extend(check_g21_scorecard(current_review))
+    issues.extend(check_g5_sub95_residual_fields(current_review))
     issues.extend(check_g32_halt_success_challenge(current_review))
     issues.extend(check_g33_risk_boundary_evidence(current_review, canon))
     issues.extend(check_g34_halt_tail_invariants(current_review, canon))
     issues.extend(check_g35_halt_handoff_shape(current_review, canon))
     issues.extend(check_g36_required_state(current_review, canon))
-    issues.extend(check_g37_residual_blocker_coherence(current_review))
+    issues.extend(check_g37_terminal_residual_accounting(current_review))
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))

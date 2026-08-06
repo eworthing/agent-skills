@@ -172,7 +172,7 @@ Meta-Rules + Evidence Discipline: [references/method.md](references/method.md). 
 - Every score above 7 has at least one source-backed reason. G4.
 - Every score of 10 explains why no behavior-preserving source-backed improvement is available. G6.
 - 9.5+ on a category requires the 9-anchor met **plus** explicit residual identification. G5.
-- Terminal scorecards cannot strand a category at 9 with only cosmetic, ADR-accepted, or SPT-failing candidates. Promote to 9.5 accepted residual, promote to 10 if no residual exists, or keep sub-9.5 only with a named non-backlog blocker. G23.
+- Terminal scorecards cannot strand a category below 9.5 — at **either** terminal (`HALT_LOOP_CAP` or `HALT_STAGNATION`), any subtype, any backlog. Every sub-9.5 dimension is accounted by a backlog item whose `score_impact` names it, or by `residual_blocker_kind: "structural_anchor_unmet"`. Cosmetic / ADR-accepted / SPT-failing candidates promote to a 9.5 accepted residual instead, or to 10 if no residual exists. A non-empty backlog accounts only for the dimensions it names. G23, mechanized by G37.
 - "Code simplicity" drops → over-engineered the last refactor; revert.
 - Delta computed against previous loop's `CURRENT_REVIEW.md` (now archived in `REVIEW_HISTORY.md`).
 

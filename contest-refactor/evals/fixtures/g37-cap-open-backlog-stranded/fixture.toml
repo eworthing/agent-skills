@@ -1,0 +1,21 @@
+id = "g37-cap-open-backlog-stranded"
+purpose = "Negative v4 fixture: HALT_LOOP_CAP with a NON-empty backlog strands data_flow — no backlog score_impact names it and residual_blocker_kind is absent. Must FAIL on G37."
+expected_result = "fail"
+aspirational = false
+notes = "Reproduces the exhausted-cap shape from a 15-loop production run. Before G37's trigger widened, that artifact validated clean: G37 only fired at CONVERGED (empty-backlog) terminals, on the assumption that a non-empty backlog explains the sub-9.5 gaps — which holds only for the dimensions the backlog actually names. Here the backlog names simplicity, seven dimensions carry structural_anchor_unmet, and data_flow carries neither, so the fixture proves both legal accounts stay silent while the stranded one fires. Derived from g41-cap-loop-executed by deleting data_flow's residual_blocker_kind in both CURRENT_REVIEW.json and REVIEW_HISTORY.json.loops[-1] (G18 equality). Sits at loop=1 so G43's loop>=4 floor keeps G37 the only gate that fires — verified: strict mode reports exactly one FAIL, [G37]."
+
+[[tested_rules]]
+kind = "gate"
+id = "G37"
+
+[[tested_rules]]
+kind = "residual-rule"
+id = "terminal-normalization"
+
+[[tested_rules]]
+kind = "scorecard-dimension"
+id = "data_flow"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_LOOP_CAP"
