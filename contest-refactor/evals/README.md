@@ -72,6 +72,7 @@ bare model approximates or omits. That gap is the lift.
 | `identity-flag` (#16) | `identity-restraint` (#17) | `.indices` on a dynamic/reorderable list vs. genuinely static `CaseIterable` |
 | `ownership-flag` (#18) | `ownership-restraint` (#19) | `@State` from a passed value with expected parent-sync vs. a local edit draft |
 | — | `style-suppression-restraint` (#20) | `// swiftlint:disable line_length` is style, not a safety suppression |
+| `halt-challenge-flag` (#21) | `halt-challenge-restraint` (#22) | **HALT_SUCCESS challenger scenarios, not reviewer-judgment**: a hollow HR-1 compliance residual hiding three writers to `selectedTab` (must break) vs. a correctly SPT-rejected 979-LOC true-external adapter residual (must hold). Corpus for the panel pre-enforcement gate (`scripts/_panel_gate_adapter.py`, plans/rec1-panel-certification.md) |
 | `strictness-aggressive-flag` (#23) | `strictness-aggressive-restraint` (#24) | under `--strictness aggressive`: a prose-only accepted residual (demand a citation, don't accept) vs. one citing a named constraint + file:line + test (accept; don't demand a date) |
 | `principal-invariant-owner-flag` (#25) | `principal-invariant-owner-restraint` (#26) | domain invariant enforced independently in two modules (split) vs. single domain method both paths call through |
 | `principal-duplicated-rule-flag` (#27) | `principal-duplicated-rule-restraint` (#28) | eligibility predicate duplicated across View + Repository + Worker with drift vs. `DiscountPolicy` already centralizes it |

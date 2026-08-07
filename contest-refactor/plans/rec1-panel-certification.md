@@ -1,6 +1,6 @@
 # Plan — Recommendation 1: certification cannot rest on one pass
 
-**Status:** revised across 10 peer-review rounds in two sessions (codex `gpt-5.6-sol`, effort `xhigh`), both run to their round cap, plus a final consistency pass. **Delivery step 1 (v5 reader) is implemented** — `scripts/_artifact_panel.py` (G32 moved out of `_artifact_halt.py` and extended for v5), `_g32_panel_selftest.py` (49 cases), and 20 fixtures (see § Fixtures — as built). Steps 2 (behavioral gate) and 3 (emitter + routing prose) are not started.
+**Status:** revised across 10 peer-review rounds in two sessions (codex `gpt-5.6-sol`, effort `xhigh`), both run to their round cap, plus a final consistency pass. **Delivery step 1 (v5 reader) is implemented** — `scripts/_artifact_panel.py` (G32 moved out of `_artifact_halt.py` and extended for v5), `_g32_panel_selftest.py` (49 cases), and 20 fixtures (see § Fixtures — as built). **Step 2 (behavioral gate) is implemented and was run live 2026-08-07** — `scripts/_panel_gate_adapter.py` + 17-case selftest, evidence in `evals/panel_gate_results.json`; **gate verdict FAIL for the claude_code/Sonnet profile** (flag discriminated 3/3, restraint over-flagged 3/6 members — see § Pre-enforcement gate — as run). Step 3 (emitter + routing prose) is **blocked**: no profile has a recordable `panel_certification` capability, exactly as the gate is designed to enforce.
 **Review state:** session 1 settled the design — Tier 1 only, `schema_version` 5, fixed N=3, staged launch, no fixture migration. Session 2 (fresh context) recorded the core certification design as sound from its round 4 on, with remaining findings characterised as "narrow state-machine and schema contradictions rather than missing architectural work." Its final round's fixes (panel-checkpoint resume row above rows 7/7b/8; G32 narrowed to digest *shape*) plus a subsequent self-review pass — which moved panel-checkpoint creation to **panel spawn** so mid-panel member verdicts have somewhere durable to live, added the `normalization` field to the member schema, deduplicated the fixture tables, and swept stale cross-references — have **not** been peer-reviewed.
 
 **Known pattern worth flagging to an implementer:** three separate times this plan assigned G32 a *temporal* invariant it cannot check (`candidate_binding` equality, then its immutability, then `protocol_digest` copy-forward). G32 is a stateless single-artifact validator. Any cross-artifact or across-time guarantee belongs to routing/resume logic with behavioral tests. Expect to re-apply that rule during implementation.
@@ -404,6 +404,36 @@ Any failure blocks the `panel_certification` capability for that profile.
 **Reproducibility.** Pin and record provider, model, skill revision, `protocol_digest`, raw member responses, enforced `C_max`, observed usage, and grading results for every gate run. **Enablement is scoped to the provider/model profiles actually measured**, enforced by the capability entry — an untested profile is not covered by another profile's gate pass.
 
 **Repository checks**, all required: the new `_g32_panel_selftest.py`; every existing `_*_selftest.py`; `validate-artifact.py`; `validate-fixtures.py evals/fixtures/`; `validate-repo.py`; `check_module_size.py`; `ruff check` + `ruff format --check` at the pinned `0.15.6`; `eval-skill.py contest-refactor`.
+
+### Pre-enforcement gate — as run (step 2, 2026-08-07)
+
+**Profile:** `claude_code` / `claude-sonnet-5` (in-session Agent tool, alias `sonnet`; prompt-level read-only; verdicts delivered over the session mailbox). **skill_rev** `4a081da`; **protocol_digest** `sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec`. Staged launch honored: every flag panel and two restraint panels ended at member 1 (break); only restraint panel 2 reached stage 2. Evidence with all raw member responses embedded: [`evals/panel_gate_results.json`](../evals/panel_gate_results.json).
+
+| scenario | panels | structural | semantic | outcome |
+|---|---|---|---|---|
+| `halt-challenge-flag` (#21) | 3 | 3/3 pass | 3/3 pass — every panel broke at member 1, naming all three `selectedTab` writers, severity Likely disqualifier | **discriminates** |
+| `halt-challenge-restraint` (#22) | 3 | 3/3 pass | 0/3 — panels went broke / broke-at-aggregate / broke; 3 of 6 members manufactured a break | **over-flags** |
+
+**Gate verdict: FAIL — no `panel_certification` capability entry may be recorded.** The instrument has a positive control (the flag scenario proves it can break a hollow residual) but fails restraint: under the asymmetric one-break-demotes rule, this profile would wrongly demote a legitimate `HALT_SUCCESS`. The correlated over-flag axis is the **port-seam split**: two members broke by proposing a `CatalogPort`/`TransportPort` adapter split (plus one poll/timeout-extraction break), while the two holding members rejected *the same split* as an SPT Q2/Q3 relocation failure. Challenger-prompt hardening against seam-split manufacture, then a re-gate, is the unblock path for step 3.
+
+**First measured `C` (per member, aggregated across the one transport attempt each; input counts fresh + cache-creation + cache-read tokens):**
+
+| member | input | output | total | duration |
+|---|---|---|---|---|
+| flag p1 m1 | 544,712 | 11,523 | 556,235 | 144 s |
+| flag p2 m1 | 455,847 | 12,568 | 468,415 | 185 s |
+| flag p3 m1 | 437,774 | 18,016 | 455,790 | 178 s |
+| restraint p1 m1 | 327,756 | 7,373 | 335,129 | 258 s |
+| restraint p2 m1 | 768,193 | 24,896 | 793,089 | 307 s |
+| restraint p2 m2 | 609,172 | 21,939 | 631,111 | 242 s |
+| restraint p2 m3 | 324,547 | 15,476 | 340,023 | 165 s |
+| restraint p3 m1 | 346,298 | 21,042 | 367,340 | 249 s |
+
+Observed max `C` = **793k**; ~85% of every member's input is **cache reads** (the agentic loop re-presenting its own context each turn), with fresh+cache-creation+output typically 55k–125k. The naive `C_max = 150_000` was exceeded by **every** member under the raw-throughput metric, so all six panels also carry `budget_violation` — which is why the flag scenario's gate line reads FAIL despite 3/3 semantic passes. **Cost-model follow-up:** `C_max` needs a principled, cache-aware re-derivation (raw throughput, weighted-billing, or fresh-only — pick one and re-state § Cost in that unit) before any re-gate; the current figure was a pre-measurement guess and the gate exists to replace it.
+
+**Profile limitations recorded (each alone blocks a capability entry, independent of the restraint failure):** budget enforcement is `post_hoc_discard` — the in-session Agent tool cannot stop a member *before* it crosses the ceiling, which § Cost requires; and `token_usage` is not reported by the transport itself (recovered post-hoc from session transcripts, deduplicated by message id). A capability-bearing profile needs a transport with preemptive budget enforcement and native usage reporting.
+
+**As-built deviations (step 2):** the adapter owns the shared digest function; inputs 2–4 are verbatim plan prose frozen as module constants, so a scoped `RUF001` per-file ignore was added in `pyproject.toml` (rewording to satisfy the linter would change what the digest hashes). Input 10 is the adapter's own bytes — editing it invalidates every recorded pass by design, and **step 3's prose edits to `halt-verifier.md` (input 1) will likewise invalidate this run's digest; the gate re-runs against the frozen protocol before any capability entry is recorded** (the harness is now one `grade` command plus member spawns). Member verdict delivery in this harness arrived via the session mailbox, twice double-JSON-encoded and twice fence/prose-wrapped; `extract_member_json` tolerates all observed shapes and the raw texts are retained verbatim for re-grading. Gate-scope normalization allocates every break against a fresh registry (no cross-member dedup — Method Step 1.5 needs a real registry and is out of gate scope).
 
 ## Risk register
 
