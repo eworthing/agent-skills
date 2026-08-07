@@ -655,4 +655,26 @@ removes a ceiling. **Every gate that certifies convergence lives above the blind
 `skill_rev`, a Critic reading no prior scorecard cannot reach `HALT_SUCCESS` at all. Limits stated plainly:
 post hoc, the ≥ 9.5 comparison alone is *not* significant (3 occurrences, p = 0.121), and it is one corpus.
 
+### Attempt 4 — corpus or rubric? Answered from the archives at zero cost (2026-08-06)
+
+The planned follow-up was a second corpus at N=6 (~1.5M tokens). It was unnecessary: **loop 1 of an archived
+run is already a blind Critic pass** whenever no prior `REVIEW_HISTORY` was on disk. Run A, B and S loop 1
+qualify; **Run C's loop 1 does not** — the combined history carries loop numbers `[1..10, 1..15]`, so it ran
+with Run B's ten loops already on disk.
+
+Pooled: **81 blind scores, 9 passes, 2 corpora, 3+ skill revisions.**
+
+- **Attempt 3's stronger reading is refuted.** The 8.5 ceiling is **corpus-specific** — a blind Critic over
+  agent-skills (Python) emitted 9.0 on four of nine dimensions immediately.
+- **What survives:** across all 81 blind scores, **none reached 9.5** — the threshold G5, G6 and G21 all
+  certify against.
+- **The natural experiment:** Run C began at Run B's HEAD, so their loop 1s describe near-identical source.
+  Blind (Run B): max 8.5, zero at 9.0+. Primed (Run C): max 9.5, **three dimensions at 9.5** — in its first
+  loop, before touching a line of code. That is exactly what attempt 3's N=6 test could not establish.
+
+Caveats: observational, n=1 per run; archived passes ran the *full* protocol at different skill revisions,
+which strengthens the 9.5 claim but weakens per-pass comparison; `skill_rev` is null throughout (the gap
+Change 1 closed), so 29 skill commits also separate the Run B / Run C pair; Run S is a self-review and is the
+sole source of every blind score ≥ 9.0.
+
 Full protocol: [`scorecard-coupling/README.md`](scorecard-coupling/README.md).

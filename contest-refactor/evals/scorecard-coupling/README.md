@@ -187,9 +187,54 @@ function of having certified before.
 
 Stated limits: this is **post hoc** — 9.0 is a rubric anchor, not a fitted cutpoint, but it was
 chosen after seeing the data and needs its own pre-registration. The ≥ 9.5 comparison, which is the
-one that touches the actual gate, is **not** significant on three occurrences. And it is one corpus,
-one `skill_rev`, one model; whether the blind ceiling belongs to this codebase or to the rubric is
-undetermined and is the obvious next probe.
+one that touches the actual gate, is **not** significant on three occurrences.
+
+## Attempt 4 — is the ceiling the corpus or the rubric? (archival, zero cost)
+
+The obvious next probe was a second corpus at N=6, ~1.5M tokens. It was unnecessary: **loop 1 of an
+archived run is already a blind Critic pass** whenever no prior `REVIEW_HISTORY` was on disk. The
+evidence was sitting in the archives the whole time.
+
+One classification matters first. **Run C's loop 1 is not blind** — the combined history file carries
+loop numbers `[1..10, 1..15]`, so Run C's first loop was appended after Run B's ten and that Critic
+could read a prior scorecard for the same codebase. Run A, Run B and Run S loop 1 do qualify.
+
+| blind pass | corpus | mean | max | ≥9.0 |
+|---|---|---|---|---|
+| Run A loop 1 | steamgriddb (C#) | 5.222 | 6.0 | 0 |
+| Run B loop 1 | steamgriddb (C#) | 7.333 | 8.5 | 0 |
+| **Run S loop 1** | **agent-skills (Python)** | 8.222 | **9.0** | **4** |
+| attempts 1–3 ×6 | steamgriddb (C#) | 7.63 avg | 8.5 | 0 |
+
+**Pooled: 81 blind scores, 9 passes, 2 corpora, 3+ skill revisions.**
+
+**First result — attempt 3's stronger reading is refuted.** The 8.5 ceiling is **corpus-specific**. A
+blind Critic over a Python codebase emitted 9.0 on four of nine dimensions immediately, so "no blind
+Critic scores above 8.5" is a fact about the steamgriddb codebase, not about the instrument.
+
+**Second result — what survives, and it is the part that matters.** Across all 81 blind scores,
+**not one reached 9.5** — the threshold G5's residual requirement, G6's 10-anchor and G21's
+`HALT_SUCCESS` bar all certify against.
+
+### The natural experiment the archive was hiding
+
+Run C began at Run B's HEAD, so their loop 1s describe the same codebase at most one loop apart:
+
+| | Run B loop 1 (**blind**) | Run C loop 1 (**primed**) |
+|---|---|---|
+| max score | 8.5 | **9.5** |
+| dimensions ≥ 9.5 | 0 | **3** |
+
+Near-identical source. Only the primed pass crosses the gate threshold — on three dimensions at
+once, in its first loop, before touching a line of code. That is the claim attempt 3's N=6 test
+could not establish (p = 0.121 on three occurrences), showing up for free.
+
+**Caveats, and they are real:** observational, n=1 per run; the archived passes ran the *full*
+protocol at different skill revisions, which strengthens the 9.5 claim (more rulesets, still no 9.5)
+while weakening any per-pass comparison; `skill_rev` is null in every archived artifact because the
+field did not exist yet — the exact attribution gap Change 1 closed, and why the Run B / Run C pair
+is suggestive rather than clean, since 29 skill commits also separate them. Run S is the skill
+reviewing its own repository and is the sole source of every blind score at or above 9.0.
 
 ### A mitigation one rater invented
 

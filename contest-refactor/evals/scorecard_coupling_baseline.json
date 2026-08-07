@@ -186,12 +186,44 @@
         },
         "finding": "This is the cleanest signal in the layer and it reframes the mechanism. Across 54 scores from six independent blind Critics, NOT ONE exceeded 8.5. Primed Critics emitted 15 scores at 9.0 or above and reached 9.5 three times, with 5 of 6 passes crossing 9.0. A prior does not nudge scores upward by a constant — it removes a CEILING. The blind rater will not enter a scoring band on this evidence that the primed rater enters routinely.",
         "why_it_matters": "Every gate that certifies convergence lives above the blind ceiling. G5's residual requirement triggers at 9.5, G6 at 10, and G21's HALT_SUCCESS bar sits at 9.5 across the board. On this corpus at this skill_rev, a Critic reading no prior scorecard CANNOT reach HALT_SUCCESS at all — its ceiling is 8.5 — while a Critic reading its own prior scorecard can. Certification would then be partly a function of having certified before. Note the limit honestly: the >= 9.5 comparison on its own is NOT significant (3 occurrences, p = 0.121), so the band-unlock is established at 9.0 and only suggested at the gate threshold itself.",
-        "scope": "One corpus, one skill_rev, one model. Whether the blind ceiling is a property of this codebase or of the rubric is not determined here and is the obvious next probe."
+        "scope": "RESOLVED by attempt 4 without further sampling: the 8.5 ceiling is corpus-specific, not a rubric property. What survives is the narrower and more relevant claim that no blind pass on either corpus reached 9.5."
       },
       "deviations": [
         "Inherits every deviation of the lean harness used throughout this layer.",
         "Passes 1-3 of each arm were run earlier in the session than passes 4-6; identical harness hash, corpus SHA, skill_rev and model, but not the same wall-clock window.",
         "A commit (9425b54) landed on the target repo's master between the two batches. Both batches read detached worktrees pinned to 1bdec1a and the primed scorecard was verified byte-equal to the artifact at that SHA, so the corpus was unaffected."
+      ]
+    },
+    {
+      "attempt_index": 4,
+      "probe": "blind_ceiling_corpus_vs_rubric",
+      "controlled": false,
+      "status": "observational — archival, zero new sampling",
+      "captured_at": "2026-08-06T20:40:00Z",
+      "note": "Answers attempt 3's open question at no cost. Loop 1 of an archived run IS a blind Critic pass whenever no prior REVIEW_HISTORY existed on disk when it ran, so the archives already held the second-corpus evidence a fresh probe would have bought. Recorded because the cheap answer arrived after the expensive one and the record should show that.",
+      "classification": "Run A loop 1 and Run S loop 1 qualify as blind (nothing prior on disk). Run B loop 1 qualifies: Run A's history had been purged to .contest-refactor-backup-20260805-000130 before it ran. Run C loop 1 does NOT qualify — the combined history file carries loop numbers [1..10, 1..15], so Run C's loop 1 was appended after Run B's ten and that Critic could read a prior scorecard for the same codebase. It is reported here as primed.",
+      "pooled_blind": {
+        "passes": 9, "scores": 81, "corpora": 2, "skill_revisions": "3+",
+        "max_ever_emitted": 9.0, "count_ge_9_0": "4/81", "count_ge_9_5": "0/81"
+      },
+      "by_corpus": {
+        "steamgriddb_csharp_uwp": {"scores": 72, "max": 8.5, "ge_9_0": 0, "ge_9_5": 0},
+        "agent_skills_python": {"scores": 9, "max": 9.0, "ge_9_0": 4, "ge_9_5": 0}
+      },
+      "per_pass": {
+        "Run A loop 1 (steamgriddb)": {"mean": 5.222, "max": 6.0},
+        "Run B loop 1 (steamgriddb)": {"mean": 7.333, "max": 8.5},
+        "Run S loop 1 (agent-skills)": {"mean": 8.222, "max": 9.0, "ge_9_0": 4},
+        "Run C loop 1 (steamgriddb, PRIMED)": {"mean": 7.944, "max": 9.5, "ge_9_5": 3}
+      },
+      "finding": "Two results, and they split the attempt-3 question. FIRST: the 8.5 ceiling is CORPUS-SPECIFIC, not a property of the rubric. A blind Critic over agent-skills (Python, stdlib-only) emitted 9.0 on four of nine dimensions immediately, so 'no blind Critic ever scores above 8.5' is a fact about the steamgriddb codebase, not about the scoring instrument. Attempt 3's stronger reading is refuted. SECOND, and what survives: across 81 blind scores from nine passes, two corpora and at least three skill revisions, NOT ONE reached 9.5 — the threshold G5's residual requirement, G6's 10-anchor and G21's HALT_SUCCESS bar all certify against.",
+      "natural_experiment": "Run B loop 1 versus Run C loop 1 is the sharpest pair in the archive and it addresses exactly what attempt 3 could not establish. Run C began at Run B's HEAD, so the two describe the same codebase at most one loop's refactor apart. Run B's loop 1 was blind: max 8.5, nothing at 9.0 or above. Run C's loop 1 was primed with Run B's ten loops: max 9.5, with THREE dimensions at 9.5 (domain_modeling, framework_idioms, credibility). Near-identical source, one blind and one primed, and only the primed pass crosses the gate threshold — on three dimensions at once, in its first loop, before touching a line of code.",
+      "caveats": [
+        "Observational, n=1 per archived run, and not a designed replication.",
+        "The archived passes ran the FULL protocol (validation.md and the emit gates, which exert pressure toward 9.5 via G5/G21) at different skill revisions, unlike the lean harness used in attempts 1-3. That heterogeneity strengthens the 9.5 claim — more rulesets, still no 9.5 — while weakening any per-pass comparison.",
+        "skill_rev is null in every archived artifact because the field did not exist yet. This is precisely the attribution gap Change 1 was added to close, and it is why the Run B / Run C pair is suggestive rather than clean: 29 skill commits also separate them.",
+        "The steamgriddb blind pool is dominated by attempts 1-3 (54 of 72 scores); only 18 come from full-protocol runs.",
+        "Run S is the skill reviewing its own repository, which carries its own bias direction and is the only source of every blind score at or above 9.0."
       ]
     }
   ],
