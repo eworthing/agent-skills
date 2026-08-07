@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "next_serial": 4,
+  "entries": [
+    {
+      "stable_id": "F-003",
+      "title": "Offline-sync conflict resolution owned in two places",
+      "severity": "Noticeable weakness",
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "open"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "schema_version": 5,
+  "loops": [
+    {
+      "schema_version": 5,
+      "loop": 1,
+      "loop_cap": 10,
+      "state": "HALT_STAGNATION",
+      "halt_subtype": "user_decision",
+      "halt_handoff": {
+        "text": "Loop 1 halted: member 1's break matched the findings registry ambiguously; awaiting a user decision.",
+        "expected_actions": []
+      },
+      "halt_handoff_text": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-5",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-5",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "src/"
+        ],
+        "test_command": "pytest",
+        "lens": "Generic",
+        "test_scope": "full",
+        "test_filter": null
+      },
+      "verdict": "Promising, but architecturally immature",
+      "verdict_explanation": "Panel: member 1 broke ambiguously (row 0); findings[] should be empty but carries one entry.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/architecture_quality.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/state_management.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/domain_modeling.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/data_flow.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/framework_idioms.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/concurrency.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/simplicity.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/test_strategy.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/credibility.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [],
+      "strengths": [
+        "Module graph enforced by source."
+      ],
+      "findings": [
+        {
+          "stable_id": "F-009",
+          "loop_local_id": "F1",
+          "title": "Stray finding written despite the open registry question",
+          "severity": "Noticeable weakness",
+          "why_it_matters": "no registry write should happen while the question is open",
+          "what_is_wrong": "findings[] carries an entry the pending route forbids",
+          "evidence": [
+            "src/legacy/handler.py:77"
+          ],
+          "why_weakens_submission": "contradicts the no-registry-write rule for the pending aggregate",
+          "minimal_correction_path": "remove the entry until the user answers and normalization completes"
+        }
+      ],
+      "simplification_check": {
+        "structurally_necessary": "Continue with backlog work.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "should_not_be_done": "Force a new protocol return.",
+        "tests_after_fix": "Existing tests pass."
+      },
+      "backlog": [],
+      "deepening_candidates": [],
+      "builder_notes": [],
+      "narrative": "Loop 1: negative twin of panel-pending-ambiguous-raw \u2014 findings[] wrongly carries one entry while the aggregate is 'pending', contradicting rule #6 exception (f) and the no-registry-write rule.",
+      "unresolved_reason": "Member 1's break cannot be resolved against the findings registry without user input.",
+      "open_question_for_user": "Does this break match existing finding F-0NN, or is it a new finding?",
+      "halt_success_challenge": {
+        "required_panel_size": 3,
+        "outcome": "pending",
+        "protocol_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "candidate_binding": {
+          "run_id": "run-panel-001",
+          "source_rev": "rev-panel-001",
+          "candidate_commit_sha": "commit-panel-001",
+          "candidate_fingerprint": "fp-sha256-panel00000000000000000000000000"
+        },
+        "panel": [
+          {
+            "member_index": 1,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "broke",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": {
+              "finding": {
+                "title": "Ambiguous match against an existing registry entry",
+                "why_it_matters": "cannot tell which existing finding this is",
+                "what_is_wrong": "the break resembles two prior registry entries equally closely",
+                "evidence": [
+                  "src/legacy/handler.py:77"
+                ],
+                "why_weakens_submission": "writing to the wrong stable_id would corrupt occurrence history",
+                "minimal_correction_path": "ask the user which existing finding this break resolves against"
+              },
+              "spt": {
+                "result": "passed",
+                "rationale": "the break itself is real; only the registry match is ambiguous"
+              }
+            },
+            "normalization": "pending_user_decision",
+            "reason": "member 1 broke, but the break matches the registry ambiguously",
+            "retry_count": 1,
+            "retry_cause": null,
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "ok",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

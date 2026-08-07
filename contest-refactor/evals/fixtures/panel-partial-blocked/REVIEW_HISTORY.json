@@ -1,0 +1,290 @@
+{
+  "schema_version": 5,
+  "loops": [
+    {
+      "schema_version": 5,
+      "loop": 1,
+      "loop_cap": 10,
+      "state": "HALT_STAGNATION",
+      "halt_subtype": "verification_blocked",
+      "halt_handoff": {
+        "text": "Loop 1 fail-closed: only 1 of 3 panel members returned a usable verdict.",
+        "expected_actions": []
+      },
+      "halt_handoff_text": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-5",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-5",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "src/"
+        ],
+        "test_command": "pytest",
+        "build_command": "pytest",
+        "lens": "Generic",
+        "adrs": [],
+        "domain_terms": [],
+        "test_scope": "full",
+        "test_filter": null,
+        "working_tree_dirty_paths": []
+      },
+      "verdict": "Promising, but architecturally immature",
+      "verdict_explanation": "Loop 1 v5 panel-certification fixture.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/architecture_quality.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/state_management.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/domain_modeling.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/data_flow.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/framework_idioms.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/concurrency.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/simplicity.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/test_strategy.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "src/credibility.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "strengths": [
+        "Single-owner state."
+      ],
+      "findings": [],
+      "simplification_check": {
+        "structurally_necessary": "done",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "helpful_simplification": "n/a",
+        "should_not_be_done": "n/a",
+        "tests_after_fix": "n/a"
+      },
+      "backlog": [],
+      "unresolved_reason": "Member 1 held but members 2 and 3 exhausted their retry envelopes.",
+      "deepening_candidates": [],
+      "builder_notes": [],
+      "narrative": "v5 panel-certification fixture (plans/rec1-panel-certification.md).",
+      "run_id": null,
+      "source_rev": null,
+      "candidate_fingerprint": null,
+      "halt_success_challenge": {
+        "required_panel_size": 3,
+        "outcome": "blocked",
+        "protocol_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "candidate_binding": {
+          "run_id": "run-2026-08-01-panel-nonterm",
+          "source_rev": "rev-panel-nonterm",
+          "candidate_commit_sha": "commit-panel-nonterm",
+          "candidate_fingerprint": "fp-panel-nonterm-basis"
+        },
+        "panel": [
+          {
+            "member_index": 1,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "held",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": null,
+            "normalization": null,
+            "reason": "No Serious-or-worse finding and no accepted-residual refutation survives SPT.",
+            "retry_count": 1,
+            "retry_cause": null,
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "ok",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          },
+          {
+            "member_index": 2,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "unavailable",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": null,
+            "normalization": null,
+            "reason": "Retry envelope exhausted on repeated timeout.",
+            "retry_count": 2,
+            "retry_cause": "timeout",
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "timeout",
+                "error": null,
+                "duration_ms": 1000
+              },
+              {
+                "attempt": 2,
+                "outcome": "timeout",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          },
+          {
+            "member_index": 3,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "unavailable",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": null,
+            "normalization": null,
+            "reason": "Spawn failed on attempt 1; attempt 2 completed but too late to count.",
+            "retry_count": 2,
+            "retry_cause": "spawn_error",
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "spawn_error",
+                "error": null,
+                "duration_ms": 1000
+              },
+              {
+                "attempt": 2,
+                "outcome": "ok",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

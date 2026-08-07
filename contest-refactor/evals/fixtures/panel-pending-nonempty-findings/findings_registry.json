@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "next_serial": 10,
+  "entries": [
+    {
+      "stable_id": "F-009",
+      "title": "Stray finding written despite the open registry question",
+      "severity": "Noticeable weakness",
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "open"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # Plan — Recommendation 1: certification cannot rest on one pass
 
-**Status:** revised across 10 peer-review rounds in two sessions (codex `gpt-5.6-sol`, effort `xhigh`), both run to their round cap, plus a final consistency pass. Nothing implemented.
+**Status:** revised across 10 peer-review rounds in two sessions (codex `gpt-5.6-sol`, effort `xhigh`), both run to their round cap, plus a final consistency pass. **Delivery step 1 (v5 reader) is implemented** — `scripts/_artifact_panel.py` (G32 moved out of `_artifact_halt.py` and extended for v5), `_g32_panel_selftest.py` (49 cases), and 20 fixtures (see § Fixtures — as built). Steps 2 (behavioral gate) and 3 (emitter + routing prose) are not started.
 **Review state:** session 1 settled the design — Tier 1 only, `schema_version` 5, fixed N=3, staged launch, no fixture migration. Session 2 (fresh context) recorded the core certification design as sound from its round 4 on, with remaining findings characterised as "narrow state-machine and schema contradictions rather than missing architectural work." Its final round's fixes (panel-checkpoint resume row above rows 7/7b/8; G32 narrowed to digest *shape*) plus a subsequent self-review pass — which moved panel-checkpoint creation to **panel spawn** so mid-panel member verdicts have somewhere durable to live, added the `normalization` field to the member schema, deduplicated the fixture tables, and swept stale cross-references — have **not** been peer-reviewed.
 
 **Known pattern worth flagging to an implementer:** three separate times this plan assigned G32 a *temporal* invariant it cannot check (`candidate_binding` equality, then its immutability, then `protocol_digest` copy-forward). G32 is a stateless single-artifact validator. Any cross-artifact or across-time guarantee belongs to routing/resume logic with behavioral tests. Expect to re-apply that rule during implementation.
@@ -310,8 +310,8 @@ Plus boundary fixtures for the three rule #6 amendments and the pending-route po
 | `user_decision`-after-`broke`, 1 finding, qualifying v5 panel | pass |
 | two distinct stage-2 breaks → 2 findings | pass |
 | `verification_blocked` with empty `findings`, aggregate `blocked` at v5 | pass |
-| 1-finding CONTINUE **without** a qualifying v5 panel | fail |
-| empty `verification_blocked` outside the v5-panel scope | fail |
+| 1-finding CONTINUE **without** a qualifying v5 panel | fail — **deferred, see below** |
+| empty `verification_blocked` outside the v5-panel scope | fail — **deferred, see below** |
 | ambiguous match: raw `break_evidence` under `pending_user_decision` at `user_decision` | pass |
 | one ambiguous break + one otherwise-valid sibling: both raw, distinct markers, `findings[]` empty | pass |
 | normalized sibling under aggregate `pending` | fail |
@@ -320,6 +320,13 @@ Plus boundary fixtures for the three rule #6 amendments and the pending-route po
 Remaining coverage goes in `_g32_panel_selftest.py`: per-member binding, per-member arm diversity, the v4/v5 version boundary, `required_panel_size` mismatch, `member_index` gaps and reordering, retry-envelope shape per rule #25 plus `budget_exhausted`, aggregate/state coupling, `token_usage` arithmetic, two **distinct** stage-2 breaks ordered deterministically by `member_index` (two findings, not one), two members **deduplicating** to one `stable_id` (one finding, one occurrence), first-attempt `budget_exhausted` followed by success, two-attempt exhaustion normalizing to `unavailable`, ambiguous registry match routing to row 0, rollback-resume, stale-digest-resume, and routing precedence (pending-beats-break, break-beats-unavailable, Stop/Ask-beats-CONTINUE).
 
 **Partial-panel resume needs behavioral coverage, not just shape checks:** unchanged-candidate reuse; drift forcing a fresh Critic; a stage-1 `unavailable` resuming into stage 2; and a decisive one-member break **not** being mistaken for unresolved partial work.
+
+**As built (step 1, implementation-time deviations):**
+
+- **The two state-only rule #6 fail fixtures are deferred to step 3.** Rule #6's finding counts are prose-only — no gate enforces them — and `validate-fixtures.py` requires a fail fixture to actually fail (`aspirational = true` waives only the rule-id assertion, not the failure itself). Only the **panel-keyed** halves of exceptions (d)/(f) are G32-enforceable, and those shipped: aggregate `broke` → findings count ∈ {1,2} matching distinct referenced break ids; aggregate `pending` → findings exactly empty. The state-only direction needs rule #6 itself to gain a gate, which is not this plan's scope.
+- **20 fixtures shipped, not 22:** 12 core (`panel-*`) + 8 boundary (`panel-rule6-*`, `panel-pending-*`). Names differ cosmetically from the tables above.
+- **`open_question_for_user` had no script enforcement anywhere** (discovered while building the pending fixtures). G32's pending branch now enforces it as the fourth leg of the raw-acceptance condition; the general non-null-iff-`user_decision` rule remains prose (G34/G36 territory, untouched here).
+- The staged-length rule is enforced **biconditionally** (1 entry ⇒ member 1 broke/unavailable; 3 entries ⇒ member 1 held). A first draft checked only the first direction on the theory that the converse was an execution fact — it is not; member 1's outcome is in the artifact.
 
 ### Code
 

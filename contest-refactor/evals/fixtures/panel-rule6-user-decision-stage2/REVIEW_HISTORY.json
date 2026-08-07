@@ -1,0 +1,284 @@
+{
+  "schema_version": 5,
+  "loops": [
+    {
+      "schema_version": 5,
+      "loop": 1,
+      "loop_cap": 10,
+      "state": "HALT_STAGNATION",
+      "halt_subtype": "user_decision",
+      "halt_handoff": {
+        "text": "Loop 1 halted: panel member 2 broke on a finding that needs a product Stop/Ask decision.",
+        "expected_actions": []
+      },
+      "halt_handoff_text": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-5",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-5",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "source_roots": [
+          "src/"
+        ],
+        "test_command": "pytest",
+        "lens": "Generic",
+        "test_scope": "full",
+        "test_filter": null
+      },
+      "verdict": "Promising, but architecturally immature",
+      "verdict_explanation": "Panel: member 1 held, member 2 broke on a Stop/Ask finding, member 3 held.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/architecture_quality.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/state_management.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/domain_modeling.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/data_flow.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/framework_idioms.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/concurrency.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/simplicity.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/test_strategy.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 9.5,
+          "delta": "SAME",
+          "proof": "src/credibility.py:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [],
+      "strengths": [
+        "Module graph enforced by source."
+      ],
+      "findings": [
+        {
+          "stable_id": "F-003",
+          "loop_local_id": "F1",
+          "title": "Offline-sync conflict resolution owned in two places",
+          "severity": "Noticeable weakness",
+          "why_it_matters": "conflict-resolution ownership is ambiguous between client and server",
+          "what_is_wrong": "both layers implement last-write-wins independently",
+          "evidence": [
+            "src/sync/conflict.py:12",
+            "src/server/sync.py:8"
+          ],
+          "why_weakens_submission": "a Stop/Ask product decision is needed before either can be trusted",
+          "minimal_correction_path": "pick one owner and delete the other implementation"
+        }
+      ],
+      "simplification_check": {
+        "structurally_necessary": "Continue with backlog work.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "should_not_be_done": "Force a new protocol return.",
+        "tests_after_fix": "Existing tests pass."
+      },
+      "backlog": [],
+      "deepening_candidates": [],
+      "builder_notes": [],
+      "narrative": "Loop 1: stage-2 panel break routes to the Stop/Ask branch (rule #6 exception (d), row 1 of the precedence table) \u2014 same finding count as the CONTINUE route.",
+      "unresolved_reason": "Top finding needs a product decision on offline-sync conflict-resolution ownership.",
+      "open_question_for_user": "Should offline-sync own conflict resolution, or the server?",
+      "halt_success_challenge": {
+        "required_panel_size": 3,
+        "outcome": "broke",
+        "protocol_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "candidate_binding": {
+          "run_id": "run-panel-001",
+          "source_rev": "rev-panel-001",
+          "candidate_commit_sha": "commit-panel-001",
+          "candidate_fingerprint": "fp-sha256-panel00000000000000000000000000"
+        },
+        "panel": [
+          {
+            "member_index": 1,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "held",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": null,
+            "normalization": null,
+            "reason": "no break found",
+            "retry_count": 1,
+            "retry_cause": null,
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "ok",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          },
+          {
+            "member_index": 2,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "broke",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": {
+              "finding_stable_id": "F-003",
+              "spt": {
+                "result": "passed",
+                "rationale": "direct read confirms it"
+              }
+            },
+            "normalization": null,
+            "reason": "found dual conflict-resolution ownership needing a Stop/Ask decision",
+            "retry_count": 1,
+            "retry_cause": null,
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "ok",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          },
+          {
+            "member_index": 3,
+            "challenger_model": "claude-opus-4-8",
+            "outcome": "held",
+            "attempts": [
+              {
+                "arm": "residual_refutation",
+                "target": "data_flow",
+                "what_tried": "reread the residual",
+                "why_failed": "still holds"
+              },
+              {
+                "arm": "new_finding",
+                "target": "simplicity",
+                "what_tried": "grep for dead code",
+                "why_failed": "none found"
+              }
+            ],
+            "break_evidence": null,
+            "normalization": null,
+            "reason": "no break found",
+            "retry_count": 1,
+            "retry_cause": null,
+            "retry_attempts": [
+              {
+                "attempt": 1,
+                "outcome": "ok",
+                "error": null,
+                "duration_ms": 1000
+              }
+            ],
+            "token_usage": {
+              "input_tokens": 100,
+              "output_tokens": 50,
+              "total_tokens": 150
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

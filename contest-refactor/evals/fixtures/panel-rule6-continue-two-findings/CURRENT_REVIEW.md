@@ -1,0 +1,3 @@
+# Loop 1 Review
+
+Rule #6 exception (d): a v5 panel with two distinct stage-2 breaks (members 2 and 3, member 1 held) demotes to CONTINUE carrying exactly two findings. Must PASS.

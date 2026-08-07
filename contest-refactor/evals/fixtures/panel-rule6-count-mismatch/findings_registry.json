@@ -1,0 +1,42 @@
+{
+  "schema_version": 3,
+  "next_serial": 8,
+  "entries": [
+    {
+      "stable_id": "F-005",
+      "title": "Duplicated dialog wiring across three call sites",
+      "severity": "Noticeable weakness",
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-006",
+      "title": "Retry loop duplicated in two adapters",
+      "severity": "Noticeable weakness",
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F2",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-007",
+      "title": "Unreferenced third finding not resolved by any panel break",
+      "severity": "Noticeable weakness",
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F3",
+          "status": "open"
+        }
+      ]
+    }
+  ]
+}

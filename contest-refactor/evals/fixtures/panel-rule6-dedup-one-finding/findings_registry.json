@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "next_serial": 5,
+  "entries": [
+    {
+      "stable_id": "F-004",
+      "title": "Cache skeleton hand-copied across store lookups",
+      "severity": "Noticeable weakness",
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "open"
+        }
+      ]
+    }
+  ]
+}

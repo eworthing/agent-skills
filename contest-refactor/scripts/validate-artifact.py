@@ -49,7 +49,6 @@ from _artifact_core import (  # noqa: E402
 )
 from _artifact_halt import (  # noqa: E402
     check_g21_scorecard,
-    check_g32_halt_success_challenge,
     check_g33_risk_boundary_evidence,
     check_g34_halt_tail_invariants,
     check_g35_halt_handoff_shape,
@@ -71,6 +70,7 @@ from _artifact_history import (  # noqa: E402
     check_g31_fingerprint_integrity,
     check_retirement_rule,
 )
+from _artifact_panel import check_g32_halt_success_challenge  # noqa: E402
 from _artifact_residual import (  # noqa: E402
     check_g5_sub95_residual_fields,
     check_g37_terminal_residual_accounting,
