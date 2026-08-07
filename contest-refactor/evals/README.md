@@ -631,4 +631,28 @@ One rater invented a mitigation unprompted: it scored the source first and read 
 landing closest of any primed pass to the blind mean. Score-then-read is a cheap candidate fix awaiting its
 own attempt.
 
+### Attempt 3 — variance collapse at N=6 (2026-08-06)
+
+Both arms extended to six passes; harness hashes and the regenerated prime verified identical.
+
+| arm | mean | SD | spread |
+|---|---|---|---|
+| BLIND (n=6) | 7.630 | 0.460 | 1.222 |
+| HIGH (n=6) | 8.389 | 0.196 | 0.556 |
+
+**Pre-registered verdict: CONFIRMED, marginally** — F(5,5) = 5.538 vs the registered 5.050, p = 0.0418.
+The registered prediction held in both directions (HIGH's SD rose from 0.116 as regression to the mean
+predicts; BLIND's fell from 0.663), so the real effect is about half the N=3 estimate and still clears the
+bar. **Weak evidence, and the registered robust check disagrees:** Brown-Forsythe t(10) = 1.797 vs 2.228,
+not significant. HIGH is narrower on 7/9 dimensions. N=10–12 would settle it. Mean displacement restates to
+**+0.759**, so attempt 2's ≥ 1.0 ratchet bar remains unmet on twice the data.
+
+**The band unlock (post hoc) is the sharpest result in this layer.** Across 54 scores from six independent
+blind Critics, **not one exceeded 8.5**; primed Critics emitted **15 scores ≥ 9.0** (Fisher p = 9.9e-06) and
+reached 9.5 three times, with 5 of 6 passes crossing 9.0. A prior does not nudge scores by a constant — it
+removes a ceiling. **Every gate that certifies convergence lives above the blind ceiling:** G5 triggers at
+9.5, G6 at 10, G21's `HALT_SUCCESS` bar sits at 9.5 on all nine dimensions. On this corpus at this
+`skill_rev`, a Critic reading no prior scorecard cannot reach `HALT_SUCCESS` at all. Limits stated plainly:
+post hoc, the ≥ 9.5 comparison alone is *not* significant (3 occurrences, p = 0.121), and it is one corpus.
+
 Full protocol: [`scorecard-coupling/README.md`](scorecard-coupling/README.md).

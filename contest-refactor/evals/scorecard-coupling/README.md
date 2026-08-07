@@ -140,6 +140,57 @@ cannot tell "did not anchor" from "had nowhere to go." Fraction-of-available-gap
 any future attempt — and deliberately *not* applied to this one's verdict, since switching metrics
 after seeing data is precisely what this layer exists to catch.
 
+## What attempt 3 measured — variance collapse at N=6
+
+Both arms extended from 3 to 6 passes; harness files verified unchanged by hash, prime regenerated
+to the same 9.278.
+
+| arm | mean | SD | spread |
+|---|---|---|---|
+| BLIND (n=6) | 7.630 | 0.460 | 1.222 |
+| HIGH (n=6) | 8.389 | **0.196** | 0.556 |
+
+**Pre-registered verdict: CONFIRMED, marginally.** F(5,5) = 5.538 against the registered 5.050,
+p = 0.0418. A high prior does reduce inter-rater variance on identical source. The registered
+prediction held in both directions — HIGH's SD rose from the implausibly tight 0.116 to 0.196
+exactly as regression to the mean predicts, and BLIND's fell from 0.663 to 0.460 — so the real
+effect is about **half** what N=3 suggested (SD ratio 5.7× → 2.35×) and still clears the bar.
+
+**This is weak evidence and should not be reported as more.** The *registered* robust check
+disagrees: Brown-Forsythe on absolute deviations from the median gives t(10) = 1.797 against a 2.228
+critical value — not significant. The F-test assumes normality and is outlier-sensitive at this n;
+blind pass B2 (6.833) does real work in the numerator. Supporting but not decisive: HIGH's spread is
+narrower on 7 of 9 dimensions. N=10–12 per arm would settle it.
+
+Also restated at N=6: the mean displacement is **+0.759**, so attempt 2's ≥ 1.0 ratchet bar is still
+not met — that REFUTED verdict is now firmer, on twice the data.
+
+### The band unlock — post hoc, and the sharpest thing here
+
+| | BLIND | HIGH |
+|---|---|---|
+| scores ≥ 9.0 | **0 / 54** | **15 / 54** (Fisher p = 9.9e-06) |
+| scores ≥ 9.5 | 0 / 54 | 3 / 54 (p = 0.121, *not* significant) |
+| highest score emitted | **8.5** | 9.5 |
+| passes reaching ≥ 9.0 | 0 / 6 | 5 / 6 |
+
+Across 54 scores from six independent blind Critics, **not one exceeded 8.5.** Primed Critics
+emitted fifteen at 9.0 or above. A prior does not nudge scores by a constant — **it removes a
+ceiling.** The blind rater will not enter a band on this evidence that the primed rater enters
+routinely.
+
+Why that matters: **every gate that certifies convergence lives above the blind ceiling.** G5's
+residual requirement triggers at 9.5, G6 at 10, G21's `HALT_SUCCESS` bar sits at 9.5 across all nine
+dimensions. On this corpus at this `skill_rev`, a Critic reading no prior scorecard *cannot reach
+`HALT_SUCCESS` at all*; a Critic reading its own prior can. Certification would then be partly a
+function of having certified before.
+
+Stated limits: this is **post hoc** — 9.0 is a rubric anchor, not a fitted cutpoint, but it was
+chosen after seeing the data and needs its own pre-registration. The ≥ 9.5 comparison, which is the
+one that touches the actual gate, is **not** significant on three occurrences. And it is one corpus,
+one `skill_rev`, one model; whether the blind ceiling belongs to this codebase or to the rubric is
+undetermined and is the obvious next probe.
+
 ### A mitigation one rater invented
 
 One LOW-arm pass volunteered that it "read the prior review only after my independent scorecard was
