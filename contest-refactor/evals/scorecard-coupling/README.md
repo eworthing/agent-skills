@@ -243,6 +243,91 @@ written." It landed at 7.889 — closest of any primed pass to the blind mean, a
 arm's lowest pass. Score first, read the prior only to compute the delta. Cheap, and it needs its
 own attempt before anyone believes it off one observation.
 
+## Attempt 5 — re-analysis with the right estimator (no new sampling)
+
+Attempts 1–3 analysed a 9-dimension × 6-rater design with raw spread, sample SD and an F-test on
+grand means. That collapses each rater to one number and throws away the structure that decides the
+practical question. The standard analysis is a two-way variance decomposition plus the **intraclass
+correlation**. On the data already collected:
+
+| variance source | BLIND | PRIMED |
+|---|---|---|
+| dimension (signal) | 20.8% | 61.4% |
+| **rater severity** | **59.3%** | 10.2% |
+| rater × dimension | 20.0% | 28.4% |
+| **ICC(2,1)** — one rater, absolute | **0.166** | **0.575** |
+| ICC(3,1) — consistency, severity removed | 0.412 | 0.621 |
+| raters for 0.80 reliability (Spearman-Brown) | **20** | 3 |
+
+**Nearly 60% of blind-arm variance is which rater, not which dimension.** That is
+[rater severity](https://languagetestingasia.springeropen.com/articles/10.1186/s40468-020-0098-3) —
+the effect Many-Facet Rasch Measurement exists to
+[separate and adjust out](https://www.repository.cam.ac.uk/items/db7bc448-f687-4f78-b7d1-e2b71f18a058).
+It also explains attempt 1's headline mechanically: "pass B strictly lower on 9/9" is a rater main
+effect, which is the *most benign* form of unreliability, because a main effect is modellable.
+
+### The cut-score consequence
+
+Single-rater SEM is **0.283**, so the 95% band is **± 0.56**. Clearing G21's 9.5 bar by more than
+measurement error requires an observed score of **≥ 10.06 — above the scale maximum.** On the mean of
+three passes it requires ≥ 9.82.
+
+**A single Critic pass cannot certify the 9.5 threshold.** This holds independently of every
+anchoring question in attempts 2–4.
+
+### Calibration or contagion? Both — and the mixture is the point
+
+The primed arm's ICC is higher partly because its between-dimension variance is 3× the blind arm's.
+Either the anchor fixed the scale and let raters resolve real differences, or raters copied the
+prime's profile. ICC cannot tell those apart; correlating each arm's 9-dimension profile against the
+prime's can.
+
+| profile correlation | r |
+|---|---|
+| BLIND vs PRIME | +0.361 |
+| **HIGH vs PRIME** | **+0.844** |
+| HIGH vs BLIND | +0.756 |
+
+Priming more than **doubled** the profile's correlation with the prime, so raters adopted the
+anchor's *pattern* and not merely its level. But the primed profile still correlates +0.756 with the
+blind one, so it is not purely the anchor reflected back. And once severity is removed, primed raters
+disagree about individual dimensions *slightly more* (residual SEM 0.346 vs 0.283).
+
+**Priming's entire measurable benefit is severity removal.** Everything else it does — level
+inflation, band unlock, shape capture — is cost.
+
+## What this layer licenses
+
+**Retracted before it shipped:** an earlier draft of this recommendation set proposed blinding the
+`HALT_SUCCESS` challenger, which `halt-verifier.md:48` currently hands the candidate scorecard. On
+these numbers that would move the *only* independent certification check in the skill from ICC 0.575
+to **ICC 0.166** — the least reliable configuration measured. The prior is not purely a bias; it is
+also doing a calibration anchor's job.
+
+1. **Certification cannot rest on one pass.** Licensed by measurement alone: require N ≥ 3
+   independent passes at the `HALT_SUCCESS_candidate` step and certify on the **median** (robust to
+   one severe rater), or state an explicit guard band. Independent of the anchoring debate.
+2. **Replace the self-prior anchor with an external calibration set** — fixed scored exemplars with
+   justified scores, shipped with the skill. This is
+   [standard practice for LLM judges](https://galileo.ai/blog/calibrate-llm-judge-human-annotations)
+   and [reduces volatility while raising agreement](https://journals.plos.org/plosone/article?id=10.1371%2Fjournal.pone.0339920).
+   It buys the severity correction without the self-confirmation loop. **Supersedes** the
+   "mechanize score-then-read" proposal — score-then-read leaves the rater uncalibrated, which is
+   measurably the worse failure — and **absorbs 2b**, since the real fix is scored exemplars rather
+   than more prose anchor text.
+3. **Publish the noise floor** in `architecture-rubric-scoring.md § Score Anchors` and the HALT
+   handoff templates: ICC(2,1) = 0.17 blind / 0.58 primed, SEM 0.28, ~59% of blind variance being
+   rater identity.
+4. **Consider judging `delta` directly** rather than deriving it from absolute scores. Honest
+   caveat: pairwise is not a clean win —
+   [preferences flipped in ~35% of cases against 9% for absolute scores](https://arxiv.org/abs/2504.14716),
+   and pairwise discards the per-dimension diagnostic axis this skill exists to produce. Supplement,
+   do not replace.
+
+**Methodological lesson:** a two-way ANOVA on the *first six* passes would have produced every number
+above. Attempt 3 spent ~1.5M tokens extending N to answer a narrower question than the same data
+could already answer. Reach for the standard estimator before buying more samples.
+
 ### Operational note for the next attempt
 
 In `steamgriddb-xbox` the five artifact files are **tracked**, so they materialize in any pinned

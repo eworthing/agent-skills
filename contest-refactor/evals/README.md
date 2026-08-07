@@ -677,4 +677,33 @@ which strengthens the 9.5 claim but weakens per-pass comparison; `skill_rev` is 
 Change 1 closed), so 29 skill commits also separate the Run B / Run C pair; Run S is a self-review and is the
 sole source of every blind score ≥ 9.0.
 
+### Attempt 5 — re-analysis with the right estimator, no new sampling (2026-08-07)
+
+Attempts 1–3 used raw spread, SD and an F-test on grand means. The standard analysis for repeated ratings of
+the same targets is a two-way variance decomposition plus the **intraclass correlation**. On the same data:
+
+| | BLIND | PRIMED |
+|---|---|---|
+| dimension (signal) | 20.8% | 61.4% |
+| **rater severity** | **59.3%** | 10.2% |
+| rater × dimension | 20.0% | 28.4% |
+| **ICC(2,1)** one rater | **0.166** | **0.575** |
+| raters for 0.80 reliability | **20** | 3 |
+
+**Nearly 60% of blind variance is which rater, not which dimension** — textbook rater severity, and the
+mechanical explanation for attempt 1's "pass B strictly lower on 9/9."
+
+**The cut-score consequence is the hardest result in this layer.** Single-rater SEM is 0.283, 95% band
+± 0.56, so clearing G21's 9.5 bar by more than measurement error needs an observed **≥ 10.06 — above the
+scale maximum**. A single Critic pass cannot certify 9.5, independently of every anchoring question.
+
+**Calibration or contagion? Both.** Profile correlation against the prime rose from +0.361 (blind) to
++0.844 (primed), so raters adopted the anchor's *pattern*, not just its level — but the primed profile still
+correlates +0.756 with the blind one. With severity removed, primed raters disagree slightly *more* per
+dimension (0.346 vs 0.283). **Priming's entire measurable benefit is severity removal.**
+
+This **retracted a recommendation before it shipped**: blinding the `HALT_SUCCESS` challenger would have
+moved the only independent certification check from ICC 0.575 to 0.166. The licensed changes and the prior
+art are in [`scorecard-coupling/README.md § What this layer licenses`](scorecard-coupling/README.md).
+
 Full protocol: [`scorecard-coupling/README.md`](scorecard-coupling/README.md).

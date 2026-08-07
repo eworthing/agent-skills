@@ -225,6 +225,53 @@
         "The steamgriddb blind pool is dominated by attempts 1-3 (54 of 72 scores); only 18 come from full-protocol runs.",
         "Run S is the skill reviewing its own repository, which carries its own bias direction and is the only source of every blind score at or above 9.0."
       ]
+    },
+    {
+      "attempt_index": 5,
+      "probe": "reanalysis_icc_and_shape",
+      "controlled": true,
+      "status": "complete — RE-ANALYSIS of attempts 1-3, zero new sampling",
+      "captured_at": "2026-08-07T00:00:00Z",
+      "skill_rev": "23bea47",
+      "source_rev": "1bdec1a",
+      "note": "No new passes. Attempts 1-3 analysed a 9-dimension x 6-rater design with raw spread, sample SD and an F-test on grand means, which collapses each rater to one number and discards the structure that decides the practical question. The standard analysis for repeated ratings of the same targets on a continuous scale is a two-way variance decomposition plus the intraclass correlation. Running it on the data already collected changed the recommendation set, so it is recorded as its own attempt rather than folded silently into attempt 3.",
+      "variance_decomposition": {
+        "blind": {"dimension_signal_pct": 20.8, "rater_severity_pct": 59.3, "rater_x_dimension_pct": 20.0},
+        "high": {"dimension_signal_pct": 61.4, "rater_severity_pct": 10.2, "rater_x_dimension_pct": 28.4}
+      },
+      "icc": {
+        "blind": {"icc_2_1": 0.166, "icc_2_k": 0.544, "icc_3_1": 0.412, "k": 6},
+        "high": {"icc_2_1": 0.575, "icc_2_k": 0.890, "icc_3_1": 0.621, "k": 6},
+        "reading": "ICC(2,1) is absolute agreement for a single rater — what one Critic pass actually buys. ICC(3,1) is consistency with rater severity removed; the gap between them is the severity cost, 0.246 blind against 0.046 primed."
+      },
+      "raters_needed": {
+        "blind": {"for_0.80": 20.1, "for_0.90": 45.3},
+        "high": {"for_0.80": 3.0, "for_0.90": 6.7},
+        "method": "Spearman-Brown prophecy from ICC(2,1)."
+      },
+      "standard_error_of_measurement": {
+        "blind_one_rater": 0.283, "blind_95_ci": 0.56,
+        "high_one_rater": 0.346, "high_95_ci": 0.68,
+        "blind_mean_of_3": 0.164, "blind_mean_of_5": 0.127
+      },
+      "cut_score_consequence": "G21 certifies HALT_SUCCESS per dimension at >= 9.5. A single blind Critic's 95% band is +/- 0.56, so clearing that cut by more than measurement error requires an observed score >= 10.06 — ABOVE THE SCALE MAXIMUM. On the mean of three passes it requires >= 9.82. The direct consequence: a single Critic pass cannot certify the 9.5 bar, and this holds independently of every anchoring question in attempts 2-4.",
+      "finding_1_severity_dominates": "Nearly 60% of blind-arm variance is WHICH RATER, not which dimension. That is textbook rater severity, the effect Many-Facet Rasch Measurement exists to separate and adjust out. It also explains attempt 1's headline observation mechanically: 'pass B strictly lower on 9/9 dimensions' is a rater main effect, and a main effect is the most benign form of unreliability because it is modellable.",
+      "finding_2_calibration_or_contagion": {
+        "question": "The primed arm's ICC is higher partly because its between-dimension variance is 3x the blind arm's. Either the anchor fixed the scale and let raters resolve real differences (calibration), or raters copied the prime's profile of which dimensions are strong (contagion). ICC alone cannot tell these apart.",
+        "test": "Correlate each arm's 9-dimension profile against the PRIME's profile. The blind arm is the best available estimate of the true profile.",
+        "profile_correlation_vs_prime": {"blind": 0.361, "high": 0.844, "gain": 0.484},
+        "profile_correlation_high_vs_blind": 0.756,
+        "within_dimension_sd_raw": {"blind": 0.532, "high": 0.380},
+        "within_dimension_sd_severity_removed": {"blind": 0.283, "high": 0.346},
+        "verdict": "BOTH, and the mixture is what matters. Priming more than doubled the profile's correlation with the prime (+0.361 -> +0.844), so raters adopted the anchor's PATTERN and not merely its level — that is contagion. Yet the primed profile still correlates +0.756 with the blind profile, so it is not purely the anchor reflected back. Meanwhile, once severity is removed, primed raters disagree about individual dimensions SLIGHTLY MORE than blind ones (residual SEM 0.346 against 0.283). Priming's entire measurable benefit is severity removal."
+      },
+      "consequence_for_the_recommendations": "This retracts the change that was about to be proposed. Blinding the HALT_SUCCESS challenger (halt-verifier.md:48 hands it the candidate scorecard) would move the only independent certification check in the skill from ICC 0.575 to ICC 0.166 — the least reliable configuration measured. The prior is not purely a bias; it is also doing the job a calibration anchor does. The defensible fix is to keep the calibration and drop the self-reference: anchor on an EXTERNAL fixed set of scored exemplars rather than on the run's own prior output, which is the standard practice in the LLM-judge literature and the human-rater literature alike.",
+      "prior_art": [
+        "Rater severity and its adjustment: Many-Facet Rasch Measurement (Linacre lineage); see languagetestingasia.springeropen.com/articles/10.1186/s40468-020-0098-3 and repository.cam.ac.uk/items/db7bc448-f687-4f78-b7d1-e2b71f18a058 for extended MFRM over automated essay scoring.",
+        "Anchoring and calibration of LLM judges with scored reference exemplars: galileo.ai/blog/calibrate-llm-judge-human-annotations; techcommunity.microsoft.com/blog/azure-ai-foundry-blog/evaluating-ai-agents-techniques-to-reduce-variance-and-boost-alignment-for-llm-j/4498571; journals.plos.org/plosone/article?id=10.1371/journal.pone.0339920 (calibration raised human agreement and reduced volatility).",
+        "Pointwise versus pairwise protocols: arxiv.org/abs/2504.14716 finds pairwise is NOT a clean win — preferences flipped in roughly 35% of cases against 9% for absolute scores, and pairwise is more vulnerable to distraction. Pairwise also discards the per-dimension diagnostic axis, which is this skill's product."
+      ],
+      "methodological_lesson": "A two-way ANOVA on the FIRST six passes would have produced every number in this record. Attempt 3 spent ~1.5M tokens extending N to answer a narrower question (is the spread difference significant) than the same data could already answer (where does the variance come from, and how many raters does a threshold decision need). Reach for the standard estimator before buying more samples."
     }
   ],
   "anchor_coverage": {
