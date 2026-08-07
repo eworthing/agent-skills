@@ -27,7 +27,12 @@ import _artifact_panel
 _DEFAULT_ROOT = Path(__file__).resolve().parent.parent
 
 # Per-member cumulative token cap per transport attempt (plan § Cost).
-C_MAX = 150_000
+# Unit: raw context throughput per transport attempt — fresh input + cache
+# creation + cache reads + output, summed across the attempt (what the
+# transport actually processes; provider billing weights belong to the budget
+# config, not the schema). Re-derived 2026-08-07 from the first gate run:
+# observed member max 793k on a scenario-sized corpus, ~85% cache reads.
+C_MAX = 1_200_000
 
 GATE_THRESHOLDS = {
     "panels_per_scenario": 3,
@@ -46,7 +51,8 @@ SPAWN_PROFILE = {
 }
 
 BUDGET_ENFORCEMENT = {
-    "c_max_tokens": 150000,
+    "c_max_tokens": 1200000,
+    "unit": "raw context throughput: fresh + cache_creation + cache_read + output per attempt",
     "mode": "post_hoc_discard",
     "detail": (
         "in-session Agent tool cannot preempt mid-session; observed usage is audited "
@@ -245,14 +251,25 @@ def _assemble_member(capture_member: dict) -> dict:
     parsing raw_response_text. Unparseable, or a 'broke' whose break_evidence
     isn't a dict carrying dict finding+spt, converts to outcome 'unavailable'
     (plan: a break still malformed after the envelope never persists as a
-    schema-invalid broke)."""
+    schema-invalid broke).
+
+    A capture retry_attempts[] entry MAY carry an optional per-attempt
+    'token_usage' (plan § Cost: C_max caps a transport ATTEMPT, not the member
+    aggregate). That's for _budget_audit, which reads it from the capture
+    directly -- stripped here, since the v5 schema's envelope entries are
+    {attempt, outcome, error, duration_ms} only.
+    """
     retry_attempts = capture_member.get("retry_attempts") or []
+    clean_retry_attempts = [
+        {k: v for k, v in a.items() if k != "token_usage"} if isinstance(a, dict) else a
+        for a in retry_attempts
+    ]
     transport = {
         "member_index": capture_member["member_index"],
         "normalization": None,
         "retry_count": len(retry_attempts),
         "retry_cause": capture_member.get("retry_cause"),
-        "retry_attempts": retry_attempts,
+        "retry_attempts": clean_retry_attempts,
         "token_usage": capture_member.get("token_usage"),
     }
     parsed = extract_member_json(capture_member.get("raw_response_text", ""))
@@ -330,19 +347,44 @@ def normalize_panel(
     return records, findings, aggregate, state, subtype
 
 
-def _budget_audit(records: list[dict]) -> tuple[dict, str | None, bool]:
+def _budget_audit(capture_members: list[dict]) -> tuple[dict, str | None, bool]:
+    """Plan § Cost: C_max caps a transport ATTEMPT, not a member's aggregate --
+    the aggregate is required to sum every attempt ('aggregate across ALL
+    transport attempts'), so a member that legitimately retried past one
+    budget_exhausted attempt can carry an aggregate well over C_MAX without
+    the attempt whose result was actually used ever itself crossing the cap.
+
+    When any retry_attempts[] entry carries a per-attempt 'token_usage', a
+    member violates iff an 'ok' attempt's total_tokens exceeds C_MAX. A
+    'budget_exhausted' attempt is over cap by definition -- that's why it was
+    discarded and retried -- so checking it again would fail every member
+    that ever retried past one, exactly the false positive this fixes. With
+    no per-attempt usage present anywhere in the panel, fall back to the
+    member aggregate (unchanged prior behavior).
+    """
     per_member = []
     max_total = None
     violation = False
-    for m in records:
+    for m in capture_members:
         usage = m.get("token_usage")
         total = usage.get("total_tokens") if isinstance(usage, dict) else None
         per_member.append({"member_index": m.get("member_index"), "total_tokens": total})
-        if total is not None:
-            if max_total is None or total > max_total:
-                max_total = total
-            if total > C_MAX:
+        if total is not None and (max_total is None or total > max_total):
+            max_total = total
+
+        attempt_usages = [
+            a
+            for a in (m.get("retry_attempts") or [])
+            if isinstance(a, dict) and isinstance(a.get("token_usage"), dict)
+        ]
+        if attempt_usages:
+            if any(
+                a.get("outcome") == "ok" and a["token_usage"].get("total_tokens", 0) > C_MAX
+                for a in attempt_usages
+            ):
                 violation = True
+        elif total is not None and total > C_MAX:
+            violation = True
     exhaustion_cause = "budget_exhausted" if violation else None
     return (
         {"per_member": per_member, "max_member_total_tokens": max_total},
@@ -518,7 +560,7 @@ def _grade_panel(provider, model, scenario: str, skill_rev: str, digest: str, pa
     raw_member_responses = [m["raw_response_text"] for m in capture_members]
     member_records = [_assemble_member(m) for m in capture_members]
     records, findings, aggregate, state, subtype = normalize_panel(member_records)
-    observed_usage, exhaustion_cause, budget_violation = _budget_audit(records)
+    observed_usage, exhaustion_cause, budget_violation = _budget_audit(capture_members)
     structural_pass, structural_issues = _structural_grade(
         scenario, panel_index, skill_rev, digest, aggregate, state, subtype, records, findings
     )

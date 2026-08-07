@@ -354,7 +354,7 @@ def _all_held_members():
 
 def test_budget_violation():
     over_budget = [
-        _capture_member(1, _held_json(), token_usage=_usage(200_000)),
+        _capture_member(1, _held_json(), token_usage=_usage(adapter.C_MAX + 50_000)),
         _capture_member(2, _held_json()),
         _capture_member(3, _held_json()),
     ]
@@ -367,6 +367,51 @@ def test_budget_violation():
     assert run1["exhaustion_cause"] == "budget_exhausted"
     assert run1["budget_violation"] is True
     assert results["scenario_gate"]["halt-challenge-restraint"]["pass"] is False
+
+
+def test_budget_per_attempt_no_violation():
+    # attempt 1 is tagged budget_exhausted (over cap by definition -- that's
+    # why it was discarded and retried) and is excluded from the per-attempt
+    # check; attempt 2 (outcome "ok") is the one actually checked, and stays
+    # under C_MAX (1_200_000). The member aggregate (required to sum every
+    # attempt) is still over C_MAX -- exactly the shape the old aggregate-only
+    # audit falsely flagged.
+    exhausted_total = 1_250_000
+    ok_total = 400_000
+    member = _capture_member(
+        1,
+        _held_json(),
+        token_usage=_usage(exhausted_total + ok_total),
+        retry_cause="budget_exhausted",
+        retry_attempts=[
+            {
+                "attempt": 1,
+                "outcome": "budget_exhausted",
+                "error": "cumulative session tokens exceeded C_max",
+                "duration_ms": 90000,
+                "token_usage": _usage(exhausted_total),
+            },
+            {
+                "attempt": 2,
+                "outcome": "ok",
+                "error": None,
+                "duration_ms": 45000,
+                "token_usage": _usage(ok_total),
+            },
+        ],
+    )
+    capture = _capture(
+        "halt-challenge-restraint",
+        [_panel(1, [member, _capture_member(2, _held_json()), _capture_member(3, _held_json())])],
+    )
+    results = adapter.grade_captures([capture], skill_rev="deadbeef")
+    run = results["runs"][0]
+    assert run["exhaustion_cause"] is None, run["exhaustion_cause"]
+    assert run["budget_violation"] is False
+    assert run["structural_pass"] is True, run["structural_issues"]
+    # G32 stripped retry_attempts back to the v5 envelope shape -- no leaked token_usage.
+    for attempt in run["normalized_member_records"][0]["retry_attempts"]:
+        assert "token_usage" not in attempt, attempt
 
 
 def _flag_members():
@@ -450,6 +495,10 @@ def main() -> int:
             test_semantic_restraint_overflag_fail,
         ),
         ("budget violation: exhausted member fails its panel", test_budget_violation),
+        (
+            "budget: per-attempt exhaustion doesn't falsely flag a retried member",
+            test_budget_per_attempt_no_violation,
+        ),
         ("end-to-end grade_captures: both scenario gates pass", test_end_to_end_grade_captures),
     ]
     failures: list[str] = []

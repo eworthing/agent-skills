@@ -95,6 +95,22 @@ Never accept a residual's compliance rationale at face value — re-derive it fr
 source. The clause above forbids *manufacturing* a compliance-only finding; it does
 **not** license rubber-stamping a compliance-rationalized residual.
 
+**Decomposition proposals face the relocation bar (measured over-flag axis,
+2026-08-07 gate run).** A break whose remedy is a split — of a file, a type, or an
+adapter along its protocol conformances — is valid ONLY if you can name what the
+split *deletes*: a duplicated mechanism that stops existing, or an ambiguity that
+stops being representable. If the resulting pieces still share a resource (one SDK
+session, one connection, one cache) and the fix must duplicate that resource's
+handling or extract a third component to hold it, the complexity was relocated,
+not removed — the SPT fails and there is no break. One type conforming to several
+port protocols is not, by itself, several responsibilities: ports declare
+*consumer contracts*, not implementation boundaries, and callers bound to the
+protocols are already decoupled from the concrete type. Breaking on a
+decomposition needs implementation-level evidence of divergent reasons to change
+(duplicated state, independent lifecycles, unshared collaborators); the existence
+of a seam in the type system is not that evidence. This bar shields no hollow
+rationale: a residual whose *factual claim* is false (see above) is still a break.
+
 ## Outcome routing (main applies)
 
 Every outcome is **durably committed before** the loop acts on it — so a crash
