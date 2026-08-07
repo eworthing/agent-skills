@@ -57,6 +57,11 @@ unfixable = []
 "quorum-review/scripts/run_quorum.py" = ["F401"]
 # `×` (U+00D7) is intentional notation in the token-math docstrings/output here.
 "contest-refactor/scripts/token-budget.py" = ["RUF001", "RUF002"]
+# Verbatim unicode prose copied from plans/rec1-panel-certification.md (en-dash
+# ranges, em dashes, ellipsis, arrows) is intentional: these are frozen
+# protocol-digest inputs, not free text -- rewording to satisfy RUF001 would
+# change what compute_protocol_digest() hashes.
+"contest-refactor/scripts/_panel_gate_adapter.py" = ["RUF001"]
 
 [tool.ruff.format]
 docstring-code-format = true

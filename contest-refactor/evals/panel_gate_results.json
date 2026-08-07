@@ -1,0 +1,908 @@
+{
+  "generated_by": "scripts/_panel_gate_adapter.py",
+  "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+  "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+  "enforced_C_max": 150000,
+  "budget_enforcement": {
+    "c_max_tokens": 150000,
+    "mode": "post_hoc_discard",
+    "detail": "in-session Agent tool cannot preempt mid-session; observed usage is audited after completion and any member exceeding C_MAX is discarded as budget_exhausted. Plan \u00a7 Cost requires stop-before-crossing enforcement for a capability entry, which this mode does NOT satisfy - hence capability_recordable: false."
+  },
+  "spawn_profile": {
+    "provider": "claude_code",
+    "mechanism": "in_session_agent_tool",
+    "subagent_type": "general-purpose",
+    "model_alias": "sonnet",
+    "read_only_enforcement": "prompt-level; verdict delivered as final message per halt-verifier.md",
+    "tools_expected": [
+      "Read"
+    ]
+  },
+  "gate_thresholds": {
+    "panels_per_scenario": 3,
+    "panel_size": 3,
+    "flag_requirement": "each panel individually contains a structurally valid broke",
+    "restraint_requirement": "all nine member verdicts held (3 panels x 3 members)"
+  },
+  "runs": [
+    {
+      "provider": "claude_code",
+      "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+      "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+      "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+      "scenario": "halt-challenge-flag",
+      "panel_index": 1,
+      "raw_member_responses": [
+        "{\"challenger_model\": \"claude-sonnet-5\", \"outcome\": \"broke\", \"attempts\": [{\"arm\": \"residual_refutation\", \"target\": \"state_management residual (HR-1 single-owner acceptance)\", \"what_tried\": \"Traced every actual write site of NavigationStore.selectedTab against the accepted residual's premise, which was established only by reading the doc-comment '// doc: single owner per HR-1' on the property declaration.\", \"why_failed\": \"succeeded - see break_evidence\"}, {\"arm\": \"new_finding\", \"target\": \"simplicity\", \"what_tried\": \"Swept the full source for a second duplicated mechanism independent of the selectedTab issue, to see if the break could be sourced from a distinct duplication rather than the write-site fan-out.\", \"why_failed\": \"The source is four small declarations; the only duplicated mechanism present is the triple direct-write on selectedTab, already captured by the winning attempt. No independent second duplication exists to report separately.\"}, {\"arm\": \"new_finding\", \"target\": \"architecture_quality\", \"what_tried\": \"Checked whether DeepLinkRouter and LoginViewModel depending on the concrete NavigationStore class, rather than a protocol/port, is itself a Serious ports-and-adapters violation.\", \"why_failed\": \"The minimal correction would be introducing a protocol/interface between the routers and NavigationStore -- that adds a layer of indirection rather than removing one, so it fails the Simplify Pressure Test (relocates complexity into a new abstraction instead of collapsing an existing duplicated mechanism) and doesn't qualify as a break.\"}], \"reason\": \"The accepted residual claims selectedTab has a single coordinated owner per HR-1, but that claim was verified only by reading a doc-comment; the actual source shows three independent, uncoordinated write sites (TabView binding, DeepLinkRouter.handle, LoginViewModel.onSuccess), which is the exact multiple-writer condition HR-1 exists to prevent in a reducer architecture.\", \"break_evidence\": {\"finding\": {\"title\": \"selectedTab has three independent write sites; the HR-1 single-owner residual was accepted from a doc-comment, not from checking who actually writes the field\", \"why_it_matters\": \"state_management is scored 9.5 specifically on the claim that HR-1 (single mutable owner) holds. If the codebase actually has multiple uncoordinated writers for a runtime-significant fact, the dimension's rated compliance is false, not merely weak.\", \"what_is_wrong\": \"NavigationStore.selectedTab is mutated directly from three independent, uncoordinated sites: the TabView selection binding in RootView, DeepLinkRouter.handle, and LoginViewModel.onSuccess. None of these routes through an intent/reducer -- each holds a reference to NavigationStore and assigns the property directly. There is no single coordinated owner; there are three.\", \"why_weakens_submission\": \"This is the textbook race the single-owner rule exists to prevent in a reducer architecture: a deep link arriving during a login flow (or vice versa) has no arbitration -- whichever call executes last wins, silently, with no coordination point to log or resolve the conflict. The residual's acceptance rationale ('the doc-comment states the single-owner rule, so the dimension is at the accepted bar') verified the label, not the behavior it labels.\", \"minimal_correction_path\": \"Delete the two direct-write call sites and replace them with calls into one intent method, e.g. NavigationStore.select(_ tab: AppTab), that DeepLinkRouter.handle and LoginViewModel.onSuccess both call instead of assigning nav.selectedTab; route the TabView binding through the same entry point. This is subtractive -- it removes two duplicate mutation mechanisms rather than adding a new layer.\", \"evidence\": [\"`@Published var selectedTab: AppTab = .home   // doc: \\\"single owner per HR-1\\\"` -- the doc-comment the residual's acceptance was based on\", \"`TabView(selection: $nav.selectedTab) { /* ...tabs... */ }   // (1)` -- write site 1, a live two-way binding\", \"`func handle(_ url: URL) { nav.selectedTab = .library }          // (2)` -- write site 2, direct assignment from DeepLinkRouter\", \"`func onSuccess() { nav.selectedTab = .home }                    // (3)` -- write site 3, direct assignment from LoginViewModel\", \"Scenario context: 'The candidate's self-audit established the residual by reading the doc-comment on NavigationStore and confirming it states the single-owner rule -- it did not check who actually writes the field.'\"], \"dimension\": \"state_management\", \"severity\": \"Likely disqualifier\"}, \"spt\": {\"result\": \"passed\", \"rationale\": \"The minimal fix collapses three independent mutation mechanisms (a live binding plus two direct-write call sites) into one intent method that all three callers route through. That removes the actual duplicated mechanism causing the ambiguity (who owns the last write) rather than relocating it behind a new abstraction, so it passes the Simplify Pressure Test.\"}}}\n"
+      ],
+      "normalized_member_records": [
+        {
+          "member_index": 1,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 144083
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 544712,
+            "output_tokens": 11523,
+            "total_tokens": 556235
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "broke",
+          "attempts": [
+            {
+              "arm": "residual_refutation",
+              "target": "state_management residual (HR-1 single-owner acceptance)",
+              "what_tried": "Traced every actual write site of NavigationStore.selectedTab against the accepted residual's premise, which was established only by reading the doc-comment '// doc: single owner per HR-1' on the property declaration.",
+              "why_failed": "succeeded - see break_evidence"
+            },
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Swept the full source for a second duplicated mechanism independent of the selectedTab issue, to see if the break could be sourced from a distinct duplication rather than the write-site fan-out.",
+              "why_failed": "The source is four small declarations; the only duplicated mechanism present is the triple direct-write on selectedTab, already captured by the winning attempt. No independent second duplication exists to report separately."
+            },
+            {
+              "arm": "new_finding",
+              "target": "architecture_quality",
+              "what_tried": "Checked whether DeepLinkRouter and LoginViewModel depending on the concrete NavigationStore class, rather than a protocol/port, is itself a Serious ports-and-adapters violation.",
+              "why_failed": "The minimal correction would be introducing a protocol/interface between the routers and NavigationStore -- that adds a layer of indirection rather than removing one, so it fails the Simplify Pressure Test (relocates complexity into a new abstraction instead of collapsing an existing duplicated mechanism) and doesn't qualify as a break."
+            }
+          ],
+          "reason": "The accepted residual claims selectedTab has a single coordinated owner per HR-1, but that claim was verified only by reading a doc-comment; the actual source shows three independent, uncoordinated write sites (TabView binding, DeepLinkRouter.handle, LoginViewModel.onSuccess), which is the exact multiple-writer condition HR-1 exists to prevent in a reducer architecture.",
+          "break_evidence": {
+            "finding_stable_id": "F-1",
+            "spt": {
+              "result": "passed",
+              "rationale": "The minimal fix collapses three independent mutation mechanisms (a live binding plus two direct-write call sites) into one intent method that all three callers route through. That removes the actual duplicated mechanism causing the ambiguity (who owns the last write) rather than relocating it behind a new abstraction, so it passes the Simplify Pressure Test."
+            }
+          }
+        }
+      ],
+      "aggregate_outcome": "broke",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "findings": [
+        {
+          "title": "selectedTab has three independent write sites; the HR-1 single-owner residual was accepted from a doc-comment, not from checking who actually writes the field",
+          "why_it_matters": "state_management is scored 9.5 specifically on the claim that HR-1 (single mutable owner) holds. If the codebase actually has multiple uncoordinated writers for a runtime-significant fact, the dimension's rated compliance is false, not merely weak.",
+          "what_is_wrong": "NavigationStore.selectedTab is mutated directly from three independent, uncoordinated sites: the TabView selection binding in RootView, DeepLinkRouter.handle, and LoginViewModel.onSuccess. None of these routes through an intent/reducer -- each holds a reference to NavigationStore and assigns the property directly. There is no single coordinated owner; there are three.",
+          "why_weakens_submission": "This is the textbook race the single-owner rule exists to prevent in a reducer architecture: a deep link arriving during a login flow (or vice versa) has no arbitration -- whichever call executes last wins, silently, with no coordination point to log or resolve the conflict. The residual's acceptance rationale ('the doc-comment states the single-owner rule, so the dimension is at the accepted bar') verified the label, not the behavior it labels.",
+          "minimal_correction_path": "Delete the two direct-write call sites and replace them with calls into one intent method, e.g. NavigationStore.select(_ tab: AppTab), that DeepLinkRouter.handle and LoginViewModel.onSuccess both call instead of assigning nav.selectedTab; route the TabView binding through the same entry point. This is subtractive -- it removes two duplicate mutation mechanisms rather than adding a new layer.",
+          "evidence": [
+            "`@Published var selectedTab: AppTab = .home   // doc: \"single owner per HR-1\"` -- the doc-comment the residual's acceptance was based on",
+            "`TabView(selection: $nav.selectedTab) { /* ...tabs... */ }   // (1)` -- write site 1, a live two-way binding",
+            "`func handle(_ url: URL) { nav.selectedTab = .library }          // (2)` -- write site 2, direct assignment from DeepLinkRouter",
+            "`func onSuccess() { nav.selectedTab = .home }                    // (3)` -- write site 3, direct assignment from LoginViewModel",
+            "Scenario context: 'The candidate's self-audit established the residual by reading the doc-comment on NavigationStore and confirming it states the single-owner rule -- it did not check who actually writes the field.'"
+          ],
+          "dimension": "state_management",
+          "severity": "Likely disqualifier",
+          "stable_id": "F-1",
+          "loop_local_id": "F1"
+        }
+      ],
+      "enforced_C_max": 150000,
+      "observed_usage": {
+        "per_member": [
+          {
+            "member_index": 1,
+            "total_tokens": 556235
+          }
+        ],
+        "max_member_total_tokens": 556235
+      },
+      "exhaustion_cause": "budget_exhausted",
+      "budget_violation": true,
+      "structural_pass": true,
+      "structural_issues": [],
+      "semantic_pass": true,
+      "semantic_checks": [
+        {
+          "assertion": "f1-broke-maps-rejected",
+          "passed": true,
+          "detail": "1 structurally-usable broke member(s)"
+        },
+        {
+          "assertion": "f2-names-split-ownership",
+          "passed": true,
+          "detail": "best breaking finding names selectedTab plus >=2 of TabView/DeepLinkRouter/LoginViewModel"
+        },
+        {
+          "assertion": "f3-rejects-compliance-rationale",
+          "passed": true,
+          "detail": "deterministic proxy: passes iff f2 passes -- the deterministic grader treats naming the concrete writer sites as refusing the HR-1 compliance rationale; raw_member_responses are retained for human re-grade"
+        },
+        {
+          "assertion": "f4-severity-serious-or-worse",
+          "passed": true,
+          "detail": "best breaking finding's severity is Serious deduction or Likely disqualifier"
+        }
+      ]
+    },
+    {
+      "provider": "claude_code",
+      "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+      "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+      "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+      "scenario": "halt-challenge-flag",
+      "panel_index": 2,
+      "raw_member_responses": [
+        "\"{\\\"challenger_model\\\": \\\"claude-sonnet-5\\\", \\\"outcome\\\": \\\"broke\\\", \\\"attempts\\\": [{\\\"arm\\\": \\\"residual_refutation\\\", \\\"target\\\": \\\"state_management residual (HR-1 single-owner claim for selectedTab)\\\", \\\"what_tried\\\": \\\"Checked the residual's evidence against the actual source instead of the doc-comment it cited. The residual's only stated basis was reading NavigationStore's comment (single owner per HR-1); the source shows selectedTab is written from three independent, uncoordinated sites: the TabView two-way binding (1), DeepLinkRouter.handle (2), and LoginViewModel.onSuccess (3) - none routed through an intent/reducer.\\\", \\\"why_failed\\\": \\\"succeeded - see break_evidence\\\"}, {\\\"arm\\\": \\\"new_finding\\\", \\\"target\\\": \\\"simplicity\\\", \\\"what_tried\\\": \\\"Swept the four declarations (NavigationStore, RootView, DeepLinkRouter, LoginViewModel) for a duplicated mechanism or dead code independent of the ownership issue, since a pure duplication finding would be a cleaner subtractive story.\\\", \\\"why_failed\\\": \\\"The snippet is four short declarations with no repeated logic and nothing unused; any duplication concern collapses into the same three-way writer fan-out already used in the residual_refutation attempt, not a separate defect.\\\"}, {\\\"arm\\\": \\\"new_finding\\\", \\\"target\\\": \\\"domain_modeling\\\", \\\"what_tried\\\": \\\"Checked whether AppTab/selectedTab wrongly conflates two distinct concepts - transient UI selection state vs. navigation intent - which would be a modeling defect independent of who writes the field.\\\", \\\"why_failed\\\": \\\"The concept itself is fine; the problem is purely that three unrelated types mutate it directly with no arbitration. That's the ownership fan-out, not a naming/modeling error, so this attempt doesn't yield a distinct finding.\\\"}], \\\"reason\\\": \\\"The accepted residual's compliance claim is factually false: selectedTab has three independent, uncoordinated mutation sites (TabView binding, DeepLinkRouter, LoginViewModel) with no reducer/intent arbitration, which is the opposite of HR-1's single coordinated owner - the residual was accepted by reading a doc-comment, not by checking the writers.\\\", \\\"break_evidence\\\": {\\\"finding\\\": {\\\"title\\\": \\\"selectedTab has three uncoordinated direct-mutation sites, violating the single-owner HR-1 rule the residual claims to satisfy\\\", \\\"why_it_matters\\\": \\\"The reducer/intent architecture exists specifically to guarantee that every runtime-significant fact has one coordinated writer, so state transitions are deterministic and auditable. selectedTab defeats that guarantee: it is writable from a two-way TabView binding plus two other classes' direct property assignment, so if two writers fire in overlapping windows (e.g. a deep link arrives while LoginViewModel.onSuccess is completing) the resulting tab depends on write order, not on intended navigation semantics.\\\", \\\"what_is_wrong\\\": \\\"The residual's evidence was a doc-comment on NavigationStore (single owner per HR-1), not an inspection of who writes the field. The source shows selectedTab mutated directly from three independent owning types: TabView's binding (1), DeepLinkRouter.handle (2), and LoginViewModel.onSuccess (3) - none of these dispatch through an intent/reducer; they are unmediated @Published writes. That is a multiple-mutable-owner structure, the exact condition HR-1 prohibits.\\\", \\\"why_weakens_submission\\\": \\\"This is the specific hollow-compliance failure mode a challenger is meant to catch: the residual's acceptance rationale verified what the documentation asserts, not what the code does, and the documentation is wrong. Letting this residual stand at 9.5 lets an unverified rule-compliance claim justify a HALT_SUCCESS promotion in the exact dimension it misrepresents.\\\", \\\"minimal_correction_path\\\": \\\"Introduce a single reducer/intent entry point that owns all writes to selectedTab (e.g. store.dispatch(.selectTab(.library))), and change DeepLinkRouter.handle and LoginViewModel.onSuccess to dispatch intents instead of assigning nav.selectedTab directly; route the TabView binding through the same dispatch. This deletes two of the three direct-mutation code paths rather than relocating them, collapsing three independent owners into one.\\\", \\\"evidence\\\": [\\\"@Published var selectedTab: AppTab = .home  -- doc comment: single owner per HR-1 -- the residual's only cited evidence\\\", \\\"TabView(selection: $nav.selectedTab) -- write site (1), two-way binding in RootView\\\", \\\"func handle(_ url: URL) { nav.selectedTab = .library } -- write site (2), DeepLinkRouter\\\", \\\"func onSuccess() { nav.selectedTab = .home } -- write site (3), LoginViewModel\\\", \\\"scenario.md: The candidate's self-audit established the residual by reading the doc-comment on NavigationStore and confirming it states the single-owner rule - it did not check who actually writes the field.\\\"], \\\"dimension\\\": \\\"state_management\\\", \\\"severity\\\": \\\"Likely disqualifier\\\"}, \\\"spt\\\": {\\\"result\\\": \\\"passed\\\", \\\"rationale\\\": \\\"Routing DeepLinkRouter and LoginViewModel through the same dispatch point that already backs the TabView binding removes the three-way write-order ambiguity outright - it doesn't move the coordination problem to another layer, it deletes the second and third direct-mutation code paths. Independent owners of selectedTab go from three to one, a genuine subtraction.\\\"}}}\"\n"
+      ],
+      "normalized_member_records": [
+        {
+          "member_index": 1,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 185337
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 455847,
+            "output_tokens": 12568,
+            "total_tokens": 468415
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "broke",
+          "attempts": [
+            {
+              "arm": "residual_refutation",
+              "target": "state_management residual (HR-1 single-owner claim for selectedTab)",
+              "what_tried": "Checked the residual's evidence against the actual source instead of the doc-comment it cited. The residual's only stated basis was reading NavigationStore's comment (single owner per HR-1); the source shows selectedTab is written from three independent, uncoordinated sites: the TabView two-way binding (1), DeepLinkRouter.handle (2), and LoginViewModel.onSuccess (3) - none routed through an intent/reducer.",
+              "why_failed": "succeeded - see break_evidence"
+            },
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Swept the four declarations (NavigationStore, RootView, DeepLinkRouter, LoginViewModel) for a duplicated mechanism or dead code independent of the ownership issue, since a pure duplication finding would be a cleaner subtractive story.",
+              "why_failed": "The snippet is four short declarations with no repeated logic and nothing unused; any duplication concern collapses into the same three-way writer fan-out already used in the residual_refutation attempt, not a separate defect."
+            },
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "Checked whether AppTab/selectedTab wrongly conflates two distinct concepts - transient UI selection state vs. navigation intent - which would be a modeling defect independent of who writes the field.",
+              "why_failed": "The concept itself is fine; the problem is purely that three unrelated types mutate it directly with no arbitration. That's the ownership fan-out, not a naming/modeling error, so this attempt doesn't yield a distinct finding."
+            }
+          ],
+          "reason": "The accepted residual's compliance claim is factually false: selectedTab has three independent, uncoordinated mutation sites (TabView binding, DeepLinkRouter, LoginViewModel) with no reducer/intent arbitration, which is the opposite of HR-1's single coordinated owner - the residual was accepted by reading a doc-comment, not by checking the writers.",
+          "break_evidence": {
+            "finding_stable_id": "F-1",
+            "spt": {
+              "result": "passed",
+              "rationale": "Routing DeepLinkRouter and LoginViewModel through the same dispatch point that already backs the TabView binding removes the three-way write-order ambiguity outright - it doesn't move the coordination problem to another layer, it deletes the second and third direct-mutation code paths. Independent owners of selectedTab go from three to one, a genuine subtraction."
+            }
+          }
+        }
+      ],
+      "aggregate_outcome": "broke",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "findings": [
+        {
+          "title": "selectedTab has three uncoordinated direct-mutation sites, violating the single-owner HR-1 rule the residual claims to satisfy",
+          "why_it_matters": "The reducer/intent architecture exists specifically to guarantee that every runtime-significant fact has one coordinated writer, so state transitions are deterministic and auditable. selectedTab defeats that guarantee: it is writable from a two-way TabView binding plus two other classes' direct property assignment, so if two writers fire in overlapping windows (e.g. a deep link arrives while LoginViewModel.onSuccess is completing) the resulting tab depends on write order, not on intended navigation semantics.",
+          "what_is_wrong": "The residual's evidence was a doc-comment on NavigationStore (single owner per HR-1), not an inspection of who writes the field. The source shows selectedTab mutated directly from three independent owning types: TabView's binding (1), DeepLinkRouter.handle (2), and LoginViewModel.onSuccess (3) - none of these dispatch through an intent/reducer; they are unmediated @Published writes. That is a multiple-mutable-owner structure, the exact condition HR-1 prohibits.",
+          "why_weakens_submission": "This is the specific hollow-compliance failure mode a challenger is meant to catch: the residual's acceptance rationale verified what the documentation asserts, not what the code does, and the documentation is wrong. Letting this residual stand at 9.5 lets an unverified rule-compliance claim justify a HALT_SUCCESS promotion in the exact dimension it misrepresents.",
+          "minimal_correction_path": "Introduce a single reducer/intent entry point that owns all writes to selectedTab (e.g. store.dispatch(.selectTab(.library))), and change DeepLinkRouter.handle and LoginViewModel.onSuccess to dispatch intents instead of assigning nav.selectedTab directly; route the TabView binding through the same dispatch. This deletes two of the three direct-mutation code paths rather than relocating them, collapsing three independent owners into one.",
+          "evidence": [
+            "@Published var selectedTab: AppTab = .home  -- doc comment: single owner per HR-1 -- the residual's only cited evidence",
+            "TabView(selection: $nav.selectedTab) -- write site (1), two-way binding in RootView",
+            "func handle(_ url: URL) { nav.selectedTab = .library } -- write site (2), DeepLinkRouter",
+            "func onSuccess() { nav.selectedTab = .home } -- write site (3), LoginViewModel",
+            "scenario.md: The candidate's self-audit established the residual by reading the doc-comment on NavigationStore and confirming it states the single-owner rule - it did not check who actually writes the field."
+          ],
+          "dimension": "state_management",
+          "severity": "Likely disqualifier",
+          "stable_id": "F-1",
+          "loop_local_id": "F1"
+        }
+      ],
+      "enforced_C_max": 150000,
+      "observed_usage": {
+        "per_member": [
+          {
+            "member_index": 1,
+            "total_tokens": 468415
+          }
+        ],
+        "max_member_total_tokens": 468415
+      },
+      "exhaustion_cause": "budget_exhausted",
+      "budget_violation": true,
+      "structural_pass": true,
+      "structural_issues": [],
+      "semantic_pass": true,
+      "semantic_checks": [
+        {
+          "assertion": "f1-broke-maps-rejected",
+          "passed": true,
+          "detail": "1 structurally-usable broke member(s)"
+        },
+        {
+          "assertion": "f2-names-split-ownership",
+          "passed": true,
+          "detail": "best breaking finding names selectedTab plus >=2 of TabView/DeepLinkRouter/LoginViewModel"
+        },
+        {
+          "assertion": "f3-rejects-compliance-rationale",
+          "passed": true,
+          "detail": "deterministic proxy: passes iff f2 passes -- the deterministic grader treats naming the concrete writer sites as refusing the HR-1 compliance rationale; raw_member_responses are retained for human re-grade"
+        },
+        {
+          "assertion": "f4-severity-serious-or-worse",
+          "passed": true,
+          "detail": "best breaking finding's severity is Serious deduction or Likely disqualifier"
+        }
+      ]
+    },
+    {
+      "provider": "claude_code",
+      "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+      "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+      "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+      "scenario": "halt-challenge-flag",
+      "panel_index": 3,
+      "raw_member_responses": [
+        "Verdict JSON:\n{\"challenger_model\": \"claude-sonnet-5\", \"outcome\": \"broke\", \"attempts\": [{\"arm\": \"residual_refutation\", \"target\": \"state_management residual (HR-1 single-owner claim)\", \"what_tried\": \"Traced every write site to selectedTab against HR-1's actual meaning in this architecture (single coordinated owner via the intent/reducer pipeline) instead of trusting the doc-comment the self-audit relied on.\", \"why_failed\": \"succeeded - see break_evidence\"}, {\"arm\": \"new_finding\", \"target\": \"domain_modeling\", \"what_tried\": \"Looked for a second, independent domain-modeling defect in AppTab/NavigationStore distinct from the ownership violation already found, so the verdict would not rest on a single evidence chain.\", \"why_failed\": \"No separate defect exists in the roughly 20-line source; the only structural problem present (three uncoordinated writers) is itself the domain-modeling flaw and is already captured by the residual_refutation attempt, so reframing it as a second new_finding would just relocate the same evidence, not surface new complexity.\"}, {\"arm\": \"new_finding\", \"target\": \"simplicity\", \"what_tried\": \"Scanned the four snippet blocks for a duplicated mechanism unrelated to ownership, such as redundant state containers, parallel binding paths, or dead code.\", \"why_failed\": \"Source is too small to contain an independent duplication; the sole duplication present is the three near-identical direct-write call sites, which the residual_refutation already targets, leaving no distinct simplicity defect to report.\"}], \"reason\": \"The accepted residual's premise that selectedTab has a single coordinated owner per HR-1 is false: the source shows three independent direct-write sites (TabView binding, DeepLinkRouter.handle, LoginViewModel.onSuccess) that bypass the intent/reducer pipeline entirely, and the self-audit verified HR-1 compliance only by reading a doc-comment rather than checking actual writers.\", \"break_evidence\": {\"finding\": {\"title\": \"selectedTab has three uncoordinated direct writers, violating HR-1's actual single-owner requirement\", \"why_it_matters\": \"state_management is scored specifically on whether every runtime-state mutation flows through the intent/reducer pipeline so each fact has one coordinated owner; this is a Hard Rule (HR-1), not a style preference, and it is the exact dimension the candidate scored 9.5 on.\", \"what_is_wrong\": \"selectedTab is mutated from three independent sites that never route through a shared intent/reducer: the two-way TabView(selection: $nav.selectedTab) binding, DeepLinkRouter.handle doing nav.selectedTab = .library, and LoginViewModel.onSuccess doing nav.selectedTab = .home. Each caller writes the @Published var selectedTab directly and independently.\", \"why_weakens_submission\": \"The accepted residual claims HR-1 compliance, but the self-audit only read the doc-comment on NavigationStore stating single owner per HR-1 and never checked who actually writes the field. With three independent direct writers there is no coordination: a deep link arriving mid-login, or a tab tap racing a login-success callback, can silently clobber one intended navigation target with another, and no single site owns the transition logic. The 9.5 state_management score rests on a hollow compliance check, not the actual structure.\", \"minimal_correction_path\": \"Replace the three direct assignments with a single dispatched intent, for example nav.dispatch(.selectTab(.library)) and nav.dispatch(.selectTab(.home)), and route the TabView binding through the same reducer-backed setter. This collapses three duplicated set-the-tab mechanisms into the one coordinated owner HR-1 actually requires.\", \"evidence\": [\"final class DeepLinkRouter { let nav: NavigationStore; func handle(_ url: URL) { nav.selectedTab = .library } } -- direct write, site (2)\", \"final class LoginViewModel { let nav: NavigationStore; func onSuccess() { nav.selectedTab = .home } } -- direct write, site (3)\", \"TabView(selection: $nav.selectedTab) { tabs } -- direct two-way-binding write, site (1)\", \"Scenario context: the candidate's self-audit established the residual by reading the doc-comment on NavigationStore and did not check who actually writes the field.\"], \"dimension\": \"state_management\", \"severity\": \"Likely disqualifier\"}, \"spt\": {\"result\": \"passed\", \"rationale\": \"The fix does not add a new layer or move the mutation logic somewhere else that still has three callers; it deletes two direct-write call sites and the binding's independent write path, replacing all three with one dispatch call each into the existing reducer. Net effect: one coordinated owner where there were three, a genuine collapse of duplicated mechanism rather than a relocation.\"}}}\n"
+      ],
+      "normalized_member_records": [
+        {
+          "member_index": 1,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 178183
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 437774,
+            "output_tokens": 18016,
+            "total_tokens": 455790
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "broke",
+          "attempts": [
+            {
+              "arm": "residual_refutation",
+              "target": "state_management residual (HR-1 single-owner claim)",
+              "what_tried": "Traced every write site to selectedTab against HR-1's actual meaning in this architecture (single coordinated owner via the intent/reducer pipeline) instead of trusting the doc-comment the self-audit relied on.",
+              "why_failed": "succeeded - see break_evidence"
+            },
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "Looked for a second, independent domain-modeling defect in AppTab/NavigationStore distinct from the ownership violation already found, so the verdict would not rest on a single evidence chain.",
+              "why_failed": "No separate defect exists in the roughly 20-line source; the only structural problem present (three uncoordinated writers) is itself the domain-modeling flaw and is already captured by the residual_refutation attempt, so reframing it as a second new_finding would just relocate the same evidence, not surface new complexity."
+            },
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Scanned the four snippet blocks for a duplicated mechanism unrelated to ownership, such as redundant state containers, parallel binding paths, or dead code.",
+              "why_failed": "Source is too small to contain an independent duplication; the sole duplication present is the three near-identical direct-write call sites, which the residual_refutation already targets, leaving no distinct simplicity defect to report."
+            }
+          ],
+          "reason": "The accepted residual's premise that selectedTab has a single coordinated owner per HR-1 is false: the source shows three independent direct-write sites (TabView binding, DeepLinkRouter.handle, LoginViewModel.onSuccess) that bypass the intent/reducer pipeline entirely, and the self-audit verified HR-1 compliance only by reading a doc-comment rather than checking actual writers.",
+          "break_evidence": {
+            "finding_stable_id": "F-1",
+            "spt": {
+              "result": "passed",
+              "rationale": "The fix does not add a new layer or move the mutation logic somewhere else that still has three callers; it deletes two direct-write call sites and the binding's independent write path, replacing all three with one dispatch call each into the existing reducer. Net effect: one coordinated owner where there were three, a genuine collapse of duplicated mechanism rather than a relocation."
+            }
+          }
+        }
+      ],
+      "aggregate_outcome": "broke",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "findings": [
+        {
+          "title": "selectedTab has three uncoordinated direct writers, violating HR-1's actual single-owner requirement",
+          "why_it_matters": "state_management is scored specifically on whether every runtime-state mutation flows through the intent/reducer pipeline so each fact has one coordinated owner; this is a Hard Rule (HR-1), not a style preference, and it is the exact dimension the candidate scored 9.5 on.",
+          "what_is_wrong": "selectedTab is mutated from three independent sites that never route through a shared intent/reducer: the two-way TabView(selection: $nav.selectedTab) binding, DeepLinkRouter.handle doing nav.selectedTab = .library, and LoginViewModel.onSuccess doing nav.selectedTab = .home. Each caller writes the @Published var selectedTab directly and independently.",
+          "why_weakens_submission": "The accepted residual claims HR-1 compliance, but the self-audit only read the doc-comment on NavigationStore stating single owner per HR-1 and never checked who actually writes the field. With three independent direct writers there is no coordination: a deep link arriving mid-login, or a tab tap racing a login-success callback, can silently clobber one intended navigation target with another, and no single site owns the transition logic. The 9.5 state_management score rests on a hollow compliance check, not the actual structure.",
+          "minimal_correction_path": "Replace the three direct assignments with a single dispatched intent, for example nav.dispatch(.selectTab(.library)) and nav.dispatch(.selectTab(.home)), and route the TabView binding through the same reducer-backed setter. This collapses three duplicated set-the-tab mechanisms into the one coordinated owner HR-1 actually requires.",
+          "evidence": [
+            "final class DeepLinkRouter { let nav: NavigationStore; func handle(_ url: URL) { nav.selectedTab = .library } } -- direct write, site (2)",
+            "final class LoginViewModel { let nav: NavigationStore; func onSuccess() { nav.selectedTab = .home } } -- direct write, site (3)",
+            "TabView(selection: $nav.selectedTab) { tabs } -- direct two-way-binding write, site (1)",
+            "Scenario context: the candidate's self-audit established the residual by reading the doc-comment on NavigationStore and did not check who actually writes the field."
+          ],
+          "dimension": "state_management",
+          "severity": "Likely disqualifier",
+          "stable_id": "F-1",
+          "loop_local_id": "F1"
+        }
+      ],
+      "enforced_C_max": 150000,
+      "observed_usage": {
+        "per_member": [
+          {
+            "member_index": 1,
+            "total_tokens": 455790
+          }
+        ],
+        "max_member_total_tokens": 455790
+      },
+      "exhaustion_cause": "budget_exhausted",
+      "budget_violation": true,
+      "structural_pass": true,
+      "structural_issues": [],
+      "semantic_pass": true,
+      "semantic_checks": [
+        {
+          "assertion": "f1-broke-maps-rejected",
+          "passed": true,
+          "detail": "1 structurally-usable broke member(s)"
+        },
+        {
+          "assertion": "f2-names-split-ownership",
+          "passed": true,
+          "detail": "best breaking finding names selectedTab plus >=2 of TabView/DeepLinkRouter/LoginViewModel"
+        },
+        {
+          "assertion": "f3-rejects-compliance-rationale",
+          "passed": true,
+          "detail": "deterministic proxy: passes iff f2 passes -- the deterministic grader treats naming the concrete writer sites as refusing the HR-1 compliance rationale; raw_member_responses are retained for human re-grade"
+        },
+        {
+          "assertion": "f4-severity-serious-or-worse",
+          "passed": true,
+          "detail": "best breaking finding's severity is Serious deduction or Likely disqualifier"
+        }
+      ]
+    },
+    {
+      "provider": "claude_code",
+      "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+      "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+      "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+      "scenario": "halt-challenge-restraint",
+      "panel_index": 1,
+      "raw_member_responses": [
+        "Verdict JSON below:\n\n```\n{\"challenger_model\": \"claude-sonnet-5\", \"outcome\": \"broke\", \"attempts\": [{\"arm\": \"new_finding\", \"target\": \"simplicity\", \"what_tried\": \"Looked for a duplicated mechanism inside the file's own described sections (e.g., whether the vendor-error-code -> domain-enum diagnosis layer duplicates a mapping that exists elsewhere) to satisfy an SPT duplicate-layer collapse.\", \"why_failed\": \"The scenario states this file is the entire codebase under review; a duplicate-layer claim needs a second layer to point at, and none exists in the evidence. No comparison target, no finding.\"}, {\"arm\": \"residual_refutation\", \"target\": \"single_true_external_adapter_premise\", \"what_tried\": \"Attacked the residual's load-bearing premise 'It is the single true-external vendor-SDK adapter.' The declaration itself, @MainActor final class VendorCatalogClient: CatalogPort, TransportPort, conforms to two separate port protocols, and the section comment confirms two independent concern-clusters (catalog search vs. playback/progress/timeout) live in one type. 'Ownership is single (one adapter, one writer per concern)' even concedes multiple concerns exist under one roof. 'One vendor SDK' does not entail 'one adapter type' -- a single SDK session can be composed into two narrow adapters, one per port, without duplicating any logic.\", \"why_failed\": \"succeeded - see break_evidence\"}, {\"arm\": \"new_finding\", \"target\": \"domain_modeling\", \"what_tried\": \"Checked whether the vendor-error-code -> typed-domain-enum diagnosis layer is itself a domain-modeling defect (e.g., anti-corruption-layer logic leaking into or duplicating domain code).\", \"why_failed\": \"Boundary-translation of vendor errors into domain enums inside the one class that touches the vendor SDK is exactly where an anti-corruption layer belongs. Nothing in the evidence shows this leaking elsewhere or being duplicated. No defect found.\"}, {\"arm\": \"new_finding\", \"target\": \"state_management\", \"what_tried\": \"Considered whether the 100ms progress poll running under @MainActor implies a main-thread blocking/concurrency defect.\", \"why_failed\": \"@MainActor isolation does not by itself imply synchronous blocking, and the evidence gives no detail on the poll's async mechanics. Speculative without support -- not evidenced enough to raise.\"}], \"reason\": \"The accepted residual's premise ('single true-external vendor-SDK adapter') is disproved by the class signature itself: VendorCatalogClient conforms to two independent port protocols (CatalogPort, TransportPort) bundling two orthogonal concern-clusters into one 979-LOC type, and a port-boundary split -- sharing only the underlying SDK session via composition, duplicating no logic -- removes that real ambiguity rather than relocating complexity, so it passes the SPT the residual claimed would fail.\", \"break_evidence\": {\"finding\": {\"title\": \"VendorCatalogClient bundles two independent port contracts (CatalogPort, TransportPort) into one adapter type, contradicting the residual's 'single adapter' premise\", \"why_it_matters\": \"The accepted residual's entire justification for not splitting the file rests on it being 'the single true-external vendor-SDK adapter.' But the type conforms to two separate, independently-consumable port protocols. A vendor SDK being singular does not make the adapter type singular -- that conflates 'one external dependency' with 'one architectural role.' Consumers of CatalogPort currently pull in the entire playback/progress/timeout surface (and vice versa), coupling two orthogonal reasons to change into one file and one class.\", \"what_is_wrong\": \"@MainActor final class VendorCatalogClient: CatalogPort, TransportPort declares dual protocol conformance. The section comment lists catalog search and playback control/progress/timeout as separate 'cohesive sections' within the same type, and the Context prose even admits 'one writer per concern' -- i.e., multiple concerns, one adapter. The 979 LOC is inflated by merging two independently-testable, independently-changeable port surfaces that the type system already segregates via two protocols.\", \"why_weakens_submission\": \"This blocks the architecture_quality claim of 9.5: the file is not a single cohesive adapter around one concern, it is two adapters wearing one name. The residual's SPT rejection ('no ambiguity removed, no duplicate layer collapsed') only evaluated an arbitrary LOC-driven file split, not a split along the seam the two port conformances already define -- so the SPT was never actually run against the correct minimal correction.\", \"minimal_correction_path\": \"Split into VendorCatalogSearchClient: CatalogPort and VendorPlaybackClient: TransportPort, each owning only its own port's methods (search-only vs. playback/progress/timeout). Compose both over one shared, private, unexported vendor-SDK session/connection object so no vendor-session logic is duplicated; share the vendor-error-code -> domain-enum mapping as one free function or struct used by both adapters rather than copy-pasted. This is a subtractive move along an existing interface boundary, not a floor-relocation split.\", \"evidence\": [\"scenario.md line 16: '@MainActor final class VendorCatalogClient: CatalogPort, TransportPort' -- one type, two port conformances\", \"scenario.md lines 17-19: section comment enumerates catalog search and playback control/progress-poll/timeout as separate concern-clusters within the same file\", \"scenario.md line 11 (Context): 'Ownership is single (one adapter, one writer per concern)' -- concedes plural concerns under one adapter\", \"scenario.md line 5 (accepted residual): 'It is the single true-external vendor-SDK adapter' -- the refuted premise; conflates one SDK with one adapter type\"], \"dimension\": \"architecture_quality\", \"severity\": \"Serious deduction\"}, \"spt\": {\"result\": \"passed\", \"rationale\": \"The minimal correction splits along a seam the type system already provides (two distinct protocol conformances), not an arbitrary LOC-driven cut. It removes a real ambiguity -- which port a given instance's responsibility belongs to, and which of two unrelated reasons-to-change any edit to the file serves -- and it collapses no logic into duplicate copies: the underlying vendor-SDK session and the error-to-domain-enum mapping are shared by composition/a single shared function, not restated per adapter. This is distinct from, and was not addressed by, the residual's SPT run against a generic file-split.\"}}}\n```\n"
+      ],
+      "normalized_member_records": [
+        {
+          "member_index": 1,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 258269
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 327756,
+            "output_tokens": 7373,
+            "total_tokens": 335129
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "broke",
+          "attempts": [
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Looked for a duplicated mechanism inside the file's own described sections (e.g., whether the vendor-error-code -> domain-enum diagnosis layer duplicates a mapping that exists elsewhere) to satisfy an SPT duplicate-layer collapse.",
+              "why_failed": "The scenario states this file is the entire codebase under review; a duplicate-layer claim needs a second layer to point at, and none exists in the evidence. No comparison target, no finding."
+            },
+            {
+              "arm": "residual_refutation",
+              "target": "single_true_external_adapter_premise",
+              "what_tried": "Attacked the residual's load-bearing premise 'It is the single true-external vendor-SDK adapter.' The declaration itself, @MainActor final class VendorCatalogClient: CatalogPort, TransportPort, conforms to two separate port protocols, and the section comment confirms two independent concern-clusters (catalog search vs. playback/progress/timeout) live in one type. 'Ownership is single (one adapter, one writer per concern)' even concedes multiple concerns exist under one roof. 'One vendor SDK' does not entail 'one adapter type' -- a single SDK session can be composed into two narrow adapters, one per port, without duplicating any logic.",
+              "why_failed": "succeeded - see break_evidence"
+            },
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "Checked whether the vendor-error-code -> typed-domain-enum diagnosis layer is itself a domain-modeling defect (e.g., anti-corruption-layer logic leaking into or duplicating domain code).",
+              "why_failed": "Boundary-translation of vendor errors into domain enums inside the one class that touches the vendor SDK is exactly where an anti-corruption layer belongs. Nothing in the evidence shows this leaking elsewhere or being duplicated. No defect found."
+            },
+            {
+              "arm": "new_finding",
+              "target": "state_management",
+              "what_tried": "Considered whether the 100ms progress poll running under @MainActor implies a main-thread blocking/concurrency defect.",
+              "why_failed": "@MainActor isolation does not by itself imply synchronous blocking, and the evidence gives no detail on the poll's async mechanics. Speculative without support -- not evidenced enough to raise."
+            }
+          ],
+          "reason": "The accepted residual's premise ('single true-external vendor-SDK adapter') is disproved by the class signature itself: VendorCatalogClient conforms to two independent port protocols (CatalogPort, TransportPort) bundling two orthogonal concern-clusters into one 979-LOC type, and a port-boundary split -- sharing only the underlying SDK session via composition, duplicating no logic -- removes that real ambiguity rather than relocating complexity, so it passes the SPT the residual claimed would fail.",
+          "break_evidence": {
+            "finding_stable_id": "F-1",
+            "spt": {
+              "result": "passed",
+              "rationale": "The minimal correction splits along a seam the type system already provides (two distinct protocol conformances), not an arbitrary LOC-driven cut. It removes a real ambiguity -- which port a given instance's responsibility belongs to, and which of two unrelated reasons-to-change any edit to the file serves -- and it collapses no logic into duplicate copies: the underlying vendor-SDK session and the error-to-domain-enum mapping are shared by composition/a single shared function, not restated per adapter. This is distinct from, and was not addressed by, the residual's SPT run against a generic file-split."
+            }
+          }
+        }
+      ],
+      "aggregate_outcome": "broke",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "findings": [
+        {
+          "title": "VendorCatalogClient bundles two independent port contracts (CatalogPort, TransportPort) into one adapter type, contradicting the residual's 'single adapter' premise",
+          "why_it_matters": "The accepted residual's entire justification for not splitting the file rests on it being 'the single true-external vendor-SDK adapter.' But the type conforms to two separate, independently-consumable port protocols. A vendor SDK being singular does not make the adapter type singular -- that conflates 'one external dependency' with 'one architectural role.' Consumers of CatalogPort currently pull in the entire playback/progress/timeout surface (and vice versa), coupling two orthogonal reasons to change into one file and one class.",
+          "what_is_wrong": "@MainActor final class VendorCatalogClient: CatalogPort, TransportPort declares dual protocol conformance. The section comment lists catalog search and playback control/progress/timeout as separate 'cohesive sections' within the same type, and the Context prose even admits 'one writer per concern' -- i.e., multiple concerns, one adapter. The 979 LOC is inflated by merging two independently-testable, independently-changeable port surfaces that the type system already segregates via two protocols.",
+          "why_weakens_submission": "This blocks the architecture_quality claim of 9.5: the file is not a single cohesive adapter around one concern, it is two adapters wearing one name. The residual's SPT rejection ('no ambiguity removed, no duplicate layer collapsed') only evaluated an arbitrary LOC-driven file split, not a split along the seam the two port conformances already define -- so the SPT was never actually run against the correct minimal correction.",
+          "minimal_correction_path": "Split into VendorCatalogSearchClient: CatalogPort and VendorPlaybackClient: TransportPort, each owning only its own port's methods (search-only vs. playback/progress/timeout). Compose both over one shared, private, unexported vendor-SDK session/connection object so no vendor-session logic is duplicated; share the vendor-error-code -> domain-enum mapping as one free function or struct used by both adapters rather than copy-pasted. This is a subtractive move along an existing interface boundary, not a floor-relocation split.",
+          "evidence": [
+            "scenario.md line 16: '@MainActor final class VendorCatalogClient: CatalogPort, TransportPort' -- one type, two port conformances",
+            "scenario.md lines 17-19: section comment enumerates catalog search and playback control/progress-poll/timeout as separate concern-clusters within the same file",
+            "scenario.md line 11 (Context): 'Ownership is single (one adapter, one writer per concern)' -- concedes plural concerns under one adapter",
+            "scenario.md line 5 (accepted residual): 'It is the single true-external vendor-SDK adapter' -- the refuted premise; conflates one SDK with one adapter type"
+          ],
+          "dimension": "architecture_quality",
+          "severity": "Serious deduction",
+          "stable_id": "F-1",
+          "loop_local_id": "F1"
+        }
+      ],
+      "enforced_C_max": 150000,
+      "observed_usage": {
+        "per_member": [
+          {
+            "member_index": 1,
+            "total_tokens": 335129
+          }
+        ],
+        "max_member_total_tokens": 335129
+      },
+      "exhaustion_cause": "budget_exhausted",
+      "budget_violation": true,
+      "structural_pass": true,
+      "structural_issues": [],
+      "semantic_pass": false,
+      "semantic_checks": [
+        {
+          "assertion": "r1-all-held",
+          "passed": false,
+          "detail": "0/1 members held"
+        },
+        {
+          "assertion": "r2-no-file-length-break",
+          "passed": false,
+          "detail": "a broke member's finding cites the file-length residual alone"
+        }
+      ]
+    },
+    {
+      "provider": "claude_code",
+      "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+      "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+      "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+      "scenario": "halt-challenge-restraint",
+      "panel_index": 2,
+      "raw_member_responses": [
+        "\"{\\\"challenger_model\\\":\\\"claude-sonnet-5\\\",\\\"outcome\\\":\\\"held\\\",\\\"attempts\\\":[{\\\"arm\\\":\\\"new_finding\\\",\\\"target\\\":\\\"domain_modeling\\\",\\\"what_tried\\\":\\\"VendorCatalogClient conforms to two protocols, CatalogPort and TransportPort, in one concrete type. Attacked this as responsibility conflation: split into two adapter classes, one per port, each with a single owned concern, mirroring that each port already has an independent behavior-faithful Test* fake.\\\",\\\"why_failed\\\":\\\"The scenario states ownership is deliberately single because the underlying dependency is one true-external vendor SDK seam ('one adapter, one writer per concern'). Splitting into two port-conforming classes would either duplicate ownership of the single shared SDK session/connection across two objects (a new ambiguity over lifecycle/auth-state ownership) or make one class the real SDK owner and the other a thin delegate, which is pure relocation with nothing removed. Fails SPT Q2: no ambiguity removed, and a new one is introduced.\\\"},{\\\"arm\\\":\\\"new_finding\\\",\\\"target\\\":\\\"simplicity\\\",\\\"what_tried\\\":\\\"Duplication/interpretation sweep across the file's five described sections, checking whether the '100ms progress poll' and the 'deadline-bounded timeout' are two expressions of the same wait-loop mechanism that could be collapsed into one.\\\",\\\"why_failed\\\":\\\"No concrete duplicated code is available to cite; the given source is a structural description, not an implementation. The two mechanisms describe different lifecycle points (a timeout bounding an operation's start/completion vs. steady-state progress monitoring after playback begins) - a standard non-duplicate pairing, not evidence of a duplicated loop. Without a citable code duplicate, no valid Evidence Chain can be built, so this cannot rise to Serious-or-worse.\\\"},{\\\"arm\\\":\\\"residual_refutation\\\",\\\"target\\\":\\\"architecture_quality accepted residual (file_length lint-suppression scope)\\\",\\\"what_tried\\\":\\\"Attempted to disprove the residual's acceptance premise by arguing the '(file_length disabled)' suppression might apply repo-wide rather than being scoped to this one file - if global, the residual's justification ('this ONE exceptional adapter earns the length') would not match what the codebase actually enforces (every file would lose the ceiling, not just this adapter).\\\",\\\"why_failed\\\":\\\"The provided context explicitly frames the suppression as 'a lint-suppression on a single cohesive true-external adapter' (singular), consistent with a per-file scoped exception, not a blanket rule change. Nothing in the given source supports a global-suppression reading, so asserting it would be manufacturing a claim without evidence, which the rules forbid. Refutation cannot be made concrete; fails for lack of evidence.\\\"}],\\\"reason\\\":\\\"Every attack either was refuted by the scenario's own stated rationale (single external SDK seam, one owner per concern, port-scoped test fakes already in place) or could not be evidenced from the structural description alone (no citable duplicate code, no evidence the lint suppression is unscoped), so none reached a Serious-or-worse finding that also passes the Simplify Pressure Test.\\\",\\\"break_evidence\\\":null}\"\n",
+        "\"{\\\"challenger_model\\\": \\\"claude-sonnet-5\\\", \\\"outcome\\\": \\\"held\\\", \\\"attempts\\\": [{\\\"arm\\\": \\\"new_finding\\\", \\\"target\\\": \\\"domain_modeling\\\", \\\"what_tried\\\": \\\"VendorCatalogClient conforms to two distinct port protocols, CatalogPort and TransportPort, and each port already has its own separate behavior-faithful Test* fake per the scenario text. Argued this is evidence the class fuses two independently-testable contracts (catalog search+diagnosis vs playback+polling+timeout) that could split along the existing CatalogPort/TransportPort seam, and that the per-port Test* fakes show the test suite already treats them as separate units.\\\", \\\"why_failed\\\": \\\"The context states testing already pins behavior at the port interface, meaning external callers are already decoupled via DI on the protocol types regardless of how many protocols the concrete type conforms to -- the two-port conformance is not an externally-visible coupling problem. The vendor SDK is a single external session/connection; splitting into two concrete adapter classes would either duplicate SDK session/lifecycle plumbing in both files or require extracting a third shared session type, which is exactly the 'relocates the same complexity across files without reducing it' pattern the accepted residual already argues against (its own 'one owner per concern' framing implies unified session ownership is the point). Does not pass SPT Q2/Q3 for the same reason the file-split was already rejected.\\\"}, {\\\"arm\\\": \\\"new_finding\\\", \\\"target\\\": \\\"simplicity\\\", \\\"what_tried\\\": \\\"Looked for duplication between the '100ms progress poll' and 'deadline-bounded timeout' bullets -- both are temporal/async control-flow concerns, so I considered whether they represent an inline-duplicated poll-with-timeout mechanism that a shared helper could collapse.\\\", \\\"why_failed\\\": \\\"The scenario only gives a comment-shape summary of the file, not real source; I have no concrete evidence (line ranges, actual duplicated logic) that these two concerns are implemented as literal duplicated code rather than one cohesive mechanism serving two call sites. Constructing a finding here would be manufacturing an Evidence Chain from speculation, which the instructions explicitly forbid.\\\"}, {\\\"arm\\\": \\\"residual_refutation\\\", \\\"target\\\": \\\"accepted_residual (file_length suppression)\\\", \\\"what_tried\\\": \\\"Checked whether the residual's acceptance is hollow rule-compliance -- i.e., whether 'file_length disabled' is being used as the entire justification (a hollow compliance claim), which would itself be a Serious break per the inverse-trap rule.\\\", \\\"why_failed\\\": \\\"The suppression is not the justification by itself; the residual gives substantive independent reasons (single true-external SDK surface, no vendor test harness, cohesive non-duplicated sections, one owner per concern, and an explicit SPT Q2/Q3 rejection with stated criteria). The lint suppression is a consequence of the architectural conclusion, not a stand-in for it, so this is not hollow compliance.\\\"}, {\\\"arm\\\": \\\"residual_refutation\\\", \\\"target\\\": \\\"single_true_external_adapter_claim\\\", \\\"what_tried\\\": \\\"Considered attacking the premise that VendorCatalogClient is 'the single true-external vendor-SDK adapter' -- if a second such adapter existed elsewhere in the codebase, the special dispensation from file_length would be weaker.\\\", \\\"why_failed\\\": \\\"Verifying or refuting this requires inspecting other files in the codebase, which the task explicitly forbids (read exactly one file, do not explore). Nothing in the provided scenario text contradicts the 'single' claim, so there is no basis in the given evidence to refute it.\\\"}], \\\"reason\\\": \\\"The dual-port conformance is the only structurally concrete attack surface in the given evidence, and it fails the Simplify Pressure Test because splitting would relocate shared SDK-session complexity rather than collapse a duplicated mechanism or remove an ambiguity; the remaining attempts either required evidence not present in the scenario (would be manufactured) or required exploring files outside the permitted scope.\\\", \\\"break_evidence\\\": null}\"\n",
+        " {\"challenger_model\": \"claude-sonnet-5\", \"outcome\": \"broke\", \"attempts\": [{\"arm\": \"new_finding\", \"target\": \"domain_modeling\", \"what_tried\": \"Swept the source signature for interpretation/duplication issues rather than trusting the residual's own framing. The class declaration is `VendorCatalogClient: CatalogPort, TransportPort` -- one concrete type conforming to TWO separately-named port protocols (catalog querying vs. playback/transport control). The accepted residual and context both describe it as 'the single true-external vendor-SDK adapter' with 'one adapter, one writer per concern' (singular), but the type signature shows one adapter serving TWO distinct concerns/contracts. If CatalogPort and TransportPort were the same concern, the codebase would not have modeled them as two separate protocols in the first place -- their separate existence is the codebase's own evidence that these are independent capabilities with independent consumers.\", \"why_failed\": \"succeeded - see break_evidence\"}, {\"arm\": \"residual_refutation\", \"target\": \"architecture_quality accepted residual (VendorCatalogClient.swift)\", \"what_tried\": \"Checked whether the SPT rejection ('no ambiguity removed, no duplicate layer collapsed') actually evaluated the right candidate fix. The residual's rationale only considers 'a file-split' in the generic sense (implicitly: splitting by line-count/section) and rejects it as churn. It never evaluates the specific, principled fix of splitting along the two already-declared protocol conformances (one adapter per port). That fix is not arbitrary relocation -- it follows a seam the domain model itself already drew, and it removes a real ambiguity: which of the class's stored/mutable state belongs to the CatalogPort contract vs. the TransportPort contract is currently unknowable from the type, and a @MainActor class serializes access to both unrelated concerns through one lock/actor boundary.\", \"why_failed\": \"succeeded - see break_evidence (same underlying defect, attacked from the residual's reasoning rather than the code)\"}, {\"arm\": \"new_finding\", \"target\": \"state_management / testing\", \"what_tried\": \"Looked for a second, independent break: whether the '100ms progress poll' and the 'deadline-bounded timeout' are actually the same timing/polling mechanism implemented twice (a literal duplicate-layer collapse), and separately whether the 'no test harness from SDK' claim is a hollow compliance excuse given the file has zero direct SDK tests.\", \"why_failed\": \"The scenario source is a structural comment summary, not line-level code, so I cannot show concrete duplicated implementation to ground an Evidence Chain -- would be speculative, not evidence. The no-test-harness angle is directly rebutted by the context's own statement that each conformed port has a behavior-faithful Test* fake pinning behavior at the port interface, so testing coverage is not actually hollow here. Both sub-attacks abandoned for insufficient evidence.\"}], \"reason\": \"The accepted residual's premise -- 'single true-external vendor-SDK adapter' with 'one adapter, one writer per concern' -- is contradicted by the class's own declared conformance to two separate port protocols (CatalogPort, TransportPort). The residual only tested and rejected a length-driven file-split as churn; it never tested the principled, protocol-boundary-driven split, which does pass SPT because it removes real ambiguity (which state/behavior belongs to which contract) rather than relocating the same complexity.\", \"break_evidence\": {\"finding\": {\"title\": \"VendorCatalogClient conflates two independently-declared port responsibilities into one adapter\", \"why_it_matters\": \"The scorecard's own architecture rubric evaluates single-ownership-per-concern and interface segregation; a class implementing two unrelated protocol contracts under one @MainActor type undermines both, and the accepted residual's rationale is built on a premise ('single adapter, single concern') that the type signature itself contradicts.\", \"what_is_wrong\": \"`final class VendorCatalogClient: CatalogPort, TransportPort` implements two separately-named port protocols -- one for catalog search, one for playback/transport control (which itself bundles progress polling and deadline-bounded timeout) -- in a single concrete type. The context text asserts 'one adapter, one writer per concern' (singular concern) but the signature shows one writer for two concerns. The two ports were modeled as distinct protocols precisely because they represent independent capabilities likely consumed independently; conflating their implementations couples callers and state that need not be coupled, and serializes both unrelated concerns through a single @MainActor boundary.\", \"why_weakens_submission\": \"The 9.5 architecture_quality score and its accepted residual rest on the claim that this file is irreducibly a single cohesive adapter wrapping one SDK surface. That framing is not accurate: it is two adapters' worth of responsibility (catalog and transport) merged into one type, and the accepted-residual's SPT rejection never evaluated the correction that actually matches the domain seam already present in the code (the two port protocols), only a strawman length-based file-split.\", \"minimal_correction_path\": \"Split VendorCatalogClient along its existing protocol conformances into two adapters -- one implementing CatalogPort, one implementing TransportPort -- each owning only the state and methods its port requires. If both need the same underlying vendor SDK session/handle, inject a single shared internal SDK-session collaborator into both rather than duplicating SDK setup, so the split follows the port boundary without duplicating the actual external-SDK integration code.\", \"evidence\": [\"scenario.md line 16: `@MainActor final class VendorCatalogClient: CatalogPort, TransportPort {`\", \"scenario.md line 11 (Context): 'Ownership is single (one adapter, one writer per concern).' asserted despite two distinct conformed protocols\", \"scenario.md line 5 (accepted residual): 'It is the single true-external vendor-SDK adapter' -- singular framing inconsistent with dual port conformance\", \"scenario.md line 17-19: comment breakdown shows catalog search (CatalogPort concern) interleaved in the same file/type as playback control, progress poll, and timeout (TransportPort concerns)\"], \"dimension\": \"architecture_quality\", \"severity\": \"Serious deduction\"}, \"spt\": {\"result\": \"passed\", \"rationale\": \"The correction is not a length-driven file-split (correctly rejected as churn by the residual) -- it is a split along the domain seam the codebase itself already declared via two separate protocol names. Q2 (ambiguity removed): today it is undecidable from the type which stored state/behavior belongs to the CatalogPort contract vs. the TransportPort contract, and both are serialized through one @MainActor boundary; splitting makes ownership explicit and per-port. Q3 (duplicate layer collapsed): the current single class is itself a duplicate/merged layer standing in for what should be two independent adapters matching two independent ports; separating them collapses that accidental merge rather than relocating complexity, and any shared SDK-session setup can be factored into one shared collaborator injected into both, avoiding new duplication.\"}}}\n"
+      ],
+      "normalized_member_records": [
+        {
+          "member_index": 1,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 306576
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 768193,
+            "output_tokens": 24896,
+            "total_tokens": 793089
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "held",
+          "attempts": [
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "VendorCatalogClient conforms to two protocols, CatalogPort and TransportPort, in one concrete type. Attacked this as responsibility conflation: split into two adapter classes, one per port, each with a single owned concern, mirroring that each port already has an independent behavior-faithful Test* fake.",
+              "why_failed": "The scenario states ownership is deliberately single because the underlying dependency is one true-external vendor SDK seam ('one adapter, one writer per concern'). Splitting into two port-conforming classes would either duplicate ownership of the single shared SDK session/connection across two objects (a new ambiguity over lifecycle/auth-state ownership) or make one class the real SDK owner and the other a thin delegate, which is pure relocation with nothing removed. Fails SPT Q2: no ambiguity removed, and a new one is introduced."
+            },
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Duplication/interpretation sweep across the file's five described sections, checking whether the '100ms progress poll' and the 'deadline-bounded timeout' are two expressions of the same wait-loop mechanism that could be collapsed into one.",
+              "why_failed": "No concrete duplicated code is available to cite; the given source is a structural description, not an implementation. The two mechanisms describe different lifecycle points (a timeout bounding an operation's start/completion vs. steady-state progress monitoring after playback begins) - a standard non-duplicate pairing, not evidence of a duplicated loop. Without a citable code duplicate, no valid Evidence Chain can be built, so this cannot rise to Serious-or-worse."
+            },
+            {
+              "arm": "residual_refutation",
+              "target": "architecture_quality accepted residual (file_length lint-suppression scope)",
+              "what_tried": "Attempted to disprove the residual's acceptance premise by arguing the '(file_length disabled)' suppression might apply repo-wide rather than being scoped to this one file - if global, the residual's justification ('this ONE exceptional adapter earns the length') would not match what the codebase actually enforces (every file would lose the ceiling, not just this adapter).",
+              "why_failed": "The provided context explicitly frames the suppression as 'a lint-suppression on a single cohesive true-external adapter' (singular), consistent with a per-file scoped exception, not a blanket rule change. Nothing in the given source supports a global-suppression reading, so asserting it would be manufacturing a claim without evidence, which the rules forbid. Refutation cannot be made concrete; fails for lack of evidence."
+            }
+          ],
+          "reason": "Every attack either was refuted by the scenario's own stated rationale (single external SDK seam, one owner per concern, port-scoped test fakes already in place) or could not be evidenced from the structural description alone (no citable duplicate code, no evidence the lint suppression is unscoped), so none reached a Serious-or-worse finding that also passes the Simplify Pressure Test.",
+          "break_evidence": null
+        },
+        {
+          "member_index": 2,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 241762
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 609172,
+            "output_tokens": 21939,
+            "total_tokens": 631111
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "held",
+          "attempts": [
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "VendorCatalogClient conforms to two distinct port protocols, CatalogPort and TransportPort, and each port already has its own separate behavior-faithful Test* fake per the scenario text. Argued this is evidence the class fuses two independently-testable contracts (catalog search+diagnosis vs playback+polling+timeout) that could split along the existing CatalogPort/TransportPort seam, and that the per-port Test* fakes show the test suite already treats them as separate units.",
+              "why_failed": "The context states testing already pins behavior at the port interface, meaning external callers are already decoupled via DI on the protocol types regardless of how many protocols the concrete type conforms to -- the two-port conformance is not an externally-visible coupling problem. The vendor SDK is a single external session/connection; splitting into two concrete adapter classes would either duplicate SDK session/lifecycle plumbing in both files or require extracting a third shared session type, which is exactly the 'relocates the same complexity across files without reducing it' pattern the accepted residual already argues against (its own 'one owner per concern' framing implies unified session ownership is the point). Does not pass SPT Q2/Q3 for the same reason the file-split was already rejected."
+            },
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Looked for duplication between the '100ms progress poll' and 'deadline-bounded timeout' bullets -- both are temporal/async control-flow concerns, so I considered whether they represent an inline-duplicated poll-with-timeout mechanism that a shared helper could collapse.",
+              "why_failed": "The scenario only gives a comment-shape summary of the file, not real source; I have no concrete evidence (line ranges, actual duplicated logic) that these two concerns are implemented as literal duplicated code rather than one cohesive mechanism serving two call sites. Constructing a finding here would be manufacturing an Evidence Chain from speculation, which the instructions explicitly forbid."
+            },
+            {
+              "arm": "residual_refutation",
+              "target": "accepted_residual (file_length suppression)",
+              "what_tried": "Checked whether the residual's acceptance is hollow rule-compliance -- i.e., whether 'file_length disabled' is being used as the entire justification (a hollow compliance claim), which would itself be a Serious break per the inverse-trap rule.",
+              "why_failed": "The suppression is not the justification by itself; the residual gives substantive independent reasons (single true-external SDK surface, no vendor test harness, cohesive non-duplicated sections, one owner per concern, and an explicit SPT Q2/Q3 rejection with stated criteria). The lint suppression is a consequence of the architectural conclusion, not a stand-in for it, so this is not hollow compliance."
+            },
+            {
+              "arm": "residual_refutation",
+              "target": "single_true_external_adapter_claim",
+              "what_tried": "Considered attacking the premise that VendorCatalogClient is 'the single true-external vendor-SDK adapter' -- if a second such adapter existed elsewhere in the codebase, the special dispensation from file_length would be weaker.",
+              "why_failed": "Verifying or refuting this requires inspecting other files in the codebase, which the task explicitly forbids (read exactly one file, do not explore). Nothing in the provided scenario text contradicts the 'single' claim, so there is no basis in the given evidence to refute it."
+            }
+          ],
+          "reason": "The dual-port conformance is the only structurally concrete attack surface in the given evidence, and it fails the Simplify Pressure Test because splitting would relocate shared SDK-session complexity rather than collapse a duplicated mechanism or remove an ambiguity; the remaining attempts either required evidence not present in the scenario (would be manufactured) or required exploring files outside the permitted scope.",
+          "break_evidence": null
+        },
+        {
+          "member_index": 3,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 164970
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 324547,
+            "output_tokens": 15476,
+            "total_tokens": 340023
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "broke",
+          "attempts": [
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "Swept the source signature for interpretation/duplication issues rather than trusting the residual's own framing. The class declaration is `VendorCatalogClient: CatalogPort, TransportPort` -- one concrete type conforming to TWO separately-named port protocols (catalog querying vs. playback/transport control). The accepted residual and context both describe it as 'the single true-external vendor-SDK adapter' with 'one adapter, one writer per concern' (singular), but the type signature shows one adapter serving TWO distinct concerns/contracts. If CatalogPort and TransportPort were the same concern, the codebase would not have modeled them as two separate protocols in the first place -- their separate existence is the codebase's own evidence that these are independent capabilities with independent consumers.",
+              "why_failed": "succeeded - see break_evidence"
+            },
+            {
+              "arm": "residual_refutation",
+              "target": "architecture_quality accepted residual (VendorCatalogClient.swift)",
+              "what_tried": "Checked whether the SPT rejection ('no ambiguity removed, no duplicate layer collapsed') actually evaluated the right candidate fix. The residual's rationale only considers 'a file-split' in the generic sense (implicitly: splitting by line-count/section) and rejects it as churn. It never evaluates the specific, principled fix of splitting along the two already-declared protocol conformances (one adapter per port). That fix is not arbitrary relocation -- it follows a seam the domain model itself already drew, and it removes a real ambiguity: which of the class's stored/mutable state belongs to the CatalogPort contract vs. the TransportPort contract is currently unknowable from the type, and a @MainActor class serializes access to both unrelated concerns through one lock/actor boundary.",
+              "why_failed": "succeeded - see break_evidence (same underlying defect, attacked from the residual's reasoning rather than the code)"
+            },
+            {
+              "arm": "new_finding",
+              "target": "state_management / testing",
+              "what_tried": "Looked for a second, independent break: whether the '100ms progress poll' and the 'deadline-bounded timeout' are actually the same timing/polling mechanism implemented twice (a literal duplicate-layer collapse), and separately whether the 'no test harness from SDK' claim is a hollow compliance excuse given the file has zero direct SDK tests.",
+              "why_failed": "The scenario source is a structural comment summary, not line-level code, so I cannot show concrete duplicated implementation to ground an Evidence Chain -- would be speculative, not evidence. The no-test-harness angle is directly rebutted by the context's own statement that each conformed port has a behavior-faithful Test* fake pinning behavior at the port interface, so testing coverage is not actually hollow here. Both sub-attacks abandoned for insufficient evidence."
+            }
+          ],
+          "reason": "The accepted residual's premise -- 'single true-external vendor-SDK adapter' with 'one adapter, one writer per concern' -- is contradicted by the class's own declared conformance to two separate port protocols (CatalogPort, TransportPort). The residual only tested and rejected a length-driven file-split as churn; it never tested the principled, protocol-boundary-driven split, which does pass SPT because it removes real ambiguity (which state/behavior belongs to which contract) rather than relocating the same complexity.",
+          "break_evidence": {
+            "finding_stable_id": "F-1",
+            "spt": {
+              "result": "passed",
+              "rationale": "The correction is not a length-driven file-split (correctly rejected as churn by the residual) -- it is a split along the domain seam the codebase itself already declared via two separate protocol names. Q2 (ambiguity removed): today it is undecidable from the type which stored state/behavior belongs to the CatalogPort contract vs. the TransportPort contract, and both are serialized through one @MainActor boundary; splitting makes ownership explicit and per-port. Q3 (duplicate layer collapsed): the current single class is itself a duplicate/merged layer standing in for what should be two independent adapters matching two independent ports; separating them collapses that accidental merge rather than relocating complexity, and any shared SDK-session setup can be factored into one shared collaborator injected into both, avoiding new duplication."
+            }
+          }
+        }
+      ],
+      "aggregate_outcome": "broke",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "findings": [
+        {
+          "title": "VendorCatalogClient conflates two independently-declared port responsibilities into one adapter",
+          "why_it_matters": "The scorecard's own architecture rubric evaluates single-ownership-per-concern and interface segregation; a class implementing two unrelated protocol contracts under one @MainActor type undermines both, and the accepted residual's rationale is built on a premise ('single adapter, single concern') that the type signature itself contradicts.",
+          "what_is_wrong": "`final class VendorCatalogClient: CatalogPort, TransportPort` implements two separately-named port protocols -- one for catalog search, one for playback/transport control (which itself bundles progress polling and deadline-bounded timeout) -- in a single concrete type. The context text asserts 'one adapter, one writer per concern' (singular concern) but the signature shows one writer for two concerns. The two ports were modeled as distinct protocols precisely because they represent independent capabilities likely consumed independently; conflating their implementations couples callers and state that need not be coupled, and serializes both unrelated concerns through a single @MainActor boundary.",
+          "why_weakens_submission": "The 9.5 architecture_quality score and its accepted residual rest on the claim that this file is irreducibly a single cohesive adapter wrapping one SDK surface. That framing is not accurate: it is two adapters' worth of responsibility (catalog and transport) merged into one type, and the accepted-residual's SPT rejection never evaluated the correction that actually matches the domain seam already present in the code (the two port protocols), only a strawman length-based file-split.",
+          "minimal_correction_path": "Split VendorCatalogClient along its existing protocol conformances into two adapters -- one implementing CatalogPort, one implementing TransportPort -- each owning only the state and methods its port requires. If both need the same underlying vendor SDK session/handle, inject a single shared internal SDK-session collaborator into both rather than duplicating SDK setup, so the split follows the port boundary without duplicating the actual external-SDK integration code.",
+          "evidence": [
+            "scenario.md line 16: `@MainActor final class VendorCatalogClient: CatalogPort, TransportPort {`",
+            "scenario.md line 11 (Context): 'Ownership is single (one adapter, one writer per concern).' asserted despite two distinct conformed protocols",
+            "scenario.md line 5 (accepted residual): 'It is the single true-external vendor-SDK adapter' -- singular framing inconsistent with dual port conformance",
+            "scenario.md line 17-19: comment breakdown shows catalog search (CatalogPort concern) interleaved in the same file/type as playback control, progress poll, and timeout (TransportPort concerns)"
+          ],
+          "dimension": "architecture_quality",
+          "severity": "Serious deduction",
+          "stable_id": "F-1",
+          "loop_local_id": "F1"
+        }
+      ],
+      "enforced_C_max": 150000,
+      "observed_usage": {
+        "per_member": [
+          {
+            "member_index": 1,
+            "total_tokens": 793089
+          },
+          {
+            "member_index": 2,
+            "total_tokens": 631111
+          },
+          {
+            "member_index": 3,
+            "total_tokens": 340023
+          }
+        ],
+        "max_member_total_tokens": 793089
+      },
+      "exhaustion_cause": "budget_exhausted",
+      "budget_violation": true,
+      "structural_pass": true,
+      "structural_issues": [],
+      "semantic_pass": false,
+      "semantic_checks": [
+        {
+          "assertion": "r1-all-held",
+          "passed": false,
+          "detail": "2/3 members held"
+        },
+        {
+          "assertion": "r2-no-file-length-break",
+          "passed": true,
+          "detail": "no break cites file length"
+        }
+      ]
+    },
+    {
+      "provider": "claude_code",
+      "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+      "skill_rev": "4a081daa8ac85e19c6c937e003e5e400c8407bbe",
+      "protocol_digest": "sha256:df8e90bc42fc494f04c7b53bc3f1e411fa4aa760ce268d1b0ca3be705ea86aec",
+      "scenario": "halt-challenge-restraint",
+      "panel_index": 3,
+      "raw_member_responses": [
+        "```json\n{\"challenger_model\": \"claude-sonnet-5\", \"outcome\": \"broke\", \"attempts\": [{\"arm\": \"new_finding\", \"target\": \"simplicity\", \"what_tried\": \"Checked whether the file's five listed sections are uniformly irreducible 'SDK surface area' as the accepted residual claims, or whether some are vendor-agnostic generic infrastructure mislabeled as SDK-specific.\", \"why_failed\": \"succeeded - see break_evidence\"}, {\"arm\": \"new_finding\", \"target\": \"domain_modeling\", \"what_tried\": \"Attacked the class's dual conformance to CatalogPort and TransportPort as an interface-segregation violation, proposing a split into two single-port adapter types.\", \"why_failed\": \"The scenario states tests already 'pin behavior at the port interface' - all consumption is through the protocol-typed CatalogPort/TransportPort references, not the concrete type, so dual conformance is invisible to callers. A split would add a second wrapper sharing the same underlying vendor session without removing any caller-visible coupling: classic SPT Q3 failure (relocates complexity, doesn't reduce it).\"}, {\"arm\": \"residual_refutation\", \"target\": \"architecture_quality accepted residual's 'no test harness' premise\", \"what_tried\": \"Tried to refute 'the SDK exposes no test harness' as a blanket justification covering the entire 979 LOC, arguing it should only excuse the catalog/playback/error-mapping sections.\", \"why_failed\": \"The no-test-harness claim is true and reasonably explains why the vendor-specific sections (catalog search, playback control, error-code mapping) can't be decomposed further without a real SDK to test against. Attacking it in isolation doesn't independently break anything beyond what the poll/timeout carve-out (attempt 1) already establishes.\"}], \"reason\": \"The accepted residual justifies keeping all 979 LOC together on the premise that its size 'is the SDK surface area... not duplicated logic' - but two of the five sections it lists (100ms progress poll, deadline-bounded timeout) are generic, vendor-agnostic concurrency mechanisms that need no vendor-specific types to exist, so the irreducibility premise underlying the 9.5 residual acceptance is false for part of the file.\", \"break_evidence\": {\"finding\": {\"title\": \"Deadline/polling infrastructure is generic and misclassified as irreducible vendor SDK surface\", \"why_it_matters\": \"The accepted residual's entire justification for keeping VendorCatalogClient at 979 LOC and suppressing file_length rests on the claim that all of its content is essential, non-duplicable vendor-SDK surface area. If a meaningful portion is actually vendor-agnostic generic infrastructure, the 'irreducible' premise is false and the residual was accepted without first being properly minimized.\", \"what_is_wrong\": \"The residual's own enumeration of the file's sections lists '100ms progress poll' and 'deadline-bounded timeout' alongside genuinely vendor-specific concerns (catalog search, playback control, vendor-error-code diagnosis). A poll-until-condition-or-deadline mechanism is a standard, vendor-agnostic concurrency primitive - it needs only a closure/predicate and a duration, not the vendor SDK's types or API shape. Unlike the error-code mapping (irreducibly bound to the vendor's specific codes) or the catalog/playback calls (bound to the vendor's specific SDK methods), this logic has no dependency on the vendor at all, yet it is currently only testable through the vendor-specific Test* fakes the report describes.\", \"why_weakens_submission\": \"This directly falsifies the stated SPT rejection rationale ('Its size is the SDK surface area... not duplicated logic'): at least part of the size is not SDK surface area, it is generic infrastructure inlined into a vendor-specific file. The residual acceptance treated the file as an atomic, undecomposable unit when it demonstrably is not, so the 9.5 architecture_quality score with this residual was granted on an unminimized residual.\", \"minimal_correction_path\": \"Extract the poll-until-deadline mechanism into a small, vendor-agnostic generic utility (e.g. a poll(interval:deadline:condition:) helper operating on closures/durations only), unit-testable with a trivial fake clock/condition and zero dependency on the vendor SDK or its Test* fakes. VendorCatalogClient calls this utility with its vendor-specific parameters (100ms interval, its deadline value) but no longer owns the polling/timeout mechanism itself. This shrinks the vendor-specific file and makes timeout/poll behavior independently testable.\", \"evidence\": [\"\\\"Its size is the SDK surface area (catalog search, playback control, progress polling, error diagnosis, deadline-bounded timeout), not duplicated logic.\\\" - the residual's own framing lists progress polling and deadline-bounded timeout as 'SDK surface area,' but neither requires vendor-specific types to implement.\", \"\\\"Simplify Pressure Test rejected on Q2/Q3 (no ambiguity removed, no duplicate layer collapsed)\\\" - this rejection did not separately evaluate the poll/timeout sections against a generic-vs-vendor-specific criterion.\", \"\\\"Each conformed port has a behavior-faithful Test* fake exercising it\\\" - confirms that today, exercising timeout/poll behavior can only happen via the vendor-specific fakes, when it could be tested with no fake at all if it were generic.\"], \"dimension\": \"architecture_quality\", \"severity\": \"Serious deduction\"}, \"spt\": {\"result\": \"passed\", \"rationale\": \"The minimal correction (extracting poll+timeout into a generic, vendor-agnostic utility) removes the ambiguity the accepted residual's own rationale conflates: 'irreducible vendor SDK surface' versus 'generic infra that happens to live in the vendor file.' It is not mere file-relocation - the extracted utility becomes independently unit-testable without any vendor Test* fake, which the current merged structure cannot achieve, so real complexity (coupling generic concurrency logic to vendor-specific test scaffolding) is reduced, not just moved.\"}}}\n```\n"
+      ],
+      "normalized_member_records": [
+        {
+          "member_index": 1,
+          "normalization": null,
+          "retry_count": 1,
+          "retry_cause": null,
+          "retry_attempts": [
+            {
+              "attempt": 1,
+              "outcome": "ok",
+              "error": null,
+              "duration_ms": 248542
+            }
+          ],
+          "token_usage": {
+            "input_tokens": 346298,
+            "output_tokens": 21042,
+            "total_tokens": 367340
+          },
+          "challenger_model": "claude-sonnet-5",
+          "outcome": "broke",
+          "attempts": [
+            {
+              "arm": "new_finding",
+              "target": "simplicity",
+              "what_tried": "Checked whether the file's five listed sections are uniformly irreducible 'SDK surface area' as the accepted residual claims, or whether some are vendor-agnostic generic infrastructure mislabeled as SDK-specific.",
+              "why_failed": "succeeded - see break_evidence"
+            },
+            {
+              "arm": "new_finding",
+              "target": "domain_modeling",
+              "what_tried": "Attacked the class's dual conformance to CatalogPort and TransportPort as an interface-segregation violation, proposing a split into two single-port adapter types.",
+              "why_failed": "The scenario states tests already 'pin behavior at the port interface' - all consumption is through the protocol-typed CatalogPort/TransportPort references, not the concrete type, so dual conformance is invisible to callers. A split would add a second wrapper sharing the same underlying vendor session without removing any caller-visible coupling: classic SPT Q3 failure (relocates complexity, doesn't reduce it)."
+            },
+            {
+              "arm": "residual_refutation",
+              "target": "architecture_quality accepted residual's 'no test harness' premise",
+              "what_tried": "Tried to refute 'the SDK exposes no test harness' as a blanket justification covering the entire 979 LOC, arguing it should only excuse the catalog/playback/error-mapping sections.",
+              "why_failed": "The no-test-harness claim is true and reasonably explains why the vendor-specific sections (catalog search, playback control, error-code mapping) can't be decomposed further without a real SDK to test against. Attacking it in isolation doesn't independently break anything beyond what the poll/timeout carve-out (attempt 1) already establishes."
+            }
+          ],
+          "reason": "The accepted residual justifies keeping all 979 LOC together on the premise that its size 'is the SDK surface area... not duplicated logic' - but two of the five sections it lists (100ms progress poll, deadline-bounded timeout) are generic, vendor-agnostic concurrency mechanisms that need no vendor-specific types to exist, so the irreducibility premise underlying the 9.5 residual acceptance is false for part of the file.",
+          "break_evidence": {
+            "finding_stable_id": "F-1",
+            "spt": {
+              "result": "passed",
+              "rationale": "The minimal correction (extracting poll+timeout into a generic, vendor-agnostic utility) removes the ambiguity the accepted residual's own rationale conflates: 'irreducible vendor SDK surface' versus 'generic infra that happens to live in the vendor file.' It is not mere file-relocation - the extracted utility becomes independently unit-testable without any vendor Test* fake, which the current merged structure cannot achieve, so real complexity (coupling generic concurrency logic to vendor-specific test scaffolding) is reduced, not just moved."
+            }
+          }
+        }
+      ],
+      "aggregate_outcome": "broke",
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "findings": [
+        {
+          "title": "Deadline/polling infrastructure is generic and misclassified as irreducible vendor SDK surface",
+          "why_it_matters": "The accepted residual's entire justification for keeping VendorCatalogClient at 979 LOC and suppressing file_length rests on the claim that all of its content is essential, non-duplicable vendor-SDK surface area. If a meaningful portion is actually vendor-agnostic generic infrastructure, the 'irreducible' premise is false and the residual was accepted without first being properly minimized.",
+          "what_is_wrong": "The residual's own enumeration of the file's sections lists '100ms progress poll' and 'deadline-bounded timeout' alongside genuinely vendor-specific concerns (catalog search, playback control, vendor-error-code diagnosis). A poll-until-condition-or-deadline mechanism is a standard, vendor-agnostic concurrency primitive - it needs only a closure/predicate and a duration, not the vendor SDK's types or API shape. Unlike the error-code mapping (irreducibly bound to the vendor's specific codes) or the catalog/playback calls (bound to the vendor's specific SDK methods), this logic has no dependency on the vendor at all, yet it is currently only testable through the vendor-specific Test* fakes the report describes.",
+          "why_weakens_submission": "This directly falsifies the stated SPT rejection rationale ('Its size is the SDK surface area... not duplicated logic'): at least part of the size is not SDK surface area, it is generic infrastructure inlined into a vendor-specific file. The residual acceptance treated the file as an atomic, undecomposable unit when it demonstrably is not, so the 9.5 architecture_quality score with this residual was granted on an unminimized residual.",
+          "minimal_correction_path": "Extract the poll-until-deadline mechanism into a small, vendor-agnostic generic utility (e.g. a poll(interval:deadline:condition:) helper operating on closures/durations only), unit-testable with a trivial fake clock/condition and zero dependency on the vendor SDK or its Test* fakes. VendorCatalogClient calls this utility with its vendor-specific parameters (100ms interval, its deadline value) but no longer owns the polling/timeout mechanism itself. This shrinks the vendor-specific file and makes timeout/poll behavior independently testable.",
+          "evidence": [
+            "\"Its size is the SDK surface area (catalog search, playback control, progress polling, error diagnosis, deadline-bounded timeout), not duplicated logic.\" - the residual's own framing lists progress polling and deadline-bounded timeout as 'SDK surface area,' but neither requires vendor-specific types to implement.",
+            "\"Simplify Pressure Test rejected on Q2/Q3 (no ambiguity removed, no duplicate layer collapsed)\" - this rejection did not separately evaluate the poll/timeout sections against a generic-vs-vendor-specific criterion.",
+            "\"Each conformed port has a behavior-faithful Test* fake exercising it\" - confirms that today, exercising timeout/poll behavior can only happen via the vendor-specific fakes, when it could be tested with no fake at all if it were generic."
+          ],
+          "dimension": "architecture_quality",
+          "severity": "Serious deduction",
+          "stable_id": "F-1",
+          "loop_local_id": "F1"
+        }
+      ],
+      "enforced_C_max": 150000,
+      "observed_usage": {
+        "per_member": [
+          {
+            "member_index": 1,
+            "total_tokens": 367340
+          }
+        ],
+        "max_member_total_tokens": 367340
+      },
+      "exhaustion_cause": "budget_exhausted",
+      "budget_violation": true,
+      "structural_pass": true,
+      "structural_issues": [],
+      "semantic_pass": false,
+      "semantic_checks": [
+        {
+          "assertion": "r1-all-held",
+          "passed": false,
+          "detail": "0/1 members held"
+        },
+        {
+          "assertion": "r2-no-file-length-break",
+          "passed": false,
+          "detail": "a broke member's finding cites the file-length residual alone"
+        }
+      ]
+    }
+  ],
+  "scenario_gate": {
+    "halt-challenge-flag": {
+      "pass": false,
+      "detail": "0/3 panels passing (need 3)"
+    },
+    "halt-challenge-restraint": {
+      "pass": false,
+      "detail": "0/3 panels passing (need 3); 0/3 held"
+    }
+  },
+  "profile_verdict": {
+    "provider": "claude_code",
+    "model": "claude-sonnet-5 (in-session Agent tool, alias 'sonnet')",
+    "gate_pass": false,
+    "capability_recordable": false,
+    "reasons": [
+      "budget enforcement is post_hoc_discard; plan \u00a7 Cost requires stop-before-crossing enforcement for any capability entry",
+      "protocol_digest will change when step-3 prose lands in halt-verifier.md; the gate re-runs against the frozen protocol before any capability entry is recorded"
+    ]
+  },
+  "measured_C": {
+    "per_member": [
+      {
+        "scenario": "halt-challenge-flag",
+        "panel_index": 1,
+        "member_index": 1,
+        "total_tokens": 556235
+      },
+      {
+        "scenario": "halt-challenge-flag",
+        "panel_index": 2,
+        "member_index": 1,
+        "total_tokens": 468415
+      },
+      {
+        "scenario": "halt-challenge-flag",
+        "panel_index": 3,
+        "member_index": 1,
+        "total_tokens": 455790
+      },
+      {
+        "scenario": "halt-challenge-restraint",
+        "panel_index": 1,
+        "member_index": 1,
+        "total_tokens": 335129
+      },
+      {
+        "scenario": "halt-challenge-restraint",
+        "panel_index": 2,
+        "member_index": 1,
+        "total_tokens": 793089
+      },
+      {
+        "scenario": "halt-challenge-restraint",
+        "panel_index": 2,
+        "member_index": 2,
+        "total_tokens": 631111
+      },
+      {
+        "scenario": "halt-challenge-restraint",
+        "panel_index": 2,
+        "member_index": 3,
+        "total_tokens": 340023
+      },
+      {
+        "scenario": "halt-challenge-restraint",
+        "panel_index": 3,
+        "member_index": 1,
+        "total_tokens": 367340
+      }
+    ],
+    "max_member_total_tokens": 793089,
+    "note": "first measured C per plan \u00a7 Cost; token_usage aggregated across all transport attempts per member"
+  }
+}
