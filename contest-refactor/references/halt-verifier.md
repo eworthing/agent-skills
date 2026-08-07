@@ -14,8 +14,10 @@ which is skipped on HALT loops — so without this pass a terminal success would
 - [When it runs](#when-it-runs)
 - [Why a cold, main-owned agent](#why-a-cold-main-owned-agent)
 - [Spawn (read-only)](#spawn-read-only)
+  - [Panel launch (v5, capability-gated)](#panel-launch-v5-capability-gated)
 - [The challenge — break the verdict](#the-challenge--break-the-verdict)
 - [Outcome routing (main applies)](#outcome-routing-main-applies)
+  - [v5 aggregate routing (staged panel)](#v5-aggregate-routing-staged-panel)
 - [Output contract](#output-contract)
 - [Oscillation](#oscillation)
 
@@ -48,6 +50,35 @@ loop subagent (fresh eyes need equal capability).
 Main hands the challenger: the candidate scorecard, every `accepted` residual + its
 rationale, the source roots, the lens, and the binding triple
 (`run_id`, `source_rev`, `candidate_commit_sha`).
+
+### Panel launch (v5, capability-gated)
+
+At `schema_version` 5, **when** the `panel_certification` capability authorizes it
+for the active provider + exact model + `protocol_digest` (default-deny manifest,
+[provider-adapters.md § panel_certification capability manifest](provider-adapters.md#panel_certification-capability-manifest-v5-panel-authorization)
+— today no profile is authorized, so the single-challenger path above remains the
+live path for everyone), main launches a **panel of exactly 3 members** instead of
+one challenger: same prompt (this file), same spawn profile, same inputs per
+member. Members are independent — no cross-member coordination, and no member
+sees another's result.
+
+**Staged launch.** Member 1 launches first.
+- A **structurally valid break** (§ v5 aggregate routing below) demotes
+  immediately; members 2 and 3 never launch.
+- Member 1 exhausting its retry envelope routes `verification_blocked`; members 2
+  and 3 never launch.
+- Only on member 1 `held` do members 2 and 3 launch **in parallel**.
+
+**Stage-2 join.** Once members 2 and 3 are running, main **awaits both** through
+their real retry envelopes and persists their actual outcomes. There is no
+cancellation: a joined member either finishes or exhausts its envelope, and a
+cancelled-sibling pseudo-outcome would be an invented state no envelope produces.
+
+Main creates the **panel checkpoint** at member-1 launch — a `"halt_success_panel"`
+phase in `LOOP_STATE.json` (see
+[output-format-state-schemas.md § Panel phase](output-format-state-schemas.md#panel-phase-v5-halt_success_panel)),
+stamping `protocol_digest` and `candidate_binding` at creation, then appending
+each member's record as it completes.
 
 ## The challenge — break the verdict
 
@@ -121,6 +152,56 @@ between adjudication and routing cannot lose the decision.
 | **broke** | Commit a CONTINUE transition carrying the finding as Priority 1 (with the `candidate_commit_sha` reference); re-dispatch loop N+1. If the fix needs a CLAUDE-md Stop/Ask decision → `HALT_STAGNATION` subtype `user_decision` instead. The challenger broke it → demote, never promote. |
 | **held** | Record `halt_success_challenge` (challenger_model, outcome `"held"`, binding, attempts[], reason); promote to terminal `HALT_SUCCESS`; commit. G32 gates the emit. |
 | **unavailable / timeout** (after the bounded retry envelope) | **Fail closed**: commit `HALT_STAGNATION` subtype `verification_blocked` (or `user_decision`). Never auto-promote; never route to CONTINUE-without-a-finding. A terminal success is never blessed by silence. |
+
+### v5 aggregate routing (staged panel)
+
+When a v5 panel is authorized (§ Panel launch above), main applies this
+precedence table to the completed set of member outcomes instead of the v4 table
+— evaluated top-down, **first match wins**:
+
+| # | condition | aggregate | outcome |
+|---|---|---|---|
+| 0 | any member's break hits an **ambiguous registry match** | `pending` | `HALT_STAGNATION` subtype `user_decision`, `open_question_for_user` non-null |
+| 1 | any member returned a **structurally valid** `broke`, and the fix needs a CLAUDE-md Stop/Ask decision | `broke` | `HALT_STAGNATION` subtype `user_decision`, `open_question_for_user` non-null |
+| 2 | any member returned a **structurally valid** `broke` | `broke` | demote — CONTINUE with the finding as Priority 1 |
+| 3 | fewer than 3 members returned a usable verdict after the retry envelope | `blocked` | `HALT_STAGNATION` subtype `verification_blocked` |
+| 4 | all 3 returned `held` | `held` | promote to terminal `HALT_SUCCESS` |
+
+**Row 0 outranks the ordinary break rows.** An ambiguous match resolves no
+`stable_id`, so without its own row it would fall to row 2 and land on CONTINUE,
+where raw `break_evidence` is forbidden. It also outranks a *valid* sibling
+break: a run that cannot tell which existing finding this is must ask before
+writing to the registry, regardless of what another member found — the sibling's
+break is still persisted (raw) and re-resolved after the user answers.
+
+**Rows 1–2 outrank row 3.** A valid break beats another member's unavailability
+— it is positive evidence and does not become less true because a sibling timed
+out.
+
+**Structural validity.** A `broke` is structurally valid only if, after
+normalization, it carries a resolved `finding_stable_id` and an `spt` record
+with `result: "passed"` and a non-empty rationale. A break still malformed after
+the member's retry envelope normalizes to `outcome: "unavailable"` with
+`retry_cause: "malformed_json"` — it counts toward row 3, not rows 1–2; a garbled
+response is never a free demotion.
+
+**Why asymmetric.** A `held` is the *absence* of evidence — weak from one rater
+alone, which is the whole finding. A `broke` is positive evidence. Majority-voting
+on breaks would let a real defect be outvoted, inverting the gate's purpose.
+
+The v4 table above (single `broke` / `held` / `unavailable`) remains the complete
+v4 contract, unchanged.
+
+Collecting, ordering, resolving against the registry, deduping, and assigning
+`loop_local_id` to panel breaks is a main-owned, multi-artifact transaction — see
+the schema shapes in
+[output-format-json.md § Schema version 5 changelog](output-format-json.md#schema-version-5-changelog)
+and the registry fuzzy-match rules in
+[output-format-state-schemas.md § Fuzzy-match rules](output-format-state-schemas.md#fuzzy-match-rules-method-step-15--bootstrap)
+(Method Step 1.5). Partial-panel resume — including the panel checkpoint's own
+resume row — is in
+[resume-detection.md § Resume Precedence Matrix](resume-detection.md#resume-precedence-matrix)
+row 6b.
 
 ## Output contract
 

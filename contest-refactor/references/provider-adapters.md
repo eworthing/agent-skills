@@ -12,6 +12,7 @@ Each section is dated `verified <YYYY-MM-DD>` so staleness is visible. When a pr
 - [Reviewer read-only shell allow-list (uniform across providers)](#reviewer-read-only-shell-allow-list-uniform-across-providers)
 - [Loop-spawn profile (Step 0 onward)](#loop-spawn-profile-step-0-onward)
 - [Reviewer-spawn profile (Step 3 step 6)](#reviewer-spawn-profile-step-3-step-6)
+- [panel_certification capability manifest (v5 panel authorization)](#panel_certification-capability-manifest-v5-panel-authorization)
 - [Model overrides](#model-overrides)
 - [When to upgrade the model](#when-to-upgrade-the-model)
 - [Token cost](#token-cost)
@@ -146,6 +147,44 @@ No subagent. Reviewer logic runs inline in the main agent context with whatever 
 The HALT_SUCCESS challenger ([references/halt-verifier.md](halt-verifier.md)) is **read-only with identical enforcement to the Reviewer-spawn profile above** — only the prompt differs (`halt-verifier.md`, not `implementation-reviewer.md`). Reuse each provider's reviewer-spawn flags, read-only allow-list, and the same model tier as the loop subagent (fresh eyes need equal capability). The one structural difference: the challenger is spawned by the **main orchestrator**, not the loop subagent, so the verdict is independent of the Critic that produced the scorecard. On `unknown` provider the challenger runs inline and main must vet it ("challenger ran inline; verdict requires manual confirmation") — but a terminal `HALT_SUCCESS` still requires the recorded held challenge (G32); an inline-unavailable challenger fails closed to `verification_blocked`.
 
 **Why same-tier (not a bigger same-family model) — measured 2026-06-27.** Independence here comes from *who spawns it* (main, not the Critic) and *fresh context*, not from a different Claude. A disagreement probe found Opus and Sonnet agree **9/10** on the hardest cross-module defects (same training family → correlated blind spots), and on the one differing case Opus was *more lenient* — so upgrading the challenger to a bigger same-family model buys little independence and isn't the right lever. Genuine challenger diversity would need a **different family** (a Codex/Gemini challenger breaking a Claude Critic's claim) — untested, structural, recorded as a future direction in [evals/reviewer-model-experiment.md](../evals/reviewer-model-experiment.md). Until then, same-tier-different-spawner is the deliberate, evidence-checked default.
+
+### panel_certification capability manifest (v5 panel authorization)
+
+Default-deny. SSOT is `canon/panel-certification.toml`, keyed by **provider + exact
+model + `protocol_digest`** — a profile is authorized only when all three match a
+recorded pass. Checked via
+`python3 "$SKILL_DIR/scripts/_panel_capability.py" check --provider <p> --model <m>`
+→ `{"emit": "v5"|"v4", "reason", "protocol_digest"}`; missing, stale-digest, or
+never-recorded profiles emit `v4`.
+
+`protocol_digest` is `sha256` over 10 length-prefixed inputs, one canonical
+algorithm — `compute_protocol_digest` in
+[`scripts/_panel_gate_adapter.py`](../scripts/_panel_gate_adapter.py) — shared by
+both gate evidence and runtime lookup so the two cannot drift independently:
+(1) `halt-verifier.md` full file bytes, (2) the panel routing-precedence table +
+staged-launch rules, (3) the break-normalization transaction steps, (4) the v5
+`halt_success_challenge` schema block, (5) the gate thresholds (panel count,
+per-panel break requirement, restraint all-hold requirement), (6) `C_max` for the
+profile, (7) the challenger spawn profile + tool allow-list for that provider,
+(8) the budget-enforcement configuration + the adapter implementing it, (9) the
+gate scenario + assertion definitions, (10) the grading adapter's own bytes. Any
+behavior-affecting change invalidates every recorded pass.
+
+Hard protocol disablement is recorded **separately**, as an explicit
+`unsupported_digests` list, independent of the creation-capability entries — a
+digest on that list routes to the fresh v4 Critic path even if it would otherwise
+still be executable (rollback-resume; see
+[resume-detection.md § Resume Precedence Matrix row 6b](resume-detection.md#resume-precedence-matrix)).
+
+Recording an entry requires a gate **PASS** at the exact digest, evidenced in
+[`evals/panel_gate_results.json`](../evals/panel_gate_results.json) (see
+[`plans/rec1-panel-certification.md` § Pre-enforcement gate](../plans/rec1-panel-certification.md#pre-enforcement-gate)).
+
+**Zero entries are recorded today.** The only measured profile — `claude_code`
+in-session `Agent` tool — cannot stop a member before it crosses `C_max` (budget
+enforcement is post-hoc discard, not preemptive) and does not natively report
+token usage, so no capability entry may be recorded for it; every profile
+therefore emits v4, and the machinery is live while the capability is not.
 
 ## Helper-spawn profile (read-only analysis sidecars)
 

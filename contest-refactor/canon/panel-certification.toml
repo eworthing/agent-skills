@@ -1,0 +1,39 @@
+# panel_certification capability manifest.
+# Cross-reference: plans/rec1-panel-certification.md § Version transition,
+# enablement, and delivery sequence.
+#
+# DEFAULT-DENY. A (provider, model) pair with no exact entry below emits the
+# v4 single-challenger contract -- never v5. This file ships with ZERO
+# recorded entries: the only currently measured profile (claude_code /
+# claude-sonnet-5, the in-session Agent tool) is UNRECORDABLE. Its budget
+# enforcement is post_hoc_discard -- it cannot stop a member before it
+# crosses C_max -- and the transport does not natively report token usage;
+# both are required by plan § Cost before any capability entry may be
+# recorded. Zero entries is the fail-closed design, not an oversight.
+#
+# Entry shape, once one is eventually recorded:
+#
+#   [[entries]]
+#   provider = "claude_code"                    # exact detection value
+#   model = "claude-sonnet-5"                    # exact full model id --
+#                                                 # an entry for one model
+#                                                 # never covers another
+#   protocol_digest = "sha256:..."               # from
+#                                                 # scripts/_panel_gate_adapter.py
+#                                                 # compute_protocol_digest()
+#   evidence = "evals/panel_gate_results.json"   # gate-run evidence path
+#   recorded = "2026-08-07"                      # YYYY-MM-DD
+#
+# scripts/_panel_capability.py emit_check() emits v5 ONLY on an exact
+# provider + model + current-digest match against an entry here. Recording
+# an entry requires a gate PASS in evals/panel_gate_results.json at that
+# exact protocol_digest (plan § Pre-enforcement gate).
+#
+# unsupported_digests[] is hard protocol disablement / rollback, recorded
+# SEPARATELY from creation entries: a digest listed here routes to the
+# fresh v4 Critic path even if it would otherwise still be executable
+# (i.e. even if a matching entry above exists).
+
+schema_version = 1
+entries = []
+unsupported_digests = []

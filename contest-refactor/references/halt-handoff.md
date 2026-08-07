@@ -228,6 +228,16 @@ Next step options:
 
 **Condition**: A `HALT_SUCCESS_candidate` was emitted, but the independent HALT_SUCCESS challenger ([halt-verifier.md](halt-verifier.md)) was unavailable — it timed out or failed to spawn after the bounded retry envelope. Fail-closed: the candidate is **not** auto-promoted (a terminal success is never blessed by silence) and the loop does **not** route to CONTINUE-without-a-finding. `unresolved_reason` names the unavailability; re-invoking retries the challenge against the committed candidate.
 
+**At `schema_version >= 5`**, this subtype also covers a **panel** with fewer
+than 3 usable member verdicts (aggregate `outcome: "blocked"`, precedence row 3
+in [halt-verifier.md § v5 aggregate routing](halt-verifier.md#v5-aggregate-routing-staged-panel))
+— not only a single unavailable challenger. The partial panel is durably
+recorded in the artifact (auditable, never discarded). On re-invocation the
+panel resumes per
+[resume-detection.md § Resume Precedence Matrix row 6b](resume-detection.md#resume-precedence-matrix)
+— digest permitting — reusing durable held member records rather than
+re-running members whose verdicts are already durable.
+
 #### Handoff template
 
 ```

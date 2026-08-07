@@ -50,6 +50,38 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
 }
 ```
 
+### Panel phase (v5, `halt_success_panel`)
+
+`LOOP_STATE.json` carries one additional OPTIONAL top-level field: `phase`.
+Absent ⇒ the legacy mid-Step-3 checkpoint above, schema unchanged. Present as
+`"halt_success_panel"` ⇒ a **panel checkpoint created by MAIN** (not by the loop
+subagent) at member-1 launch, per
+[halt-verifier.md § Panel launch](halt-verifier.md#panel-launch-v5-capability-gated):
+
+```jsonc
+{
+  "schema_version": 1,
+  "phase": "halt_success_panel",
+  "panel_state": {
+    "protocol_digest": "sha256:…",          // stamped at creation
+    "candidate_binding": {                  // copied at creation, immutable
+      "run_id": "…", "source_rev": "…",
+      "candidate_commit_sha": "…", "candidate_fingerprint": "…"
+    },
+    "sub_phase": "members",                 // "members" | "normalization"
+    "members": [ /* v5 member records, appended as each member completes */ ],
+    "registry_pending_writes": []           // idempotency_key flush rules, per § Idempotency requirements below
+  }
+}
+```
+
+`sub_phase` transitions from `"members"` to `"normalization"` **before** the
+first review/history/registry write. `registry_pending_writes[]` reuses the
+existing idempotency-key flush rules (§ Idempotency requirements below). The
+checkpoint is deleted after the routed transition commits. Resume keys on
+`phase`, not on `CURRENT_REVIEW.json.state` — see
+[resume-detection.md § Resume Precedence Matrix row 6b](resume-detection.md#resume-precedence-matrix).
+
 ### Lifecycle
 
 1. **Init** (Step 3 sub-step 0): write with `step_started: 1, step_completed: 0`, populated `pre_step3_blob_shas`, empty arrays, `null` for review/commit fields. fsync.

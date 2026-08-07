@@ -6,6 +6,7 @@ Persistent cross-loop state schemas (`LOOP_STATE.json`, `findings_registry.json`
 
 ## Contents
 
+- [Schema version 5 changelog](#schema-version-5-changelog)
 - [Schema version 4 changelog](#schema-version-4-changelog)
 - [Schema version 3 changelog](output-format-migrations.md#schema-version-3-changelog) (moved — resume path)
 - [CURRENT_REVIEW.json Schema](#current_reviewjson-schema)
@@ -16,6 +17,102 @@ Persistent cross-loop state schemas (`LOOP_STATE.json`, `findings_registry.json`
 - [Schema validation rules (enforced by the validation hard gates)](#schema-validation-rules-enforced-by-the-validation-hard-gates)
 
 Persistent state file schemas (`LOOP_STATE.json`, `findings_registry.json`, `REVIEW_HISTORY.json`, Fuzzy-match rules) → see [output-format-state-schemas.md](output-format-state-schemas.md).
+
+## Schema version 5 changelog
+
+`CURRENT_REVIEW.json` and `REVIEW_HISTORY.json` move to `schema_version: 5`,
+which replaces the single-challenger `halt_success_challenge` object with a
+**panel of 3 staged challengers** (Tier 1 of
+[`plans/rec1-panel-certification.md`](../plans/rec1-panel-certification.md)). G32
+in [validation.md](validation.md) enforces the v5 panel shape at
+`schema_version >= 5`. Emission is gated per-profile by the default-deny
+`panel_certification` capability
+([provider-adapters.md § panel_certification capability manifest](provider-adapters.md#panel_certification-capability-manifest-v5-panel-authorization))
+— an un-entried profile keeps writing v4 indefinitely.
+
+### v5 changes
+
+- `halt_success_challenge` becomes the **panel object** below:
+  `required_panel_size`, aggregate `outcome`, `protocol_digest`,
+  `candidate_binding`, and `panel[]` (1 or 3 member records, staged).
+- New aggregate outcome enum: `held` | `broke` | `blocked` | `pending`
+  (replaces v4's binary `held` / `broke`).
+- **Durable panel records are now PERMITTED on non-promoting paths** —
+  `CONTINUE`-after-`broke`, `HALT_STAGNATION`/`user_decision`,
+  `HALT_STAGNATION`/`verification_blocked` — relaxing v4's "non-null only on
+  `HALT_SUCCESS`" rule. The v4 rule stands unchanged for v4 artifacts.
+- Retry enums (`retry_cause`, `retry_attempts[].outcome`) extended with
+  `budget_exhausted`, per member.
+- Break evidence is a **two-stage** contract: raw (challenger-produced) vs
+  normalized (main-produced), disambiguated by the new `normalization` field —
+  see below.
+- `candidate_binding` is hoisted into the panel record, immutable, and copied in
+  at panel-creation time (not re-derived per member).
+- `protocol_digest` is stamped at panel-creation time; the resume router — not
+  G32 — compares it against the currently executable protocol.
+- Emission is gated per-profile by the `panel_certification` capability,
+  default-deny.
+
+### halt_success_challenge object schema (v5, panel)
+
+```jsonc
+"halt_success_challenge": {
+  "required_panel_size": 3,               // int, fixed at 3 in v5
+  "outcome": "held",                      // aggregate: held | broke | blocked | pending
+  "protocol_digest": "sha256:…",          // stamped at panel creation; what resume/rollback compares
+  "candidate_binding": {                  // immutable; present on EVERY path
+    "run_id": "…",
+    "source_rev": "…",
+    "candidate_commit_sha": "…",
+    "candidate_fingerprint": "…"          // v4+ field, reused
+  },
+  "panel": [                              // ordered; member 1 is the staged first launch
+    {
+      "member_index": 1,                  // 1-based, matches launch order
+      "challenger_model": "…",
+      "outcome": "held",                  // held | broke | unavailable
+      "attempts": [ /* {arm, target, what_tried, why_failed} — as today */ ],
+      "break_evidence": null,             // required non-null iff outcome == "broke"
+                                          // NORMALIZED form: { finding_stable_id, spt: {result, rationale} }
+                                          // (the raw challenger returns a different shape — see below)
+      "normalization": null,              // null | "pending_user_decision" | "deferred_by_pending_registry_decision"
+                                          // non-null ONLY under aggregate outcome "pending" (raw break_evidence)
+      "reason": "…",
+      "retry_count": 1,                   // int ∈ {1, 2} — mirrors rule #25 exactly
+      "retry_cause": null,                // null | "timeout" | "spawn_error" | "malformed_json"
+                                          //      | "budget_exhausted"  (v5 addition)
+                                          // non-null iff retry_count == 2
+      "retry_attempts": [                 // length == retry_count
+        { "attempt": 1, "outcome": "ok", "error": null, "duration_ms": 7250 }
+      ],
+      "token_usage": {                    // aggregate across ALL transport attempts
+        "input_tokens": 0, "output_tokens": 0, "total_tokens": 0
+      }
+    }
+    // members 2 and 3 present only if member 1 held
+  ]
+}
+```
+
+**The break contract has two stages.** A challenger cannot mint a
+`finding_stable_id` — registry matching and allocation happen in main, after
+every break in the panel is collected and ordered.
+
+| stage | shape | produced by |
+|---|---|---|
+| **raw** | `break_evidence: { finding: <unnumbered Finding — every required field except stable_id AND loop_local_id>, spt: { result: "passed", rationale: <non-empty> } }` | the challenger |
+| **normalized** | `break_evidence: { finding_stable_id, spt: { result, rationale } }` | main, after registry-match or allocation and writing the `findings[]` entry |
+
+G32 validates only the **normalized** record, on every route **except**
+aggregate `pending`, where the **raw** record is required instead — the raw
+record cannot contain a stable ID yet, so applying G32 to it directly would be a
+category error.
+
+**`spt`, not `spt_question_failed`.** `spt_question_failed` is the enum naming
+*which* SPT question *rejected* a convergence candidate (§ Schema validation
+rules, `convergence_pass[]`) — break evidence records the opposite: a **pass**
+(`spt.result == "passed"`). The two fields are not interchangeable; a rejected
+convergence candidate never proves a break.
 
 ## Schema version 4 changelog
 
@@ -32,6 +129,8 @@ Persistent state file schemas (`LOOP_STATE.json`, `findings_registry.json`, `REV
 - New gate G32 (HALT_SUCCESS independent challenge); new quality-pass behaviour on candidate state.
 
 ### halt_success_challenge object schema (v4+, required when state == "HALT_SUCCESS")
+
+v5 replaces this object with a panel — see [§ Schema version 5 changelog](#schema-version-5-changelog).
 
 ```jsonc
 "halt_success_challenge": {

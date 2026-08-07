@@ -128,7 +128,7 @@ title = "Fingerprint Integrity"
 
 [[validation_gates]]
 id = "G32"
-title = "HALT_SUCCESS independent challenge (terminal, v4+)"
+title = "HALT_SUCCESS independent challenge (terminal, v4+; staged panel at v5+)"
 
 [[validation_gates]]
 id = "G33"

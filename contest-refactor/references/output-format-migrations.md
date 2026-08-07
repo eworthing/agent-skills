@@ -2,6 +2,23 @@
 
 Historical schema-version migration notes for `CURRENT_REVIEW.json` / `REVIEW_HISTORY.json` / `findings_registry.json`. **Loaded only on the resume path** (Step -1, when reading an artifact whose `schema_version` is below current) — a loop emitting a fresh current-schema artifact never needs this. Kept out of the per-loop investigation payload. The current-schema field definitions live in [output-format-json.md](output-format-json.md); the gates that apply these defaults live in [validation.md](validation.md) (G29).
 
+## Schema version 4 → 5
+
+Additive. A persisted **v4** candidate finishes under the legacy
+single-challenger contract; **v5** artifacts use panels. Mixed-version
+`REVIEW_HISTORY.json.loops[]` entries are legal — each entry carries its own
+`schema_version`. No artifact is rewritten in place.
+
+v5 **emission** is gated by the default-deny `panel_certification` capability
+([provider-adapters.md § panel_certification capability manifest](provider-adapters.md#panel_certification-capability-manifest-v5-panel-authorization);
+SSOT `canon/panel-certification.toml`) — an un-entried provider + exact model +
+`protocol_digest` combination keeps writing v4 indefinitely, forever if never
+measured.
+
+**Rollback** clears the capability entry but the v5 **reader** stays: a
+previously-written v5 artifact remains readable, and a failed v5 panel is never
+reinterpreted as a v4 success.
+
 ## Schema version 3 changelog
 
 `CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, and `findings_registry.json` bump `schema_version: 2 → 3`. `LOOP_STATE.json` is a new file on its own track at `schema_version: 1`. Backward compatibility:

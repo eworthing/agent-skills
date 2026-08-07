@@ -136,7 +136,7 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 - [ ] **G31 Fingerprint Integrity** — `fingerprint.claim_consequence_hash`, `fingerprint.evidence_paths_hash`, and `attempted_remedy_hash` stored on each occurrence must equal the values recomputed from the finding's current fields. Drift indicates a finding was edited after emission without rehashing.
   *Source:* [`output-format-state-schemas.md § Fingerprint + retirement occurrence fields (PR 1)`](output-format-state-schemas.md#fingerprint--retirement-occurrence-fields-pr-1) + [`output-format-state-schemas.md § Fingerprint algorithm (canonical, owned by scripts/_fingerprint.py)`](output-format-state-schemas.md#fingerprint-algorithm-canonical-owned-by-scripts_fingerprintpy) — algorithm owner is `scripts/_fingerprint.py`; G31 enforces stored == recomputed.
 
-- [ ] **G32 HALT_SUCCESS independent challenge (terminal, v4+)** — *Applies when schema_version >= 4.* Ensures that a terminal `HALT_SUCCESS` has been independently challenged before the run closes. The loop emits `HALT_SUCCESS_candidate` (non-terminal); the main agent runs a challenger model and promotes to `HALT_SUCCESS` only when the challenge outcome is `"held"`. `HALT_SUCCESS_candidate` is **exempt** from this gate — it is a success claim awaiting promotion.
+- [ ] **G32 HALT_SUCCESS independent challenge (terminal, v4+; staged panel at v5+)** — *Applies when schema_version >= 4.* Ensures that a terminal `HALT_SUCCESS` has been independently challenged before the run closes. The loop emits `HALT_SUCCESS_candidate` (non-terminal); the main agent runs a challenger model and promotes to `HALT_SUCCESS` only when the challenge outcome is `"held"`. `HALT_SUCCESS_candidate` is **exempt** from this gate — it is a success claim awaiting promotion.
 
   When `state == "HALT_SUCCESS"` and `schema_version >= 4`:
   - `halt_success_challenge` must be non-null.
@@ -152,6 +152,19 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
   - `run_id`, `source_rev`, and `candidate_fingerprint` must all be non-null.
 
   When `schema_version < 4`: G32 does not fire. Legacy v3 `HALT_SUCCESS` without a challenge remains valid.
+
+  *At schema_version >= 5*, `halt_success_challenge` — required non-null on `HALT_SUCCESS`, and additionally **permitted** (null also legal) on `CONTINUE` and on `HALT_STAGNATION`/{`user_decision`, `verification_blocked`} — is validated as a **panel of 3 staged challengers** rather than a single challenger:
+
+  - `required_panel_size == 3`; `panel` length **biconditionally** staged-consistent (1 entry ⇔ member 1's `outcome` is `broke` or `unavailable`; 3 entries ⇔ member 1's `outcome` is `held`); `member_index` values exactly `1..len`, in order.
+  - Aggregate `outcome` agrees with the routing-precedence table applied to the member records, and aggregate/state coupling holds: `held`↔`HALT_SUCCESS`, `broke`↔`CONTINUE` or `HALT_STAGNATION`/`user_decision`, `blocked`↔`HALT_STAGNATION`/`verification_blocked`, `pending`↔`HALT_STAGNATION`/`user_decision`.
+  - Every member record is checked — not just the first: `challenger_model`, `outcome` enum, `reason`, and per-member arm diversity (the v4 diversity rule reused per member).
+  - `break_evidence` non-null iff that member's `outcome == "broke"`. **Normalized** form (`finding_stable_id` resolving in this loop's `findings[]`, `spt.result == "passed"`, non-empty rationale) on every route **except** aggregate `pending`, where **raw** form (`finding` + a passed `spt`) is required, carrying a `normalization` marker (`pending_user_decision` on the ambiguous member, `deferred_by_pending_registry_decision` on its valid siblings) — plus `open_question_for_user` non-null as the fourth leg of the raw-acceptance condition. `normalization` is null everywhere else.
+  - Retry envelope shape per rule #25, **plus `budget_exhausted`** in both the `retry_cause` and `retry_attempts[].outcome` enums, checked per member.
+  - `candidate_binding` **shape** required on every permitted path; **equality** against the live candidate's `run_id` / `source_rev` / `candidate_fingerprint` checked only on `HALT_SUCCESS` — those top-level fields do not exist by construction on the other permitted states.
+  - `protocol_digest` **shape** only (`sha256:<hex>`). Copy-forward and comparison against a currently-executable protocol are the resume router's job, not G32's — G32 is a stateless single-artifact validator.
+  - `token_usage` non-negative with `total_tokens == input_tokens + output_tokens`, per member.
+
+  Code owner: [`scripts/_artifact_panel.py`](../scripts/_artifact_panel.py). Durable panel records are **permitted** (not required) on the non-promoting paths at v5 — `CONTINUE`-after-`broke`, `HALT_STAGNATION`/`user_decision`, `HALT_STAGNATION`/`verification_blocked` — so a partial or losing panel stays auditable rather than being discarded.
 
   Run G32 at Step 1 emit whenever state is `HALT_SUCCESS` or `HALT_SUCCESS_candidate` and `schema_version >= 4`. Failure → ensure `halt_success_challenge` is present and binding matches, or downgrade to `HALT_SUCCESS_candidate` and await independent challenge.
 
