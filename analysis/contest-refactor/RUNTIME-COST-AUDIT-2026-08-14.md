@@ -184,6 +184,18 @@ Both landed with the full harness green (`validate-repo` OK, 80 fixtures, 38 sel
 
 **1. G43 range fix + freshness pin.** `SKILL.md:133,236` instructed "full G1–G42" while canon declared G43, leaving the largest gate (1,777 tok) outside the range the loop is told to run. Both sites now say *"every gate in `canon/validation-gates.toml`"* — canon-derived, so it cannot go stale again. Pinned by a new `check_gate_range_freshness` in `validate-repo.py`, which fails any hardcoded `G1–G<n>` whose upper bound ≠ canon's highest. **RED/GREEN verified**: reintroducing the original text reproduces `[gate-range-freshness] SKILL.md: stale gate range 'G1-G42' but canon declares G43 as highest`.
 
+**3. Lever F — reading discipline.** A 248-tok recipe added to `method.md` ahead of the 10 steps: locate with search then read targeted; batch independent lookups; cite as you read; don't re-open what you already cited. Form is a positive recipe, not a prohibition — the baseline failure is a technique the Critic never had, not a rule it skips.
+
+Micro-tested, criteria pre-registered before any run: 2 arms × 5 fresh-context runs on a real Step-4 ownership review of `contest-refactor/scripts/`, measured from subagent transcripts (deduped by `message.id`; cost-weighted input 1× / cache-write 1.25× / cache-read 0.1× / output 5×).
+
+| median | control | treatment | delta |
+|---|---:|---:|---:|
+| weighted cost | 189,312 | 151,092 | **−20.2%** |
+| assistant messages | 22 | 17 | **−22.7%** |
+| verified `file:line` citations | 6 | 10 | **+67%** |
+
+**Honest limits.** n=5/arm; cost distributions overlap heavily (treatment cheaper in 16/25 pairwise comparisons — not significant). Treatment spread is 2.25× vs control 2.07×, so the wording is **not** producing convergence. The quality result is the more robust half. A first pass at these numbers was taken while runs were still in flight and wrongly reported a clean separation and one failed treatment run; both were measurement artifacts, corrected here from complete transcripts.
+
 **2. Lever E — provenance carve.** All 43 `*Source:*` citations moved verbatim from `validation.md` to a new cold `references/validation-sources.md`, keyed by gate id. No normative clause moved; no rule reworded. Load-path proof: the new file returns **0 occurrences in every load set** (`step1`, `step1_emit`, `step2`, `step3`, `loop`).
 
 | | Before | After | Net |
@@ -203,7 +215,7 @@ Risk-adjusted. All savings are **unique-load proxy** tokens over a 10-loop run a
 | **E** | Move the 43 `*Source:*` provenance lines to a cold reference; **retain every normative clause** | 31,760 | 3.7% | **Low** — no rule becomes reactive |
 | **A** | Carve the 11 audited-clean gates' prose to `validation-mechanized.md`, routed on validator failure; requires phase-aware validator + `validate-repo.py` update | ≤62,490 | ≤7.3% | **Medium** |
 | ~~**D**~~ | ~~CI ceiling on per-loop reload~~ — **shipped** as `token-budget.py --check` | prevents recurrence | — | — |
-| **F** | Fewer assistant messages + read→extract→drop inside loop subagents | **the largest measured lever** | — | Behavioral |
+| ~~**F**~~ | ~~Fewer assistant messages + read→extract→drop~~ — **shipped** as a Reading-discipline recipe in `method.md` | −20% cost / +67% findings (median, n=5/arm, noisy) | — | — |
 | ~~**B**~~ | ~~Reviewer reference-trim~~ — **killed**: measured at **<0.1% of real cost** | — | — | — |
 
 **A + E = 84,960 tok (10.0% proxy)** — *not* 94,250: **929 tokens of provenance lines sit inside the 11 gates A already carves**, and are counted once.
