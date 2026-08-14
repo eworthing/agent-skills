@@ -4,7 +4,7 @@
 **Snapshot**: repo HEAD `c6b8175`
 **Peer review**: codex `gpt-5.6-sol` effort `xhigh`. Round 1 → `REVISE` (6 blocking); round 2 → `REVISE` (5 blocking, narrowed; all rev-2 arithmetic independently reproduced by the reviewer). Every correction below was re-verified against the repo before adoption — including two places where the reviewer's own figures did not reconcile. See [Review corrections](#review-corrections).
 **Extends**: [TOKEN-USAGE-AUDIT.md](TOKEN-USAGE-AUDIT.md) (2026-06-26), whose Lever 4 is **partly executed** (A3 Move A `432f138`, Move B `b33e7ec`).
-**Status**: findings validated. **G43 fix and Lever E shipped 2026-08-14** (see [Shipped](#shipped)); Levers A / B / C / D / F remain proposed.
+**Status**: findings validated. **Shipped 2026-08-14** (see [Shipped](#shipped)): the G43 fix, Lever E, Lever D, Lever F. **Withdrawn**: C. **Killed**: B. **Default-no**: A.
 
 ---
 
@@ -184,7 +184,19 @@ Both landed with the full harness green (`validate-repo` OK, 80 fixtures, 38 sel
 
 **1. G43 range fix + freshness pin.** `SKILL.md:133,236` instructed "full G1–G42" while canon declared G43, leaving the largest gate (1,777 tok) outside the range the loop is told to run. Both sites now say *"every gate in `canon/validation-gates.toml`"* — canon-derived, so it cannot go stale again. Pinned by a new `check_gate_range_freshness` in `validate-repo.py`, which fails any hardcoded `G1–G<n>` whose upper bound ≠ canon's highest. **RED/GREEN verified**: reintroducing the original text reproduces `[gate-range-freshness] SKILL.md: stale gate range 'G1-G42' but canon declares G43 as highest`.
 
-**3. Lever F — reading discipline.** A 248-tok recipe added to `method.md` ahead of the 10 steps: locate with search then read targeted; batch independent lookups; cite as you read; don't re-open what you already cited. Form is a positive recipe, not a prohibition — the baseline failure is a technique the Critic never had, not a rule it skips.
+**2. Lever E — provenance carve.** All 43 `*Source:*` citations moved verbatim from `validation.md` to a new cold `references/validation-sources.md`, keyed by gate id. No normative clause moved; no rule reworded. Load-path proof: the new file returns **0 occurrences in every load set** (`step1`, `step1_emit`, `step2`, `step3`, `loop`).
+
+| | Before | After | Net |
+|---|---:|---:|---:|
+| `validation.md` | 16,385 | 13,209 | −3,176 |
+| per-loop fixed reload | 84,197 | **81,124** | **−3,073** |
+| run projection (10 loops) | 852,247 | **821,580** | **−30,667 (3.6%)** |
+
+The per-loop net (−3,073) is smaller than the gross carve (−3,176) because a discoverability pointer was added to `validation.md` and to SKILL.md's See Also. Per the accounting model, 3.6% is a **gross unique-instruction delta, not a billed-cost saving**.
+
+**3. Lever D — budget guard.** `token-budget.py --check`: hand-set ceilings (`loop` 82,000, `skill_md` 10,600) plus `DECLARED_DIVERGENCES`, which fails any undeclared difference between the code's load table and SKILL.md's Load Matrix. The matrix is parsed from SKILL.md directly, closing the gap where the old self-test validated the table against its own copy of the same lists. `--require-tiktoken` exits 2 rather than passing heuristic numbers off as measured. Negative-tested for ceiling breach, undeclared divergence, and a stale-exemption check that caught a bad entry in its own table on first run.
+
+**4. Lever F — reading discipline.** A 248-tok recipe added to `method.md` ahead of the 10 steps: locate with search then read targeted; batch independent lookups; cite as you read; don't re-open what you already cited. Form is a positive recipe, not a prohibition — the baseline failure is a technique the Critic never had, not a rule it skips.
 
 Micro-tested, criteria pre-registered before any run: 2 arms × 5 fresh-context runs on a real Step-4 ownership review of `contest-refactor/scripts/`, measured from subagent transcripts (deduped by `message.id`; cost-weighted input 1× / cache-write 1.25× / cache-read 0.1× / output 5×).
 
@@ -195,16 +207,6 @@ Micro-tested, criteria pre-registered before any run: 2 arms × 5 fresh-context 
 | verified `file:line` citations | 6 | 10 | **+67%** |
 
 **Honest limits.** n=5/arm; cost distributions overlap heavily (treatment cheaper in 16/25 pairwise comparisons — not significant). Treatment spread is 2.25× vs control 2.07×, so the wording is **not** producing convergence. The quality result is the more robust half. A first pass at these numbers was taken while runs were still in flight and wrongly reported a clean separation and one failed treatment run; both were measurement artifacts, corrected here from complete transcripts.
-
-**2. Lever E — provenance carve.** All 43 `*Source:*` citations moved verbatim from `validation.md` to a new cold `references/validation-sources.md`, keyed by gate id. No normative clause moved; no rule reworded. Load-path proof: the new file returns **0 occurrences in every load set** (`step1`, `step1_emit`, `step2`, `step3`, `loop`).
-
-| | Before | After | Net |
-|---|---:|---:|---:|
-| `validation.md` | 16,385 | 13,209 | −3,176 |
-| per-loop fixed reload | 84,197 | **81,124** | **−3,073** |
-| run projection (10 loops) | 852,247 | **821,580** | **−30,667 (3.6%)** |
-
-The per-loop net (−3,073) is smaller than the gross carve (−3,176) because a discoverability pointer was added to `validation.md` and to SKILL.md's See Also. Per the accounting model, 3.6% is a **gross unique-instruction delta, not a billed-cost saving**.
 
 ## Ranked levers
 
@@ -308,11 +310,13 @@ Reviewer independently reproduced every rev-2 figure: 6,249 / 4,226 / 3,176 / 92
 
 ## Open risks
 
-1. **Billed savings remain unsized for the shipped work.** Finding 7 gives the cost model and the ranking, but no per-run measurement was taken before/after Lever E. The 3.6% figure stays a gross unique-instruction delta.
-2. **The 11 candidate gates are unaudited at clause level.** 6,249 tok is a ceiling; the true figure is lower by however much of those clauses the Python doesn't reach.
-3. **n=0 on Lever A's live behaviour**, and its main risk — that the model writes sloppier artifacts knowing a validator will catch them — is behavioral, requiring the 5+ rep experiment, not a static audit.
-4. **Loop-count distribution unmeasured.** 10 loops is a cap, not an observed mean; runs of 15 are referenced in gate rationales.
-6. **G43's current enforcement is unverified** — 28.4% of Lever A's scope rests on a gate outside the instructed range (Finding 6).
+1. **Lever F's cost result is underpowered.** −20.2% median, but treatment is cheaper in only 16/25 pairwise comparisons at n=5/arm, and treatment variance (2.25×) is no lower than control (2.07×) — the wording is not binding hard. The **quality** half (+67% citations) is the robust result. 5 more reps per arm would settle the cost claim.
+2. **No end-to-end before/after on a real run.** E, D and F were each measured on their own terms (unique-load delta, guard tests, a scoped micro-test). Nobody has run a full `/contest-refactor` loop before and after to confirm the combined effect in billed tokens.
+3. **G43 has been fixed but not re-baselined.** It is now inside the instructed range, but no run has exercised it, so its actual behavior and cost are still unobserved (Finding 6).
+4. **The 11 candidate gates are unaudited at clause level.** 6,249 tok is a ceiling; the true figure is lower by however much of those clauses the Python does not reach. Only matters if Lever A is ever revisited.
+5. **Lever A is n=0 behaviourally**, and its main risk — the model writing sloppier artifacts knowing a validator will catch them — needs the pre-registered experiment, not a static audit.
+6. **Loop-count distribution unmeasured.** 10 loops is a cap, not an observed mean; runs of 15 are referenced in gate rationales.
+7. **Rev 3 was never re-reviewed.** Round 3 returned REVISE; rev 3 adopted all of it, but no round 4 ran to confirm the corrections hold.
 
 ---
 
@@ -322,5 +326,8 @@ Reviewer independently reproduced every rev-2 figure: 6,249 / 4,226 / 3,176 / 92
 
 **Do next, in order:**
 
-1. **Lever F — the largest measured lever, and the only untouched one.** Axes 1–2 of Finding 7: fewer assistant messages per loop subagent, and read→extract→drop instead of holding 27–50 KB source files resident across a whole loop. Loop subagents are 66.8% of cost-weighted total. This is a change to how the loop *conducts* itself, so it belongs in `method.md` / lens read-discipline, not in another carve — and per repo convention it needs a micro-test against a control before shipping.
-2. **Lever A — only if F leaves it worth the scope.** Three reviews shrank its value while growing its prerequisites; on the measured cost model it sits on axis 3, the same modestly-weighted axis as the E carve that just shipped for 3.6%. The five-phase validator, gate × phase × state matrix, and pre-registered experiment are a large bill for that axis. Default to not doing it.
+1. **Confirm the combined effect on one real run.** Everything shipped was measured in isolation. A single `/contest-refactor` invocation against a fixed target, before and after these four commits, converts every proxy here into a billed number — and would settle open risks 1–3 at once. Cheapest remaining source of certainty.
+2. **Firm up Lever F's cost claim** (5 more reps per arm) if a real-run measurement is not practical. The quality gain already stands.
+3. **Lever A — default no.** Three reviews shrank its value while growing its prerequisites; on the measured cost model it sits on axis 3, the same modestly-weighted axis where E bought 3.6%. The five-phase validator, gate × phase × state matrix, and pre-registered experiment are a large bill for that axis. Revisit only if (1) shows the shipped work fell short.
+
+**Do not revisit:** Lever B (measured at <0.1%), Lever C (the flag already exists), narrative-prose trimming, cross-file dedupe, concision sweeps, `evals/` size — all measured non-causes, recorded above so they are not re-litigated.
