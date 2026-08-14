@@ -142,13 +142,24 @@ This is a live defect independent of any cost work, and it is a precondition for
 
 **Fix**: make the range canon-derived (or say "all gates"), pin it with a `validate-repo.py` check that the instructed range matches `canon/validation-gates.toml`, and re-baseline G43's behavior before crediting it in any carve.
 
-## Finding 7 — per-message rebilling multiplies the reference levers; it does not compete with them
+## Finding 7 — RESOLVED: per-message rebilling is already measured
 
-Rev 2 called message count and reference trimming "orthogonal" and gated the levers on measuring the former first. **That was backwards.** The prior audit measured `cost ≈ per-message resident context × messages`, and found references are **~25% of per-message context, riding every one of ~241 loop messages** — concluding that a reference trim "helped across all ~241 loop messages, not just 8 loops (**more valuable than the static model credited**)" and that broad reference trims are **worth ~10%+** ([TOKEN-USAGE-AUDIT.md:311](TOKEN-USAGE-AUDIT.md)).
+This needed no new instrumentation. The prior audit measured it on a real 4-loop run (Codex-validated) and the numbers settle every open question here.
 
-So Levers A and E are worth **more** than their unique-load proxies, and Lever F (fewer messages) is **complementary and multiplicative**, not a substitute. The two multiply: trimming resident context reduces the multiplicand, cutting messages reduces the multiplier.
+**Cost ≈ per-message resident context × messages.** Each loop is a 28–85-message subagent re-billing its full ~250k context every message. One run: ~241 unique assistant messages, 289 tool calls (148 Bash, 90 Read), ~5.3M *fresh* tokens. Cache hit rate is 93.9% — **caching already works; it is not the leak.**
 
-What is still missing is *sizing*, not direction. Per-message observability is needed to convert the proxies into billed savings — but it is **not** a gate on whether to act. The prior audit's own scoping caveat still applies: its Phase-B concision sweep on this same payload (`validation.md` Hard Gates ~8.2k first) carried a verification tax that could exceed the saving ([:324](TOKEN-USAGE-AUDIT.md), [:328](TOKEN-USAGE-AUDIT.md)).
+Ranked by measured impact ([TOKEN-USAGE-AUDIT.md § Findings](TOKEN-USAGE-AUDIT.md)):
+
+| # | Lever | Measured weight |
+|---|---|---|
+| 1 | **Fewer assistant messages per loop subagent** | 20% fewer messages ≈ 20% off the 82.6%-of-cost input side |
+| 2 | **Read→extract→drop instead of holding files resident** | 90 Reads pulled ~336k tok of source; 27–50 KB files re-bill every subsequent message |
+| 3 | Broad reference/context trims | references are ~25% of per-message context; worth ~10%+ |
+| 4 | Cross-loop re-reads | ~5.0M cache-write (36% of cost) re-reading the same source each loop; bounded by blind-critic independence |
+
+Loop subagents are **66.8%** of cost-weighted total (~70% of all cache-read); reviewer sidecars are 3.6%.
+
+**What this means for the levers here.** E (shipped) and A sit on axis 3 — the right axis, modestly weighted. B sits on the 3.6% sidecar and is dead. The unexploited leverage is axes 1–2, which are **behavioral** (how the loop reads and how often it messages), not structural (what the skill file contains). No document edit reaches them; they are a change to loop conduct.
 
 ---
 
@@ -192,9 +203,8 @@ Risk-adjusted. All savings are **unique-load proxy** tokens over a 10-loop run a
 | **E** | Move the 43 `*Source:*` provenance lines to a cold reference; **retain every normative clause** | 31,760 | 3.7% | **Low** — no rule becomes reactive |
 | **A** | Carve the 11 audited-clean gates' prose to `validation-mechanized.md`, routed on validator failure; requires phase-aware validator + `validate-repo.py` update | ≤62,490 | ≤7.3% | **Medium** |
 | **D** | CI ceiling on per-loop reload, **manifest-derived** (+ `--require-tiktoken`) | prevents recurrence | — | Low |
-| **B** | Reviewer reference-trim — **needs re-audit**, baseline stale | unquantified | — | Medium |
-| **C** | Default `--cap` 10 → 5 | ~half, incl. wall-clock | — | Cuts depth — owner call |
-| **F** | Reduce message count / resident context (batched reads, read→extract→drop) per Finding 7 | unmeasured, **multiplies with A/E** | — | Unknown |
+| **F** | Fewer assistant messages + read→extract→drop inside loop subagents | **the largest measured lever** | — | Behavioral |
+| ~~**B**~~ | ~~Reviewer reference-trim~~ — **killed**: measured at **<0.1% of real cost** | — | — | — |
 
 **A + E = 84,960 tok (10.0% proxy)** — *not* 94,250: **929 tokens of provenance lines sit inside the 11 gates A already carves**, and are counted once.
 
@@ -228,9 +238,13 @@ As specified it would not catch what it exists to catch. `token-budget.py` and `
 
 Scope D as: one machine-readable load manifest (or a parser over the Load Matrix) from which `loaded_set()` and its goldens are **generated or validated**, plus **separate ceilings for the fixed reload and for conditional routes**, so a conditional file cannot silently become unconditional.
 
-### Lever B needs re-basing before it can be quoted
+### Lever B is killed, not deferred
 
-The 55,216–110,432 band is an **eight-loop, pre-A3** figure. A3 Move A (`432f138`) and Move B (`b33e7ec`) have since landed as Lever-4 carves. Current `method.md` / `architecture-rubric.md` must be re-closure-audited for what the reviewer still doesn't need, and recomputed on current reviewer-invocation counts. Sidecar savings belong to a different cost population and must never be quoted as a share of 852,247.
+Not "needs re-audit" — **measured and immaterial**. The empirical run puts all three reviewer sidecars at **3.6% of cost-weighted total**, and trimming only their `method.md`/`architecture-rubric.md` reads moves **<0.1% of real cost** ([TOKEN-USAGE-AUDIT.md § Findings 5](TOKEN-USAGE-AUDIT.md)). The Step-0 audit agents alone cost more than every reviewer combined. The 55–110k projection was real arithmetic against the wrong denominator: a rounding error on a ~5.3M-fresh-token run. Do not revisit.
+
+### Lever C withdrawn
+
+Rev 3 listed "default `--cap` 10 → 5" as a lever. It is not one: `--cap N` is already a user flag, so nothing is unlocked by moving the default, and the empirical run states plainly that **"loop count was not the problem this run (4 loops, clean convergence)."** Lowering the default would truncate runs for users who never pass the flag, buying nothing. Withdrawn.
 
 ---
 
@@ -275,24 +289,20 @@ Reviewer independently reproduced every rev-2 figure: 6,249 / 4,226 / 3,176 / 92
 
 ## Open risks
 
-1. **Billed savings remain unsized.** The proxies are lower bounds; converting them requires per-message instrumentation (Finding 7). Direction is settled, magnitude is not.
+1. **Billed savings remain unsized for the shipped work.** Finding 7 gives the cost model and the ranking, but no per-run measurement was taken before/after Lever E. The 3.6% figure stays a gross unique-instruction delta.
 2. **The 11 candidate gates are unaudited at clause level.** 6,249 tok is a ceiling; the true figure is lower by however much of those clauses the Python doesn't reach.
 3. **n=0 on Lever A's live behaviour**, and its main risk — that the model writes sloppier artifacts knowing a validator will catch them — is behavioral, requiring the 5+ rep experiment, not a static audit.
 4. **Loop-count distribution unmeasured.** 10 loops is a cap, not an observed mean; runs of 15 are referenced in gate rationales.
-5. **Lever B unquantified** pending re-audit.
 6. **G43's current enforcement is unverified** — 28.4% of Lever A's scope rests on a gate outside the instructed range (Finding 6).
 
 ---
 
 ## Recommendation
 
-**Sequence: fix G43 → E → D → instrument → clause audit → A. Defer B.**
+**Shipped:** the G43 fix and Lever E. **Withdrawn:** Lever C (a flag that already exists). **Killed:** Lever B (<0.1% of real cost).
 
-1. **Fix the G1–G42 / G43 gap** (Finding 6). A live defect, cheap, independent of every lever, and a precondition for crediting 28.4% of Lever A's scope. Pin it with a `validate-repo.py` range check.
-2. **Lever E** — the only change that removes weight without converting a proactive rule into a reactive one. Ship on the existing harness (`validate-repo.py`, 80 fixtures, the 38-file self-test sweep, `eval-skill.py`).
-3. **Lever D** with E, manifest-derived and with `--require-tiktoken`, or the growth pattern re-inflates both.
-4. **Instrument per-message cost** (Finding 7) — to *size* A/E/F correctly, not to decide whether to act. Reference trims and message-count reduction multiply; F is complementary to A/E, not a competing axis.
-5. **Clause-level audit** of the 11 candidates with negative fixtures. This determines whether A is worth its scope.
-6. **Lever A** only if the audit holds, the five-phase validator (including `postchallenge-precommit`) and `validate-repo.py` updates are built, and the pre-registered paired experiment clears.
+**Do next, in order:**
 
-**C remains a separate owner decision** — the only lever that trades away rigor, and the only one that materially shortens wall-clock.
+1. **Lever D** — the manifest-derived per-loop ceiling with `--require-tiktoken`. Cheap, and without it the +38%/six-weeks growth simply resumes.
+2. **Lever F — the largest measured lever, and the only untouched one.** Axes 1–2 of Finding 7: fewer assistant messages per loop subagent, and read→extract→drop instead of holding 27–50 KB source files resident across a whole loop. Loop subagents are 66.8% of cost-weighted total. This is a change to how the loop *conducts* itself, so it belongs in `method.md` / lens read-discipline, not in another carve — and per repo convention it needs a micro-test against a control before shipping.
+3. **Lever A — only if D and F leave it worth the scope.** Three reviews shrank its value while growing its prerequisites; on the measured cost model it sits on axis 3, the same modestly-weighted axis as the E carve that just shipped for 3.6%. The five-phase validator, gate × phase × state matrix, and pre-registered experiment are a large bill for that axis. Default to not doing it.
