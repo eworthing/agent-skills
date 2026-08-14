@@ -275,6 +275,7 @@ Stagnation is not failure when honestly emitted with a subtype — it's the loop
 - Resume detection (Resume Precedence Matrix + provider detection + bootstrap + drift + LOOP_STATE.json resume): [references/resume-detection.md](references/resume-detection.md).
 - 10-step Method + meta-rules + Simplify Pressure Test + evidence discipline: [references/method.md](references/method.md).
 - Pre-output validation: hard gates + quality pass + tone boundary: [references/validation.md](references/validation.md).
+  - Per-gate provenance (cold — not loaded during a loop): [references/validation-sources.md](references/validation-sources.md).
 - Implementation reviewer (post-Step-3 pre-commit gate): [references/implementation-reviewer.md](references/implementation-reviewer.md).
 - Halt user handoff (subtypes + menus, drift re-validation, reset): [references/halt-handoff.md](references/halt-handoff.md).
 - Output format (artifact index): [references/output-format.md](references/output-format.md).
