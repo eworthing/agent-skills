@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -55,8 +56,10 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
             "architecture-rubric.md",
             "architecture-rubric-scoring.md",
         ],
-        # SKILL.md row "Step 1 emit": output-format trio + validation (+ halt-handoff
-        # conditional, counted because most loops route through a HALT check at emit).
+        # SKILL.md row "Step 1 emit": output-format trio + validation. halt-handoff.md sits
+        # in the matrix's "Always load" cell but is scoped in prose to "when emitting any HALT
+        # state" -- most loops are CONTINUE, so it is EXCLUDED here and declared as a known
+        # divergence in DECLARED_DIVERGENCES (see --check).
         "step1_emit": [
             "output-format.md",
             "output-format-json.md",
@@ -209,6 +212,114 @@ def cmd_project(args, count_fn, method):
     print(f"  RUN TOTAL projection  : {run_total:>8}")
 
 
+# --- budget guard (Lever D) ------------------------------------------------
+#
+# Two independent guards, so neither is derived from the data it polices:
+#   1. CEILINGS -- hand-set numbers. Growth past them fails, forcing a deliberate bump.
+#   2. DECLARED_DIVERGENCES -- every place the load table above intentionally differs
+#      from SKILL.md's Reference Load Matrix, with the reason. Any UNdeclared difference
+#      fails, so the table cannot silently drift from the instructions it models.
+#
+# Motivation: per-loop fixed reload grew 61,100 -> 84,197 tok in six weeks with nothing
+# to notice it, and the self-test validated the table against its own copy of the lists.
+
+CEILINGS = {
+    "loop": 82_000,  # per-loop fixed reload (unique loads, apple lens)
+    "skill_md": 10_600,  # SKILL.md trigger read
+}
+
+DECLARED_DIVERGENCES = {
+    (
+        "step1",
+        "SKILL.md",
+    ): "loop subagent reads SKILL.md first (trust-model.md:62); it is the router, not a reference",
+    (
+        "step1",
+        "lens-apple.md",
+    ): 'matrix cell says "Selected stack lens" in prose; expanded to the concrete lens',
+    (
+        "step1",
+        "lens-generic.md",
+    ): 'matrix cell says "Selected stack lens" in prose; expanded to the concrete lens',
+    ("step1", "lens-security.md"): 'matrix cell says "always-included lenses" in prose; expanded',
+    ("step1", "lens-efficiency.md"): 'matrix cell says "always-included lenses" in prose; expanded',
+    (
+        "step1_emit",
+        "output-format-json.md",
+    ): "matrix names output-format.md as the index; expanded to the trio it routes to",
+    (
+        "step1_emit",
+        "output-format-markdown.md",
+    ): "matrix names output-format.md as the index; expanded to the trio it routes to",
+    (
+        "step1_emit",
+        "halt-handoff.md",
+    ): "matrix lists it under Always but scopes it in prose to HALT emits; excluded from the CONTINUE-path baseline",
+    (
+        "step3",
+        "output-format-markdown-archive.md",
+    ): "routed by SKILL.md Step-3 sub-step 9 (archive compression), not named in the matrix row",
+}
+
+MATRIX_ROWS = {"Step 1": "step1", "Step 1 emit": "step1_emit", "Step 2": "step2", "Step 3": "step3"}
+
+
+def _matrix_always() -> dict:
+    """Parse the 'Always load' column of SKILL.md's Reference Load Matrix."""
+    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    start = text.index("## Reference Load Matrix")
+    section = text[start : text.index("## Loop Isolation", start)]
+    out = {}
+    for line in section.splitlines():
+        if not line.startswith("|") or line.startswith("|---") or "Always load" in line:
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if cells[0] in MATRIX_ROWS and len(cells) > 1:
+            out[MATRIX_ROWS[cells[0]]] = set(re.findall(r"references/([a-z0-9-]+\.md)", cells[1]))
+    return out
+
+
+def cmd_check(args, count_fn, method) -> int:
+    failures = []
+    matrix = _matrix_always()
+    for step, declared in sorted(matrix.items()):
+        actual = set(loaded_set(step, args.lens))
+        for name in sorted(actual - declared):
+            if (step, name) not in DECLARED_DIVERGENCES:
+                failures.append(
+                    f"[load-matrix] {step}: loads {name!r} but SKILL.md's matrix does not list it "
+                    f"(add it to the matrix, or declare it in DECLARED_DIVERGENCES with a reason)"
+                )
+        for name in sorted(declared - actual):
+            if (step, name) not in DECLARED_DIVERGENCES:
+                failures.append(
+                    f"[load-matrix] {step}: SKILL.md's matrix lists {name!r} but the load table omits it "
+                    f"(add it to the table, or declare it in DECLARED_DIVERGENCES with a reason)"
+                )
+
+    per_loop = sum(
+        count_fn(_resolve(f).read_text(encoding="utf-8")) for f in loaded_set("loop", args.lens)
+    )
+    skill_md = count_fn((SKILL_DIR / "SKILL.md").read_text(encoding="utf-8"))
+    for label, value in (("loop", per_loop), ("skill_md", skill_md)):
+        if value > CEILINGS[label]:
+            failures.append(
+                f"[ceiling] {label} = {value:,} tok exceeds ceiling {CEILINGS[label]:,}. "
+                f"Trim, or raise the ceiling deliberately and say why in the commit."
+            )
+
+    print(f"# budget guard ({method}, lens={args.lens})")
+    print(f"  per-loop fixed reload : {per_loop:>8} / {CEILINGS['loop']:,}")
+    print(f"  SKILL.md trigger      : {skill_md:>8} / {CEILINGS['skill_md']:,}")
+    print(
+        f"  load-matrix sync      : {len(matrix)} steps, {len(DECLARED_DIVERGENCES)} declared divergences"
+    )
+    for f in failures:
+        print(f"FAIL {f}")
+    print("budget-guard: OK" if not failures else f"budget-guard: {len(failures)} failure(s)")
+    return 1 if failures else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -231,9 +342,28 @@ def main(argv=None):
         help="stack lens to model (default apple, the heavier path)",
     )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="budget guard: fail if the load table drifts from SKILL.md's matrix or a ceiling is exceeded",
+    )
+    ap.add_argument(
+        "--require-tiktoken",
+        action="store_true",
+        help="exit non-zero unless real tiktoken counts are available (never report heuristic numbers as measured)",
+    )
     args = ap.parse_args(argv)
 
     count_fn, method = _make_counter()
+    if args.require_tiktoken and method != "tiktoken/cl100k_base":
+        print(
+            f"error: --require-tiktoken given but tokenizer is {method!r}; "
+            f"install tiktoken (pip install tiktoken)",
+            file=sys.stderr,
+        )
+        return 2
+    if args.check:
+        return cmd_check(args, count_fn, method)
     if args.loaded_set:
         cmd_loaded_set(args, count_fn, method)
     elif args.project:

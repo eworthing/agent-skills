@@ -202,7 +202,7 @@ Risk-adjusted. All savings are **unique-load proxy** tokens over a 10-loop run a
 |---|---|---:|---:|---|
 | **E** | Move the 43 `*Source:*` provenance lines to a cold reference; **retain every normative clause** | 31,760 | 3.7% | **Low** — no rule becomes reactive |
 | **A** | Carve the 11 audited-clean gates' prose to `validation-mechanized.md`, routed on validator failure; requires phase-aware validator + `validate-repo.py` update | ≤62,490 | ≤7.3% | **Medium** |
-| **D** | CI ceiling on per-loop reload, **manifest-derived** (+ `--require-tiktoken`) | prevents recurrence | — | Low |
+| ~~**D**~~ | ~~CI ceiling on per-loop reload~~ — **shipped** as `token-budget.py --check` | prevents recurrence | — | — |
 | **F** | Fewer assistant messages + read→extract→drop inside loop subagents | **the largest measured lever** | — | Behavioral |
 | ~~**B**~~ | ~~Reviewer reference-trim~~ — **killed**: measured at **<0.1% of real cost** | — | — | — |
 
@@ -232,11 +232,18 @@ Scope A must include, or it is not shippable:
 6. **Rollback criteria** and telemetry on validator-failure frequency.
 7. **G43 re-baseline first** (Finding 6) — 28.4% of the scope is a gate whose current enforcement is unverified.
 
-### Lever D needs one source of truth, or it gives false assurance
+### Lever D — shipped (was: needs one source of truth)
 
 As specified it would not catch what it exists to catch. `token-budget.py` and `_token_budget_selftest.py` **each hardcode their own copy of the per-step load lists**; neither derives them from `SKILL.md`'s Reference Load Matrix. Both can stay green while the matrix drifts — the exact failure mode the ceiling is meant to prevent. `token-budget.py:58` also carries a stale comment claiming the conditional `halt-handoff.md` is "counted" at Step-1 emit, while the adjacent list omits it — so the script's own documentation disagrees with its data.
 
-Scope D as: one machine-readable load manifest (or a parser over the Load Matrix) from which `loaded_set()` and its goldens are **generated or validated**, plus **separate ceilings for the fixed reload and for conditional routes**, so a conditional file cannot silently become unconditional.
+**Shipped** as `token-budget.py --check`, which parses SKILL.md's Load Matrix directly rather than trusting either hardcoded copy. Two guards, deliberately independent so neither is derived from the data it polices:
+
+- **Ceilings** — hand-set numbers (`loop` 82,000; `skill_md` 10,600). Growth past them fails, forcing a deliberate bump with a stated reason.
+- **`DECLARED_DIVERGENCES`** — every intentional difference between the code's load table and the matrix, each with a reason. Any *undeclared* difference fails, so the table cannot drift from the instructions it models. A conditional file becoming unconditional surfaces here, which is why no separate conditional ceiling was needed.
+
+`--require-tiktoken` exits 2 rather than reporting heuristic numbers as measured (round-3 N6).
+
+Self-tested including negative cases: ceiling breach, undeclared divergence, and a **stale-exemption check** — an entry that is no longer a divergence fails, since a dead exemption silently pre-approves a future real drift. That check caught a bad entry in the table on its first run.
 
 ### Lever B is killed, not deferred
 
@@ -299,10 +306,9 @@ Reviewer independently reproduced every rev-2 figure: 6,249 / 4,226 / 3,176 / 92
 
 ## Recommendation
 
-**Shipped:** the G43 fix and Lever E. **Withdrawn:** Lever C (a flag that already exists). **Killed:** Lever B (<0.1% of real cost).
+**Shipped:** the G43 fix, Lever E, and Lever D. **Withdrawn:** Lever C (a flag that already exists). **Killed:** Lever B (<0.1% of real cost).
 
 **Do next, in order:**
 
-1. **Lever D** — the manifest-derived per-loop ceiling with `--require-tiktoken`. Cheap, and without it the +38%/six-weeks growth simply resumes.
-2. **Lever F — the largest measured lever, and the only untouched one.** Axes 1–2 of Finding 7: fewer assistant messages per loop subagent, and read→extract→drop instead of holding 27–50 KB source files resident across a whole loop. Loop subagents are 66.8% of cost-weighted total. This is a change to how the loop *conducts* itself, so it belongs in `method.md` / lens read-discipline, not in another carve — and per repo convention it needs a micro-test against a control before shipping.
-3. **Lever A — only if D and F leave it worth the scope.** Three reviews shrank its value while growing its prerequisites; on the measured cost model it sits on axis 3, the same modestly-weighted axis as the E carve that just shipped for 3.6%. The five-phase validator, gate × phase × state matrix, and pre-registered experiment are a large bill for that axis. Default to not doing it.
+1. **Lever F — the largest measured lever, and the only untouched one.** Axes 1–2 of Finding 7: fewer assistant messages per loop subagent, and read→extract→drop instead of holding 27–50 KB source files resident across a whole loop. Loop subagents are 66.8% of cost-weighted total. This is a change to how the loop *conducts* itself, so it belongs in `method.md` / lens read-discipline, not in another carve — and per repo convention it needs a micro-test against a control before shipping.
+2. **Lever A — only if F leaves it worth the scope.** Three reviews shrank its value while growing its prerequisites; on the measured cost model it sits on axis 3, the same modestly-weighted axis as the E carve that just shipped for 3.6%. The five-phase validator, gate × phase × state matrix, and pre-registered experiment are a large bill for that axis. Default to not doing it.

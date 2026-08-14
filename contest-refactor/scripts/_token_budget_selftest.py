@@ -10,7 +10,9 @@ Run directly: `python3 scripts/_token_budget_selftest.py` (exit 0 = pass). Stdli
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import sys
 from pathlib import Path
 
@@ -116,6 +118,64 @@ s = "Claim -> Source -> Consequence -> Remedy. " * 7
 check(count_fn(s) == count_fn(s), "counter is non-deterministic")
 check(count_fn(s) > 0, "counter returned non-positive on real text")
 check(count_fn("") == 0, "counter on empty string is non-zero")
+
+# --- Budget guard (Lever D). The guard reads SKILL.md's matrix directly, so it closes the
+# gap the GOLDEN_* lists above cannot: those duplicate the load table, and both could stay
+# green while SKILL.md drifted underneath them.
+
+
+class _Args:
+    lens = "apple"
+
+
+def _guard() -> int:
+    """Run the guard with stdout captured -- the negative cases below print FAIL lines by
+    design, and leaking them into a passing self-test's output reads like a real failure."""
+    with contextlib.redirect_stdout(io.StringIO()):
+        return tb.cmd_check(_Args(), count_fn, method)
+
+
+check(_guard() == 0, "budget guard fails at HEAD")
+
+# A ceiling must actually bite.
+_real = dict(tb.CEILINGS)
+try:
+    tb.CEILINGS["loop"] = 1
+    check(_guard() == 1, "ceiling breach not detected")
+finally:
+    tb.CEILINGS.clear()
+    tb.CEILINGS.update(_real)
+
+# Matrix drift must actually bite: drop a declared divergence and the omission should surface.
+_div = dict(tb.DECLARED_DIVERGENCES)
+try:
+    tb.DECLARED_DIVERGENCES.pop(("step1", "SKILL.md"), None)
+    check(_guard() == 1, "undeclared load-table divergence not detected")
+finally:
+    tb.DECLARED_DIVERGENCES.clear()
+    tb.DECLARED_DIVERGENCES.update(_div)
+
+# Every declared divergence must still BE one. A stale exemption silently pre-approves a
+# future real drift, which is the failure mode the guard exists to prevent.
+# Checked under BOTH lenses: the table is lens-independent, so an entry that diverges
+# under either lens (e.g. the stack lens itself) is live.
+_matrix = tb._matrix_always()
+for (step, name), reason in tb.DECLARED_DIVERGENCES.items():
+    if step not in _matrix:
+        continue
+    declared = _matrix[step]
+    live = False
+    for _lens in ("apple", "generic"):
+        actual = set(tb.loaded_set(step, _lens))
+        if name in (actual - declared) or name in (declared - actual):
+            live = True
+            break
+    check(
+        live,
+        f"stale DECLARED_DIVERGENCES entry ({step}, {name}): no longer a divergence -- remove it",
+    )
+    check(bool(reason.strip()), f"DECLARED_DIVERGENCES ({step}, {name}) has an empty reason")
+
 
 if failures:
     print(f"FAIL ({len(failures)}):")
