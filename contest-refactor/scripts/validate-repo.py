@@ -507,6 +507,44 @@ def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> list[Violati
     return violations
 
 
+def check_gate_range_freshness(canon: _canon.Canon) -> list[Violation]:
+    """A hardcoded G1-G<n> range in the runtime surface must match canon's highest gate.
+
+    Motivation: G43 landed 2026-08-06 while SKILL.md still instructed "full G1-G42",
+    putting the largest gate outside the range the loop is told to run. Prefer
+    canon-derived phrasing ("every gate in canon/validation-gates.toml"); if a literal
+    range is written anyway, this pins it to canon so it cannot silently go stale.
+    """
+    violations: list[Violation] = []
+    parsed = [
+        int(m.group(1)) for gid in canon.validation_gates if (m := re.match(r"^G(\d+)$", gid))
+    ]
+    if not parsed:
+        return violations
+    highest = max(parsed)
+
+    sources: list[Path] = []
+    skill_md = SKILL_ROOT / "SKILL.md"
+    if skill_md.is_file():
+        sources.append(skill_md)
+    if REFERENCES_DIR.is_dir():
+        sources.extend(sorted(REFERENCES_DIR.glob("*.md")))
+
+    for src in sources:
+        for match in re.finditer(r"G1\s*[\u2013\u2014-]\s*G(\d+)", src.read_text(encoding="utf-8")):
+            upper = int(match.group(1))
+            if upper != highest:
+                violations.append(
+                    Violation(
+                        "gate-range-freshness",
+                        f"stale gate range 'G1-G{upper}' but canon declares G{highest} as highest; "
+                        f"use canon-derived phrasing or update the range",
+                        src,
+                    )
+                )
+    return violations
+
+
 def main() -> int:
     canon = _canon.load_canon(SKILL_ROOT)
     violations: list[Violation] = []
@@ -515,6 +553,7 @@ def main() -> int:
     violations.extend(check_g30_g31_present())
     violations.extend(check_g3_evidence_chain_cross_reference())
     violations.extend(check_gate_sequencing(canon))
+    violations.extend(check_gate_range_freshness(canon))
     violations.extend(check_canon_alignment(canon))
     violations.extend(check_example_config())
     violations.extend(check_references_one_level_deep())
