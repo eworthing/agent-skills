@@ -2,7 +2,9 @@
 
 > **CURRENT-STATE (2026-06-28):** COVERED — orchestrator / two-layer / phase-machine / scoring equivalents already present. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 
-Source: `refs/competitors/levnik-skills/plugins/codebase-audit-suite/` (35+ specialized auditor skills across audit/test/architecture/persistence sub-suites). Inspected after research flagged it as "newest serious entrant on persisted-state orchestration." Source confirms; research understated scope (suite is 35+ workers, not just one).
+Source (as analyzed 2026-05-25): `levnik-skills/plugins/codebase-audit-suite/` at the 2026-05-09 snapshot (`4e85ab37`) — 35+ specialized auditor skills across audit/test/architecture/persistence sub-suites. Inspected after research flagged it as "newest serious entrant on persisted-state orchestration." Source confirmed it; research understated scope (35+ workers, not one).
+
+> **Upstream moved (re-verified 2026-08-17, levnik @ `5bf66c5`).** levnik's "Skills v2" rewrite (`5967ec7f`, 2026-07-11) deleted every `shared/references/*_contract.md` and collapsed 137 skills (`4e85ab37`, the 2026-05-09 snapshot this analysis read) into 25 across 7 plugin suites. `codebase-audit-suite/` still exists but is now **5 skills**: `ln-21-documentation-auditor`, `ln-22-codebase-auditor`, `ln-23-test-suite-auditor`, `ln-24-architecture-auditor`, `ln-25-persistence-auditor`. The `ln-620`–`ln-647` worker IDs cited throughout this doc no longer exist, and neither do the sub-suites. Claims below about **what** levnik does stay sourced to the snapshot and remain readable as analysis; claims about **scale** (35+ workers, 4 sub-suites) no longer describe upstream. The suite went from 35+ narrow workers to 5 broad auditors — evidence *against* the "decompose the Critic into many specialty workers" direction.
 
 ## What it actually is
 

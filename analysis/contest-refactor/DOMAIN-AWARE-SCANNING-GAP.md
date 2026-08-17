@@ -2,7 +2,9 @@
 
 > **CURRENT-STATE (2026-06-28):** DEFERRED — multi-domain `--domain`; low demand, monorepo handled by most-LOC source root. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 
-Source: `refs/competitors/levnik-skills/shared/references/audit_worker_core_contract.md`. Already mentioned in LEVNIK-AUDIT-SUITE-GAP § Gap E as "defer indefinitely; only useful for multi-domain monorepos."
+Source (as analyzed 2026-05-25): levnik's shared `audit_worker_core_contract.md`. Already mentioned in LEVNIK-AUDIT-SUITE-GAP § Gap E as "defer indefinitely; only useful for multi-domain monorepos."
+
+> **Upstream moved (re-verified 2026-08-17, levnik @ `5bf66c5`).** levnik's "Skills v2" rewrite (`5967ec7f`, 2026-07-11) deleted every `shared/references/*_contract.md` and collapsed 137 skills (`4e85ab37`, the 2026-05-09 snapshot this analysis read) into 25 across 7 plugin suites. **The feature is gone**: `domain_mode`, `current_domain`, and `scan_path` appear nowhere in the repo at HEAD. The prior art this stub declined to adopt was abandoned by its own author — DEFER stands, now with upstream's reversal as evidence.
 
 This is a deliberate STUB doc — minimal scope, low priority. Written to close the coverage gap from LEVNIK-AUDIT-SUITE-GAP without inflating to a full gap-doc treatment.
 

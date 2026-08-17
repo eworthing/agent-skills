@@ -5,9 +5,9 @@
 
 Compares contest-refactor's traceability machinery (per-finding `evidence[]` + `blast_radius`, per-loop `loop_result.changed_paths[]` + `targeted_finding_id`, `LOOP_STATE.pre_step3_blob_shas`, G22 commit subject pattern, `findings_registry.json` cross-loop occurrences) against:
 
-- **pr-agent** (`refs/competitors/pr-agent/`) — qodo-ai/pr-agent, ~11k★, mature PR diff reviewer
-- **aider** (`refs/competitors/aider/`) — Aider-AI/aider, ~45k★, terminal pair-programming with repo-map + auto-commit
-- **anthropic pr-review-toolkit** (`refs/competitors/anthropic-claude-code/plugins/pr-review-toolkit/`) — 6-agent PR report-generation plugin
+- **pr-agent** (clone pruned 2026-08-17 @ `1eea0011`) — qodo-ai/pr-agent, ~11k★, mature PR diff reviewer
+- **aider** (clone pruned 2026-08-17 @ `5dc9490b`) — Aider-AI/aider, ~45k★, terminal pair-programming with repo-map + auto-commit
+- **anthropic pr-review-toolkit** (`refs/competitors/shared/anthropic-claude-code/plugins/pr-review-toolkit/`) — 6-agent PR report-generation plugin
 
 Missed-on-first-pass comparator worth folding into this analysis: **levnik-skills**, which added explicit `file`, `line_start`, and `line_end` review-schema fields in its review-suggestion schema v2.
 
@@ -109,7 +109,7 @@ Pairs with HALT-STATE-GAP Gap C (per-hunk partial-accept) — both share the sam
 
 ### Gap A.1: Refactoring-pattern canonical vocabulary
 
-rohitg00's `refactoring-specialist.md:20` (full path: `refs/competitors/rohitg00-toolkit/agents/developer-experience/refactoring-specialist.md`) recommends "naming the specific refactoring pattern applied" in commit messages but doesn't formalize. (Earlier draft cited `:9` — that line is part of the YAML frontmatter; the commit-pattern rule lives at line 20 in the numbered Process section.) Combined with arXiv:2511.04824's empirical finding (Change Variable Type 11.8% / Rename Parameter 10.4% / Rename Variable 8.5%), there's a clear case for a canonical Fowler-derived enum.
+rohitg00's `refactoring-specialist.md:20` (full path: `refs/competitors/contest-refactor/rohitg00-toolkit/agents/developer-experience/refactoring-specialist.md`) recommends "naming the specific refactoring pattern applied" in commit messages but doesn't formalize. (Earlier draft cited `:9` — that line is part of the YAML frontmatter; the commit-pattern rule lives at line 20 in the numbered Process section.) Combined with arXiv:2511.04824's empirical finding (Change Variable Type 11.8% / Rename Parameter 10.4% / Rename Variable 8.5%), there's a clear case for a canonical Fowler-derived enum.
 
 **Adopt** new canon file `canon/refactoring-patterns.toml`:
 

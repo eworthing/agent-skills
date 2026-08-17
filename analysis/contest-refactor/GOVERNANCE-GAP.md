@@ -5,9 +5,9 @@
 
 Compares contest-refactor's governance ingestion (Step 0 Context Discovery + `.contest-refactor.toml` + lens system + ADR awareness per `references/method.md`) against:
 
-- **brooks-lint** (`refs/competitors/brooks-lint/`) — 12-book grounded analysis with `.brooks-lint.yaml` config + module graph from grep
-- **architecture-review-mcp** (`refs/competitors/architecture-review-mcp/`) — MCP server with AST-based NetworkX dependency + class graphs
-- **archgate-cli** (`refs/competitors/archgate-cli/`, 38★, Apache-2.0) — **operational prior art** for executable governance: markdown ADRs (`.archgate/adrs/DOMAIN-NNN-title.md`) paired 1:1 by basename with `.rules.ts` companion files that export `RuleSet` objects checked at CI / pre-commit. Added 2026-05-25 per CLAIM-DELTA after user-surfaced miss. Materially affects Gap C framing below.
+- **brooks-lint** (`refs/competitors/contest-refactor/brooks-lint/`) — 12-book grounded analysis with `.brooks-lint.yaml` config + module graph from grep
+- **architecture-review-mcp** (clone pruned 2026-08-17 @ `75f4e1c0`) — MCP server with AST-based NetworkX dependency + class graphs
+- **archgate-cli** (`refs/competitors/contest-refactor/archgate-cli/`, 38★, Apache-2.0) — **operational prior art** for executable governance: markdown ADRs (`.archgate/adrs/DOMAIN-NNN-title.md`) paired 1:1 by basename with `.rules.ts` companion files that export `RuleSet` objects checked at CI / pre-commit. Added 2026-05-25 per CLAIM-DELTA after user-surfaced miss. Materially affects Gap C framing below.
 
 ## Baseline: contest-refactor today
 
@@ -114,7 +114,7 @@ Record in `CURRENT_REVIEW.json.governance_context.ci_binding_rules[]`. Step 0.4 
 
 **Prior-art reframing**: the original draft positioned this as the doc § 1 P0 "flagship invention" for contest-refactor. archgate-cli (38★, Apache-2.0) ships this mechanism in production. The decision is no longer **whether** to adopt executable governance, but **how**: build TOML-declarative rules in contest-refactor's own config, OR consume archgate's `.rules.ts` output, OR adopt archgate's pattern verbatim.
 
-**Reference mechanism (archgate)** — sourced from `refs/competitors/archgate-cli/src/formats/rules.ts:67-90` + `src/formats/adr.ts:31-45` + `src/commands/check.ts:22-157`:
+**Reference mechanism (archgate)** — sourced from `refs/competitors/contest-refactor/archgate-cli/src/formats/rules.ts:67-90` + `src/formats/adr.ts:31-45` + `src/commands/check.ts:22-157`:
 
 - ADR markdown at `.archgate/adrs/DOMAIN-NNN-title.md` with required YAML frontmatter (`id`, `title`, `domain`, `rules:bool`, optional `files[]` glob array, optional `respectGitignore:bool`); body free-form
 - Companion file `.archgate/adrs/DOMAIN-NNN-title.rules.ts` paired by exact basename, exports `RuleSet`:

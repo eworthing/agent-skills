@@ -3,7 +3,9 @@
 > **CURRENT-STATE (2026-06-28):** PARTIALLY-COVERED — the Evidence Chain already mandates grep→source-verify in prose (`method.md:18-30,36,71`); residual = a named mandatory procedure + a gate proving Layer-2 verification occurred + optional excluded-candidate trail. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 > Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
-Source: `refs/competitors/levnik-skills/shared/references/audit_worker_core_contract.md` (verbatim quote in LEVNIK-AUDIT-SUITE-GAP).
+Source (as analyzed 2026-05-25): levnik's shared `audit_worker_core_contract.md` — verbatim quote in LEVNIK-AUDIT-SUITE-GAP.
+
+> **Upstream moved (re-verified 2026-08-17, levnik @ `5bf66c5`).** levnik's "Skills v2" rewrite (`5967ec7f`, 2026-07-11) deleted every `shared/references/*_contract.md` and collapsed 137 skills (`4e85ab37`, the 2026-05-09 snapshot this analysis read) into 25 across 7 plugin suites. **The rule survives, reworded and decentralized**: `refs/competitors/contest-refactor/levnik-skills/plugins/codebase-audit-suite/skills/ln-22-codebase-auditor/SKILL.md` § Evidence Rules — *"A pattern match is a candidate, not a finding. Confirm reachability, context, and consequence."* Fourteen of the 25 skills restate the same discipline in their own wording. Gone: the "Layer 1 / Layer 2" vocabulary, and the single shared contract that made it mandatory for every worker. What contest-refactor would be importing is now **per-skill prose, not one enforced rule** — which strengthens the case for encoding it as a gate here rather than copying levnik's current form.
 
 ## Baseline: contest-refactor today
 
@@ -155,7 +157,7 @@ The `layer2_verdict: "false_positive_excluded"` value is permitted only for find
 
 ### Adjacent reasoning contract (logic-lens, added 2026-05-25 per Codex Class 2 MC2)
 
-`refs/competitors/logic-lens/AGENTS.md:25` defines an **Iron Law** for every emitted finding: must use `Premises → Trace → Divergence → Trigger → Remedy` (5-stage reasoning chain anchored in `skills/_shared/common.md`). This is a stricter pre-remedy reasoning contract than contest-refactor's `Claim → Source → Consequence → Remedy` (4-stage) at `references/method.md`.
+`refs/competitors/contest-refactor/logic-lens/AGENTS.md:25` defines an **Iron Law** for every emitted finding: must use `Premises → Trace → Divergence → Trigger → Remedy` (5-stage reasoning chain anchored in `skills/_shared/common.md`). This is a stricter pre-remedy reasoning contract than contest-refactor's `Claim → Source → Consequence → Remedy` (4-stage) at `references/method.md`.
 
 **Comparison**:
 - contest-refactor `Claim → Source → Consequence → Remedy` — anchors the assertion + cites evidence + ties to architectural impact + proposes fix

@@ -2,13 +2,15 @@
 
 > **CURRENT-STATE (2026-06-28):** OPEN — Gap A fresh-checkout oracle is absent — G21 full-reverify + dirty-tree abort are SAME-worktree and G32's challenge is v4-only (`validation.md:152`); parked in the plan's W4. Gap B (container) deferred. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 
-Source: `refs/competitors/goose/`, `refs/competitors/sweep/`, `refs/competitors/superpowers/`. Research called this P2: "final validation from fresh checkout, container, or sandbox."
+Source: `refs/competitors/contest-refactor/goose/`, `refs/competitors/contest-refactor/sweep/`, `refs/competitors/contest-refactor/superpowers/`. Research called this P2: "final validation from fresh checkout, container, or sandbox."
+
+> **Clones pruned 2026-08-17**: `goose/` and `sweep/` were deleted from `refs/competitors/` (747 MB for a refuted claim and a dead stub). The file paths cited below were read at goose `4f3bb750` / sweep `a8b8b67b`; re-clone at those SHAs to re-verify. `superpowers/` is still present.
 
 ## Research overstatement confirmed
 
 Inspection of cloned competitors finds **goose and sweep do NOT implement clean-environment validation** the way the source landscape research implied:
 
-### goose (`refs/competitors/goose/`)
+### goose (`refs/competitors/contest-refactor/goose/`)
 
 - **Sandbox** = macOS `sandbox-exec` (Apple seatbelt) for security, NOT workspace isolation for validation. Restricts file access + egress proxy. Documented at `documentation/docs/guides/sandbox.md:1-40`.
 - **"Fresh session"** UI option (`crates/goose-cli/src/commands/project.rs`) restarts goose with new session_id in same directory. NOT a fresh checkout.
@@ -17,7 +19,7 @@ Inspection of cloned competitors finds **goose and sweep do NOT implement clean-
 
 **Verdict**: research overstatement. Goose's "sandbox" is security-scoped, not validation-scoped.
 
-### sweep (`refs/competitors/sweep/`)
+### sweep (`refs/competitors/contest-refactor/sweep/`)
 
 - Repo is a **shallow stub**: 2 files total; README redirects to JetBrains plugin; `sweepai/` source directory missing.
 - Cannot validate research claims; source is elsewhere.
@@ -26,7 +28,7 @@ Inspection of cloned competitors finds **goose and sweep do NOT implement clean-
 
 ### Only working clean-env pattern in clones: superpowers worktree isolation
 
-`refs/competitors/superpowers/skills/using-git-worktrees/` (already covered in HALT-STATE-GAP Gap A):
+`refs/competitors/contest-refactor/superpowers/skills/using-git-worktrees/` (already covered in HALT-STATE-GAP Gap A):
 - Detect already-in-worktree via `GIT_DIR != GIT_COMMON`
 - Prefer native `EnterWorktree` tool; fall back to `git worktree add` to `.worktrees/` (project-local, gitignored) or `~/.config/superpowers/worktrees/$project/`
 - Run baseline tests in worktree before proceeding

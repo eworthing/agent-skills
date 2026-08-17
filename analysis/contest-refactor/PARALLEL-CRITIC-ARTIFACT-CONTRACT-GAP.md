@@ -3,7 +3,9 @@
 > **CURRENT-STATE (2026-06-28):** DEFERRED — self-gated — no consumers until CRITIC-INDEPENDENCE Gap B (parallel critics) ships. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 > Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
-Source: `refs/competitors/levnik-skills/shared/references/audit_summary_contract.md` + `audit_final_report_contract.md` + `audit_output_schema.md`. Verified verbatim in LEVNIK-AUDIT-SUITE-GAP.
+Source (as analyzed 2026-05-25): levnik's shared `audit_summary_contract.md` + `audit_final_report_contract.md` + `audit_output_schema.md`. Verified verbatim in LEVNIK-AUDIT-SUITE-GAP.
+
+> **Upstream moved (re-verified 2026-08-17, levnik @ `5bf66c5`).** levnik's "Skills v2" rewrite (`5967ec7f`, 2026-07-11) deleted every `shared/references/*_contract.md` and collapsed 137 skills (`4e85ab37`, the 2026-05-09 snapshot this analysis read) into 25 across 7 plugin suites. **The contract this doc models was abandoned**: no JSON envelope, `summaryArtifactPath`, `schema_version`, or `output_dir` survives anywhere at HEAD. The replacement is in-band markdown — all 25 skills declare an **Execution contract** whose Definition of Done is an ordered checklist, and each returns a `Checklist: X/Y complete` + `Incomplete: <item — reason; impact; next action>` header. So the split JSON-transport / MD-evidence design below is **no longer live prior art**; it is a 2026-05 snapshot whose author replaced it with prose. Weigh that before adopting it when parallel critics ship.
 
 Pre-requisite gap doc. **Defer adoption until CRITIC-INDEPENDENCE Gap B (parallel critic mode) ships.** This doc designs the artifact contract that parallel critics will produce; without parallel critics, the contract has no consumers.
 
