@@ -276,6 +276,120 @@ This is architecturally larger than the other items — it means treating strict
 deterministic post-filter over a superset of findings rather than as an instruction. Recorded as an
 option with an honest cost, not a recommendation.
 
+### Gap 8 — No grader-alignment measurement anywhere in the eval suite · **VERIFIED gap, high value**
+
+Second-pass finding. `great_cto` carries 450 scripts, 57 hooks, 114 eval files and 9 TOML canon
+files, and appears **twice** in our entire 21-doc analysis corpus. The thing we missed is in
+`tests/eval/judge-alignment/`:
+
+> An unaligned judge is a random number generator with good grammar. Measure its agreement with
+> hand labels before trusting a single verdict.
+
+They caught their grader producing four verdicts of the same shape — *"correctly identifies that
+arithmetic is objective while inputs are not, but fails to demonstrate this → FAIL"*. In each, the
+judge states the answer is right and marks it wrong: the response satisfied the criterion in
+substance and failed on **wording or placement**. Measured result: 20 hand-labelled cases,
+agreement 45%, **kappa 0.00** — 11 of 20 verdicts that had driven prompt edits that day were false
+failures.
+
+Three rules follow, and all three transfer:
+
+1. **"A criterion describes what the answer must ESTABLISH, never the words it must use."** When a
+   verdict turns on phrasing, the defect is in the criterion or the judge — fix one, record which.
+2. **Measure agreement only on disagreement cases.** *"Two graders agreeing on an easy case says
+   nothing about either."*
+3. **The routing rule** — *"a verdict whose reason contains 'correctly identifies… but does not
+   name' is a judge finding, not an agent finding. Route it here rather than into a prompt edit."*
+
+Rule 3 is the operationally important one, because the failure it prevents is self-concealing: a
+false failure invites softening the criterion, *"which is how a suite quietly stops measuring"* —
+they record it happening three times in one session before anyone named it.
+
+`wshobson-agents` implements the machinery version independently: PluginEval reports **Cohen's
+kappa** across judges when `judges > 1`. Two independent implementations in the corpus; neither
+appears in any of our 21 gap docs.
+
+**Our exposure is real but narrower than theirs.** Layers 2/3 grade semantically via a `grader.md`
+subagent, and `evals/README.md:154` states the measured axis is **"restraint + vocabulary, NOT
+recall"**, with criteria of the form *"does `flagged_smells` name the canon smell"*. Naming is
+partly legitimate here in a way it was not for great_cto — canon smell names **are** the artifact,
+consumed by gates and dedup, so requiring the name is substantive, not cosmetic. But we have no
+measurement of whether our grader agrees with a human on the cases where it matters, and
+`evals/README.md:248-249` already concedes the point: the current measurement is *"within-judge
+robustness, not lift over a bare model and not external validity (that needs more scenarios + a
+second judge)."*
+
+So this is a named-but-unbuilt next step, and great_cto supplies the design: keep only the disputed
+cases, hand-label them with reasoning, report agreement and kappa, and state honestly what the
+number is not. Their own honesty note is worth copying too — the labels were written by the author
+of the criteria, so *"a second labeller who did not write them would be worth more than another
+twenty cases from this one."*
+
+### Gap 9 — Graders don't declare the axis they do *not* judge · **VERIFIED gap, cheap**
+
+Second-pass finding, from `trailofbits-skills` (142 eval files; our docs cite its hooks and SARIF
+output, not its grader contract). A grader spec there is typed and weighted (`type: llm`,
+`weight: 0.5`) and closes with an explicit non-scope:
+
+> The exact vocabulary does not matter; addressing each requirement separately does.
+> …
+> This grader is about coverage and not about correctness. A wrong verdict on §3.2 still passes
+> here — the `senior-branch-unenforced` grader is what judges that.
+
+One axis per grader, the acceptable answer *forms* enumerated (verdict word, table row, or an
+unambiguous sentence), and a pointer to the grader that owns the axis this one ignores. That is
+Gap 8's rule implemented at the level of a single file, and it independently corroborates it.
+
+Our Layer-2/3 grading collapses axes into one semantic judgement per case. Splitting graders by
+axis and requiring each to state its non-scope is a small change to the eval harness that makes a
+mixed verdict impossible to produce by accident.
+
+### Gap 10 — State transitions live in prose, not in canon · **VERIFIED gap, medium**
+
+`canon/states.toml` is 11 lines: a flat list of six state names. Every transition rule — which
+flag routes where, which steps are skipped, what must run before escalating — lives in SKILL.md
+prose (`Step 1 Routing (mandatory)`), with legality enforced *after the fact* on artifacts by G9's
+presence table, G34's HALT-tail, and G35's handoff shape.
+
+`great_cto/shared/pipeline.toml` externalizes the whole machine:
+
+```toml
+[transitions.architect]
+on = ["APPROVED", "DONE"]
+gate = "gate:arch"
+next = ["pm"]
+skip_next_when = "depth=small"
+```
+
+State → accepted terminal signals → gate → next states, plus conditional skips. That shape would
+let a validator answer *"was this transition legal?"* mechanically instead of inferring it from the
+artifact that resulted, and it fits our existing SSOT convention (`canon/*.toml` read by
+`_canon.py`).
+
+Worth noting what this is not: `STATE-MACHINE-COMPOSITION-APPENDIX.md` sequenced *proposed* new
+intercept points into the existing loop. It never proposed making the transitions themselves
+declarative. That is the miss.
+
+### Gap 11 — No cost-proportional stage skipping · **VERIFIED gap, ties to an open audit**
+
+`great_cto` gates whole stages on project size. Its `decision-eval` skill refuses to run when
+*"project_size is nano (overhead exceeds value)"*, and `pipeline.toml` carries
+`skip_next_when = "depth=small"`.
+
+contest-refactor has `--scope`, `--strictness`, and `--cap`, all of which tune *rigor* or
+*extent* — none of which skips a phase because the work is too small to justify its cost. With
+`RUNTIME-COST-AUDIT-2026-08-14` open, an explicit "this stage is not worth running at this size"
+rule is directly relevant, and it is the cheapest form of cost control available: not running a
+step beats running it more efficiently.
+
+### Checked, already covered — second pass
+
+| Mechanism | Source | Why no action |
+|---|---|---|
+| PreCompact continuity hook | `continuous-claude-v3/.claude/hooks/pre-compact-continuity.sh` | Our loop state is file-based (`LOOP_STATE.json`, `REVIEW_HISTORY`), so it survives compaction without a hook. Their hook re-injects state a session holds in context. |
+| File-ownership claims for parallel agents | `continuous-claude-v3/.claude/hooks/file-claims.sh` | Already captured in `PARALLEL-CRITIC-ARTIFACT-CONTRACT-GAP` via wshobson's file-ownership model. |
+| Confidence intervals on eval results | `wshobson-agents` PluginEval (Wilson / Bootstrap / Clopper-Pearson) | Already captured in `SCHEMA-GAP` continuous scoring. |
+
 ### Already covered — no action
 
 | Mechanism | Where we already have it |
@@ -309,9 +423,18 @@ product is long-running full-repo audit. Our deferral stands, and now has eviden
 | 6 | Confidence as a second axis + `confidence-anchors.toml` + P0-at-low-confidence carve-out | contest-refactor | Medium-High | Moderate | Decide vs Evidence Chain first |
 | 7 | Assert retired prose stays retired (regression test on superseded instructions) | contest-refactor | Low-Medium | Low | Ready |
 | 8 | Strictness as a deterministic post-filter with pinned per-preset counts | contest-refactor | Medium | High | Option only |
+| 9 | **Judge-finding routing rule** — a verdict reading "correct in substance, wrong in wording" goes to an alignment set, never into a criterion edit | contest-refactor evals | High | Very low | Ready (second pass) |
+| 10 | **Grader-alignment set** — disputed cases only, hand-labelled, agreement + kappa reported with an explicit non-claim | contest-refactor evals | High | Moderate | Ready (second pass) |
+| 11 | Split graders by axis; each states the axis it does *not* judge | contest-refactor evals | Medium-High | Low | Ready (second pass) |
+| 12 | Declarative transition table in `canon/states.toml` | contest-refactor | Medium | Moderate | Design call (second pass) |
+| 13 | Cost-proportional stage skipping (`skip_when` by size) | contest-refactor | Medium | Low-Moderate | Ties to RUNTIME-COST-AUDIT (second pass) |
 
-Items 1–4 are independent and small. Item 5 is the one that could unblock a parked decision. Items
-6 and 8 need a design call before any code.
+Items 1–4, 9, and 11 are independent and small. Item 5 is the one that could unblock a parked
+decision. Items 6, 8, and 12 need a design call before any code.
+
+**Item 9 is the cheapest high-value change in the list**: it is a triage rule for reading grader
+output, costs nothing to adopt, and prevents the specific failure — softening a criterion in
+response to a false failure — that makes an eval suite stop measuring without anyone noticing.
 
 ## Deliberately not adopted
 
