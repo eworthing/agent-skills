@@ -6,7 +6,7 @@ Provenance and adaptation record for the OpenCode read-only + partial-timeout ch
 
 | Source | Trust | Contribution | Usage |
 |---|---|---|---|
-| `refs/competitors/sub-agents-skills` @ `695aac17cf4bacf5d5ec19160767650bbdd14774` | Upstream impl / high | `--auto` + deny-policy env; partial-result handling | MIT; concepts adapted onto the existing runner — its orchestration architecture not copied. |
+| `refs/competitors/peer-plan-review/sub-agents-skills` @ `695aac17cf4bacf5d5ec19160767650bbdd14774` | Upstream impl / high | `--auto` + deny-policy env; partial-result handling | MIT; concepts adapted onto the existing runner — its orchestration architecture not copied. |
 | OpenCode `permissions.mdx` (docs) | Official / high | Deny rules stay enforced under `run --auto`; permission keys + precedence | Provider-specific; re-check when the OpenCode CLI changes. |
 | OpenCode `cli.mdx` (docs) | Official / high | `OPENCODE_PERMISSION` accepts inline JSON via env | Keep JSON compact + deterministic. |
 | Local `common/`, `peer-plan-review`, tests; commit `39365d5` | Canonical local / high | Current provider/session contracts; origin of the stale `--dangerously-skip-permissions` flag | Local source of truth overrides competitor structure. |

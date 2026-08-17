@@ -3,7 +3,7 @@
 > **CURRENT-STATE (2026-06-28):** COVERED — continuation discipline enforced by G20/G15 at artifact level; plugin Stop-hooks are Claude-Code-only and unportable for a cross-provider skill, so the gate is the portable equivalent. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 > Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
-Compares contest-refactor's gate machinery (31 hard gates G1-G31 + 8 quality passes Q1-Q8 in `references/validation.md`, validated by `scripts/validate-artifact.py`) against Trail of Bits fp-check (`refs/competitors/trailofbits-skills/plugins/fp-check/`) which uses Claude Code's Stop + SubagentStop hook system with LLM-judge prompts.
+Compares contest-refactor's gate machinery (31 hard gates G1-G31 + 8 quality passes Q1-Q8 in `references/validation.md`, validated by `scripts/validate-artifact.py`) against Trail of Bits fp-check (`refs/competitors/contest-refactor/trailofbits-skills/plugins/fp-check/`) which uses Claude Code's Stop + SubagentStop hook system with LLM-judge prompts.
 
 ## Baseline: contest-refactor today
 
@@ -176,7 +176,7 @@ Records `gate_overrides: [{gate: "G24", rationale: "...", overridden_by: "user",
 
 ## Gate-provenance discipline (agentlint, added 2026-05-25 per Codex Class 2 MC3)
 
-`refs/competitors/agentlint/README.md:102-109` ships a discipline that pairs naturally with contest-refactor's gate philosophy: **"Every check is backed by data, not opinions"** — sources cited per check include "265 versions of Anthropic's Claude Code system prompt", "Claude Code source code" (for hard-limit boundaries), production audits, and 6 academic papers. The hard rule at line 109: **"If a check can't cite a source, it doesn't ship."**
+`refs/competitors/contest-refactor/agentlint/README.md:102-109` ships a discipline that pairs naturally with contest-refactor's gate philosophy: **"Every check is backed by data, not opinions"** — sources cited per check include "265 versions of Anthropic's Claude Code system prompt", "Claude Code source code" (for hard-limit boundaries), production audits, and 6 academic papers. The hard rule at line 109: **"If a check can't cite a source, it doesn't ship."**
 
 **Why this matters for contest-refactor's gates**: contest-refactor's 31 hard gates (G1-G31, with G35+G36+G41+G45+G48 reserved per other gap docs) are deterministic structural checks, but their *anchoring* — why this specific invariant is worth a gate — is implicit in the schema-design rationale, not surfaced per-gate. agentlint's discipline would have each gate file (or registry entry) name the source-of-truth for the invariant: a specific design doc section, a documented incident, a paper, or a competitor's documented behavior.
 

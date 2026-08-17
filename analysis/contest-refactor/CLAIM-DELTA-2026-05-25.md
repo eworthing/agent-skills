@@ -21,7 +21,7 @@ After 21-doc bundle + 3 Gemini rounds + 4 Codex rounds + APPROVED status, user s
 
 **Current claim**: contest-refactor's `[[boundary_rules]]` config proposal "takes contest-refactor from ADR-aware citation to executable governance verbatim per doc § 1." Framed as P0 invention with no prior art.
 
-**Reality** (per `refs/competitors/archgate-cli/README.md` + `cli.archgate.dev` docs):
+**Reality** (per `refs/competitors/contest-refactor/archgate-cli/README.md` + `cli.archgate.dev` docs):
 
 > Archgate has two layers:
 > 1. **ADRs as documents** — markdown files with YAML frontmatter stored in `.archgate/adrs/`. Each ADR records a decision: what was decided, why, and what to do and not do.
@@ -40,7 +40,7 @@ archgate is **operational prior art** for "executable governance ingestion." Wor
 
 **Current claim**: Gemini DROPPED from supported `--cross-model-critic` providers because Gemini's `-p` requires argv-passed prompt (leaks source via process table). Codex sole verified provider.
 
-**Reality** (per `refs/competitors/buildingopen-bouncer/README.md`):
+**Reality** (per `refs/competitors/shared/buildingopen-bouncer/README.md`):
 
 > Claude cannot wave through unverified work. Another model checks the evidence.
 > One install gives you both the automatic Stop hook and the on-demand `/bouncer` skill.
@@ -63,7 +63,7 @@ Bouncer is a Gemini-based Stop hook that **scores Claude's output post-hoc**. Ge
 
 **Current claim**: contest-refactor's `LOOP_STATE.json` + `findings_registry.json` + `REVIEW_HISTORY.json` checkpoint mechanics are "gold standard"; "no competitor matches contest-refactor checkpoint mechanics."
 
-**Reality** (per `refs/competitors/continuous-claude-v3/README.md`):
+**Reality** (per `refs/competitors/contest-refactor/continuous-claude-v3/README.md`):
 
 > Continuous Claude transforms Claude Code into a continuously learning system that maintains context across sessions, orchestrates specialized agents, and eliminates wasting tokens through intelligent code analysis.
 >

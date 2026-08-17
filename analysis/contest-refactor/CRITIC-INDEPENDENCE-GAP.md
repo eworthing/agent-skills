@@ -4,8 +4,8 @@
 
 Compares `contest-refactor`'s Critic Phase (`SKILL.md` Step 1 + `references/trust-model.md` Loop Isolation) against:
 
-- **Open Code Review** (`refs/competitors/open-code-review/`) — 28 sealed personas + Tech Lead synthesizer + Discourse phase
-- **Anthropic code-review plugin** (`refs/competitors/anthropic-claude-code/plugins/code-review/`) — 4 parallel critics + per-issue validator subagent
+- **Open Code Review** (`refs/competitors/shared/open-code-review/`) — 28 sealed personas + Tech Lead synthesizer + Discourse phase
+- **Anthropic code-review plugin** (`refs/competitors/shared/anthropic-claude-code/plugins/code-review/`) — 4 parallel critics + per-issue validator subagent
 
 ## Baseline: contest-refactor today
 

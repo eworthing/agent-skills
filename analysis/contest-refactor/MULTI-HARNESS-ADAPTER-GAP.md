@@ -4,8 +4,8 @@
 
 Sources:
 
-- `refs/competitors/wshobson-agents/` (35.9k★, MIT, added 2026-05-25 p.m.) — **adapter-driven** multi-harness generation. One markdown source under `plugins/` → adapters (`tools/adapters/{base,codex,cursor,opencode,gemini}.py`) transform per harness → gitignored per-harness artifacts. Five harnesses: Claude Code, Codex CLI, Cursor, OpenCode, Gemini CLI.
-- `refs/competitors/alirezarezvani-claude-skills/` (16.1k★, MIT, added 2026-05-25 p.m.) — **sync-script-driven** alternative. Stdlib-Python scripts (`sync-codex-skills.py`, `sync-gemini-skills.py`, `sync-hermes-skills.py`, `sync-vibe-skills.py`) generate symlinks + index from single domain-folder source-of-truth. 4 harnesses via symlinks.
+- `refs/competitors/contest-refactor/wshobson-agents/` (35.9k★, MIT, added 2026-05-25 p.m.) — **adapter-driven** multi-harness generation. One markdown source under `plugins/` → adapters (`tools/adapters/{base,codex,cursor,opencode,gemini}.py`) transform per harness → gitignored per-harness artifacts. Five harnesses: Claude Code, Codex CLI, Cursor, OpenCode, Gemini CLI.
+- `refs/competitors/contest-refactor/alirezarezvani-claude-skills/` (16.1k★, MIT, added 2026-05-25 p.m.) — **sync-script-driven** alternative. Stdlib-Python scripts (`sync-codex-skills.py`, `sync-gemini-skills.py`, `sync-hermes-skills.py`, `sync-vibe-skills.py`) generate symlinks + index from single domain-folder source-of-truth. 4 harnesses via symlinks.
 
 ## Baseline: contest-refactor today
 

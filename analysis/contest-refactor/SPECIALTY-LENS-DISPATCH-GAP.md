@@ -19,28 +19,28 @@ Merges what was originally split between "Risk-Triggered Lenses" (per landscape 
 
 ## Trigger-predicate patterns in the wild (source-confirmed)
 
-### levnik audit-suite (`refs/competitors/levnik-skills/plugins/codebase-audit-suite/`)
+### levnik audit-suite (`refs/competitors/contest-refactor/levnik-skills/plugins/codebase-audit-suite/`)
 
 **Pattern**: stack-detection-triggered. PHASE_1_DISCOVERY detects project type/language/framework; coordinator skips inapplicable workers. **Hardcoded worker list** (ln-621 through ln-629) — no per-finding risk triggers.
 
 **Strength**: applicability filter at known boundary (start of run).
 **Weakness**: doesn't react to risks discovered mid-loop (e.g., agent touches concurrency code mid-refactor → ln-628 doesn't auto-dispatch).
 
-### claude-bouncer (`refs/competitors/claude-bouncer/`)
+### claude-bouncer (`refs/competitors/contest-refactor/claude-bouncer/`)
 
 **Pattern**: per-tool-call pattern matching. PreToolUse hooks fire on every tool invocation; match against regex/glob (`rm -rf`, `:(){ :|:& };:`, etc.); block + emit dialog.
 
 **Strength**: triggers at the exact moment risk surfaces (tool-call boundary). Tight latency.
 **Weakness**: only blocks/allows. Doesn't load additional analytical context. Suited for safety enforcement, not specialty analysis.
 
-### agentlint (`refs/competitors/agentlint/`)
+### agentlint (`refs/competitors/contest-refactor/agentlint/`)
 
 **Pattern**: dimension-gated static checks. All 51 core checks run every invocation; file-existence gates entire dimensions (no hooks.json → Harness dimension skipped). 
 
 **Strength**: deterministic, exhaustive coverage when files exist.
 **Weakness**: not risk-responsive within a session. Once started, all applicable checks run.
 
-### trailofbits (`refs/competitors/trailofbits-skills/`)
+### trailofbits (`refs/competitors/contest-refactor/trailofbits-skills/`)
 
 **Pattern**: marketplace of specialty plugins (fp-check, c-review, differential-review, static-analysis, variant-analysis, semgrep-rule-creator, supply-chain). User installs by category; each plugin owns its own SKILL.md + agents + references.
 
@@ -234,7 +234,7 @@ For each new `lens-*.md` file, port rules verbatim from inspected competitors:
 
 ## Adoption-signal augmentation: adaptive specialist gating (gstack, added 2026-05-25 per Codex Class 2 MC1)
 
-`refs/competitors/gstack/review/SKILL.md:1301-1313` ships an **adaptive specialist gating** layer that sits *after* scope-based trigger evaluation: each specialist is tagged `[GATE_CANDIDATE]` (0 findings in 10+ dispatches → auto-skip) or `[NEVER_GATE]` (insurance-lens like security/data-migration; always dispatch regardless of hit rate). Force flags (`--security`, `--all-specialists`) override gating.
+`refs/competitors/contest-refactor/gstack/review/SKILL.md:1301-1313` ships an **adaptive specialist gating** layer that sits *after* scope-based trigger evaluation: each specialist is tagged `[GATE_CANDIDATE]` (0 findings in 10+ dispatches → auto-skip) or `[NEVER_GATE]` (insurance-lens like security/data-migration; always dispatch regardless of hit rate). Force flags (`--security`, `--all-specialists`) override gating.
 
 **Why interesting for contest-refactor**: contest-refactor's proposed `lens-registry.toml` trigger predicates are static (glob/regex/scoring threshold per Adoption-order Phase 2 above). gstack adds a **dynamic gating layer** based on per-lens hit-rate history. For lenses with provably low-yield on a given project, auto-suppression reduces token spend without losing safety: `[NEVER_GATE]` reserves the bypass for high-asymmetric-cost categories (security, data migration).
 

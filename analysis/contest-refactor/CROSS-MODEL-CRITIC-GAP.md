@@ -5,10 +5,10 @@
 
 Sources:
 
-- `refs/competitors/claude-review-loop/` (hamelsmu/claude-review-loop, ~619★) — Claude actor + Codex critic with Stop-hook gated loop, argv-based Codex invocation
-- `refs/competitors/pauhu-claude-codex-review/` (0★, MIT, added 2026-05-25 p.m.) — manual `/codex-review` dispatch; argv-based Codex (optional); falls back to `npx tsc + eslint` when Codex unavailable
-- `refs/competitors/TimmyZinin-codex-review/` (0★, MIT, added 2026-05-25 p.m.) — manual `/codex-review [args]` dispatch; **stdin-based Codex invocation already in production** (`codex exec ${CODEX_FLAGS} - < /tmp/codex-review-prompt-${TIMESTAMP}.md`); pre/post `git status` verification; hard constraints in prompt; 600s timeout
-- `refs/competitors/buildingopen-bouncer/` (4★, MIT, added 2026-05-25 a.m.) — Stop hook + on-demand `/bouncer` skill; **post-output scoring** via Python `google.genai.Client()` SDK (HTTP POST, NOT CLI) → Gemini 2.5 Flash scores 1-10; threshold-gated (default 10/10 hardcoded); Claude blocked + fed feedback below threshold
+- `refs/competitors/shared/claude-review-loop/` (hamelsmu/claude-review-loop, ~619★) — Claude actor + Codex critic with Stop-hook gated loop, argv-based Codex invocation
+- `refs/competitors/peer-plan-review/pauhu-claude-codex-review/` (0★, MIT, added 2026-05-25 p.m.) — manual `/codex-review` dispatch; argv-based Codex (optional); falls back to `npx tsc + eslint` when Codex unavailable
+- `refs/competitors/peer-plan-review/TimmyZinin-codex-review/` (0★, MIT, added 2026-05-25 p.m.) — manual `/codex-review [args]` dispatch; **stdin-based Codex invocation already in production** (`codex exec ${CODEX_FLAGS} - < /tmp/codex-review-prompt-${TIMESTAMP}.md`); pre/post `git status` verification; hard constraints in prompt; 600s timeout
+- `refs/competitors/shared/buildingopen-bouncer/` (4★, MIT, added 2026-05-25 a.m.) — Stop hook + on-demand `/bouncer` skill; **post-output scoring** via Python `google.genai.Client()` SDK (HTTP POST, NOT CLI) → Gemini 2.5 Flash scores 1-10; threshold-gated (default 10/10 hardcoded); Claude blocked + fed feedback below threshold
 
 This doc covers ARCHITECTURE-level adoption, separate from the Stop-hook mechanics already covered in GATES-GAP.
 

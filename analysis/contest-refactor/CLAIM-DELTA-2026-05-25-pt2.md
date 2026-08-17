@@ -137,9 +137,9 @@ done
 Alias-confirmation queries:
 
 ```bash
-cd refs/competitors/anthropic-security-review && git remote get-url origin
+cd refs/competitors/contest-refactor/anthropic-security-review && git remote get-url origin
 # → https://github.com/anthropics/claude-code-security-review.git
-cd refs/competitors/awesome-code-review && git remote get-url origin
+cd refs/competitors/contest-refactor/awesome-code-review && git remote get-url origin
 # → https://github.com/awesome-skills/code-review-skill.git
 ```
 

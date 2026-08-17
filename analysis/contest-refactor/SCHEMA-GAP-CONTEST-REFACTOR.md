@@ -10,9 +10,9 @@ Compares `contest-refactor`'s **finding-level** schema (`CURRENT_REVIEW.json.fin
 
 Compared repos:
 
-- **CodeRabbit Skills** (`refs/competitors/coderabbit-skills/`) — GitHub-thread native
-- **Anthropic code-review plugin** (`refs/competitors/anthropic-claude-code/plugins/code-review/`) — parallel agents + confidence scoring
-- **Trail of Bits** (`refs/competitors/trailofbits-skills/plugins/{fp-check,c-review,static-analysis}/`) — layered worker→judge pipeline + Stop-hook gates + SARIF
+- **CodeRabbit Skills** (`refs/competitors/contest-refactor/coderabbit-skills/`) — GitHub-thread native
+- **Anthropic code-review plugin** (`refs/competitors/shared/anthropic-claude-code/plugins/code-review/`) — parallel agents + confidence scoring
+- **Trail of Bits** (`refs/competitors/contest-refactor/trailofbits-skills/plugins/{fp-check,c-review,static-analysis}/`) — layered worker→judge pipeline + Stop-hook gates + SARIF
 
 ## Gap matrix
 
@@ -91,7 +91,7 @@ SARIF is useful when contest-refactor wants to plug into CI pipelines or ingest 
 
 ### Gap 7 (P0): Positive-finding `[GOOD]` emission rule
 
-Source-verified in `refs/competitors/grill-for-claude/codex/skills/grill-core/SKILL.md:18-26, 59-67`. xiaolai's grill skill ships a 5-tier severity enum `[CRITICAL] [HIGH] [MEDIUM] [LOW] [GOOD]` where `[GOOD]` is the positive-finding value emitted when a scan area was checked and is sound.
+Source-verified in `refs/competitors/contest-refactor/grill-for-claude/codex/skills/grill-core/SKILL.md:18-26, 59-67`. xiaolai's grill skill ships a 5-tier severity enum `[CRITICAL] [HIGH] [MEDIUM] [LOW] [GOOD]` where `[GOOD]` is the positive-finding value emitted when a scan area was checked and is sound.
 
 **Why this matters**: contest-refactor's Critic emits findings on weakness only. Silence on a topic = ambiguous (was it checked and clean, or skipped?). This pressures Critic to manufacture findings (Q3 fake-clean reward warns against this; existing `strengths[]` field is the partial mitigation but isn't per-area). grill's pattern forces Critic to emit `[GOOD]` evidence when nothing's wrong, breaking the pressure.
 

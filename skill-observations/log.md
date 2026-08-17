@@ -16,7 +16,7 @@ Observations captured during task-oriented work. Each entry identifies a potenti
 **Skill:** peer-plan-review
 **Type:** open-source
 **Phase/Area:** Provider adapter / OpenCode safety and self-check
-**Reference file:** `refs/competitors/sub-agents-skills/skills/sub-agents/scripts/_builder.py`
+**Reference file:** `refs/competitors/peer-plan-review/sub-agents-skills/skills/sub-agents/scripts/_builder.py`
 
 **Issue:** `peer-plan-review` still builds OpenCode commands with the now-absent `--dangerously-skip-permissions` flag and relies on prompt instructions for read-only behavior. Its self-check only runs top-level `opencode --help`, so it reported success even though `opencode run --help` exposes `--auto` instead. The competitor uses `--auto` plus an explicit `OPENCODE_PERMISSION` policy that denies edit, bash, task, external-directory, and question permissions.
 
@@ -32,7 +32,7 @@ Observations captured during task-oriented work. Each entry identifies a potenti
 **Skill:** peer-plan-review
 **Type:** open-source
 **Phase/Area:** Runner timeout and output handling
-**Reference file:** `refs/competitors/sub-agents-skills/skills/sub-agents/scripts/_executor.py`
+**Reference file:** `refs/competitors/peer-plan-review/sub-agents-skills/skills/sub-agents/scripts/_executor.py`
 
 **Issue:** The competitor drains CLI output incrementally, normalizes terminal events, caps captured stdout, and returns a `partial` result when a timeout occurs after useful output. `peer-plan-review` uses `communicate(timeout=...)`, then discards the post-kill output on `TimeoutExpired`, so a long review can lose all usable findings and captured output is not memory-bounded.
 

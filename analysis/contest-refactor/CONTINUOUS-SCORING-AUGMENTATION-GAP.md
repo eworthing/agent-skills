@@ -3,7 +3,7 @@
 > **CURRENT-STATE (2026-06-28):** DEFERRED — additive observability layer; no consumer, deliberate simplicity. See [`GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md`](GAP-AUDIT-AND-IMPROVEMENT-PLAN-2026-06-28.md) for the source-verified audit.
 > Gate numbers **G37+** cited below are UNBUILT proposals — G33–G36 have since SHIPPED (2026-06-29); the live catalog (`contest-refactor/canon/validation-gates.toml`) now stops at **G36**. *(Re-verified 2026-06-30.)*
 
-Source: `refs/competitors/wshobson-agents/` (35.9k★, MIT, added 2026-05-25 p.m.) — 3-layer evaluation framework with continuous scoring + confidence intervals. Used in `plugin-eval` plugin to assess skill quality.
+Source: `refs/competitors/contest-refactor/wshobson-agents/` (35.9k★, MIT, added 2026-05-25 p.m.) — 3-layer evaluation framework with continuous scoring + confidence intervals. Used in `plugin-eval` plugin to assess skill quality.
 
 ## Baseline: contest-refactor today
 
