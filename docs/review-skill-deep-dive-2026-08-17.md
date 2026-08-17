@@ -4,7 +4,9 @@ Deep dive into six external review/audit skills, compared against `contest-refac
 `peer-plan-review`, and `quorum-review`, to produce a comprehensive improvement plan.
 
 Sources: four repos cloned today plus two already in the corpus (`brooks-lint`, `logic-lens`)
-that were ranked highest by the survey that prompted this work.
+that were ranked highest by the survey that prompted this work, extended by second and third
+passes over the wider held corpus and a fourth pass over a ten-repo expansion cloned the same
+day (all SHA-pinned in the source inventory below).
 
 ## Evidence discipline
 
@@ -17,22 +19,64 @@ Claims about *our* implementation were checked by grep/read against the working 
 `984aa5b`. Where our coverage was confirmed, it says so — several apparent gaps turned out to be
 already built, and those are recorded as "no action" rather than dropped.
 
+**What this document is.** A gap analysis and a ranked backlog, not an execution plan. "Ready"
+in the plan table means the mechanism is identified and verified upstream — not that artifacts,
+schema changes, acceptance tests, migration, and rollback are specified. Every item still gets a
+short design note (those five things plus the success metric it will be judged by) before code;
+the tranche structure at the end of the plan section states the dependency order; tranche
+selection is the owner's call.
+
+### Source inventory
+
+The six primary repos are SHA-pinned in the clone table below. The second and third passes
+additionally rely on these already-held clones (all under `refs/competitors/`, refreshed
+2026-08-17):
+
+| Repo | SHA | Used for |
+|---|---|---|
+| `great_cto` | `e6003b03` | Gaps 8, 10, 11, 12 (judge alignment, `pipeline.toml`, DAG grading) |
+| `gstack` | `c86e6472` | Gaps 13, 16; context-bill and wtree comparisons |
+| `continuous-claude-v3` | `d07ff4b0` | Gap 14 (auto-handoff-stop); second-pass no-action table |
+| `trailofbits-skills` | `04b24117` | Gap 9 (grader non-scope contract) |
+| `wshobson-agents` | `d6837ae2` | Gap 8 (PluginEval Cohen's kappa); CI-on-eval-results |
+| `pauhu-claude-codex-review` | `78022325` | Gap 3 (`.codexignore` pre-dispatch scrub) |
+
+The fourth pass audits the ten repos cloned 2026-08-17 after the third pass:
+
+| Repo | SHA | Used for |
+|---|---|---|
+| `shared/anthropic-skills` | `f379e5ad` | Official grader/comparator/analyzer contracts; authoring conventions; Gaps 17, 20 |
+| `compound-engineering-plugin` | `dec2598e` | Items 6, 11, 14, 15; Gap 18 (A/A floor); accretion-stop; receipts |
+| `ce-reviewers` | `3367e288` | Persona ownership boundaries (stale vs the plugin — see hygiene note) |
+| `crucible` | `2be110b5` | Gaps 17, 18, 19; items 2, 8, 16; judge-demotion tension |
+| `harness-eval` | `88146404` | Judge hygiene (blind, pinned, 3-sample); Gap 19; the `7,0,8` outlier |
+| `dsh-skill-eval` | `8288582b` | Item 2 fidelity pin; item 4 hard-negative trigger set |
+| `skilllens` | `ce8fcb89` | Gap 20 (paired delta + tautological-item rule); Gap 19 manipulation check |
+| `planning-with-files` | `9b7d0a00` | Items 14, 16, 17, 18; attestation; test-must-exec-shipped-artifact |
+| `agent-verifier` | `23d73ad3` | Rule-level `[P]`/`[H]` confidence alternative; escape-hatch tables |
+| `code-quality-atlas` | `d4ec723d` | D18 no-scalar tension; floor plateau; provenance hashes; literal-string result |
+
+A named mechanism at a pinned SHA is evidence the mechanism **exists**, not evidence it is
+**effective**. Effectiveness claims here rest only on the sources' own recorded measurements
+(e.g. great_cto's kappa numbers), and adopting any mechanism still requires our own RED-first
+measurement per standing practice.
+
 ---
 
 ## What was cloned, skipped, and not found
 
 | Repo | Status | Notes |
 |---|---|---|
-| `shadcn/improve` | **cloned** → `contest-refactor/shadcn-improve` | 8.9k★, MIT. Biggest by stars in the whole corpus. |
-| `bjgreenberg/senior-engineering-partner` | **cloned** → `contest-refactor/senior-engineering-partner` | 146★, Apache-2.0. |
-| `ngmeyer/skills` (`rigorous-review`) | **cloned** → `contest-refactor/ngmeyer-skills` | 2★, MIT. 10 skills; `rigorous-review` is the one of interest. |
-| `mhylle/claude-skills-collection` | **cloned** → `contest-refactor/mhylle-skills-collection` | 17★, MIT. 38 skills. |
+| `shadcn/improve` | **cloned** → `contest-refactor/shadcn-improve` (`03369ee`) | 8.9k★, MIT. Biggest by stars in the whole corpus. |
+| `bjgreenberg/senior-engineering-partner` | **cloned** → `contest-refactor/senior-engineering-partner` (`6c3eb93`) | 146★, Apache-2.0. |
+| `ngmeyer/skills` (`rigorous-review`) | **cloned** → `contest-refactor/ngmeyer-skills` (`701dfb8`) | 2★, MIT. 10 skills; `rigorous-review` is the one of interest. |
+| `mhylle/claude-skills-collection` | **cloned** → `contest-refactor/mhylle-skills-collection` (`a3910d0`) | 17★, MIT. 38 skills. |
 | `hyhmrright/brooks-lint` | already held | Refreshed today (`d4b5c40`). |
 | `hyhmrright/logic-lens` | already held | Refreshed today (`69de591`). |
 | `awesome-skills/code-review-skill` | already held | Refreshed today (`95c707b`). |
 | `alirezarezvani/claude-skills` | already held | Refreshed today (`aa8d7788`). |
 | Cloudflare `security-audit-skill` | **skipped** | Security-only, excluded by instruction. |
-| `center-audit` | **not found** | No owner given in the source material. `gh search repos`, `gh search code`, and name variants all return nothing matching the description (evidence IDs, trajectory validation, calibrated confidence, repair contracts). Treat as unverified until an owner/path surfaces — the corpus has prior fabrications on record (`RESEARCH-DELTA.md`). |
+| `center-audit` | **found 2026-08-17, clone pending** | Initially unfindable (no owner given; the corpus has prior fabrications on record, `RESEARCH-DELTA.md`). The owner has since surfaced: `VerbalChainsaw/center-audit` (0★, MIT) — an evidence-gated prove/disprove audit framework reportedly shipping trigger/behavior evals and a machine-readable output schema (feature description INFERRED from repo metadata — unverified until cloned and SHA-pinned). The fabrication caution is resolved; cloning awaits approval. |
 
 ---
 
@@ -177,14 +221,22 @@ gets inflated (noise) or demoted (a miss). rigorous-review's carve-out — *P0 a
 survives the gate and routes to the validator* — is precisely the case our current model cannot
 express.
 
-This is not a large change. `severity-anchors.toml` already establishes the pattern; a
-`confidence-anchors.toml` with the four behavioral anchors, a field on the finding, and a gate that
-suppresses below the bar *except* for high-severity-low-confidence (routed to the HALT_SUCCESS
-challenger, which we already have) would land in the existing shape.
+`severity-anchors.toml` already establishes the pattern; a `confidence-anchors.toml` with the
+four behavioral anchors, a field on the finding, and a gate that suppresses below the bar *except*
+for high-severity-low-confidence findings — routed to a dedicated per-finding validator, **not**
+the HALT_SUCCESS challenger, whose contract validates a terminal state — would land in the
+existing shape, at moderate rather than small cost. That shape is now one *candidate* rather
+than the design: the fourth pass surfaced three shipped confidence models (finding-level
+anchors, rule-level `[P]`/`[H]` tiers, binary burden-of-proof with a separate
+executor-uncertainty channel), so item 6 is a two-stage experiment — first establish that the
+Evidence Chain actually loses information, then compare the three designs on the same labelled
+findings. Only the winner touches schema, canon, or gates.
 
 **Interaction to check first**: our Evidence Chain already demands Claim → Source → Consequence →
 Remedy, which forces some of what confidence-75 asks for. The honest question is whether confidence
-adds a distinction the Evidence Chain cannot already carry — decide that before building.
+adds a distinction the Evidence Chain cannot already carry — and that decision should be a labelled
+comparison, not a discussion: collect real findings, label which ones the Evidence Chain
+mis-represents, and build only if the set is non-empty.
 
 ### Gap 2 — Our cheaper-executor rejection may have tested the wrong variable · **VERIFIED, high value**
 
@@ -207,6 +259,13 @@ models can't do this" from "our backlog under-specifies the job." Re-running `ar
 self-containment contract on the handoff is a genuinely new measurement, and it is the only item
 here that could unblock a decision we have parked.
 
+Two cautions before that run. First, 8.9k stars is popularity, not validation — shadcn's split
+shipping widely says nothing about whether it is *safe*. Second, escape hatches can convert unsafe
+execution into safe refusal without improving completion, so the protocol must score safety and
+completion as separate, preregistered metrics — a safe stop is not a success — on a matched task
+corpus, with fixed model versions, repeated trials, and the accept/reject decision rule written
+down before the first run.
+
 ### Gap 3 — Evidence quotes can persist secrets into committed artifacts · **VERIFIED gap, security class**
 
 `lens-security.md` covers secrets as a *review topic*, and `project-config.md` refuses config
@@ -221,9 +280,29 @@ Three independent sources in this batch converged on the same rule, which is unu
 worth weighting: shadcn Hard Rule 4 (never reproduce the value), pauhu's `.codexignore`
 pre-dispatch scrub, and senior-engineering-partner's `leakage-guard.sh` + denylist.
 
-The fix is small and mechanizable: an evidence-redaction clause (cite `file:line` + credential
+The fix is mechanizable: an evidence-redaction clause (cite `file:line` + credential
 *type*, never the value) plus a gate that pattern-scans emitted artifacts for common credential
 shapes — `project-config.md:88` already carries a usable pattern list (`AKIA`, `sk-`, `xoxb-`).
+
+Two scope notes from review. There is no trusted serializer mediating artifact writes today —
+the model writes the files — so nothing can mechanically promise redact-*before*-write. The honest
+architecture is layered: the redaction **rule** is the preventive control, and the scanner gate is
+a post-write, pre-commit quarantine over every persistence sink (`CURRENT_REVIEW.md`,
+`CURRENT_REVIEW.json`, the `REVIEW_HISTORY` archive, `findings_registry.json`, any event or log
+file) — on a hit it blocks the commit and quarantines the artifact (non-destructive and
+fail-closed; the design note picks the exact mechanics, and neither scanner output nor quarantine
+metadata may contain the matched value), and its own diagnostics must never reproduce a match; a
+scanner that prints what it found re-leaks it. Fixtures include a
+direct write that bypasses the normal archive path, and the scanner's false-positive rate is
+tracked. And the rule is forward-looking only: shipping it does nothing for values already
+persisted, so item 1 also carries a one-time confidential audit of existing committed artifacts
+and history, with rotation advice for anything found — run as a separately tracked
+incident-response task, *alongside* the gate, so its duration, findings, or authorization needs
+never delay prevention of new persistence. History rewriting, if ever warranted, is a separate,
+explicitly-authorized decision. The fixture corpus
+needs positive, negative, and transformed cases — the supported transformations named exactly
+(base64-encoded and simple string-concatenation splits; nothing beyond them is implied) — all
+using fake credentials.
 
 ### Gap 4 — A skill edit can ship without an eval · **VERIFIED gap, governance**
 
@@ -240,6 +319,18 @@ Adapting it to this repo (pre-commit hook rather than PR gate, since we commit s
 would make the discipline enforceable rather than remembered. The waiver escape matters — without
 it the gate becomes a nuisance and gets bypassed wholesale.
 
+A local hook alone is advisory — `--no-verify` skips it — and because this repo commits straight
+to main, CI is detection *after landing*, not prevention: an unevaluated change is already on main
+when the check fires. The honest contract is three parts: pre-commit catches the common path, CI
+(where `sync_common --check` already runs) detects bypass, and a red eval-guard check triggers a
+defined containment step — revert, or an immediate eval/waiver follow-up commit — before the next
+skill sync or distribution. The gate
+needs a mechanical definition of "substantive" (the diff reaches outside frontmatter and
+formatting), a machine-readable waiver (a commit trailer, not free prose — validated where it can
+be seen: pre-commit only sees the staged diff, so the trailer check runs from a `commit-msg` hook
+and again in CI via one shared checker), rename and deletion handling, fixture-tested exit codes,
+and a report-only introduction period before it blocks.
+
 ### Gap 5 — Flag/restraint pairing is convention, not machinery · **VERIFIED gap, small**
 
 `evals/README.md` documents the flag/restraint pairs well — every "should reject" has a legitimate
@@ -251,7 +342,9 @@ risk references lack a `### What Not to Flag` section, and 9 of its 30 frozen sa
 false-positive cases that must stay clean.
 
 Enforcing "every flag fixture names its restraint twin" in `validate-fixtures.py` is a small change
-that protects a property we already believe in.
+that protects a property we already believe in. It needs a concrete pair contract, not a
+name-matching heuristic: explicit pair identifiers in `fixture.toml`, uniqueness, and a declared
+exception list for the few fixtures with no meaningful twin.
 
 ### Gap 6 — Hard rules may not survive challenger dispatch · **INFERRED, needs a check**
 
@@ -261,6 +354,9 @@ hard rules, and omitting them is how a live token ends up quoted.
 
 **Action is to verify, not to build**: read the challenger prompt and confirm it carries
 payload-not-instruction (and, once Gap 3 lands, the redaction rule) verbatim. If it does, no change.
+The check generalizes, though: the challenger is one dispatch boundary of several — inventory every
+subagent/provider spawn, and prefer generating the hard-rule block from one canonical source over
+hand-maintained verbatim copies, which drift.
 
 ### Gap 7 — Strictness is model-applied, so it cannot be regression-tested · **VERIFIED, larger change**
 
@@ -274,7 +370,10 @@ loop.
 
 This is architecturally larger than the other items — it means treating strictness as a
 deterministic post-filter over a superset of findings rather than as an instruction. Recorded as an
-option with an honest cost, not a recommendation.
+RFC with an honest cost, not a recommendation — and with one more honesty note: pinned counts
+measure parser and preset *stability*, not review quality, so the RFC would need precision and
+restraint fixtures plus periodic end-to-end model sampling alongside the frozen counts, and its
+interaction with a confidence axis (item 6) resolved first.
 
 ### Gap 8 — No grader-alignment measurement anywhere in the eval suite · **VERIFIED gap, high value**
 
@@ -296,8 +395,9 @@ Three rules follow, and all three transfer:
 
 1. **"A criterion describes what the answer must ESTABLISH, never the words it must use."** When a
    verdict turns on phrasing, the defect is in the criterion or the judge — fix one, record which.
-2. **Measure agreement only on disagreement cases.** *"Two graders agreeing on an easy case says
-   nothing about either."*
+2. **Enrich for disagreement when diagnosing.** *"Two graders agreeing on an easy case says
+   nothing about either"* — but a disagreement-only set understates real agreement, so it
+   diagnoses failure shapes; the headline number comes from a representative set (below).
 3. **The routing rule** — *"a verdict whose reason contains 'correctly identifies… but does not
    name' is a judge finding, not an agent finding. Route it here rather than into a prompt edit."*
 
@@ -305,9 +405,10 @@ Rule 3 is the operationally important one, because the failure it prevents is se
 false failure invites softening the criterion, *"which is how a suite quietly stops measuring"* —
 they record it happening three times in one session before anyone named it.
 
-`wshobson-agents` implements the machinery version independently: PluginEval reports **Cohen's
-kappa** across judges when `judges > 1`. Two independent implementations in the corpus; neither
-appears in any of our 22 gap docs.
+`wshobson-agents` corroborates the agreement-measurement machinery independently: PluginEval
+reports **Cohen's kappa** across judges when `judges > 1` — though cross-judge kappa measures
+reliability *between judges*, not alignment with human correctness. Two independent
+implementations of agreement measurement in the corpus; neither appears in any of our 22 gap docs.
 
 **Our exposure is real but narrower than theirs.** Layers 2/3 grade semantically via a `grader.md`
 subagent, and `evals/README.md:154` states the measured axis is **"restraint + vocabulary, NOT
@@ -319,11 +420,22 @@ measurement of whether our grader agrees with a human on the cases where it matt
 robustness, not lift over a bare model and not external validity (that needs more scenarios + a
 second judge)."*
 
-So this is a named-but-unbuilt next step, and great_cto supplies the design: keep only the disputed
-cases, hand-label them with reasoning, report agreement and kappa, and state honestly what the
-number is not. Their own honesty note is worth copying too — the labels were written by the author
+So this is a named-but-unbuilt next step, and great_cto supplies the diagnostic half of the
+design: hand-label the disputed cases with reasoning, report agreement and kappa, and state
+honestly what the number is not. Their own honesty note is worth copying too — the labels were written by the author
 of the criteria, so *"a second labeller who did not write them would be worth more than another
 twenty cases from this one."*
+
+The full design, leakage-safe: the labelled data splits three ways, frozen in tranche 0 before
+any redesign and *after* the instrumentation pipeline (Gaps 17-19) has qualified the raw pool —
+so the holdout is drawn from already-qualified cases and stays genuinely untouched — a
+disagreement-enriched diagnostic/development set for finding failure shapes, a
+stratified representative validation set for comparing grading prototypes, and an untouched final
+holdout scored once at selection, never used to drive a node or criterion edit — and if the
+selected design fails its acceptance threshold there, it is rejected, and any edited successor
+needs a *fresh* final holdout before it can receive a final score. Labels come from
+two blinded labellers with adjudication; report intervals, not point estimates; and record the
+current grader's verdicts on all three sets first, so lift is measurable at all.
 
 ### Gap 9 — Graders don't declare the axis they do *not* judge · **VERIFIED gap, cheap**
 
@@ -341,8 +453,9 @@ unambiguous sentence), and a pointer to the grader that owns the axis this one i
 Gap 8's rule implemented at the level of a single file, and it independently corroborates it.
 
 Our Layer-2/3 grading collapses axes into one semantic judgement per case. Splitting graders by
-axis and requiring each to state its non-scope is a small change to the eval harness that makes a
-mixed verdict impossible to produce by accident.
+axis and requiring each to state its non-scope is a small change to the eval harness that isolates
+the *source* of a disagreement — the design note still owes aggregation rules, conflicting-axis
+outcomes, missing-grader handling, and the extra per-case call cost.
 
 ### Gap 10 — State transitions live in prose, not in canon · **VERIFIED gap, medium**
 
@@ -370,6 +483,10 @@ Worth noting what this is not: `STATE-MACHINE-COMPOSITION-APPENDIX.md` sequenced
 intercept points into the existing loop. It never proposed making the transitions themselves
 declarative. That is the miss.
 
+Adopting it means specifying, up front: a versioned schema, the guard-expression grammar
+(`depth=small` is a language, however small), where transition events come from, and what a
+validator does on an illegal transition — reject the artifact, or flag and continue.
+
 ### Gap 11 — No cost-proportional stage skipping · **VERIFIED gap, ties to an open audit**
 
 `great_cto` gates whole stages on project size. Its `decision-eval` skill refuses to run when
@@ -382,9 +499,14 @@ contest-refactor has `--scope`, `--strictness`, and `--cap`, all of which tune *
 rule is directly relevant, and it is the cheapest form of cost control available: not running a
 step beats running it more efficiently.
 
+Sequencing constraints: skip rules read the state model, so item 12 precedes item 13; thresholds
+come out of the runtime-cost audit, not intuition; safety-relevant stages (build verification, the
+secret gate) are never skippable; and every skip is logged with its reason so silence never means
+"ran clean" when it means "didn't run".
+
 ### Gap 12 — Holistic judge calls where a decision graph would be reproducible · **VERIFIED, high value**
 
-Third-pass finding, and it is the *implementation* Gaps 8, 9 and 11 were missing. Same repo that
+Third-pass finding, and it is the *implementation* Gaps 8 and 9 were missing. Same repo that
 supplied the alignment set — `great_cto/tests/eval/dags/security-officer-finding-gate.dag.json`:
 
 > The old judge scored this whole rubric in one 0-1 call and returned 0.72 against a 0.80 bar, with
@@ -404,11 +526,16 @@ expressed as one answerable question:
 a Finding…"*. Flag and restraint are the two branches of one question, not two separately-graded
 cases.
 
-This attacks the kappa-0.00 problem structurally rather than by measuring it: a narrow binary
-question is one a grader answers the same way twice, so agreement stops being a variable to
-estimate. It composes with Gap 9 (one axis per grader) and Gap 15 below (mechanize the structural
-part) into a single coherent redesign of Layer-2/3 grading — which is currently one semantic
-verdict per case from a `grader.md` subagent.
+This attacks the kappa-0.00 problem structurally rather than by only measuring it — with a
+boundary worth stating precisely: the graph makes score *aggregation* deterministic given the node
+answers; the node answers are still model answers. A narrow binary question is *more* repeatable
+than a holistic 0–1 score, not guaranteed repeatable, and an ambiguous root question destabilizes
+every path below it. So DAG adoption carries its own measurement — node-level repeatability,
+sampled per question, with unstable nodes rewritten or mechanized. It composes with Gap 9 (one
+axis per grader) and Gap 15 below (mechanize the structural part) into a single coherent redesign
+of Layer-2/3 grading — which is currently one semantic verdict per case from a `grader.md`
+subagent — as designs to compare against the frozen baseline, not as automatically cumulative
+changes.
 
 ### Gap 13 — The verification oracle is self-reported · **VERIFIED gap, high value**
 
@@ -427,9 +554,19 @@ This is the one gap in this document where the failure mode is not noise or drif
 `HALT_SUCCESS_candidate`, and pass every gate we have, because every gate reads model-authored
 artifacts. The challenger panel re-reads the claim; it does not re-run the command.
 
-Cost is low relative to the exposure — a wrapper that records command, exit code, and truncated
-output to an append-only lane file, plus a gate asserting that score-bearing build evidence has a
-matching ledger entry.
+The design constraint that matters is the trust boundary: an "append-only" file the model can
+write — or delete and recreate — is not independent evidence, and neither is a path the loop's
+prose rules tell the model not to touch; an instruction does not authenticate a file. The ledger
+must be **host-attested** — written by a mechanism the model cannot invoke with arbitrary content
+(a harness hook, or a host-enforced protected location). Each record binds run ID, the configured
+command, cwd, source revision/fingerprint, timestamp, exit status/signal, and an output digest
+(truncated output *redacted*); the artifact cites the record's event ID and the gate asserts the
+linkage. Where a given harness offers no such boundary, the ledger downgrades honestly to a
+consistency check and says so — it is an anti-fabrication control only when attested. The RED fixtures
+are adversarial by nature: a missing record, a forged record, a replayed record from an earlier
+run, a mismatched exit code. Cost is higher than a bare wrapper, but still low relative to being
+the only control in the design that attests execution *results* — hook-observed tool invocation
+(item 16's evidence) can attest that a command ran, never what it returned.
 
 ### Gap 14 — No halt state for context or budget exhaustion · **VERIFIED gap**
 
@@ -448,9 +585,18 @@ hook that blocks at ≥85% context and directs the session into a handoff, readi
 from the same temp file the status line uses so the number the hook acts on is the number the user
 sees. It is backed by `continuity_ledger`, `create_handoff`, and `resume_handoff` skills.
 
-We do not need their hook — our state is file-based and survives compaction. We need the **state**:
-a halt subtype for pressure-death plus the handoff fields we already require elsewhere, so an
-exhausted run terminates honestly instead of silently.
+We do not need their hook's re-injection role — our state is file-based and survives compaction.
+But the subtype alone is inert: a run that has already exhausted context cannot emit anything, so
+the state is only reachable if something detects *pressure* before death and triggers the handoff
+early. That detection is an external signal — a host hook or token meter (ccv3 reads the same
+percentage the status line shows precisely so the acted-on number is the visible one) — and where
+no reliable meter exists, the honest fallback is periodic preventive checkpointing on a
+conservative step budget, recorded as the detection mode used and without claiming it can tell
+context pressure from any other interruption. The design also
+separates three deaths that currently look alike: context pressure (handoff possible), provider
+spend limit (handoff possible if caught), and process crash (nothing to emit — a G34-shaped
+absence is the only trace). Checkpoint writes on the handoff path must be atomic, and the fixtures
+interrupt before, during, and after the handoff write.
 
 ### Gap 15 — Shrink the judge's surface before trying to align it · **VERIFIED, refines Gaps 8-9**
 
@@ -479,9 +625,15 @@ mechanical version: it fetches GitHub issue/PR text and **wraps it in a labelled
 before the agent sees it, so the boundary between instruction and data is established by the
 fetcher rather than by the reader's discipline.
 
-Relevant to us at exactly one place — wherever contest-refactor ingests text it did not author
-(incident files via `--incidents`, tracker text, ADRs). A wrapper is more reliable than a rule,
-though the rule is not wrong.
+Scope it to where a bounded interception point actually exists: the explicit ingress adapters —
+incident files via `--incidents`, tracker text, ADRs, any remote issue/PR fetch. Ordinary
+repository reads (the reviewed code, comments, READMEs) stay covered by G14 plus the reader's
+tool-payload labelling: there is no common interception point for them, and mediating every read
+would be an architectural spike, not this item — promote it only if a RED case shows the
+G14-only boundary failing. Honest framing either way: the envelope is provenance metadata, not a
+mechanical injection barrier — it makes the boundary legible so the non-obedience rule (G14) has
+something to grip; it cannot prevent a model from obeying embedded text. Wrapper *plus* rule, not
+wrapper instead of rule.
 
 ### Checked, already covered or ahead — third pass
 
@@ -489,7 +641,7 @@ though the rule is not wrong.
 |---|---|---|
 | Token bill-of-materials | `gstack-context-bill` | **We are ahead.** `scripts/token-budget.py` does per-file counts, per-loop fixed-reload sums, full-run projection, *and* `--loaded-set <step>` proving which files a given step reloads — plus it prints whether the count came from tiktoken or the heuristic, so a number is never silently an estimate. No action. |
 | Working-tree fingerprint | `gstack-wtree` | Different purpose. Ours (`candidate_fingerprint.py`) is a semantic fingerprint of the architecture-relevant payload; theirs is a cheap disk-state hash (~40× faster than a full re-hash via a stat-cache-seeded temp index). `source_rev` already covers our disk-state need. Perf idea only. |
-| Exit-code discipline | `senior-engineering-partner/scripts/eval-guard.py` | Not a new gap — the *fix shape* for plan item 3. It exits **0 pass / 1 fail / 2 git plumbing error**, and documents that "CI and a local run are byte-identical". That third code is precisely what `exec_replay_grade.py` is missing when it folds "inputs missing" into "invariant failed". |
+| Exit-code discipline | `senior-engineering-partner/scripts/eval-guard.py` | Not a new gap — the *fix shape* for the `exec_replay_grade.py` exit-code split. It exits **0 pass / 1 fail / 2 git plumbing error**, and documents that "CI and a local run are byte-identical". That third code is precisely what `exec_replay_grade.py` is missing when it folds "inputs missing" into "invariant failed". |
 
 ### Checked, already covered — second pass
 
@@ -520,45 +672,282 @@ product is long-running full-repo audit. Our deferral stands, and now has eviden
 
 ---
 
-## Ranked improvement plan
+## Fourth pass — the ten-repo expansion (2026-08-17)
+
+Ten repos cloned after the third pass, audited by four parallel readers (one bucket each);
+every quote below was spot-verified against the clone before inclusion. Two of the ten are far
+more substantial than their stars suggested: `code-quality-atlas` (605 files, a generation
+pipeline with per-subsection provenance hashes, ~302 tests, a cross-model eval harness with a
+precision/recall split) and the Compound Engineering plugin (40 skills — the only repo in the
+corpus that *ships* several of our backlog items).
+
+### Corrections this pass forces on earlier passes
+
+- **Item 6 has a shipped reference implementation.** CE's `ce-code-review` uses discrete
+  anchors `0/25/50/75/100` with behavioral criteria embedded in the findings JSON schema,
+  severity and anchor as declared-independent axes (*"a P0 finding can be anchor `50` if it is
+  an important concern you could not fully verify"*), and mechanical suppression below 75
+  *except P0* (`findings-mechanics.py:201-208`) — the same carve-out rigorous-review argues for,
+  running in production. Plus a coupling we had not designed: an anchor ≥ 75 with no quoted
+  evidence line is force-capped to 50 in code. They migrated *away* from float confidence after
+  observing round-value clustering. The labelled comparison now tests whether *this* design
+  carries a distinction the Evidence Chain cannot, rather than inventing a design first.
+- **Item 14's honest-downgrade contract is CE's receipt rule, verbatim**: model identity *"is
+  verified only by such a receipt — never by the request parameters or the model's own text —
+  and outputs without one are labeled as requested-but-unverified"* (`CONCEPTS.md:131`).
+  planning-with-files supplies the artifact-side half: SHA-256 attestation where the executable
+  command allowlist rides *inside* the hashed plan, so tampering breaks the hash and the hooks
+  refuse injection until re-approval.
+- **Item 15 gains a removal datapoint.** CE built premise-dependency graphs over findings and
+  deleted them (2026-08-13): *"elaborate structure resting on a classification the model was not
+  yet doing well."* A different object than great_cto's grading DAG — theirs synthesized
+  findings, ours grades rubric questions — but it hardens the tranche-3 order: measure the
+  classification before building a graph on it. harness-eval independently supplies the
+  node-repeatability evidence: one judge criterion sampled three times returned `7,0,8 → median
+  7` on the same artifact. Median-of-N is a band-aid, not alignment.
+- **Item 11 has a live counter-pressure.** CE's doctrine demands per-finding parallel validators
+  (*"a single batched validator looking at all findings together pattern-matches across them"*),
+  yet their shipped orchestration now puts everything in **one** validator batch for cost and
+  determinism — and the learning doc was never updated. harness-eval implements the clean form:
+  each of five criteria gets its own conversation. Both endpoints run in production. Item 11's
+  design note must name the cost pressure and separate two independent decisions — conversations
+  per grading axis, and findings per validator call — measuring cost, cross-item contamination,
+  repeatability, and accuracy for each.
+
+### What lands on existing items
+
+| Item | Fourth-pass evidence |
+|---|---|
+| 2 (eval-guard) | crucible runs the behavioral suite on any PR touching `.claude/**` — path-triggered, no waiver path. dsh-skill-eval adds the missing half: a **fidelity pin** — a test that fails when the eval harness drifts from the production artifact it claims to evaluate (their catalog renderer must match the pinned upstream template byte-for-byte). |
+| 4 (flag/restraint) | CE names *"new-only restraint negatives"* as a first-class fixture class (*"a rule that fires on everything is as broken as one that fires on nothing"*). dsh-skill-eval ships a 20-case trigger set for a code-review skill whose hard negatives — refactor requests, security audits, design-doc review — are directly liftable. Anthropic's skill-creator requires 8-10 *near-miss* negatives per eval set ("obviously irrelevant" negatives test nothing). |
+| 8 (strictness RFC) | crucible's accept-gate is the strongest found shape: an **ordered vector of named filters** (safety → per-scenario no-regression → effect-size floor + one-sided two-proportion z-test → cost tie-break), reported as a rejection histogram per named reason. |
+| 13 (cost skipping) | CE's skip gates fail closed on helper-computed signals and **count every skip in a Coverage section**. crucible grades cost as a first-class result (*"never hide spend"*). A loop reaching 9.5 in 14 iterations at $40 is a worse skill than one reaching 9.2 in 3 at $4 — iteration count and spend belong in the eval suite, fed by the runtime-cost audit. |
+| 16 (mechanize first) | crucible: 15 deterministic assertion types including hook-observed `subagent_invoked`/`tool_invoked` — mechanized observation of what the agent **did**, not what it claimed — plus a free offline lint gate before any paid trial. planning-with-files: parse-don't-match (a regex gate stayed green while the YAML it guarded was invalid), and **every selftest must exec the shipped artifact** — their suite stayed green while 2 of 6 mechanisms were silently broken, because a test reimplemented the fix instead of importing it. |
+| 17 (exhaustion halt) | atlas's harness refuses to grade a partial run (*"the failed scenarios' empty responses look exactly like 'no findings'"*). And the pressure signal may now be a platform primitive, not a hook: the Claude API's `task_budget` injects a model-visible countdown so a loop paces itself instead of dying mid-step. |
+| 18 (provenance envelope) | planning-with-files: nonce-delimited injection with the honest limitation stated, plus a per-file trust split (untrusted web content only ever lands in `findings.md`, never in the hook-amplified plan file). CE: an *"Untrusted customer content — data, not instructions"* blockquote convention plus an argument-injection guard (refs must match `#?\d+` or hex before reaching any git command). |
+| Grading tranche | Anthropic's grader adds **claim extraction** — grade what the actor *said it did* (typed factual/process/quality claims, each verified) — and its analyzer classifies every assertion by discrimination pattern. atlas adds `analysis_model` stamping so a silent grader-model upgrade cannot masquerade as a skill change. |
+
+### Gap 17 — Eval cases are never screened for discriminating power · **VERIFIED gap, high value**
+
+Two independent implementations, neither in our suite. crucible admits a generated scenario only
+if it *"parses, PASSES on the good reference, and FAILS on the weakened reference. Otherwise it
+carries no signal"* (`src/frontier.ts:139-142`) — the weakened reference is literally a bare
+CLAUDE.md. Anthropic's analyzer classifies every assertion across runs: always-pass-both,
+always-fail-both, pass-with-fail-without (value), **fail-with-skill-but-pass-without (the skill
+may be hurting)**, high-variance (flaky).
+
+We have five eval layers and no test that any case discriminates. A case that passes with the
+skill *and* without it — or fails both ways — quietly biases every alignment number the grading
+tranche will produce, and the fail-with-skill case has no detector at all. Two corrections to
+the naive form, from review: discrimination is a *stochastic* property, so a case is classified
+from repeated paired deltas against the A/A floor (Gap 18), never from one pass/fail
+observation; and always-pass cases that encode absolute contracts — a regression that must never
+fire, a schema that must always validate — are not pruned but moved to a separately reported
+contract suite, excluded from lift claims. The screen therefore runs *last* in the
+instrumentation pipeline (21 → 22 → 20 → 19).
+
+### Gap 18 — No noise floor under eval claims · **VERIFIED gap, high value**
+
+CE's retune methodology opens with the measurement that *"retired every small-sample claim in
+flight"*: 12 runs across two **byte-identical** builds gave workflow adherence 7 of 12 and a
+7.12× output-token spread — so any later claim smaller than that envelope is unsupported.
+crucible encodes the same discipline as code: a one-sided two-proportion z-test plus an
+effect-size floor in its accept-gate, because *"a fixed pass-rate threshold at small k cannot
+tell a real improvement from binomial noise -- 4/5 vs 3/5 looks like a win but is well inside
+the variance."* harness-eval flags any ranking whose top-two ±σ ranges overlap as
+**inconclusive** rather than publishing an ordering.
+
+Our standing micro-test discipline (5+ reps, read the matches) has the right instinct and no
+statistical floor. Before tranche 3 reports any lift, run the A/A arm and pin the floor — keyed
+to model/version, grader prompt, sampling settings, harness revision, tool configuration, and
+scenario corpus, and recomputed when any of those change. The accept rule must match the
+experiment's shape: crucible's two-proportion z-test assumes *independent* arms; our
+with/without design (Gap 20) is **paired**, so the preregistered test is exact McNemar on paired
+binary outcomes (or a paired permutation procedure for non-binary scores) — with minimum effect,
+alpha, power/sample size, multiple-comparison handling, and an explicit *inconclusive* outcome
+all stated before the first run.
+
+### Gap 19 — An invalid trial is indistinguishable from a failing one · **VERIFIED gap**
+
+The suite-wide generalization of the `exec_replay_grade.py` exit-code split, implemented four
+independent ways in the new corpus: skilllens voids the trial (`valid: False`, scores `null`,
+never 0) when a deterministic **manipulation check** fails — the with-skill arm didn't invoke
+the skill, or the without-skill arm did; harness-eval's `countable()` excludes ungradeable
+trials from normalization entirely; crucible classifies **infra-failure vs candidate-failure**
+(auth/rate-limit regexes over run errors, deliberately conservative — *"only an explicit
+runError is inspected, never a normal assertion failure"*); atlas refuses to grade partial runs.
+A rate-limited run scored as a failing refactor silently poisons the dataset — and our Layers
+2-5 currently have no invalid-trial concept at all.
+
+One boundary correction against skilllens's design, from review: `invalid` is reserved for
+**exogenous harness failures** — rate limits, auth errors, infrastructure timeouts, lost
+artifacts. A correctly-supplied skill that failed to trigger or was not followed is an
+**adherence failure the suite must count**, not an invalid trial; voiding it would erase exactly
+the failure a trigger eval exists to see. Candidate-induced timeouts, malformed output, and
+runaway spend likewise count against the candidate unless independently classified as
+infrastructure. Invalid counts are reported per arm with machine-readable reasons, and a
+comparison with excessive or asymmetric invalidity is itself void.
+
+### Gap 20 — No paired baseline, and no guard against tautological criteria · **VERIFIED gap, high value**
+
+Anthropic's skill-creator makes the baseline structural: *"For each test case, spawn two
+subagents in the same turn — one with the skill, one without"* — including snapshotting the
+pre-edit skill as the baseline when improving an existing one. skilllens scores the *delta*
+(floored at zero, voided if the manipulation check fails) and contributes the sharpest
+rubric-design rule in the whole expansion: a criterion the baseline arm structurally cannot
+satisfy *"verifies that the skill's methodology was executed, not whether the task goal was
+completed at high quality ... making this an invalid evaluation item."*
+
+Both halves bite us. Our suite reports absolute scores — nothing separates "the loop found
+this" from "the model would have found it anyway" (our own advisory-eval history — recall lift
+0 because the defects were too legible — is this lesson, learned once and not yet mechanized).
+And our Layer-2/3 criteria of the form "does `flagged_smells` name the canon smell" sit exactly
+on the tautology boundary the skilllens rule polices: legitimate where the name is the consumed
+artifact, invalid the moment a criterion rewards our vocabulary over the outcome.
+
+### Recorded tensions — fourth pass
+
+1. **The scalar rubric now has two shipped counter-examples.** atlas considered and rejected
+   per-dimension scores (D18): teams optimize the number, *"a score can rise while real defects
+   are reworded to survive detection,"* and a scalar erases the *kind* of problem — replaced by
+   three categorical axes (severity/tier/valence) plus severity-count trends. CE likewise ships
+   a 3-value verdict, no score. Our 9.5-convergence stays defensible as an *internal*
+   convergence signal rather than a reported grade — but the design rationale should say so and
+   engage D18 directly. atlas also documents the floor-plateau lesson: escalating strictness
+   round-over-round *"suppressed real Major regressions ... just because the PR had taken a few
+   rounds"* — convergence must come from only-new-findings, not from raising the bar.
+2. **Alignment vs demotion.** crucible's standing rule: deterministic assertions are hard gates;
+   *"Never let an LLM-judge result fail a CI gate by itself."* The alternative to aligning a
+   judge is demoting it to a non-gating signal. Tranche 3 should state explicitly why we keep
+   judges gate-adjacent where we do: Layers 2/3 measure judgment itself, which cannot be demoted
+   without giving up the measurement — and everything demotable is what item 16 mechanizes.
+3. **Three shipped confidence designs, not zero.** CE's finding-level anchors (expressive,
+   evidence-coupled, self-assessed — gameable in principle); agent-verifier's rule-level
+   `[P]`/`[H]` tiers (un-gameable — the tier is stamped on the rule at authoring time — but
+   carrying zero per-finding information); Anthropic's binary burden-of-proof (*"the burden of
+   proof to pass is on the expectation"*, *"No partial credit"*) with executor-declared
+   `uncertainties[]` as a separate channel. Item 6's design note now chooses among three live
+   designs rather than inventing one.
+
+These tensions are design-note obligations, not commentary: the grading design note must justify
+any scalar it keeps and any gating role a judge holds — naming which deterministic failures
+remain hard gates — and item 6's note must run the three-way comparison before any schema work.
+
+### Smaller learnings recorded
+
+- **Accretion-stop for review-fix loops** (CE, measured): a two-condition step absorbed 24 bot
+  findings over nine rounds — most against text a previous round had added — before being
+  restated as the two conditions it began as. Their rule: on the second round against the same
+  block, stop patching and restate the block as goal + done condition + safe direction. Applies
+  to our own skill-prose review cycles more than to the runtime loop.
+- **The literal-string result** (atlas, measured): recall 65%→75% by giving the model a concrete
+  string for the second case (`Not applicable:` beside `No findings`) after three
+  judgment-prose rewrites had failed — and a follow-up worked example *destabilized* a
+  thematically-near scenario, so any example edit demands a full-suite re-gate.
+- **Independence is a property of the execution context** (CE): *"Two personas reasoned inside
+  one context are two perspectives, not two witnesses"* — and where dispatch is unavailable,
+  adversarial roles **block rather than run inline** (*"an orchestrator grading its own
+  experiment is not a measurement"*). Directly load-bearing for the challenger panel.
+- **Corpus hygiene warning**: `ce-reviewers` is ~4.5 months behind the CE plugin and materially
+  divergent (float confidence the plugin abandoned, a deprecated mode, a dangling schema
+  reference). Persona-style reference only; the plugin's own `references/personas/` is current.
+
+---
+
+## Improvement backlog (ranked at discovery)
 
 | # | Change | Skill | Value | Cost | Status |
 |---|---|---|---|---|---|
-| 1 | Evidence-redaction rule + credential-shape gate on emitted artifacts | contest-refactor | High (security) | Low | Ready |
-| 2 | `eval-guard`-style pre-commit gate: substantive skill-prose change requires an eval touch or an explicit waiver | repo-wide | High | Low | Ready |
-| 3 | Verify the challenger prompt carries hard rules verbatim | contest-refactor | Medium-High | Very low | Check first |
+| 1 | Evidence-redaction rule + credential-shape quarantine gate; retrospective audit tracked separately | contest-refactor | High (security) | Low-Moderate | Ready |
+| 2 | `eval-guard` gate, pre-commit + CI with a defined containment step on bypass: substantive skill-prose change requires an eval touch or a waiver trailer; acceptance includes a fidelity pin — the harness fails when it drifts from the artifact it evaluates | repo-wide | High | Low-Moderate | Ready |
+| 3 | Verify hard-rule propagation at every dispatch boundary (challenger first), generated from one canonical source | contest-refactor | Medium-High | Low | Check first |
 | 4 | Enforce flag/restraint pairing in `validate-fixtures.py` | contest-refactor | Medium | Low | Ready |
-| 5 | Re-measure `arm_b` with a self-containment contract on the handoff | contest-refactor | High if it moves | Moderate | Needs design |
-| 6 | Confidence as a second axis + `confidence-anchors.toml` + P0-at-low-confidence carve-out | contest-refactor | Medium-High | Moderate | Decide vs Evidence Chain first |
-| 7 | Assert retired prose stays retired (regression test on superseded instructions) | contest-refactor | Low-Medium | Low | Ready |
-| 8 | Strictness as a deterministic post-filter with pinned per-preset counts | contest-refactor | Medium | High | Option only |
+| 5 | Re-measure `arm_b` with a self-containment contract on the handoff | contest-refactor | High if it moves | Moderate | Experiment protocol first |
+| 6 | Confidence: two-stage experiment — does the Evidence Chain lose information; then finding-level anchors vs rule-level tiers vs binary burden-of-proof + `uncertainties[]` | contest-refactor | Medium-High | Moderate-High | Two-stage experiment |
+| 7 | Assert retired prose stays retired — first target: the unreachable Check-3 sub-severity note rule deleted at `1abea0c`; inventory further retirements from the git log | contest-refactor | Low-Medium | Low | Ready |
+| 8 | Strictness as a deterministic post-filter with pinned per-preset counts | contest-refactor | Medium | High | RFC only |
 | 9 | **Judge-finding routing rule** — a verdict reading "correct in substance, wrong in wording" goes to an alignment set, never into a criterion edit | contest-refactor evals | High | Very low | Ready (second pass) |
-| 10 | **Grader-alignment set** — disputed cases only, hand-labelled, agreement + kappa reported with an explicit non-claim | contest-refactor evals | High | Moderate | Ready (second pass) |
-| 11 | Split graders by axis; each states the axis it does *not* judge | contest-refactor evals | Medium-High | Low | Ready (second pass) |
+| 10 | **Grader-alignment measurement** — diagnostic + validation + untouched-holdout sets, two blinded labellers, agreement + kappa with intervals and an explicit non-claim | contest-refactor evals | High | Moderate | Ready (second pass) |
+| 11 | Split graders by axis; each states the axis it does *not* judge — two separated decisions: conversations per axis, and findings per validator call | contest-refactor evals | Medium-High | Low-Moderate | Candidate in T3 comparison |
 | 12 | Declarative transition table in `canon/states.toml` | contest-refactor | Medium | Moderate | Design call (second pass) |
-| 13 | Cost-proportional stage skipping (`skip_when` by size) | contest-refactor | Medium | Low-Moderate | Ties to RUNTIME-COST-AUDIT (second pass) |
-| 14 | **Independent execution-evidence ledger** — a wrapper, not the agent, authors the record of what ran and what it returned | contest-refactor | High (anti-fabrication) | Low-Moderate | Ready (third pass) |
-| 15 | **DAG-shaped grading** — rubric as a graph of binary questions, score computed from the path | contest-refactor evals | High | Moderate | Ready (third pass) |
-| 16 | Mechanize structural assertions before aligning the judge | contest-refactor evals | Medium-High | Moderate | Sequencing (third pass) |
-| 17 | Halt subtype for context/budget exhaustion + handoff fields | contest-refactor | Medium-High | Low | Ready (third pass) |
-| 18 | Mechanical trust envelope for ingested foreign text | contest-refactor | Low-Medium | Low | Ready (third pass) |
+| 13 | Cost-proportional stage skipping (`skip_when` by size) | contest-refactor | Medium | Moderate | After item 12 + cost audit |
+| 14 | **Host-attested execution-evidence ledger** — the record of what ran lives outside the model-writable boundary; downgrades to a consistency check where no attestation exists | contest-refactor | High (anti-fabrication) | Moderate | Ready (third pass) |
+| 15 | **DAG-shaped grading** — rubric as a graph of binary questions, score computed from the path | contest-refactor evals | High | Moderate | Conditional on node-pilot |
+| 16 | Mechanize structural assertions before aligning the judge; acceptance: every selftest execs the shipped artifact, never a reimplementation | contest-refactor evals | Medium-High | Moderate | Sequencing (third pass) |
+| 17 | Halt subtype for context/budget exhaustion + handoff fields | contest-refactor | Medium-High | Low-Moderate | Needs pressure-signal design |
+| 18 | Provenance envelope at the explicit ingress adapters (`--incidents`, trackers, remote fetches); whole-read mediation only as a future spike | contest-refactor | Low-Medium | Low-Moderate | Ready (third pass) |
+| 19 | **Discriminating-power screen** — classify each lift case from repeated paired deltas against the A/A floor; absolute-contract cases move to a separately reported contract suite, excluded from lift claims | contest-refactor evals | High | Low-Moderate | Ready (fourth pass) |
+| 20 | **A/A noise floor + paired significance gate** — identical-build distribution pinned per keyed config; exact McNemar or paired permutation with preregistered effect/alpha/power and an explicit inconclusive outcome | contest-refactor evals | High | Moderate | Ready (fourth pass) |
+| 21 | **Trial-validity taxonomy** — `invalid` reserved for exogenous harness failures, reported per arm with reasons; adherence failures always count; asymmetric invalidity voids the comparison | contest-refactor evals | Medium-High | Moderate | Ready (fourth pass) |
+| 22 | **Paired with/without baseline** — same-turn paired runs scoring the delta; outcome criteria both arms can satisfy, skill-contract criteria reported separately, never mixed into lift | contest-refactor evals | High | Moderate | Ready (fourth pass) |
 
-Items 1–4, 9, and 11 are independent and small. Item 5 is the one that could unblock a parked
-decision. Items 6, 8, and 12 need a design call before any code.
+### Execution order
 
-**Item 9 is the cheapest high-value change in the list**: it is a triage rule for reading grader
-output, costs nothing to adopt, and prevents the specific failure — softening a criterion in
-response to a false failure — that makes an eval suite stop measuring without anyone noticing.
+The table ranks by value at discovery; the tranches below are the dependency order to execute in.
+Per the scoping note up top, every item gets a short design note before code, and anything that
+touches grading, transitions, or halt states ships **shadow-first** — dual output compared against
+current behavior, schema changes versioned rather than mutated — with telemetry on the new path
+(scanner hits without values and scanner false-positive rate, waiver use, grader node
+disagreements, transition violations, skip reasons, ledger-attestation failures, pressure-signal
+availability, handoff/resume success, retrospective-audit disposition, invalid-trial counts and
+rates by arm and reason, comparison-void events).
 
-**Items 9, 10, 11, 15 and 16 are one project, not five.** The order matters: mechanize the
-structural assertions (16), reshape what remains into binary questions on a graph (15), give each
-grader one axis and a declared non-scope (11), *then* measure agreement on the residue (10), with
-the routing rule (9) protecting the loop throughout. Doing 10 first would align a judge against
-questions it should never have been asked.
+**Tranche 0 — prep, split per workstream (new).** Each tranche starts when *its own*
+prerequisites are done, not when all of tranche 0 is. For slice 1a: the secrets/untrusted-text
+threat model (items 1, 3, 18), the persistence-sink and dispatch/ingestion boundary inventory,
+and the compatibility decisions — nothing more. For item 14: the evidence-fabrication threat
+model. For tranche 3, immediately before it and blocking nothing else: run the instrumentation
+pipeline (21 → 22 → 20 → 19) over a qualification pool of raw cases *first*, freeze the
+qualified contract and lift manifests, and only then stratify the three labelled datasets — an
+adjudicated diagnostic/development set, a representative validation set for comparing grading
+prototypes, and an untouched final holdout. Record the current grader's verdicts on all three
+before any redesign — the final-holdout baseline stored through a blinded evaluator, so redesign
+authors never inspect it before selection — and freeze the current artifact schemas. The compatibility policy, stated once: committed reviews and history stay readable;
+validators dual-read across schema versions.
 
-**Item 14 is the one that is not about measurement.** Every gate we own reads model-authored
-artifacts, so a fabricated build result passes all 43 of them. That is a different class of risk
-from everything else in this table.
+**Tranche 1 — evidence and persistence: items 1, 3, 14, 18, as two independently releasable
+slices.** Slice 1a — the secret controls (items 1, 3): urgent, no host dependency. The
+forward-looking quarantine gate ships as soon as its fixtures pass; the retrospective history
+audit runs alongside as a separately tracked incident-response task and never delays it.
+Slice 1b — the attested ledger (item 14), which waits on the host-attestation design. Item 18
+ships independently of both slices once its bounded ingress adapters and RED cases are ready —
+only item 14 needs the attestation boundary. Item 14 is the only control in the plan that
+attests a command's *result and exit status* (item 16's hook-observed tool execution attests
+that commands ran, not what they returned) — every existing gate reads model-authored artifacts,
+so a fabricated build result passes all 43 of them; that is a different class of risk from
+everything else here.
+
+**Tranche 2 — governance: items 2, 4, 7.** Report-only first, then enforce; the pre-commit rule
+mirrored in CI, with the honest caveat that direct-to-main means CI detects after landing — a
+bypass triggers the defined containment step (revert, or an immediate eval/waiver follow-up).
+
+**Tranche 3 — the grading redesign, instrumentation first.** The fourth-pass items are one
+pipeline with a strict order — **21 → 22 → 20 → 19** — run over the qualification pool *before*
+tranche 0 draws the three labelled sets: trial-validity semantics (21) must exist before paired
+arms run (22); the A/A floor (20) is computed on that paired harness; and discriminating power
+(19) is classified from repeated paired deltas against the floor, never from a single
+observation. Then the redesign, with 9 in force throughout: **16 → variant definition →
+comparison → 10**. Mechanize the structural assertions first (16); then define the graph-free
+node questions and the axis/conversation variants *together*, and compare no-DAG, axis-split,
+conditional-DAG, and any justified combination on the validation set — 15 and 11 are candidate
+designs inside that comparison, never a mandatory cumulative sequence, and graph machinery is
+built only if the node classifiers clear a preregistered accuracy/repeatability threshold (the
+CE removal datapoint is the recorded cost of the other order). Item 11's design note separates
+two independent decisions — conversations per grading axis, and findings per validator call —
+measured for cost, cross-item contamination, repeatability, and accuracy. Selection happens on
+the validation set; agreement on the semantic residue is then measured with the three labelled
+sets (10). Item 9 — the cheapest high-value change in the list — is the routing rule protecting
+the loop throughout: a "correct in substance, wrong in wording" verdict is a judge finding,
+never a criterion edit. Doing 10 first would align a judge against questions it should never
+have been asked. The final holdout is scored once, at selection, and never drives a node or
+criterion edit.
+
+**Tranche 4 — state model: item 12, then 13 and 17.** Transitions become declarative before
+anything reads them to skip a stage or to reach a new halt state.
+
+**Experiments, not tranches: items 5 and 6.** Each needs a protocol with a preregistered decision
+rule before any run — Gap 2's cautions for item 5, the labelled Evidence-Chain comparison for
+item 6. **Item 8 stays an RFC.**
 
 ## Deliberately not adopted
 
