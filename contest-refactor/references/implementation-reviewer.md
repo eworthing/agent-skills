@@ -142,8 +142,12 @@ targeted one?
   mechanically testable). You cannot certify a compile or race-freedom result by
   reading the diff — you validate that adequate evidence exists. Missing or
   inadequate evidence on a risk-bearing diff → reject.
-- A regression at lower severity is acceptable — note it in `regressions[]` but
-  don't reject for it. The next loop's Critic phase will pick it up.
+- A regression **below** the targeted finding's severity is not a rejection reason —
+  and it is not recorded either. An `approved` verdict carries an empty `regressions[]`
+  (JSON contract below), so there is no legal slot for a sub-severity note on an
+  approval. Let it go: the next loop's Critic re-derives findings from committed source,
+  which is the design (G26 anchor-to-source). `regressions[]` is populated only on the
+  `rejected` path, where routing appends it to `CURRENT_REVIEW.md`.
 
 If any same-or-higher-severity regression → reject.
 
