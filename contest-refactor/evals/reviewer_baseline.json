@@ -9,8 +9,8 @@
     "tolerance_note": "false_approve (approving a must-reject diff) carries a fake-clean refactor into the audit trail — the dangerous regression; tolerance 0 (arm_b must reject >=4/5 AND name-the-defect >=4/5 on every reject/conditional case, no regression vs arm_a). false_reject (rejecting a must-approve diff) only costs a carried-forward loop — bounded: arm_b must approve >=4/5 per approve case, may drop to >=3/5 on at most one approve category, total new approve->reject flips vs arm_a <=1. A sub-9.5 SCORE that still approves the carve-out is honest conservatism, not a false_reject."
   },
   "prereg": {
-    "reviewer_prompt_sha256": "72207944517d6380f50cc4cc94c144f0e9521f1197de4468f33a10840c34ac76",
-    "reviewer_prompt_source": "references/implementation-reviewer.md lines 35-182 (fenced template content, excluding the ``` fences); recompute with: awk 'NR>=35 && NR<=182' references/implementation-reviewer.md | shasum -a 256",
+    "reviewer_prompt_sha256": "f620648ad0d1eb5275a1d53a1e409032b253f769b0a44dd8298826a062318ade",
+    "reviewer_prompt_source": "references/implementation-reviewer.md, the first fenced block (template content, excluding the ``` fences). Recompute with the FENCE-DERIVED recipe: awk '/^```$/{n++; next} n==1' references/implementation-reviewer.md | shasum -a 256. Do NOT use hardcoded line numbers -- the previous recipe pinned lines 35-182 and silently read the wrong range once the closing fence moved, yielding a sha matching neither this field nor the real body. _reviewer_baseline_selftest.py check (f) now enforces this field against the live file.",
     "rubric_refs": ["references/architecture-rubric.md", "references/method.md"],
     "judge_model": "claude-opus-4-8",
     "arm_a_model": "claude-sonnet-4-6",
@@ -20,6 +20,8 @@
   },
   "measurement": {
     "date": "2026-06-27",
+    "prompt_sha256": "72207944517d6380f50cc4cc94c144f0e9521f1197de4468f33a10840c34ac76",
+    "prompt_staleness": "STALE. The prompt body changed 4x after this measurement (f3222cd, 6f03dda, 36832f1, adfbe0b) and again when the unreachable sub-severity-note rule was deleted from Check 3; none triggered a re-baseline. These numbers describe the prompt at prompt_sha256 above, NOT the prompt at prereg.reviewer_prompt_sha256. Treat the gates below as advisory until re-measured. Selftest check (f) reports this gap; it is informational, not a failure, because closing it costs a full 200-run re-measurement.",
     "method": "Host-dispatched reviewer spawns (claude_code Agent tool, model=sonnet for arm A / model=haiku for arm B) on each materialized case repo, verbatim reviewer prompt. Targeted K=5 x 20 cases x 2 arms = 200 reviews; ~65 spawned reviewers idled without writing their verdict file (a harness write-dropout, not a reviewer verdict), so achieved 2-4 usable reps per cell. Raw verdicts in reviewer_baseline_replication.json. The decision is robust to the dropouts: GATE A is unanimous and GATE B fails already at the achieved K.",
     "gate_a_false_approve": {
       "result": "CLEAN",

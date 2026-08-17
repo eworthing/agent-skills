@@ -24,7 +24,18 @@ Contract enforced here (mechanical, no model):
       over-flag-free is a subset of the mechanical verdict), and the asymmetric
       false_approve_tolerance — NO measured must-reject case (danger_class ==
       "false_approve") may have arm_b.decision == "approve"; plus the raw
-      replication file carries exactly 5 terminal slots per case per arm.
+      replication file carries exactly 5 terminal slots per case per arm;
+  (f) prompt-pin integrity: prereg.reviewer_prompt_sha256 still matches the live
+      first fenced block of references/implementation-reviewer.md. The pin is
+      what makes a baseline mean anything -- without this the prompt drifted 4x
+      undetected (f3222cd, 6f03dda, 36832f1, adfbe0b) while the manifest kept
+      claiming a sha recorded at ded1e97. The sha is derived from the FENCE
+      POSITIONS, never hardcoded line numbers: the old documented recipe pinned
+      lines 35-182 and silently read the wrong range once the closing fence
+      moved. Separately, when measurement.prompt_sha256 differs from the prereg
+      pin, the recorded numbers describe a prompt that no longer exists -- that
+      is reported as an ADVISORY, not a failure, since closing it costs a full
+      re-measurement.
 
 RED-first: run this before creating the cases or the manifest to confirm it
 fails. Then build those artifacts and confirm it passes.
@@ -52,6 +63,70 @@ VALID_STATUSES = {"baseline_unmeasured", "measured"}
 VALID_DANGER = {"false_approve", "false_reject", "none"}
 VALID_DECISIONS = {"reject", "approve", "conditional", "inconclusive"}
 REQUIRED_CASE_MEMBERS = ("case.toml", "finding.md", "base", "head")
+REVIEWER_PROMPT_PATH = SKILL_ROOT / "references" / "implementation-reviewer.md"
+
+
+def _reviewer_prompt_sha256() -> str | None:
+    """SHA-256 of the verbatim reviewer prompt: the first fenced block, fences excluded.
+
+    Fence-derived on purpose. The recipe this replaces hardcoded `NR>=35 && NR<=182`,
+    so when the closing fence moved from 183 to 186 the documented command silently
+    read three lines short and produced a sha that matched neither the recorded pin
+    nor the real prompt body. Deriving the bounds cannot drift that way.
+    """
+    if not REVIEWER_PROMPT_PATH.exists():
+        return None
+    body, fences = [], 0
+    for line in REVIEWER_PROMPT_PATH.read_text().splitlines(keepends=True):
+        if line.rstrip("\n") == "```":
+            fences += 1
+            if fences >= 2:
+                break
+            continue
+        if fences == 1:
+            body.append(line)
+    if fences < 2:
+        return None  # malformed / unterminated fence -> caller reports
+    import hashlib
+
+    return hashlib.sha256("".join(body).encode()).hexdigest()
+
+
+def _check_prompt_pin(manifest: dict, failures: list[str]) -> list[str]:
+    """(f) The recorded pin must still match the live prompt. Returns advisories."""
+    advisories: list[str] = []
+    prereg = manifest.get("prereg") or {}
+    recorded = prereg.get("reviewer_prompt_sha256")
+    live = _reviewer_prompt_sha256()
+
+    if live is None:
+        failures.append(
+            f"could not extract the reviewer prompt from "
+            f"{REVIEWER_PROMPT_PATH.relative_to(SKILL_ROOT)} "
+            "(expected a terminated ``` fenced block)"
+        )
+        return advisories
+    if not recorded:
+        failures.append("prereg.reviewer_prompt_sha256 is missing -- the baseline pins nothing")
+        return advisories
+    if recorded != live:
+        failures.append(
+            "prereg.reviewer_prompt_sha256 does not match the live reviewer prompt "
+            f"(recorded {recorded[:12]}..., live {live[:12]}...). The prompt was edited "
+            "without re-pinning, so the baseline describes a prompt that no longer exists. "
+            "Fix: confirm the edit is intended, set prereg.reviewer_prompt_sha256 to the live "
+            "value, and record in measurement.prompt_staleness that the numbers predate it."
+        )
+        return advisories
+
+    measured_on = (manifest.get("measurement") or {}).get("prompt_sha256")
+    if measured_on and measured_on != recorded:
+        advisories.append(
+            f"recorded measurement was taken against prompt {measured_on[:12]}..., but the "
+            f"current pin is {recorded[:12]}... -- the gates in measurement[] are ADVISORY "
+            "until re-measured against the current prompt"
+        )
+    return advisories
 
 
 def _load_manifest() -> dict:
@@ -252,17 +327,21 @@ def main() -> int:
                 "violates false_approve_tolerance=0 (cheaper reviewer must not rubber-stamp a must-reject diff)"
             )
     _check_replication_raw(measured_ids, failures)
+    advisories = _check_prompt_pin(manifest, failures)
 
     if failures:
         for f in failures:
             print(f"FAIL: {f}")
         return 1
 
+    for a in advisories:
+        print(f"ADVISORY: {a}")
+
     n = len(entries)
     print(
         f"OK: reviewer_baseline.json accounts for {n} case(s); "
         f"{len(case_dirs)} on-disk dir(s) registered; "
-        f"{len(measured_ids)} measured; all enums/twins valid"
+        f"{len(measured_ids)} measured; all enums/twins valid; prompt pin current"
     )
     return 0
 
