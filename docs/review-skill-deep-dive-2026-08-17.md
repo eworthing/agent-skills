@@ -76,7 +76,7 @@ measurement per standing practice.
 | `awesome-skills/code-review-skill` | already held | Refreshed today (`95c707b`). |
 | `alirezarezvani/claude-skills` | already held | Refreshed today (`aa8d7788`). |
 | Cloudflare `security-audit-skill` | **skipped** | Security-only, excluded by instruction. |
-| `center-audit` | **found 2026-08-17, clone pending** | Initially unfindable (no owner given; the corpus has prior fabrications on record, `RESEARCH-DELTA.md`). The owner has since surfaced: `VerbalChainsaw/center-audit` (0★, MIT) — an evidence-gated prove/disprove audit framework reportedly shipping trigger/behavior evals and a machine-readable output schema (feature description INFERRED from repo metadata — unverified until cloned and SHA-pinned). The fabrication caution is resolved; cloning awaits approval. |
+| `center-audit` | **cloned** → `contest-refactor/center-audit` (`b154fb0e`) | Initially unfindable (no owner given; the corpus has prior fabrications on record, `RESEARCH-DELTA.md`); the owner later surfaced as `VerbalChainsaw/center-audit` (0★, MIT). **VERIFIED on disk after cloning**: evidence-gated prove/disprove audit framework with `assets/center-audit-output.schema.json`, 20 trigger cases + 10 behavior cases + a behavior rubric under `evals/`. The fabrication caution is fully resolved. Second-wave clone, not yet audited. |
 
 ---
 
