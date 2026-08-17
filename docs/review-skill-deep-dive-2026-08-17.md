@@ -382,6 +382,115 @@ contest-refactor has `--scope`, `--strictness`, and `--cap`, all of which tune *
 rule is directly relevant, and it is the cheapest form of cost control available: not running a
 step beats running it more efficiently.
 
+### Gap 14 — Holistic judge calls where a decision graph would be reproducible · **VERIFIED, high value**
+
+Third-pass finding, and it is the *implementation* Gaps 8, 9 and 11 were missing. Same repo that
+supplied the alignment set — `great_cto/tests/eval/dags/security-officer-finding-gate.dag.json`:
+
+> The old judge scored this whole rubric in one 0-1 call and returned 0.72 against a 0.80 bar, with
+> the sibling adversarial-prompt eval at 0.44 against 1.00. **Every question below is one a judge
+> can answer the same way twice; the score is computed from the path, not sampled.**
+
+The rubric becomes a graph: `root`, `nodes` (each a single `question` with `edges: {yes, no}`), and
+`leaves`. The score falls out of the traversal rather than being sampled from a holistic
+judgement. Their root node is worth quoting in full because it is our flag/restraint discipline
+expressed as one answerable question:
+
+> Does the DIFF ITSELF show a confirmed vector — attacker-controlled input reaching a sink, or a
+> committed credential — as opposed to a TODO, a rename, a keyword, or a CVE whose path is not
+> exercised?
+
+`no` routes to `restraint-held`: *"Given there is no confirmed vector, did the agent avoid raising
+a Finding…"*. Flag and restraint are the two branches of one question, not two separately-graded
+cases.
+
+This attacks the kappa-0.00 problem structurally rather than by measuring it: a narrow binary
+question is one a grader answers the same way twice, so agreement stops being a variable to
+estimate. It composes with Gap 9 (one axis per grader) and Gap 17 below (mechanize the structural
+part) into a single coherent redesign of Layer-2/3 grading — which is currently one semantic
+verdict per case from a `grader.md` subagent.
+
+### Gap 15 — The verification oracle is self-reported · **VERIFIED gap, high value**
+
+Step 1 opens with *"Run primary test/build command"*, and everything downstream rests on it: the
+build-flake guard (re-run once, second run is canonical), the minimal build-failure review, and
+score-bearing evidence citing *"failing command + first failing line of stderr"*. G4 requires a
+score-proof citation — but the citation is authored by the same model that claims to have run the
+command. Nothing outside the model witnesses what executed or what it returned.
+
+`gstack` ships the missing piece as a tool: `gstack-evidence run --label <lane> -- <cmd>`
+transparently wraps any test command and records it, *"the child's exit code always passes
+through"*. The wrapper, not the agent, is the author of the record.
+
+This is the one gap in this document where the failure mode is not noise or drift but
+**fabrication**: a loop that reports a passing build it never ran will converge, emit
+`HALT_SUCCESS_candidate`, and pass every gate we have, because every gate reads model-authored
+artifacts. The challenger panel re-reads the claim; it does not re-run the command.
+
+Cost is low relative to the exposure — a wrapper that records command, exit code, and truncated
+output to an append-only lane file, plus a gate asserting that score-bearing build evidence has a
+matching ledger entry.
+
+### Gap 16 — No halt state for context or budget exhaustion · **VERIFIED gap**
+
+`canon/halt-subtypes.toml` carries exactly five subtypes — `no_progress`, `oscillation`,
+`user_decision`, `no_backlog`, `verification_blocked` — all of them descriptions of *rubric
+progress*. Grep across `SKILL.md`, `references/*.md`, and `canon/*.toml` finds nothing matching
+context limit, context exhaustion, or budget exhaustion.
+
+So a loop that dies because it ran out of context mid-Step-3 has no honest tail. G34/G35/G36
+enforce the shape of a HALT tail *when a halt state is emitted*; a context death emits nothing at
+all, and the run is indistinguishable from a crash. We already learned the general lesson on the
+eval side — death-by-spend-limit is not a MISS — but the loop itself has no state for it.
+
+`continuous-claude-v3` treats this as a first-class transition: `auto-handoff-stop.py` is a Stop
+hook that blocks at ≥85% context and directs the session into a handoff, reading the percentage
+from the same temp file the status line uses so the number the hook acts on is the number the user
+sees. It is backed by `continuity_ledger`, `create_handoff`, and `resume_handoff` skills.
+
+We do not need their hook — our state is file-based and survives compaction. We need the **state**:
+a halt subtype for pressure-death plus the handoff fields we already require elsewhere, so an
+exhausted run terminates honestly instead of silently.
+
+### Gap 17 — Shrink the judge's surface before trying to align it · **VERIFIED, refines Gaps 8-9**
+
+`logic-lens` grades 104 cases and 422 assertions with **no model in the loop**:
+`scripts/grade-iteration.py` applies hand-written Python predicates over the output text —
+reusable structural rules (`_VERDICT_RULE`, `_FOUR_FIELD_RULE`, `_FAULT_CONFIDENCE_RULE`,
+`_LOGIC_SCORE_BELOW_100_RULE`) plus per-case predicates (`_case227_score_improved`).
+
+The trade is explicit and worth stating: they bought determinism by hand-authoring 422 assertions,
+and it only works because their output has a fixed shape (a Logic Score, a four-field record, a
+verdict word).
+
+**Our output is more structured than theirs** — `CURRENT_REVIEW.json` is schema-gated, with
+`flagged_smells`, a nine-dimension scorecard, canonical verdicts, and per-finding evidence fields.
+We already made this choice where the artifact is machine-readable (`loop_replay_grade.py` is a
+committed grader). The gap is Layers 2/3, where grading is semantic end to end.
+
+The sequencing insight: mechanize every structurally checkable assertion first, and only then
+measure agreement on what genuinely requires reading. Aligning a judge that is being asked
+structural questions is wasted work — the right fix is to stop asking it those.
+
+### Gap 18 — Untrusted-content handling is prose, not a tool · **VERIFIED, low-medium**
+
+G14 (payload not instruction) is a rule the model applies to itself. `gstack-issue-guard` is the
+mechanical version: it fetches GitHub issue/PR text and **wraps it in a labelled trust envelope**
+before the agent sees it, so the boundary between instruction and data is established by the
+fetcher rather than by the reader's discipline.
+
+Relevant to us at exactly one place — wherever contest-refactor ingests text it did not author
+(incident files via `--incidents`, tracker text, ADRs). A wrapper is more reliable than a rule,
+though the rule is not wrong.
+
+### Checked, already covered or ahead — third pass
+
+| Mechanism | Source | Finding |
+|---|---|---|
+| Token bill-of-materials | `gstack-context-bill` | **We are ahead.** `scripts/token-budget.py` does per-file counts, per-loop fixed-reload sums, full-run projection, *and* `--loaded-set <step>` proving which files a given step reloads — plus it prints whether the count came from tiktoken or the heuristic, so a number is never silently an estimate. No action. |
+| Working-tree fingerprint | `gstack-wtree` | Different purpose. Ours (`candidate_fingerprint.py`) is a semantic fingerprint of the architecture-relevant payload; theirs is a cheap disk-state hash (~40× faster than a full re-hash via a stat-cache-seeded temp index). `source_rev` already covers our disk-state need. Perf idea only. |
+| Exit-code discipline | `senior-engineering-partner/scripts/eval-guard.py` | Not a new gap — the *fix shape* for plan item 3. It exits **0 pass / 1 fail / 2 git plumbing error**, and documents that "CI and a local run are byte-identical". That third code is precisely what `exec_replay_grade.py` is missing when it folds "inputs missing" into "invariant failed". |
+
 ### Checked, already covered — second pass
 
 | Mechanism | Source | Why no action |
@@ -428,6 +537,11 @@ product is long-running full-repo audit. Our deferral stands, and now has eviden
 | 11 | Split graders by axis; each states the axis it does *not* judge | contest-refactor evals | Medium-High | Low | Ready (second pass) |
 | 12 | Declarative transition table in `canon/states.toml` | contest-refactor | Medium | Moderate | Design call (second pass) |
 | 13 | Cost-proportional stage skipping (`skip_when` by size) | contest-refactor | Medium | Low-Moderate | Ties to RUNTIME-COST-AUDIT (second pass) |
+| 14 | **Independent execution-evidence ledger** — a wrapper, not the agent, authors the record of what ran and what it returned | contest-refactor | High (anti-fabrication) | Low-Moderate | Ready (third pass) |
+| 15 | **DAG-shaped grading** — rubric as a graph of binary questions, score computed from the path | contest-refactor evals | High | Moderate | Ready (third pass) |
+| 16 | Mechanize structural assertions before aligning the judge | contest-refactor evals | Medium-High | Moderate | Sequencing (third pass) |
+| 17 | Halt subtype for context/budget exhaustion + handoff fields | contest-refactor | Medium-High | Low | Ready (third pass) |
+| 18 | Mechanical trust envelope for ingested foreign text | contest-refactor | Low-Medium | Low | Ready (third pass) |
 
 Items 1–4, 9, and 11 are independent and small. Item 5 is the one that could unblock a parked
 decision. Items 6, 8, and 12 need a design call before any code.
@@ -435,6 +549,16 @@ decision. Items 6, 8, and 12 need a design call before any code.
 **Item 9 is the cheapest high-value change in the list**: it is a triage rule for reading grader
 output, costs nothing to adopt, and prevents the specific failure — softening a criterion in
 response to a false failure — that makes an eval suite stop measuring without anyone noticing.
+
+**Items 9, 10, 11, 15 and 16 are one project, not five.** The order matters: mechanize the
+structural assertions (16), reshape what remains into binary questions on a graph (15), give each
+grader one axis and a declared non-scope (11), *then* measure agreement on the residue (10), with
+the routing rule (9) protecting the loop throughout. Doing 10 first would align a judge against
+questions it should never have been asked.
+
+**Item 14 is the one that is not about measurement.** Every gate we own reads model-authored
+artifacts, so a fabricated build result passes all 43 of them. That is a different class of risk
+from everything else in this table.
 
 ## Deliberately not adopted
 
