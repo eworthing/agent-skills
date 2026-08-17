@@ -278,8 +278,8 @@ option with an honest cost, not a recommendation.
 
 ### Gap 8 — No grader-alignment measurement anywhere in the eval suite · **VERIFIED gap, high value**
 
-Second-pass finding. `great_cto` carries 450 scripts, 57 hooks, 114 eval files and 9 TOML canon
-files, and appears **twice** in our entire 21-doc analysis corpus. The thing we missed is in
+Second-pass finding. `great_cto` carries 440 scripts, 47 hooks, 114 eval files and 9 TOML canon
+files, and appears **twice** in our entire 35-doc analysis corpus. The thing we missed is in
 `tests/eval/judge-alignment/`:
 
 > An unaligned judge is a random number generator with good grammar. Measure its agreement with
@@ -307,7 +307,7 @@ they record it happening three times in one session before anyone named it.
 
 `wshobson-agents` implements the machinery version independently: PluginEval reports **Cohen's
 kappa** across judges when `judges > 1`. Two independent implementations in the corpus; neither
-appears in any of our 21 gap docs.
+appears in any of our 22 gap docs.
 
 **Our exposure is real but narrower than theirs.** Layers 2/3 grade semantically via a `grader.md`
 subagent, and `evals/README.md:154` states the measured axis is **"restraint + vocabulary, NOT
@@ -382,7 +382,7 @@ contest-refactor has `--scope`, `--strictness`, and `--cap`, all of which tune *
 rule is directly relevant, and it is the cheapest form of cost control available: not running a
 step beats running it more efficiently.
 
-### Gap 14 — Holistic judge calls where a decision graph would be reproducible · **VERIFIED, high value**
+### Gap 12 — Holistic judge calls where a decision graph would be reproducible · **VERIFIED, high value**
 
 Third-pass finding, and it is the *implementation* Gaps 8, 9 and 11 were missing. Same repo that
 supplied the alignment set — `great_cto/tests/eval/dags/security-officer-finding-gate.dag.json`:
@@ -406,11 +406,11 @@ cases.
 
 This attacks the kappa-0.00 problem structurally rather than by measuring it: a narrow binary
 question is one a grader answers the same way twice, so agreement stops being a variable to
-estimate. It composes with Gap 9 (one axis per grader) and Gap 17 below (mechanize the structural
+estimate. It composes with Gap 9 (one axis per grader) and Gap 15 below (mechanize the structural
 part) into a single coherent redesign of Layer-2/3 grading — which is currently one semantic
 verdict per case from a `grader.md` subagent.
 
-### Gap 15 — The verification oracle is self-reported · **VERIFIED gap, high value**
+### Gap 13 — The verification oracle is self-reported · **VERIFIED gap, high value**
 
 Step 1 opens with *"Run primary test/build command"*, and everything downstream rests on it: the
 build-flake guard (re-run once, second run is canonical), the minimal build-failure review, and
@@ -431,7 +431,7 @@ Cost is low relative to the exposure — a wrapper that records command, exit co
 output to an append-only lane file, plus a gate asserting that score-bearing build evidence has a
 matching ledger entry.
 
-### Gap 16 — No halt state for context or budget exhaustion · **VERIFIED gap**
+### Gap 14 — No halt state for context or budget exhaustion · **VERIFIED gap**
 
 `canon/halt-subtypes.toml` carries exactly five subtypes — `no_progress`, `oscillation`,
 `user_decision`, `no_backlog`, `verification_blocked` — all of them descriptions of *rubric
@@ -452,7 +452,7 @@ We do not need their hook — our state is file-based and survives compaction. W
 a halt subtype for pressure-death plus the handoff fields we already require elsewhere, so an
 exhausted run terminates honestly instead of silently.
 
-### Gap 17 — Shrink the judge's surface before trying to align it · **VERIFIED, refines Gaps 8-9**
+### Gap 15 — Shrink the judge's surface before trying to align it · **VERIFIED, refines Gaps 8-9**
 
 `logic-lens` grades 104 cases and 422 assertions with **no model in the loop**:
 `scripts/grade-iteration.py` applies hand-written Python predicates over the output text —
@@ -472,7 +472,7 @@ The sequencing insight: mechanize every structurally checkable assertion first, 
 measure agreement on what genuinely requires reading. Aligning a judge that is being asked
 structural questions is wasted work — the right fix is to stop asking it those.
 
-### Gap 18 — Untrusted-content handling is prose, not a tool · **VERIFIED, low-medium**
+### Gap 16 — Untrusted-content handling is prose, not a tool · **VERIFIED, low-medium**
 
 G14 (payload not instruction) is a rule the model applies to itself. `gstack-issue-guard` is the
 mechanical version: it fetches GitHub issue/PR text and **wraps it in a labelled trust envelope**
