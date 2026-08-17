@@ -5,8 +5,9 @@ Deep dive into six external review/audit skills, compared against `contest-refac
 
 Sources: four repos cloned today plus two already in the corpus (`brooks-lint`, `logic-lens`)
 that were ranked highest by the survey that prompted this work, extended by second and third
-passes over the wider held corpus and a fourth pass over a ten-repo expansion cloned the same
-day (all SHA-pinned in the source inventory below).
+passes over the wider held corpus, a fourth pass over a ten-repo expansion, and a fifth pass
+over the nine-repo second wave — all cloned the same day, all SHA-pinned in the source inventory
+below.
 
 ## Evidence discipline
 
@@ -55,6 +56,20 @@ The fourth pass audits the ten repos cloned 2026-08-17 after the third pass:
 | `planning-with-files` | `9b7d0a00` | Items 14, 16, 17, 18; attestation; test-must-exec-shipped-artifact |
 | `agent-verifier` | `23d73ad3` | Rule-level `[P]`/`[H]` confidence alternative; escape-hatch tables |
 | `code-quality-atlas` | `d4ec723d` | D18 no-scalar tension; floor plateau; provenance hashes; literal-string result |
+
+The fifth pass audits the nine-repo second wave, cloned 2026-08-17:
+
+| Repo | SHA | Used for |
+|---|---|---|
+| `alibaba-open-code-review` | `533f7367` | Gaps 22, 24, 25; the review-filter prompt; coverage manifest; benchmark caveat |
+| `opendatahub-agent-eval-harness` | `db0732c3` | Items 19-22 validation (McNemar completion); tranche-3 imports |
+| `aws-agent-skill-eval` | `13b2277b` | Item 22's in-the-wild violation; static safety scanner (item 29); deterministic-first grading |
+| `center-audit` | `b154fb0e` | Gap 24 (evidence grades, trajectory arithmetic); Gap 26 (repair contract); cascade lenses |
+| `tech-audit-skill` | `41869d17` | Gap 22 (escalate-on-hit, churn prior); Gap 26 (essentiality ladder); treatment tags |
+| `sentry-skills` | `24fdb833` | Gap 21/25 (admission checklists, research-vs-report scope); dangling-route caveat |
+| `skillet` | `5b2a7efb` | Gap 21 (latent-premises, retry-safety); Gap 26 (leverage sort, dispositions) |
+| `conorbronsdon-agent-skills` | `9e5276b5` | Gap 21 (operational, reference-comparison lenses); enforcement-tier rating |
+| `cloudflare-security-audit` | `8bac4200` | Gap 21 (anti-taxonomy agents, multi-run recall); Gap 25 (three-pass pipeline) |
 
 A named mechanism at a pinned SHA is evidence the mechanism **exists**, not evidence it is
 **effective**. Effectiveness claims here rest only on the sources' own recorded measurements
@@ -854,6 +869,171 @@ remain hard gates — and item 6's note must run the three-way comparison before
 
 ---
 
+## Fifth pass — the second wave, and the capability backlog (2026-08-17)
+
+Nine repos, four parallel auditors, every quote below spot-verified against the clone. This
+batch inverts the fourth pass: it is rich in **object-level capability** — new ways to detect,
+rate, and improve code — and thin on eval machinery, which is exactly the rebalancing the
+backlog needed. Gaps 21-26 and items 23-29 below are the capability backlog; per the standing
+priority, they concern what the Critic *finds and fixes*, not how the skill is measured.
+
+### Claims that did not survive contact
+
+| Repo | What the survey/README said | What the clone shows |
+|---|---|---|
+| `tech-audit-skill` | "13-dimension framework", "~250-line spine", "5-7 hour full audit" | A **16**-dimension registry; a **143**-line spine; and the execution file replaced hours with *"Scope, not clock"* — the README is stale in three directions. Plus a dead routing column (`cuts/deep.md` maps through a "Topics" column the registry doesn't have) and a red test as cloned. |
+| `cloudflare-security-audit` | "one run finds ~half" | The quote is real (`SKILL.md:37`) — and there is **no methodology, sample size, or data anywhere in the repo** behind "Testing shows". The mechanism (run-numbered dirs, prior-run gap targeting) is real; the statistic is marketing. Also: ~60% of the repo is security content, so "methodology-only" undersold it — four of its twelve hunting lenses (sad-path, implicit trust, parser disagreement, round-trip survival) are pure correctness lenses. |
+| `alibaba-open-code-review` | Vendor benchmark: higher precision/F1, ~1/9 tokens | **Nothing in-repo substantiates it** — no dataset, harness, scorer, or matching rubric; four PNGs and an external link. The ~1/9 token figure is plausibly confounded by pre-LLM file exclusion. Also: `ocr scan` has **no coverage manifest by design** (`RunManifest returns nil`), and "smart file bundling" is extension/directory grouping, not semantics. |
+| `sentry-skills` | security-review routes into 5 language + 5 infrastructure guides | **Six of eleven routed files do not exist** (`languages/` has only python+javascript; `infrastructure/` only docker) — dangling routes in a 924★ production skill. Copy only routes that resolve. |
+| `center-audit` | "24 sections", self-validating | The output format defines **21** sections, and the repo **fails its own validator** (a prose example `references/foo.md` trips the resource check; SKILL.md is 503 lines against its own 500 limit). The mechanisms are real regardless. |
+| `aws-agent-skill-eval` | "reliability via trigger precision"; hard/soft/baseline assertion levels | `trigger_precision` is **recall** and `no_trigger_precision` is **specificity** — mislabeled in the shipped API while their own RESULTS.md uses the right words. The assertion levels are **docstring fiction** (zero implementation). `style_score` is `outcome_score` counted twice; the golden dataset is calibrated on itself and then reported as "100% accuracy". |
+| `conorbronsdon-agent-skills` | ships `repo-audit` (Enforced/Advisory/Guidance) | **Absent from the clone** — it lives in a separate upstream repo. The methodology exists in-clone as `eval-integrity`'s PRESENT/PARTIAL/ABSENT ratings, with the two good rules attached (a rating with no `file:line` is a guess; a grep miss alone does not establish ABSENT). |
+
+### Items 19-22, validated against shipped prior art
+
+`opendatahub-agent-eval-harness` (~30k LOC, mature) is the closest prior art to the tranche-3
+instrumentation, and it **independently built the structure item 20's test completes**: its
+pairwise judging runs every case twice with slots swapped, a side wins only if it wins both
+orderings, ties are excluded — that is exactly McNemar's discordant-pair table, and the only
+gate they run on it is a bare `min_win_rate` with no test. Frame item 20 as completing shipped
+machinery, not inventing it. Their judge-sample aggregation (median-low over N samples,
+instability preserved with all rationales) is a *judge-level* noise floor that composes with our
+*arm-level* A/A floor — both are needed to attribute a delta to the skill rather than the judge.
+And their degenerate-design guards (returning `p_value: None` with a reason instead of a number
+when variance is zero or F is non-finite) are the post-hoc cousin of our a-priori
+discriminating-power screen. What they lack is precisely items 19-22: no A/A floor, no paired
+test, no power, no trial-validity taxonomy — a timed-out run is scored as a content failure
+(zero `exit_code` filtering sites), which is the exact conflation Gap 19 names.
+
+`aws-agent-skill-eval` demonstrates, in published form, the failure each item exists to
+prevent: its headline +100% results come from criteria the control arm **structurally cannot
+satisfy** (*"Only with-skill can see the SKILL.md to find the API key!"* — celebrated as "the
+cleanest proof of skill value"; item 22's violation in the wild); its accept rule is
+`mean_with >= mean_without` with no floor (+0.001 passes; item 20); harness timeouts grade as
+0% quality (item 19); and its golden dataset does all three of our three sets' jobs at once,
+unblinded, with assertions tuned to the instrument (the design our
+qualification-before-split ordering exists to prevent).
+
+Five imports into tranche 3 from this pair: a **coverage gate against denominator shrinkage**
+(`max_error_rate` — our `invalid` category creates the survivor-metric hazard it solves: nine
+voided trials and one pass must not report 100%); a **broken-instrument detector** (when a judge
+fails every case, check whether its referenced fields still exist before reading it as a
+regression); **deterministic-first grading with per-assertion `method` provenance** (AWS's
+deterministic tier measured 100% accurate; its LLM tier produced the only inconsistency);
+**judge-sample stability** as a persisted per-case artifact; and repeated-measures ANOVA with
+case as a blocking factor if the design ever exceeds two arms (with their min-p-across-
+coefficients hazard noted as the thing not to copy).
+
+### Gap 21 — Detection breadth: missing lens families, and no agent outside the taxonomy · **VERIFIED gap, capability**
+
+Four lens families with no counterpart in our canon, each fully specified upstream: skillet's
+**latent-premises** (contract / environment / ordering / cardinality / input — unenforced
+assumptions, admitted only when *"genuinely unenforced AND you can name what concretely breaks
+when it fails"*); **retry-safety** (second-run safety over migrations, payments, queues, with
+the expand-migrate-contract deploy-window checks); conorbronsdon's **operational** lens (retry
+budgets, cost-at-scale, deployment-config drift — it caught the P0 that five rounds of
+line-level review missed); and **reference-comparison** (drift from the SDK/protocol reference:
+missing steps, reordered steps, default mismatches). On top of the families, Cloudflare
+contributes the *structural* fix for any finite taxonomy: a **Wildcard agent** given no category
+(*"your job is to find the thing nobody thought to look for. Read code that looks boring"*)
+paired with an **"obvious things" agent** (*"the dumb stuff… everyone assumes someone else
+already checked"*), plus **multi-run recall as a mechanism** — run-numbered output dirs, prior
+runs read as negative priors (skip known findings, weight toward unhunted categories), and
+honest coverage disclosure when no prior runs exist. Sentry adds the scope rule that makes
+breadth affordable: **research the entire codebase to build confidence; report only in scope.**
+
+### Gap 22 — No deterministic selection, coverage manifest, or resumable traversal · **VERIFIED gap, capability**
+
+alibaba ships the whole missing layer, deterministically: five ordered per-file gates each
+returning a **typed exclusion reason** (surfaced per file as `will_review` + `exclude_reason`);
+a run manifest where *"selected … equals the disjoint union of completed, reused, failed and
+waived"* and the terminal state is **derived from coverage, never stored**; typed 8-value
+failure classes; two identities per item (stable `ItemID` vs content `Fingerprint`); and
+fingerprint-keyed JSONL resume where a `failed` record retracts an earlier `done`. tech-audit
+adds the traversal *prior*: a git churn heatmap biasing deep reads toward the top-30 most-touched
+files, and **registry treatment tags** (`always-deep / default-deep / scan / release-only`)
+where scan-tier dimensions escalate to deep only when a finding fires — constant-cost sweep
+everywhere, expensive pass only where the sweep bites. Notably, *nobody* in all 55 clones has
+partitioned whole-repo traversal with a coverage ledger — alibaba's manifest covers diff review
+only (scan returns nil by design), tech-audit samples, center-audit forbids it by doctrine. The
+gap is real and unfilled; closing it is genuine differentiation, and the pieces above assemble
+it.
+
+### Gap 23 — No tool-grounded substrate, and no per-language rules · **VERIFIED gap, capability**
+
+Our Critic reviews from judgment alone. The pattern across the wave: **run cheap deterministic
+tools first, and forbid the model from duplicating them.** tech-audit's tool matrix orders
+twelve tools cheapest-first (gitleaks → native audit → linters → typecheck → trivy → semgrep)
+with an interrupt rule ("if a fast tool surfaces a 🔴, escalate immediately") and a context rule
+(tool output to a file, summarize counts — never dump raw output into context). alibaba's
+per-language rule docs are the authoring template: a **precision preamble** (*"Favor precision
+over recall… A false positive costs reviewer trust"*), an explicit **negative clause on every
+bullet** (the thing *not* to flag), **version-conditioned rules** (Go 1.22 loopvar, Go 1.23
+timer semantics — something a generic smell taxonomy cannot express), and the anti-duplication
+mandate (*"Do not duplicate findings that `go vet`, Staticcheck… can determine reliably"*).
+Sentry's grep-patterns-per-reference-file show the complementary framing: every taxonomy entry
+carries its own mechanical detector, **explicitly labeled a lead, not a finding**.
+
+### Gap 24 — Evidence is asserted prose, not computed fact · **VERIFIED gap, capability**
+
+Two shipped mechanisms turn evidence chains into checkable objects. alibaba: the model **never
+emits line numbers** — it emits the code quote verbatim, and a deterministic resolver computes
+the lines (sliding-window match, deterministic cross-file relocation *before* any LLM
+re-anchoring — because the LLM fallback *"overwrites the one piece of evidence pointing at the
+real code"* — and `start_line == 0` as an honest unanchored state). center-audit: evidence
+carries a **strength grade** (A executed/reproducible, B direct anchored, C corroborating
+inference, D hypothesis) and an **`independence_group`** field with an enumerated
+non-independence list (*"two agents that received the first agent's conclusion and repeated
+it"*) — making double-counted corroboration a schema-detectable error — plus **trajectory
+arithmetic**: *"One material unproven link forbids `CERTAIN`. Two sequential unproven links make
+the path a hypothesis, not a finding."* Our Claim→Source→Consequence→Remedy chain has none of
+this: no computed anchoring, no strength grades, no independence accounting, no gap arithmetic.
+
+### Gap 25 — Findings pass one gate, not a disproof pipeline · **VERIFIED gap, capability**
+
+Cloudflare runs three passes with an independence boundary at each: dedup **by shared root
+cause** first (overlap is the recall strategy; dedup is the cost control), then a **separate
+disproof agent per finding** (*"hunting agents are biased toward finding things; the validation
+agents are biased toward killing false positives"*), then a **fresh-agent verification** pass
+(*"You did NOT write this finding"*) with a ternary `VERIFIED / CORRECTED: [field] / REJECTED`
+verdict that also checks whether the **remediation would actually work**. skillet's bug-hunt
+states the admission contract most sharply: the verifier's job is to REFUTE, *"no trigger, no
+bug"*, refuted findings are dropped silently and reported only as a count. alibaba's
+review-filter is the precision complement, applied at synthesis: an **asymmetric loss function**
+stated in the prompt (*"Removing a correct comment silently destroys a real finding… nobody
+learns that it was dropped"*), exactly **two grounds for removal**, **protected subjects vetoed
+before correctness is even judged**, and a field-ordering trick (analysis serialized before
+IDs) that measurably stopped the model from removing findings it had just called protected. Our
+challenger panel certifies a terminal state; nothing in our loop runs per-finding disproof, and
+nothing protects findings from over-zealous filtering.
+
+### Gap 26 — Remediation is untyped, and fixes are never re-validated · **VERIFIED gap, capability**
+
+tech-audit types every fix at the title level with the **essentiality ladder** (`delete: →
+stdlib: → native: → yagni: → shrink:`) plus a re-routing boundary (deletion findings in
+correctness/security/a11y territory route to the owning dimension instead — the classic
+simplification-critic failure, prevented structurally). skillet closes each finding with
+**exactly one disposition** (guard / document / encode-in-type — *"a wall of options is a
+punt"*) and sorts the merged backlog by **severity × effort leverage** — the sort key our
+findings lack. center-audit contributes the two deepest pieces: a **repair contract** whose
+consumer must *independently re-validate the invariant before editing* (*"failing-before tests
+must be authored… against the audit's invariant, not against the proposed fix's diff"*), closed
+by a 4-value `repair_revalidation` field (`INVARIANT_HOLDS / DRIFTED / REPLACED /
+CONTRACT_REJECTED`); and a **5-condition promotion test** for when a local fix may escalate to
+structural refactor (*"Do not redecorate the cathedral"*) — the inverse of our mandate, and
+therefore exactly the gate our loop should pass before it refactors instead of patches.
+
+### Where we remain ahead
+
+None of the nine runs anything like our loop: alibaba has **zero quality evals** (100+ Go test
+files, none asserting finding quality) and a bare 4-value severity enum; Cloudflare has zero
+tests of any kind; center-audit and Cloudflare both stop at the contract boundary — neither
+applies a fix and re-verifies, which is precisely where the Actor-Critic loop lives; skillet's
+eval runner is a stub (2 of 36 skills have evals); sentry's review skills ship no evals at all.
+Severity anchors, mechanical gates, the findings registry, the challenger panel, and the 5-layer
+suite have no counterpart anywhere in the wave. The capability gaps above are additive to that
+position, not corrective of it.
+
 ## Improvement backlog (ranked at discovery)
 
 | # | Change | Skill | Value | Cost | Status |
@@ -880,6 +1060,13 @@ remain hard gates — and item 6's note must run the three-way comparison before
 | 20 | **A/A noise floor + paired significance gate** — identical-build distribution pinned per keyed config; exact McNemar or paired permutation with preregistered effect/alpha/power and an explicit inconclusive outcome | contest-refactor evals | High | Moderate | Ready (fourth pass) |
 | 21 | **Trial-validity taxonomy** — `invalid` reserved for exogenous harness failures, reported per arm with reasons; adherence failures always count; asymmetric invalidity voids the comparison | contest-refactor evals | Medium-High | Moderate | Ready (fourth pass) |
 | 22 | **Paired with/without baseline** — same-turn paired runs scoring the delta; outcome criteria both arms can satisfy, skill-contract criteria reported separately, never mixed into lift | contest-refactor evals | High | Moderate | Ready (fourth pass) |
+| 23 | **Detection-lens expansion** — latent-premises, retry-safety, operational, and reference-comparison lens families; Wildcard + "obvious things" anti-taxonomy agents; run-numbered multi-run recall with prior-run gap targeting | contest-refactor | High | Moderate | Ready (fifth pass) |
+| 24 | **Deterministic selection + coverage manifest + resumable scan** — ordered gates with typed exclusion reasons; disjoint coverage sets with derived terminal state; fingerprint-keyed resume; churn prior; escalate-on-hit | contest-refactor | High | Moderate | Ready (fifth pass) |
+| 25 | **Tool-grounded substrate + per-language rules** — cheap-first tool ladder; don't-duplicate-deterministic-tooling mandate; precision preambles with explicit negative clauses and version-conditioned rules | contest-refactor | High | Moderate | Ready (fifth pass) |
+| 26 | **Computed evidence anchoring + strength grades** — model emits the quote, engine computes the lines; A/B/C/D strength + `independence_group`; trajectory gap arithmetic | contest-refactor | High | Moderate | Ready (fifth pass) |
+| 27 | **Per-finding disproof pipeline** — root-cause dedup → separate disprover → fresh-agent VERIFIED/CORRECTED/REJECTED (incl. remediation check); asymmetric-loss synthesis filter with protected-subject vetoes | contest-refactor | High | Moderate | Design with item 6's validator |
+| 28 | **Typed remediation + fix re-validation** — essentiality-ladder fix prefixes with re-routing boundary; one-disposition rule; `repair_revalidation` contract; severity × effort leverage sort; 5-condition refactor-promotion test | contest-refactor | Medium-High | Low-Moderate | Ready (fifth pass) |
+| 29 | **Static safety/structure scan of skill artifacts** — AWS's SEC-001..009 + STR checks as a zero-cost deterministic layer over our own skills | repo-wide | Medium | Low | Ready (fifth pass) |
 
 ### Execution order
 
@@ -944,6 +1131,19 @@ criterion edit.
 
 **Tranche 4 — state model: item 12, then 13 and 17.** Transitions become declarative before
 anything reads them to skip a stage or to reach a new halt state.
+
+**Tranche 5 — capability: items 23-28, with 29 anywhere.** The object-level work, sequenced by
+dependency: 24 and 25 are infrastructure (what gets looked at, and with which tools) for 23
+(what gets seen); 26 hardens what every lens emits; 28 types what every finding proposes; 27 is
+designed together with item 6's per-finding validator. The bridge to tranche 3 is the standing
+rule that makes this round of coverage work provable where the last one wasn't: **every new
+lens ships with discriminating fixtures and is admitted only on measured paired lift** — the
+lens-value question our earlier domain-lens measurement could not answer (recall lift 0 on
+too-legible fixtures) is exactly what items 19-22 now instrument. Tranche-3 additions from the
+fifth pass: the `max_error_rate` coverage gate on the `invalid` category, the
+judge-failed-every-case broken-instrument detector, deterministic-first grading with per-assertion
+`method` provenance, judge-sample stability as a persisted artifact, and repeated-measures
+ANOVA (case as blocking factor) if the design ever exceeds two arms.
 
 **Experiments, not tranches: items 5 and 6.** Each needs a protocol with a preregistered decision
 rule before any run — Gap 2's cautions for item 5, the labelled Evidence-Chain comparison for

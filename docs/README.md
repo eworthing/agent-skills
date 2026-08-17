@@ -6,7 +6,7 @@ for work that spans `contest-refactor`, `peer-plan-review`, and `quorum-review` 
 
 | Doc | What it covers |
 |---|---|
-| [review-skill-deep-dive-2026-08-17.md](review-skill-deep-dive-2026-08-17.md) | Four-pass deep dive into the external review/audit-skill landscape — six primary skills, the wider held corpus, and a ten-repo expansion — with a gap analysis against our three workflow skills, a peer-reviewed improvement backlog (20 gaps, 22 items), and dependency-ordered execution tranches. |
+| [review-skill-deep-dive-2026-08-17.md](review-skill-deep-dive-2026-08-17.md) | Four-pass deep dive into the external review/audit-skill landscape — six primary skills, the wider held corpus, and a ten-repo expansion — with a gap analysis against our three workflow skills, a peer-reviewed improvement backlog (26 gaps, 29 items — trust tranches 0-4 plus the fifth-pass capability tranche), and dependency-ordered execution tranches. |
 
 ## Related
 
