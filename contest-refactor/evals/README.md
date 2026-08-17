@@ -380,6 +380,31 @@ working as intended: it caught a real efficacy regression before it shipped.
 Full write-up — method, results, lessons learned, and how to re-run:
 [reviewer-model-experiment.md](reviewer-model-experiment.md).
 
+## Judge-finding routing (Layers 2–3 semantic grading)
+
+Layers 2 and 3 grade semantically — a `grader.md` subagent (or the reviewer-judgment harness)
+reads the model's output against `assertions[]` / `expected_verdict` and writes a verdict with
+reasoning. That reasoning is itself sometimes wrong, in a specific and self-concealing way: it
+concedes the response is correct in substance ("correctly identifies X…") but fails it on
+wording or placement ("…but does not name it"). That is a **judge finding**, not an agent
+finding — external measurement (a kappa-0.00 grading incident on a separate corpus) is what
+surfaced the pattern.
+
+- **Trigger.** A grader verdict whose own reasoning concedes the response is substance-correct
+  but marks it failed for wording, placement, or naming — not a case where the response
+  actually missed the defect or over-flagged a restraint twin.
+- **Action.** Record it in [`judge-alignment-log.md`](judge-alignment-log.md). Do **not** edit
+  the failing criterion, the grader prompt, or skill prose in response to a single instance.
+  That is how a suite quietly stops measuring: each such edit teaches the grader (or the skill)
+  to match one grader's wording instead of fixing the grader's judgment. Alignment gets
+  measured and fixed as its own pass (backlog item 10), not patched criterion-by-criterion as
+  findings turn up.
+- **Exception — canon smell names are not cosmetic.** `flagged_smells` values are consumed by
+  gates and dedup (`canon/*.toml`), so a verdict that fails a response for not naming the exact
+  canon smell (vs. describing it in prose) is a legitimate fail, not a judge finding — the name
+  *is* the artifact here, not decoration on top of it. Route only genuine wording/placement
+  disputes; don't route around a real vocabulary-precision requirement.
+
 ## Layer 4 — loop-replay regression (`loop-fixtures/`, `loop_replay_baseline.json`)
 
 Layers 1–3 each test a *slice*: artifact rules (no loop), refactoring judgment (no real loop —
