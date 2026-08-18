@@ -1247,5 +1247,19 @@
     "total_named": 44034866,
     "total_lean": 41368816,
     "dominant_cost": "GRADING, at ~57% of the total -- more than both arms combined. Its driver is grader OUTPUT tokens (8k-21k per call at a 5x weight), which is the judgment being paid for, plus the 2.0 calls-per-output trigger multiplier. Lean dispatch does not touch either. The single largest uncertainty in this projection is the trigger rate, which the pilot cannot estimate because both its scenarios were twin_defective."
+  },
+  "grader_tier_test": {
+    "date": "2026-08-18",
+    "method": "Re-graded the 4 committed pilot outputs with claude-haiku-4-5 against the identical frozen grader prompt, and compared to the 8 Sonnet grades already on record. Reuses measured data rather than re-running an arm -- the low-token tier-test method this repo documented in evals/reviewer-model-experiment.md.",
+    "reference_standard": "NOT perfection. Sonnet disagreed with ITSELF on 1 of 3 double-graded slots, so Sonnet's own self-agreement (2/3) is the ceiling. Holding a cheaper tier to a standard the incumbent does not meet would be a rigged comparison.",
+    "result": {
+      "haiku_vs_sonnet_adjudicated_final": "2/4 semantic grades",
+      "sonnet_vs_sonnet": "2/3 double-graded slots",
+      "raw_agreement_verdict": "indistinguishable at this n -- 2/4 vs 2/3 separates nothing",
+      "token_cost": "haiku used 57% of sonnet's tokens per grader call, before any price difference"
+    },
+    "the_finding_that_actually_decides_it": "BOTH of Haiku's differences ran the SAME DIRECTION: `over_flagged` where Sonnet said `held`. That is precisely the failure mode this repo already measured at ~5M tokens in the reviewer tier experiment -- 'haiku over-rejects legitimate refactors (GATE B fail); never false-approves (GATE A clean)'. Two independent experiments, two different ROLES (reviewing code, grading restraint), same directional bias. A raw agreement count of 2/4 is noise at this n; a replicated DIRECTION is not.",
+    "consequence": "Disqualifying for unsupervised restraint grading: Decision 4 is a veto and reads the 4 restraint twins on exactly the semantic tier where the bias lands. A grader biased toward `over_flagged` would manufacture restraint regressions and veto programme retargeting on an artifact. But the SAME evidence says Haiku's LENIENT verdicts are trustworthy -- it never false-approves -- which is what makes an asymmetric cascade sound rather than hopeful.",
+    "arms_stay_sonnet": "Unrelated to cost and not negotiable on cost grounds. The mechanical rule is 'caught iff (verdict==rejected OR blocks_95) AND target dimension < 9.5'. A model that over-rejects scores as CATCHING flags for free, and over-flags the twins. Haiku arms would ceiling the flag half and floor the twin half in BOTH arms at once -- less money to measure nothing."
   }
 }
