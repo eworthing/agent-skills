@@ -73,6 +73,7 @@ from _artifact_history import (  # noqa: E402
     check_retirement_rule,
 )
 from _artifact_panel import check_g32_halt_success_challenge  # noqa: E402
+from _artifact_remediation import check_g46_general_remediation_fields  # noqa: E402
 from _artifact_residual import (  # noqa: E402
     check_g5_sub95_residual_fields,
     check_g37_terminal_residual_accounting,
@@ -155,6 +156,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g37_terminal_residual_accounting(current_review))
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g45_exhaustion_record(current_review, canon))
+    issues.extend(check_g46_general_remediation_fields(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
     issues.extend(check_g41_cap_loop_executed(current_review))

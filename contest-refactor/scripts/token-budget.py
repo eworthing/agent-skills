@@ -229,7 +229,12 @@ CEILINGS = {
     # tight addition so the loop knows the state exists and what shape (`exhaustion`
     # object, G45 coupling) to emit for it. Deliberate escape hatch per this dict's own
     # guard comment below -- measured at 83,253 tok, smallest 100-multiple headroom above it.
-    "loop": 83_300,  # per-loop fixed reload (unique loads, apple lens)
+    # Bumped 83,300 -> 84,200 for backlog item 28 (general remediation fields: finding_family
+    # / effort / repair_revalidation, G46): validation.md, output-format-json.md and
+    # output-format-json-rules.md each needed an addition describing the new required
+    # loop_result fields + the drift_notes coupling. Deliberate escape hatch per this dict's
+    # own guard comment below -- measured at 84,115 tok, smallest 100-multiple headroom above it.
+    "loop": 84_200,  # per-loop fixed reload (unique loads, apple lens)
     "skill_md": 10_600,  # SKILL.md trigger read
 }
 

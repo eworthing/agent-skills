@@ -38,6 +38,9 @@ class Canon:
     residual_blocker_kinds: tuple[str, ...]
     exhaustion_kinds: tuple[str, ...]
     detection_modes: tuple[str, ...]
+    finding_families: tuple[str, ...]
+    effort_levels: tuple[str, ...]
+    repair_revalidation_outcomes: tuple[str, ...]
     validation_gates: Mapping[str, str]
     # Extended enums that are useful to validators but not common enough to
     # promote into first-class Canon fields live in .extra.
@@ -170,6 +173,16 @@ def load_canon(skill_root: Path | None = None) -> Canon:
     )
     detection_modes = _require_list(exhaustion_kinds_data, "detection_modes", exhaustion_kinds_path)
 
+    remediation_fields_path = canon_dir / "remediation-fields.toml"
+    remediation_fields_data = _load_toml(remediation_fields_path)
+    finding_families = _require_list(
+        remediation_fields_data, "finding_families", remediation_fields_path
+    )
+    effort_levels = _require_list(remediation_fields_data, "effort_levels", remediation_fields_path)
+    repair_revalidation_outcomes = _require_list(
+        remediation_fields_data, "repair_revalidation_outcomes", remediation_fields_path
+    )
+
     gates_data = _load_toml(canon_dir / "validation-gates.toml")
     if not isinstance(gates_data, dict) or "validation_gates" not in gates_data:
         sys.stderr.write(
@@ -237,6 +250,9 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         residual_blocker_kinds=residual_blocker_kinds,
         exhaustion_kinds=exhaustion_kinds,
         detection_modes=detection_modes,
+        finding_families=finding_families,
+        effort_levels=effort_levels,
+        repair_revalidation_outcomes=repair_revalidation_outcomes,
         validation_gates=MappingProxyType(gates_map),
         extra=MappingProxyType(extra),
     )
@@ -270,6 +286,12 @@ if __name__ == "__main__":
     )
     print(f"exhaustion_kinds ({len(canon.exhaustion_kinds)}): {', '.join(canon.exhaustion_kinds)}")
     print(f"detection_modes ({len(canon.detection_modes)}): {', '.join(canon.detection_modes)}")
+    print(f"finding_families ({len(canon.finding_families)}): {', '.join(canon.finding_families)}")
+    print(f"effort_levels ({len(canon.effort_levels)}): {', '.join(canon.effort_levels)}")
+    print(
+        f"repair_revalidation_outcomes ({len(canon.repair_revalidation_outcomes)}): "
+        f"{', '.join(canon.repair_revalidation_outcomes)}"
+    )
     print(
         f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}"
     )

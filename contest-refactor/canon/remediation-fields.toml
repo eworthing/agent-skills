@@ -1,0 +1,99 @@
+# Canonical vocabulary for the GENERAL remediation-record fields on loop_result
+# (backlog item 28, general half): finding_family, effort, and
+# repair_revalidation.outcome. Three CLOSED enums in one file because G46
+# validates all three together on the same object -- loop_result, present iff
+# a fix was actually attempted this loop (SKILL.md Step 3 sub-step 4; rule #8
+# already floors loop_result's own presence on that same trigger, so a
+# backlog item that has not yet been picked up carries none of these fields).
+# Cross-references: validation gate G46, references/output-format-json.md
+# (loop_result schema), references/output-format-json-rules.md (rule #38),
+# analysis/contest-refactor/ITEM28-REMEDIATION-INVENTORY-2026-08-18.md
+# (design note -- family-conditional fields fix_kind-on-findings/disposition
+# are DEFERRED behind item 23's lenses per the tranche-5 chain,
+# docs/review-skill-deep-dive-2026-08-17.md:1253; not built by this file).
+#
+# finding_families -- WHAT KIND of repair this loop attempted. Discriminant for
+# a future family-conditional pass (deferred -- design note §3):
+#   simplification         an architecture-rubric finding (deletion / two-adapter /
+#                           shallow module / interface-as-test-surface /
+#                           replace-don't-layer) -- fix_kind (canon/fix-kinds.toml)
+#                           is this family's natural sub-classifier, not wired here
+#   latent_premise          a finding whose fix is guard | document | encode_in_type
+#                           -- a new disposition enum, not built here
+#   dependency_upgrade      a package/SDK version bump
+#   data_migration          a data-shape or storage-format change
+#   configuration_change    a build flag, env var, or config-file edit
+#   algorithm_fix           a logic correction with no structural move
+#   test_addition           a fix whose main content is a new/changed test
+#   security_fix            a security-motivated repair; may pair with
+#                            risk_boundary_evidence (G33) when it crosses a
+#                            Meta-Rule-4 boundary
+#   concurrency_fix         an isolation/Sendable/lock-ordering repair; almost
+#                            always paired with risk_boundary_evidence (G33)
+#
+# effort_levels -- the executor's own estimate of how much work the repair took.
+# Deliberately NOT a re-derivation of severity or priority: method-critic.md's
+# Backlog Prioritization Pass already ranks by expected marginal contest gain,
+# not confidence of completion, and the two "invert routinely" -- effort must
+# not silently redefine either:
+#   trivial | small | moderate | large
+#
+# repair_revalidation_outcomes -- did the fix actually hold, once independently
+# re-checked. Adopted verbatim from center-audit
+# (refs/competitors/contest-refactor/center-audit, pinned b154fb0),
+# README.md:65-68 + CHANGELOG.md:29, plus a fifth value (AUDIT_MOOT) this skill
+# hits routinely that upstream's own ROADMAP.md:15 names as a known gap. Three
+# of five carry the INVARIANT_ prefix -- do not shorten them to match a
+# shorthand seen elsewhere; the prefixed forms are the wire values.
+#   INVARIANT_HOLDS       required_invariant still reproduces; the fix is
+#                         confirmed. The only value that does NOT require
+#                         drift_notes (G46).
+#   INVARIANT_DRIFTED      SUCCESSFUL repair: the contract edge itself shifted
+#                         since the finding was written; the fix landed with
+#                         adjustments. Reserved for a genuine contract-edge
+#                         shift, not for mechanical adjustments (CHANGELOG.md:29).
+#   INVARIANT_REPLACED     SUCCESSFUL repair: re-checking showed the finding's
+#                         stated invariant was wrong; the repair replaced it.
+#                         Nearest existing precedent in this skill: registry
+#                         status "withdrawn" (a prior finding proven a false
+#                         positive).
+#   CONTRACT_REJECTED      FAILED repair: re-validation failed, the pattern
+#                         persists wholly or partially. This skill's existing
+#                         narrow-revert response (SKILL.md Step 3 sub-step 6
+#                         rejected path) is exactly this label's semantics.
+#   AUDIT_MOOT              NEITHER success nor failure: the code under audit
+#                         was deleted, the feature was deprecated, or the
+#                         scope no longer applies -- there is no contradiction
+#                         left to resolve, so CONTRACT_REJECTED would misstate
+#                         it as a failure.
+#
+# Deliberately NO "disposition" (guard | document | encode_in_type) enum and no
+# widened fix_kind membership here: both are family-conditional and deferred
+# behind item 23's lenses (see cross-references above). Shipping either ahead
+# of its consumer would ship dead enum.
+finding_families = [
+    "simplification",
+    "latent_premise",
+    "dependency_upgrade",
+    "data_migration",
+    "configuration_change",
+    "algorithm_fix",
+    "test_addition",
+    "security_fix",
+    "concurrency_fix",
+]
+
+effort_levels = [
+    "trivial",
+    "small",
+    "moderate",
+    "large",
+]
+
+repair_revalidation_outcomes = [
+    "INVARIANT_HOLDS",
+    "INVARIANT_DRIFTED",
+    "INVARIANT_REPLACED",
+    "CONTRACT_REJECTED",
+    "AUDIT_MOOT",
+]

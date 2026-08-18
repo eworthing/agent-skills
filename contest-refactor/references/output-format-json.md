@@ -400,6 +400,16 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
     "unintended_regression": null,                                    // null or string describing the regression
     "changed_paths": ["BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"],  // (v3+) source paths touched (from `git diff --name-only HEAD` after step 1). LOOP_STATE.pre_step3_blob_shas classifies each narrow-revert target as tracked or loop-created.
 
+    // General remediation fields (v4+, item 28). Required whenever loop_result is present (rule #8); G46 enforces shape + drift_notes coupling.
+    "finding_family": "simplification",                                // enum, canon/remediation-fields.toml finding_families (9). Family-conditional fields (fix_kind here, disposition) DEFERRED.
+    "effort": "small",                                                  // enum: trivial | small | moderate | large
+    "repair_revalidation": {                                            // required; mirrors risk_boundary_evidence's shape
+      "outcome": "INVARIANT_HOLDS",                                     // enum, canon/remediation-fields.toml repair_revalidation_outcomes: INVARIANT_HOLDS|INVARIANT_DRIFTED|INVARIANT_REPLACED|CONTRACT_REJECTED|AUDIT_MOOT
+      "detail": "re-ran the deletion test against Core/NavigationStore.swift; single writer confirmed",  // non-empty: what was actually re-checked
+      "mechanically_testable": true,                                    // bool; reasoning_only-style justification legal only when false
+      "drift_notes": null                                               // required non-empty for every outcome except "INVARIANT_HOLDS" (one-directional, G46)
+    },
+
     // Indirect coverage citation (PR 3, v2+). Required when what_changed contains a Deepening Keyword AND no test files in diff. Otherwise null.
     "interface_test_coverage_path": [
       {

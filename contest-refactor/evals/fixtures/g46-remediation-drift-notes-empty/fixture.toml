@@ -1,0 +1,15 @@
+id = "g46-remediation-drift-notes-empty"
+purpose = "Negative v4 fixture: loop_result.repair_revalidation.outcome=CONTRACT_REJECTED but drift_notes is empty. Must FAIL on G46's drift_notes coupling (non-empty required whenever outcome != INVARIANT_HOLDS)."
+expected_result = "fail"
+pair_id = "g46-remediation-drift-notes"
+pair_role = "flag"
+aspirational = false
+notes = "Identical to g46-remediation-drift-notes-honest except loop_result.repair_revalidation.drift_notes is '' instead of a real explanation; every other field (finding_family, effort, outcome, detail, mechanically_testable, implementation_review, scorecard, backlog) is unchanged, so G46's drift_notes coupling is the ONLY rule that fires. REVIEW_HISTORY.json.loops[-1] re-synced for G18."
+
+[[tested_rules]]
+kind = "gate"
+id = "G46"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

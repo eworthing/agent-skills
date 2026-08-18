@@ -181,3 +181,7 @@ title = "Credential quarantine — persistence sinks scanned for hardcoded-secre
 [[validation_gates]]
 id = "G45"
 title = "Exhaustion halt record shape + detection↔kind honesty coupling (schema_version >= 4)"
+
+[[validation_gates]]
+id = "G46"
+title = "General remediation fields — finding_family/effort/repair_revalidation shape + drift_notes coupling (schema_version >= 4)"

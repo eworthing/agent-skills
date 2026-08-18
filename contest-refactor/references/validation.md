@@ -220,6 +220,12 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   Run G45 at Step 1 emit (artifact write). Failure → fix the `exhaustion` object's shape, or drop the overclaimed `kind` to `"unknown"` when `detection_mode` is `"preventive_step_budget"`.
 
+- [ ] **G46 General remediation fields — finding_family/effort/repair_revalidation shape + drift_notes coupling (pre-emit, schema_version >= 4)** — *Applies only when `loop_result` is present (a fix was actually attempted this loop, rule #8); a queued backlog item carries none of these fields.* Three fields are REQUIRED (unlike the OPTIONAL `risk_boundary_evidence`): `finding_family ∈ canon/remediation-fields.toml finding_families` (9 values; discriminant for a family-conditional pass deferred behind item 23's lenses, not built here), `effort ∈ canon/remediation-fields.toml effort_levels` (`trivial | small | moderate | large`), and `repair_revalidation`, mirroring `risk_boundary_evidence`'s shape: `{outcome ∈ canon/remediation-fields.toml repair_revalidation_outcomes (INVARIANT_HOLDS | INVARIANT_DRIFTED | INVARIANT_REPLACED | CONTRACT_REJECTED | AUDIT_MOOT, adopted from center-audit plus the AUDIT_MOOT value its own roadmap names as a gap), detail <non-empty>, mechanically_testable <bool>}`.
+
+  **The `drift_notes` coupling is the point of the gate.** Required non-empty for every outcome except `INVARIANT_HOLDS` (one-directional — a stray `drift_notes` alongside a genuine `INVARIANT_HOLDS` is not this gate's business). center-audit shipped this described-but-unenforced in v2.5.0 and had to patch the schema in v2.5.1 — G46 mechanizes it from day one.
+
+  Run G46 at Step 1 emit. Failure → fix the offending field's shape/membership, or null/fill `drift_notes` to match `outcome`.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

@@ -4,15 +4,10 @@
   {
    "schema_version": 4,
    "loop": 1,
-   "loop_cap": 1,
-   "state": "HALT_LOOP_CAP",
+   "loop_cap": 10,
+   "state": "CONTINUE",
    "halt_subtype": null,
-   "halt_handoff": {
-    "state": "HALT_LOOP_CAP",
-    "halt_subtype": null,
-    "text": "Loop cap reached; best next move recorded.",
-    "expected_actions": []
-   },
+   "halt_handoff": null,
    "halt_handoff_text": null,
    "re_validated_at_sha": null,
    "re_validation_context": null,
@@ -34,7 +29,7 @@
     "lens": "Generic"
    },
    "verdict": "Promising, but architecturally immature",
-   "verdict_explanation": "Loop 1: clean v3 CONTINUE; vanilla retry_count=1 (no retries); single backlog item carried.",
+   "verdict_explanation": "Loop 1: reviewer rejected a contract-edge repair; G46 isolates the drift_notes coupling only.",
    "scorecard": {
     "architecture_quality": {
      "score": 8.5,
@@ -73,6 +68,7 @@
      "residual_blocking_10": null,
      "residual_disposition": null,
      "residual_rationale_or_backlog_ref": null,
+     "residual_blocker_kind": "structural_anchor_unmet",
      "unverifiable_due_to_build_failure": false
     },
     "framework_idioms": {
@@ -141,43 +137,46 @@
     {
      "priority": 1,
      "rank": 1,
-     "title": "Collapse the duplicated confirmation-dialog ceremony (Finding F2)",
+     "title": "Fold the two duplicate JSON-decoding helpers into one shared function (Finding F1)",
      "kind": "structural",
-     "why_it_matters": "three near-identical dialog bodies drift apart",
+     "why_it_matters": "two near-identical decode helpers drift apart",
      "score_impact": "simplicity +0.5",
      "stable_id": "F-001"
     }
    ],
    "deepening_candidates": [],
    "builder_notes": [],
-   "narrative": "Clean v3 CONTINUE; vanilla loop; all v3 invariants satisfied (G18/G19/G27/G28 N/A or pass).",
-   "unresolved_reason": "Reached loop cap 1; one backlog item carried forward.",
+   "narrative": "Loop 1 attempted a repair; the reviewer rejected it on a contract-edge mismatch the finding's original evidence did not anticipate. G46 fixture: isolates the drift_notes conditional on repair_revalidation.outcome == CONTRACT_REJECTED.",
+   "unresolved_reason": null,
    "loop_result": {
-    "what_changed": "Extracted the three duplicated ContentDialog bodies into one helper (src/Widget.cs).",
-    "honesty_evidence": "full suite green before and after (138/138); build exit 0",
-    "finding_family": "simplification",
+    "what_changed": "Attempted to fold the two duplicate JSON-decoding helpers into one shared function.",
+    "evidence_change_is_honest": "swift test 1439 passed pre-change; reviewer rejected post-diff on a contract-edge mismatch",
+    "risk_boundary_evidence": null,
+    "finding_family": "algorithm_fix",
     "effort": "small",
     "repair_revalidation": {
-     "outcome": "INVARIANT_HOLDS",
-     "detail": "Re-ran ContentDialogTests after consolidation; the three call sites now share one helper and every assertion still passes.",
+     "outcome": "CONTRACT_REJECTED",
+     "detail": "re-ran JSONDecodeHelperTests against the consolidated function; it silently dropped the legacy snake_case key mapping the finding's cited call site depended on",
      "mechanically_testable": true,
-     "drift_notes": null
+     "drift_notes": "the finding's original evidence cited JSONDecodeHelper.swift:44 mapping snake_case 'user_id' to 'userId'; the consolidated helper dropped that mapping entirely, so re-validation against the finding's stated invariant failed outright -- a genuine rejection, not a contract-edge shift"
     },
-    "targeted_finding_status": "resolved",
-    "unintended_regression": null,
+    "targeted_finding_status": "carried_forward",
+    "unintended_regression": "consolidated decoder dropped the legacy snake_case key mapping; reviewer rejected",
     "changed_paths": [
-     "src/Widget.cs"
+     "Core/JSONDecodeHelper.swift"
     ]
    },
    "implementation_review": {
-    "verdict": "approved",
-    "reason": "Extraction is behavior-preserving; the three dialog bodies now share one helper and no seam was added.",
+    "verdict": "rejected",
+    "reason": "consolidated decoder dropped the legacy snake_case key mapping; reviewer rejected",
     "checks": {
-     "reality": "passed",
+     "reality": "failed",
      "honesty": "passed",
      "regression": "passed"
     },
-    "regressions": [],
+    "regressions": [
+     "Core/JSONDecodeHelper.swift: legacy snake_case key mapping silently dropped"
+    ],
     "conditions": [],
     "rounds": 1,
     "retry_count": 1,
@@ -187,7 +186,7 @@
       "attempt": 1,
       "outcome": "ok",
       "error": null,
-      "duration_ms": 9100
+      "duration_ms": 8000
      }
     ]
    }

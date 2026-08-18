@@ -153,6 +153,14 @@
   "loop_result": {
     "what_changed": "Extracted the three duplicated ContentDialog bodies into one helper (src/Widget.cs).",
     "honesty_evidence": "full suite green before and after (138/138); build exit 0",
+    "finding_family": "simplification",
+    "effort": "small",
+    "repair_revalidation": {
+      "outcome": "INVARIANT_HOLDS",
+      "detail": "Re-ran ContentDialogTests after consolidation; the three call sites now share one helper and every assertion still passes.",
+      "mechanically_testable": true,
+      "drift_notes": null
+    },
     "targeted_finding_status": "resolved",
     "unintended_regression": null,
     "changed_paths": [
