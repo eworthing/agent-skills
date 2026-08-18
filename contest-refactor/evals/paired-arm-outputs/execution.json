@@ -1480,7 +1480,7 @@
         "with_skill"
       ],
       "session_id": "sess-rung1",
-      "state": "started",
+      "state": "finished",
       "pre_dispatch_head": "913ebc9c7fa01ece0c1750e9d9145c49a03267d0",
       "arms": {
         "with_skill": {
@@ -1527,6 +1527,37 @@
           "expected_output": "/tmp/paired-arm/study/pair-041/attempt1/without_skill/review-verdict.md",
           "work_dir": "/tmp/paired-arm/study/pair-041/attempt1/without_skill"
         }
+      },
+      "usage": {
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a4f0369acdacc4e87.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a4f0369acdacc4e87.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 3,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a4f0369acdacc4e87.output"
+          ],
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 59739,
+          "cache_read_input_tokens": 125448,
+          "output_tokens": 13861,
+          "context_tokens_processed": 199054
+        },
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a332cab4bfe1c746d.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a332cab4bfe1c746d.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 3,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a332cab4bfe1c746d.output"
+          ],
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 34060,
+          "cache_read_input_tokens": 105084,
+          "output_tokens": 8046,
+          "context_tokens_processed": 147196
+        },
+        "pair_total_context_tokens": 346250
       }
     }
   ],
