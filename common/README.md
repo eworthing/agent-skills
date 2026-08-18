@@ -76,3 +76,27 @@ git add <new-skill>/scripts/_common/
 ```
 
 Then import from `_common.*` in the skill's scripts (after adding the `sys.path.insert` snippet shown above).
+
+## eval-guard — skill-prose changes need a guarding eval
+
+**The rule:** a substantive change to a skill's `SKILL.md` or `references/*.md` must either touch that skill's `evals/` (or `tests/`) directory in the same change, or carry an explicit `Eval-waiver: <reason>` commit trailer. This was already the repo's standing discipline, unenforced; `common/scripts/eval_guard.py` is what enforces it mechanically instead of relying on memory.
+
+**"Substantive," mechanically:** the diff has to reach beyond the YAML frontmatter block and beyond whitespace-only edits. Bumping a frontmatter field (a version, `allowed-tools`) or reflowing whitespace doesn't count; anything else in the body does. Additions and deletions fall out of the same rule for free — a deletion's new side is empty text, which can't equal a non-trivial stripped-and-normalized body, so deleting prose with no eval touch is always flagged. Renames are diffed by content at their old/new paths, so a pure rename (no content change) passes and a rename-with-rewrite is judged on the rewrite. When in doubt, the classifier errs toward flagging.
+
+**Waiver format:** a git trailer, `Eval-waiver: <reason>` (exact key spelling, non-empty reason), in the trailing trailer block of the commit message — the same convention this repo already uses for `Co-Authored-By:` / `Claude-Session:`. A malformed near-miss (wrong case, empty reason) is reported but does not count as a waiver.
+
+**Three-part contract** (this repo commits straight to `main`, so there's no PR gate to lean on):
+
+1. **pre-commit** (`.githooks/pre-commit`, Gate 4) runs `eval_guard.py --staged` — catches the common path early. It is advisory only and always exits 0 on policy grounds: git invokes pre-commit *before* obtaining the commit message, so this stage structurally cannot see a waiver trailer and must never block on its absence.
+2. **commit-msg** (`.githooks/commit-msg`, new hook) runs `eval_guard.py --commit-msg "$1"` — the real local gate, since by now both the staged diff and the drafted message (with any trailer) exist.
+3. **CI** (`.github/workflows/eval-guard.yml`, new workflow — none existed before this change) runs `eval_guard.py --range <base>..<head>` on every push/PR — catches anything that bypassed 1/2 (`--no-verify`, `core.hooksPath` never configured, a merge, ...) once it has landed.
+
+All three modes share one checker script (`common/scripts/eval_guard.py`), so the "substantive" and waiver logic can't drift between local and CI.
+
+**Report-only today.** `eval_guard.py`'s `REPORT_ONLY = True` constant makes every policy failure print a loud warning and exit 0 instead of blocking — verified live against this repo's own commit history while building the gate (it correctly flagged a real past `contest-refactor` commit that touched `SKILL.md`/`references/` with no eval touch, and correctly passed one that did touch evals). **The flip:** set `REPORT_ONLY = False` in `common/scripts/eval_guard.py` (or pass `--enforce` explicitly to the commit-msg/CI invocations) to make `commit-msg` and CI actually block on exit code 1. `--staged` never blocks regardless — that's structural, not a report-only artifact — so pre-commit stays a nudge even after the flip.
+
+**Containment step on a red CI check:** either revert the offending commit, or land an immediate follow-up commit — an empty commit is fine — that adds the missing `evals/`/`tests/` coverage, or adds a properly formatted `Eval-waiver: <reason>` trailer.
+
+**Exit codes** (shared discipline with `sync_common.py --check` / `check_module_size.py`): `0` pass, `1` policy fail (downgraded to `0` under report-only), `2` plumbing error (bad args, a git command itself failed, ...) — plumbing errors are never downgraded, so a broken checker still surfaces instead of silently no-op'ing.
+
+Tests: `common/tests/test_eval_guard.py` (throwaway git repos under `tmp_path`, one per fixture case: substantive-without-touch, substantive-with-touch, frontmatter-only, whitespace-only, valid waiver, malformed waiver, rename, deletion, report-only downgrade, `--staged` advisory-only, plumbing errors).

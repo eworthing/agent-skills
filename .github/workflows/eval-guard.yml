@@ -1,0 +1,49 @@
+# eval-guard — CI half of the repo-wide "eval-guard" gate.
+#
+# No other GitHub Actions workflow exists in this repo yet: this is the
+# first file under .github/workflows/. AGENTS.md and common/README.md both
+# describe "CI" running sync_common.py --check / check_module_size.py, but
+# that was previously only documentation — only the local
+# `git config core.hooksPath .githooks` pre-commit gate actually ran it.
+# Folding those pre-existing checks into CI is a separate gap from this
+# change; this workflow is scoped to eval-guard only (repo backlog item 2).
+#
+# Report-only: common/scripts/eval_guard.py's REPORT_ONLY constant makes
+# every failure here a warning, not a red check, until that constant is
+# flipped (or --enforce is added to the step below). See common/README.md
+# ("eval-guard") for the full three-part contract and the containment step
+# to take if this check ever does go red.
+name: eval-guard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  eval-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # eval_guard.py --range needs history for the diff + git log
+
+      - name: Compute commit range
+        id: range
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+            if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+              # First push to a new branch (or force-push with no prior sha):
+              # fall back to the repo's root commit so the range is still valid.
+              base=$(git rev-list --max-parents=0 HEAD | tail -1)
+            fi
+          fi
+          echo "range=${base}..${head}" >> "$GITHUB_OUTPUT"
+
+      - name: Run eval-guard
+        run: python3 common/scripts/eval_guard.py --range "${{ steps.range.outputs.range }}"

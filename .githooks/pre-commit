@@ -74,4 +74,13 @@ if git diff --cached --name-only --diff-filter=ACMR -- '*.py' | grep -q .; then
       echo "pre-commit: formatting drift. Run: ruff format"; exit 1; }
 fi
 
+# --- Gate 4: eval-guard — substantive skill-prose changes need a guarding eval ---
+# --staged never fails on policy grounds (exit 0): git runs pre-commit before
+# obtaining the commit message, so this mode structurally cannot see an
+# Eval-waiver trailer and only warns here. The real waiver-aware gate is the
+# commit-msg hook below, plus CI. A genuine plumbing error (exit 2 — e.g. git
+# itself failing) is NOT swallowed, same as every other gate in this file.
+# See common/README.md ("eval-guard") for the full contract and the flip switch.
+python3 common/scripts/eval_guard.py --staged
+
 exit 0

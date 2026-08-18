@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# .githooks/commit-msg — eval-guard's real local gate.
+#
+# Install once per clone (shared with pre-commit):
+#   git config core.hooksPath .githooks
+#
+# By commit-msg time, both the staged diff AND the drafted commit message
+# (with any `Eval-waiver: <reason>` trailer) exist, so this is where
+# eval-guard can actually decide pass/fail — pre-commit runs too early to
+# see the message at all. See common/README.md ("eval-guard") for the full
+# contract and common/scripts/eval_guard.py for the REPORT_ONLY flip switch.
+#
+# Report-only in this change: eval_guard.py's REPORT_ONLY constant makes
+# every failure path here a warning that still exits 0. This hook does NOT
+# pass --enforce, so flipping REPORT_ONLY (or adding --enforce below) is the
+# one place blocking gets turned on.
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+python3 common/scripts/eval_guard.py --commit-msg "$1"
