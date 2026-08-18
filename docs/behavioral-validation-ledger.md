@@ -17,6 +17,31 @@ Each sweep's measured token spend is recorded when it closes.
 
 (empty — next behavioral changes accumulate here)
 
+## Open run — paired-arm recall measurement (sweep #3)
+
+Opened 2026-08-18. A third distinct kind: not a with/without-**change** probe and not an A/A
+floor, but a with/without-**skill** arm study. It answers the one question every
+measurement-dependent backlog item is blocked on — *does the skill lift recall anywhere?* — which
+the repo currently answers in opposite directions at two grains (advisory: recall lift measured 0,
+three rounds, two models; principal: "where recall lift lives", but measured current-arm only).
+
+- **Design:** 11 scenarios × K=5 × 2 arms = 55 pairs / 110 dispatch slots, both arms fresh on
+  `claude-sonnet-5`. Preregistered in `contest-refactor/evals/paired_arm_replication.json` and
+  frozen before any output existed — materials, dispatch envelope, the four grading rules, the
+  grading protocol, four independent decision rules, per-scenario `expected_baseline` hypotheses,
+  and the 55-pair dispatch order.
+- **Deliverable:** a descriptive diagnostic, never a lift claim. No A/A floor exists, so
+  `evaluate_lift()` returns `unreportable` by construction; the binding readout rule is *"no lift
+  detected at this n"*, never *"lift is zero"*.
+- **Execution:** git-as-checkpoint. A pair is complete iff a committed terminal attempt record
+  says so; `started` records land before dispatch so an interrupted session is counted rather than
+  silently re-dispatched. Expected to span sessions.
+- **Spend:** recorded per pair in `paired-arm-outputs/execution.json` as the run proceeds, not
+  reconstructed at the end. At ~220 agents across an unknown number of sessions, sweep #2's
+  sum-at-the-end method is not reproducible.
+
+Closes with the routed decision-table outcome and measured total.
+
 ## Pending calibration run — A/A noise floor (item 20)
 
 Distinct from the probes above: not a with/without comparison of a change, but the

@@ -746,6 +746,63 @@ Each assertion is tagged:
 Acceptance for the suite: measurable with-skill lift on at least the `suppression-flag` and
 `crossplat-flag` discriminating assertions, **and zero restraint regression**.
 
+### The paired-arm measurement (opened 2026-08-18)
+
+That acceptance criterion has never been evaluated, and the claim two sections above — that the
+`principal-*` layer "is where recall lift lives" — rests on a **current-arm-only** measurement
+(`principal_baseline.json → replication_summary.confound_noted`: *"not lift over a bare model"*).
+The advisory layer meanwhile measured recall lift at **0** across three rounds and two base
+models. So the question every measurement-dependent backlog item is blocked on — *does this skill
+lift recall anywhere?* — is open at both grains, in opposite directions.
+
+`evals/paired_arm_replication.json` is a **preregistered** paired with-skill/without-skill run
+over 11 scenarios (5 principal flags, 2 usable principal twins, both core flag/restraint pairs)
+× K=5 reps × 2 arms = 55 pairs / 110 slots. Both arms run **fresh on the same model**: the
+2026-06-24 record names `claude-opus-4-8`, and reusing it would confound model with arm.
+
+What is frozen before any output exists (and re-verified on every validator run):
+
+- both arms' materials and task templates, by sha256, plus the **dispatch envelope** — the
+  delivered prompt is template + envelope, and freezing only the template would leave the text a
+  slot actually receives underspecified;
+- the four grading rules, copied verbatim from `principal_baseline_replication.json` so they are
+  frozen by provenance;
+- the **grading protocol**: grader model, grader prompt + hash, three mechanically-decidable
+  ambiguity triggers, second-grader → third-adjudicator rule, and the label-masking protocol with
+  its stated limitation (it is masking, not blinding — style still leaks the arm);
+- four independent decision rules and a per-scenario `expected_baseline` **hypothesis**, with the
+  two core flags deliberately predicted `hold` against the principal flags' `miss`;
+- the dispatch order: 55 pair ids with within-pair arm order, from a recorded seed, so resume
+  walks the same experiment rather than re-randomizing into a different one.
+
+Read the result as a **descriptive diagnostic, never a lift claim**. `noise_floor.json` ships
+empty so `evaluate_lift()` returns `unreportable`, and `required_n_for_power(0.10, 0.05, 0.80)` is
+778 discordant pairs against 11 cases. The binding readout rule: an observed zero or negative
+delta is *"no lift detected at this n"* — never *"lift is zero"*.
+
+Two things this run **narrows or contradicts** in the text above, declared rather than applied
+silently (`prereg.declared_divergences`):
+
+- **The acceptance criterion is invalid as literally written**, to the extent it rests on
+  vocabulary. `evals.json` carries assertions that are both `[discriminating]` and
+  `criterion_class: "skill_contract"` (canon severity anchors). Admitting those scores the bare
+  arm on vocabulary it structurally cannot produce. Decision 2 evaluates the **`outcome`-classed
+  half only**; the `skill_contract` half is reported separately on the vocabulary axis, alongside
+  `grade_structural.py`'s `flagged_smells_canon_exact`.
+- **`semantic ≤ mechanical` is arm-conditional.** It holds for a rubric-following reviewer, but a
+  bare model can name a defect in prose while emitting `verdict: approved`, so the validator
+  applies the subset invariant to `with_skill` only.
+
+Operational state is deliberately in a **separate** file. `paired-arm-outputs/execution.json`
+(measured concurrency, per-pair cost, the session cap, the dispatch log) is append-only from Phase
+2 onward; the prereg freezes at Phase 1 and cannot absorb values measured afterwards. A pair is
+complete **iff a committed terminal attempt record says so** — `paired_arm_run.py` reconciles from
+committed records, not from files on disk, so uncommitted work simply does not exist on resume.
+`RESUME.md` is a convenience for a human; `git log` is the authority.
+
+Per D3, neither historical principal record is edited: both stay byte-identical, and the
+supersession relationship lives here and in the new file.
+
 ## Layer 3 — reviewer-judgment (`reviewer-cases/`, `reviewer_baseline.json`)
 
 Layers 1–2 grade the **Critic** (Step 1). They never exercise the **implementation

@@ -141,7 +141,12 @@ def _extract_json(candidate_text: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         pass
 
-    blocks = re.findall(r"```(?:json)?\s*\n(.*?)```", candidate_text, re.S)
+    # Any language tag, not just `json`. A reviewer that quotes a ```sql or ```swift block in its
+    # prose used to break fence PAIRING: the untagged pattern could not open on ```sql, so it
+    # opened on that block's CLOSING fence instead, swallowed the prose up to the ```json opener,
+    # and left the real verdict block with no opener of its own -- a well-formed response scored
+    # as malformed. Found by the paired-arm cost pilot, where both arms did exactly that.
+    blocks = re.findall(r"```[A-Za-z0-9_+.-]*[ \t]*\n(.*?)```", candidate_text, re.S)
     for block in reversed(blocks):  # prompts say "end the file with" the json block
         try:
             parsed = json.loads(block.strip())

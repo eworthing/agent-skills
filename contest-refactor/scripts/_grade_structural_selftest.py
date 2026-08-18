@@ -76,6 +76,27 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as td:
         tmpdir = Path(td)
 
+        # ---- fence pairing: prose that quotes code around the verdict block --------
+        # Regression guard for the defect the paired-arm cost pilot surfaced: BOTH arms quoted a
+        # ```sql block in their reasoning, and the extractor's untagged pattern could not open on
+        # it -- so it opened on that block's CLOSING fence, swallowed the prose up to the ```json
+        # opener, and left the real verdict block unopened. Two well-formed reviews were scored
+        # `malformed`. A grader that cannot read a reviewer who quotes code is not measuring the
+        # reviewer.
+        print("== fenced code in prose does not break verdict extraction ==")
+        quoted = (
+            "The pre-refactor query was:\n\n```sql\nSELECT * FROM orders;\n```\n\n"
+            "and the Swift call site:\n\n```swift\nlet ok = policy.isEligible(m)\n```\n\n"
+            "Verdict below.\n\n```json\n" + json.dumps(SUPPRESSION_FLAG_PASS) + "\n```\n"
+        )
+        rc, report = _run(quoted, "suppression-flag", tmpdir, "fenced.json")
+        _check("prose with ```sql/```swift blocks still parses -> exit 0", rc == 0, f"got {rc}")
+        _check(
+            "the LAST fenced block is the one graded",
+            len(report.get("assertions", [])) == 4,
+            str(len(report.get("assertions", []))),
+        )
+
         # ---- GREEN: fully-passing Layer-2 candidate --------------------------------
         print("== fully-passing Layer-2 candidate (suppression-flag) ==")
         rc, report = _run(

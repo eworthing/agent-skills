@@ -41,45 +41,115 @@
           "status": "valid",
           "reason": null
         },
-        "candidate_output_status": "malformed",
-        "malformed_detail": "no parseable JSON object found (tried whole file, then fenced blocks)",
-        "verdict_json": null,
-        "structural_report": null,
+        "candidate_output_status": "ok",
+        "verdict_json": {
+          "verdict": "conditional",
+          "blocks_95": true,
+          "blocking_severity": "Serious deduction",
+          "dimension_scores": {
+            "domain_modeling": 7.0,
+            "test_strategy": 6.0
+          },
+          "flagged_smells": [
+            "fake simplification",
+            "aggregate-test-count-as-test-strategy"
+          ],
+          "evidence_demanded": [
+            "Schema/migration/ADR confirmation of whether orders.is_active and orders.prior_orders (queried directly in the pre-refactor SQL, no join shown) are point-in-time snapshots captured at order creation or live-synced mirrors of the member's current state",
+            "A test on OrderRepository.fetchOrdersWithDiscount covering a member whose current isActive/priorOrderCount diverges from an existing order's is_active/prior_orders column values, asserting which value the query is supposed to honor",
+            "File:line citation of the specific test(s) exercising DiscountPolicy.isEligible directly, and of the call site(s) that consume fetchOrdersWithDiscount's result (to establish whether this is a primary member-facing flow or an off-path utility, which affects severity)"
+          ]
+        },
+        "structural_report": {
+          "layer": 2,
+          "id": "principal-duplicated-rule-restraint",
+          "general_checks": [
+            {
+              "name": "required_fields_present",
+              "pass": true,
+              "detail": "all present"
+            },
+            {
+              "name": "verdict_word_membership",
+              "pass": true,
+              "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+            },
+            {
+              "name": "flagged_smells_canon_exact",
+              "pass": true,
+              "detail": "all canon-exact"
+            },
+            {
+              "name": "dimension_scores_shape",
+              "pass": true,
+              "detail": "shape OK"
+            },
+            {
+              "name": "boolean_coherence",
+              "pass": true,
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+            }
+          ],
+          "assertions": [],
+          "residue": [
+            "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
+            "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
+            "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+            "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression"
+          ],
+          "counts": {
+            "general_checks_total": 5,
+            "general_checks_pass": 5,
+            "deterministic_assertions_total": 0,
+            "deterministic_assertions_pass": 0,
+            "semantic_residue": 4
+          },
+          "all_deterministic_pass": true
+        },
         "assertion_results": [
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 0,
-            "assertion_text": "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
-            "criterion_class": "outcome",
-            "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "assertion_text": "required_fields_present",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "all present"
           },
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 1,
-            "assertion_text": "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
-            "criterion_class": "outcome",
-            "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "assertion_text": "verdict_word_membership",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
           },
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 2,
-            "assertion_text": "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-            "criterion_class": "outcome",
-            "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "assertion_text": "flagged_smells_canon_exact",
+            "criterion_class": "skill_contract",
+            "passed": true,
+            "rationale": "all canon-exact"
           },
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 3,
-            "assertion_text": "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression",
-            "criterion_class": "outcome",
-            "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "assertion_text": "dimension_scores_shape",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "shape OK"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 4,
+            "assertion_text": "boolean_coherence",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
           }
         ],
-        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/with_skill/review-verdict.md"
+        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/with_skill/review-verdict.md",
+        "regrade_note": "Structural grade recomputed from the committed, immutable raw output after the fence-pairing defect in grade_structural._extract_json was fixed. The candidate output did not change and was NOT re-dispatched; only the grader's ability to read it did."
       },
       {
         "pair_id": "pilot-001",
@@ -91,48 +161,129 @@
           "status": "valid",
           "reason": null
         },
-        "candidate_output_status": "malformed",
-        "malformed_detail": "no parseable JSON object found (tried whole file, then fenced blocks)",
-        "verdict_json": null,
-        "structural_report": null,
+        "candidate_output_status": "ok",
+        "verdict_json": {
+          "verdict": "conditional",
+          "blocks_95": true,
+          "blocking_severity": "high — unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case",
+          "dimension_scores": {
+            "domain_modeling": 7
+          },
+          "flagged_smells": [
+            "refactor reported as behavior-preserving centralization while silently changing evaluation semantics in OrderRepository",
+            "test-green claim used as proof of correctness for a code path the existing suite likely never exercised",
+            "exhaustiveness claim (\"all three call sites\") asserted without search evidence"
+          ],
+          "evidence_demanded": [
+            "Confirm whether orders.is_active / orders.prior_orders are live-synced to Member or are point-in-time snapshots captured at order time",
+            "If snapshots: justify (or revert) the switch to live member.isActive/member.priorOrderCount in fetchOrdersWithDiscount, and identify every caller of that method to confirm they want live re-evaluation",
+            "Add a test for fetchOrdersWithDiscount covering a member whose isActive/priorOrderCount today differs from the order-time values",
+            "Add a direct unit test for DiscountPolicy.isEligible covering the three boundary conditions (subtotal==50, priorOrderCount==3, inactive member)",
+            "Show the search (grep/graph query) used to confirm CartView/OrderRepository/DiscountWorker are the only three call sites of the old inline predicate"
+          ]
+        },
+        "structural_report": {
+          "layer": 2,
+          "id": "principal-duplicated-rule-restraint",
+          "general_checks": [
+            {
+              "name": "required_fields_present",
+              "pass": true,
+              "detail": "all present"
+            },
+            {
+              "name": "verdict_word_membership",
+              "pass": true,
+              "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+            },
+            {
+              "name": "flagged_smells_canon_exact",
+              "pass": false,
+              "detail": "non-canon values: ['refactor reported as behavior-preserving centralization while silently changing evaluation semantics in OrderRepository', 'test-green claim used as proof of correctness for a code path the existing suite likely never exercised', 'exhaustiveness claim (\"all three call sites\") asserted without search evidence']"
+            },
+            {
+              "name": "dimension_scores_shape",
+              "pass": true,
+              "detail": "shape OK"
+            },
+            {
+              "name": "boolean_coherence",
+              "pass": false,
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'high — unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case'"
+            }
+          ],
+          "assertions": [],
+          "residue": [
+            "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
+            "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
+            "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+            "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression"
+          ],
+          "counts": {
+            "general_checks_total": 5,
+            "general_checks_pass": 3,
+            "deterministic_assertions_total": 0,
+            "deterministic_assertions_pass": 0,
+            "semantic_residue": 4
+          },
+          "all_deterministic_pass": false
+        },
         "assertion_results": [
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 0,
-            "assertion_text": "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
-            "criterion_class": "outcome",
-            "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "assertion_text": "required_fields_present",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "all present"
           },
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 1,
-            "assertion_text": "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
-            "criterion_class": "outcome",
-            "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "assertion_text": "verdict_word_membership",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
           },
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 2,
-            "assertion_text": "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-            "criterion_class": "outcome",
+            "assertion_text": "flagged_smells_canon_exact",
+            "criterion_class": "skill_contract",
             "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "rationale": "non-canon values: ['refactor reported as behavior-preserving centralization while silently changing evaluation semantics in OrderRepository', 'test-green claim used as proof of correctness for a code path the existing suite likely never exercised', 'exhaustiveness claim (\"all three call sites\") asserted without search evidence']"
           },
           {
-            "source": "evals_assertion",
+            "source": "general_check",
             "assertion_index": 3,
-            "assertion_text": "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression",
-            "criterion_class": "outcome",
+            "assertion_text": "dimension_scores_shape",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "shape OK"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 4,
+            "assertion_text": "boolean_coherence",
+            "criterion_class": "unclassified",
             "passed": false,
-            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'high — unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case'"
           }
         ],
-        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/without_skill/review-verdict.md"
+        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/without_skill/review-verdict.md",
+        "regrade_note": "Structural grade recomputed from the committed, immutable raw output after the fence-pairing defect in grade_structural._extract_json was fixed. The candidate output did not change and was NOT re-dispatched; only the grader's ability to read it did."
       }
     ],
-    "measurements": {}
+    "measurements": {},
+    "findings": [
+      {
+        "id": "fence_pairing_extractor_defect",
+        "found_by": "Phase 2 cost pilot, pilot-001 attempt 2",
+        "what": "Both arms were scored candidate_output_status='malformed' on first grading. The outputs were well-formed: prose then a single trailing fenced json verdict block, exactly as the frozen task template asks. grade_structural._extract_json's fence regex accepted only an untagged or `json` opening fence, so a reviewer that quoted a ```sql or ```swift block in its reasoning broke fence PAIRING -- the pattern opened on that block's CLOSING fence, swallowed the prose up to the ```json opener, and left the real verdict block unopened.",
+        "why_it_matters": "This is the pilot doing its job. Run blind across 110 study slots it would have produced a silent, arm-correlated bias: quoting the code under review is exactly the behaviour a rubric-following reviewer is more likely to exhibit, so the arm with the lens would have been scored malformed more often -- a measurement artifact pointing the WRONG WAY, against the skill, and invisible in the aggregate.",
+        "fix": "grade_structural._extract_json now accepts any language tag; scripts/paired_arm_grade.py gained the same fix for grader replies. RED regression case added to _grade_structural_selftest.py. Both pilot attempts re-graded from their committed, immutable outputs -- no re-dispatch, the model output never changed."
+      }
+    ]
   },
   "dispatch_log": [
     {
