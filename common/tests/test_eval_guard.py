@@ -150,6 +150,44 @@ class TestEvalTouchGate:
         rc = eval_guard.main(["--range", f"{base}..{head}", "--repo", str(repo), "--enforce"])
         assert rc == eval_guard.EXIT_PASS
 
+    def test_substantive_with_selftest_touch_passes(self, repo):
+        # This repo's convention: a scripts/_*selftest*.py guard counts, same as evals/.
+        _write(repo, "demo-skill/SKILL.md", SKILL_MD_V1)
+        _write(repo, "demo-skill/scripts/_case_selftest.py", "def main(): pass\n")
+        _git(repo, "add", ".")
+        _git(repo, "commit", "-q", "-m", "add skill + selftest")
+        base = _git_out(repo, "rev-parse", "HEAD")
+
+        v2 = SKILL_MD_V1.replace("Original prose body.", "New behavior via the selftest guard.")
+        _write(repo, "demo-skill/SKILL.md", v2)
+        _write(repo, "demo-skill/scripts/_case_selftest.py", "def main(): assert True\n")
+        _git(repo, "add", ".")
+        _git(repo, "commit", "-q", "-m", "rewrite guidance + update selftest")
+        head = _git_out(repo, "rev-parse", "HEAD")
+
+        rc = eval_guard.main(["--range", f"{base}..{head}", "--repo", str(repo), "--enforce"])
+        assert rc == eval_guard.EXIT_PASS
+
+    def test_substantive_with_unrelated_scripts_file_flagged(self, repo, capsys):
+        # A scripts/ file that isn't a selftest doesn't satisfy the gate.
+        _write(repo, "demo-skill/SKILL.md", SKILL_MD_V1)
+        _write(repo, "demo-skill/scripts/helper.py", "print('hi')\n")
+        _git(repo, "add", ".")
+        _git(repo, "commit", "-q", "-m", "add skill + helper script")
+        base = _git_out(repo, "rev-parse", "HEAD")
+
+        v2 = SKILL_MD_V1.replace("Original prose body.", "New behavior, unrelated script touched.")
+        _write(repo, "demo-skill/SKILL.md", v2)
+        _write(repo, "demo-skill/scripts/helper.py", "print('hi again')\n")
+        _git(repo, "add", ".")
+        _git(repo, "commit", "-q", "-m", "rewrite guidance + tweak helper")
+        head = _git_out(repo, "rev-parse", "HEAD")
+
+        rc = eval_guard.main(["--range", f"{base}..{head}", "--repo", str(repo), "--enforce"])
+        assert rc == eval_guard.EXIT_FAIL
+        out = capsys.readouterr()
+        assert "MISSING eval/test touch" in out.err
+
     def test_substantive_with_tests_dir_touch_passes(self, repo):
         # Some skills use tests/ instead of evals/ — either counts.
         _write(repo, "demo-skill/SKILL.md", SKILL_MD_V1)

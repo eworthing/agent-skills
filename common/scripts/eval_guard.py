@@ -3,7 +3,9 @@
 eval_guard.py — repo-wide "eval-guard" gate.
 
 Rule: a substantive change to a skill's SKILL.md or references/*.md must
-either (a) touch that skill's evals/ or tests/ directory in the same
+either (a) touch that skill's evals/ or tests/ directory, or add/modify a
+scripts/_*selftest*.py (or scripts/*_selftest.py) file — this repo's
+convention for deterministic prose guards, see CLAUDE.md — in the same
 change, or (b) carry an `Eval-waiver: <reason>` commit trailer.
 
 "Substantive" is mechanical, not semantic: the diff reaches beyond the
@@ -75,6 +77,11 @@ EXIT_PLUMBING_ERROR = 2
 
 PROSE_RE = re.compile(r"^(?P<skill>[^/]+)/(?:SKILL\.md|references/.+\.md)$")
 FRONTMATTER_RE = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n?", re.DOTALL)
+# scripts/_*selftest*.py or scripts/*_selftest.py — this repo's convention for a
+# deterministic guard that isn't an evals/ or tests/ dir (see CLAUDE.md).
+SELFTEST_RE = re.compile(
+    r"^(?P<skill>[^/]+)/scripts/(?:_[^/]*selftest[^/]*\.py|[^/]*_selftest\.py)$"
+)
 WAIVER_KEY = "Eval-waiver"
 WAIVER_TRAILER_RE = re.compile(r"^([A-Za-z][\w-]*):\s?(.*)$")
 
@@ -166,9 +173,24 @@ class SkillFinding:
         return bool(self.substantive_changes) and not self.eval_touched
 
 
+def _selftest_touches_skill(all_entries: list[tuple[str, str, str | None]], skill: str) -> bool:
+    """True if `skill` has an added-or-modified scripts/_*selftest*.py in this diff.
+
+    A pure deletion doesn't count — removing the guarding test isn't coverage.
+    """
+    for status, path, _ in all_entries:
+        if status.startswith("D"):
+            continue
+        m = SELFTEST_RE.match(path)
+        if m and m.group("skill") == skill:
+            return True
+    return False
+
+
 def collect_findings(
     prose_entries: list[tuple[str, str, str | None]],
     all_changed_paths: set[str],
+    all_entries: list[tuple[str, str, str | None]],
     old_ref: str,
     new_ref: str | None,
     cwd: Path,
@@ -203,7 +225,7 @@ def collect_findings(
             or p == f"{skill}/tests"
             or p.startswith((f"{skill}/evals/", f"{skill}/tests/"))
             for p in all_changed_paths
-        )
+        ) or _selftest_touches_skill(all_entries, skill)
         findings.append(SkillFinding(skill=skill, changes=changes, eval_touched=touched))
     return findings
 
@@ -273,18 +295,20 @@ def _banner(msg: str) -> None:
     print(rule, file=sys.stderr)
 
 
-def _staged_diff(cwd: Path) -> tuple[list[tuple[str, str, str | None]], set[str]]:
+_DiffResult = tuple[list[tuple[str, str, str | None]], set[str], list[tuple[str, str, str | None]]]
+
+
+def _staged_diff(cwd: Path) -> _DiffResult:
     prose_out = _git(
         ["diff", "--cached", "--name-status", "-M", "-z", "--diff-filter=ACMRD", "--", "*.md"],
         cwd,
     )
-    all_out = _git(["diff", "--cached", "--name-only", "-M", "-z"], cwd)
-    return _parse_name_status_z(prose_out), {p for p in all_out.split("\0") if p}
+    all_out = _git(["diff", "--cached", "--name-status", "-M", "-z"], cwd)
+    all_entries = _parse_name_status_z(all_out)
+    return _parse_name_status_z(prose_out), {p for _, p, _ in all_entries}, all_entries
 
 
-def _range_diff(
-    old_ref: str, new_ref: str, cwd: Path
-) -> tuple[list[tuple[str, str, str | None]], set[str]]:
+def _range_diff(old_ref: str, new_ref: str, cwd: Path) -> _DiffResult:
     prose_out = _git(
         [
             "diff",
@@ -299,8 +323,9 @@ def _range_diff(
         ],
         cwd,
     )
-    all_out = _git(["diff", "--name-only", "-M", "-z", old_ref, new_ref], cwd)
-    return _parse_name_status_z(prose_out), {p for p in all_out.split("\0") if p}
+    all_out = _git(["diff", "--name-status", "-M", "-z", old_ref, new_ref], cwd)
+    all_entries = _parse_name_status_z(all_out)
+    return _parse_name_status_z(prose_out), {p for _, p, _ in all_entries}, all_entries
 
 
 def _verdict(
@@ -325,8 +350,8 @@ def _verdict(
     msg = (
         f"eval-guard: substantive skill-prose change(s) with no eval/test touch "
         f"and no valid waiver ({scope} check).\n\n{report}\n\n"
-        f"Fix: touch the skill's evals/ or tests/ directory, or add a commit "
-        f"trailer `{WAIVER_KEY}: <reason>`."
+        f"Fix: touch the skill's evals/ or tests/ directory (or add/modify a "
+        f"scripts/_*selftest*.py), or add a commit trailer `{WAIVER_KEY}: <reason>`."
     )
     if waiver_error:
         msg += f"\n\nNote: found a near-miss waiver trailer that didn't count: {waiver_error}"
@@ -339,8 +364,8 @@ def _verdict(
 
 
 def run_staged(cwd: Path) -> int:
-    prose_entries, all_paths = _staged_diff(cwd)
-    findings = collect_findings(prose_entries, all_paths, "HEAD", None, cwd)
+    prose_entries, all_paths, all_entries = _staged_diff(cwd)
+    findings = collect_findings(prose_entries, all_paths, all_entries, "HEAD", None, cwd)
     flagged = blocking_findings(findings, waived=False)
     if flagged:
         report = render_findings(findings, waiver_reason=None)
@@ -362,8 +387,8 @@ def run_commit_msg(message_path: Path, cwd: Path, enforce: bool) -> int:
     message = message_path.read_text(encoding="utf-8", errors="replace")
     reason, waiver_error = parse_waiver(message)
 
-    prose_entries, all_paths = _staged_diff(cwd)
-    findings = collect_findings(prose_entries, all_paths, "HEAD", None, cwd)
+    prose_entries, all_paths, all_entries = _staged_diff(cwd)
+    findings = collect_findings(prose_entries, all_paths, all_entries, "HEAD", None, cwd)
     flagged = blocking_findings(findings, waived=reason is not None)
     return _verdict(findings, flagged, reason, waiver_error, enforce, scope="commit")
 
@@ -377,8 +402,8 @@ def run_range(range_spec: str, cwd: Path, enforce: bool) -> int:
         print(f"eval-guard: --range expects <a>..<b>, got {range_spec!r}", file=sys.stderr)
         return EXIT_PLUMBING_ERROR
 
-    prose_entries, all_paths = _range_diff(old_ref, new_ref, cwd)
-    findings = collect_findings(prose_entries, all_paths, old_ref, new_ref, cwd)
+    prose_entries, all_paths, all_entries = _range_diff(old_ref, new_ref, cwd)
+    findings = collect_findings(prose_entries, all_paths, all_entries, old_ref, new_ref, cwd)
 
     log_out = _git(["log", "--format=%B%x00", f"{old_ref}..{new_ref}"], cwd)
     messages = [m for m in log_out.split("\0") if m.strip()]
