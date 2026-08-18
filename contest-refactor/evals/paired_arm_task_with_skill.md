@@ -26,6 +26,4 @@ Review one completed /contest-refactor loop. `scenario.md` shows the change the 
 ## Output
 
 Write your full response — prose reasoning, then the single fenced ` ```json ` verdict block
-described above — to `./review-verdict.md`. Do not write anything else. Where the rubric gives
-you a named anchor or smell that fits, use its exact vocabulary; do not invent vocabulary the
-rubric does not define.
+described above — to `./review-verdict.md`. Do not write anything else.

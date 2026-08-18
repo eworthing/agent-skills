@@ -2,7 +2,7 @@
   "schema_version": 1,
   "record_state": "preregistered",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
-  "prereg_sha256": "6c7e13ee42ddb4085a24f4f063b26b803c64494cf7e2ecc7c6c89853a392268e",
+  "prereg_sha256": "4655128f453e2c46068ffbad9458a188252e248fca246c87a22dac9a8ef2aeb1",
   "prereg": {
     "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
     "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
@@ -103,8 +103,8 @@
     "material_hashes": {
       "references/architecture-rubric.md": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
       "references/method.md": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
-      "evals/paired_arm_task_with_skill.md": "ab278cf8b82b9eab6028280f67bbde3214dd34283648ef3ca4b59fe5dc6c2d72",
-      "evals/paired_arm_task_without_skill.md": "dda4c56647ae5b76a37a001ae3999aa0137d258dfae1f69d0209d39042b423de",
+      "evals/paired_arm_task_with_skill.md": "6f2fec8e8b62e7ac43e05e04624f7c377c61fc8bff916e7f58a9521f7c3021c1",
+      "evals/paired_arm_task_without_skill.md": "973d1738090c29f013315d61ba3ae63e9ee2c5627322ab39252da708e9f03545",
       "evals/scenarios/suppression-flag/scenario.md": "fde5883b50e7982978c020467637ffd5ccbf232272cf5763a7079bce7a925237",
       "evals/scenarios/crossplat-flag/scenario.md": "8a9f5e4c7fe86e9974b3a740891d2411ecac6861838ddaee69914ac1fa5ccbe2",
       "evals/scenarios/suppression-restraint/scenario.md": "fd76754b6351898ecce73561b652905da7f0ed5d5360506c4bd291689bb3ccf0",
@@ -682,6 +682,11 @@
         "id": "readme_746_outcome_only",
         "statement": "evals/README.md:746's acceptance criterion ('measurable with-skill lift on at least the suppression-flag and crossplat-flag discriminating assertions, and zero restraint regression') as literally written admits assertions that are both [discriminating] and criterion_class==\"skill_contract\" (canon severity-anchor / vocabulary checks).",
         "reason": "Admitting skill_contract-classed assertions would score the bare arm on vocabulary it structurally cannot produce -- the same invalid-evaluation-item the flagged_smells_canon_exact exclusion two sections earlier in this plan already avoids. Decision 2 narrows README:746 to its outcome-classed half; the skill_contract half is reported separately on the vocabulary axis. This is a declared divergence from the legacy text, not a silent reinterpretation."
+      },
+      {
+        "id": "symmetric_vocabulary_instructions",
+        "statement": "Neither task template instructs an arm about vocabulary. An earlier draft told without_skill 'do not fabricate a rubric vocabulary you were not given' and with_skill 'use its exact vocabulary'; both instructions were removed before any dispatch.",
+        "reason": "Those asymmetric prompt-level constraints would have INSTRUCTED the vocabulary difference into existence rather than measuring it -- any flagged_smells gap between arms would then be an artifact of the prompt, not of the lens, making the separately-reported vocabulary axis measure instruction compliance instead of capability. The without_skill version was additionally methodology leakage: telling that arm not to invent a rubric vocabulary reveals that one exists, violating evals/README.md:475's requirement that the neutral prompt leak no methodology so 'a no-skill arm gets no hints'. The with_skill arm's rubric already carries its own 'use only in this exact sense' instruction internally, so the lens still speaks for itself -- which is the declared estimand."
       }
     ],
     "headline_excluded": [
