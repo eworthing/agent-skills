@@ -1,0 +1,11 @@
+id = "transition-illegal-post-cap-continue"
+purpose = "Loop 1 emits terminal HALT_LOOP_CAP (canon/states.toml transitions.HALT_LOOP_CAP.edges == []); loop 2 resumes with CONTINUE anyway, as if the run continued past a terminal halt without --reset. Flag twin for transition-legal-multiloop: the report-only transition-legality check must print exactly one [transition-violation ...] line for the (HALT_LOOP_CAP -> CONTINUE) pair."
+expected_result = "pass"
+pair_id = "transition-legality"
+pair_role = "flag"
+aspirational = false
+notes = "Loop 1 = halt-loop-cap-clean's CURRENT_REVIEW.json verbatim (already a standalone passing HALT_LOOP_CAP fixture). Loop 2 = v3-clean-loop's CONTINUE shape renumbered to loop 2. Every individual loop entry is independently well-formed (each already passes strict on its own as its source fixture), so validate-artifact.py --mode strict still exits 0 here -- the transition check is report-only and never contributes an Issue to the exit code. The illegal-transition proof lives in _transition_table_selftest.py, which captures check_transition_report_only's stdout directly and asserts the violation line fires."
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_LOOP_CAP"

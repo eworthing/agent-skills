@@ -1,0 +1,11 @@
+id = "transition-legal-multiloop"
+purpose = "3-loop CONTINUE chain (loop 1 -> 2 -> 3), each transition legal per canon/states.toml transitions.CONTINUE.edges (guards loop-below-cap + backlog-nonempty). Restraint twin for transition-illegal-post-cap-continue: the transition-legality report-only check (scripts/_artifact_transitions.py) must stay silent across every consecutive REVIEW_HISTORY.json.loops[] pair here."
+expected_result = "pass"
+pair_id = "transition-legality"
+pair_role = "restraint"
+aspirational = false
+notes = "Built by repeating v3-clean-loop's CONTINUE shape across loop numbers 1/2/3 (same scorecard, delta SAME throughout -- no G8 score-up-without-proof exposure). REVIEW_HISTORY.json carries 3 entries with loops[-1] equal to CURRENT_REVIEW.json (G18) and REVIEW_HISTORY.md one divider per loop (G22). The transition check is deliberately unnumbered (no G<n> id, see _artifact_transitions.py's module docstring) and never affects exit code (report-only); this fixture's job is the selftest's stdout assertion (scripts/_transition_table_selftest.py), not validate-artifact.py's exit code."
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

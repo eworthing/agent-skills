@@ -81,9 +81,9 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         sys.stderr.write(f"error: canon directory missing: {canon_dir}\n")
         sys.exit(2)
 
-    states = _require_list(
-        _load_toml(canon_dir / "states.toml"), "states", canon_dir / "states.toml"
-    )
+    states_path = canon_dir / "states.toml"
+    states_data = _load_toml(states_path)
+    states = _require_list(states_data, "states", states_path)
     halt_subtypes = _require_list(
         _load_toml(canon_dir / "halt-subtypes.toml"),
         "halt_subtypes",
@@ -206,6 +206,12 @@ def load_canon(skill_root: Path | None = None) -> Canon:
     if fix_kinds_path.exists():
         fix_kinds_data = _load_toml(fix_kinds_path)
         extra["fix_kinds"] = _require_list(fix_kinds_data, "fix_kinds", fix_kinds_path)
+    # states.toml schema_version >= 2 (backlog item 12): declarative transition
+    # table + closed guard vocabulary. Additive over the v1 `states` list read
+    # above, so older consumers of `states` are unaffected by these being absent.
+    extra["states_schema_version"] = states_data.get("schema_version", 1)
+    extra["transition_guards"] = tuple(states_data.get("guards", ()))
+    extra["transitions"] = states_data.get("transitions", {})
 
     return Canon(
         states=states,

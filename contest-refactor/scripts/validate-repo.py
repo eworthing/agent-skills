@@ -26,6 +26,7 @@ import sys
 import tomllib
 from collections.abc import Sequence
 from datetime import date
+from itertools import pairwise
 from pathlib import Path
 
 # Local sibling imports
@@ -507,6 +508,69 @@ def check_reference_links_resolve(skill_root: Path = SKILL_ROOT) -> list[Violati
     return violations
 
 
+DECLARED_TRANSITION_DIVERGENCES = {
+    (
+        "HALT_SUCCESS_candidate",
+        "HALT_SUCCESS",
+    ): "same-loop-number promotion: G18 makes main rewrite the candidate's own archived "
+    "entry in place, so it never appears as two loop-indexed entries the table could model",
+}
+
+
+def check_transition_prose_sync(canon: _canon.Canon) -> list[Violation]:
+    """Every state pair SKILL.md's routing prose names must exist in canon's table.
+
+    canon/states.toml is the mechanical SSOT for transition legality; SKILL.md's
+    Step 1 Routing prose stays the instruction the model reads. Two sources
+    describing one machine drift apart silently, which is what the load-matrix
+    sync check in token-budget.py exists to prevent for the reload set. Same
+    discipline here: a prose-named edge with no canon edge is either a table gap
+    or a divergence someone must declare in DECLARED_TRANSITION_DIVERGENCES with
+    the reason it cannot be modeled.
+    """
+    violations: list[Violation] = []
+    transitions = (getattr(canon, "extra", {}) or {}).get("transitions") or {}
+    if not transitions:
+        return violations
+
+    skill_md = SKILL_ROOT / "SKILL.md"
+    if not skill_md.is_file():
+        return violations
+    text = skill_md.read_text(encoding="utf-8")
+    states = sorted(canon.states, key=len, reverse=True)
+
+    # Routing prose writes a promotion as "[STATE: X]" ... "promote to terminal
+    # [STATE: Y]"; collect the ordered state mentions per line and treat each
+    # adjacent pair on one line as a prose-asserted edge.
+    for line in text.splitlines():
+        mentions: list[tuple[int, str]] = []
+        for state in states:
+            start = 0
+            while (idx := line.find(f"[STATE: {state}]", start)) != -1:
+                mentions.append((idx, state))
+                start = idx + 1
+        if len(mentions) < 2:
+            continue
+        mentions.sort()
+        for (_, src), (_, dst) in pairwise(mentions):
+            if src == dst:
+                continue
+            edges = (transitions.get(src) or {}).get("edges") or []
+            if dst in {e.get("to") for e in edges if isinstance(e, dict)}:
+                continue
+            if (src, dst) in DECLARED_TRANSITION_DIVERGENCES:
+                continue
+            violations.append(
+                Violation(
+                    "transition-prose-sync",
+                    f"SKILL.md routing prose asserts {src} -> {dst}, absent from "
+                    f"canon/states.toml transitions and undeclared as a divergence",
+                    skill_md,
+                )
+            )
+    return violations
+
+
 def check_gate_range_freshness(canon: _canon.Canon) -> list[Violation]:
     """A hardcoded G1-G<n> range in the runtime surface must match canon's highest gate.
 
@@ -554,6 +618,7 @@ def main() -> int:
     violations.extend(check_g3_evidence_chain_cross_reference())
     violations.extend(check_gate_sequencing(canon))
     violations.extend(check_gate_range_freshness(canon))
+    violations.extend(check_transition_prose_sync(canon))
     violations.extend(check_canon_alignment(canon))
     violations.extend(check_example_config())
     violations.extend(check_references_one_level_deep())

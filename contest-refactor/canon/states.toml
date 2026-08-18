@@ -1,6 +1,64 @@
 # Canonical run states for contest-refactor.
 # Source of truth. Referenced by scripts/_canon.py.
 # Cross-references: references/output-format-json.md (rule #11), SKILL.md (Halting Conditions).
+#
+# schema_version 2 (backlog item 12) adds a declarative transition table on
+# top of the unchanged v1 `states` list -- additive evolution, not mutation.
+# Existing consumers that only read `states` (scripts/_canon.py's
+# `_require_list`, every selftest that does `load_canon().states`) are
+# unaffected; `guards` and `transitions` are new top-level keys they never
+# looked at.
+#
+# transitions.<state>.edges[] declares which next-state values are legal
+# across a loop boundary, i.e. between REVIEW_HISTORY.json.loops[i].state
+# and loops[i+1].state for two consecutive (adjacent) loop numbers. A state
+# with an empty (or absent) `edges` list is TERMINAL -- SKILL.md's
+# Continuation Discipline stops the run there, so no next loop is legal.
+#
+# Each edge is {to, guards, gate}:
+#   to      target state (must be a member of `states`)
+#   guards  non-empty list of tokens from the CLOSED `guards` enum below --
+#           documentation of WHY this edge is legal, not something the
+#           report-only checker evaluates against live artifact fields (no
+#           expression language, no parser -- see scripts/_artifact_transitions.py)
+#   gate    the validation-gates.toml G-id (or "-" if none) whose structural
+#           checks are the closest existing enforcement for this edge
+#
+# Guard vocabulary (CLOSED enum; every edge's `guards` entries must be one
+# of these tokens -- scripts/_transition_table_selftest.py fails on both an
+# edge using an unknown token AND a declared token no edge uses):
+#   loop-below-cap          loop < loop_cap (SKILL.md Continuation Discipline / G20)
+#   loop-equals-cap         loop == loop_cap; HALT_LOOP_CAP set in that loop's
+#                           Step-3 wrap-up after the loop runs in full (G41)
+#   loop-exceeds-cap        loop > loop_cap at Step 1 entry -- a resumed or
+#                           misconfigured run with no budget left (Step 1 Routing)
+#   backlog-nonempty        Improvement Backlog has >=1 item (G9)
+#   halt-tail-present       halt_subtype/unresolved_reason/halt_handoff populated
+#                           per G34 for the HALT_STAGNATION subtype that fired
+#   candidate-criteria-met  every scorecard dimension >=9.5 + build green
+#                           (HALT_SUCCESS_candidate emit criteria, G32)
+#   challenge-broke         the HALT_SUCCESS Challenge outcome == "broke" (G32)
+#   challenger-unavailable  the Challenge was unreachable after the bounded
+#                           retry envelope -- fail-closed (G32)
+#   stop-ask-gate-blocked   a Stop/Ask gate blocks the post-"broke" fix, so
+#                           main halts instead of dispatching a new CONTINUE loop
+#   flag:dry-run            --dry-run invocation flag (mirrored as
+#                           CURRENT_REVIEW.json.dry_run), Step 2 sub-step 6
+#
+# Known limitation (documented, not silently papered over): the
+# HALT_SUCCESS_candidate -> HALT_SUCCESS "held" promotion is described in
+# SKILL.md's Step 1 Routing prose ("promote to terminal [STATE: HALT_SUCCESS],
+# commit"), but it is a SAME-loop-number overwrite -- G18 requires
+# REVIEW_HISTORY.json's last entry to equal CURRENT_REVIEW.json verbatim, so
+# main rewrites the candidate's own archived entry in place rather than
+# appending a new one. It therefore never appears as two distinct entries in
+# the loop-indexed observed-transition sequence this table models, so it is
+# NOT a modeled edge here. scripts/validate-repo.py's
+# check_transition_prose_sync declares this as a prose-only divergence
+# rather than silently dropping it.
+
+schema_version = 2
+
 states = [
     "CONTINUE",
     "HALT_SUCCESS",
@@ -9,3 +67,74 @@ states = [
     "HALT_LOOP_CAP",
     "HALT_DRY_RUN",
 ]
+
+guards = [
+    "loop-below-cap",
+    "loop-equals-cap",
+    "loop-exceeds-cap",
+    "backlog-nonempty",
+    "halt-tail-present",
+    "candidate-criteria-met",
+    "challenge-broke",
+    "challenger-unavailable",
+    "stop-ask-gate-blocked",
+    "flag:dry-run",
+]
+
+[[transitions.CONTINUE.edges]]
+to = "CONTINUE"
+guards = ["loop-below-cap", "backlog-nonempty"]
+gate = "G20"
+
+[[transitions.CONTINUE.edges]]
+to = "HALT_LOOP_CAP"
+guards = ["loop-equals-cap"]
+gate = "G41"
+
+[[transitions.CONTINUE.edges]]
+to = "HALT_LOOP_CAP"
+guards = ["loop-exceeds-cap"]
+gate = "G34"
+
+[[transitions.CONTINUE.edges]]
+to = "HALT_STAGNATION"
+guards = ["halt-tail-present"]
+gate = "G34"
+
+[[transitions.CONTINUE.edges]]
+to = "HALT_SUCCESS_candidate"
+guards = ["candidate-criteria-met"]
+gate = "G32"
+
+[[transitions.CONTINUE.edges]]
+to = "HALT_DRY_RUN"
+guards = ["flag:dry-run"]
+gate = "G9"
+
+[[transitions.HALT_SUCCESS_candidate.edges]]
+to = "CONTINUE"
+guards = ["challenge-broke"]
+gate = "G32"
+
+[[transitions.HALT_SUCCESS_candidate.edges]]
+to = "HALT_STAGNATION"
+guards = ["challenge-broke", "stop-ask-gate-blocked"]
+gate = "G32"
+
+[[transitions.HALT_SUCCESS_candidate.edges]]
+to = "HALT_STAGNATION"
+guards = ["challenger-unavailable"]
+gate = "G32"
+
+# Terminal states -- Continuation Discipline stops the run here, so no edges.
+[transitions.HALT_SUCCESS]
+edges = []
+
+[transitions.HALT_STAGNATION]
+edges = []
+
+[transitions.HALT_LOOP_CAP]
+edges = []
+
+[transitions.HALT_DRY_RUN]
+edges = []
