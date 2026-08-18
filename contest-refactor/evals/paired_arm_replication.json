@@ -1,0 +1,713 @@
+{
+  "schema_version": 1,
+  "record_state": "preregistered",
+  "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
+  "prereg_sha256": "6c7e13ee42ddb4085a24f4f063b26b803c64494cf7e2ecc7c6c89853a392268e",
+  "prereg": {
+    "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
+    "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
+    "contamination_rule": "A flag is headline_excluded iff its diff carries a present-tense/structural smell sufficient for the rubric to reject it independent of the cross-module/forces force under test. Pre-classified: abstraction-seam-flag contaminated (bare protocol trips the Unified Seam Policy).",
+    "candidate_output_rule": {
+      "rows": [
+        {
+          "event": "Empty / non-JSON / no-verdict output",
+          "classification": "adherence",
+          "effect": "mark_valid(); candidate_output_status=\"malformed\". Counted as failed assertions. The pair still scores."
+        },
+        {
+          "event": "Candidate-induced timeout -- the agent ran away on its own until the wall-clock budget ended it",
+          "classification": "adherence",
+          "effect": "mark_valid(); candidate_output_status=\"runaway\". Counted as failed assertions. canon/trial-validity.toml names this explicitly as unrepresentable-as-invalid."
+        },
+        {
+          "event": "Infrastructure timeout (harness hang with no candidate progress), rate limit, auth failure, lost artifact",
+          "classification": "exogenous",
+          "effect": "mark_invalid(<canon reason>, canon) where <canon reason> in {\"infra_timeout\", \"rate_limited\", \"auth_failure\", \"artifact_lost\"} (canon/trial-validity.toml invalid_reasons). compute_lift() returns None for that pair. The case stays in cases_in_corpus()."
+        }
+      ],
+      "tie_break": "When the evidence cannot separate a candidate-induced runaway from an infrastructure timeout, classify as runaway (the counted-failure/adherence side) -- item 21's whole posture is that adherence failures must never be voided away.",
+      "replaces": "the 2026-06-24 invalid_output_rule, which predated the trial-validity taxonomy (item 21) and conflated candidate-output status with trial validity."
+    },
+    "decision_rules": {
+      "decision_1_principal_corpus_growth": {
+        "title": "Decision 1 -- principal corpus growth",
+        "scope": "Reads only the 4 headline-eligible principal flags (principal-abstraction-seam-flag excluded as contaminated, per the contamination_rule).",
+        "rows": [
+          {
+            "observed": "with_skill >=4/5 and without_skill <=1/5 on >=2 of 4",
+            "action": "Recall gap located at cross-module grain -> corpus growth specified at that grain; Phase 6 twin rework proceeds."
+          },
+          {
+            "observed": "Both arms >=4/5 on all 4",
+            "action": "No recall gap detected here -> do not grow the corpus for recall."
+          },
+          {
+            "observed": "Anything else, incl. any arm in the 2/5-3/5 band",
+            "action": "Inconclusive across the four eligible scenarios (K=5 each) -> no directional action."
+          }
+        ]
+      },
+      "decision_2_core_suite_acceptance": {
+        "title": "Decision 2 -- core suite acceptance (README:746)",
+        "scope": "Evaluated per named discriminating assertion, not per scenario, on suppression-flag and crossplat-flag.",
+        "criterion_class_restriction": "Only assertions that are BOTH tagged [discriminating] AND classified criterion_class==\"outcome\" are admitted. Assertions that are [discriminating] AND criterion_class==\"skill_contract\" (canon-vocabulary/severity-anchor checks) are excluded from this decision and reported separately on the vocabulary axis -- admitting them would score the bare arm on vocabulary it structurally cannot produce.",
+        "met_iff": "For suppression-flag and crossplat-flag, every outcome-classed [discriminating] assertion shows with_skill passing >=4/5 while without_skill passes <=2/5 (a concrete K=5 gap of at least 2 slots) AND Decision 4 finds no restraint regression on suppression-restraint or crossplat-restraint.",
+        "otherwise": "Unmet and unsettled -- reported as such, never as a failure of the skill.",
+        "readme_reference": "evals/README.md:746"
+      },
+      "decision_3_global_recall": {
+        "title": "Decision 3 -- global recall",
+        "scope": "The conjunction across both layers; the only row that licenses a programme-wide statement.",
+        "retargeting_requires_all_of": [
+          "Decision 1 returns 'no recall gap detected'",
+          "core no-gap: both arms >=4/5 on EVERY eligible core assertion ([discriminating] AND criterion_class==\"outcome\") across suppression-flag and crossplat-flag -- defined here because Decision 2's 'unmet-and-unsettled' is not the same as 'no gap'",
+          "Decision 4 reports no negative flag result and no restraint regression"
+        ],
+        "decision_4_is_veto": "A negative or regression finding in Decision 4 blocks programme retargeting outright, because retargeting toward restraint while restraint is regressing is incoherent.",
+        "otherwise": "If the two layers disagree, or any condition is unmet, that is the finding -- record it and retarget nothing."
+      },
+      "decision_4_negative_regression": {
+        "title": "Decision 4 -- negative regression",
+        "scope": "All 4 restraint twins (semantic tier) and, separately, every flag.",
+        "rows": [
+          {
+            "observed": "without_skill held <4/5 and with_skill >=4/5 on >=1 twin",
+            "reading": "Restraint lift corroborated (matches the advisory finding)"
+          },
+          {
+            "observed": "with_skill held < without_skill held on any twin",
+            "reading": "Restraint regression -- a lens-content defect per restraint_regression_tolerance: 0, not a score"
+          },
+          {
+            "observed": "without_skill > with_skill on any flag, at any margin",
+            "reading": "The skill may be hurting. Reported explicitly, never absorbed. Two arms both >=4/5 with the skill arm lower is a negative signal, not a tie."
+          }
+        ]
+      },
+      "language_rule": "An observed zero or negative delta is stated as \"no lift detected at this n\" -- never \"lift is zero\", never \"the skill adds nothing\". With 5 reps per arm and no measured floor, this design cannot distinguish a true null from an underpowered one."
+    },
+    "arm_model": "claude-sonnet-5",
+    "arms": {
+      "with_skill": {
+        "materials": [
+          "references/architecture-rubric.md",
+          "references/method.md"
+        ],
+        "task_template": "evals/paired_arm_task_with_skill.md"
+      },
+      "without_skill": {
+        "materials": [],
+        "task_template": "evals/paired_arm_task_without_skill.md"
+      }
+    },
+    "material_hashes": {
+      "references/architecture-rubric.md": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
+      "references/method.md": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
+      "evals/paired_arm_task_with_skill.md": "ab278cf8b82b9eab6028280f67bbde3214dd34283648ef3ca4b59fe5dc6c2d72",
+      "evals/paired_arm_task_without_skill.md": "dda4c56647ae5b76a37a001ae3999aa0137d258dfae1f69d0209d39042b423de",
+      "evals/scenarios/suppression-flag/scenario.md": "fde5883b50e7982978c020467637ffd5ccbf232272cf5763a7079bce7a925237",
+      "evals/scenarios/crossplat-flag/scenario.md": "8a9f5e4c7fe86e9974b3a740891d2411ecac6861838ddaee69914ac1fa5ccbe2",
+      "evals/scenarios/suppression-restraint/scenario.md": "fd76754b6351898ecce73561b652905da7f0ed5d5360506c4bd291689bb3ccf0",
+      "evals/scenarios/crossplat-restraint/scenario.md": "6fa92b5492bd3388e9480d4974e26f2694ca6d4ca3f265e06021149b1f0da068",
+      "evals/scenarios/principal-invariant-owner-flag/scenario.md": "7be7c9ea8077770b841e4789628fcfa8a64e6c3e2d5b77fd202b2e73b0bf85da",
+      "evals/scenarios/principal-invariant-owner-restraint/scenario.md": "f68c8885f123148b17760345bd9a8b1d62b8cb827619c33838e06c974550184b",
+      "evals/scenarios/principal-duplicated-rule-flag/scenario.md": "cd80ea788e0aa56f348370ac4dffc3a0593044ebd1e182ef0e01160dda8e6c45",
+      "evals/scenarios/principal-process-owner-flag/scenario.md": "b00161fda80b2aff241117029976b535f4413f37aa1ac5c5478b9791f44ceff8",
+      "evals/scenarios/principal-consistency-boundary-flag/scenario.md": "c4135cbe2b778829cc63c4e673504bf5ae3d8967143f13fe77cb162ef89b8612",
+      "evals/scenarios/principal-consistency-boundary-restraint/scenario.md": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc",
+      "evals/scenarios/principal-abstraction-seam-flag/scenario.md": "b4e35a817f6b81ac71c946fdbcb601dfed8e48b0d91e345f377d81cc1b59453d"
+    },
+    "historical_file_hashes": {
+      "evals/principal_baseline.json": "8fb47ee8047024dcbbda8c0d276ca2b48eb782885641381070a2edd8789c71d4",
+      "evals/principal_baseline_replication.json": "ddde4f5ecbc0c33bfdab6966611e1baf8ce772adf90e4f1af1959b9b411520b4"
+    },
+    "K": 5,
+    "decision_threshold": ">=4/5",
+    "frozen_order_generation": {
+      "algorithm": "base_pairs = itertools.product(SCENARIO_IDS, range(1, K+1)) in the fixed SCENARIO_IDS order recorded here; random.Random(dispatch_order_seed).shuffle(base_pairs); for each pair in the shuffled order, random.Random instance (same stream, continued) .shuffle([\"with_skill\", \"without_skill\"]) to pick that pair's within-pair arm order.",
+      "scenario_ids_fixed_order": [
+        "suppression-flag",
+        "crossplat-flag",
+        "suppression-restraint",
+        "crossplat-restraint",
+        "principal-invariant-owner-flag",
+        "principal-invariant-owner-restraint",
+        "principal-duplicated-rule-flag",
+        "principal-process-owner-flag",
+        "principal-consistency-boundary-flag",
+        "principal-consistency-boundary-restraint",
+        "principal-abstraction-seam-flag"
+      ]
+    },
+    "dispatch_order_seed": 20260818,
+    "grading_subsample_seed": 20260819,
+    "grading_subsample_fraction": 0.2,
+    "grading_subsample_size_pairs": 11,
+    "frozen_order": [
+      {
+        "pair_id": "pair-001",
+        "scenario_id": "crossplat-flag",
+        "rep": 5,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-002",
+        "scenario_id": "principal-duplicated-rule-flag",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-003",
+        "scenario_id": "suppression-flag",
+        "rep": 5,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-004",
+        "scenario_id": "crossplat-flag",
+        "rep": 4,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-005",
+        "scenario_id": "principal-abstraction-seam-flag",
+        "rep": 5,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-006",
+        "scenario_id": "suppression-restraint",
+        "rep": 2,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-007",
+        "scenario_id": "suppression-flag",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-008",
+        "scenario_id": "principal-invariant-owner-restraint",
+        "rep": 3,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-009",
+        "scenario_id": "suppression-restraint",
+        "rep": 3,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-010",
+        "scenario_id": "principal-invariant-owner-flag",
+        "rep": 4,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-011",
+        "scenario_id": "suppression-flag",
+        "rep": 3,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-012",
+        "scenario_id": "crossplat-restraint",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-013",
+        "scenario_id": "crossplat-restraint",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-014",
+        "scenario_id": "principal-invariant-owner-restraint",
+        "rep": 5,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-015",
+        "scenario_id": "suppression-restraint",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-016",
+        "scenario_id": "principal-consistency-boundary-flag",
+        "rep": 5,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-017",
+        "scenario_id": "principal-duplicated-rule-flag",
+        "rep": 5,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-018",
+        "scenario_id": "principal-process-owner-flag",
+        "rep": 2,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-019",
+        "scenario_id": "principal-invariant-owner-restraint",
+        "rep": 2,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-020",
+        "scenario_id": "principal-consistency-boundary-restraint",
+        "rep": 3,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-021",
+        "scenario_id": "principal-invariant-owner-flag",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-022",
+        "scenario_id": "principal-consistency-boundary-flag",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-023",
+        "scenario_id": "principal-consistency-boundary-restraint",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-024",
+        "scenario_id": "principal-duplicated-rule-flag",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-025",
+        "scenario_id": "principal-consistency-boundary-restraint",
+        "rep": 4,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-026",
+        "scenario_id": "principal-invariant-owner-flag",
+        "rep": 5,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-027",
+        "scenario_id": "principal-consistency-boundary-restraint",
+        "rep": 5,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-028",
+        "scenario_id": "crossplat-flag",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-029",
+        "scenario_id": "principal-invariant-owner-restraint",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-030",
+        "scenario_id": "suppression-flag",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-031",
+        "scenario_id": "principal-consistency-boundary-flag",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-032",
+        "scenario_id": "crossplat-flag",
+        "rep": 3,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-033",
+        "scenario_id": "principal-abstraction-seam-flag",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-034",
+        "scenario_id": "principal-process-owner-flag",
+        "rep": 3,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-035",
+        "scenario_id": "suppression-flag",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-036",
+        "scenario_id": "principal-abstraction-seam-flag",
+        "rep": 4,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-037",
+        "scenario_id": "crossplat-restraint",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-038",
+        "scenario_id": "crossplat-restraint",
+        "rep": 3,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-039",
+        "scenario_id": "principal-process-owner-flag",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-040",
+        "scenario_id": "principal-abstraction-seam-flag",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-041",
+        "scenario_id": "principal-consistency-boundary-flag",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-042",
+        "scenario_id": "principal-invariant-owner-flag",
+        "rep": 3,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-043",
+        "scenario_id": "principal-duplicated-rule-flag",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-044",
+        "scenario_id": "principal-abstraction-seam-flag",
+        "rep": 3,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-045",
+        "scenario_id": "principal-consistency-boundary-restraint",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-046",
+        "scenario_id": "crossplat-restraint",
+        "rep": 5,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-047",
+        "scenario_id": "principal-consistency-boundary-flag",
+        "rep": 3,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-048",
+        "scenario_id": "principal-duplicated-rule-flag",
+        "rep": 3,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-049",
+        "scenario_id": "principal-process-owner-flag",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-050",
+        "scenario_id": "suppression-restraint",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-051",
+        "scenario_id": "suppression-restraint",
+        "rep": 5,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-052",
+        "scenario_id": "principal-invariant-owner-restraint",
+        "rep": 4,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-053",
+        "scenario_id": "principal-process-owner-flag",
+        "rep": 5,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-054",
+        "scenario_id": "crossplat-flag",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pair-055",
+        "scenario_id": "principal-invariant-owner-flag",
+        "rep": 2,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      }
+    ],
+    "terminal_selection_predicate": {
+      "attempt_2_is_terminal_iff": "attempt 1 mechanically satisfies the retry predicate: attempt 1 produced no parsing output at all",
+      "otherwise": "attempt 1 is terminal and attempt 2 is retained as superseded",
+      "basis": "preregistered predicate, never ordering -- ordering alone must never decide, because ordering is exactly what a post-hoc rerun could manipulate"
+    },
+    "expected_baseline": {
+      "suppression-flag": "hold",
+      "crossplat-flag": "hold",
+      "suppression-restraint": "hold",
+      "crossplat-restraint": "hold",
+      "principal-invariant-owner-flag": "miss",
+      "principal-invariant-owner-restraint": "hold",
+      "principal-duplicated-rule-flag": "miss",
+      "principal-process-owner-flag": "miss",
+      "principal-consistency-boundary-flag": "miss",
+      "principal-consistency-boundary-restraint": "hold",
+      "principal-abstraction-seam-flag": "miss"
+    },
+    "non_claim": {
+      "claim_type": "descriptive diagnostic only, not a reportable lift claim",
+      "evaluate_lift_status": "unreportable",
+      "aa_floor": "none -- evals/noise_floor.json ships floors: [], so evaluate_lift() returns unreportable for any key",
+      "power_params": {
+        "min_effect": 0.1,
+        "alpha": 0.05,
+        "power": 0.8
+      },
+      "required_n_for_power": 778,
+      "observed_n_cases": 11,
+      "readout_language_rule": "\"no lift detected at this n\", never \"lift is zero\", never \"the skill adds nothing\"",
+      "deliverable": "per-arm caught/held rates with Clopper-Pearson lower bounds, plus observed arm deltas and paired discordance counts. Per-arm intervals do not quantify the difference; equal 5-rep rates are not demonstrated equality."
+    },
+    "declared_divergences": [
+      {
+        "id": "subset_invariant_with_skill_only",
+        "statement": "semantic.caught <= mechanical.caught (flags) / mechanical.held <= semantic.held (restraints) holds for a rubric-following reviewer but not necessarily for a bare model, which can name a defect in prose while emitting verdict: approved.",
+        "reason": "The validator applies this subset invariant to with_skill only; the without_skill exemption is recorded here rather than silently applied."
+      },
+      {
+        "id": "readme_746_outcome_only",
+        "statement": "evals/README.md:746's acceptance criterion ('measurable with-skill lift on at least the suppression-flag and crossplat-flag discriminating assertions, and zero restraint regression') as literally written admits assertions that are both [discriminating] and criterion_class==\"skill_contract\" (canon severity-anchor / vocabulary checks).",
+        "reason": "Admitting skill_contract-classed assertions would score the bare arm on vocabulary it structurally cannot produce -- the same invalid-evaluation-item the flagged_smells_canon_exact exclusion two sections earlier in this plan already avoids. Decision 2 narrows README:746 to its outcome-classed half; the skill_contract half is reported separately on the vocabulary axis. This is a declared divergence from the legacy text, not a silent reinterpretation."
+      }
+    ],
+    "headline_excluded": [
+      "principal-abstraction-seam-flag"
+    ],
+    "study_scenarios": [
+      "suppression-flag",
+      "crossplat-flag",
+      "suppression-restraint",
+      "crossplat-restraint",
+      "principal-invariant-owner-flag",
+      "principal-invariant-owner-restraint",
+      "principal-duplicated-rule-flag",
+      "principal-process-owner-flag",
+      "principal-consistency-boundary-flag",
+      "principal-consistency-boundary-restraint",
+      "principal-abstraction-seam-flag"
+    ],
+    "expected_baseline_rationale": {
+      "core_flags": "suppression-flag and crossplat-flag are COMPONENT-GRAIN defects. evals/advisory_baseline.json measurement.headline records, across three rounds and two base models, that bare models catch every component-grain defect unaided ('these component-grain defects are not recall-discriminating for any model'). Predicting 'miss' for them would preregister a hypothesis against evidence already held, so they are predicted 'hold'. If the bare arm nevertheless misses them, that CONTRADICTS the advisory finding and is the more interesting result.",
+      "principal_flags": "CROSS-MODULE / forces-dependent grain. evals/README.md:620 asserts this is 'where recall lift lives', but principal_baseline.json replication_summary.confound_noted states the supporting measurement is current-arm only -- never tested against a bare model. 'miss' is therefore a genuine open prediction here, not a default.",
+      "restraint_twins": "'hold' per the convention already used uniformly by principal_baseline.json's ten entries.",
+      "note": "The two layers deliberately carry OPPOSITE predictions. That is what makes the result informative in either direction rather than confirmatory."
+    }
+  },
+  "captured_at": null,
+  "per_scenario": {},
+  "attempts": []
+}
