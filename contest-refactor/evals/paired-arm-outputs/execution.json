@@ -59,6 +59,17 @@
           "without_skill",
           "with_skill"
         ]
+      },
+      {
+        "pair_id": "pilot-003",
+        "scenario_id": "principal-abstraction-seam-restraint",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ],
+        "purpose": "Lean-dispatch A/B, added after pilot-001/002 measured that 59% of context processed and 17.5% of fresh tokens were spent on turns AFTER the verdict was written -- a ToolSearch + SendMessage summary round-trip that exists for the host's convenience and contributes nothing to the measurement. Identical frozen prompt and materials; the ONLY change is that the agent is spawned without a teammate name, so it is not an addressable teammate and has no summary to send. Nothing in the prereg changes, because nothing the arm RECEIVES changes.",
+        "order_seed": 20260821
       }
     ],
     "attempts": [
