@@ -140,11 +140,16 @@ validated against candidate output or shared across unrelated scripts (contrast
 `canon/trial-validity.toml`, whose thresholds are load-bearing machinery for more than one
 consumer). `scripts/_paired_baseline.criterion_class()` is the reader. **Absence is not a
 default to either class** (D6, mirroring `historical_validity()`'s `"not_recorded"` rule): it
-reads `"unclassified"`, and an unclassified assertion enters neither score. The 165 assertions
-already in `evals.json` are, as of this item, all unclassified — D6 forecloses retroactively
-guessing a classification for measured-suite content nobody has actually adjudicated;
-classifying the existing corpus is a future editorial pass, not something this item invents
-values for.
+reads `"unclassified"`, and an unclassified assertion enters neither score. That default is
+the safety net, not the steady state: the corpus **has** since been classified (commit
+`de02426`) — all 165 assertions carry a class, 151 `outcome` and 14 `skill_contract`, none
+`unclassified`. The 14 are the ones a baseline arm structurally cannot satisfy: the 8
+`flagged_smells` canon-exact smell-name checks, and 6 `blocking_severity` checks requiring the
+exact anchor strings. The distinction that decides this axis is whether the vocabulary is
+handed to *both* arms in the case prompt — `verdict` is enumerated there verbatim
+(`"approved|rejected|conditional"`), so verdict criteria measure a judgment either arm could
+reach; `blocking_severity` appears only as "the rubric severity anchor or null", so the
+4-value taxonomy is reachable only by having read the rubric.
 
 **The lift computation (D1).** `compute_lift()` takes a `PairedTrial` (a `case_id` plus a
 `with_arm` and `without_arm` `ArmResult`, each a tuple of graded `AssertionResult`s) and
@@ -192,12 +197,18 @@ The remedy for a real flag is either of D3's two named exits: reclassify the cri
 `skill_contract` (the same text stops being policed at all once it's no longer claiming to
 measure lift), or declare the exception with a reason.
 
-`DECLARED_TAUTOLOGY_EXCEPTIONS` ships empty: since no assertion in `evals.json` carries
-`criterion_class` yet (D6, above), `screen_criteria()` run against the real corpus today
-flags nothing — not because the corpus is clean of the tautology Gap 20 describes, but
-because nothing has been classified `outcome` for it to check. A demonstration run against a
-copy of `evals.json` with two of eval #12's assertions force-classified `outcome` (never
-persisted — this was an in-memory check, not a corpus edit) confirmed the screen fires
+`DECLARED_TAUTOLOGY_EXCEPTIONS` carries **70** reasoned entries against the classified
+corpus, with **0 undeclared** flags — the screen is wired into `scripts/validate-repo.py`, so
+an undeclared flag fails the repo check. Read that ratio with care rather than as a clean
+bill of health: a screen whose every flag is resolved by declaring is one where declaring has
+quietly become the default. The screen is a prompt for adjudication, not a verdict. When it
+fires on a criterion, the question to answer is whether the criterion rewards *our vocabulary*
+or *the outcome the vocabulary names* — and the honest answer is sometimes to reclassify. Six
+`blocking_severity` criteria were declared exceptions in the original pass and reclassified to
+`skill_contract` on review; the screen had in fact named `serious deduction` and `likely
+disqualifier` as skill vocabulary itself, and the exception had been declared over its own
+objection. An earlier demonstration run, before the corpus was classified, confirmed the
+screen fires
 correctly on real text: it flagged `"flagged_smells names suppression-as-fix..."` (normalized
 hits: `flagged smells`, `suppression as fix`, `fake clean reward`) and `"blocks_95 is true and
 the concurrency score is < 9.5"` (hits: `blocks 95`, `concurrency`) — the second is exactly the
@@ -205,6 +216,144 @@ ambiguous case Gap 20 warns about (`concurrency` is a real scorecard dimension t
 is legitimately checking a threshold against, not rewarding vocabulary for its own sake), and
 would need a human to declare it rather than reclassify it. Classifying the existing corpus is
 future work; this item ships the mechanism the classification pass will run under.
+
+### A/A noise floor and the paired significance gate (backlog item 20)
+
+Trial validity says a trial produced a scoreable outcome; the paired lift computation says how
+big the delta was. Neither says whether that delta is distinguishable from noise. Gap 18
+(`docs/review-skill-deep-dive-2026-08-17.md:797`) names the missing floor: CE's own retune
+methodology *"retired every small-sample claim in flight"* after 12 runs on two
+**byte-identical** builds swung workflow adherence 7 of 12 — any later claim smaller than that
+envelope is unsupported. `scripts/_noise_floor.py` is the implementation;
+`scripts/_noise_floor_selftest.py` proves every rule below against constructed trial records —
+per this item's scope, **no A/A trial has actually been run**; see "Scope" below.
+
+**Two mechanisms, both required before a lift is reportable.** (1) A **measured A/A noise
+ceiling**, empirically keyed (D2, below) and stored in `evals/noise_floor.json` — how big an
+apparent "lift" pure noise alone produced when both arms ran the identical candidate. (2) A
+**significance test** matched to the paired design — exact McNemar for binary pass/fail
+outcomes, a paired sign-flip permutation test for non-binary scores — never the asymptotic
+two-proportion z-test, which assumes independent arms and ours are paired.
+
+**The key (D2).** `NoiseFloorKey` carries the six fields Gap 18 names verbatim: `model` (a
+version-qualified model id, literal), `grader_prompt_hash` (sha256 of the grader/judge prompt
+template text), `sampling_hash` (sha256 of the canonical-JSON sampling settings),
+`harness_revision` (the git commit SHA of `scripts/` at measurement time, literal, supplied by
+the caller — this module stays pure and never shells out), `tool_configuration_hash` (sha256 of
+the canonical-JSON tool/allowed-tools/MCP configuration), and `scenario_corpus_hash` (sha256 of
+the canonical-JSON `{case_id: content}` map over the exact scenario set exercised).
+`make_key()` derives all four hashes from the raw material a harness already has at dispatch
+time. `NoiseFloorKey.fingerprint()` hashes all six fields together, and `lookup_floor()` is an
+**exact match only** — changing any single field (a model bump, a re-worded grader prompt)
+changes the fingerprint, and a lookup at the new fingerprint against a store built for the old
+one simply finds nothing. There is no near-match, no "closest key," anywhere in this module: a
+floor measured under one key is invisible to a lookup under a different key, on purpose, so a
+stale floor can never be laundered across a model upgrade as if it still applied.
+
+**The unit of analysis is the case (D4).** `aggregate_cases()` collapses every `LiftResult`
+sharing a `case_id` — repeated trials, repeated judge samples, whatever grain a future caller
+feeds in — into exactly one `CaseAggregate` per case via `statistics.median_low` per arm (the
+same reducer `opendatahub-agent-eval-harness`'s own judge-sample aggregation uses — deep-dive
+fifth pass, *"median-low over N samples, instability preserved"* — chosen because it always
+returns one of the actually-observed scores rather than an interpolated average). Slot-swapped
+judging is an order-bias control that belongs inside the judge protocol upstream of this module,
+**not** itself a discordant-pair table — `aggregate_cases()` never sees or interprets which slot
+a judge ran in, only the already-graded per-case scores. Feeding 20 repeated `LiftResult`s for
+one `case_id` and 4 singletons in still produces exactly 5 aggregate rows, never 24 — the
+selftest builds this directly and checks `mcnemar_counts()` over the aggregate is unaffected by
+how many raw reps any one case carried, the pseudo-replication guard.
+
+**Exact McNemar (D3, binary).** `exact_mcnemar_p(b, c)` — the binomial sign test on the `b + c`
+discordant pairs from `mcnemar_counts()` — is deliberately **not** the asymptotic chi-square
+approximation, with or without continuity correction, because the two diverge materially at
+small `k`, the regime this suite actually lives in. Worked example from the selftest: `b=1,
+c=9` (10 discordant pairs) gives an exact two-sided p-value of `22/1024 ≈ 0.0215`; the
+*uncorrected* asymptotic chi-square answer for the same counts is `≈ 0.0114` — under half the
+exact value — and the continuity-corrected asymptotic answer is `≈ 0.0269`, on the other side of
+it. Using either asymptotic form here would have called the same data significant at a stricter
+threshold than the exact test actually supports, or the reverse — exactly the small-`k` gap Gap
+18 warns about. `n = 0` (no discordant pairs at all) returns `p = 1.0`, a well-defined answer,
+not an edge case requiring special handling downstream.
+
+**Paired permutation (D3, non-binary scores).** `paired_permutation_p()` sign-flips each case's
+signed delta (already collapsed to one delta per case) under the null that its sign is equally
+likely either way, and reports the two-sided fraction of permuted sums at least as extreme as
+the observed sum. `n ≤ 20` (the default `max_exact_n`) enumerates every one of the `2**n` sign
+patterns exactly; above that it draws `n_resamples` (default 100,000) sign-flips from a seeded
+`random.Random`, deterministic for a fixed seed. A delta of exactly zero contributes to neither
+`n_used` nor the permuted sums (flipping the sign of zero changes nothing), mirroring McNemar's
+own exclusion of concordant pairs. Hand-computable example: deltas `[0.4, 0.4, -0.2]`, observed
+sum `0.6`; of the 8 sign patterns, 4 have `|sum| ≥ 0.6` (`±1.0` twice, `±0.6` twice), giving
+`p = 0.5` exactly — the selftest proves this against the shipped implementation, then re-derives
+the same answer through the Monte Carlo path by forcing `max_exact_n` below 3.
+
+**The accept rule (D5) — three outcomes, plus a precondition.** Once a floor is on file for the
+current key, `evaluate_lift()` returns exactly one of:
+
+- **`"significant"`** — the observed effect (signed net case-level swing, as a fraction of the
+  *full* case count — `(b − c) / N` for the binary path, the mean per-case delta for the
+  continuous path) exceeds **both** the measured A/A `noise_ceiling` for this key **and** the
+  preregistered `min_effect`, **and** the test's p-value clears `alpha` (Bonferroni-adjusted for
+  `family_size`, the number of simultaneous lift claims drawn from one report).
+- **`"not_significant"`** — adequately powered (see below) but at least one of those three bars
+  was not cleared; `reasons[]` names which.
+- **`"inconclusive"`** — the number of informative units (discordant pairs for the binary path,
+  nonzero-delta cases for the continuous path) is below `required_n_for_power()`'s minimum for
+  the target power at `min_effect` — the case count could not have detected the preregistered
+  effect even if it were real, so the p-value is not a verdict about anything.
+
+`required_n_for_power()` uses the standard normal-approximation sample-size formula (via
+`statistics.NormalDist`, stdlib) rather than brute-force searching exact power at every
+candidate `n` — a planning heuristic only; `exact_mcnemar_p()` always computes the *reported*
+p-value exactly. At the constants below, `required_n_for_power(0.10, 0.05, 0.80) = 778`
+discordant pairs — a number worth sitting with: most reports at this suite's current corpus
+sizes will land `"inconclusive"`, which is the honest answer for how much evidence a
+tenth-of-the-corpus swing actually needs, not a defect in the gate.
+
+Preceding all three outcomes, a **precondition** (D6): if no floor is on file for the current
+key, or the matched record carries no numeric `noise_ceiling`, `evaluate_lift()` returns
+`status="unreportable"` — every other field left at `None`/`0`. This is not a fourth peer of the
+three outcomes above; it is the gate that decides whether they even apply. There is no code path
+anywhere in this module that substitutes a fabricated floor, defaults to `noise_ceiling = 0`, or
+silently proceeds on a key mismatch — the selftest proves both triggers (an empty floor store,
+and a matched-key record with a non-numeric `noise_ceiling`) independently.
+
+**The four named constants**, in `canon/noise-floor.toml`, PREREGISTERED AND UNFITTED — there is
+no measured A/A corpus yet to fit them against (same posture as `canon/trial-validity.toml`'s
+own two thresholds, item 21):
+
+- **`alpha = 0.05`** — two-sided, deliberately: a paired with/without-skill comparison must be
+  able to detect the skill making things *worse* (Gap 17's fail-with-skill-but-pass-without
+  category), which a one-sided test cannot see by construction.
+- **`min_effect = 0.10`** — the smallest net case-level swing worth reporting even if
+  significant, as a fraction of the *full* corpus. Matches `trial-validity.toml`'s own
+  `max_between_arm_asymmetry` (also `0.10`) in order of magnitude. CE's 7/12 byte-identical
+  swing is the cautionary data point behind the constant's *existence*, not its size — which is
+  exactly why `min_effect` alone is never the gate; the measured A/A floor is the other,
+  data-derived half, and its absence makes a claim unreportable regardless of this number (D6).
+- **`power_target = 0.80`** — the conventional 80% detection power, used only by
+  `required_n_for_power()`, never to move `alpha` or an observed p-value.
+- **`multiple_comparison_method = "bonferroni"`** — `alpha / family_size`. Chosen over a sharper
+  method (Benjamini-Hochberg, Holm) because it needs no dependence assumption between claims and
+  is the smallest correct mechanism for a suite that, today, reports at most a handful of lift
+  claims per run.
+
+**Where the floor lives, and why (D2).** `evals/noise_floor.json` — a new file, following the
+`schema_version` + prose-`note` shape every other `evals/*_baseline.json` file already uses,
+rather than extending one of those files: none of them concern an A/A (same-candidate-twice)
+comparison, and a same-shaped-but-semantically-distinct record folded into e.g.
+`advisory_baseline.json` would blur exactly the boundary D3 of item 21's own historical-baseline
+rule protects (`evals/README.md`'s "Historical baselines are not back-filled" section, above).
+Each record is `{"key": <NoiseFloorKey.as_dict()>, "noise_ceiling": <float>, ...}`, read via
+`load_floor_store()`.
+
+**Scope.** This item ships the storage format, the key, the significance machinery, and the
+accept rule — validated in the selftest against **constructed** trial records, never measured
+ones. `evals/noise_floor.json` ships with `"floors": []`, genuinely empty rather than carrying a
+placeholder or example record: an empty list can never be mistaken for a measurement, which is
+the simplest way to guarantee D6 by construction rather than by convention. The actual A/A
+runs — dispatching the current skill against itself, at a real key, enough replicates to
+populate a real `noise_ceiling` — are a separate, batched, LLM-spend sweep, not run here.
 
 ## Layer 1 — artifact-rule (`evals.json` #0–#11, `fixtures/`, `artifact-smoke/`)
 

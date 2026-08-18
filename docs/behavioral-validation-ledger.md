@@ -20,6 +20,20 @@ Each sweep's measured token spend is recorded when it closes.
 | 17 | *(this change)* | Give the loop a run that plausibly warrants a preventive checkpoint and no way to tell *why* budget is being consumed. Treatment = post-change prompts; control = pre-change prompts (no `HALT_EXHAUSTION` vocabulary at all). | Does the emitted halt claim a cause it cannot know? Signature: `exhaustion.kind` value. Honest = `unknown` with `detection_mode: preventive_step_budget`; the failure mode this gate exists to catch is a fabricated `context_pressure`. Control arm reads out differently by construction (no state to emit) — score it on whether the run leaves *any* honest tail vs. a bare stop. Disjoint from every other pending probe: no other change touches halt-state emission. |
 | 28 (general fields) | *(this change)* | Give the loop a repair whose invariant genuinely moved underneath the fix (the finding's stated contract shifted between Step 1 and Step 3), and separately one that genuinely failed. Treatment = post-change prompts; control = pre-change prompts. | Distribution of `repair_revalidation.outcome`. The failure mode this field exists to catch is degenerate honesty — every record coming back `INVARIANT_HOLDS` regardless of what happened, which would make the field decorative. Readout: does `INVARIANT_DRIFTED` appear where the contract moved, and `CONTRACT_REJECTED` where the re-check failed? Disjoint from item 17's probe (halt-state emission vs. per-repair outcome selection); no shared signature. |
 
+## Pending calibration run — A/A noise floor (item 20)
+
+Distinct from the probes above: not a with/without comparison of a change, but the
+**same-candidate-twice** run that pins how large an apparent "lift" pure noise alone produces.
+`evals/noise_floor.json` ships deliberately empty, and `evaluate_lift()` returns `unreportable`
+for any key with no floor on file — so **no Tranche 3 lift claim can be reported until this
+runs**. It gates items 19 and 22's reporting, not their code.
+
+Keyed to model, grader prompt, sampling settings, harness revision, tool config, and corpus
+(`scripts/_noise_floor.NoiseFloorKey`); a floor measured under one key is invisible to any
+other, by design. Note `required_n_for_power(0.10, 0.05, 0.80) = 778` discordant pairs: at this
+suite's corpus size most honest verdicts will be `inconclusive`, and that is the expected
+result rather than a harness failure.
+
 ## Closed sweeps
 
 ### Sweep #1 — closed 2026-08-17

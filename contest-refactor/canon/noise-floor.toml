@@ -1,0 +1,59 @@
+# Preregistered significance-test constants for the paired A/A noise-floor gate (backlog item
+# 20, Gap 18: docs/review-skill-deep-dive-2026-08-17.md:797). Consumed by
+# scripts/_noise_floor.py (evaluate_lift() / required_n_for_power() / bonferroni_alpha()),
+# proven in scripts/_noise_floor_selftest.py.
+#
+# These are NOT the noise floor itself. The floor is a MEASURED value, keyed to model/version,
+# grader prompt, sampling settings, harness revision, tool configuration, and scenario corpus,
+# and stored in evals/noise_floor.json (see that file's own header and evals/README.md's "A/A
+# noise floor" section). The four constants below are the fixed rule the test applies once a
+# floor for the current key exists: how big an effect counts as worth reporting at all, how
+# much evidence is required before calling a result significant, how the power/sample-size
+# relationship is computed, and how strict the significance bar gets when more than one lift
+# claim is drawn from the same report.
+#
+# All four are PREREGISTERED AND UNFITTED (D5 of the item-20 brief): there is no measured A/A
+# corpus yet to fit them against -- this item ships mechanism, not measurement, same posture as
+# canon/trial-validity.toml's two thresholds (item 21). Defensible round numbers, not derived
+# ones; revise only from data, and only in this file.
+#
+#   alpha                        0.05 -- the conventional two-sided significance threshold.
+#                                 Two-sided, deliberately, because a paired with/without-skill
+#                                 comparison must be able to detect the skill making things
+#                                 WORSE (Gap 17's fail-with-skill-but-pass-without category,
+#                                 item 22's own signed, never-floored delta exists for exactly
+#                                 this reason) -- a one-sided test cannot see that direction by
+#                                 construction. Revise only from a measured false-positive/
+#                                 false-negative trade-off study; there is none yet.
+#   min_effect                   0.10 -- the smallest net case-level swing worth reporting even
+#                                 if statistically significant: the SIGNED fraction of the FULL
+#                                 case corpus (not just the discordant/nonzero subset) that
+#                                 moved toward one arm. Matches trial-validity.toml's own
+#                                 max_between_arm_asymmetry (also 0.10) in order of magnitude --
+#                                 both currently treat "a tenth of the corpus" as the smallest
+#                                 swing this suite calls meaningful rather than noise-shaped.
+#                                 CE's own retune methodology is the cautionary data point
+#                                 behind the number's existence, not its size: 12 runs on
+#                                 BYTE-IDENTICAL builds swung workflow adherence 7/12 -- a
+#                                 single-run range far wider than 0.10 -- which is exactly why
+#                                 min_effect alone is never the gate; the MEASURED A/A floor
+#                                 (evals/noise_floor.json) is the other, data-derived half of
+#                                 the same gate, and absence of that measurement makes a claim
+#                                 unreportable regardless of this constant (D6).
+#   power_target                 0.80 -- the conventional power target: an 80% chance of
+#                                 detecting a real min_effect-sized swing if one exists. Used
+#                                 only by required_n_for_power() to compute a minimum sample
+#                                 size; never used to change alpha or an observed p-value.
+#   multiple_comparison_method   "bonferroni" -- alpha divided by the number of simultaneous
+#                                 lift claims drawn from one report (bonferroni_alpha()'s
+#                                 `family_size`). Bonferroni over a sharper method
+#                                 (Benjamini-Hochberg, Holm) because it needs no assumption
+#                                 about dependence between claims and is the smallest correct
+#                                 mechanism for a suite that, today, reports at most a handful
+#                                 of lift claims per run -- revisit if a report routinely tests
+#                                 dozens of criteria at once and the conservatism costs real
+#                                 power.
+alpha = 0.05
+min_effect = 0.10
+power_target = 0.80
+multiple_comparison_method = "bonferroni"

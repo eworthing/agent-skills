@@ -243,6 +243,23 @@ def load_canon(skill_root: Path | None = None) -> Canon:
     if fix_kinds_path.exists():
         fix_kinds_data = _load_toml(fix_kinds_path)
         extra["fix_kinds"] = _require_list(fix_kinds_data, "fix_kinds", fix_kinds_path)
+    # Noise-floor significance-test constants (backlog item 20, D5): scalars, not enums, so
+    # they live in .extra like trial-validity's two thresholds above. Optional-file pattern
+    # (unlike trial-validity.toml, which is mandatory) because today only
+    # scripts/_noise_floor.py consumes them -- no other validator depends on this file existing.
+    noise_floor_path = canon_dir / "noise-floor.toml"
+    if noise_floor_path.exists():
+        noise_floor_data = _load_toml(noise_floor_path)
+        for key in (
+            "alpha",
+            "min_effect",
+            "power_target",
+            "multiple_comparison_method",
+        ):
+            if key not in noise_floor_data:
+                sys.stderr.write(f"error: canon file {noise_floor_path}: missing '{key}'\n")
+                sys.exit(2)
+            extra[f"noise_floor_{key}"] = noise_floor_data[key]
     # states.toml schema_version >= 2 (backlog item 12): declarative transition
     # table + closed guard vocabulary. Additive over the v1 `states` list read
     # above, so older consumers of `states` are unaffected by these being absent.
