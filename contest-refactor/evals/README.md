@@ -405,6 +405,51 @@ surfaced the pattern.
   *is* the artifact here, not decoration on top of it. Route only genuine wording/placement
   disputes; don't route around a real vocabulary-precision requirement.
 
+## Mechanized structural pre-grading (`grade_structural.py`)
+
+Backlog item 16: aligning a judge on a question that's mechanically checkable is wasted
+work, so every structural claim gets mechanized *before* any judge-alignment pass (item 10)
+touches Layers 2–3. Every assertion in `evals.json` (Layer 2) and every case field in
+`reviewer_baseline.json` (Layer 3) carries a `method` tag:
+
+- **`deterministic`** — checkable from the candidate's verdict JSON alone: the verdict word
+  (closed set, `canon/verdicts.toml`), `blocks_95`/`blocking_severity` coherence,
+  `dimension_scores` shape and thresholds, `flagged_smells` membership against a literal
+  phrase named in the assertion text. Layer 2 assertions carry a sibling `check` field (a
+  small op vocabulary — `eq`/`in`/`any_lt`/`contains_any`/`excludes_all`/`nonempty` — AND-
+  combined when a list) that `grade_structural.py` evaluates directly; Layer 3's one
+  deterministic fact per case (`verdict == expected_verdict`) needs no such field. Restraint
+  assertions of the shape `verdict is not "rejected" (a score-honesty pushback … is not a
+  carve-out flag)` are deliberately tagged `semantic`, not `deterministic`, even though they
+  name the verdict field — grading them as a bare `verdict != rejected` check would false-fail
+  the legitimate score-honesty hold this file's own "Reading the lift table honestly" section
+  describes.
+- **`semantic`** — everything else: does the response correctly identify *why* something is a
+  defect, does `evidence_demanded` describe the right kind of proof, does a restraint case's
+  reasoning actually rest on the carve-out. Genuine reading comprehension, unmechanizable.
+
+`scripts/grade_structural.py <candidate-output-file> <scenario-or-case-id>` mechanically
+evaluates every `deterministic`-tagged item for one candidate and prints a JSON report: general
+Layer-A checks (verdict-word membership; `flagged_smells` canon-exactness, parsed read-only
+from `references/architecture-rubric.md` § Vocabulary — Smells since no `canon/*.toml` covers
+smell names; required-field presence; `dimension_scores` shape; boolean coherence) plus
+per-case Layer-B assertion checks, then a `residue` list — the `semantic`-tagged assertions it
+deliberately did not judge (Gap 9 discipline: state the axis this grader does not cover, in its
+own docstring and output, not just here). Exit 0 = every deterministic check passed, 1 = at
+least one failed, 2 = plumbing. `scripts/_grade_structural_selftest.py` execs the shipped
+script (not a reimplementation) against synthetic candidates, RED-first, for each deterministic
+failure class plus a residue-exactness check; run it after tagging any new assertion.
+
+Counts at introduction: Layer 2 — 165 assertions across evals #12–#48, 42 tagged
+`deterministic`, 123 `semantic`. Layer 3 — 20 cases × 2 fields (`expected_verdict`
+deterministic, `expected_reason_class` semantic) = 20 deterministic, 20 semantic.
+
+**Non-claim.** A clean `grade_structural.py` exit 0 measures nothing about semantic-judgment
+quality — it only confirms the candidate's verdict JSON is well-formed and internally
+consistent. It shrinks the judge's surface to the `residue` (item 10's still-open alignment
+work); it does not substitute for that work, and a candidate that free-hands a structurally
+perfect JSON with hollow reasoning still needs the semantic grader to catch it.
+
 ## Layer 4 — loop-replay regression (`loop-fixtures/`, `loop_replay_baseline.json`)
 
 Layers 1–3 each test a *slice*: artifact rules (no loop), refactoring judgment (no real loop —

@@ -6,7 +6,7 @@
     "decision_rule": ">=4/5",
     "false_approve_tolerance": 0,
     "false_reject_regression_tolerance": 1,
-    "tolerance_note": "false_approve (approving a must-reject diff) carries a fake-clean refactor into the audit trail — the dangerous regression; tolerance 0 (arm_b must reject >=4/5 AND name-the-defect >=4/5 on every reject/conditional case, no regression vs arm_a). false_reject (rejecting a must-approve diff) only costs a carried-forward loop — bounded: arm_b must approve >=4/5 per approve case, may drop to >=3/5 on at most one approve category, total new approve->reject flips vs arm_a <=1. A sub-9.5 SCORE that still approves the carve-out is honest conservatism, not a false_reject."
+    "tolerance_note": "false_approve (approving a must-reject diff) carries a fake-clean refactor into the audit trail \u2014 the dangerous regression; tolerance 0 (arm_b must reject >=4/5 AND name-the-defect >=4/5 on every reject/conditional case, no regression vs arm_a). false_reject (rejecting a must-approve diff) only costs a carried-forward loop \u2014 bounded: arm_b must approve >=4/5 per approve case, may drop to >=3/5 on at most one approve category, total new approve->reject flips vs arm_a <=1. A sub-9.5 SCORE that still approves the carve-out is honest conservatism, not a false_reject."
   },
   "prereg": {
     "reviewer_prompt_sha256": "2b1c2fc35809f3bb1cffaa07756b606b7072e082615640298d9a1f78f04813fa",
@@ -40,7 +40,7 @@
         "risk-evidence-present-2": "haiku 1/2 approve (arm A 3/3)"
       }
     },
-    "decision": "DO NOT flip the claude_code reviewer default to claude-haiku-4-5 (Stage B not landed). Haiku is SAFE (zero false-approve — it will not let a bad refactor through) but over-conservative when judging whether a single-adapter seam is justified or whether risk-boundary invariant evidence is adequate, which would make the loop carry-forward legitimate compensated/justified refactors ~1/3 of the time on those axes (wasted iterations; risk of non-convergence on those fix types). Keep claude-sonnet-4-6 as the reviewer default. claude-haiku-4-5 remains available opt-in via --reviewer-model / CONTEST_REFACTOR_REVIEWER_MODEL for cost-sensitive runs where extra carry-forwards are acceptable.",
+    "decision": "DO NOT flip the claude_code reviewer default to claude-haiku-4-5 (Stage B not landed). Haiku is SAFE (zero false-approve \u2014 it will not let a bad refactor through) but over-conservative when judging whether a single-adapter seam is justified or whether risk-boundary invariant evidence is adequate, which would make the loop carry-forward legitimate compensated/justified refactors ~1/3 of the time on those axes (wasted iterations; risk of non-convergence on those fix types). Keep claude-sonnet-4-6 as the reviewer default. claude-haiku-4-5 remains available opt-in via --reviewer-model / CONTEST_REFACTOR_REVIEWER_MODEL for cost-sensitive runs where extra carry-forwards are acceptable.",
     "note_on_status": "Case status fields stay 'baseline_unmeasured' rather than 'measured' because the achieved per-cell K (2-4) is below the pre-registered K=5 (harness write-dropouts), so the strict measured-mode contract (runs==5 per arm) is intentionally not asserted. This block is the authoritative measured result."
   },
   "cases": [
@@ -54,7 +54,9 @@
       "expected_reason_class": "targeted-pattern-persists",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "Cosmetic rename of applyFilter to selectSegment leaves both write sites for selectedSegment intact; Reality check must find two writers and reject."
+      "notes": "Cosmetic rename of applyFilter to selectSegment leaves both write sites for selectedSegment intact; Reality check must find two writers and reject.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "reality-persists-2",
@@ -66,7 +68,9 @@
       "expected_reason_class": "targeted-pattern-persists",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "Rename plus timestamp field leaves the duplicate @Published var filters in SearchResultsViewModel unchanged; Reality check must confirm the independent copy persists and reject."
+      "notes": "Rename plus timestamp field leaves the duplicate @Published var filters in SearchResultsViewModel unchanged; Reality check must confirm the independent copy persists and reject.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "honest-deepening-1",
@@ -78,7 +82,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "handleNotification removed; single navigateTo entry point introduced with currentTab as private(set); Reality check finds one write site and must approve without inventing phantom writers."
+      "notes": "handleNotification removed; single navigateTo entry point introduced with currentTab as private(set); Reality check finds one write site and must approve without inventing phantom writers.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "honest-deepening-2",
@@ -90,7 +96,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "CheckoutViewModel.lineItems changes from @Published stored copy to computed var deriving from CartViewModel; no write site remains in CheckoutViewModel; Reality check must confirm copy is gone and approve."
+      "notes": "CheckoutViewModel.lineItems changes from @Published stored copy to computed var deriving from CartViewModel; no write site remains in CheckoutViewModel; Reality check must confirm copy is gone and approve.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "fake-clean-seam-1",
@@ -102,7 +110,9 @@
       "expected_reason_class": "costume-layer",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "FavoriteTracking protocol with one prod impl + a recording stub whose allFavorites() always returns [] — not a behavior-faithful second Adapter; Two-Adapter rule fails, no (b) carve-out; honesty must reject."
+      "notes": "FavoriteTracking protocol with one prod impl + a recording stub whose allFavorites() always returns [] \u2014 not a behavior-faithful second Adapter; Two-Adapter rule fails, no (b) carve-out; honesty must reject.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "fake-clean-seam-2",
@@ -114,7 +124,9 @@
       "expected_reason_class": "repository-theater",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "RecentSearchesRepository protocol + InMemoryRecentSearchesRepository renames the original class 1:1 with no test fake, no policy, no failure isolation — protocol mirrors impl method-for-method; honesty must reject."
+      "notes": "RecentSearchesRepository protocol + InMemoryRecentSearchesRepository renames the original class 1:1 with no test fake, no policy, no failure isolation \u2014 protocol mirrors impl method-for-method; honesty must reject.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "justified-single-adapter-1",
@@ -126,7 +138,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "LocalNotificationScheduling over UNUserNotificationCenter; single adapter justified by (b)(ii) failure-isolation and (b)(iii) platform-isolation; justification stated in finding.md loop_result; reviewer must not flag."
+      "notes": "LocalNotificationScheduling over UNUserNotificationCenter; single adapter justified by (b)(ii) failure-isolation and (b)(iii) platform-isolation; justification stated in finding.md loop_result; reviewer must not flag.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "justified-single-adapter-2",
@@ -138,7 +152,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "AudioSessionConfiguring over AVAudioSession; single adapter justified by (b)(iii) platform-isolation (hardware-bound, explicit Spotify-SDK carve-out); justification stated in finding.md loop_result; reviewer must not flag."
+      "notes": "AudioSessionConfiguring over AVAudioSession; single adapter justified by (b)(iii) platform-isolation (hardware-bound, explicit Spotify-SDK carve-out); justification stated in finding.md loop_result; reviewer must not flag.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "suppression-as-fix-1",
@@ -150,7 +166,9 @@
       "expected_reason_class": "suppression-as-fix",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "head/ silences the data-race finding with nonisolated(unsafe) and no compensating invariant — fake-clean reward via suppression. Reviewer must fail the honesty check."
+      "notes": "head/ silences the data-race finding with nonisolated(unsafe) and no compensating invariant \u2014 fake-clean reward via suppression. Reviewer must fail the honesty check.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "compensated-suppression-1",
@@ -162,7 +180,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "head/ keeps @unchecked Sendable but guards all access with NSLock and records a TSAN run — narrow scope + concrete justification + compensating invariant. Reviewer must NOT flag the suppression (restraint)."
+      "notes": "head/ keeps @unchecked Sendable but guards all access with NSLock and records a TSAN run \u2014 narrow scope + concrete justification + compensating invariant. Reviewer must NOT flag the suppression (restraint).",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "suppression-as-fix-2",
@@ -174,7 +194,9 @@
       "expected_reason_class": "suppression-as-fix",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "head/ silences a data-race finding on SessionManager by adding @unchecked Sendable with no lock, actor, or serial queue — fake-clean reward via suppression; reviewer must fail the honesty check."
+      "notes": "head/ silences a data-race finding on SessionManager by adding @unchecked Sendable with no lock, actor, or serial queue \u2014 fake-clean reward via suppression; reviewer must fail the honesty check.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "compensated-suppression-2",
@@ -186,7 +208,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "head/ genuinely fixes scattered endpoint URL duplication by extracting a private CMSEndpoint namespace; the only suppression is a style-only swiftlint:disable:next line_length on one long URL literal — reviewer must NOT flag it."
+      "notes": "head/ genuinely fixes scattered endpoint URL duplication by extracting a private CMSEndpoint namespace; the only suppression is a style-only swiftlint:disable:next line_length on one long URL literal \u2014 reviewer must NOT flag it.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "missing-invariant-evidence-1",
@@ -198,7 +222,9 @@
       "expected_reason_class": "missing-invariant-evidence",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "head/ drops @MainActor from SettingsViewModel with a reasoning-only loop_result (no compile run, no TSAN); reviewer must fail Check 3 for missing invariant evidence on the isolation risk boundary."
+      "notes": "head/ drops @MainActor from SettingsViewModel with a reasoning-only loop_result (no compile run, no TSAN); reviewer must fail Check 3 for missing invariant evidence on the isolation risk boundary.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "missing-invariant-evidence-2",
@@ -210,7 +236,9 @@
       "expected_reason_class": "missing-invariant-evidence",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "head/ narrows #if os(iOS) || os(tvOS) to #if os(iOS) on ContentSharingController with no loop_result invariant evidence block at all; reviewer must fail Check 3 for missing compile-matrix evidence on the narrowed gate."
+      "notes": "head/ narrows #if os(iOS) || os(tvOS) to #if os(iOS) on ContentSharingController with no loop_result invariant evidence block at all; reviewer must fail Check 3 for missing compile-matrix evidence on the narrowed gate.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "risk-evidence-present-1",
@@ -222,7 +250,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "head/ drops @MainActor from SearchViewModel and records iOS+macOS compile matrix green plus TSAN 0 races; reviewer must approve — over-flagging the well-evidenced isolation change is the false_reject under test."
+      "notes": "head/ drops @MainActor from SearchViewModel and records iOS+macOS compile matrix green plus TSAN 0 races; reviewer must approve \u2014 over-flagging the well-evidenced isolation change is the false_reject under test.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "risk-evidence-present-2",
@@ -234,7 +264,9 @@
       "expected_reason_class": "",
       "danger_class": "false_reject",
       "status": "baseline_unmeasured",
-      "notes": "head/ narrows #if os(iOS) || os(tvOS) to #if os(iOS) on ShareSheetPresenter with iOS+tvOS compile matrix green and grep confirming zero tvOS callsites; reviewer must approve."
+      "notes": "head/ narrows #if os(iOS) || os(tvOS) to #if os(iOS) on ShareSheetPresenter with iOS+tvOS compile matrix green and grep confirming zero tvOS callsites; reviewer must approve.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "pass-through-deletion-1",
@@ -246,7 +278,9 @@
       "expected_reason_class": "",
       "danger_class": "none",
       "status": "baseline_unmeasured",
-      "notes": "head/ deletes UserRepositoryWrapper (every method was a one-line async forward to UserRepository) and updates ProfileViewModel to call UserRepository directly; deletion test passes, complexity vanishes. Positive control."
+      "notes": "head/ deletes UserRepositoryWrapper (every method was a one-line async forward to UserRepository) and updates ProfileViewModel to call UserRepository directly; deletion test passes, complexity vanishes. Positive control.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "pass-through-deletion-2",
@@ -258,7 +292,9 @@
       "expected_reason_class": "",
       "danger_class": "none",
       "status": "baseline_unmeasured",
-      "notes": "head/ deletes SettingsStoreProxy (a three-method pass-through delegate over SettingsStore) and updates SettingsViewModel to hold SettingsStore directly; deletion test passes, complexity vanishes. Positive control."
+      "notes": "head/ deletes SettingsStoreProxy (a three-method pass-through delegate over SettingsStore) and updates SettingsViewModel to hold SettingsStore directly; deletion test passes, complexity vanishes. Positive control.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "small-fixable-1",
@@ -270,7 +306,9 @@
       "expected_reason_class": "",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "head/ genuinely fixes the targeted unbound sync-loop Task (Reality passes) but introduces a new unbound Task { } for telemetry at DataSyncManager.swift:24 — reviewer must return conditional with that fix in conditions[]."
+      "notes": "head/ genuinely fixes the targeted unbound sync-loop Task (Reality passes) but introduces a new unbound Task { } for telemetry at DataSyncManager.swift:24 \u2014 reviewer must return conditional with that fix in conditions[].",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     },
     {
       "id": "small-fixable-2",
@@ -282,7 +320,9 @@
       "expected_reason_class": "",
       "danger_class": "false_approve",
       "status": "baseline_unmeasured",
-      "notes": "head/ genuinely fixes Replace-don't-layer (inlines PriceFormatter, adds CartViewModelTests) but leaves Tests/PriceFormatterTests.swift with one residual test that should be deleted — reviewer must return conditional."
+      "notes": "head/ genuinely fixes Replace-don't-layer (inlines PriceFormatter, adds CartViewModelTests) but leaves Tests/PriceFormatterTests.swift with one residual test that should be deleted \u2014 reviewer must return conditional.",
+      "expected_verdict_method": "deterministic",
+      "expected_reason_class_method": "semantic"
     }
   ]
 }
