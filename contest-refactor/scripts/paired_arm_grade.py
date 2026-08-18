@@ -119,6 +119,28 @@ def mechanical_grade(verdict_json: dict, kind: str, target_dimensions: list[str]
     return "caught" if (verdict == "rejected" or blocks is True) and below else "missed"
 
 
+def render_spec_prompt(scenario_id: str) -> str:
+    """The spec author sees the scenario, the answer key and the assertions -- never a candidate
+    response. That omission is the whole point: it is what makes the spec a preregistration
+    rather than a description of answers already seen."""
+    prereg = _prereg()
+    template = (
+        SKILL_ROOT / prereg["grading"]["tiering"]["spec_first"]["authoring_prompt_file"]
+    ).read_text()
+    entry = _eval_entry(scenario_id)
+    kind = "restraint" if scenario_id.endswith("-restraint") else "flag"
+    lines = [f"- `assertion_index: {i}` — {a['text']}" for i, a in semantic_assertions(scenario_id)]
+    scenario = (SKILL_ROOT / "evals" / "scenarios" / scenario_id / "scenario.md").read_text()
+    return (
+        template.replace("{{SCENARIO_ID}}", scenario_id)
+        .replace("{{SCENARIO_KIND}}", kind)
+        .replace("{{SEMANTIC_RULE}}", prereg["semantic_rule"])
+        .replace("{{EXPECTED_OUTPUT}}", entry["expected_output"])
+        .replace("{{ASSERTIONS}}", "\n".join(lines))
+        .replace("{{SCENARIO}}", scenario)
+    )
+
+
 def _extract_json(text: str) -> dict:
     # Same fence-pairing hazard as grade_structural._extract_json: match any language tag so a
     # quoted code block in the grader's own reasoning cannot shift the pairing.
@@ -183,6 +205,11 @@ def _spans(span: object, candidate_text: str) -> bool:
     if not isinstance(span, str) or not span.strip():
         return False
     return " ".join(span.split()) in " ".join(candidate_text.split())
+
+
+def cmd_spec_render(args: argparse.Namespace) -> int:
+    print(render_spec_prompt(args.scenario))
+    return 0
 
 
 def cmd_render(args: argparse.Namespace) -> int:
@@ -253,6 +280,9 @@ def main(argv: list[str]) -> int:
     m.add_argument("--candidate", required=True)
     m.add_argument("--dimensions", default=None, help="comma-separated target dimensions")
     m.set_defaults(fn=cmd_mechanical)
+    sr = sub.add_parser("spec-render")
+    sr.add_argument("--scenario", required=True)
+    sr.set_defaults(fn=cmd_spec_render)
     args = ap.parse_args(argv)
     try:
         return args.fn(args)

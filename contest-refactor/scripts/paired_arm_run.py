@@ -144,7 +144,15 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_mode(mode: str) -> tuple[list[dict], list[dict], dict[str, str]]:
+def rung_scenarios(prereg: dict, rung: int) -> set[str]:
+    ladder = prereg.get("execution_ladder") or {}
+    block = ladder.get(f"rung_{rung}")
+    if not isinstance(block, dict):
+        raise Plumbing(f"prereg.execution_ladder has no rung_{rung}")
+    return set(block.get("scenarios") or ([block["scenario"]] if block.get("scenario") else []))
+
+
+def load_mode(mode: str, rung: int | None = None) -> tuple[list[dict], list[dict], dict[str, str]]:
     """-> (frozen order, terminal attempts, scenario set) for this mode."""
     execution = read_json(EXEC_PATH)
     if mode == "study":
@@ -153,12 +161,18 @@ def load_mode(mode: str) -> tuple[list[dict], list[dict], dict[str, str]]:
             s: ("restraint" if s.endswith("-restraint") else "flag")
             for s in record["prereg"]["study_scenarios"]
         }
-        return record["prereg"]["frozen_order"], record["attempts"], scenarios
+        order = record["prereg"]["frozen_order"]
+        if rung is not None:
+            wanted = rung_scenarios(record["prereg"], rung)
+            # A SUBSEQUENCE of the frozen order, never a re-sort: each pair keeps its
+            # preregistered within-pair arm order and its relative position among its peers.
+            order = [e for e in order if e["scenario_id"] in wanted]
+        return order, record["attempts"], scenarios
     return execution["pilot"]["order"], execution["pilot"]["attempts"], dict(PILOT_SCENARIOS)
 
 
-def pair_states(mode: str) -> list[dict]:
-    order, attempts, _ = load_mode(mode)
+def pair_states(mode: str, rung: int | None = None) -> list[dict]:
+    order, attempts, _ = load_mode(mode, rung)
     log = read_json(EXEC_PATH)["dispatch_log"]
     states = []
     for pair in order:
@@ -181,8 +195,8 @@ def pair_states(mode: str) -> list[dict]:
     return states
 
 
-def next_pair(mode: str) -> dict | None:
-    for st in pair_states(mode):
+def next_pair(mode: str, rung: int | None = None) -> dict | None:
+    for st in pair_states(mode, rung):
         if st["resolved"] or st["attempts_spent"] >= 2:
             continue
         return st
@@ -446,7 +460,7 @@ def write_resume(mode: str) -> None:
 
 
 def cmd_next(args: argparse.Namespace) -> int:
-    st = next_pair(args.mode)
+    st = next_pair(args.mode, args.rung)
     if st is None:
         print(f"{args.mode}: DONE — every pair in the frozen order has a terminal record")
         return 0
@@ -478,7 +492,7 @@ def cmd_next(args: argparse.Namespace) -> int:
 
 
 def cmd_start(args: argparse.Namespace) -> int:
-    st = next_pair(args.mode)
+    st = next_pair(args.mode, args.rung)
     if st is None:
         print(f"{args.mode}: nothing to start")
         return 0
@@ -531,7 +545,7 @@ def cmd_start(args: argparse.Namespace) -> int:
 
 
 def cmd_finish(args: argparse.Namespace) -> int:
-    states = {s["pair_id"]: s for s in pair_states(args.mode)}
+    states = {s["pair_id"]: s for s in pair_states(args.mode, args.rung)}
     st = states.get(args.pair)
     if st is None:
         raise Guard(f"{args.pair} is not in the {args.mode} frozen order")
@@ -564,7 +578,7 @@ def cmd_finish(args: argparse.Namespace) -> int:
             out_path = dest
         attempts_new.append(build_attempt(st, arm, attempt, out_path, reason))
 
-    scenarios = load_mode(args.mode)[2]
+    scenarios = load_mode(args.mode, args.rung)[2]
     for i, a in enumerate(attempts_new):
         issues = validate_attempt(a, i, canon, require_grade_status=False, scenarios=scenarios)
         if issues:
@@ -616,7 +630,7 @@ def cmd_finish(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    for st in pair_states(args.mode):
+    for st in pair_states(args.mode, args.rung):
         flag = (
             "resolved"
             if st["resolved"]
@@ -640,6 +654,12 @@ def main(argv: list[str]) -> int:
         sp.add_argument("--scratch-root", default="/tmp/paired-arm")
         sp.add_argument("--session-id", default=None)
         sp.add_argument("--pair", default=None)
+        sp.add_argument(
+            "--rung",
+            type=int,
+            default=None,
+            help="restrict study mode to this ladder rung's subsequence",
+        )
         sp.add_argument("--usage", default=None, help="path to a JSON file of measured usage")
         sp.add_argument(
             "--invalid",
