@@ -1,6 +1,7 @@
 id = "panel-broke-user-decision"
 purpose = "1-entry panel: member 1 returns a structurally valid, normalized break whose fix needs a CLAUDE.md Stop/Ask decision. Routes to HALT_STAGNATION/user_decision (Stop/Ask route), not CONTINUE. Positive case: G32 passes."
 expected_result = "pass"
+pair_exception = "independent-branch: 1-entry panel, valid normalized break routed to HALT_STAGNATION/user_decision. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "handoff-invalid-match-kind"
 purpose = "match_kind not in canon match-kinds. Must FAIL (G35)."
 expected_result = "fail"
+pair_exception = "independent-branch: match_kind outside the canon match-kinds set. G35 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

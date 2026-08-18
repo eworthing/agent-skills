@@ -1,6 +1,7 @@
 id = "halt-stagnation-null-subtype"
 purpose = "HALT_STAGNATION with halt_subtype:null. Rule #17 requires a non-null subtype for HALT_STAGNATION; G34 must FAIL."
 expected_result = "fail"
+pair_exception = "independent-branch: HALT_STAGNATION with halt_subtype:null (rule #17). G34 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

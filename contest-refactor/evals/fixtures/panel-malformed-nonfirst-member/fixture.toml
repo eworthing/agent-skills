@@ -1,6 +1,7 @@
 id = "panel-malformed-nonfirst-member"
 purpose = "Member 2 (not member 1) is missing 'reason' and carries empty 'attempts'. Per-member shape validation must run at every panel index, not just the first. Negative case: G32 fails on member[1] shape."
 expected_result = "fail"
+pair_exception = "independent-branch: a non-first panel member missing 'reason' with empty 'attempts'. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

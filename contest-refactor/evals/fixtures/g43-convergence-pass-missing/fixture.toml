@@ -1,6 +1,7 @@
 id = "g43-convergence-pass-missing"
 purpose = "Negative v4 fixture: architecture_quality is stalled sub-9.5 across three loops and no convergence_pass[] record names it, nor does any backlog item. Must FAIL on G43."
 expected_result = "fail"
+pair_exception = "independent-branch: convergence pass missing before the clean-streak claim. G43 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 notes = "Covers the silent-skip half of the failure. One production loop owed an Adversarial Pass on two accepted dimensions and recorded neither, and nothing noticed; an earlier run predated the Sweep entirely. The Sweep and the Adversarial Pass are the same obligation at different score bands, so one gate covers both -- this fixture pins the sub-9.5 (Stalled-Dimension Sweep) arm. Built from g39-score-impact-valid replicated across 4 loops -- the first v4 fixtures at loop >= 4, which G43's floor requires (loop 1's delta is SAME by definition, so at loop 4 the three observations are loops 4/3/2 and loop 2's is the first real one). REVIEW_HISTORY.json carries 4 entries with loops[-1] equal to CURRENT_REVIEW.json (G18) and REVIEW_HISTORY.md one divider per loop (G22). Only architecture_quality is left stalled; every other sub-9.5 dimension carries delta UP on the current loop so it is not owed a pass, keeping exactly one dimension in scope. Verified: strict mode reports exactly one FAIL, [G43]."
 

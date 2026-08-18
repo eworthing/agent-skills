@@ -1,6 +1,7 @@
 id = "handoff-any-of-with-paths"
 purpose = "match_kind=any_of with non-empty match_paths violates the coupling. Must FAIL (G35)."
 expected_result = "fail"
+pair_exception = "independent-branch: match_kind=any_of with non-empty match_paths. G35 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

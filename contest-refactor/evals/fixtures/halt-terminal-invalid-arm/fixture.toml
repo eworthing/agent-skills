@@ -1,6 +1,7 @@
 id = "halt-terminal-invalid-arm"
 purpose = "Terminal HALT_SUCCESS with an unknown challenge arm. G32 must fail."
 expected_result = "fail"
+pair_exception = "independent-branch: terminal HALT_SUCCESS challenge with an unknown arm. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

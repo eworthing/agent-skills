@@ -1,6 +1,7 @@
 id = "continue-with-halt-subtype"
 purpose = "CONTINUE carrying a non-null halt_subtype. Rule #17 forbids a subtype outside HALT_STAGNATION; G34 must FAIL."
 expected_result = "fail"
+pair_exception = "independent-branch: CONTINUE state carrying a non-null halt_subtype (rule #17). G34 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

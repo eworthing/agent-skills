@@ -1,6 +1,7 @@
 id = "halt-loop-cap-missing-handoff"
 purpose = "HALT_LOOP_CAP with halt_handoff:null. Rule #18 requires a handoff for HALT_LOOP_CAP; G34 must FAIL."
 expected_result = "fail"
+pair_exception = "independent-branch: HALT_LOOP_CAP with halt_handoff:null (rule #18). G34 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

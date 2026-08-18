@@ -1,6 +1,7 @@
 id = "missing-state-absent"
 purpose = "state key absent: same hole, harness-tested end-to-end. Must FAIL (G36)."
 expected_result = "fail"
+pair_exception = "independent-branch: top-level state key absent entirely. G36 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

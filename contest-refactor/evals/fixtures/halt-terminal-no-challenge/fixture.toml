@@ -1,6 +1,7 @@
 id = "halt-terminal-no-challenge"
 purpose = "Terminal HALT_SUCCESS with halt_success_challenge missing — the self-certification failure G32 catches. Must FAIL on G32."
 expected_result = "fail"
+pair_exception = "independent-branch: terminal HALT_SUCCESS with halt_success_challenge missing entirely. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "panel-broke-bad-spt"
 purpose = "Member 1's normalized break_evidence carries spt.result='failed' instead of 'passed' — the SPT record does not prove the break survived the Simplify Pressure Test. Negative case: G32 fails."
 expected_result = "fail"
+pair_exception = "independent-branch: member break_evidence.spt.result='failed' instead of 'passed'. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

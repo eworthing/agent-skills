@@ -1,6 +1,7 @@
 id = "halt-terminal-missing-explanation"
 purpose = "Terminal HALT_SUCCESS without per-attempt why_failed or top-level reason. G32 must fail."
 expected_result = "fail"
+pair_exception = "independent-branch: terminal HALT_SUCCESS challenge missing why_failed/reason. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

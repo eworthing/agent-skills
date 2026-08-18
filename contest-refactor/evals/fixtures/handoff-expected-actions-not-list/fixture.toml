@@ -1,6 +1,7 @@
 id = "handoff-expected-actions-not-list"
 purpose = "expected_actions is a dict, not an array. Must FAIL (G35)."
 expected_result = "fail"
+pair_exception = "independent-branch: expected_actions is a dict, not an array. G35 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

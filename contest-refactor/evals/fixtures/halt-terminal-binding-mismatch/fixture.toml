@@ -1,6 +1,7 @@
 id = "halt-terminal-binding-mismatch"
 purpose = "Terminal HALT_SUCCESS whose challenge binding.run_id does not match top-level run_id — freshness binding violated. Must FAIL on G32."
 expected_result = "fail"
+pair_exception = "independent-branch: terminal HALT_SUCCESS challenge binding.run_id mismatched against top-level run_id. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

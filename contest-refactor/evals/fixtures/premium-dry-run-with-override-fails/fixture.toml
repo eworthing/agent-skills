@@ -1,6 +1,7 @@
 id = "premium-dry-run-with-override-fails"
 purpose = "Negative G38 fixture: dry-run premium invocation incorrectly records premium_loop_override true."
 expected_result = "fail"
+pair_exception = "independent-branch: dry-run premium invocation incorrectly recording premium_loop_override=true. G38 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 notes = "--allow-premium-loop is ignored on dry-runs; artifacts must leave premium_loop_override false."
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "premium-dry-run-nonhalt-valid"
 purpose = "Positive G38 fixture: premium dry-run safety keys on dry_run true rather than state == HALT_DRY_RUN."
 expected_result = "pass"
+pair_exception = "independent-branch: premium dry-run safety keys on dry_run=true regardless of which halt state is present. G38 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 notes = "Keeps the validator aligned with the approved design: G38 must not reject a dry-run artifact solely because another halt state is present."
 
 [[tested_rules]]

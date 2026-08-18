@@ -1,6 +1,7 @@
 id = "handoff-action-not-dict"
 purpose = "an expected_actions entry is not an object. Must FAIL (G35)."
 expected_result = "fail"
+pair_exception = "independent-branch: an expected_actions entry that is not an object. G35 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

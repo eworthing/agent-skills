@@ -1,6 +1,7 @@
 id = "halt-terminal-held"
 purpose = "Terminal HALT_SUCCESS with a valid held challenge and matching binding. Positive case: G32 passes."
 expected_result = "pass"
+pair_exception = "independent-branch: terminal HALT_SUCCESS with a valid held challenge and matching binding. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

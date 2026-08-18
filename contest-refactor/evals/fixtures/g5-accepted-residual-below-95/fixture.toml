@@ -1,6 +1,7 @@
 id = "g5-accepted-residual-below-95"
 purpose = "Negative v4 fixture: test_strategy scores 8.5 while carrying residual_disposition='accepted' and a named residual. The rubric puts an accepted residual at 9.5. Must FAIL on G5."
 expected_result = "fail"
+pair_exception = "shared-baseline-mutation: derived from pass fixture 'g39-score-impact-valid' by mutating a single field to trigger G5; 'g39-score-impact-valid' is a shared clean baseline for other independent negative siblings, not this fixture's dedicated 1:1 twin."
 aspirational = false
 notes = "Reproduces a terminal scorecard from a 15-loop production run. A score below 9.5 is not accepting a residual — it is deferring one — and rule #12 said so while nothing enforced it. This mechanizes the CONVERSE half of G5 only; the forward half (every score >= 9.5 names the residual blocking 10) stays a Critic checklist item, because halt-loop-cap-clean is an expected-pass fixture violating it on all 9 dimensions and mechanizing it is separate work. Derived from g39-score-impact-valid by populating test_strategy's three residual fields in both CURRENT_REVIEW.json and REVIEW_HISTORY.json.loops[-1] (G18 equality). state=CONTINUE at loop=1 keeps G37 and G43 silent — verified: strict mode reports exactly one FAIL, [G5]."
 

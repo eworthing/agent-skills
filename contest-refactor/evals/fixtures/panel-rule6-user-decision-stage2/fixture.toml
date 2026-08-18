@@ -1,6 +1,7 @@
 id = "panel-rule6-user-decision-stage2"
 purpose = "Rule #6 exception (d), row 1 (Stop/Ask route): a v5 panel stage-2 break needing a CLAUDE-md Stop/Ask decision routes to HALT_STAGNATION/user_decision carrying the same one-finding count as the CONTINUE route. Must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: rule #6 exception (d) stage-2 break needing a Stop/Ask decision, routes to HALT_STAGNATION. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

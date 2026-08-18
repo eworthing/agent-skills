@@ -1,6 +1,7 @@
 id = "halt-candidate-with-handoff"
 purpose = "HALT_SUCCESS_candidate with a non-null halt_handoff. The candidate is exempt (handoff null); G34 must FAIL."
 expected_result = "fail"
+pair_exception = "independent-branch: HALT_SUCCESS_candidate carrying a non-null halt_handoff (candidate is handoff-exempt). G34 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

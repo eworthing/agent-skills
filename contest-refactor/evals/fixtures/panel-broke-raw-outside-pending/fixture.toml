@@ -1,6 +1,7 @@
 id = "panel-broke-raw-outside-pending"
 purpose = "Member 1's break_evidence is left in RAW form ({finding, spt}, no finding_stable_id) while aggregate outcome is 'broke', not 'pending'. Raw form is legal only under aggregate 'pending'. Negative case: G32 fails."
 expected_result = "fail"
+pair_exception = "independent-branch: member break_evidence left RAW while aggregate outcome is 'broke' (not 'pending'). G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

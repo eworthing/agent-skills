@@ -1,6 +1,7 @@
 id = "panel-partial-blocked"
 purpose = "3-entry panel: member 1 held (so stage 2 launched), members 2 and 3 both exhausted their retry envelopes. Fewer than 3 usable verdicts routes to HALT_STAGNATION/verification_blocked with aggregate 'blocked'. Positive case: G32 passes."
 expected_result = "pass"
+pair_exception = "independent-branch: 3-entry panel, member 1 held, members 2/3 exhausted retries -- fewer than 3 usable verdicts. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

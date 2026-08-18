@@ -1,6 +1,7 @@
 id = "missing-state-null"
 purpose = "state is null: owned by no gate today, passes strict. Must FAIL (G36)."
 expected_result = "fail"
+pair_exception = "independent-branch: top-level state key present but null. G36 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

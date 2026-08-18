@@ -1,6 +1,8 @@
 id = "g41-cap-loop-executed"
 purpose = "Positive v4 fixture: the cap loop ran Steps 2-3, landed a reviewer-approved change, and then emitted HALT_LOOP_CAP carrying its remaining backlog item forward. Must PASS."
 expected_result = "pass"
+pair_id = "g41-cap-loop"
+pair_role = "restraint"
 aspirational = false
 notes = "Closes a real coverage hole: before this fixture, every HALT_LOOP_CAP artifact in the corpus sat at loop=1/cap=10, so nothing exercised the actual cap terminal (loop == loop_cap) at all — the shape a capped run always ends on. Pairs with g41-cap-loop-not-executed: identical except this one carries loop_result + implementation_review, so the pair isolates exactly what G41 checks and protects against the gate over-rejecting a cap loop that did its work. Derived from halt-loop-cap-clean bumped to schema_version 4 with loop_cap set to loop and a one-item backlog added (a cap terminal may legitimately carry the best next move forward, per SKILL.md's backlog-presence table), REVIEW_HISTORY.json.loops[-1] re-synced for G18. Strict mode must exit 0."
 

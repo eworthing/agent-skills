@@ -1,6 +1,7 @@
 id = "halt-candidate-no-challenge"
 purpose = "Valid HALT_SUCCESS_candidate (all-9.5-accepted; run_id/source_rev/candidate_fingerprint present; halt_success_challenge null). G32 exempts the non-terminal candidate; must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: HALT_SUCCESS_candidate exempt from challenge (candidate, not terminal). G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

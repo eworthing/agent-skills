@@ -1,6 +1,7 @@
 id = "panel-broke-null-evidence"
 purpose = "Member 1 outcome='broke' but break_evidence is null. break_evidence is required non-null whenever outcome=='broke'. Negative case: G32 fails."
 expected_result = "fail"
+pair_exception = "independent-branch: member outcome='broke' with break_evidence null. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

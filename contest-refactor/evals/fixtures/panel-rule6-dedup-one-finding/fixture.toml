@@ -1,6 +1,7 @@
 id = "panel-rule6-dedup-one-finding"
 purpose = "Break normalization step 2 (deduplicate by stable_id): two members break on the same defect and resolve to one stable_id, so findings[] carries exactly one entry. Must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: two members break on the same defect, deduplicated to one stable_id. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

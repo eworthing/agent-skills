@@ -1,6 +1,7 @@
 id = "g39-score-impact-valid"
 purpose = "Positive v4 CONTINUE fixture whose backlog item names two dimensions in the machine-readable score_impact shape ('data_flow +0.5; framework_idioms +0.5'); protects G39 against over-rejection of the multi-dimension semicolon join."
 expected_result = "pass"
+pair_exception = "independent-branch: backlog score_impact in the machine-readable multi-dimension ';'-joined shape. G39 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 notes = "Derived from v3-clean-loop with schema_version bumped to 4 (G39's floor) and REVIEW_HISTORY.json's last loops[] entry re-synced so G18 still holds. Exercises the two shapes a single regex could plausibly get wrong: multiple entries joined by ';', and a dimension id containing an underscore. Strict mode must exit 0."
 
 [[tested_rules]]

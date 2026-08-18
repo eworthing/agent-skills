@@ -1,6 +1,7 @@
 id = "handoff-empty-text"
 purpose = "halt_handoff.text is empty. Must FAIL (G35)."
 expected_result = "fail"
+pair_exception = "independent-branch: halt_handoff.text empty. G35 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

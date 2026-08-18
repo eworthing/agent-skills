@@ -1,6 +1,7 @@
 id = "reviewer-retry-then-reject"
 purpose = "Implementation reviewer subagent failed to spawn on both retry attempts (retry_count=2, retry_cause=spawn_error), final verdict=rejected, narrow revert taken; protects G27 retry envelope schema (retry_count, retry_cause, retry_attempts[]) at schema_version 3 and the terminal-reject path."
 expected_result = "pass"
+pair_exception = "independent-branch: reviewer retry envelope for the terminal-reject path (spawn_error x2). G27 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 # Pin the G28 orphan-check reference time near last_checkpoint_at so this
 # "recent checkpoint" fixture stays inside the 24h window no matter when the

@@ -1,6 +1,8 @@
 id = "panel-pending-normalized-sibling"
 purpose = "Negative twin of panel-pending-deferred-sibling: member 3's break_evidence uses the NORMALIZED form ({finding_stable_id, spt}) with its normalization marker absent, which the pending route forbids — every break in the panel must stay RAW while the registry question is open. Must FAIL (G32 only)."
 expected_result = "fail"
+pair_id = "panel-pending-deferred-sibling"
+pair_role = "flag"
 aspirational = false
 
 [[tested_rules]]

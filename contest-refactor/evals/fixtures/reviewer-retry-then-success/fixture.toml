@@ -1,6 +1,7 @@
 id = "reviewer-retry-then-success"
 purpose = "Implementation reviewer timed out on attempt 1 (90s) then succeeded on attempt 2 (retry_count=2, retry_cause=timeout, terminal verdict=approved); protects G27 retry envelope semantics for the recovered-success path."
 expected_result = "pass"
+pair_exception = "independent-branch: reviewer retry envelope for the recovered-success path (timeout then ok). G27 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 notes = "Complete v3 artifact set (PR5c). Ships full CURRENT_REVIEW.{json,md} + REVIEW_HISTORY.{json,md} + findings_registry.json. G27 retry envelope is valid: retry_count=2, retry_cause=timeout, retry_attempts[0].outcome=timeout, retry_attempts[1].outcome=ok, verdict=approved, reason contains no forbidden infra-cause vocab. Validator must exit 0; G27 passes silently."
 

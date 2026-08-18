@@ -1,6 +1,7 @@
 id = "panel-of-two"
 purpose = "Panel carries only 2 members. The staged launch produces exactly 1 or 3 entries, never 2. Negative case: G32 fails on panel length."
 expected_result = "fail"
+pair_exception = "independent-branch: panel carrying exactly 2 members (staged launch only produces 1 or 3). G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

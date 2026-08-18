@@ -1,6 +1,7 @@
 id = "handoff-not-object"
 purpose = "halt_handoff is a non-dict (string): passes G34 presence but is malformed. Must FAIL (G35 root-type)."
 expected_result = "fail"
+pair_exception = "independent-branch: halt_handoff is a non-dict string (passes G34 presence but fails G35 root-type). G35 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

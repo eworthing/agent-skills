@@ -1,6 +1,7 @@
 id = "panel-unavailable-after-malformed"
 purpose = "1-entry panel: member 1 exhausted its retry envelope on malformed_json (retry_count=2, both retry_attempts malformed_json). Routes to HALT_STAGNATION/verification_blocked with aggregate 'blocked'. Positive case: G32 passes."
 expected_result = "pass"
+pair_exception = "independent-branch: 1-entry panel, member exhausted retry envelope on malformed_json, routes to verification_blocked. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

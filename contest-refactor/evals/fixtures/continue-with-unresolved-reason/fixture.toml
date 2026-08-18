@@ -1,6 +1,7 @@
 id = "continue-with-unresolved-reason"
 purpose = "CONTINUE carrying a non-null unresolved_reason. Rule #11 forbids it outside {HALT_STAGNATION,HALT_LOOP_CAP}; G34 must FAIL."
 expected_result = "fail"
+pair_exception = "independent-branch: CONTINUE state carrying a non-null unresolved_reason (rule #11). G34 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "stale-loop-state-with-halt"
 purpose = "HALT_STAGNATION subtype=no_progress with a LOOP_STATE.json from loop 5 whose last_checkpoint_at is 2026-05-11 (>24h before current loop 6 timestamp); protects G28 orphan detection (stale LOOP_STATE.json must be detected and cleaned, not blindly resumed)."
 expected_result = "fail"
+pair_exception = "independent-branch: stale LOOP_STATE.json (>24h) plus a loop-number mismatch, blindly resumable. G28 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 notes = "Complete v3 artifact set (PR5c). LOOP_STATE.json is INTENTIONALLY stale (last_checkpoint_at 2026-05-11, >24h old) AND loop=5 mismatches CURRENT_REVIEW.loop=6. G28 must fire two issues: loop-num mismatch + orphan detection. expected_result=fail; rule-id cross-check must match cited gate G28 against fired rule G28."
 

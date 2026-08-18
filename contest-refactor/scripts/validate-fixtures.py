@@ -24,6 +24,10 @@ Checks every `<fixtures-dir>/<id>/fixture.toml`:
 - Negative fixtures (`expected_result: fail`) actually fail
   `validate-artifact.py --mode strict`.
 - Positive fixtures (`expected_result: pass`) actually pass it.
+- Flag/restraint pairing: every fixture declares either (`pair_id` +
+  `pair_role` in {flag, restraint}) or an explicit `pair_exception` reason —
+  silence is an error. Each `pair_id` must resolve to exactly one flag and
+  exactly one restraint fixture across the whole corpus.
 
 Usage:
     python3 scripts/validate-fixtures.py evals/fixtures/
@@ -56,6 +60,7 @@ ARTIFACT_VALIDATOR = SCRIPT_DIR / "validate-artifact.py"
 REQUIRED_FIXTURE_FIELDS = ("id", "purpose", "tested_rules", "expected_result")
 EXPECTED_RESULT_VALUES = {"pass", "fail"}
 OPTIONAL_BOOL_FIELDS = ("aspirational",)
+PAIR_ROLE_VALUES = {"flag", "restraint"}
 
 RESIDUAL_RULES = {
     "9.5-threshold",
@@ -186,10 +191,115 @@ def _validate_tested_rule(rule: Any, canon: _canon.Canon, kinds: Sequence[str]) 
     return errors
 
 
+def _validate_pair_fields(
+    fixture_dir: Path, data: dict, toml_path: Path
+) -> tuple[list[Violation], tuple[str, str] | None]:
+    """Check the flag/restraint pairing fields on one fixture.
+
+    Returns (violations, pair_entry). pair_entry is (pair_id, pair_role) when
+    the fixture declares a syntactically valid pair_id + pair_role, else None
+    (either it's a pair_exception fixture, or the pair fields are malformed
+    and already reported below — malformed entries are excluded from the
+    cross-fixture cardinality check rather than polluting it).
+    """
+    violations: list[Violation] = []
+    has_pair_id = "pair_id" in data
+    has_exception = "pair_exception" in data
+    if has_pair_id and has_exception:
+        violations.append(
+            Violation(
+                "pair-schema",
+                "declares both pair_id and pair_exception; a fixture is either "
+                "paired or an exception, not both",
+                toml_path,
+            )
+        )
+        return violations, None
+    if not has_pair_id and not has_exception:
+        violations.append(
+            Violation(
+                "pair-schema",
+                "declares neither pair_id (+ pair_role) nor pair_exception; every "
+                "fixture must be paired or an explicit exception",
+                toml_path,
+            )
+        )
+        return violations, None
+    if has_exception:
+        exc = data.get("pair_exception")
+        if not isinstance(exc, str) or not exc.strip():
+            violations.append(
+                Violation(
+                    "pair-schema",
+                    f"pair_exception must be a non-empty string, got {exc!r}",
+                    toml_path,
+                )
+            )
+        return violations, None
+    # has_pair_id
+    pair_id = data.get("pair_id")
+    role = data.get("pair_role")
+    valid = True
+    if not isinstance(pair_id, str) or not pair_id.strip():
+        violations.append(
+            Violation(
+                "pair-schema", f"pair_id must be a non-empty string, got {pair_id!r}", toml_path
+            )
+        )
+        valid = False
+    if role not in PAIR_ROLE_VALUES:
+        violations.append(
+            Violation(
+                "pair-schema",
+                f"pair_role={role!r} not in {sorted(PAIR_ROLE_VALUES)}",
+                toml_path,
+            )
+        )
+        valid = False
+    if not valid:
+        return violations, None
+    return violations, (pair_id, role)
+
+
+def _validate_pairing(entries: list[tuple[str, str, Path]]) -> list[Violation]:
+    """Cross-fixture check: every pair_id has exactly one flag + one restraint.
+
+    entries is a list of (pair_id, role, toml_path) collected across the
+    whole corpus by _validate_one_fixture. Catches missing twins, dangling
+    single-sided pair_ids, and duplicate pair_ids (>1 flag or >1 restraint
+    sharing an id) with one uniform message.
+    """
+    by_pair: dict[str, dict[str, list[Path]]] = {}
+    for pair_id, role, toml_path in entries:
+        by_pair.setdefault(pair_id, {"flag": [], "restraint": []})[role].append(toml_path)
+
+    violations: list[Violation] = []
+    for pair_id in sorted(by_pair):
+        roles = by_pair[pair_id]
+        flags, restraints = roles["flag"], roles["restraint"]
+        if len(flags) == 1 and len(restraints) == 1:
+            continue
+        violations.append(
+            Violation(
+                "pair-cardinality",
+                f"pair_id {pair_id!r} has {len(flags)} flag(s) and {len(restraints)} "
+                f"restraint(s); every pair_id must resolve to exactly one flag and "
+                f"exactly one restraint. flags={[str(p) for p in flags]} "
+                f"restraints={[str(p) for p in restraints]}",
+            )
+        )
+    return violations
+
+
 def _validate_one_fixture(
     fixture_dir: Path, canon: _canon.Canon, kinds: Sequence[str]
-) -> list[Violation]:
-    """Schema + content checks on a single fixture's fixture.toml."""
+) -> tuple[list[Violation], tuple[str, str, Path] | None]:
+    """Schema + content checks on a single fixture's fixture.toml.
+
+    Returns (violations, pair_entry). pair_entry is (pair_id, role, toml_path)
+    when the fixture declares a valid pair_id/pair_role, for the caller to
+    feed into _validate_pairing's cross-fixture cardinality check.
+    """
     violations: list[Violation] = []
     toml_path = fixture_dir / "fixture.toml"
     if not toml_path.exists():
@@ -200,13 +310,13 @@ def _validate_one_fixture(
                 toml_path,
             )
         )
-        return violations
+        return violations, None
     data = _load_toml(toml_path)
     if not isinstance(data, dict):
         violations.append(
             Violation("schema", "fixture.toml top-level must be a mapping", toml_path)
         )
-        return violations
+        return violations, None
     for field in REQUIRED_FIXTURE_FIELDS:
         value = data.get(field)
         if value in (None, "", [], {}):
@@ -262,7 +372,10 @@ def _validate_one_fixture(
                     toml_path,
                 )
             )
-    return violations
+    pair_violations, pair_role_entry = _validate_pair_fields(fixture_dir, data, toml_path)
+    violations.extend(pair_violations)
+    pair_entry = (pair_role_entry[0], pair_role_entry[1], toml_path) if pair_role_entry else None
+    return violations, pair_entry
 
 
 def _run_artifact_check(
@@ -425,9 +538,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     violations: list[Violation] = []
+    pair_entries: list[tuple[str, str, Path]] = []
     for fixture_dir in fixture_subdirs:
-        fixture_violations = _validate_one_fixture(fixture_dir, canon, kinds)
+        fixture_violations, pair_entry = _validate_one_fixture(fixture_dir, canon, kinds)
         violations.extend(fixture_violations)
+        if pair_entry is not None:
+            pair_entries.append(pair_entry)
         # Only run the cross-check if the fixture.toml's expected_result parses
         # cleanly; otherwise the upstream schema error is sufficient.
         if args.run_artifact_check and not any(
@@ -437,6 +553,8 @@ def main(argv: list[str] | None = None) -> int:
             expected = data.get("expected_result")
             if expected in EXPECTED_RESULT_VALUES:
                 violations.extend(_cross_check_expected_result(fixture_dir, data))
+
+    violations.extend(_validate_pairing(pair_entries))
 
     if violations:
         for v in violations:

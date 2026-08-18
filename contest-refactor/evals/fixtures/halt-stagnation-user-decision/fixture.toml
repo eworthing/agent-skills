@@ -1,6 +1,7 @@
 id = "halt-stagnation-user-decision"
 purpose = "Valid HALT_STAGNATION/user_decision: subtype + unresolved_reason + halt_handoff all present. Must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: valid HALT_STAGNATION/user_decision with subtype+unresolved_reason+handoff all present. G34 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "g39-score-impact-prose"
 purpose = "Negative v4 fixture whose backlog item carries the legacy free-text score_impact ('Architecture quality + State management each +1.0'); protects G39 against regression to prose that no rule can read."
 expected_result = "fail"
+pair_exception = "shared-baseline-mutation: derived from pass fixture 'v3-clean-loop' by mutating a single field to trigger G39; 'v3-clean-loop' is a shared clean baseline for other independent negative siblings, not this fixture's dedicated 1:1 twin."
 notes = "The pinned string is the exact example output-format-json.md shipped before G39, so this fixture fails the moment the docs regress to display labels and unattributable 'each +1.0' phrasing. Derived from v3-clean-loop at schema_version 4 with REVIEW_HISTORY.json re-synced for G18. G39 must fire; the rule-id cross-check matches cited gate G39 against the fired rule."
 
 [[tested_rules]]

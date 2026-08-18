@@ -1,6 +1,7 @@
 id = "loop-state-mid-step3-resume-step7"
 purpose = "LOOP_STATE.json shows step_started=7, step_completed=6 (loop interrupted mid-Step-3 between step 6 review and step 7 commit); protects G28 checkpoint freshness + resume-detection ability to pick up at step_started when checkpoint is recent."
 expected_result = "pass"
+pair_exception = "independent-branch: LOOP_STATE.json mid-Step-3 resume with a fresh checkpoint (freshness/range/loop-num hold). G28 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 # Pin the G28 orphan-check reference time near last_checkpoint_at so this
 # "recent checkpoint" fixture stays inside the 24h window no matter when the

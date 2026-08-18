@@ -1,6 +1,7 @@
 id = "handoff-shape-valid-multi-action"
 purpose = "Valid handoff with one action of each match_kind (all_of+paths, any_of+empty, no_drift+empty). Must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: valid handoff with one action of each match_kind. G35 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

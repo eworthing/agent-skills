@@ -1,6 +1,7 @@
 id = "panel-held-unanimous"
 purpose = "Terminal HALT_SUCCESS with a v5 panel of 3 challengers, all outcome=held, aggregate outcome=held, candidate_binding equal to the top-level fields. Positive case: G32 passes."
 expected_result = "pass"
+pair_exception = "independent-branch: v5 panel of 3 challengers, all held, aggregate held. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

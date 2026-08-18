@@ -1,6 +1,7 @@
 id = "premium-dry-run-loop-model-valid"
 purpose = "Positive G38 fixture: ordinary --dry-run plus --loop-model claude-fable-5 is safe even without the dedicated premium_dry_run audit object."
 expected_result = "pass"
+pair_exception = "independent-branch: --dry-run + --loop-model without the dedicated premium_dry_run audit object (still safe, keys on dry_run). G38 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 notes = "G38 safety keys on dry_run true; premium_dry_run is only required for the dedicated premium dry-run controls."
 
 [[tested_rules]]

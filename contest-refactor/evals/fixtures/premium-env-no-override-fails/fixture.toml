@@ -1,6 +1,7 @@
 id = "premium-env-no-override-fails"
 purpose = "Negative G38 fixture: environment-selected premium loop model attempts a non-dry-run CONTINUE loop without --allow-premium-loop."
 expected_result = "fail"
+pair_exception = "independent-branch: environment-selected premium loop model running non-dry-run CONTINUE without --allow-premium-loop. G38 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 notes = "This is the accidental quota-drain path G38 blocks before dispatch and at artifact validation."
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "halt-terminal-no-diversity"
 purpose = "Terminal HALT_SUCCESS whose held challenge skips the mandatory non-correctness arm. G32 must fail."
 expected_result = "fail"
+pair_exception = "independent-branch: terminal HALT_SUCCESS challenge skipping the mandatory non-correctness arm. G32 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = false
 
 [[tested_rules]]

@@ -1,6 +1,7 @@
 id = "halt-stagnation-verification-blocked"
 purpose = "Valid HALT_STAGNATION/verification_blocked (v4 fail-closed). Exercises the canon reconciliation. Must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: valid HALT_STAGNATION/verification_blocked (v4 fail-closed canon reconciliation). G34 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

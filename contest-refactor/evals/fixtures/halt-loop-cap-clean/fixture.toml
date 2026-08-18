@@ -1,6 +1,7 @@
 id = "halt-loop-cap-clean"
 purpose = "Valid certification-pending HALT_LOOP_CAP: empty backlog, all scores at least 9.5, fresh challenge pending. Must PASS."
 expected_result = "pass"
+pair_exception = "independent-branch: certification-pending HALT_LOOP_CAP with empty backlog, all scores >=9.5, fresh challenge pending. G34 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]

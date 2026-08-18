@@ -1,6 +1,7 @@
 id = "panel-broke-continue"
 purpose = "1-entry panel: member 1 returns a structurally valid, normalized break. Demotes to CONTINUE with the finding as Priority 1; panel record persists. Positive case: G32 passes."
 expected_result = "pass"
+pair_exception = "independent-branch: 1-entry panel, structurally valid normalized break, demotes to CONTINUE. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
 
 [[tested_rules]]
