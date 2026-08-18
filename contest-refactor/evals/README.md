@@ -111,6 +111,101 @@ already has its own discard/exclusion mechanism for G32 panel-certification runs
 and is semantically distinct from this taxonomy; conflating the two was judged more likely to
 introduce a mismatch than to help, so it was left alone.
 
+### Paired lift: criterion classification, the delta, and the tautology screen (backlog item 22)
+
+Trial validity (above) answers "did this trial produce a scoreable outcome at all." This
+section answers a different question, one Gap 20
+(`docs/review-skill-deep-dive-2026-08-17.md:843`) names as the second, unmechanized half of
+the same instrumentation gap: **given a scoreable with-skill/without-skill pair, which
+criteria may legitimately measure the skill's lift, and by how much did it actually move
+them** — signed, never floored, so a skill that *hurts* is visible rather than clamped to
+"no worse than nothing" (Gap 17's fail-with-skill-but-pass-without category, otherwise
+undetectable anywhere in this suite). `scripts/_paired_baseline.py` is the implementation;
+`scripts/_paired_baseline_selftest.py` proves every rule below.
+
+**Criterion classification (D2).** Every evals.json assertion already carries
+`method: "deterministic" | "semantic"` (backlog item 16) — *how* a criterion is graded. This
+item adds a second, **orthogonal** axis on the same assertion object: `criterion_class:
+"outcome" | "skill_contract"` — *whether* a criterion can measure lift at all.
+
+- **`outcome`** — both arms can structurally satisfy it. It measures task completion, not
+  skill invocation.
+- **`skill_contract`** — only an arm that ran the skill can satisfy it (it names this skill's
+  own field names, canon vocabulary, or artifact shape). Scored and reported, **never** mixed
+  into a lift numerator or denominator.
+
+It lives inline in evals.json, the same place `method` does — no `canon/*.toml` — because,
+like `method`, it is authoring metadata about the eval suite's own design, not a vocabulary
+validated against candidate output or shared across unrelated scripts (contrast
+`canon/trial-validity.toml`, whose thresholds are load-bearing machinery for more than one
+consumer). `scripts/_paired_baseline.criterion_class()` is the reader. **Absence is not a
+default to either class** (D6, mirroring `historical_validity()`'s `"not_recorded"` rule): it
+reads `"unclassified"`, and an unclassified assertion enters neither score. The 165 assertions
+already in `evals.json` are, as of this item, all unclassified — D6 forecloses retroactively
+guessing a classification for measured-suite content nobody has actually adjudicated;
+classifying the existing corpus is a future editorial pass, not something this item invents
+values for.
+
+**The lift computation (D1).** `compute_lift()` takes a `PairedTrial` (a `case_id` plus a
+`with_arm` and `without_arm` `ArmResult`, each a tuple of graded `AssertionResult`s) and
+returns a `LiftResult` with the **signed** delta — `with_outcome_score − without_outcome_score`
+over `outcome`-classed assertions only, `skill_contract` scores computed and carried on the
+same result but never read to produce `delta`. This is a **deliberate divergence** from
+skilllens, which floors the delta at zero: flooring destroys exactly the signal Gap 17 names
+with no other detector in this suite. `_paired_baseline_selftest.py` proves the divergence
+differentially — two trials identical except one `skill_contract` assertion's pass/fail is
+flipped must produce **identical** `delta` and `outcome_n`, while the (separately reported)
+`skill_contract` score visibly changes.
+
+**The manipulation check, counted not voided (D4 — the seam with trial validity).** The
+with-skill arm not invoking the skill, or the without-skill arm invoking it, is skilllens's own
+"manipulation check" — and skilllens voids the trial on that failure. This taxonomy's Gap 19
+correction already forecloses that for the suite generally (an adherence failure is counted,
+never invalid); item 22 makes the mechanism concrete. `score_manipulation_check()` grades
+"did this arm run under its assigned condition" as an ordinary `outcome`-classed assertion —
+both arms can structurally satisfy it — folded into the arm's outcome score like any other
+criterion. A failing manipulation check therefore *lowers* that arm's score; it never touches
+`ArmResult.validity`. The only thing that makes `compute_lift()` return `None` (void the
+comparison) is an arm whose `TrialValidity.status == "invalid"` — `canon/trial-validity.toml`'s
+closed, **exogenous-only** `invalid_reasons` enum, consumed directly from
+`scripts/_trial_validity.py`, never reinvented. Calling `mark_invalid("manipulation_check_failed",
+canon)` (or any adherence-shaped reason) raises `ValueError` — item 21's own D2 boundary, which
+item 22 cannot route around even if a future edit tried to. `_paired_baseline_selftest.py`
+proves both directions of this seam: a manipulation failure keeps `validity` valid and lowers
+the score; an exogenous-invalid arm voids the trial regardless of `manipulation_ok`.
+
+**The tautology screen (D3).** A purely lexical screen over criterion text has false
+positives by construction — Gap 20 itself: a criterion naming our vocabulary is "legitimate
+where the name is the consumed artifact, invalid the moment a criterion rewards our vocabulary
+over the outcome," and that distinction is a judgment call, not a regex. So the screen
+**flags**, a human **declares**. `screen_criteria()` walks every `outcome`-classed assertion
+in a set of evals.json-shaped cases and flags any whose normalized text contains a token from
+`_skill_vocabulary()` — the union of the two JSON contracts' required field names and the
+smell vocabulary (both imported from `scripts/grade_structural.py`, never redefined), every
+canon gate id, and every `tuple[str, ...]` enum `_canon.Canon` loads (walked via
+`dataclasses.fields()`, so a new canon enum is covered automatically rather than silently
+falling outside the screen). This is the same house pattern as `DECLARED_DIVERGENCES`
+(`scripts/token-budget.py`) and `DECLARED_TRANSITION_DIVERGENCES` (`scripts/validate-repo.py`):
+`DECLARED_TAUTOLOGY_EXCEPTIONS` maps `(case_id, assertion_index) → reason`; an undeclared flag
+is a failure (`undeclared_tautology_failures()`), a declared one is reported but never blocks.
+The remedy for a real flag is either of D3's two named exits: reclassify the criterion to
+`skill_contract` (the same text stops being policed at all once it's no longer claiming to
+measure lift), or declare the exception with a reason.
+
+`DECLARED_TAUTOLOGY_EXCEPTIONS` ships empty: since no assertion in `evals.json` carries
+`criterion_class` yet (D6, above), `screen_criteria()` run against the real corpus today
+flags nothing — not because the corpus is clean of the tautology Gap 20 describes, but
+because nothing has been classified `outcome` for it to check. A demonstration run against a
+copy of `evals.json` with two of eval #12's assertions force-classified `outcome` (never
+persisted — this was an in-memory check, not a corpus edit) confirmed the screen fires
+correctly on real text: it flagged `"flagged_smells names suppression-as-fix..."` (normalized
+hits: `flagged smells`, `suppression as fix`, `fake clean reward`) and `"blocks_95 is true and
+the concurrency score is < 9.5"` (hits: `blocks 95`, `concurrency`) — the second is exactly the
+ambiguous case Gap 20 warns about (`concurrency` is a real scorecard dimension the criterion
+is legitimately checking a threshold against, not rewarding vocabulary for its own sake), and
+would need a human to declare it rather than reclassify it. Classifying the existing corpus is
+future work; this item ships the mechanism the classification pass will run under.
+
 ## Layer 1 — artifact-rule (`evals.json` #0–#11, `fixtures/`, `artifact-smoke/`)
 
 Does a reviewer correctly apply the skill's **deterministic gate rules** (G1–G31, halt

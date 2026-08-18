@@ -75,6 +75,20 @@ ARCHITECTURE_RUBRIC = SKILL_ROOT / "references" / "architecture-rubric.md"
 
 LAYER3_CHECK_STATUSES = ("passed", "failed", "skipped")  # implementation-reviewer.md
 LAYER3_CHECK_NAMES = ("reality", "honesty", "regression")
+# The two JSON output contracts' required top-level fields, hoisted to module level (backlog
+# item 22) so the required-field vocabulary has exactly one definition -- scripts/_paired_baseline.py
+# imports these rather than re-deriving them, per the house rule against reimplementing logic
+# that already exists (see its docstring). No behavior change here: the two functions below
+# already built this exact list inline; this only names it.
+LAYER2_REQUIRED_FIELDS = (
+    "verdict",
+    "blocks_95",
+    "blocking_severity",
+    "dimension_scores",
+    "flagged_smells",
+    "evidence_demanded",
+)
+LAYER3_REQUIRED_FIELDS = ("verdict", "reason", "checks", "regressions", "conditions")
 
 
 class Plumbing(Exception):
@@ -225,14 +239,7 @@ def _eval_checks(checks: list[dict[str, Any]], candidate: dict[str, Any]) -> tup
 
 def _general_checks_layer2(candidate: dict[str, Any], canon) -> list[dict[str, Any]]:
     results = []
-    required = [
-        "verdict",
-        "blocks_95",
-        "blocking_severity",
-        "dimension_scores",
-        "flagged_smells",
-        "evidence_demanded",
-    ]
+    required = LAYER2_REQUIRED_FIELDS
     missing = [f for f in required if f not in candidate]
     results.append(
         {
@@ -307,7 +314,7 @@ def _general_checks_layer2(candidate: dict[str, Any], canon) -> list[dict[str, A
 
 def _general_checks_layer3(candidate: dict[str, Any], canon) -> list[dict[str, Any]]:
     results = []
-    required = ["verdict", "reason", "checks", "regressions", "conditions"]
+    required = LAYER3_REQUIRED_FIELDS
     missing = [f for f in required if f not in candidate]
     results.append(
         {
