@@ -2,7 +2,7 @@
   "schema_version": 1,
   "record_state": "preregistered",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
-  "prereg_sha256": "6add43b59e89b71819bdb1e67adaf5e3408479fd9cad6b65224707f65f9b6bed",
+  "prereg_sha256": "b2b95214f30cfe65f939d1d19842860a824616b8c0bdf940afc617467c176448",
   "prereg": {
     "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
     "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
@@ -118,7 +118,8 @@
       "evals/scenarios/principal-abstraction-seam-flag/scenario.md": "b4e35a817f6b81ac71c946fdbcb601dfed8e48b0d91e345f377d81cc1b59453d",
       "evals/paired_arm_grader_prompt.md": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5",
       "evals/paired_arm_dispatch_envelope.md": "c94a644710b19420b5831a38bb5a8a5da4a6d82e0375aebb013333922678beb0",
-      "evals/paired_arm_grading_spec_prompt.md": "294d5ce7adce8a676b40d3263ee8c0c2828903766de148697858e81044d9e1f7"
+      "evals/paired_arm_grading_spec_prompt.md": "294d5ce7adce8a676b40d3263ee8c0c2828903766de148697858e81044d9e1f7",
+      "evals/grading-specs/principal-consistency-boundary-flag.md": "fe84fdcbf47caf303e83993ca7633160b1b405374a4a44ed9ecdbe27bdab4343"
     },
     "historical_file_hashes": {
       "evals/principal_baseline.json": "8fb47ee8047024dcbbda8c0d276ca2b48eb782885641381070a2edd8789c71d4",
@@ -796,7 +797,17 @@
           "written_before_outputs_exist": "The spec author is shown the scenario, the answer key and the assertions, and NEVER a candidate response. That is what makes each spec a preregistration instead of a description of answers already seen.",
           "amortization": "one authoring call per scenario, executed 10 times (K=5 x 2 arms)",
           "stored_at": "evals/grading-specs/<scenario_id>.md, committed and hashed before its rung runs",
-          "absence_is_explicit": "A missing spec renders an explicit absence marker into the grader prompt, never a blank. A grader handed an empty spec section would silently fall back to interpreting the answer key itself -- the exact judgment the spec exists to move upstream."
+          "absence_is_explicit": "A missing spec renders an explicit absence marker into the grader prompt, never a blank. A grader handed an empty spec section would silently fall back to interpreting the answer key itself -- the exact judgment the spec exists to move upstream.",
+          "authored_specs": {
+            "evals/grading-specs/principal-consistency-boundary-flag.md": {
+              "sha256": "fe84fdcbf47caf303e83993ca7633160b1b405374a4a44ed9ecdbe27bdab4343",
+              "scenario_id": "principal-consistency-boundary-flag",
+              "authored_by": "claude-sonnet-5",
+              "authored_before_any_response_to_this_scenario_existed": true,
+              "residual_ambiguities_declared": 4,
+              "host_note": "Accepted as authored. The spec chose defaults on two calls the tier rule does not settle (assertions 0+2 are the load-bearing pair with 1 reinforcing; an assertion-3 failure does not flip caught to missed) and DOCUMENTED the equally-supportable stricter readings alongside them. Left as the author wrote it rather than overridden: its choices come with their reasoning attached, and if a decision later turns on one of them the alternative is on the record to be re-read against. Its third residual item -- that severity cannot be checked without a taxonomy -- is moot for this tier: no semantic assertion mentions severity, and blocking_severity canon-membership is already a mechanical general check."
+            }
+          }
         },
         "executor_model": "claude-haiku-4-5",
         "escalate_to_sonnet_iff": [
