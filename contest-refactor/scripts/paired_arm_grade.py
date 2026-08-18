@@ -70,8 +70,24 @@ def render(scenario_id: str, output_id: str, candidate_path: Path) -> str:
         .replace("{{EXPECTED_OUTPUT}}", entry["expected_output"])
         .replace("{{SEMANTIC_RULE}}", prereg["semantic_rule"])
         .replace("{{ASSERTIONS}}", "\n".join(lines))
+        .replace("{{GRADING_SPEC}}", _grading_spec(scenario_id))
         .replace("{{CANDIDATE_OUTPUT}}", candidate_path.read_text())
     )
+
+
+def _grading_spec(scenario_id: str) -> str:
+    """The frozen per-scenario grading spec, or an explicit absence marker.
+
+    Absence is stated, never blank: a grader handed an empty spec section would silently fall back
+    to interpreting the answer key itself, which is the exact judgment the spec exists to move
+    upstream. An unwritten spec must therefore be visible in the prompt, not invisible."""
+    path = SKILL_ROOT / "evals" / "grading-specs" / f"{scenario_id}.md"
+    if not path.is_file():
+        return (
+            "(NO SPEC EXISTS FOR THIS SCENARIO. Grade from the answer key and the tier rule "
+            "alone, and treat every borderline call as `uncertain` rather than deciding it.)"
+        )
+    return path.read_text()
 
 
 def mechanical_grade(verdict_json: dict, kind: str, target_dimensions: list[str] | None) -> str:

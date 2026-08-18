@@ -2,7 +2,7 @@
   "schema_version": 1,
   "record_state": "preregistered",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
-  "prereg_sha256": "5c4065e58eab37b0089cfbbc010bc136f57c125bba521a0fe21f554246671162",
+  "prereg_sha256": "6add43b59e89b71819bdb1e67adaf5e3408479fd9cad6b65224707f65f9b6bed",
   "prereg": {
     "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
     "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
@@ -116,8 +116,9 @@
       "evals/scenarios/principal-consistency-boundary-flag/scenario.md": "c4135cbe2b778829cc63c4e673504bf5ae3d8967143f13fe77cb162ef89b8612",
       "evals/scenarios/principal-consistency-boundary-restraint/scenario.md": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc",
       "evals/scenarios/principal-abstraction-seam-flag/scenario.md": "b4e35a817f6b81ac71c946fdbcb601dfed8e48b0d91e345f377d81cc1b59453d",
-      "evals/paired_arm_grader_prompt.md": "3401f8496cdc1a13d34baa01b0792289cb5992b3e220506f87214f4b37b5be41",
-      "evals/paired_arm_dispatch_envelope.md": "c94a644710b19420b5831a38bb5a8a5da4a6d82e0375aebb013333922678beb0"
+      "evals/paired_arm_grader_prompt.md": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5",
+      "evals/paired_arm_dispatch_envelope.md": "c94a644710b19420b5831a38bb5a8a5da4a6d82e0375aebb013333922678beb0",
+      "evals/paired_arm_grading_spec_prompt.md": "294d5ce7adce8a676b40d3263ee8c0c2828903766de148697858e81044d9e1f7"
     },
     "historical_file_hashes": {
       "evals/principal_baseline.json": "8fb47ee8047024dcbbda8c0d276ca2b48eb782885641381070a2edd8789c71d4",
@@ -704,6 +705,11 @@
         "id": "no_cited_span_normalizes_whitespace",
         "statement": "The `no_cited_span` ambiguity trigger tests the evidence span as a WHITESPACE-NORMALIZED substring of the candidate output, not a literal one. Amended during Phase 2, after the pilot's grading tier ran and before any STUDY output was graded.",
         "reason": "The literal test looked stricter and was simply wrong: reviewer prose is hard-wrapped at ~95 characters, so a perfect quote crossing a line break failed it. The pilot fired the trigger twice on exactly that. Left in place it would have forced a second grader on most slots -- roughly doubling grading cost for nothing -- and it was BIASED: the longer the cited span, the likelier it crosses a newline, so the check punished the most thorough citations. Normalizing whitespace keeps the property the trigger exists for (the exact token sequence must appear in the candidate, so a paraphrase still fails) and drops only a layout accident. Recorded here rather than silently widened, because loosening one's own validity check after seeing it fire is exactly the move that needs to be visible."
+      },
+      {
+        "id": "ladder_and_spec_first_grading",
+        "statement": "Phase 3 executes as a 4-rung frontier-first ladder rather than one 55-pair run, and semantic grading becomes spec-first: a sonnet-authored per-scenario grading spec, frozen before any response to that scenario exists, executed by claude-haiku-4-5 with preregistered escalation back to sonnet. frozen_order, the four grading rules, the four decision rules and every expected_baseline are UNCHANGED.",
+        "reason": "Cost. The as-designed study projected ~44M cost-equivalent tokens, which is not sustainable. The ladder attacks scope by testing discriminating cases before confirmatory ones; spec-first grading attacks the larger half of the bill by amortizing one expensive judgment across ten cheap executions. Both are declared rather than quietly applied because both change HOW the study runs, and a reader has to be able to see that the WHAT -- rules, order, hypotheses -- did not move with them. Frozen before any study slot was dispatched."
       }
     ],
     "headline_excluded": [
@@ -732,7 +738,7 @@
       "grader_model": "claude-sonnet-5",
       "grader_dispatch": "host-dispatched fresh subagent, one per candidate output, sandboxed to the prompt text alone -- the grader reads no file and no repository; every input it needs is interpolated into the frozen prompt.",
       "grader_prompt_file": "evals/paired_arm_grader_prompt.md",
-      "grader_prompt_sha256": "3401f8496cdc1a13d34baa01b0792289cb5992b3e220506f87214f4b37b5be41",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5",
       "grader_model_recorded_separately_because": "principal_baseline_replication.json's judge_model conflated grader with arm ('claude-opus-4-8 (host-dispatched general-purpose subagents, one fresh per attempt)' names the ARM dispatch, not a separate grader). non_claim already flags that ambiguity; recording grader_model apart from prereg.arm_model is what stops it recurring here.",
       "inputs_per_call": [
         "output_id (opaque blind id)",
@@ -780,6 +786,28 @@
         "unit": "the semantic assertion: the denominator is every semantic-tagged assertion across those 22 outputs",
         "reporting": "reported as an estimate WITH its denominator stated, never as a population rate. Trigger-selected adjudications outside the subsample are reported as a COUNT and never folded into the rate -- they are a biased sample by construction.",
         "trade": "Doubling every semantic grade would give a cleaner estimate at roughly double the grading cost; the subsample is the deliberate trade, preregistered so it cannot be resized after seeing results."
+      },
+      "tiering": {
+        "principle": "A cheaper model is safe exactly where the decision has already been made for it. This repo measured that twice: the reviewer tier experiment (~5M tokens) found haiku safe ONLY in the role with no gating verdict, and the Phase-2 grader tier test reproduced haiku's documented over-rejection bias at the grader role. So the decision is moved UPSTREAM rather than the model being trusted with it.",
+        "spec_first": {
+          "authoring_model": "claude-sonnet-5",
+          "authoring_prompt_file": "evals/paired_arm_grading_spec_prompt.md",
+          "authoring_prompt_sha256": "294d5ce7adce8a676b40d3263ee8c0c2828903766de148697858e81044d9e1f7",
+          "written_before_outputs_exist": "The spec author is shown the scenario, the answer key and the assertions, and NEVER a candidate response. That is what makes each spec a preregistration instead of a description of answers already seen.",
+          "amortization": "one authoring call per scenario, executed 10 times (K=5 x 2 arms)",
+          "stored_at": "evals/grading-specs/<scenario_id>.md, committed and hashed before its rung runs",
+          "absence_is_explicit": "A missing spec renders an explicit absence marker into the grader prompt, never a blank. A grader handed an empty spec section would silently fall back to interpreting the answer key itself -- the exact judgment the spec exists to move upstream."
+        },
+        "executor_model": "claude-haiku-4-5",
+        "escalate_to_sonnet_iff": [
+          "any preregistered ambiguity trigger fires (grader_uncertain, no_cited_span, opined_outside_residue)",
+          "the executor sets outside_spec:true on any assertion -- a response satisfied a criterion in wording the spec did not enumerate, which is the spec's rigidity valve rather than a fault",
+          "the executor returns the ADVERSE grade for the scenario kind (missed for a flag, over_flagged for a restraint)",
+          "the pair is in the preregistered 20% double-graded subsample"
+        ],
+        "why_adverse_grades_escalate_but_lenient_ones_do_not": "Measured asymmetry, not caution for its own sake. Both experiments agree haiku errs toward over-rejection and NEVER false-approves (GATE A clean in the reviewer run; both Phase-2 deviations were over_flagged-where-sonnet-said-held). A lenient haiku verdict is therefore the trustworthy direction and stands; the harsh direction is the suspect one and is re-decided by sonnet. Escalating both would forfeit the saving; escalating neither would import a measured bias straight into Decision 4, which is a VETO.",
+        "invalidation_rule": "The 20% subsample is the ongoing check, not a formality. If haiku-vs-sonnet disagreement on the subsample exceeds sonnet's own measured self-disagreement rate by more than one slot, the cascade is VOID for that rung and every haiku-only grade in it is re-graded on sonnet. The re-grade cost is therefore bounded and known before the cascade is used, which is what makes adopting it reversible rather than a bet.",
+        "arms_are_not_tiered": "The arm model stays claude-sonnet-5 and this is not negotiable on cost grounds. `caught` is defined as (verdict==rejected OR blocks_95) AND target dimension < 9.5, so a model that over-rejects scores as CATCHING flags for free while over-flagging the twins -- ceilinged flags and floored twins in both arms at once. That is paying less to measure nothing. The arms are the decision under test; only the GRADER's decision can be moved upstream, because only the grader has an answer key to move it into."
       }
     },
     "dispatch_envelope": {
@@ -799,6 +827,47 @@
         "the disagreement definition immediately above"
       ],
       "why_these_were_legitimate": "Every one was made before the thing it governs had produced any study data -- no arm dispatched for the first two, no study output graded for the last two -- and every one fixed an underspecification or a defect rather than tuning a threshold toward a result. The count is recorded openly BECAUSE four amendments is the point at which a reader should start asking whether the record is being fitted. That is exactly why the window now has a hard close."
+    },
+    "execution_ladder": {
+      "why": "The full design is 55 pairs. Run frontier-first instead: test the discriminating cases before the confirmatory ones, per the low-token method this repo documented in evals/reviewer-model-experiment.md ('test only the discriminators, not the whole corpus'). Each rung reports before the next is authorised.",
+      "rung_1": {
+        "scenario": "principal-consistency-boundary-flag",
+        "pairs": 5,
+        "selection_rule": "The hardest cross-module flags are already named by prior measurement (evals/reviewer-model-experiment.md: principal-consistency-boundary, -abstraction-seam, -process-owner). Restrict to headline-eligible scenarios -- which drops -abstraction-seam as contaminated -- and tie-break by that document's own enumeration order. That yields consistency-boundary. The rule is written down so the choice is auditable rather than a preference: no scenario was chosen after looking at anything.",
+        "also_stresses_grading": "This scenario has ZERO deterministic assertions and four semantic ones, so it puts the full weight on the spec-first grading path -- the part of the design that is new and unproven. The harder test runs first on purpose."
+      },
+      "rung_2": {
+        "scenarios": [
+          "principal-invariant-owner-flag",
+          "principal-duplicated-rule-flag",
+          "principal-process-owner-flag"
+        ],
+        "pairs": 15,
+        "answers": "completes Decision 1 across all 4 headline-eligible principal flags"
+      },
+      "rung_3": {
+        "scenarios": [
+          "suppression-flag",
+          "crossplat-flag",
+          "suppression-restraint",
+          "crossplat-restraint",
+          "principal-invariant-owner-restraint",
+          "principal-consistency-boundary-restraint"
+        ],
+        "pairs": 30,
+        "answers": "Decisions 2 and 4; Decision 3 becomes computable only with this rung"
+      },
+      "rung_4": {
+        "scenarios": [
+          "principal-abstraction-seam-flag"
+        ],
+        "pairs": 5,
+        "answers": "measured and reported for completeness; headline-excluded as contaminated, so it enters no decision"
+      },
+      "order_within_rungs": "Each rung executes the SUBSEQUENCE of prereg.frozen_order whose scenario_id belongs to that rung, in its original relative order. frozen_order itself is untouched: every pair keeps its preregistered within-pair arm order and its relative position. This is a deferral, not a re-randomization.",
+      "what_the_ladder_costs_scientifically": "Cross-scenario time balance. Running rungs sequentially means scenario correlates with wall-clock, so service drift between rungs is not balanced across scenarios. This affects NO decision rule: every comparison the design makes is WITHIN a pair, both arms dispatched adjacently, and that blocking is preserved exactly. Stated here rather than left for a reader to notice.",
+      "continuation_rule": "Each rung ends with a report: per-arm caught/held counts, measured spend, measured grader-tier agreement, and the resulting projection for the next rung. The next rung requires explicit authorisation. A rung is NEVER auto-continued and NEVER auto-stopped.",
+      "against_motivated_stopping": "Stopping early cannot manufacture a conclusion: Decision 1 requires all 4 eligible principal flags and Decision 3 is a conjunction across both layers, so no rung short of the full ladder can license either. A partial ladder yields a partial, explicitly partial, descriptive result -- and the binding language rule still forbids 'lift is zero'. The risk this design accepts is that the programme stops with the question half answered; the risk it refuses is that a half answer gets reported as a whole one."
     }
   },
   "captured_at": null,

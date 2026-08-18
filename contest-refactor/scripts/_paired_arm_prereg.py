@@ -395,6 +395,7 @@ def check_declared_divergences(prereg: dict) -> list[str]:
         "symmetric_vocabulary_instructions",
         "grading_protocol_frozen_at_phase_2",
         "dispatch_envelope_frozen_at_phase_2",
+        "ladder_and_spec_first_grading",
     }
     missing = required_ids - ids
     if missing:
@@ -521,6 +522,107 @@ def check_dispatch_envelope(prereg: dict) -> list[str]:
     return issues
 
 
+def check_execution_ladder(prereg: dict) -> list[str]:
+    """The ladder may re-ORDER work; it may not quietly drop any of it.
+
+    The load-bearing check is the partition: every one of the 11 study scenarios appears in
+    exactly one rung, and the rung pair-counts sum to N_PAIRS. A ladder that silently omitted a
+    scenario would read as "we ran the study" while having skipped a case -- the same
+    no-silent-exclusion property `_reviewer_baseline_selftest.py` already enforces for its corpus.
+    """
+    ladder = prereg.get("execution_ladder")
+    if not isinstance(ladder, dict):
+        return ["[execution_ladder] missing or not an object"]
+    issues: list[str] = []
+    seen: list[str] = []
+    total = 0
+    for key, rung in sorted(ladder.items()):
+        if not key.startswith("rung_") or not isinstance(rung, dict):
+            continue
+        scenarios = rung.get("scenarios") or ([rung["scenario"]] if rung.get("scenario") else [])
+        if not scenarios:
+            issues.append(f"[execution_ladder] {key} declares no scenario(s)")
+            continue
+        seen += scenarios
+        pairs = rung.get("pairs")
+        if not isinstance(pairs, int) or pairs != len(scenarios) * K:
+            issues.append(
+                f"[execution_ladder] {key}: pairs={pairs!r} does not equal "
+                f"{len(scenarios)} scenario(s) x K={K}"
+            )
+        else:
+            total += pairs
+    dupes = sorted({s for s in seen if seen.count(s) > 1})
+    if dupes:
+        issues.append(f"[execution_ladder] scenario(s) appear in more than one rung: {dupes}")
+    missing = sorted(set(STUDY_SCENARIOS) - set(seen))
+    if missing:
+        issues.append(
+            f"[execution_ladder] scenario(s) in no rung at all -- silently excluded: {missing}"
+        )
+    unknown = sorted(set(seen) - set(STUDY_SCENARIOS))
+    if unknown:
+        issues.append(f"[execution_ladder] rung names a non-study scenario: {unknown}")
+    if not missing and not dupes and total != N_PAIRS:
+        issues.append(f"[execution_ladder] rung pairs sum to {total}, expected {N_PAIRS}")
+    for field in ("continuation_rule", "order_within_rungs", "against_motivated_stopping"):
+        if not isinstance(ladder.get(field), str) or not ladder[field]:
+            issues.append(f"[execution_ladder] {field} missing or empty")
+    return issues
+
+
+def check_grading_tiering(prereg: dict) -> list[str]:
+    """Spec-first tiering is only sound while its asymmetry and its exit are both on the record."""
+    t = (prereg.get("grading") or {}).get("tiering")
+    if not isinstance(t, dict):
+        return []  # tiering is optional; a sonnet-only run is still a valid configuration
+    issues: list[str] = []
+    spec = t.get("spec_first")
+    if not isinstance(spec, dict):
+        issues.append("[grading.tiering] spec_first missing or not an object")
+    else:
+        path, want = spec.get("authoring_prompt_file"), spec.get("authoring_prompt_sha256")
+        if not isinstance(path, str) or not (SKILL_ROOT / path).is_file():
+            issues.append("[grading.tiering] spec_first.authoring_prompt_file does not resolve")
+        elif prereg.get("material_hashes", {}).get(path) != want:
+            issues.append(
+                "[grading.tiering] spec_first.authoring_prompt_sha256 disagrees with its "
+                "material_hashes entry -- recorded twice and drifted"
+            )
+        if not isinstance(spec.get("written_before_outputs_exist"), str):
+            issues.append("[grading.tiering] spec_first.written_before_outputs_exist missing")
+        if not isinstance(spec.get("absence_is_explicit"), str):
+            issues.append("[grading.tiering] spec_first.absence_is_explicit missing")
+
+    esc = t.get("escalate_to_sonnet_iff")
+    if not isinstance(esc, list) or not esc:
+        issues.append("[grading.tiering] escalate_to_sonnet_iff missing or empty")
+    else:
+        blob = " ".join(str(e).lower() for e in esc)
+        if "adverse" not in blob:
+            issues.append(
+                "[grading.tiering] escalate_to_sonnet_iff must escalate the ADVERSE grade "
+                "(missed for a flag, over_flagged for a restraint) -- that is the direction the "
+                "cheaper tier is measured to err in, and Decision 4 is a veto"
+            )
+        if "subsample" not in blob:
+            issues.append(
+                "[grading.tiering] escalate_to_sonnet_iff must include the preregistered "
+                "double-graded subsample -- it is the check that the cascade is still valid"
+            )
+    if "re-grad" not in str(t.get("invalidation_rule", "")).lower():
+        issues.append(
+            "[grading.tiering] invalidation_rule must specify RE-GRADING on sonnet when the "
+            "cascade fails its check, so adopting it stays reversible at a bounded, known cost"
+        )
+    if not isinstance(t.get("arms_are_not_tiered"), str) or not t["arms_are_not_tiered"]:
+        issues.append(
+            "[grading.tiering] arms_are_not_tiered missing -- the commitment that the ARM model "
+            "is not a cost lever has to be on the record next to the lever that is"
+        )
+    return issues
+
+
 def check_arms(prereg: dict) -> list[str]:
     issues: list[str] = []
     if not isinstance(prereg.get("arm_model"), str) or not prereg["arm_model"]:
@@ -554,6 +656,8 @@ def validate_prereg(prereg: Any) -> list[str]:
     issues += check_arms(prereg)
     issues += check_grading(prereg)
     issues += check_dispatch_envelope(prereg)
+    issues += check_execution_ladder(prereg)
+    issues += check_grading_tiering(prereg)
     issues += check_material_hashes(prereg)
     issues += check_historical_file_hashes(prereg)
     issues += check_frozen_order(prereg)

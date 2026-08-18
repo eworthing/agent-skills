@@ -366,6 +366,67 @@ def main() -> int:
         rc, _, err = _run(tmpdir, "gr_subsample.json", bad)
         _check("subsample resized away from prereg top-level -> exit 1", rc == 1, f"got {rc}")
 
+        print("== RED: execution ladder may reorder work, never drop it ==")
+        # The whole hazard of a ladder: it reads as "we ran the study" while a case was skipped.
+        bad = copy.deepcopy(real)
+        bad["prereg"]["execution_ladder"]["rung_2"]["scenarios"] = [
+            s
+            for s in bad["prereg"]["execution_ladder"]["rung_2"]["scenarios"]
+            if s != "principal-duplicated-rule-flag"
+        ]
+        bad["prereg"]["execution_ladder"]["rung_2"]["pairs"] = 10
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "ladder_drop.json", bad)
+        _check("a scenario in no rung -> exit 1", rc == 1, f"got {rc}")
+        _check("names it as silently excluded", "silently excluded" in err, err[:200])
+
+        bad = copy.deepcopy(real)
+        bad["prereg"]["execution_ladder"]["rung_4"]["scenarios"] = [
+            "principal-invariant-owner-flag"
+        ]
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "ladder_dupe.json", bad)
+        _check("a scenario in two rungs -> exit 1", rc == 1, f"got {rc}")
+
+        bad = copy.deepcopy(real)
+        bad["prereg"]["execution_ladder"]["rung_1"]["pairs"] = 3
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "ladder_k.json", bad)
+        _check("rung pairs not equal to scenarios x K -> exit 1", rc == 1, f"got {rc}")
+
+        print("== RED: grader tiering keeps its asymmetry and its exit on the record ==")
+        # Escalating only on triggers would import haiku's MEASURED over-rejection bias straight
+        # into Decision 4, which is a veto.
+        bad = copy.deepcopy(real)
+        bad["prereg"]["grading"]["tiering"]["escalate_to_sonnet_iff"] = [
+            "any preregistered ambiguity trigger fires",
+            "the pair is in the preregistered 20% double-graded subsample",
+        ]
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "tier_adverse.json", bad)
+        _check("adverse-grade escalation dropped -> exit 1", rc == 1, f"got {rc}")
+
+        bad = copy.deepcopy(real)
+        bad["prereg"]["grading"]["tiering"]["invalidation_rule"] = (
+            "If disagreement looks high we will consider our options."
+        )
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "tier_exit.json", bad)
+        _check("invalidation rule without a re-grade exit -> exit 1", rc == 1, f"got {rc}")
+
+        bad = copy.deepcopy(real)
+        del bad["prereg"]["grading"]["tiering"]["arms_are_not_tiered"]
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "tier_arms.json", bad)
+        _check("arms_are_not_tiered commitment removed -> exit 1", rc == 1, f"got {rc}")
+
+        # A sonnet-only run is still valid: tiering is optional, not mandatory.
+        ok = copy.deepcopy(real)
+        del ok["prereg"]["grading"]["tiering"]
+        ok["prereg_sha256"] = _prereg_sha256(ok["prereg"])
+        rc, _, err = _run(tmpdir, "tier_absent.json", ok)
+        _check("no tiering block at all is ALLOWED -> exit 0", rc == 0, f"got {rc}: {err[:160]}")
+
         print("== RED: prereg_sha256 must track a live prereg edit ==")
         bad = copy.deepcopy(real)
         bad["prereg"]["declared_divergences"].append(
