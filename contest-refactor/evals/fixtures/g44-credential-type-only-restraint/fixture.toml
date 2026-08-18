@@ -1,0 +1,14 @@
+id = "g44-credential-type-only-restraint"
+purpose = "Restraint twin of g44-credential-akia-plain: evidence follows method.md's Credential redaction rule exactly -- file:line + credential TYPE, no value. Must stay clean (G44 does not fire)."
+expected_result = "pass"
+pair_id = "g44-credential-plain"
+pair_role = "restraint"
+notes = "Proves G44 does not over-fire on compliant evidence text that merely NAMES the credential type. \"AKIA\" never appears anywhere in this fixture's files -- the restraint is about citing TYPE, not about a near-miss on the pattern text."
+
+[[tested_rules]]
+kind = "gate"
+id = "G44"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

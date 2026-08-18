@@ -1,0 +1,12 @@
+id = "g44-credential-base64"
+purpose = "Transformed positive: the same fake AWS access key (AKIAIOSFODNN7EXAMPLE), base64-encoded, quoted in evidence. Must trip G44 via the base64-decode-and-rematch path, not the plain-text path."
+expected_result = "fail"
+pair_exception = "independent-branch: exercises G44's base64 transform-detection path specifically (decode candidate token, re-test decoded text against the credential pattern table). g44-credential-akia-plain / g44-credential-type-only-restraint already form the plain-text flag/restraint pair; this fixture's dedicated counterpart would only re-test the same restraint logic one layer deeper, which the base64 decode-then-match algorithm already makes structurally impossible to satisfy accidentally (see FP note in scripts/_artifact_credentials.py: a random token must both validly base64-decode AND land on valid UTF-8 AND match a credential pattern)."
+
+[[tested_rules]]
+kind = "gate"
+id = "G44"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

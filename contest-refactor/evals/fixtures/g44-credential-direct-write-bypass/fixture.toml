@@ -1,0 +1,13 @@
+id = "g44-credential-direct-write-bypass"
+purpose = "Positive fixture: a fake AWS access key sits only in the ARCHIVE (REVIEW_HISTORY.md / REVIEW_HISTORY.json loop-1 builder_notes), never in the active CURRENT_REVIEW.{md,json} (loop 2, entirely clean). Simulates a credential that bypassed the normal Critic evidence-chain path -- e.g. a manual edit or a pre-redaction-rule run -- and proves G44 scans every sink independently rather than only the active loop's files."
+expected_result = "fail"
+pair_exception = "independent-branch: exercises G44's sink-independence property specifically (a hit in an archived, non-current sink must still fail strict validation). Not a flag/restraint pair candidate on its own terms -- the restraint half is already covered by g44-credential-type-only-restraint, which proves the inverse (compliant text in the SAME sink family stays clean); this fixture's job is proving sink breadth, not text compliance."
+notes = "CURRENT_REVIEW.json.loop == 2 and REVIEW_HISTORY.json.loops has exactly 2 entries with loops[-1] == CURRENT_REVIEW.json verbatim (G18). The credential lives only in loops[0] (loop 1, archived) -- G44 must still catch it."
+
+[[tested_rules]]
+kind = "gate"
+id = "G44"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

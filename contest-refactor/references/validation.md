@@ -208,6 +208,10 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   **False-positive guards.** A dimension already carrying a backlog item is accounted without a record. The streak starts at 3, so an honest ceiling may answer `clean` twice before owing a fresh target. Missing or short history is silent. `outcome: "candidate"` never owes a `proposed_fix` — the finding *is* the proposal, and it must resolve in this loop's `findings[]`, which is what keeps a named candidate on the evidence chain and out of Builder Notes (G11 holds untouched). Floor `loop >= 4` because loop 1's `delta` is `SAME` by definition: at loop 4 the three observations are loops 4/3/2 and loop 2's is the first real one.
 
+- [ ] **G44 Credential quarantine (pre-emit, unconditional — every schema_version, every state)** — every persistence sink (`CURRENT_REVIEW.md`, `CURRENT_REVIEW.json`, `REVIEW_HISTORY.md`, `REVIEW_HISTORY.json`, `findings_registry.json`) is scanned for credential-shaped values (AWS `AKIA…`, GitHub `ghp_`/`gho_`, Slack `xoxb-`/`xoxp-`, PEM headers, a proximity-scoped AWS secret-key heuristic, generic `api_key: "…"`), plus the same patterns re-checked against base64-decoded and `+`-concatenation-joined text — the two named transformations, nothing beyond them. Mechanical backstop for `method.md`'s **Credential redaction** rule: that rule says how to *write* evidence about a credential; G44 catches the value that made it into a sink anyway.
+
+  **Fails closed, never reproduces the value.** A hit blocks convergence. The report names sink + line + credential TYPE + pattern name (`[G44-hit type=<type> sink=<file>:<line>]`) and never the matched text, anywhere. Quarantine is non-destructive — the artifact stays on disk; the report *is* the record. Patterns are precision-tuned for near-zero FP on prose that names a type without quoting it; per-pattern notes live in `scripts/_artifact_credentials.py`.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.

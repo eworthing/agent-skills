@@ -1,0 +1,14 @@
+id = "g44-credential-akia-plain"
+purpose = "Positive fixture: a finding's evidence[] quotes a hardcoded AWS access key value verbatim (AWS's own documented example key AKIAIOSFODNN7EXAMPLE). Must trip G44."
+expected_result = "fail"
+pair_id = "g44-credential-plain"
+pair_role = "flag"
+notes = "Layer 2 (mechanical backstop) for the security-class backlog item: evidence citing a credential must give file:line + TYPE only, never the value (method.md \"Credential redaction\"). This fixture is the value-in-the-clear case the rule forbids and G44 must catch. Value is present verbatim in CURRENT_REVIEW.md, CURRENT_REVIEW.json, and REVIEW_HISTORY.{md,json} -- the exact multi-sink persistence path the backlog item names. G44's own failure output must NOT reproduce the value (asserted by scripts/_g44_selftest.py, not by this fixture -- validate-fixtures.py only checks the fixture fails strict mode)."
+
+[[tested_rules]]
+kind = "gate"
+id = "G44"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

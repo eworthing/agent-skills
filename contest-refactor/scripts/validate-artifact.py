@@ -47,6 +47,7 @@ from _artifact_core import (  # noqa: E402
     check_required_artifacts,
     check_schema_enums,
 )
+from _artifact_credentials import check_g44_credential_quarantine  # noqa: E402
 from _artifact_halt import (  # noqa: E402
     check_g21_scorecard,
     check_g33_risk_boundary_evidence,
@@ -156,6 +157,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g41_cap_loop_executed(current_review))
     issues.extend(check_g42_backlog_stable_id(current_review))
     issues.extend(check_g43_convergence_pass(current_review, history, canon))
+    issues.extend(check_g44_credential_quarantine(artifact_dir))
     issues.extend(check_continue_backlog(current_review))
     return issues
 
