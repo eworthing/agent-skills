@@ -5,9 +5,9 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 ## pilot
 
-- pairs complete: **2 / 3**
-- next in frozen order: **pilot-003 (principal-abstraction-seam-restraint rep 1, attempt 2)**
-- interrupted (started, no terminal record — attempt index spent): ['pilot-003']
+- pairs complete: **3 / 3**
+- next in frozen order: **none — mode complete**
+- interrupted (started, no terminal record — attempt index spent): none
 - exhausted (2 attempts spent, unresolved): none
 
 ## study

@@ -554,6 +554,247 @@
           }
         ],
         "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-002/attempt1/without_skill/review-verdict.md"
+      },
+      {
+        "pair_id": "pilot-003",
+        "scenario_id": "principal-abstraction-seam-restraint",
+        "arm": "with_skill",
+        "slot_index": 1,
+        "attempt_index": 1,
+        "trial_validity": {
+          "status": "valid",
+          "reason": null
+        },
+        "candidate_output_status": "ok",
+        "verdict_json": {
+          "verdict": "rejected",
+          "blocks_95": true,
+          "blocking_severity": "Serious deduction",
+          "dimension_scores": {
+            "architecture_quality": 7.5
+          },
+          "flagged_smells": [
+            "Repository theater",
+            "fake-clean reward (aggregate-test-count-as-test-strategy)"
+          ],
+          "evidence_demanded": [
+            "A behavior-faithful FakeClock/TestClock conformer to Clock, distinct from SystemClock",
+            "At least one test per touched flow (Checkout, Shipping, Account) that injects the fake clock and would fail if now() returned a fixed/no-op value",
+            "Specific test file(s) + assertion line ranges citing the target_symbol (Clock.now() call sites) per Architectural Test #5's indirect-coverage carve-out",
+            "OR an explicit Unified Seam Policy path-(b) justification naming which of policy/failure-isolation/platform-isolation applies to SystemClock, with source evidence"
+          ]
+        },
+        "structural_report": {
+          "layer": 2,
+          "id": "principal-abstraction-seam-restraint",
+          "general_checks": [
+            {
+              "name": "required_fields_present",
+              "pass": true,
+              "detail": "all present"
+            },
+            {
+              "name": "verdict_word_membership",
+              "pass": true,
+              "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+            },
+            {
+              "name": "flagged_smells_canon_exact",
+              "pass": false,
+              "detail": "non-canon values: ['fake-clean reward (aggregate-test-count-as-test-strategy)']"
+            },
+            {
+              "name": "dimension_scores_shape",
+              "pass": true,
+              "detail": "shape OK"
+            },
+            {
+              "name": "boolean_coherence",
+              "pass": true,
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+            }
+          ],
+          "assertions": [],
+          "residue": [
+            "[restraint] Does NOT flag the single Clock abstraction: §5 states time is uniform with no planned variation, so the unified seam is correct",
+            "[restraint] Does not demand speculative generalization (per-region clocks, pluggable time policies) for a variation CONTEXT does not state",
+            "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
+            "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape"
+          ],
+          "counts": {
+            "general_checks_total": 5,
+            "general_checks_pass": 4,
+            "deterministic_assertions_total": 0,
+            "deterministic_assertions_pass": 0,
+            "semantic_residue": 4
+          },
+          "all_deterministic_pass": false
+        },
+        "assertion_results": [
+          {
+            "source": "general_check",
+            "assertion_index": 0,
+            "assertion_text": "required_fields_present",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "all present"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 1,
+            "assertion_text": "verdict_word_membership",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 2,
+            "assertion_text": "flagged_smells_canon_exact",
+            "criterion_class": "skill_contract",
+            "passed": false,
+            "rationale": "non-canon values: ['fake-clean reward (aggregate-test-count-as-test-strategy)']"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 3,
+            "assertion_text": "dimension_scores_shape",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "shape OK"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 4,
+            "assertion_text": "boolean_coherence",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+          }
+        ],
+        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-003/attempt1/with_skill/review-verdict.md"
+      },
+      {
+        "pair_id": "pilot-003",
+        "scenario_id": "principal-abstraction-seam-restraint",
+        "arm": "without_skill",
+        "slot_index": 1,
+        "attempt_index": 1,
+        "trial_validity": {
+          "status": "valid",
+          "reason": null
+        },
+        "candidate_output_status": "ok",
+        "verdict_json": {
+          "verdict": "conditional",
+          "blocks_95": true,
+          "blocking_severity": "major — claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff",
+          "dimension_scores": {
+            "architecture_quality": 7.5
+          },
+          "flagged_smells": [
+            "speculative single-implementation abstraction (protocol with one concrete conformer, no test double shown)",
+            "unverified testability claim (no test exercises the new Clock seam)",
+            "incomplete/redacted diff (2 of 3 call sites asserted, not shown; injection wiring not shown)",
+            "naming collision risk with stdlib Swift.Clock protocol (SE-0329)"
+          ],
+          "evidence_demanded": [
+            "Full diff for the shipping and account call sites, not a prose summary",
+            "The actual wiring showing how each type obtains its `clock` (constructor injection vs. default property vs. shared singleton)",
+            "At least one test using a fake/mock Clock that pins `now()` and asserts behavior, substantiating the 'injectable for tests' claim",
+            "Justification for a protocol with a single conformer, or evidence of the test-side second conformer",
+            "Confirmation that `protocol Clock` does not collide with Swift's stdlib Clock protocol (SE-0329) in files that also touch Swift Concurrency"
+          ]
+        },
+        "structural_report": {
+          "layer": 2,
+          "id": "principal-abstraction-seam-restraint",
+          "general_checks": [
+            {
+              "name": "required_fields_present",
+              "pass": true,
+              "detail": "all present"
+            },
+            {
+              "name": "verdict_word_membership",
+              "pass": true,
+              "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+            },
+            {
+              "name": "flagged_smells_canon_exact",
+              "pass": false,
+              "detail": "non-canon values: ['speculative single-implementation abstraction (protocol with one concrete conformer, no test double shown)', 'unverified testability claim (no test exercises the new Clock seam)', 'incomplete/redacted diff (2 of 3 call sites asserted, not shown; injection wiring not shown)', 'naming collision risk with stdlib Swift.Clock protocol (SE-0329)']"
+            },
+            {
+              "name": "dimension_scores_shape",
+              "pass": true,
+              "detail": "shape OK"
+            },
+            {
+              "name": "boolean_coherence",
+              "pass": false,
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'major — claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff'"
+            }
+          ],
+          "assertions": [],
+          "residue": [
+            "[restraint] Does NOT flag the single Clock abstraction: §5 states time is uniform with no planned variation, so the unified seam is correct",
+            "[restraint] Does not demand speculative generalization (per-region clocks, pluggable time policies) for a variation CONTEXT does not state",
+            "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
+            "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape"
+          ],
+          "counts": {
+            "general_checks_total": 5,
+            "general_checks_pass": 3,
+            "deterministic_assertions_total": 0,
+            "deterministic_assertions_pass": 0,
+            "semantic_residue": 4
+          },
+          "all_deterministic_pass": false
+        },
+        "assertion_results": [
+          {
+            "source": "general_check",
+            "assertion_index": 0,
+            "assertion_text": "required_fields_present",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "all present"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 1,
+            "assertion_text": "verdict_word_membership",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 2,
+            "assertion_text": "flagged_smells_canon_exact",
+            "criterion_class": "skill_contract",
+            "passed": false,
+            "rationale": "non-canon values: ['speculative single-implementation abstraction (protocol with one concrete conformer, no test double shown)', 'unverified testability claim (no test exercises the new Clock seam)', 'incomplete/redacted diff (2 of 3 call sites asserted, not shown; injection wiring not shown)', 'naming collision risk with stdlib Swift.Clock protocol (SE-0329)']"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 3,
+            "assertion_text": "dimension_scores_shape",
+            "criterion_class": "unclassified",
+            "passed": true,
+            "rationale": "shape OK"
+          },
+          {
+            "source": "general_check",
+            "assertion_index": 4,
+            "assertion_text": "boolean_coherence",
+            "criterion_class": "unclassified",
+            "passed": false,
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'major — claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff'"
+          }
+        ],
+        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-003/attempt1/without_skill/review-verdict.md"
       }
     ],
     "measurements": {
@@ -871,7 +1112,7 @@
         "with_skill"
       ],
       "session_id": "sess-phase2",
-      "state": "started",
+      "state": "finished",
       "pre_dispatch_head": "045112f3b06d1ebfa9fe48198982a8b02c1124d7",
       "arms": {
         "with_skill": {
@@ -918,6 +1159,37 @@
           "expected_output": "/tmp/paired-arm/pilot/pilot-003/attempt1/without_skill/review-verdict.md",
           "work_dir": "/tmp/paired-arm/pilot/pilot-003/attempt1/without_skill"
         }
+      },
+      "usage": {
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a136ea105b70de46b.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a136ea105b70de46b.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 3,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a136ea105b70de46b.output"
+          ],
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 54457,
+          "cache_read_input_tokens": 86306,
+          "output_tokens": 9756,
+          "context_tokens_processed": 150525
+        },
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/ac1776d9da06cafe5.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/ac1776d9da06cafe5.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 3,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/ac1776d9da06cafe5.output"
+          ],
+          "input_tokens": 6,
+          "cache_creation_input_tokens": 61512,
+          "cache_read_input_tokens": 125331,
+          "output_tokens": 15649,
+          "context_tokens_processed": 202498
+        },
+        "pair_total_context_tokens": 353023
       }
     }
   ],
