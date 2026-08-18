@@ -6,9 +6,9 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 ## pilot
 
 - pairs complete: **0 / 2**
-- next in frozen order: **pilot-001 (principal-duplicated-rule-restraint rep 1, attempt 2)**
+- next in frozen order: **pilot-002 (principal-process-owner-restraint rep 1, attempt 1)**
 - interrupted (started, no terminal record — attempt index spent): ['pilot-001']
-- exhausted (2 attempts spent, unresolved): none
+- exhausted (2 attempts spent, unresolved): ['pilot-001']
 
 ## study
 

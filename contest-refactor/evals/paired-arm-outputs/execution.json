@@ -93,6 +93,66 @@
           "work_dir": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/b80324d2-64c3-4c6a-9980-6c8fa7565dba/scratchpad/paired-arm/pilot/pilot-001/attempt1/without_skill"
         }
       }
+    },
+    {
+      "mode": "pilot",
+      "pair_id": "pilot-001",
+      "scenario_id": "principal-duplicated-rule-restraint",
+      "rep": 1,
+      "attempt_index": 2,
+      "arm_order": [
+        "with_skill",
+        "without_skill"
+      ],
+      "session_id": "sess-phase2",
+      "state": "started",
+      "pre_dispatch_head": "fd61036ea0558f775d224aff688cdd3e022685c7",
+      "arms": {
+        "with_skill": {
+          "task_template": "evals/paired_arm_task_with_skill.md",
+          "task_template_sha256": "6f2fec8e8b62e7ac43e05e04624f7c377c61fc8bff916e7f58a9521f7c3021c1",
+          "materials": [
+            {
+              "material": "evals/scenarios/principal-duplicated-rule-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-001/attempt2/with_skill/materials/scenario.md",
+              "sha256": "133a668f93dcf7c7b5765f1f6e1ff83170b2387157bc34e79a4b40ba9ce79480",
+              "frozen": null
+            },
+            {
+              "material": "references/architecture-rubric.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-001/attempt2/with_skill/materials/architecture-rubric.md",
+              "sha256": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
+              "frozen": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d"
+            },
+            {
+              "material": "references/method.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-001/attempt2/with_skill/materials/method.md",
+              "sha256": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
+              "frozen": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/pilot/pilot-001/attempt2/with_skill/prompt.md",
+          "prompt_sha256": "d04706757d6f337c1352bae67620c8f1732781c7ee6c90b1030dc40a4cf0a35a",
+          "expected_output": "/tmp/paired-arm/pilot/pilot-001/attempt2/with_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/pilot/pilot-001/attempt2/with_skill"
+        },
+        "without_skill": {
+          "task_template": "evals/paired_arm_task_without_skill.md",
+          "task_template_sha256": "973d1738090c29f013315d61ba3ae63e9ee2c5627322ab39252da708e9f03545",
+          "materials": [
+            {
+              "material": "evals/scenarios/principal-duplicated-rule-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-001/attempt2/without_skill/materials/scenario.md",
+              "sha256": "133a668f93dcf7c7b5765f1f6e1ff83170b2387157bc34e79a4b40ba9ce79480",
+              "frozen": null
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/pilot/pilot-001/attempt2/without_skill/prompt.md",
+          "prompt_sha256": "6f0a29c11cda57a55b909ea25ae852ba529cb986538ecb5f2b83d38deb824c24",
+          "expected_output": "/tmp/paired-arm/pilot/pilot-001/attempt2/without_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/pilot/pilot-001/attempt2/without_skill"
+        }
+      }
     }
   ]
 }
