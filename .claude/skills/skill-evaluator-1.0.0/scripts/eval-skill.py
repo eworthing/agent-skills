@@ -245,6 +245,35 @@ def check_body_length(skill_path):
                        f"{body_lines} lines", category="documentation")
 
 
+TOKEN_CEILING = 5000
+
+
+@check("SKILL.md token count", "documentation")
+def check_body_token_count(skill_path):
+    """Warn when the SKILL.md body is dense enough to blow the token budget
+    even though it's short on lines — a short-but-dense file can pass the
+    500-line check above and still be oversized.
+
+    Approximation only: len(body chars) // 4, no tokenizer dependency.
+    """
+    path = os.path.join(skill_path, "SKILL.md")
+    if not os.path.isfile(path):
+        return CheckResult("SKILL.md token count", CheckResult.FAIL, "Not found", category="documentation")
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    match = re.match(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
+    body = content[match.end():] if match else content
+    approx_tokens = len(body) // 4
+
+    if approx_tokens > TOKEN_CEILING:
+        return CheckResult("SKILL.md token count", CheckResult.WARN,
+                           f"~{approx_tokens} tokens (body chars / 4) — exceeds the ~{TOKEN_CEILING} "
+                           "ceiling; line count alone can miss this on a short-but-dense file",
+                           category="documentation")
+    return CheckResult("SKILL.md token count", CheckResult.PASS,
+                       f"~{approx_tokens} tokens", category="documentation")
+
+
 @check("References are linked from SKILL.md", "documentation")
 def check_references_linked(skill_path):
     """If references/ exists, SKILL.md should link to the files."""
@@ -426,6 +455,68 @@ def check_no_hardcoded_secrets(skill_path):
     return CheckResult("No hardcoded credentials or emails", CheckResult.PASS, category="security")
 
 
+LITERAL_SECRET_PATTERNS = [
+    (re.compile(r'AKIA[0-9A-Z]{16}'), "AWS access key"),
+    (re.compile(r'sk-ant-[A-Za-z0-9-]{20,}'), "Anthropic API key"),
+    (re.compile(r'xox[bp]-[A-Za-z0-9-]{10,}'), "Slack token"),
+    (re.compile(r'gh[po]_[A-Za-z0-9]{36}'), "GitHub token"),
+    (re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'), "private key header"),
+]
+
+# Documented example credentials that are safe to ship verbatim.
+ALLOWLISTED_SECRETS = {"AKIAIOSFODNN7EXAMPLE"}
+
+
+@check("No literal secret-prefix matches", "security")
+def check_literal_secret_prefixes(skill_path):
+    """High-specificity literal secret signatures (AWS/Anthropic/Slack/GitHub
+    keys, PEM private key headers) — near-zero false-positive rate by
+    construction, unlike the generic pattern above.
+
+    Scoped to SKILL.md, references/*.md, and scripts/* only. evals/ is
+    deliberately excluded: eval fixtures legitimately contain planted fake
+    credentials for testing detection logic. Never reproduces a matched
+    value — only the file, line, and credential type.
+    """
+    candidates = []
+    skill_md = os.path.join(skill_path, "SKILL.md")
+    if os.path.isfile(skill_md):
+        candidates.append(skill_md)
+
+    refs_dir = os.path.join(skill_path, "references")
+    if os.path.isdir(refs_dir):
+        for f in os.listdir(refs_dir):
+            if f.endswith(".md"):
+                candidates.append(os.path.join(refs_dir, f))
+
+    scripts_dir = os.path.join(skill_path, "scripts")
+    if os.path.isdir(scripts_dir):
+        for root, dirs, files in os.walk(scripts_dir):
+            dirs[:] = [d for d in dirs if d not in ("__pycache__", ".git", "node_modules")]
+            for f in files:
+                candidates.append(os.path.join(root, f))
+
+    findings = []
+    for fpath in candidates:
+        rel = os.path.relpath(fpath, skill_path)
+        try:
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as fh:
+                for i, line in enumerate(fh, 1):
+                    for pattern, desc in LITERAL_SECRET_PATTERNS:
+                        m = pattern.search(line)
+                        if m and m.group() not in ALLOWLISTED_SECRETS:
+                            findings.append(f"{rel}:{i}: {desc}")
+        except (IOError, UnicodeDecodeError):
+            pass
+
+    if findings:
+        unique = list(dict.fromkeys(findings))[:10]
+        return CheckResult("No literal secret-prefix matches", CheckResult.WARN,
+                           f"Found {len(findings)} potential secret(s) (value not shown):\n" + "\n".join(unique),
+                           category="security")
+    return CheckResult("No literal secret-prefix matches", CheckResult.PASS, category="security")
+
+
 @check("Environment variables documented", "security")
 def check_env_vars_documented(skill_path):
     """If scripts reference os.environ, SKILL.md should document those vars."""
@@ -493,10 +584,12 @@ ALL_CHECKS = [
     check_description_length,
     check_trigger_contexts,
     check_body_length,
+    check_body_token_count,
     check_references_linked,
     check_python_syntax,
     check_no_ext_deps,
     check_no_hardcoded_secrets,
+    check_literal_secret_prefixes,
     check_env_vars_documented,
 ]
 
