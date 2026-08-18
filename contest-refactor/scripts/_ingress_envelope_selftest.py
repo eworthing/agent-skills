@@ -22,6 +22,10 @@ Checks:
   4. method.md's Incident retro cross-check bullet (loaded every loop) points
      to the ingress-envelope rules, not just schema/loading -- the one place
      the Critic actually encounters the mandate at runtime.
+  5. trust-model.md's subagent dispatch template forwards the resolved
+     --incidents path to the loop subagent -- without this line, Step 0 (main,
+     once) is the only place that ever sees the path, and Method Step 3's
+     incident cross-check (which runs in the loop subagent) can never fire.
 
 Run: python3 scripts/_ingress_envelope_selftest.py   (exit 0 = pass, 1 = fail)
 """
@@ -38,6 +42,7 @@ from _canon import load_canon
 
 SCHEMAS_DOC = SKILL_ROOT / "references" / "output-format-state-schemas.md"
 METHOD_DOC = SKILL_ROOT / "references" / "method.md"
+TRUST_MODEL_DOC = SKILL_ROOT / "references" / "trust-model.md"
 
 ENVELOPE_MARKERS = (
     "BEGIN INGESTED-PAYLOAD",
@@ -107,6 +112,16 @@ def main() -> int:
             f"method.md: Incident retro cross-check bullet no longer points to the "
             f"ingress-envelope rules (expected {method_pointer!r}) -- this is the only "
             "place the Critic (loop subagent, every loop) is told the envelope exists"
+        )
+
+    trust_model_text = TRUST_MODEL_DOC.read_text(encoding="utf-8")
+    forwarding_line = "Incidents feed:"
+    if forwarding_line not in trust_model_text:
+        failures.append(
+            f"trust-model.md: subagent dispatch template no longer forwards the "
+            f"--incidents path (expected a line starting {forwarding_line!r}) -- "
+            "without it the loop subagent has no way to locate the file Step 0 read, "
+            "and Method Step 3's incident cross-check can never fire"
         )
 
     if failures:

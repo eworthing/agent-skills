@@ -113,7 +113,7 @@ Execute in order. No skips. No permission asks (per Guardrails).
 
 These two steps run **once in the main agent** at the start of every `/contest-refactor` invocation, before any loop subagent is dispatched. **Full procedure — flag catalog, Resume Precedence Matrix routing, `$SKILL_DIR` resolution, context/stack/churn discovery, and the pre-dispatch preflight gate — lives in [references/startup.md](references/startup.md).** Load it first, every invocation.
 
-The loop subagent (Steps 1–3) does **not** execute Step -1 or Step 0. It receives the parsed flag *values* and Discovery *output* through `CURRENT_REVIEW.json` (and, for the invocation-scoped `--dry-run`, through its dispatch prompt) — never the flag catalog itself. This is why the per-loop reload does not include `startup.md`.
+The loop subagent (Steps 1–3) does **not** execute Step -1 or Step 0. It receives the parsed flag *values* and Discovery *output* through `CURRENT_REVIEW.json` (and, for the invocation-scoped `--dry-run` and the `--incidents` path, through its dispatch prompt) — never the flag catalog itself. This is why the per-loop reload does not include `startup.md`.
 
 ### Step 1 — Critic Phase (Ground Truth & Evaluate)
 
