@@ -30,7 +30,108 @@
         ]
       }
     ],
-    "attempts": [],
+    "attempts": [
+      {
+        "pair_id": "pilot-001",
+        "scenario_id": "principal-duplicated-rule-restraint",
+        "arm": "with_skill",
+        "slot_index": 1,
+        "attempt_index": 2,
+        "trial_validity": {
+          "status": "valid",
+          "reason": null
+        },
+        "candidate_output_status": "malformed",
+        "malformed_detail": "no parseable JSON object found (tried whole file, then fenced blocks)",
+        "verdict_json": null,
+        "structural_report": null,
+        "assertion_results": [
+          {
+            "source": "evals_assertion",
+            "assertion_index": 0,
+            "assertion_text": "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          },
+          {
+            "source": "evals_assertion",
+            "assertion_index": 1,
+            "assertion_text": "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          },
+          {
+            "source": "evals_assertion",
+            "assertion_index": 2,
+            "assertion_text": "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          },
+          {
+            "source": "evals_assertion",
+            "assertion_index": 3,
+            "assertion_text": "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          }
+        ],
+        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/with_skill/review-verdict.md"
+      },
+      {
+        "pair_id": "pilot-001",
+        "scenario_id": "principal-duplicated-rule-restraint",
+        "arm": "without_skill",
+        "slot_index": 1,
+        "attempt_index": 2,
+        "trial_validity": {
+          "status": "valid",
+          "reason": null
+        },
+        "candidate_output_status": "malformed",
+        "malformed_detail": "no parseable JSON object found (tried whole file, then fenced blocks)",
+        "verdict_json": null,
+        "structural_report": null,
+        "assertion_results": [
+          {
+            "source": "evals_assertion",
+            "assertion_index": 0,
+            "assertion_text": "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          },
+          {
+            "source": "evals_assertion",
+            "assertion_index": 1,
+            "assertion_text": "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          },
+          {
+            "source": "evals_assertion",
+            "assertion_index": 2,
+            "assertion_text": "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          },
+          {
+            "source": "evals_assertion",
+            "assertion_index": 3,
+            "assertion_text": "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression",
+            "criterion_class": "outcome",
+            "passed": false,
+            "rationale": "candidate output unparseable: no parseable JSON object found (tried whole file, then fenced blocks)"
+          }
+        ],
+        "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/without_skill/review-verdict.md"
+      }
+    ],
     "measurements": {}
   },
   "dispatch_log": [
@@ -105,7 +206,7 @@
         "without_skill"
       ],
       "session_id": "sess-phase2",
-      "state": "started",
+      "state": "finished",
       "pre_dispatch_head": "fd61036ea0558f775d224aff688cdd3e022685c7",
       "arms": {
         "with_skill": {
@@ -152,6 +253,37 @@
           "expected_output": "/tmp/paired-arm/pilot/pilot-001/attempt2/without_skill/review-verdict.md",
           "work_dir": "/tmp/paired-arm/pilot/pilot-001/attempt2/without_skill"
         }
+      },
+      "usage": {
+        "pilot001-with": {
+          "agent": "pilot001-with",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 5,
+          "transcripts": [
+            "/Users/pl/.claude/projects/-Users-Shared-git-agent-skills/b80324d2-64c3-4c6a-9980-6c8fa7565dba/subagents/agent-apilot001-with-3a3b6bb8ffc63dee.jsonl"
+          ],
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 88632,
+          "cache_read_input_tokens": 286954,
+          "output_tokens": 17526,
+          "context_tokens_processed": 393122
+        },
+        "pilot001-without": {
+          "agent": "pilot001-without",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 5,
+          "transcripts": [
+            "/Users/pl/.claude/projects/-Users-Shared-git-agent-skills/b80324d2-64c3-4c6a-9980-6c8fa7565dba/subagents/agent-apilot001-without-ee4d89386ca7c4c5.jsonl"
+          ],
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 40634,
+          "cache_read_input_tokens": 236090,
+          "output_tokens": 11244,
+          "context_tokens_processed": 287978
+        },
+        "pair_total_context_tokens": 681100
       }
     }
   ]
