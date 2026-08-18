@@ -14,7 +14,7 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 - pairs complete: **0 / 55**
 - next in frozen order: **pair-001 (crossplat-flag rep 5, attempt 1)**
-- interrupted (started, no terminal record — attempt index spent): none
+- interrupted (started, no terminal record — attempt index spent): ['pair-016']
 - exhausted (2 attempts spent, unresolved): none
 
 ## Operational
@@ -27,5 +27,5 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 ```bash
 cd contest-refactor
-python3 scripts/paired_arm_run.py next --mode pilot
+python3 scripts/paired_arm_run.py next --mode study
 ```
