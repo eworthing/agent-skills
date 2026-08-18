@@ -189,6 +189,33 @@ def next_pair(mode: str) -> dict | None:
 # ---- materialization -----------------------------------------------------------------------
 
 
+def enforce_amendment_window(mode: str, execution: dict) -> None:
+    """Once the first STUDY slot is dispatched the prereg is immutable (prereg.amendment_window).
+
+    A prose clause saying so is not a lock. This is: the first study dispatch records the live
+    `prereg_sha256`, and every later study operation asserts it still matches. An edit to the
+    prereg after dispatch -- even one that re-freezes its own self-hash consistently, which
+    check_prereg_self_hash would happily accept -- fails here, because the comparison is against a
+    value COMMITTED at first dispatch rather than against the record's own current claim.
+    """
+    if mode != "study":
+        return
+    current = load_record(STUDY_RECORD)["prereg_sha256"]
+    prior = [e for e in execution["dispatch_log"] if e["mode"] == "study"]
+    if not prior:
+        return
+    frozen = prior[0].get("prereg_sha256_at_first_dispatch")
+    if frozen and frozen != current:
+        raise Guard(
+            "the prereg changed after the study began.\n"
+            f"  frozen at first dispatch: {frozen}\n"
+            f"  now:                      {current}\n"
+            "  The amendment window closed at that commit. A change that is genuinely needed\n"
+            "  forces a FRESH preregistration under a new seed and new hashes -- never an edit\n"
+            "  to this record."
+        )
+
+
 def scratch_dir(root: Path, mode: str, pair_id: str, attempt: int) -> Path:
     return root / mode / pair_id / f"attempt{attempt}"
 
@@ -460,9 +487,11 @@ def cmd_start(args: argparse.Namespace) -> int:
     manifest = materialize(args.mode, st, attempt, Path(args.scratch_root))
 
     execution = read_json(EXEC_PATH)
+    enforce_amendment_window(args.mode, execution)
     execution["dispatch_log"].append(
         {
             "mode": args.mode,
+            "prereg_sha256_at_first_dispatch": load_record(STUDY_RECORD)["prereg_sha256"],
             "pair_id": st["pair_id"],
             "scenario_id": st["scenario_id"],
             "rep": st["rep"],
@@ -539,6 +568,7 @@ def cmd_finish(args: argparse.Namespace) -> int:
             raise Guard("attempt record rejected before commit:\n  " + "\n  ".join(issues))
 
     execution = read_json(EXEC_PATH)
+    enforce_amendment_window(args.mode, execution)
     for entry in execution["dispatch_log"]:
         if (
             entry["mode"] == args.mode

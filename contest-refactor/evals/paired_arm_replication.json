@@ -2,7 +2,7 @@
   "schema_version": 1,
   "record_state": "preregistered",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
-  "prereg_sha256": "a6ed83c08fd900cb7f0d266130c2fa867f71cc4277d1e6e7a458511ed8d7c93c",
+  "prereg_sha256": "5c4065e58eab37b0089cfbbc010bc136f57c125bba521a0fe21f554246671162",
   "prereg": {
     "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
     "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
@@ -699,6 +699,11 @@
         "id": "dispatch_envelope_frozen_at_phase_2",
         "statement": "The delivered prompt is the frozen task template PLUS a dispatch envelope (evals/paired_arm_dispatch_envelope.md), frozen and hashed here during Phase 2 before any arm was dispatched. Phase 1 froze the templates alone, so the prereg did not fully specify the text a slot actually receives.",
         "reason": "The templates say `./review-verdict.md`, but a host-dispatched subagent's working directory is the live repository -- the output would have landed in the tree, and the arms would have been pointed at in-repo material paths, which is a signpost to the answer key. Fixing that requires text the template does not carry. Recording the envelope in the prereg rather than in the operational execution.json is deliberate: it is part of the prompt, so it is scientific material, and hiding a prompt component in the operational file would understate what was frozen. Same amendment window as grading_protocol_frozen_at_phase_2: no arm dispatched, no study output in existence."
+      },
+      {
+        "id": "no_cited_span_normalizes_whitespace",
+        "statement": "The `no_cited_span` ambiguity trigger tests the evidence span as a WHITESPACE-NORMALIZED substring of the candidate output, not a literal one. Amended during Phase 2, after the pilot's grading tier ran and before any STUDY output was graded.",
+        "reason": "The literal test looked stricter and was simply wrong: reviewer prose is hard-wrapped at ~95 characters, so a perfect quote crossing a line break failed it. The pilot fired the trigger twice on exactly that. Left in place it would have forced a second grader on most slots -- roughly doubling grading cost for nothing -- and it was BIASED: the longer the cited span, the likelier it crosses a newline, so the check punished the most thorough citations. Normalizing whitespace keeps the property the trigger exists for (the exact token sequence must appear in the candidate, so a paraphrase still fails) and drops only a layout accident. Recorded here rather than silently widened, because loosening one's own validity check after seeing it fire is exactly the move that needs to be visible."
       }
     ],
     "headline_excluded": [
@@ -751,8 +756,8 @@
         },
         {
           "id": "no_cited_span",
-          "trigger": "the grader returns a non-uncertain judgment whose `evidence_span` is null, empty, or not an exact substring of the candidate output -- i.e. a rationale citing no span from the candidate output",
-          "checkable_by": "mechanical substring test against the candidate output"
+          "trigger": "the grader returns a non-uncertain judgment whose `evidence_span` is null, empty, or not a WHITESPACE-NORMALIZED substring of the candidate output -- i.e. a rationale citing no span from the candidate output",
+          "checkable_by": "mechanical substring test against the candidate output, with runs of whitespace collapsed on both sides so a quote crossing a hard line wrap still counts as a quote; a paraphrase still fails"
         },
         {
           "id": "opined_outside_residue",
@@ -763,7 +768,9 @@
       "adjudication": {
         "on_trigger": "Every triggered slot is re-graded by a second independent grader: a fresh subagent, identical frozen prompt, no knowledge of the first grade.",
         "on_disagreement": "A third blinded adjudicator decides and its verdict is final -- no averaging, no host tie-breaking.",
-        "host_may_not_decide": "The host never breaks a grader tie by its own judgment. Adjudication is mechanical: trigger -> second grader -> (on disagreement) third adjudicator, final."
+        "host_may_not_decide": "The host never breaks a grader tie by its own judgment. Adjudication is mechanical: trigger -> second grader -> (on disagreement) third adjudicator, final.",
+        "disagreement_defined_as": "Two graders DISAGREE on a field iff both returned a non-uncertain value and those values differ. An 'uncertain' from one grader and a definite value from the other is NOT a disagreement: 'uncertain' is an abstention by construction -- the frozen grader prompt calls it an expected answer and its whole purpose is to route the item to an independent second grader -- so the second grader's definite value stands. If BOTH return uncertain, the third adjudicator is dispatched; if that is also uncertain, the item is RECORDED as uncertain and reported, never forced to a boolean.",
+        "disagreement_definition_provenance": "Left undefined at Phase 1 and surfaced by the Phase-2 pilot, where one double-graded slot returned held vs over_flagged (a real disagreement, adjudicated) and another returned uncertain vs true on one assertion (an abstention resolved, not a conflict). Defined here before any STUDY output was graded, and chosen on principle rather than on which pilot outcome it produces: the rule is symmetric, favours neither grade, and follows from the prompt's own framing of uncertain as an abstention."
       },
       "disagreement_estimate": {
         "design": "preregistered random 20% subsample -- 11 of 55 pairs, both arms of each selected pair (22 outputs) -- double-graded regardless of whether any trigger fired",
@@ -781,6 +788,17 @@
       "purpose": "The delivered prompt for a slot is the frozen task template followed verbatim by this envelope. The envelope carries locational facts only -- where the assigned materials were copied to, and what `./` resolves to -- because a host-dispatched subagent's working directory is the live repository, so the template's `./review-verdict.md` would otherwise write INTO the tree both arms are sandboxed away from.",
       "symmetry": "Identical text for both arms; the only difference is the {{MATERIAL_PATHS}} list, whose length is the treatment itself (1 file vs 3). It states no criterion, no vocabulary, and no expectation.",
       "materials_are_copies": "Materials are copied to a scratch directory OUTSIDE the repository and the envelope names those copies. A path pointing into the repo would hand every arm the location of the answer key (evals/evals.json) it is sandboxed from -- the sandbox has to be a fact about what the arm can see, not only an instruction it is asked to obey. The runner verifies each copy's sha256 against material_hashes before dispatch."
+    },
+    "amendment_window": {
+      "status": "open until the first STUDY slot is dispatched",
+      "closes_at": "the first `paired_arm_run.py start --mode study` commit. From that commit on, this prereg is immutable: any change that would be needed forces a FRESH preregistration under a new seed and new hashes, never an edit to this record.",
+      "amendments_so_far": [
+        "grading_protocol_frozen_at_phase_2 (grader model, prompt, triggers, adjudication, masking)",
+        "dispatch_envelope_frozen_at_phase_2 (the delivered prompt is template + envelope)",
+        "no_cited_span_normalizes_whitespace (a literal substring test punished quotes that cross a line wrap)",
+        "the disagreement definition immediately above"
+      ],
+      "why_these_were_legitimate": "Every one was made before the thing it governs had produced any study data -- no arm dispatched for the first two, no study output graded for the last two -- and every one fixed an underspecification or a defect rather than tuning a threshold toward a result. The count is recorded openly BECAUSE four amendments is the point at which a reader should start asking whether the record is being fitted. That is exactly why the window now has a hard close."
     }
   },
   "captured_at": null,

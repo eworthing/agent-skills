@@ -74,6 +74,35 @@ def render(scenario_id: str, output_id: str, candidate_path: Path) -> str:
     )
 
 
+def mechanical_grade(verdict_json: dict, kind: str, target_dimensions: list[str] | None) -> str:
+    """The preregistered mechanical rule, verbatim from prereg.mechanical_rule:
+
+        FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5.
+        TWIN held iff verdict==approved AND blocks_95==false (strict floor).
+
+    The twin half is **a strict lower bound and under-counts by design** -- the plan says so, and
+    principal_baseline.json bears it out (invariant-owner-restraint: mechanical 0/5 vs semantic
+    4/5). A rubric-faithful reviewer may legitimately land `conditional` / `blocks_95: true` on the
+    SCORE because the Actor proposed 9.5 with no named residual, while fully clearing the
+    carve-out. That is score-honesty, not a restraint miss, so **for restraint twins the semantic
+    tier is the operative measure** and this value must never be read as the restraint result on
+    its own.
+    """
+    verdict = verdict_json.get("verdict")
+    blocks = verdict_json.get("blocks_95")
+    scores = verdict_json.get("dimension_scores") or {}
+    if kind == "restraint":
+        return "held" if (verdict == "approved" and blocks is False) else "over_flagged"
+    relevant = [
+        v
+        for k, v in scores.items()
+        if target_dimensions is None or k in target_dimensions
+        if isinstance(v, (int, float))
+    ]
+    below = any(v < 9.5 for v in relevant)
+    return "caught" if (verdict == "rejected" or blocks is True) and below else "missed"
+
+
 def _extract_json(text: str) -> dict:
     # Same fence-pairing hazard as grade_structural._extract_json: match any language tag so a
     # quoted code block in the grader's own reasoning cannot shift the pairing.
@@ -124,7 +153,20 @@ def check_triggers(scenario_id: str, grade: dict, candidate_text: str) -> list[d
 
 
 def _spans(span: object, candidate_text: str) -> bool:
-    return isinstance(span, str) and bool(span.strip()) and span.strip() in candidate_text
+    """Is `span` a real quote from the candidate -- verbatim in tokens, tolerant of line wrapping?
+
+    A LITERAL substring test looked stricter and was simply wrong. Reviewer prose is hard-wrapped
+    at ~95 characters, so any quote crossing a line break fails it while being a perfect quote.
+    The Phase-2 pilot fired `no_cited_span` twice on exactly that, and the bias had a direction:
+    the longer the cited span the likelier it crosses a newline, so the check punished the most
+    thorough citations and would have forced a needless second grader on most slots.
+
+    Collapsing whitespace runs keeps the property that matters -- the exact token sequence must
+    appear in the candidate, so a paraphrase still fails -- and drops only the layout accident.
+    """
+    if not isinstance(span, str) or not span.strip():
+        return False
+    return " ".join(span.split()) in " ".join(candidate_text.split())
 
 
 def cmd_render(args: argparse.Namespace) -> int:
@@ -153,6 +195,26 @@ def cmd_structural(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_mechanical(args: argparse.Namespace) -> int:
+    verdict = grade_structural._load_candidate(Path(args.candidate))
+    kind = "restraint" if args.scenario.endswith("-restraint") else "flag"
+    dims = args.dimensions.split(",") if args.dimensions else None
+    print(
+        json.dumps(
+            {
+                "scenario_id": args.scenario,
+                "kind": kind,
+                "mechanical_grade": mechanical_grade(verdict, kind, dims),
+                "verdict": verdict.get("verdict"),
+                "blocks_95": verdict.get("blocks_95"),
+                "dimension_scores": verdict.get("dimension_scores"),
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -170,6 +232,11 @@ def main(argv: list[str]) -> int:
     s.add_argument("--scenario", required=True)
     s.add_argument("--candidate", required=True)
     s.set_defaults(fn=cmd_structural)
+    m = sub.add_parser("mechanical")
+    m.add_argument("--scenario", required=True)
+    m.add_argument("--candidate", required=True)
+    m.add_argument("--dimensions", default=None, help="comma-separated target dimensions")
+    m.set_defaults(fn=cmd_mechanical)
     args = ap.parse_args(argv)
     try:
         return args.fn(args)

@@ -2,10 +2,41 @@
   "schema_version": 1,
   "record_kind": "operational",
   "note": "Operational record for the paired-arm run, append-only from Phase 2. Deliberately SEPARATE from evals/paired_arm_replication.json: that file's prereg is frozen at Phase 1 and cannot absorb values measured afterwards. Nothing here constrains what the experiment means -- only how it is executed. Concurrency, per-pair cost, and the session cap are measurements, not hypotheses.",
-  "host_concurrency": null,
-  "host_concurrency_method": null,
-  "pairs_per_session_cap": null,
-  "measured": {},
+  "host_concurrency": 4,
+  "host_concurrency_method": "Four subagents were dispatched in one message and all four ran to completion without contention, twice. That is a measured FLOOR, not a ceiling -- no attempt was made to find the ceiling, because probing it costs real dispatches for information the design does not need. USABLE arm concurrency is 2, not 4: the recorded-HEAD guard means two pairs cannot be in flight in one worktree (the second pair's `started` commit moves HEAD out from under the first pair's `finish`), so pairs serialize by construction. Grading has no git guard between calls and fans out to at least 4.",
+  "pairs_per_session_cap": 8,
+  "measured": {
+    "pilot_agents": 12,
+    "arms": {
+      "input_tokens": 40,
+      "cache_creation_input_tokens": 239921,
+      "cache_read_input_tokens": 1060299,
+      "output_tokens": 55460,
+      "context_tokens_processed": 1355720,
+      "fresh_tokens": 295421,
+      "slots": 4,
+      "pairs": 2,
+      "per_slot_fresh": 73855,
+      "per_pair_context": 677860,
+      "per_pair_fresh": 147710
+    },
+    "grading": {
+      "input_tokens": 40,
+      "cache_creation_input_tokens": 276284,
+      "cache_read_input_tokens": 763167,
+      "output_tokens": 99257,
+      "context_tokens_processed": 1138748,
+      "fresh_tokens": 375581,
+      "calls": 8,
+      "outputs_graded": 4,
+      "calls_per_output": 2.0,
+      "per_output_context": 284687,
+      "per_output_fresh": 93895
+    },
+    "pilot_total_context": 2494468,
+    "pilot_total_fresh": 671002,
+    "accounting_note": "Two figures, deliberately. `fresh` = input + cache_creation + output, and is the measure comparable to sweep #2's 83k/rep -- ours is ~74k/rep, so the plan's 'expect materially less' is roughly borne out on the comparable measure. `context_tokens_processed` adds cache reads and is ~339k/rep; it is the bigger number and the less meaningful one, and it is reported so nobody has to guess which measure a headline used. Sweep #2's total was assembled by summing agents at the end; this run commits per-pair figures as it goes."
+  },
   "pilot": {
     "purpose": "Phase 2 cost pilot: 4 dispatch slots on 2 of the 3 EXCLUDED twin_defective scenarios. Comparable material, formally outside the corpus, so no study output is inspected before the study is registered. Establishes (1) both material bundles produce parseable verdict JSON, (2) the reconcile -> dispatch -> verify -> commit -> RESUME loop works including a deliberately interrupted pair, (3) measured per-pair and grading cost, (4) the host's actual usable agent concurrency.",
     "outside_the_study": "These scenario ids are NOT in prereg.study_scenarios, so validate-paired-arm.py rejects them in the study record by construction. Pilot attempts live here and are validated with the same validate_attempt() code path via its `scenarios` parameter -- the pilot tests the shipped validator rather than a parallel implementation of it.",
@@ -514,7 +545,42 @@
         "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-002/attempt1/without_skill/review-verdict.md"
       }
     ],
-    "measurements": {},
+    "measurements": {
+      "requirement_1_parseable_verdict_json": "PASS, after a defect fix. All four outputs carry a well-formed trailing fenced json verdict block. On first grading all of pilot-001 was scored `malformed` by the harness, not by the candidates -- see findings/fence_pairing_extractor_defect.",
+      "requirement_2_loop_end_to_end": "PASS. reconcile -> start(commit) -> dispatch -> verify -> finish(commit) -> RESUME.md ran for both pairs. The deliberately interrupted pair behaved exactly as designed: pilot-001 attempt 1 committed a `started` record, the session ended before dispatch, and reconcile from committed state alone reported attempt 1 spent, interrupted_previously=true, routed to attempt 2, with no output anywhere in the tree. The path allowlist also held under live conditions: pilot-001's terminal commit landed while six unrelated files were modified in the tree, and only the pair's own paths were staged.",
+      "requirement_2_caveat": "The interrupted attempt was interrupted BEFORE dispatch, so it cost no model call. What is under test is the reconcile/commit boundary, which does not know or care whether dispatch had happened -- but the cheaper test is the one that ran, and that is stated rather than implied.",
+      "requirement_3_cost": "measured; see measured/ and extrapolation_to_study/",
+      "requirement_4_concurrency": "measured; see host_concurrency/",
+      "grading_outcomes": {
+        "pilot-001": {
+          "scenario": "principal-duplicated-rule-restraint",
+          "with_skill": {
+            "mechanical": "over_flagged",
+            "semantic_first": "held",
+            "semantic_second": "over_flagged",
+            "adjudicated_final": "held"
+          },
+          "without_skill": {
+            "mechanical": "over_flagged",
+            "semantic_first": "held",
+            "semantic_second": "held",
+            "adjudicated_final": "not required"
+          }
+        },
+        "pilot-002": {
+          "scenario": "principal-process-owner-restraint",
+          "with_skill": {
+            "semantic_first": "held",
+            "triggers": 0
+          },
+          "without_skill": {
+            "semantic_first": "held",
+            "semantic_second": "held"
+          }
+        },
+        "not_a_study_result": "These are EXCLUDED scenarios, diagnosed twin_defective before this run. Nothing here is evidence about the skill's recall, and no decision rule reads it."
+      }
+    },
     "findings": [
       {
         "id": "fence_pairing_extractor_defect",
@@ -522,6 +588,20 @@
         "what": "Both arms were scored candidate_output_status='malformed' on first grading. The outputs were well-formed: prose then a single trailing fenced json verdict block, exactly as the frozen task template asks. grade_structural._extract_json's fence regex accepted only an untagged or `json` opening fence, so a reviewer that quoted a ```sql or ```swift block in its reasoning broke fence PAIRING -- the pattern opened on that block's CLOSING fence, swallowed the prose up to the ```json opener, and left the real verdict block unopened.",
         "why_it_matters": "This is the pilot doing its job. Run blind across 110 study slots it would have produced a silent, arm-correlated bias: quoting the code under review is exactly the behaviour a rubric-following reviewer is more likely to exhibit, so the arm with the lens would have been scored malformed more often -- a measurement artifact pointing the WRONG WAY, against the skill, and invisible in the aggregate.",
         "fix": "grade_structural._extract_json now accepts any language tag; scripts/paired_arm_grade.py gained the same fix for grader replies. RED regression case added to _grade_structural_selftest.py. Both pilot attempts re-graded from their committed, immutable outputs -- no re-dispatch, the model output never changed."
+      },
+      {
+        "id": "no_cited_span_literal_substring_defect",
+        "found_by": "Phase 2 cost pilot, pilot-002 without_skill grading",
+        "what": "The `no_cited_span` ambiguity trigger fired twice on evidence spans that were perfect verbatim quotes. Reviewer prose is hard-wrapped at ~95 characters; the grader quoted across a line break; the literal substring test failed.",
+        "why_it_matters": "Left in place it would have forced a second grader on most slots -- roughly doubling grading cost for nothing -- and it was BIASED: the longer the cited span, the likelier it crosses a newline, so the check punished the most thorough citations.",
+        "fix": "Whitespace-normalized substring test. The token sequence must still appear, so a paraphrase still fails. Recorded as declared divergence no_cited_span_normalizes_whitespace, with a RED selftest pinning both directions."
+      },
+      {
+        "id": "semantic_rule_demanded_as_a_fix_clause_is_load_bearing",
+        "found_by": "Phase 2 cost pilot, pilot-001 with_skill double grading",
+        "what": "Two independent graders split on the operative tier: `held` vs `over_flagged`. Both agreed the review names no duplication smell. They split on the rule's second clause -- 'and not demanded as a fix' -- because the review's REMEDY asks to keep OrderRepository on point-in-time data, which undoes the carve-out even though the stated blocking reason is a data-provenance concern. The third adjudicator ruled `held`, final.",
+        "why_it_matters": "A reviewer can block for a non-carve-out reason while proposing a remedy that removes the carve-out anyway. The clause is doing real work and is genuinely ambiguous at the margin, so restraint grades on flag/twin pairs of this shape are the ones most likely to need adjudication.",
+        "not_fixed_deliberately": "The semantic rule is copied VERBATIM from principal_baseline_replication.json and frozen by provenance, precisely so it cannot be adjusted after seeing how it grades. The ambiguity is recorded, not resolved. Only the adjudication PROCEDURE was clarified -- what counts as a disagreement -- and that was defined on principle before any study output was graded."
       }
     ]
   },
@@ -768,5 +848,18 @@
         "pair_total_context_tokens": 674620
       }
     }
-  ]
+  ],
+  "pairs_per_session_cap_basis": "Measured ~1.24M context tokens / ~336k fresh tokens per pair INCLUDING its two grading calls. There is no API here to query remaining session budget, so this is a fixed cap with generous headroom rather than a prediction -- a session stops at 8 pairs regardless of how much budget appears to remain. 55 pairs therefore span ~7 sessions. With per-pair commits the cap governs predictable progress, not loss: an unplanned halt costs one pair either way.",
+  "extrapolation_to_study": {
+    "basis": "55 pairs / 110 arm slots / 110 outputs graded",
+    "arms_fresh": 8124050,
+    "arms_context": 37282300,
+    "grading_fresh_at_measured_multiplier": 10328450,
+    "grading_context_at_measured_multiplier": 31315570,
+    "total_fresh": 18452500,
+    "total_context": 68597870,
+    "grading_costs_more_than_dispatch": "Grading is the larger half. Two causes: the 2.0 calls-per-output multiplier from triggers, and a grader prompt that carries the candidate output plus the answer key plus the assertion set. A design that assumed 110 grading calls would understate grading by about half.",
+    "multiplier_caveat": "The 2.0 calls-per-output multiplier CANNOT be extrapolated from this pilot. Both pilot scenarios are twin_defective by prior diagnosis -- exactly the material most likely to produce honest 'uncertain' -- so 3 of 4 slots triggering says more about the pilot's scenarios than about the study's. At a 0% trigger rate grading halves to ~5.2M fresh; at the pilot's rate it is ~10.3M. Budget for the range, do not quote a rate.",
+    "variance_note": "Per-call cost is not uniform: grader calls ranged 104k-270k context tokens. Two of eight cost roughly 2.5x the median. A mean-based extrapolation is a central estimate, not a cap."
+  }
 }

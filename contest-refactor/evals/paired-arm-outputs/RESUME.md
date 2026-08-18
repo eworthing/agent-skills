@@ -19,13 +19,13 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 ## Operational
 
-- measured host concurrency: None
-- pairs-per-session cap: not yet derived
+- measured host concurrency: 4
+- pairs-per-session cap: 8
 - measured spend to date: not yet recorded
 
 ## Next action
 
 ```bash
 cd contest-refactor
-python3 scripts/paired_arm_run.py next --mode pilot
+python3 scripts/paired_arm_run.py next --mode study
 ```
