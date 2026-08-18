@@ -2,7 +2,7 @@
   "schema_version": 1,
   "record_state": "preregistered",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
-  "prereg_sha256": "4655128f453e2c46068ffbad9458a188252e248fca246c87a22dac9a8ef2aeb1",
+  "prereg_sha256": "a49b8782452dfe3a65ef74140730508a8840fe4e078c8d3489a6c40358597541",
   "prereg": {
     "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
     "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
@@ -115,7 +115,8 @@
       "evals/scenarios/principal-process-owner-flag/scenario.md": "b00161fda80b2aff241117029976b535f4413f37aa1ac5c5478b9791f44ceff8",
       "evals/scenarios/principal-consistency-boundary-flag/scenario.md": "c4135cbe2b778829cc63c4e673504bf5ae3d8967143f13fe77cb162ef89b8612",
       "evals/scenarios/principal-consistency-boundary-restraint/scenario.md": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc",
-      "evals/scenarios/principal-abstraction-seam-flag/scenario.md": "b4e35a817f6b81ac71c946fdbcb601dfed8e48b0d91e345f377d81cc1b59453d"
+      "evals/scenarios/principal-abstraction-seam-flag/scenario.md": "b4e35a817f6b81ac71c946fdbcb601dfed8e48b0d91e345f377d81cc1b59453d",
+      "evals/paired_arm_grader_prompt.md": "aa8f630205c3311a20264af9381f1b4df8664bfa885fd0345993f8ca416cd424"
     },
     "historical_file_hashes": {
       "evals/principal_baseline.json": "8fb47ee8047024dcbbda8c0d276ca2b48eb782885641381070a2edd8789c71d4",
@@ -687,6 +688,11 @@
         "id": "symmetric_vocabulary_instructions",
         "statement": "Neither task template instructs an arm about vocabulary. An earlier draft told without_skill 'do not fabricate a rubric vocabulary you were not given' and with_skill 'use its exact vocabulary'; both instructions were removed before any dispatch.",
         "reason": "Those asymmetric prompt-level constraints would have INSTRUCTED the vocabulary difference into existence rather than measuring it -- any flagged_smells gap between arms would then be an artifact of the prompt, not of the lens, making the separately-reported vocabulary axis measure instruction compliance instead of capability. The without_skill version was additionally methodology leakage: telling that arm not to invent a rubric vocabulary reveals that one exists, violating evals/README.md:475's requirement that the neutral prompt leak no methodology so 'a no-skill arm gets no hints'. The with_skill arm's rubric already carries its own 'use only in this exact sense' instruction internally, so the lens still speaks for itself -- which is the declared estimand."
+      },
+      {
+        "id": "grading_protocol_frozen_at_phase_2",
+        "statement": "The `grading` block -- grader model, frozen grader prompt file + sha256, the three objective ambiguity triggers, the second-grader/third-adjudicator rule, and the label-masking protocol -- was added to this prereg AFTER the Phase-1 freeze commit (8529dea/a6cb85b), during Phase 2, and before any arm was dispatched. Phase 1 shipped only grading_subsample_seed/fraction/size_pairs; the grader itself was unfrozen.",
+        "reason": "The plan's Design section requires the grader's model, frozen prompt text, and prompt hash to live in the prereg, and requires the ambiguity triggers and adjudication rule to be frozen there too. Phase 1 omitted them. Amending is legitimate here and only here: no arm has been dispatched and no study output exists, so there is nothing the grading protocol could have been fitted to. Leaving the grader unfrozen until Phase 4 -- after outputs exist -- is precisely the failure the freeze exists to prevent, so deferring would have been the worse choice. Recorded as a declared divergence rather than silently rewritten; the prereg_sha256 re-freeze makes the amendment visible in git history."
       }
     ],
     "headline_excluded": [
@@ -710,6 +716,58 @@
       "principal_flags": "CROSS-MODULE / forces-dependent grain. evals/README.md:620 asserts this is 'where recall lift lives', but principal_baseline.json replication_summary.confound_noted states the supporting measurement is current-arm only -- never tested against a bare model. 'miss' is therefore a genuine open prediction here, not a default.",
       "restraint_twins": "'hold' per the convention already used uniformly by principal_baseline.json's ten entries.",
       "note": "The two layers deliberately carry OPPOSITE predictions. That is what makes the result informative in either direction rather than confirmatory."
+    },
+    "grading": {
+      "grader_model": "claude-sonnet-5",
+      "grader_dispatch": "host-dispatched fresh subagent, one per candidate output, sandboxed to the prompt text alone -- the grader reads no file and no repository; every input it needs is interpolated into the frozen prompt.",
+      "grader_prompt_file": "evals/paired_arm_grader_prompt.md",
+      "grader_prompt_sha256": "aa8f630205c3311a20264af9381f1b4df8664bfa885fd0345993f8ca416cd424",
+      "grader_model_recorded_separately_because": "principal_baseline_replication.json's judge_model conflated grader with arm ('claude-opus-4-8 (host-dispatched general-purpose subagents, one fresh per attempt)' names the ARM dispatch, not a separate grader). non_claim already flags that ambiguity; recording grader_model apart from prereg.arm_model is what stops it recurring here.",
+      "inputs_per_call": [
+        "output_id (opaque blind id)",
+        "scenario_id",
+        "scenario_kind (flag|restraint)",
+        "expected_output verbatim from evals.json",
+        "the semantic-tagged assertions with their 0-based assertion_index",
+        "prereg.semantic_rule",
+        "the candidate output verbatim"
+      ],
+      "one_output_per_call": "No batching. One candidate output per grader call. Batching same-scenario outputs would change the grader prompt and tool fingerprint after preregistration -- invalidating the NoiseFloorKey -- and would introduce within-call comparison effects on a rule meant to be an absolute per-assertion binary. Prohibitive grading cost ABORTS the run in favour of a fresh preregistration that freezes a batching policy, its prompt, its hashes, and its independence caveat before any study output is graded. It is never a mid-run lever.",
+      "label_masking": {
+        "protocol": "Outputs reach the grader under opaque ids via evals/paired-arm-outputs/blind-map.json, generated and committed once at Phase 4 start together with a frozen randomized grading order. The grader sees only the output text, scenario id, scenario kind, answer key, and assertions -- never the arm label, never the source path, never the map.",
+        "limitation": "This is label-MASKING, not blinding. Citation habits, canon vocabulary, and response style can still reveal which arm produced a response, and no masking scheme removes that. The limitation is recorded and no claim rests on the grader being unable to infer the arm."
+      },
+      "ambiguity_triggers": [
+        {
+          "id": "grader_uncertain",
+          "trigger": "the grader emits \"uncertain\" for any assertion's `passed` field, or for `semantic_grade`",
+          "checkable_by": "field value equality"
+        },
+        {
+          "id": "no_cited_span",
+          "trigger": "the grader returns a non-uncertain judgment whose `evidence_span` is null, empty, or not an exact substring of the candidate output -- i.e. a rationale citing no span from the candidate output",
+          "checkable_by": "mechanical substring test against the candidate output"
+        },
+        {
+          "id": "opined_outside_residue",
+          "trigger": "the grader returns any `assertion_index` outside the set grade_structural.py placed in `residue` for that scenario -- it opined on an assertion the structural report already decided, or on one that does not exist",
+          "checkable_by": "set membership against the structural report's residue"
+        }
+      ],
+      "adjudication": {
+        "on_trigger": "Every triggered slot is re-graded by a second independent grader: a fresh subagent, identical frozen prompt, no knowledge of the first grade.",
+        "on_disagreement": "A third blinded adjudicator decides and its verdict is final -- no averaging, no host tie-breaking.",
+        "host_may_not_decide": "The host never breaks a grader tie by its own judgment. Adjudication is mechanical: trigger -> second grader -> (on disagreement) third adjudicator, final."
+      },
+      "disagreement_estimate": {
+        "design": "preregistered random 20% subsample -- 11 of 55 pairs, both arms of each selected pair (22 outputs) -- double-graded regardless of whether any trigger fired",
+        "seed": 20260819,
+        "fraction": 0.2,
+        "size_pairs": 11,
+        "unit": "the semantic assertion: the denominator is every semantic-tagged assertion across those 22 outputs",
+        "reporting": "reported as an estimate WITH its denominator stated, never as a population rate. Trigger-selected adjudications outside the subsample are reported as a COUNT and never folded into the rate -- they are a biased sample by construction.",
+        "trade": "Doubling every semantic grade would give a cleaner estimate at roughly double the grading cost; the subsample is the deliberate trade, preregistered so it cannot be resized after seeing results."
+      }
     }
   },
   "captured_at": null,

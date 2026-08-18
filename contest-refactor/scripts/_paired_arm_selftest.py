@@ -313,6 +313,57 @@ def main() -> int:
         _check("hand-typed required_n_for_power mismatch -> exit 1", rc == 1, f"got {rc}")
         _check("names non_claim", "non_claim" in err, err[:200])
 
+        print("== RED: grading protocol must stay frozen and internally consistent ==")
+        bad = copy.deepcopy(real)
+        del bad["prereg"]["grading"]
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "gr_missing.json", bad)
+        _check("grading block absent -> exit 1", rc == 1, f"got {rc}")
+        _check("names grading", "[grading]" in err, err[:200])
+
+        # The prompt's freeze hash is recorded twice (grading.grader_prompt_sha256 and
+        # material_hashes); the point of recording it twice is that they must agree.
+        bad = copy.deepcopy(real)
+        bad["prereg"]["grading"]["grader_prompt_sha256"] = "0" * 64
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "gr_hash_split.json", bad)
+        _check(
+            "grader_prompt_sha256 disagrees with material_hashes -> exit 1", rc == 1, f"got {rc}"
+        )
+
+        for trig in ("grader_uncertain", "no_cited_span", "opined_outside_residue"):
+            bad = copy.deepcopy(real)
+            bad["prereg"]["grading"]["ambiguity_triggers"] = [
+                t for t in bad["prereg"]["grading"]["ambiguity_triggers"] if t["id"] != trig
+            ]
+            bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+            rc, _, err = _run(tmpdir, f"gr_trig_{trig}.json", bad)
+            _check(f"ambiguity trigger {trig!r} dropped -> exit 1", rc == 1, f"got {rc}")
+
+        # Batching is the one grading lever that must never be pulled mid-run: prohibitive cost
+        # aborts in favour of a fresh preregistration. Softening the wording is the failure mode.
+        bad = copy.deepcopy(real)
+        bad["prereg"]["grading"]["one_output_per_call"] = (
+            "One output per call; batch same-scenario outputs if grading cost is too high."
+        )
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "gr_batch.json", bad)
+        _check("no-batching rule softened to a mid-run lever -> exit 1", rc == 1, f"got {rc}")
+
+        bad = copy.deepcopy(real)
+        bad["prereg"]["grading"]["adjudication"]["on_disagreement"] = (
+            "The host averages the two grades and picks the majority reading."
+        )
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "gr_adj.json", bad)
+        _check("host tie-breaking instead of a third adjudicator -> exit 1", rc == 1, f"got {rc}")
+
+        bad = copy.deepcopy(real)
+        bad["prereg"]["grading"]["disagreement_estimate"]["size_pairs"] = 55
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "gr_subsample.json", bad)
+        _check("subsample resized away from prereg top-level -> exit 1", rc == 1, f"got {rc}")
+
         print("== RED: prereg_sha256 must track a live prereg edit ==")
         bad = copy.deepcopy(real)
         bad["prereg"]["declared_divergences"].append(
