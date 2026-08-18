@@ -436,6 +436,66 @@
         },
         "pair_total_context_tokens": 681100
       }
+    },
+    {
+      "mode": "pilot",
+      "pair_id": "pilot-002",
+      "scenario_id": "principal-process-owner-restraint",
+      "rep": 1,
+      "attempt_index": 1,
+      "arm_order": [
+        "without_skill",
+        "with_skill"
+      ],
+      "session_id": "sess-phase2",
+      "state": "started",
+      "pre_dispatch_head": "bc25e560c778e06bc0470f1f052d14ce79cc2d49",
+      "arms": {
+        "with_skill": {
+          "task_template": "evals/paired_arm_task_with_skill.md",
+          "task_template_sha256": "6f2fec8e8b62e7ac43e05e04624f7c377c61fc8bff916e7f58a9521f7c3021c1",
+          "materials": [
+            {
+              "material": "evals/scenarios/principal-process-owner-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-002/attempt1/with_skill/materials/scenario.md",
+              "sha256": "4b2db9f5a3300fad95e1e047145c5b89fac1a7b4ea4702f12d17a393b37ddb09",
+              "frozen": null
+            },
+            {
+              "material": "references/architecture-rubric.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-002/attempt1/with_skill/materials/architecture-rubric.md",
+              "sha256": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
+              "frozen": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d"
+            },
+            {
+              "material": "references/method.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-002/attempt1/with_skill/materials/method.md",
+              "sha256": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
+              "frozen": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/pilot/pilot-002/attempt1/with_skill/prompt.md",
+          "prompt_sha256": "41d6ee84997b3de3cf0fcefcd350d95b456e0f7ef89a5497bc4bc61a45b5ae2f",
+          "expected_output": "/tmp/paired-arm/pilot/pilot-002/attempt1/with_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/pilot/pilot-002/attempt1/with_skill"
+        },
+        "without_skill": {
+          "task_template": "evals/paired_arm_task_without_skill.md",
+          "task_template_sha256": "973d1738090c29f013315d61ba3ae63e9ee2c5627322ab39252da708e9f03545",
+          "materials": [
+            {
+              "material": "evals/scenarios/principal-process-owner-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/pilot/pilot-002/attempt1/without_skill/materials/scenario.md",
+              "sha256": "4b2db9f5a3300fad95e1e047145c5b89fac1a7b4ea4702f12d17a393b37ddb09",
+              "frozen": null
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/pilot/pilot-002/attempt1/without_skill/prompt.md",
+          "prompt_sha256": "762a1d8abd73c33f3e6dad6d37fa79103e5820b77376ea26e00e168f0c668f87",
+          "expected_output": "/tmp/paired-arm/pilot/pilot-002/attempt1/without_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/pilot/pilot-002/attempt1/without_skill"
+        }
+      }
     }
   ]
 }
