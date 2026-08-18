@@ -1,0 +1,19 @@
+id = "g45-exhaustion-preventive-honest"
+purpose = "Positive v4 fixture: HALT_EXHAUSTION with a preventive step-budget checkpoint that honestly claims kind=\"unknown\" (a preventive checkpoint cannot distinguish context pressure from a spend limit from any other cause). Carries the G34-required unresolved_reason + halt_handoff. Must PASS."
+expected_result = "pass"
+pair_id = "g45-exhaustion-coupling"
+pair_role = "restraint"
+aspirational = false
+notes = "Derived from halt-loop-cap-clean bumped to schema_version 4 (discovery expanded with source_roots + lens), state changed to HALT_EXHAUSTION, and an exhaustion{} record added. Backlog stays empty and every score sits at 9.5 so G37/G39/G41/G42 have nothing to say -- the fixture isolates G45 (and the G34 extension covering HALT_EXHAUSTION's reason/handoff requirement). Pairs with g45-exhaustion-overclaimed-kind: identical except kind is 'context_pressure', so the pair isolates exactly the detection_mode<->kind coupling G45 enforces. REVIEW_HISTORY.json.loops[-1] re-synced for G18. Strict mode must exit 0."
+
+[[tested_rules]]
+kind = "gate"
+id = "G45"
+
+[[tested_rules]]
+kind = "gate"
+id = "G34"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_EXHAUSTION"

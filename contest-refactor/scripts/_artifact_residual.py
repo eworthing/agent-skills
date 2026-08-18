@@ -125,13 +125,16 @@ def check_g37_terminal_residual_accounting(current_review: dict) -> list[Issue]:
     an "accepted" disposition below 9.5 is itself the violation and is owned by G5's
     converse. Do not "restore" it -- doing so would license the exact incoherence G5 rejects.
 
-    Trigger: state in {HALT_LOOP_CAP, HALT_STAGNATION}, EVERY subtype, ANY backlog.
-    Widened from the original closed set (HALT_STAGNATION/no_backlog, or HALT_LOOP_CAP with an
-    empty backlog). That set assumed a non-empty backlog explains the sub-9.5 gaps -- true only
-    for the dimensions the backlog actually names. The production artifact that motivated the
-    widening ended HALT_LOOP_CAP with two backlog items naming architecture_quality and
-    concurrency, while data_flow sat at 7.5 with residual_disposition, residual_blocking_10 and
-    residual_blocker_kind all null and no backlog item naming it. It validated clean.
+    Trigger: state in {HALT_LOOP_CAP, HALT_STAGNATION, HALT_EXHAUSTION}, EVERY subtype, ANY
+    backlog. Widened from the original closed set (HALT_STAGNATION/no_backlog, or HALT_LOOP_CAP
+    with an empty backlog). That set assumed a non-empty backlog explains the sub-9.5 gaps --
+    true only for the dimensions the backlog actually names. The production artifact that
+    motivated the widening ended HALT_LOOP_CAP with two backlog items naming architecture_quality
+    and concurrency, while data_flow sat at 7.5 with residual_disposition, residual_blocking_10
+    and residual_blocker_kind all null and no backlog item naming it. It validated clean.
+    HALT_EXHAUSTION (backlog item 17) joined the trigger set for the same reason: a run that
+    dies mid-loop at 8.0 on three dimensions strands them exactly like a cap halt does -- running
+    out of budget is not an account for the gap any more than reaching the loop cap is.
 
     Bypasses: CONTINUE (not a terminal), HALT_DRY_RUN (G23's documented bypass -- the dry run
     halts before Step 3 evidence exists), and HALT_SUCCESS(_candidate), where G21 already
@@ -143,7 +146,7 @@ def check_g37_terminal_residual_accounting(current_review: dict) -> list[Issue]:
     if (current_review.get("schema_version") or 1) < 4:
         return issues
     state = current_review.get("state")
-    if state not in ("HALT_LOOP_CAP", "HALT_STAGNATION"):
+    if state not in ("HALT_LOOP_CAP", "HALT_STAGNATION", "HALT_EXHAUSTION"):
         return issues
 
     scorecard = current_review.get("scorecard") or {}

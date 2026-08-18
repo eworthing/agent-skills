@@ -44,6 +44,27 @@
 #                           main halts instead of dispatching a new CONTINUE loop
 #   flag:dry-run            --dry-run invocation flag (mirrored as
 #                           CURRENT_REVIEW.json.dry_run), Step 2 sub-step 6
+#   exhaustion-detected     a resource death (context pressure, provider spend
+#                           limit, or an unknown cause) was noticed before the
+#                           run died outright -- either a preventive step-budget
+#                           checkpoint or a user report (canon/exhaustion-kinds.toml,
+#                           G45)
+#
+# HALT_EXHAUSTION (backlog item 17, Gap 14) is a sibling of HALT_LOOP_CAP, NOT a new
+# halt_subtype, despite the backlog row's shorthand title ("halt subtype for context/
+# budget exhaustion"). `halt_subtype` is canonically scoped to HALT_STAGNATION and
+# means RUBRIC stagnation -- the loop stopped making progress. Recording a resource
+# death under that vocabulary would assert the loop had stalled when it may have been
+# making progress fine right up to the point it ran out of budget, corrupting G37's
+# residual semantics (which key off "no progress, account for the gap") and every
+# downstream read. "Ran out of a budget" is exactly HALT_LOOP_CAP's shape, so
+# HALT_EXHAUSTION sits beside it as a second terminal in that family; halt_subtype
+# stays null for it, same as HALT_LOOP_CAP.
+#
+# No HALT_SUCCESS_candidate -> HALT_EXHAUSTION edge: if a candidate loop's independent
+# challenge itself dies of exhaustion, the run resumes as CONTINUE first (the existing
+# challenge-broke / challenger-unavailable edges), so that direct pair is never
+# observable in the loop-indexed transition sequence.
 #
 # Known limitation (documented, not silently papered over): the
 # HALT_SUCCESS_candidate -> HALT_SUCCESS "held" promotion is described in
@@ -66,6 +87,7 @@ states = [
     "HALT_STAGNATION",
     "HALT_LOOP_CAP",
     "HALT_DRY_RUN",
+    "HALT_EXHAUSTION",
 ]
 
 guards = [
@@ -79,6 +101,7 @@ guards = [
     "challenger-unavailable",
     "stop-ask-gate-blocked",
     "flag:dry-run",
+    "exhaustion-detected",
 ]
 
 [[transitions.CONTINUE.edges]]
@@ -111,6 +134,11 @@ to = "HALT_DRY_RUN"
 guards = ["flag:dry-run"]
 gate = "G9"
 
+[[transitions.CONTINUE.edges]]
+to = "HALT_EXHAUSTION"
+guards = ["exhaustion-detected"]
+gate = "G45"
+
 [[transitions.HALT_SUCCESS_candidate.edges]]
 to = "CONTINUE"
 guards = ["challenge-broke"]
@@ -137,4 +165,7 @@ edges = []
 edges = []
 
 [transitions.HALT_DRY_RUN]
+edges = []
+
+[transitions.HALT_EXHAUSTION]
 edges = []

@@ -16,6 +16,7 @@ This file defines the handoff for each halt state and subtype.
 - [HALT_STAGNATION](#halt_stagnation)
 - [HALT_DRY_RUN (schema_version >= 3)](#halt_dry_run-schema_version--3)
 - [HALT_LOOP_CAP](#halt_loop_cap)
+- [HALT_EXHAUSTION (schema_version >= 4)](#halt_exhaustion-schema_version--4)
 - [Re-validation handoff (on drift)](#re-validation-handoff-on-drift)
 - [Reset handoff](#reset-handoff)
 
@@ -410,6 +411,62 @@ Next step options:
       if it holds, the required post-fix candidate challenge.
   (c) Reset — "/contest-refactor --reset".
 ```
+
+---
+
+## HALT_EXHAUSTION (schema_version >= 4)
+
+Triggered when a resource budget runs out mid-loop: the loop's context window, a provider spend cap, or a cause a preventive checkpoint cannot name. Backlog item 17 (Gap 14 in the review deep-dive). A **sibling of HALT_LOOP_CAP** — both mean "ran out of a budget" — not a new `halt_subtype`: `halt_subtype` stays scoped to `HALT_STAGNATION`'s rubric-progress meaning (see `canon/states.toml`'s header comment), and recording a resource death as stagnation would assert the loop had stalled when it may have been making fine progress right up to the point the budget ran out — corrupting G37's residual semantics and every downstream read.
+
+### The three deaths
+
+Three distinct ways a loop can stop running, only two of which can leave a trace:
+
+1. **Context pressure** — the model's context window neared or hit its limit. A handoff is possible IF a preventive checkpoint caught it before the window was actually exhausted (see below); a true out-of-context death, like a crash, leaves nothing.
+2. **Provider spend limit** — a provider- or user-configured spend/budget cap was hit. A handoff is possible if the provider surfaces the cap before terminating the loop.
+3. **Process crash** — the process died outright (killed, OOM, an unhandled exception outside the loop's own control flow). There is **nothing to emit**: a crashed process cannot write its own halt record. The only trace is a G34-shaped absence — no `HALT_EXHAUSTION` artifact, no halt state at all, just a run that stopped. That absence is the *designed* signature of a crash, not a bug in this vocabulary or a gap in this gate's coverage: do not invent a fourth `exhaustion_kind` to paper over it, and do not treat a bare absence as evidence something here is broken. The absence **is** the record.
+
+Only the first two are representable in the `exhaustion` object, because only they can be caught before the loop actually stops running.
+
+### Detection: preventive checkpointing, not a real meter
+
+No component in this repo today measures context or spend pressure directly — there is no host-side meter to read. Building one is out of scope for this item (`canon/exhaustion-kinds.toml` deliberately ships no `host_meter` token; add it in the same change that adds a real producer). The fallback available now is **preventive checkpointing**, and it is a judgment call, not a counter: no step-budget threshold ships with this skill and none is read from project config, so the loop halts and checkpoints when it assesses it has consumed an unusual amount of budget inside a single loop rather than when a configured line is crossed. Record in `evidence` what was actually observed — the sub-steps already run, the size of the diff being held, the number of files re-read — never a threshold invented in the moment and written up as though it had been configured in advance.
+
+This detection is weak by construction, and the weakness is worth stating rather than hiding: a run near its limit is the run least able to notice it is near its limit. Preventive checkpointing catches the gradual cases and misses the abrupt ones. That is precisely why the mode may not name a cause.
+
+A preventive checkpoint is not a diagnosis. It cannot tell context pressure from a spend limit from a process crash that simply hasn't happened yet — it only knows the step count crossed a line drawn in advance. So it records `detection_mode: "preventive_step_budget"` and is **forbidden** from naming a cause: `kind` must be `"unknown"` (G45's coupling). The alternative, `detection_mode: "user_reported"`, is for the one case where a human actually observed and reported which resource ran out — only a human report may claim `"context_pressure"` or `"spend_limit"` (it may also say `"unknown"` when the human didn't know either).
+
+### Subagent records
+- `system_flag: "HALT_EXHAUSTION"`
+- `halt_subtype: null` — stays null; see the sibling-of-HALT_LOOP_CAP note above.
+- `unresolved_reason` — e.g. `"preventive checkpoint: 9 Step-2 sub-steps run against an unusually large held diff; halted so the state was written down while writing it was still possible"`.
+- `exhaustion` — the required object (G45): `{ "kind": ..., "detection_mode": ..., "evidence": ... }`. `evidence` names what was *actually observed* — the step count and the budget it crossed, or, for a user report, what the human said (e.g. `"user reported the session approaching its context limit mid-Step-2"`).
+
+### Handoff template
+
+```
+Loop N ended at HALT_EXHAUSTION — a preventive checkpoint fired: <evidence>.
+This is not a diagnosis. The checkpoint cannot tell context pressure from a spend
+limit from any other cause; it only judged that continuing risked losing the state
+entirely. Work already committed through loop N stands.
+
+Cause: <kind> (<detection_mode>) — <evidence>
+
+Progress so far: <delta from loop 1 scorecard to loop N scorecard, summarized>
+Current Priority 1 (carried forward, if any): <F<id>: <title> — <one-line why>, or "none">
+
+Next step options:
+  (a) Resume — "/contest-refactor" continues from the checkpointed state.
+  (b) Accept current state — the checkpoint fired before finishing; current source
+      is a safe, committed baseline if you'd rather stop here.
+  (c) Reset — "/contest-refactor --reset".
+```
+
+`halt_handoff.expected_actions[]` mirrors the menu exactly as every other halt template does (see [Schema](#schema-pr-4-schema_version--2)): the resume action matches `no_drift_expected` when nothing changed since the checkpoint, `any_of`/`all_of` otherwise per the usual `match_paths` rule.
+
+### Atomic checkpoint write
+
+A checkpoint that dies mid-write is worse than no checkpoint — a truncated `CURRENT_REVIEW.json` corrupts every downstream reader, including the next invocation's Step -1 resume detection. Write the checkpoint to a temp file in the **same directory** as the target (so the rename stays on one filesystem — e.g. `CURRENT_REVIEW.json.tmp`), flush and close it, then `rename()` it over the target path. A same-directory `rename()` is atomic on every platform this skill targets (POSIX `rename(2)`, Windows `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING`) — a reader either sees the old complete file or the new complete file, never a partial one. Never write the target path directly, and never leave the temp file behind once the rename succeeds.
 
 ---
 

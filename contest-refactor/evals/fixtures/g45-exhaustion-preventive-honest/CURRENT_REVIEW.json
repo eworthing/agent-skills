@@ -1,0 +1,140 @@
+{
+  "schema_version": 4,
+  "loop": 1,
+  "loop_cap": 10,
+  "state": "HALT_EXHAUSTION",
+  "halt_subtype": null,
+  "halt_handoff": {
+    "state": "HALT_EXHAUSTION",
+    "halt_subtype": null,
+    "text": "A conservative preventive step-budget checkpoint fired before the run could confirm a cause; halting rather than risking an uncheckpointed death.",
+    "expected_actions": []
+  },
+  "halt_handoff_text": null,
+  "re_validated_at_sha": null,
+  "re_validation_context": null,
+  "dry_run": false,
+  "provider": "claude_code",
+  "loop_model": "claude-sonnet-5",
+  "loop_model_source": "default",
+  "reviewer_model": "claude-sonnet-5",
+  "reviewer_model_source": "default",
+  "spawn_isolation": "subagent",
+  "findings_registry_path": "./findings_registry.json",
+  "discovery": {
+    "test_command": "swift test",
+    "test_scope": "full",
+    "test_filter": null,
+    "source_roots": [
+      "src/"
+    ],
+    "lens": "Generic"
+  },
+  "verdict": "Strong contender",
+  "verdict_explanation": "Backlog cleared and every score at 9.5; the run halted on a preventive step-budget checkpoint rather than continuing uncheckpointed.",
+  "scorecard": {
+    "architecture_quality": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Core/AppEngine.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "state_management": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Core/AppState.swift:8",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "domain_modeling": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Domain/Order.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "data_flow": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Core/Effects.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "framework_idioms": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "App/RootView.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "concurrency": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Adapters/Spotify.swift:18",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "simplicity": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Core/Reducer.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "test_strategy": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "Tests/AppEngineTests.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "credibility": {
+      "score": 9.5,
+      "delta": "SAME",
+      "proof": "App/AppEngine.swift:1",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    }
+  },
+  "authority_map": [],
+  "strengths": [
+    "Module graph enforced by source."
+  ],
+  "findings": [],
+  "simplification_check": {
+    "structurally_necessary": "Continue with backlog work.",
+    "new_seam_justified": false,
+    "new_seam_adapters": [],
+    "should_not_be_done": "Force a new protocol return.",
+    "tests_after_fix": "Existing tests pass."
+  },
+  "backlog": [],
+  "deepening_candidates": [],
+  "builder_notes": [],
+  "narrative": "Preventive exhaustion halt: the loop judged it had consumed an unusual amount of budget inside one loop and checkpointed; the checkpoint cannot distinguish context pressure from a spend limit from any other cause, so the cause is recorded honestly.",
+  "unresolved_reason": "preventive checkpoint: 9 Step-2 sub-steps run against an unusually large held diff; halted so the state was written down while writing it was still possible",
+  "exhaustion": {
+    "kind": "unknown",
+    "detection_mode": "preventive_step_budget",
+    "evidence": "9 Step-2 sub-steps run; held diff spanned 14 files across 3 modules"
+  }
+}

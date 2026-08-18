@@ -1,0 +1,15 @@
+id = "g45-exhaustion-overclaimed-kind"
+purpose = "Negative v4 fixture: HALT_EXHAUSTION whose exhaustion record pairs detection_mode=\"preventive_step_budget\" with kind=\"context_pressure\" -- a claim a preventive checkpoint cannot honestly make. Must FAIL on G45's detection<->kind coupling."
+expected_result = "fail"
+pair_id = "g45-exhaustion-coupling"
+pair_role = "flag"
+aspirational = false
+notes = "Identical to g45-exhaustion-preventive-honest except exhaustion.kind is 'context_pressure' instead of 'unknown'; every other field (unresolved_reason, halt_handoff, discovery, scorecard) is unchanged, so G45's honesty coupling is the ONLY rule that fires. REVIEW_HISTORY.json.loops[-1] re-synced for G18."
+
+[[tested_rules]]
+kind = "gate"
+id = "G45"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_EXHAUSTION"

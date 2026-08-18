@@ -224,7 +224,12 @@ def cmd_project(args, count_fn, method):
 # to notice it, and the self-test validated the table against its own copy of the lists.
 
 CEILINGS = {
-    "loop": 82_000,  # per-loop fixed reload (unique loads, apple lens)
+    # Bumped 82,000 -> 83,300 for backlog item 17 (HALT_EXHAUSTION, Gap 14): SKILL.md,
+    # validation.md, output-format-json.md and output-format-json-rules.md each needed a
+    # tight addition so the loop knows the state exists and what shape (`exhaustion`
+    # object, G45 coupling) to emit for it. Deliberate escape hatch per this dict's own
+    # guard comment below -- measured at 83,253 tok, smallest 100-multiple headroom above it.
+    "loop": 83_300,  # per-loop fixed reload (unique loads, apple lens)
     "skill_md": 10_600,  # SKILL.md trigger read
 }
 

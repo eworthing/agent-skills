@@ -95,7 +95,7 @@ Full subagent prompt template, HALT routing, when to skip subagents: [references
 
 A successful loop commit is **not** a stopping condition. The run continues in the same user turn until exactly one of these fires:
 
-- `system_flag ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN}` (HALT_DRY_RUN at schema_version >= 3 only)
+- `system_flag ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN, HALT_EXHAUSTION}` (HALT_DRY_RUN v3+; HALT_EXHAUSTION v4+)
 - `open_question_for_user` non-null (`halt_subtype: user_decision` blocking gate)
 - explicit user interruption
 
@@ -154,6 +154,7 @@ Branch on the system flag after Step 1 writes the review:
 | `HALT_STAGNATION` | optional (may be non-empty if findings unresolved by user-decision dependency) | `unresolved_reason` non-null |
 | `HALT_LOOP_CAP` | optional (carries best next move forward) | `unresolved_reason` non-null |
 | `HALT_DRY_RUN` (schema_version >= 3) | non-empty (1-3 items) | `dry_run == true`; `## Loop N Plan (dry-run)` section in CURRENT_REVIEW.md required |
+| `HALT_EXHAUSTION` (v4+) | optional | `unresolved_reason` + `exhaustion` object non-null (G45) |
 
 **Step 2 + Step 3 only run when the flag is `[STATE: CONTINUE]` and the backlog has at least one item. Step 3 only runs when Step 2's dry-run gate (sub-step 6) does not fire.**
 
@@ -233,7 +234,7 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
 
 ## Halting Conditions
 
-Set by Step 1 (HALT_SUCCESS_candidate / HALT_STAGNATION, plus HALT_LOOP_CAP in the `loop > loop_cap` case only), by Step 2 sub-step 6 (HALT_DRY_RUN at schema_version >= 3), or in the Step-3 wrap-up (HALT_LOOP_CAP at `loop == loop_cap`, after the loop has done its work); terminal `HALT_SUCCESS` is set by **main** on promotion of a candidate whose challenge held. Enforced by Step 1 Routing for the Step 1-set states. **Every** hard gate in [references/validation.md](references/validation.md) — the full set declared in [`canon/validation-gates.toml`](canon/validation-gates.toml) — applies across all halt paths. When emitting any HALT, the loop subagent MUST also write a user-facing handoff per [references/halt-handoff.md](references/halt-handoff.md). The main agent reads the handoff aloud when reporting the halt to the user — a halt without handoff text leaves the user staring at a flag with no path forward.
+Set by Step 1 (HALT_SUCCESS_candidate / HALT_STAGNATION, plus HALT_LOOP_CAP in the `loop > loop_cap` case only), by Step 2 sub-step 6 (HALT_DRY_RUN at schema_version >= 3), or in the Step-3 wrap-up (HALT_LOOP_CAP at `loop == loop_cap`, after the loop has done its work); terminal `HALT_SUCCESS` is set by **main** on promotion of a candidate whose challenge held. `HALT_EXHAUSTION` (v4+) can fire at any step, on a preventive step-budget checkpoint or user report — unlike the others. Enforced by Step 1 Routing for the Step 1-set states. **Every** hard gate in [references/validation.md](references/validation.md) — the full set declared in [`canon/validation-gates.toml`](canon/validation-gates.toml) — applies across all halt paths. When emitting any HALT, the loop subagent MUST also write a user-facing handoff per [references/halt-handoff.md](references/halt-handoff.md). The main agent reads the handoff aloud when reporting the halt to the user — a halt without handoff text leaves the user staring at a flag with no path forward.
 
 **Per-finding retirement fires before whole-loop stagnation** (per [method.md § Step 1.6](references/method.md) and G30). Per-loop output surfaces "Retired finding:" lines for any `status == unresolvable` transitions in that loop (see [output-format-markdown.md](references/output-format-markdown.md) and [halt-handoff.md § Retirement precedence](references/halt-handoff.md)). The occurrence status enum is: `open` | `resolved` | `fixed_by_user` | `rejected_attempt` | `withdrawn` (audited → reclassified not-a-finding; no code change) | `unresolvable`.
 
@@ -253,6 +254,7 @@ Set by Step 1 (HALT_SUCCESS_candidate / HALT_STAGNATION, plus HALT_LOOP_CAP in t
 
   The Residual Accounting Pass still has its own terminal obligation here (G37): when the cap loop ends with an empty backlog and any sub-9.5 dimension, run that pass before emitting, exactly as for `no_backlog`. **G41** enforces the other side — a cap loop that ends with a *non-empty* backlog must carry a `loop_result`, because a backlog item means there was work the budget had bought.
 - `[STATE: HALT_DRY_RUN]` (schema_version >= 3) — `--dry-run` set on this invocation; loop halted at Step 2 dry-run gate after emitting plan. `halt_subtype: null`. Plan visible in CURRENT_REVIEW.md `## Loop N Plan (dry-run)` section. Re-invoke without `--dry-run` to execute; no `--reset` needed (the flag is invocation-scoped).
+- `[STATE: HALT_EXHAUSTION]` (v4+) — a resource budget ran out. **Sibling of `HALT_LOOP_CAP`, not a subtype** (`halt_subtype` stays `null`; see [canon/states.toml](canon/states.toml) header). Requires `unresolved_reason` non-null and an `exhaustion` object `{kind, detection_mode, evidence}` (`canon/exhaustion-kinds.toml`; G45). `detection_mode: "preventive_step_budget"` can claim only `kind: "unknown"`; only `"user_reported"` may name a cause. A crash emits nothing. Full template: [halt-handoff.md § HALT_EXHAUSTION](references/halt-handoff.md#halt_exhaustion-schema_version--4).
 - `[STATE: CONTINUE]` — otherwise.
 
 Stagnation is not failure when honestly emitted with a subtype — it's the loop telling the user "I cannot make this better without your help" or "the codebase is structurally sound; remaining items are polish, not contest-relevant." The handoff explains which.

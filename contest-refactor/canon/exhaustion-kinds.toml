@@ -1,0 +1,38 @@
+# Canonical HALT_EXHAUSTION vocabulary: what kind of resource death fired, and how it
+# was detected. Two CLOSED enums in one file because they are read together -- G45's
+# whole point is the coupling between them (a preventive checkpoint cannot claim a kind
+# it cannot actually distinguish).
+# Cross-references: canon/states.toml (HALT_EXHAUSTION state), validation gate G45,
+# references/halt-handoff.md (the honesty coupling + the three-deaths note).
+#
+# exhaustion_kinds -- WHAT ran out:
+#   context_pressure  the model's context window neared/hit its limit
+#   spend_limit       a provider- or user-configured spend/budget cap was hit
+#   unknown           the only legal claim for a detection_mode that cannot
+#                     distinguish a cause (preventive_step_budget); also legal
+#                     for user_reported when the human did not say which
+#
+# detection_modes -- HOW the exhaustion was noticed:
+#   preventive_step_budget  the loop judged it had consumed an unusual amount of budget
+#                           inside one loop and checkpointed before a resource death
+#                           could happen uncheckpointed. No threshold ships or is read
+#                           from config -- it is a judgment call (references/halt-handoff.md
+#                           states the weakness). It cannot tell context pressure from a
+#                           spend limit from anything else, so it is coupled to
+#                           kind = "unknown" (G45)
+#   user_reported           a human observed and reported the exhaustion; may name
+#                           any kind, including "unknown"
+#
+# Deliberately NO "host_meter" token: nothing in this repo produces a real host-side
+# context/spend meter today, and shipping the vocabulary ahead of a producer is dead
+# enum. Add it in the same change that adds whatever emits it.
+exhaustion_kinds = [
+    "context_pressure",
+    "spend_limit",
+    "unknown",
+]
+
+detection_modes = [
+    "preventive_step_budget",
+    "user_reported",
+]

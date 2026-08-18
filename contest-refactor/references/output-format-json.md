@@ -176,10 +176,11 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   "schema_version": 4,                          // int, required. Pre-2026-05-09 = 1; PR 1-5 = 2; v3 revision = 3; v4 revision = 4.
   "loop": 3,                                    // int, 1-based
   "loop_cap": 10,                               // int
-  "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_SUCCESS_candidate | HALT_STAGNATION | HALT_LOOP_CAP | HALT_DRY_RUN (HALT_DRY_RUN v3+; HALT_SUCCESS_candidate v4+ only)
-  "halt_subtype": null,                         // enum (required when state == HALT_STAGNATION; null otherwise): no_progress | oscillation | user_decision | no_backlog | verification_blocked. Presence enforced by G34.
+  "state": "CONTINUE",                          // enum: CONTINUE | HALT_SUCCESS | HALT_SUCCESS_candidate | HALT_STAGNATION | HALT_LOOP_CAP | HALT_DRY_RUN | HALT_EXHAUSTION (HALT_DRY_RUN v3+; HALT_SUCCESS_candidate/HALT_EXHAUSTION v4+ only)
+  "halt_subtype": null,                         // enum (required when state == HALT_STAGNATION; null otherwise): no_progress | oscillation | user_decision | no_backlog | verification_blocked. Presence enforced by G34. HALT_EXHAUSTION stays null here — it is a sibling of HALT_LOOP_CAP, not a subtype (canon/states.toml header).
   "halt_handoff_text": null,                    // legacy v1 field. v2+ uses `halt_handoff` object below instead.
-  "halt_handoff": null,                         // (PR 4, v2+) required when state ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN(v3+)}; null on CONTINUE and HALT_SUCCESS_candidate. Presence enforced by G34. Object schema below.
+  "halt_handoff": null,                         // (PR 4, v2+) required when state ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_DRY_RUN(v3+), HALT_EXHAUSTION(v4+)}; null on CONTINUE and HALT_SUCCESS_candidate. Presence enforced by G34. Object schema below.
+  "exhaustion": null,                           // (v4+) object | null. Required non-null iff state == HALT_EXHAUSTION: { kind, detection_mode, evidence } — all three non-empty strings, kind/detection_mode ∈ canon/exhaustion-kinds.toml. Coupling: detection_mode "preventive_step_budget" ⟹ kind "unknown" (G45). Full template + the three-deaths note: halt-handoff.md § HALT_EXHAUSTION.
   "re_validated_at_sha": null,                  // string sha; populated by Resume Detection when drift was checked and same halt persists.
   "re_validation_context": null,                // (PR 4, v2+) required when re_validated_at_sha non-null. Object schema below.
   "dry_run": false,                             // (v3+) boolean. Audit trail of last invocation flag. NOT read on re-invocation (CLI flag is authoritative). true ⇒ state == "HALT_DRY_RUN".
@@ -321,6 +322,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   // HALT_SUCCESS: empty
   // HALT_STAGNATION: optional; if present, unresolved_reason must be set
   // HALT_LOOP_CAP: optional; if present, unresolved_reason must be set
+  // HALT_EXHAUSTION: optional; unresolved_reason always required regardless (G34)
   "backlog": [
     {
       "priority": 1,                                                                   // required int, 1-based
@@ -332,8 +334,9 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
       "score_impact": "data_flow +0.5; framework_idioms +0.5"                          // required; `<canon_dim_id> <signed delta>`, ';'-joined (G39, v4+)
     }
   ],
-  // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP}; null otherwise.
-  // For HALT_STAGNATION/no_backlog AND a converged HALT_LOOP_CAP (empty backlog), include residual accounting for each score < 9.5:
+  // Required when system_flag in {HALT_STAGNATION, HALT_LOOP_CAP, HALT_EXHAUSTION}; null otherwise.
+  // For HALT_STAGNATION/no_backlog, a converged HALT_LOOP_CAP (empty backlog), and HALT_EXHAUSTION,
+  // include residual accounting for each score < 9.5:
   // blocker, why it keeps the 9-anchor unmet, and why it is not backlog-worthy or accepted.
   "unresolved_reason": null,
 

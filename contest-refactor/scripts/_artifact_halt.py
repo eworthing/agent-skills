@@ -192,8 +192,18 @@ def check_g33_risk_boundary_evidence(current_review: dict, canon) -> list[Issue]
 
 
 # G34 state predicates (rule predicates, not new enum domains; canon owns membership).
-_G34_REASON_STATES = {"HALT_STAGNATION", "HALT_LOOP_CAP"}
-_G34_HANDOFF_STATES = {"HALT_SUCCESS", "HALT_STAGNATION", "HALT_LOOP_CAP", "HALT_DRY_RUN"}
+# HALT_EXHAUSTION (backlog item 17) requires both a reason and a handoff, same as its
+# sibling HALT_LOOP_CAP -- see canon/states.toml's header comment for why it is a
+# sibling terminal and not a halt_subtype (halt_subtype stays null for it, already
+# covered by check_g34_halt_tail_invariants's default "non-null iff HALT_STAGNATION").
+_G34_REASON_STATES = {"HALT_STAGNATION", "HALT_LOOP_CAP", "HALT_EXHAUSTION"}
+_G34_HANDOFF_STATES = {
+    "HALT_SUCCESS",
+    "HALT_STAGNATION",
+    "HALT_LOOP_CAP",
+    "HALT_DRY_RUN",
+    "HALT_EXHAUSTION",
+}
 
 
 def check_g34_halt_tail_invariants(current_review: dict, canon) -> list[Issue]:
@@ -465,6 +475,101 @@ def check_g38_premium_model_budget_guard(current_review: dict, canon) -> list[Is
                 "G38",
                 f"loop_model={loop_model!r} is a premium model; non-dry-run execution requires "
                 "premium_loop_override=true from --allow-premium-loop",
+            )
+        )
+    return issues
+
+
+_G45_REQUIRED_KEYS = ("kind", "detection_mode", "evidence")
+
+
+def check_g45_exhaustion_record(current_review: dict, canon) -> list[Issue]:
+    """G45: exhaustion halt record SHAPE + detection<->kind honesty coupling (backlog item 17).
+
+    Presence (bidirectional, mirroring G34's idiom): `exhaustion` non-null iff
+    state == HALT_EXHAUSTION. When present it must be an object carrying exactly the
+    three required non-empty-string keys (kind, detection_mode, evidence), each a
+    member of canon/exhaustion-kinds.toml where applicable. Runs only for canon-valid
+    states -- an invalid or missing `state` is the schema-enum check's concern, not
+    G45's (mirrors G34's early return).
+
+    The honesty coupling is the point of the gate: detection_mode ==
+    "preventive_step_budget" implies kind == "unknown". A preventive step-budget
+    checkpoint cannot tell context pressure from a spend limit from any other cause,
+    so it is forbidden from claiming one -- only detection_mode == "user_reported" may
+    name "context_pressure" or "spend_limit" (it may also say "unknown"). See
+    references/halt-handoff.md for the three-deaths note this vocabulary models.
+    Schema_version >= 4.
+    """
+    issues: list[Issue] = []
+    if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    state = current_review.get("state")
+    if state not in set(canon.states):
+        return issues  # invalid/missing state owned by check_schema_enums
+    exhaustion = current_review.get("exhaustion")
+    if state != "HALT_EXHAUSTION":
+        if exhaustion is not None:
+            issues.append(
+                Issue(
+                    "G45",
+                    f"state={state} requires exhaustion=null; the record is scoped to "
+                    f"HALT_EXHAUSTION",
+                )
+            )
+        return issues
+    if exhaustion is None:
+        issues.append(Issue("G45", "state=HALT_EXHAUSTION requires a non-null exhaustion record"))
+        return issues
+    if not isinstance(exhaustion, dict):
+        issues.append(
+            Issue("G45", f"exhaustion must be an object; got {type(exhaustion).__name__}")
+        )
+        return issues
+
+    extra_keys = set(exhaustion) - set(_G45_REQUIRED_KEYS)
+    if extra_keys:
+        issues.append(
+            Issue(
+                "G45",
+                f"exhaustion has unexpected key(s) {sorted(extra_keys)}; only "
+                f"{_G45_REQUIRED_KEYS} are legal",
+            )
+        )
+    for key in _G45_REQUIRED_KEYS:
+        value = exhaustion.get(key)
+        if not (isinstance(value, str) and value.strip()):
+            issues.append(Issue("G45", f"exhaustion.{key} must be a non-empty string"))
+
+    kind = exhaustion.get("kind")
+    if isinstance(kind, str) and kind.strip() and kind not in set(canon.exhaustion_kinds):
+        issues.append(
+            Issue(
+                "G45",
+                f"exhaustion.kind {kind!r} not in canon {sorted(canon.exhaustion_kinds)}",
+            )
+        )
+    detection_mode = exhaustion.get("detection_mode")
+    if (
+        isinstance(detection_mode, str)
+        and detection_mode.strip()
+        and detection_mode not in set(canon.detection_modes)
+    ):
+        issues.append(
+            Issue(
+                "G45",
+                f"exhaustion.detection_mode {detection_mode!r} not in canon "
+                f"{sorted(canon.detection_modes)}",
+            )
+        )
+    if detection_mode == "preventive_step_budget" and kind is not None and kind != "unknown":
+        issues.append(
+            Issue(
+                "G45",
+                f"exhaustion.detection_mode='preventive_step_budget' cannot claim "
+                f"kind={kind!r}; a preventive step-budget checkpoint cannot tell context "
+                f"pressure from a spend limit from any other cause, so kind must be "
+                f"'unknown'",
             )
         )
     return issues

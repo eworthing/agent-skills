@@ -36,6 +36,8 @@ class Canon:
     risk_evidence_verifications: tuple[str, ...]
     match_kinds: tuple[str, ...]
     residual_blocker_kinds: tuple[str, ...]
+    exhaustion_kinds: tuple[str, ...]
+    detection_modes: tuple[str, ...]
     validation_gates: Mapping[str, str]
     # Extended enums that are useful to validators but not common enough to
     # promote into first-class Canon fields live in .extra.
@@ -161,6 +163,12 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         "residual_blocker_kinds",
         canon_dir / "residual-blocker-kinds.toml",
     )
+    exhaustion_kinds_path = canon_dir / "exhaustion-kinds.toml"
+    exhaustion_kinds_data = _load_toml(exhaustion_kinds_path)
+    exhaustion_kinds = _require_list(
+        exhaustion_kinds_data, "exhaustion_kinds", exhaustion_kinds_path
+    )
+    detection_modes = _require_list(exhaustion_kinds_data, "detection_modes", exhaustion_kinds_path)
 
     gates_data = _load_toml(canon_dir / "validation-gates.toml")
     if not isinstance(gates_data, dict) or "validation_gates" not in gates_data:
@@ -227,6 +235,8 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         risk_evidence_verifications=risk_evidence_verifications,
         match_kinds=match_kinds,
         residual_blocker_kinds=residual_blocker_kinds,
+        exhaustion_kinds=exhaustion_kinds,
+        detection_modes=detection_modes,
         validation_gates=MappingProxyType(gates_map),
         extra=MappingProxyType(extra),
     )
@@ -258,6 +268,8 @@ if __name__ == "__main__":
     print(
         f"residual_blocker_kinds ({len(canon.residual_blocker_kinds)}): {', '.join(canon.residual_blocker_kinds)}"
     )
+    print(f"exhaustion_kinds ({len(canon.exhaustion_kinds)}): {', '.join(canon.exhaustion_kinds)}")
+    print(f"detection_modes ({len(canon.detection_modes)}): {', '.join(canon.detection_modes)}")
     print(
         f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}"
     )

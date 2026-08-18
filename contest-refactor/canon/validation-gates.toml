@@ -177,3 +177,7 @@ title = "Convergence-pass coverage — a repeated clean must propose anew (loop 
 [[validation_gates]]
 id = "G44"
 title = "Credential quarantine — persistence sinks scanned for hardcoded-secret shapes (plain + base64 + concat-split); fails closed, never reproduces the value"
+
+[[validation_gates]]
+id = "G45"
+title = "Exhaustion halt record shape + detection↔kind honesty coupling (schema_version >= 4)"

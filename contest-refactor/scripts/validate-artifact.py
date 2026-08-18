@@ -55,6 +55,7 @@ from _artifact_halt import (  # noqa: E402
     check_g35_halt_handoff_shape,
     check_g36_required_state,
     check_g38_premium_model_budget_guard,
+    check_g45_exhaustion_record,
     check_halt_success_gating,
 )
 from _artifact_history import (  # noqa: E402
@@ -153,6 +154,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g36_required_state(current_review, canon))
     issues.extend(check_g37_terminal_residual_accounting(current_review))
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
+    issues.extend(check_g45_exhaustion_record(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
     issues.extend(check_g41_cap_loop_executed(current_review))

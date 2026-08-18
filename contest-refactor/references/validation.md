@@ -145,8 +145,8 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
 - [ ] **G34 HALT-tail emit invariants (pre-emit, schema_version >= 3)** — *Applies only when `state ∈ canon.states`; an invalid/missing `state` is owned by the schema-enum check, not G34.* Enforces the **presence** half of rules #11/#17/#18 by state (bidirectional — required-when AND null-otherwise):
   - **`halt_subtype` (rule #17):** non-null **iff** `state == HALT_STAGNATION`; null for every other state. Membership (`∈ canon.halt_subtypes`) stays with the schema-enum check — G34 does not re-check it.
-  - **`unresolved_reason` (rule #11):** non-null **iff** `state ∈ {HALT_STAGNATION, HALT_LOOP_CAP}`; null otherwise.
-  - **`halt_handoff` presence (rule #18):** non-null **iff** `state ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP}` (and `HALT_DRY_RUN` at schema_version >= 3); null for `CONTINUE` and `HALT_SUCCESS_candidate` (the non-terminal candidate is a pause for the main-agent challenge, not a user-facing halt). G34 checks handoff **presence only**; the rule #18 handoff *shape* (`text` / `expected_actions[]` / `match_kind`) is a separate, currently-unenforced rule.
+  - **`unresolved_reason` (rule #11):** non-null **iff** `state ∈ {HALT_STAGNATION, HALT_LOOP_CAP, HALT_EXHAUSTION}`; null otherwise.
+  - **`halt_handoff` presence (rule #18):** non-null **iff** `state ∈ {HALT_SUCCESS, HALT_STAGNATION, HALT_LOOP_CAP, HALT_EXHAUSTION}` (and `HALT_DRY_RUN` at schema_version >= 3); null for `CONTINUE` and `HALT_SUCCESS_candidate` (the non-terminal candidate is a pause for the main-agent challenge, not a user-facing halt). G34 checks handoff **presence only**; the rule #18 handoff *shape* (`text` / `expected_actions[]` / `match_kind`) is a separate, currently-unenforced rule. `HALT_EXHAUSTION` (backlog item 17) is a sibling of `HALT_LOOP_CAP` — both are "ran out of a budget" — not a `halt_subtype`, which stays scoped to `HALT_STAGNATION`'s rubric-progress meaning; see `canon/states.toml`'s header comment.
 
   Run G34 at Step 1 emit (artifact write). Failure → set the missing field, or null the forbidden one, to match the per-state contract.
 
@@ -158,7 +158,7 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   Run G36 at Step 1 emit (artifact write). Failure → set `state` to the canon-valid value for the loop's outcome.
 
-- [ ] **G37 Terminal residual accounting — no sub-9.5 dimension stranded (pre-emit, schema_version >= 4)** — *Mechanizes the Residual Accounting Pass (the G23 discipline) at HALT — G23 itself was never enforced in code.* Trigger: `state ∈ {HALT_LOOP_CAP, HALT_STAGNATION}` — **every subtype, any backlog**. At those terminals every dimension scoring `< 9.5` must be accounted for by exactly one of:
+- [ ] **G37 Terminal residual accounting — no sub-9.5 dimension stranded (pre-emit, schema_version >= 4)** — *Mechanizes the Residual Accounting Pass (the G23 discipline) at HALT — G23 itself was never enforced in code.* Trigger: `state ∈ {HALT_LOOP_CAP, HALT_STAGNATION, HALT_EXHAUSTION}` — **every subtype, any backlog**. A run that dies of exhaustion strands its sub-9.5 dimensions exactly like a cap halt does — running out of budget is not itself an account for the gap. At those terminals every dimension scoring `< 9.5` must be accounted for by exactly one of:
   - **(a)** a `backlog[]` item whose `score_impact` names it — there is queued work for that dimension; or
   - **(c)** `residual_blocker_kind == "structural_anchor_unmet"` — a named structural ceiling.
 
@@ -211,6 +211,14 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 - [ ] **G44 Credential quarantine (pre-emit, unconditional — every schema_version, every state)** — every persistence sink (`CURRENT_REVIEW.md`, `CURRENT_REVIEW.json`, `REVIEW_HISTORY.md`, `REVIEW_HISTORY.json`, `findings_registry.json`) is scanned for credential-shaped values (AWS `AKIA…`, GitHub `ghp_`/`gho_`, Slack `xoxb-`/`xoxp-`, PEM headers, a proximity-scoped AWS secret-key heuristic, generic `api_key: "…"`), plus the same patterns re-checked against base64-decoded and `+`-concatenation-joined text — the two named transformations, nothing beyond them. Mechanical backstop for `method.md`'s **Credential redaction** rule: that rule says how to *write* evidence about a credential; G44 catches the value that made it into a sink anyway.
 
   **Fails closed, never reproduces the value.** A hit blocks convergence. The report names sink + line + credential TYPE + pattern name (`[G44-hit type=<type> sink=<file>:<line>]`) and never the matched text, anywhere. Quarantine is non-destructive — the artifact stays on disk; the report *is* the record. Patterns are precision-tuned for near-zero FP on prose that names a type without quoting it; per-pattern notes live in `scripts/_artifact_credentials.py`.
+
+- [ ] **G45 Exhaustion halt record shape + detection↔kind honesty coupling (pre-emit, schema_version >= 4)** — *Applies only when `state == HALT_EXHAUSTION`; `exhaustion` must be null for every other state.* `exhaustion` is a required object carrying exactly three non-empty-string keys: `kind ∈ canon/exhaustion-kinds.toml exhaustion_kinds`, `detection_mode ∈ canon/exhaustion-kinds.toml detection_modes`, and `evidence` (what was actually observed, e.g. `"9 Step-2 sub-steps run; held diff spanned 14 files"`). No extra keys; no timestamp field (the artifact already carries loop and dates).
+
+  **The honesty coupling is the point of the gate.** `detection_mode == "preventive_step_budget"` implies `kind == "unknown"` — a preventive step-budget checkpoint cannot tell context pressure from a spend limit from any other cause, so it is forbidden from claiming one. Only `detection_mode == "user_reported"` may name `"context_pressure"` or `"spend_limit"` (it may also say `"unknown"`). See [halt-handoff.md](halt-handoff.md) for the full `HALT_EXHAUSTION` handoff template, the three-deaths note (context pressure / spend limit / process crash), and the atomic-write instruction for the checkpoint.
+
+  `HALT_EXHAUSTION` also requires `unresolved_reason` and `halt_handoff` (G34, extended) and stays `halt_subtype: null` (it is a sibling of `HALT_LOOP_CAP`, not a rubric-stagnation subtype — see `canon/states.toml`'s header comment). A dimension stranded sub-9.5 at a `HALT_EXHAUSTION` terminal is G37's concern (G37, extended), not G45's.
+
+  Run G45 at Step 1 emit (artifact write). Failure → fix the `exhaustion` object's shape, or drop the overclaimed `kind` to `"unknown"` when `detection_mode` is `"preventive_step_budget"`.
 
 ## Quality Pass (improve if cheap; never block emit)
 
