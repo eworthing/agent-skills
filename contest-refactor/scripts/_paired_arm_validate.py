@@ -25,6 +25,7 @@ from _paired_arm_prereg import (  # noqa: E402
     SKILL_ROOT,
     STUDY_SCENARIOS,
     VALID_ARMS,
+    VALID_ASSERTION_SOURCES,
     VALID_CANDIDATE_OUTPUT_STATUSES,
     VALID_CRITERION_CLASSES,
     VALID_GRADE_OUTCOMES,
@@ -44,16 +45,25 @@ from _paired_arm_prereg import (  # noqa: E402
 
 
 def validate_attempt(
-    attempt: Any, idx: int, canon: _canon.Canon, *, require_grade_status: bool
+    attempt: Any,
+    idx: int,
+    canon: _canon.Canon,
+    *,
+    require_grade_status: bool,
+    scenarios: dict[str, str] | None = None,
 ) -> list[str]:
+    """`scenarios` defaults to the 11 study scenarios. The Phase-2 cost pilot runs on EXCLUDED
+    scenarios and passes its own set, so the pilot exercises this exact attempt validation rather
+    than a parallel implementation of it -- which is the point of a pilot."""
+    scenarios = STUDY_SCENARIOS if scenarios is None else scenarios
     p = f"attempts[{idx}]"
     if not isinstance(attempt, dict):
         return [f"[{p}] not an object"]
     issues: list[str] = []
     add = issues.append
 
-    if attempt.get("scenario_id") not in STUDY_SCENARIOS:
-        add(f"[{p}] scenario_id {attempt.get('scenario_id')!r} not one of the 11 study scenarios")
+    if attempt.get("scenario_id") not in scenarios:
+        add(f"[{p}] scenario_id {attempt.get('scenario_id')!r} not one of {sorted(scenarios)}")
     if attempt.get("arm") not in VALID_ARMS:
         add(f"[{p}] arm {attempt.get('arm')!r} not one of {VALID_ARMS}")
     slot_index, attempt_index = attempt.get("slot_index"), attempt.get("attempt_index")
@@ -128,6 +138,15 @@ def validate_attempt(
                 add(f"[{p}.assertion_results[{j}]] assertion_text missing/empty")
             if a.get("criterion_class") not in VALID_CRITERION_CLASSES:
                 add(f"[{p}.assertion_results[{j}]] criterion_class invalid")
+            if a.get("source") not in VALID_ASSERTION_SOURCES:
+                add(
+                    f"[{p}.assertion_results[{j}]] source must be one of "
+                    f"{VALID_ASSERTION_SOURCES} -- 5 of the 11 study scenarios have zero "
+                    "deterministic assertions, so grade_structural.py's general_checks are the "
+                    "only per-output results that exist before semantic grading; without a "
+                    "source tag a general check and an evals.json assertion share an "
+                    "assertion_index namespace they do not share"
+                )
             if not isinstance(a.get("passed"), bool):
                 add(f"[{p}.assertion_results[{j}]] passed missing/not bool")
 

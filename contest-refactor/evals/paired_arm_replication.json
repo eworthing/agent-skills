@@ -2,7 +2,7 @@
   "schema_version": 1,
   "record_state": "preregistered",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
-  "prereg_sha256": "a49b8782452dfe3a65ef74140730508a8840fe4e078c8d3489a6c40358597541",
+  "prereg_sha256": "60f57023c40c11a1ff80439053e9e92671b08d0beb327a7de65c976dd25a2af8",
   "prereg": {
     "mechanical_rule": "FLAG caught iff (verdict==rejected OR blocks_95==true) AND target dimension_scores < 9.5. TWIN held iff verdict==approved AND blocks_95==false (strict floor).",
     "semantic_rule": "FLAG named-the-defect iff the cross-module/forces defect is named (not a generic score-honesty hold). TWIN held iff the carve-out smell is NOT flagged and not demanded as a fix (score-honesty != restraint miss).",
@@ -116,7 +116,8 @@
       "evals/scenarios/principal-consistency-boundary-flag/scenario.md": "c4135cbe2b778829cc63c4e673504bf5ae3d8967143f13fe77cb162ef89b8612",
       "evals/scenarios/principal-consistency-boundary-restraint/scenario.md": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc",
       "evals/scenarios/principal-abstraction-seam-flag/scenario.md": "b4e35a817f6b81ac71c946fdbcb601dfed8e48b0d91e345f377d81cc1b59453d",
-      "evals/paired_arm_grader_prompt.md": "aa8f630205c3311a20264af9381f1b4df8664bfa885fd0345993f8ca416cd424"
+      "evals/paired_arm_grader_prompt.md": "aa8f630205c3311a20264af9381f1b4df8664bfa885fd0345993f8ca416cd424",
+      "evals/paired_arm_dispatch_envelope.md": "c94a644710b19420b5831a38bb5a8a5da4a6d82e0375aebb013333922678beb0"
     },
     "historical_file_hashes": {
       "evals/principal_baseline.json": "8fb47ee8047024dcbbda8c0d276ca2b48eb782885641381070a2edd8789c71d4",
@@ -693,6 +694,11 @@
         "id": "grading_protocol_frozen_at_phase_2",
         "statement": "The `grading` block -- grader model, frozen grader prompt file + sha256, the three objective ambiguity triggers, the second-grader/third-adjudicator rule, and the label-masking protocol -- was added to this prereg AFTER the Phase-1 freeze commit (8529dea/a6cb85b), during Phase 2, and before any arm was dispatched. Phase 1 shipped only grading_subsample_seed/fraction/size_pairs; the grader itself was unfrozen.",
         "reason": "The plan's Design section requires the grader's model, frozen prompt text, and prompt hash to live in the prereg, and requires the ambiguity triggers and adjudication rule to be frozen there too. Phase 1 omitted them. Amending is legitimate here and only here: no arm has been dispatched and no study output exists, so there is nothing the grading protocol could have been fitted to. Leaving the grader unfrozen until Phase 4 -- after outputs exist -- is precisely the failure the freeze exists to prevent, so deferring would have been the worse choice. Recorded as a declared divergence rather than silently rewritten; the prereg_sha256 re-freeze makes the amendment visible in git history."
+      },
+      {
+        "id": "dispatch_envelope_frozen_at_phase_2",
+        "statement": "The delivered prompt is the frozen task template PLUS a dispatch envelope (evals/paired_arm_dispatch_envelope.md), frozen and hashed here during Phase 2 before any arm was dispatched. Phase 1 froze the templates alone, so the prereg did not fully specify the text a slot actually receives.",
+        "reason": "The templates say `./review-verdict.md`, but a host-dispatched subagent's working directory is the live repository -- the output would have landed in the tree, and the arms would have been pointed at in-repo material paths, which is a signpost to the answer key. Fixing that requires text the template does not carry. Recording the envelope in the prereg rather than in the operational execution.json is deliberate: it is part of the prompt, so it is scientific material, and hiding a prompt component in the operational file would understate what was frozen. Same amendment window as grading_protocol_frozen_at_phase_2: no arm dispatched, no study output in existence."
       }
     ],
     "headline_excluded": [
@@ -768,6 +774,13 @@
         "reporting": "reported as an estimate WITH its denominator stated, never as a population rate. Trigger-selected adjudications outside the subsample are reported as a COUNT and never folded into the rate -- they are a biased sample by construction.",
         "trade": "Doubling every semantic grade would give a cleaner estimate at roughly double the grading cost; the subsample is the deliberate trade, preregistered so it cannot be resized after seeing results."
       }
+    },
+    "dispatch_envelope": {
+      "file": "evals/paired_arm_dispatch_envelope.md",
+      "sha256": "c94a644710b19420b5831a38bb5a8a5da4a6d82e0375aebb013333922678beb0",
+      "purpose": "The delivered prompt for a slot is the frozen task template followed verbatim by this envelope. The envelope carries locational facts only -- where the assigned materials were copied to, and what `./` resolves to -- because a host-dispatched subagent's working directory is the live repository, so the template's `./review-verdict.md` would otherwise write INTO the tree both arms are sandboxed away from.",
+      "symmetry": "Identical text for both arms; the only difference is the {{MATERIAL_PATHS}} list, whose length is the treatment itself (1 file vs 3). It states no criterion, no vocabulary, and no expectation.",
+      "materials_are_copies": "Materials are copied to a scratch directory OUTSIDE the repository and the envelope names those copies. A path pointing into the repo would hand every arm the location of the answer key (evals/evals.json) it is sandboxed from -- the sandbox has to be a fact about what the arm can see, not only an instruction it is asked to obey. The runner verifies each copy's sha256 against material_hashes before dispatch."
     }
   },
   "captured_at": null,

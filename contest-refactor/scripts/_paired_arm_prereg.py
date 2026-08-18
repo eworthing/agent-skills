@@ -33,6 +33,7 @@ VALID_TRIAL_STATUSES = ("valid", "invalid")
 VALID_GRADE_STATUSES = ("graded", "not_applicable")
 VALID_GRADE_STATUS_NA_REASONS = ("superseded", "partial", "exogenous_invalid")
 VALID_CRITERION_CLASSES = ("outcome", "skill_contract", "unclassified")
+VALID_ASSERTION_SOURCES = ("general_check", "evals_assertion")
 VALID_GRADE_OUTCOMES = ("caught", "held", "missed", "over_flagged", "uncertain")
 VALID_EXPECTED_BASELINES = ("miss", "hold")
 
@@ -393,6 +394,7 @@ def check_declared_divergences(prereg: dict) -> list[str]:
         "readme_746_outcome_only",
         "symmetric_vocabulary_instructions",
         "grading_protocol_frozen_at_phase_2",
+        "dispatch_envelope_frozen_at_phase_2",
     }
     missing = required_ids - ids
     if missing:
@@ -494,6 +496,31 @@ def check_grading(prereg: dict) -> list[str]:
     return issues
 
 
+def check_dispatch_envelope(prereg: dict) -> list[str]:
+    """The text a slot actually receives is template + envelope. Freezing only the template would
+    leave the delivered prompt underspecified, so the envelope is cross-pinned the same way the
+    grader prompt is: its own recorded sha256 must agree with the live-verified material_hashes
+    entry, and the block cannot simply be dropped."""
+    env = prereg.get("dispatch_envelope")
+    if not isinstance(env, dict):
+        return ["[dispatch_envelope] missing or not an object"]
+    issues: list[str] = []
+    path, want = env.get("file"), env.get("sha256")
+    if not isinstance(path, str) or not (SKILL_ROOT / path).is_file():
+        issues.append("[dispatch_envelope] file missing or does not resolve to a file")
+    elif prereg.get("material_hashes", {}).get(path) != want:
+        issues.append(
+            "[dispatch_envelope] sha256 does not agree with the material_hashes entry for "
+            f"{path} -- the envelope's freeze hash is recorded twice and they have drifted"
+        )
+    elif not _is_hex64(want):
+        issues.append("[dispatch_envelope] sha256 is not a sha256 hex digest")
+    for field in ("purpose", "symmetry", "materials_are_copies"):
+        if not isinstance(env.get(field), str) or not env[field]:
+            issues.append(f"[dispatch_envelope] {field} missing or empty")
+    return issues
+
+
 def check_arms(prereg: dict) -> list[str]:
     issues: list[str] = []
     if not isinstance(prereg.get("arm_model"), str) or not prereg["arm_model"]:
@@ -526,6 +553,7 @@ def validate_prereg(prereg: Any) -> list[str]:
     issues += check_decision_rules(prereg)
     issues += check_arms(prereg)
     issues += check_grading(prereg)
+    issues += check_dispatch_envelope(prereg)
     issues += check_material_hashes(prereg)
     issues += check_historical_file_hashes(prereg)
     issues += check_frozen_order(prereg)

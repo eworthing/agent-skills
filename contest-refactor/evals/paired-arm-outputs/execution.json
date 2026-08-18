@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "record_kind": "operational",
+  "note": "Operational record for the paired-arm run, append-only from Phase 2. Deliberately SEPARATE from evals/paired_arm_replication.json: that file's prereg is frozen at Phase 1 and cannot absorb values measured afterwards. Nothing here constrains what the experiment means -- only how it is executed. Concurrency, per-pair cost, and the session cap are measurements, not hypotheses.",
+  "host_concurrency": null,
+  "host_concurrency_method": null,
+  "pairs_per_session_cap": null,
+  "measured": {},
+  "pilot": {
+    "purpose": "Phase 2 cost pilot: 4 dispatch slots on 2 of the 3 EXCLUDED twin_defective scenarios. Comparable material, formally outside the corpus, so no study output is inspected before the study is registered. Establishes (1) both material bundles produce parseable verdict JSON, (2) the reconcile -> dispatch -> verify -> commit -> RESUME loop works including a deliberately interrupted pair, (3) measured per-pair and grading cost, (4) the host's actual usable agent concurrency.",
+    "outside_the_study": "These scenario ids are NOT in prereg.study_scenarios, so validate-paired-arm.py rejects them in the study record by construction. Pilot attempts live here and are validated with the same validate_attempt() code path via its `scenarios` parameter -- the pilot tests the shipped validator rather than a parallel implementation of it.",
+    "order_seed": 20260820,
+    "order": [
+      {
+        "pair_id": "pilot-001",
+        "scenario_id": "principal-duplicated-rule-restraint",
+        "rep": 1,
+        "arm_order": [
+          "with_skill",
+          "without_skill"
+        ]
+      },
+      {
+        "pair_id": "pilot-002",
+        "scenario_id": "principal-process-owner-restraint",
+        "rep": 1,
+        "arm_order": [
+          "without_skill",
+          "with_skill"
+        ]
+      }
+    ],
+    "attempts": [],
+    "measurements": {}
+  },
+  "dispatch_log": []
+}

@@ -120,6 +120,7 @@ def ok_attempt(scenario_id: str, arm: str, slot: int, *, graded: bool = False) -
                 "assertion_index": 0,
                 "assertion_text": "names the defect",
                 "criterion_class": "outcome",
+                "source": "evals_assertion",
                 "passed": True,
             },
         ],
@@ -159,6 +160,7 @@ def malformed_attempt(scenario_id: str, arm: str, slot: int) -> dict:
                 "assertion_index": 0,
                 "assertion_text": "names the defect",
                 "criterion_class": "outcome",
+                "source": "evals_assertion",
                 "passed": False,
             },
         ],
@@ -404,6 +406,14 @@ def main() -> int:
         bad["attempts"][0]["verdict_json"] = None
         rc, _, err = _run(tmpdir, "ip_ok_missing_verdict.json", bad)
         _check("ok attempt missing verdict_json -> exit 1", rc == 1, f"got {rc}")
+
+        bad = copy.deepcopy(real)
+        att = ok_attempt("suppression-flag", "with_skill", 1)
+        att["assertion_results"][0].pop("source")
+        bad["record_state"] = "in_progress"
+        bad["attempts"] = [att]
+        rc, _, err = _run(tmpdir, "src_missing.json", bad)
+        _check("assertion_result without a source tag -> exit 1", rc == 1, f"got {rc}")
 
         print("== in_progress: valid+malformed attempt ==")
         rec_malformed = wrap(
