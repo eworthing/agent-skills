@@ -14,6 +14,8 @@ Checks:
 - No obvious secrets in the example config
 - References tree is one level deep (no nested references/)
 - Intra-skill `.md` links from SKILL.md / references resolve (doc-rot guard)
+- evals.json's outcome-classed assertions pass the item-22 tautology screen (undeclared hits
+  fail; see DECLARED_TAUTOLOGY_EXCEPTIONS in scripts/_paired_baseline.py)
 
 Usage:
     python3 scripts/validate-repo.py
@@ -21,6 +23,7 @@ Usage:
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import tomllib
@@ -33,9 +36,14 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import _canon  # type: ignore[import-not-found]  # noqa: E402
+from _paired_baseline import (  # type: ignore[import-not-found]  # noqa: E402
+    screen_criteria,
+    undeclared_tautology_failures,
+)
 
 SKILL_ROOT = SCRIPT_DIR.parent
 REFERENCES_DIR = SKILL_ROOT / "references"
+EVALS_JSON = SKILL_ROOT / "evals" / "evals.json"
 
 EVIDENCE_CHAIN_FILES = [
     "method.md",
@@ -609,6 +617,35 @@ def check_gate_range_freshness(canon: _canon.Canon) -> list[Violation]:
     return violations
 
 
+def check_tautology_screen(canon: _canon.Canon) -> list[Violation]:
+    """Backlog item 22's D3 tautology screen, gated: an undeclared flag fails.
+
+    Runs scripts/_paired_baseline.py's screen_criteria() over the real evals.json corpus
+    (now that the item-22 corpus-classification pass has given every assertion a
+    criterion_class -- see evals/README.md "Criterion classification"). A flag is only a
+    violation if it is NOT in DECLARED_TAUTOLOGY_EXCEPTIONS; a declared one is the screen
+    working as designed (a human adjudicated it) and must never fail the gate. Mirrors
+    check_transition_prose_sync()'s DECLARED_TRANSITION_DIVERGENCES pattern above.
+    """
+    violations: list[Violation] = []
+    if not EVALS_JSON.is_file():
+        return violations
+    cases = json.loads(EVALS_JSON.read_text(encoding="utf-8")).get("evals", [])
+    findings = screen_criteria(cases, canon)
+    for f in undeclared_tautology_failures(findings):
+        violations.append(
+            Violation(
+                "tautology-screen",
+                f"case {f.case_id!r} assertion #{f.assertion_index} is criterion_class "
+                f"'outcome' but its text names skill vocabulary {f.hits!r}: {f.text!r} -- "
+                "reclassify to skill_contract or add a reasoned entry to "
+                "DECLARED_TAUTOLOGY_EXCEPTIONS in scripts/_paired_baseline.py",
+                EVALS_JSON,
+            )
+        )
+    return violations
+
+
 def main() -> int:
     canon = _canon.load_canon(SKILL_ROOT)
     violations: list[Violation] = []
@@ -623,6 +660,7 @@ def main() -> int:
     violations.extend(check_example_config())
     violations.extend(check_references_one_level_deep())
     violations.extend(check_reference_links_resolve())
+    violations.extend(check_tautology_screen(canon))
 
     if violations:
         for v in violations:

@@ -139,6 +139,7 @@
         {
           "text": "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -152,6 +153,7 @@
         {
           "text": "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -170,15 +172,18 @@
         },
         {
           "text": "[discriminating] evidence_demanded names a TSAN run or a focused concurrent/parallel test (Meta-Rule 4)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] States the data race persists \u2014 @unchecked Sendable only silences the Sendable diagnostic; no lock/actor/value semantics added",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "blocking_severity",
@@ -193,6 +198,7 @@
         {
           "text": "[validity] verdict is \"rejected\"",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "verdict",
@@ -203,7 +209,8 @@
         },
         {
           "text": "[validity] Does not treat the green single-config suite as proof the race is fixed",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -219,19 +226,23 @@
       "assertions": [
         {
           "text": "[discriminating] Identifies canImport(UIKit) is true on tvOS, so it does not gate the tvOS-absent symbol",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Names #if os(iOS) (os-based gating) as the correct guard rather than canImport",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] evidence_demanded names compiling the affected declared targets (tvOS / the non-iOS targets) per Meta-Rule 4",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] blocks_95 is true; framework_idioms < 9.5; blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "blocks_95",
@@ -258,11 +269,13 @@
         },
         {
           "text": "[discriminating] States the iOS-Simulator-only run cannot catch the tvOS build break",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] Does not accept the dimension at 9.5 on the strength of the passing iOS suite alone",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -279,6 +292,7 @@
         {
           "text": "[restraint] flagged_smells does NOT contain suppression-as-fix (the suppression is compensated)",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -291,15 +305,18 @@
         },
         {
           "text": "[restraint] verdict is not \"rejected\" on account of the @unchecked Sendable conformance (a score-honesty pushback on the Actor's unearned 9.5 \u2014 no named residual per the 9.5+ Threshold rule \u2014 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no concurrency deduction to the @unchecked Sendable conformance; any sub-9.5 score rests on the missing-residual rule, not on the compensated suppression",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes the NSLock serialization + justification + TSAN test as satisfying the safety-suppression carve-out",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -315,19 +332,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag a cross-platform / tvOS compile problem (the guard is #if os(iOS), which is correct)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes the recorded per-target compile evidence satisfies Meta-Rule 4",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for cross-platform reasons; does not demand changing #if os(iOS) to canImport (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no framework_idioms deduction to the #if os(iOS) guard; any sub-9.5 score rests on the missing-residual rule, not on the cross-platform guard",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -343,11 +364,13 @@
       "assertions": [
         {
           "text": "[discriminating] Flags index-based identity (.indices / id: \\.self) on a dynamic/reorderable collection as the problem",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to state_management with a score < 9.5 (not a style nit)",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -361,11 +384,13 @@
         },
         {
           "text": "[discriminating] Recommends stable element identity (ForEach over Identifiable Track / id: \\.id)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -388,19 +413,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag the .indices / id: \\.self usage as unstable collection identity (the content is a static CaseIterable, so the lens carve-out applies)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not name a collection-identity smell or demand ForEach(tabs) / id: \\.id for this static list",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for collection-identity reasons (a score-honesty pushback on the Actor's unearned 9.5 \u2014 no named residual per the 9.5+ Threshold rule \u2014 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no state_management deduction to the .indices usage; any sub-9.5 score rests on the missing-residual rule, not on the static-content .indices",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -416,11 +445,13 @@
       "assertions": [
         {
           "text": "[discriminating] Flags @State seeded from a parent-passed value where continued parent sync is expected (stale value)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps to state_management with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -434,11 +465,13 @@
         },
         {
           "text": "[discriminating] Recommends a non-owning declaration (let / @Binding) instead of @State",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -461,19 +494,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag the @State seeded from currentName as a bug (legitimate local edit draft \u2014 the sheet owns the in-progress edit, no parent sync expected)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not name a passed-value-ownership / stale-state smell or demand let / @Binding for draftName",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for passed-value-ownership reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no state_management deduction to the draft @State; any sub-9.5 score rests on the missing-residual rule, not on the edit-draft pattern",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -489,19 +526,23 @@
       "assertions": [
         {
           "text": "[restraint] Classifies swiftlint:disable line_length as a style/tooling suppression, not a safety-affecting one",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not name suppression-as-fix / fake-clean reward or fail SPT Q4 on the lint disable",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for the line-length suppression (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no simplicity deduction to the lint suppression; any sub-9.5 score rests on the missing-residual rule, not on the style suppression",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -518,6 +559,7 @@
           "text": "[discriminating] verdict is 'rejected' \u2014 the HALT_SUCCESS claim is broken",
           "severity": "Serious deduction",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "verdict",
@@ -528,15 +570,18 @@
         },
         {
           "text": "[discriminating] flagged_smells / finding names the split ownership of selectedTab (three writers: TabView binding, DeepLinkRouter, LoginViewModel), not the 'follows HR-1' compliance text",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] does not accept project-rule (HR-1) compliance as evidence the dimension is clean; treats the residual rationale as fake-clean reward",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] blocks_95 true with blocking_severity 'Serious deduction' or 'Likely disqualifier'",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "blocks_95",
@@ -568,6 +613,7 @@
           "text": "[restraint] verdict is 'approved' or 'conditional' \u2014 the candidate holds",
           "severity": null,
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "verdict",
@@ -581,11 +627,13 @@
         },
         {
           "text": "[restraint] does NOT raise a blocking finding on the 979-LOC LiveMusicKitClient file length",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] if it proposes a file-split, it runs the Simplify Pressure Test and finds the split fails (no manufactured finding)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -601,11 +649,13 @@
       "assertions": [
         {
           "text": "[discriminating] Treats the accepted residual as insufficiently evidenced under aggressive (prose only; no file:line / named constraint / covering test) and requires it be queued rather than accepted",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] blocks_95 is true for concurrency at 9.5 as written (the residual cannot be accepted on bare prose under aggressive)",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -616,15 +666,18 @@
         },
         {
           "text": "[discriminating] evidence_demanded names a concrete source citation (file:line / named language-or-framework constraint / covering test)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] Does not demand a residual_expires date (aggressive raises the evidence bar, not a date requirement)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] Does not move or lower the 9.5 threshold itself \u2014 the pushback is on residual evidence, not the pass boundary",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -640,19 +693,23 @@
       "assertions": [
         {
           "text": "[restraint] Accepts the residual as adequately evidenced under aggressive (named constraint + file:line + covering test); does not require it be queued for evidence reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does NOT demand a residual_expires date for a permanent language-constraint carve-out (the optional-expiry rule is unchanged by the preset)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not flag or reject the cited carve-out merely because the run is aggressive (a score-honesty pushback on an unearned 9.5 would be separate from the evidence rule)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] blocks_95 is not asserted true on the basis of the residual evidence (the citation satisfies aggressive)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -668,15 +725,18 @@
       "assertions": [
         {
           "text": "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps the finding to domain_modeling (or state_management) with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -692,6 +752,7 @@
         {
           "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "blocking_severity",
@@ -706,6 +767,7 @@
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -716,7 +778,8 @@
         },
         {
           "text": "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -732,19 +795,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -760,15 +827,18 @@
       "assertions": [
         {
           "text": "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps the finding to domain_modeling with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -783,6 +853,7 @@
         {
           "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "blocking_severity",
@@ -797,6 +868,7 @@
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -807,7 +879,8 @@
         },
         {
           "text": "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -823,19 +896,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag duplicated business rule (DiscountPolicy.isEligible is the single owner; OrderRepository uses the same static constants)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not name a duplicate-abstractions or multi-writer smell for the domain_modeling dimension on account of the SQL literal",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for cross-module rule duplication (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes that reading DiscountPolicy static constants in a SQL literal is not an independent eligibility expression",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -851,15 +928,18 @@
       "assertions": [
         {
           "text": "[discriminating] Identifies that CheckoutViewModel (presentation layer) sequences three cross-module writes with no process owner",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Names the partial-failure scenario: charge succeeds but finalize throws, leaving an unrecoverable inconsistency (charged card, held seat, no Booking)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps the finding to data_flow (or architecture_quality) with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -875,6 +955,7 @@
         {
           "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "blocking_severity",
@@ -889,6 +970,7 @@
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -899,7 +981,8 @@
         },
         {
           "text": "[validity] Does not accept the passing test suite as proof the partial-failure path is handled",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -915,19 +998,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag missing process owner (PurchaseCoordinator owns the saga and the compensating rollback)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not name a temporal-coupling or hidden-control-flow smell for the data_flow dimension",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for missing-process-owner reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes that ADR-0031 documents the payment-capture reconciliation path; does not demand a full distributed-saga overhaul",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -943,19 +1030,23 @@
       "assertions": [
         {
           "text": "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] Acknowledges the transaction is correct and race-free against current source",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -971,19 +1062,23 @@
       "assertions": [
         {
           "text": "[restraint] Does NOT flag the order+audit transaction: \u00a74 keeps the audit log co-located with no planned split and \u00a76 requires strong consistency, so the atomic boundary is correct under the same roadmap",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not demand the transaction be split or converted to eventual consistency on speculation absent a grounded force",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not invent a roadmap change for the audit log that CONTEXT does not state",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Treats 'cross-entity ACID transaction' as legitimate here rather than a smell in itself",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -999,19 +1094,23 @@
       "assertions": [
         {
           "text": "[discriminating] Recognizes CONTEXT \u00a75 (committed Q4) requires per-region divergence in eligibility/channel/retry/audit that a single send(_:) path cannot host cleanly",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Identifies the seam/abstraction boundary as wrong for the committed change (design-for-change / Parnas: hide what is likely to change), not merely as resolved duplication",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Does not accept architecture_quality at 9.5 despite the present-tense cleanliness, because a grounded committed force shears the seam",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] Acknowledges the unification removes real present-tense duplication and has a single owner",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1027,19 +1126,23 @@
       "assertions": [
         {
           "text": "[restraint] Does NOT flag the single Clock abstraction: \u00a75 states time is uniform with no planned variation, so the unified seam is correct",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not demand speculative generalization (per-region clocks, pluggable time policies) for a variation CONTEXT does not state",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1056,6 +1159,7 @@
         {
           "text": "[discriminating] Flags reservation after suspension / reentrancy across the await (nil-guard before `await`, task stored after)",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -1068,11 +1172,13 @@
         },
         {
           "text": "[discriminating] Identifies the leaked, uncancellable duplicate listener as the consequence",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to concurrency with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -1086,11 +1192,13 @@
         },
         {
           "text": "[discriminating] Recommends storing/reserving the task before the suspension or serializing startup",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -1114,6 +1222,7 @@
         {
           "text": "[restraint] Does not flag the startup path as reservation after suspension",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -1126,15 +1235,18 @@
         },
         {
           "text": "[restraint] Recognizes the task is stored before any `await` (claim before suspension)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for reentrancy reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no concurrency deduction to the reserve-before-suspend startup",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1151,6 +1263,7 @@
         {
           "text": "[discriminating] Flags `currentCatalogID` as write-only / state with no authority (written in start/stop/ownershipLost, never read)",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -1164,11 +1277,13 @@
         },
         {
           "text": "[discriminating] Distinguishes it from `sessionToken`, which has real read sites",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to state_management with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -1182,11 +1297,13 @@
         },
         {
           "text": "[discriminating] Recommends deleting the field and its assignments",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -1210,6 +1327,7 @@
         {
           "text": "[restraint] Does not flag `inFlight` as state with no authority (has a read site and owns coalescing)",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -1222,15 +1340,18 @@
         },
         {
           "text": "[restraint] Recognizes the coalesced caller awaits the shared task, so no failure is swallowed",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for state-with-no-authority reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no state_management deduction to the in-flight registry",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1246,15 +1367,18 @@
       "assertions": [
         {
           "text": "[discriminating] Flags nondeterministic user-visible order from Dictionary iteration after the sort was dropped",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Notes `sortIndex` was the display-order authority now unused",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to data_flow with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -1268,11 +1392,13 @@
         },
         {
           "text": "[discriminating] Recommends restoring a deterministic sort in the projection owner",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -1296,6 +1422,7 @@
         {
           "text": "[restraint] Does not flag the by-name-then-ID projection as unstable shaped output",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -1308,15 +1435,18 @@
         },
         {
           "text": "[restraint] Recognizes the durable tie-breaker yields deterministic order",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for projection-order reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no data_flow deduction to the stable projection order",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1332,19 +1462,23 @@
       "assertions": [
         {
           "text": "[discriminating] Surfaces the hard-coded 300ms magic delay / view-owned prefetch scheduling as a finding",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Names it as workflow/scheduling time in presentation (view owning a scheduling delay for a domain concern)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Recommends a named constant/policy or moving scheduling out of the view",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] flagged_smells is non-empty (the smell is surfaced even if non-blocking)",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "flagged_smells",
@@ -1366,19 +1500,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag the toast auto-dismiss timer (ephemeral UI, canon carve-out)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes no durable/domain clock is owned by the view here",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for view-owned-time reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no deduction to the presentational timer",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1394,15 +1532,18 @@
       "assertions": [
         {
           "text": "[discriminating] Flags a projection offset used as write identity across mismatched collections (active-only view vs active+benched reducer ordering)",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Flags the `movePlayerToTop` index-provenance mix and `?? 0` fabrication",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to data_flow with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -1416,11 +1557,13 @@
         },
         {
           "text": "[discriminating] Recommends ID-addressing or validating the exact active-only ordered slice",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -1443,19 +1586,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag the ID-addressed reorder with ordered-slice validation",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes durable IDs plus a fail-closed stale-slice check",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for workflow-identity reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no data_flow deduction to the validated write authority",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1471,15 +1618,18 @@
       "assertions": [
         {
           "text": "[discriminating] Flags the completion event resolving from ambient `selectedFolderID` instead of the record's captured context",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Notes `SyncRecord` captures no request, enabling wrong-folder application when selection changes",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to state_management with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -1493,11 +1643,13 @@
         },
         {
           "text": "[discriminating] Recommends capturing the request/context on the record and applying completion through it",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -1520,19 +1672,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag record-captured completion resolution",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes selection is used only for new commands, not for existing-record events",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for causal-context reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no state_management deduction to the captured-context path",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     },
@@ -1549,6 +1705,7 @@
         {
           "text": "[discriminating] Flags `durationSeconds` dropped to 0 across all publish paths despite `item.duration` being available (adapter output contract incompleteness)",
           "method": "deterministic",
+          "criterion_class": "skill_contract",
           "check": [
             {
               "field": "flagged_smells",
@@ -1561,11 +1718,13 @@
         },
         {
           "text": "[discriminating] Notes the downstream progress-UI consumer needs the promised fact",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[discriminating] Maps it to data_flow with a score < 9.5",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "dimension_scores",
@@ -1579,11 +1738,13 @@
         },
         {
           "text": "[discriminating] Recommends publishing the item duration in every emission",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[validity] blocks_95 is true for the touched dimension",
           "method": "deterministic",
+          "criterion_class": "outcome",
           "check": [
             {
               "field": "blocks_95",
@@ -1606,19 +1767,23 @@
       "assertions": [
         {
           "text": "[restraint] Does not flag the adapter that publishes the promised `durationSeconds`",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Recognizes every publish path threads the item duration",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] verdict is not \"rejected\" for output-contract reasons",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         },
         {
           "text": "[restraint] Attributes no data_flow deduction to the complete adapter",
-          "method": "semantic"
+          "method": "semantic",
+          "criterion_class": "outcome"
         }
       ]
     }

@@ -224,11 +224,225 @@ def compute_lift(trial: PairedTrial) -> LiftResult | None:
 # DECLARED_TRANSITION_DIVERGENCES (scripts/validate-repo.py). An undeclared flag fails; a
 # declared one passes and stays visible in the findings list.
 
+# (case_id, assertion_index): reason. Populated by the item-22 corpus-classification pass
+# (evals/README.md "Criterion classification"): every evals.json assertion now carries
+# criterion_class, and every resulting outcome-classed lexical hit below is adjudicated here
+# rather than reclassified -- each one names a real severity/dimension/verdict judgment on a
+# required output-contract field (or a coincidental generic-English collision), never a
+# criterion whose ONLY substance is reproducing our own coined vocabulary (those -- the
+# flagged_smells exact-canon-name checks -- were reclassified to skill_contract instead, the
+# other exit D3 names).
 DECLARED_TAUTOLOGY_EXCEPTIONS: dict[tuple[str, int], str] = {
-    # (case_id, assertion_index): reason. Empty today -- see evals/README.md "Criterion
-    # classification": the 165 assertions already in evals.json carry no criterion_class yet
-    # (D6), so screen_criteria() has nothing classed "outcome" to flag against the real corpus
-    # until a future pass classifies them. This dict is where that pass records its calls.
+    ("suppression-flag", 1): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token; thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("suppression-flag", 2): (
+        "evidence_demanded is a required field name; the evidence-sufficiency judgment is generic review diligence, not our vocabulary"
+    ),
+    ("suppression-flag", 3): (
+        "coincidental collision with a canon fix-kind token; here it names the real Swift `Sendable` protocol under review in this scenario's source, not our taxonomy"
+    ),
+    ("suppression-flag", 5): (
+        "verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("crossplat-flag", 2): (
+        "evidence_demanded is a required field name; the evidence-sufficiency judgment is generic review diligence, not our vocabulary"
+    ),
+    ("suppression-restraint", 1): (
+        "verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours; coincidental collision with a canon fix-kind token; here it names the real Swift `Sendable` protocol under review in this scenario's source, not our taxonomy"
+    ),
+    ("suppression-restraint", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field; coincidental collision with a canon fix-kind token; here it names the real Swift `Sendable` protocol under review in this scenario's source, not our taxonomy"
+    ),
+    ("crossplat-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("crossplat-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("identity-flag", 1): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("identity-flag", 3): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("identity-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("identity-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("ownership-flag", 0): (
+        "coincidental collision with an unrelated canon workflow-state token; ordinary English"
+    ),
+    ("ownership-flag", 1): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("ownership-flag", 3): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("ownership-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("ownership-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("style-suppression-restraint", 1): (
+        "names the smell category descriptively for the grading judge's benefit in a restraint check whose behavioral bar is avoiding a false-positive finding -- not a token the candidate must reproduce"
+    ),
+    ("style-suppression-restraint", 2): (
+        "verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("style-suppression-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("halt-challenge-flag", 0): (
+        "HALT_SUCCESS is this scenario's own subject matter (the case prompt itself frames the task as challenging a HALT_SUCCESS claim), not a smell/review-vocabulary reward; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("halt-challenge-flag", 1): (
+        "flagged_smells referenced generically as the field the finding belongs in, not a specific canon smell token"
+    ),
+    ("halt-challenge-flag", 2): (
+        "names the smell category descriptively for the grading judge's benefit in a restraint check whose behavioral bar is avoiding a false-positive finding -- not a token the candidate must reproduce"
+    ),
+    ("halt-challenge-restraint", 0): (
+        "verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("strictness-aggressive-flag", 1): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token; thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("strictness-aggressive-flag", 2): (
+        "evidence_demanded is a required field name; the evidence-sufficiency judgment is generic review diligence, not our vocabulary"
+    ),
+    ("strictness-aggressive-restraint", 0): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name"
+    ),
+    ("strictness-aggressive-restraint", 3): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("principal-invariant-owner-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("principal-invariant-owner-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("principal-invariant-owner-restraint", 1): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("principal-invariant-owner-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("principal-duplicated-rule-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("principal-duplicated-rule-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("principal-duplicated-rule-restraint", 1): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("principal-duplicated-rule-restraint", 2): (
+        "verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("principal-process-owner-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("principal-process-owner-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("principal-process-owner-restraint", 1): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("principal-process-owner-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("principal-consistency-boundary-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field; generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name"
+    ),
+    ("principal-abstraction-seam-flag", 1): (
+        "coincidental collision with an unrelated canon finding-status token; ordinary English"
+    ),
+    ("principal-abstraction-seam-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("reentrancy-reserve-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("reentrancy-reserve-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("reentrancy-reserve-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("reentrancy-reserve-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("write-only-state-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("write-only-state-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("write-only-state-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours; names the smell category descriptively for the grading judge's benefit in a restraint check whose behavioral bar is avoiding a false-positive finding -- not a token the candidate must reproduce"
+    ),
+    ("write-only-state-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("projection-order-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("projection-order-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("projection-order-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("projection-order-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("view-owned-time-flag", 3): (
+        "flagged_smells referenced generically as the field the finding belongs in, not a specific canon smell token"
+    ),
+    ("view-owned-time-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("stable-workflow-identity-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("stable-workflow-identity-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("stable-workflow-identity-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("stable-workflow-identity-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("causal-runtime-context-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("causal-runtime-context-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("causal-runtime-context-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("causal-runtime-context-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("adapter-output-contract-flag", 2): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
+    ("adapter-output-contract-flag", 4): (
+        "blocks_95 is a required contract field naming whether a finding blocks the touched dimension's 9.5 bar, not a smell vocabulary token"
+    ),
+    ("adapter-output-contract-restraint", 2): (
+        "generic English 'reason(s)' coincidentally matches the Layer-3 `reason` field name; verdict's 3-value enum is spelled out verbatim in every case's own prompt (\"approved|rejected|conditional\"); ordinary review vocabulary, not ours"
+    ),
+    ("adapter-output-contract-restraint", 3): (
+        "thresholds a real scorecard dimension's severity (Gap 20's own worked ambiguous example, docs/review-skill-deep-dive-2026-08-17.md:843) -- the judgment is generalizable, the dimension key is the contract's own field"
+    ),
 }
 
 
