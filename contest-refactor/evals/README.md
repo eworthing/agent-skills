@@ -355,6 +355,109 @@ the simplest way to guarantee D6 by construction rather than by convention. The 
 runs — dispatching the current skill against itself, at a real key, enough replicates to
 populate a real `noise_ceiling` — are a separate, batched, LLM-spend sweep, not run here.
 
+### Discriminating-power classification (backlog item 19)
+
+Trial validity says a trial produced a scoreable outcome; paired lift says how big the delta
+was; the A/A floor says whether that delta is noise. None of the three says whether a *case*
+was ever capable of showing a difference in the first place. Gap 17
+(`docs/review-skill-deep-dive-2026-08-17.md:772`) names the missing screen: Anthropic's own
+analyzer classifies every assertion by discrimination pattern across runs —
+always-pass-both, always-fail-both, pass-with-fail-without (value),
+**fail-with-skill-but-pass-without (the skill may be hurting)**, high-variance (flaky). We had
+five eval layers and no test that any case discriminates, and the fourth category had no
+detector anywhere in this suite — the exact gap item 22's signed, unfloored `delta` and item
+20's two-sided `alpha` both exist to let be seen at all. `scripts/_discriminating_power.py` is
+the implementation; `scripts/_discriminating_power_selftest.py` proves every rule below against
+constructed records — per this item's scope, no development corpus has actually been fit yet
+(see "Scope" below).
+
+**Two review corrections make this the item where selection bias gets introduced if built
+carelessly, so they are mechanically enforced, not prose.**
+
+*Discrimination is stochastic (D3).* A case is classified from **repeated paired deltas against
+the A/A floor** — never from one pass/fail observation. `classify_case()` refuses (category
+`"unclassifiable"`) below `MIN_REPS_FOR_CLASSIFICATION` (2) reps, and refuses again if no A/A
+floor is on file for the current key — calling `_noise_floor.lookup_floor()` directly rather
+than reimplementing item 20's own absence rule. Every rep is reduced to a McNemar-shaped count
+via item 20's `mcnemar_counts()` (reused here at a different grain: one case's own reps against
+each other, not many cases' aggregated rows), and the five categories fall out of that count:
+
+- `a == n_reps` (every rep: both arms pass) → **`always_pass_both`**
+- `d == n_reps` (every rep: both arms fail) → **`always_fail_both`**
+- no discordant reps but the arms never settle into one pattern (`a`, `d` both `< n_reps`) →
+  **`high_variance`** (concordant flakiness)
+- discordant reps exist; `consistency = max(b, c) / (b + c)` measures how much they agree on
+  which arm wins. Below the fitted `min_direction_consistency` → **`high_variance`** (the reps
+  disagree with each other, which is what "flaky" means). At or above it, the signed
+  `observed_effect = (b − c) / n_reps` is compared against the measured A/A `noise_ceiling` for
+  the key: not exceeding it is **still** `"high_variance"` — a consistent-looking swing that
+  doesn't clear the floor a byte-identical A/A run already produces is indistinguishable from
+  that noise. Exceeding it yields **`pass_with_fail_without`** (`b ≥ c`, the skill helps) or
+  **`fail_with_skill_but_pass_without`** (`c > b`) — Gap 17's own highest-value output, and the
+  one category this suite could not previously see at all.
+
+*Always-pass cases that encode absolute contracts are not pruned (D4).* A regression that must
+never fire, a schema that must always validate, stays in the corpus — it is excluded from lift
+claims but never deleted. This is `case_kind` on `_paired_baseline.PairedTrial`
+(`"lift_eligible"` | `"contract"`, added by this item): `compute_lift()` — the one choke point
+every `PairedTrial` passes through to become a `LiftResult` — returns `None` unconditionally for
+a `"contract"`-kind trial, structurally, not by a convention a caller could route around. The
+gate lives in `_paired_baseline.py` rather than in this item's own module for exactly that
+reason: putting it anywhere else would leave a path that skips it. Proven bidirectionally in the
+selftest: byte-identical arms produce a real `LiftResult` under the default `case_kind`, and
+`None` under `case_kind="contract"` — the only variable that changed. `classify_case()` also
+routes a `"contract"`-kind `SplitReps` to a sixth, non-category status (`"contract"`, alongside
+the refusal status `"unclassifiable"`) rather than ever assigning it one of the five Anthropic
+categories — an absolute-contract case's discrimination pattern is not a question a contract
+exists to answer.
+
+**Two further corrections, from a second review pass, are what this item's selftest exists to
+guard against.**
+
+*D1 — fitted only on development; retrospective on validation/holdout; never excludes.* The
+screen must never select the eval sets by their own observed treatment response — its rule is
+designed on development outcomes only, and on validation and holdout it only *classifies* cases
+after the fact, without changing what counts toward a lift claim, or the benchmark becomes
+circular. Three mechanical consequences:
+
+- `fit_discrimination_rule()` is the **only** function that reads case outcomes to produce a
+  `DiscriminationRule` (its single free parameter, `min_direction_consistency`, fit as the
+  median per-case direction-consistency across development cases that showed any discordance
+  at all). It raises `ValueError` — naming the offending `split` and `case_id` — if handed a
+  record whose `split` isn't `"development"`. It returns `None`, never a hardcoded fallback,
+  when there is nothing to fit from (no records, or zero development cases that ever
+  disagreed with themselves) — the same D6 posture as item 20's empty `noise_floor.json`.
+- `classify_case()` / `classify_corpus()` place no split restriction of their own —
+  classification runs identically on development, validation, and holdout cases; only *fitting*
+  the rule is development-only.
+- `classify_corpus()` returns exactly one `DiscriminationVerdict` per input `SplitReps`, in
+  input order, and never mutates its input — a label is added to a case, never a reason to drop
+  one. This module ships no "discriminating cases only" filter for a lift computation to
+  accidentally consume; labeling a validation/holdout case is proven, in the selftest, not to
+  change a lift summary (`_noise_floor.aggregate_cases()`) computed over the same
+  `LiftResult`s before and after the classification pass.
+
+*D5 — discrimination is a TREATMENT property, not a GRADER property.* A case useless for
+measuring skill lift can be excellent for detecting judge error, so the judge-alignment suite
+(Layer 3, below) must never be sampled by this module's output. This is enforced **structurally,
+by type**, not documented as a caution: every function here takes `SplitReps`, which wraps
+`LiftResult` — item 22's with-skill/without-skill paired-arm output. The judge-alignment suite's
+grain (`{targeted finding, diff} → verdict JSON`, two reviewer *models* compared against a
+reference verdict) never produces a `LiftResult` at all — there is no with-skill/without-skill
+pair, no `with_outcome_score`/`without_outcome_score`, no signed delta anywhere in that grain.
+Constructing a `LiftResult` from a reviewer-case-shaped record fails at the dataclass
+constructor (missing required fields) before any of this module's logic runs — proven directly
+in the selftest. Nothing here is generic over "any evals.json case"; the narrow typing is the
+enforcement mechanism.
+
+**Scope.** Same posture as items 20 and 21: this item ships the classifier, the split
+discipline, and the contract-suite separation, proven against constructed records only.
+`fit_discrimination_rule()` is never called against a real development corpus here — that needs
+the same batched, LLM-spend sweep item 20's A/A floor is waiting on — so every classification
+this item can actually perform today refuses (`"unclassifiable"`, no rule fit yet) until that
+sweep exists. No number in `_discriminating_power.py` is a placeholder standing in for a future
+measurement.
+
 ## Layer 1 — artifact-rule (`evals.json` #0–#11, `fixtures/`, `artifact-smoke/`)
 
 Does a reviewer correctly apply the skill's **deterministic gate rules** (G1–G31, halt

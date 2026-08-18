@@ -34,6 +34,11 @@ other, by design. Note `required_n_for_power(0.10, 0.05, 0.80) = 778` discordant
 suite's corpus size most honest verdicts will be `inconclusive`, and that is the expected
 result rather than a harness failure.
 
+The same sweep supplies item 19's development-set outcomes. Its classifier ships unfitted and
+refuses to classify without them, so **Tranche 3's instrumentation is complete as code and
+inert as measurement** until this runs — which is the intended state, not a gap: every piece
+refuses rather than substituting a default.
+
 ## Closed sweeps
 
 ### Sweep #1 — closed 2026-08-17

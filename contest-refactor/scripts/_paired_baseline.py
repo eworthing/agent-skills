@@ -66,6 +66,15 @@ from grade_structural import (
 
 CRITERION_CLASSES = ("outcome", "skill_contract")
 
+# Added by backlog item 19 (Gap 17's D4, docs/review-skill-deep-dive-2026-08-17.md:772 --
+# scripts/_discriminating_power.py carries the full rationale). An always-pass case that
+# encodes an absolute contract (a regression that must never fire, a schema that must always
+# validate) is never pruned, but must be structurally unable to enter a lift computation -- not
+# just declared out via a convention a caller could ignore. `compute_lift()` below is the ONE
+# choke point every PairedTrial passes through to become a LiftResult, so the gate lives here,
+# not in item 19's own module: putting it anywhere else would leave a path around it.
+CASE_KINDS = ("lift_eligible", "contract")
+
 
 def criterion_class(assertion: Mapping) -> str:
     """Read an evals.json-shaped assertion's `criterion_class` (D2).
@@ -117,6 +126,17 @@ class PairedTrial:
     case_id: str
     with_arm: ArmResult
     without_arm: ArmResult
+    # D4 of item 19: defaults to "lift_eligible" so every existing call site (this file's own
+    # selftest included) is unaffected. Explicit "contract" is the only way to route a case out
+    # of the lift computation, and compute_lift() below enforces it unconditionally.
+    case_kind: str = "lift_eligible"
+
+    def __post_init__(self) -> None:
+        if self.case_kind not in CASE_KINDS:
+            raise ValueError(
+                f"{self.case_kind!r} is not a case_kind ({'|'.join(CASE_KINDS)}): "
+                f"case {self.case_id!r}"
+            )
 
 
 def score_manipulation_check(arm: ArmResult) -> AssertionResult:
@@ -181,7 +201,15 @@ def compute_lift(trial: PairedTrial) -> LiftResult | None:
     `skill_contract` scores are computed and returned, but never read by this function to
     produce `delta` -- they cannot enter the lift numerator or denominator (D2; proven
     differentially in the selftest).
+
+    Also returns None when `trial.case_kind == "contract"` (item 19, D4) -- a THIRD, distinct
+    reason from the two below: both arms may be perfectly valid, there is simply no lift claim
+    an absolute-contract case is allowed to contribute to. The case itself is never dropped
+    from the corpus; it is scored through a separate contract-suite path
+    (scripts/_discriminating_power.py), never mixed into a lift numerator or denominator.
     """
+    if trial.case_kind == "contract":
+        return None
     if (
         trial.with_arm.validity.status == "invalid"
         or trial.without_arm.validity.status == "invalid"
@@ -507,6 +535,7 @@ def undeclared_tautology_failures(findings: Iterable[TautologyFinding]) -> list[
 
 
 __all__ = [
+    "CASE_KINDS",
     "CRITERION_CLASSES",
     "DECLARED_TAUTOLOGY_EXCEPTIONS",
     "ArmResult",
