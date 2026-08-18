@@ -55,6 +55,9 @@ ARMS = ("with_skill", "without_skill")
 PILOT_SCENARIOS = {
     "principal-duplicated-rule-restraint": "restraint",
     "principal-process-owner-restraint": "restraint",
+    # Added for the lean-dispatch A/B (pilot-003). All three are twin_defective by prior
+    # diagnosis, which is exactly why they are safe to burn: none is in the study corpus.
+    "principal-abstraction-seam-restraint": "restraint",
 }
 
 # grade_structural.py's general checks are the only per-output results that exist before semantic

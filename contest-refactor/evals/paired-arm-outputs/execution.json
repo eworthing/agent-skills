@@ -1205,5 +1205,47 @@
     "grading_costs_more_than_dispatch": "Grading is the larger half. Two causes: the 2.0 calls-per-output multiplier from triggers, and a grader prompt that carries the candidate output plus the answer key plus the assertion set. A design that assumed 110 grading calls would understate grading by about half.",
     "multiplier_caveat": "The 2.0 calls-per-output multiplier CANNOT be extrapolated from this pilot. Both pilot scenarios are twin_defective by prior diagnosis -- exactly the material most likely to produce honest 'uncertain' -- so 3 of 4 slots triggering says more about the pilot's scenarios than about the study's. At a 0% trigger rate grading halves to ~5.2M fresh; at the pilot's rate it is ~10.3M. Budget for the range, do not quote a rate.",
     "variance_note": "Per-call cost is not uniform: grader calls ranged 104k-270k context tokens. Two of eight cost roughly 2.5x the median. A mean-based extrapolation is a central estimate, not a cap."
+  },
+  "cost_model": {
+    "unit": "cost-equivalent base-input tokens",
+    "weights": {
+      "input": 1.0,
+      "cache_write": 1.25,
+      "cache_read": 0.1,
+      "output": 5.0
+    },
+    "why": "Neither figure reported at the end of the pilot was a COST. `fresh` under-weights output (the expensive bucket) and `context_tokens_processed` over-weights cache reads (the cheap one). Weighting the four buckets by their standard relative prices gives one number that can actually be compared between dispatch shapes. The weights are stated because the conclusion depends on them: at these weights OUTPUT dominates, and output is the review itself -- the irreducible part.",
+    "correction": "The Phase-2 report first quoted ~18.5M fresh / ~68.6M context for the study. On this weighting the study is ~44M cost-equivalent tokens, so the fresh figure UNDERSTATED the real cost by roughly 2.4x rather than overstating it."
+  },
+  "lean_dispatch_ab": {
+    "pair": "pilot-003",
+    "scenario": "principal-abstraction-seam-restraint",
+    "what_changed": "The agent is spawned WITHOUT a teammate name, so it is not an addressable teammate and has no summary to send. Prompt, materials, model, and tool set are unchanged -- nothing the arm receives differs, so no prereg amendment was needed and none was made.",
+    "mechanically_confirmed": "Turns dropped 5 -> 3 and tool_uses 4 -> 2/4. The named arms spent turns 3-5 on ToolSearch(select:SendMessage) then a prose summary, i.e. AFTER the verdict was already written. The summary still reaches the host, via the completion notification, at no extra round-trip.",
+    "measured": {
+      "context_processed": {
+        "without_skill": "-47%",
+        "with_skill": "-48%"
+      },
+      "cost_equivalent": {
+        "without_skill": "-1%",
+        "with_skill": "-22%",
+        "pooled_per_slot": "-14%"
+      },
+      "per_slot_cost_equivalent": {
+        "named": 170818,
+        "lean": 146581
+      }
+    },
+    "honest_limits": "n=1 per arm, on a DIFFERENT scenario from the named slots, and per-slot cost varies more than the effect: the two named with_skill slots alone differ by 12% from each other while being the same dispatch shape. The context saving (~47%) is solid because it follows mechanically from removing two turns. The cost saving is a point estimate somewhere around 10-15% with error bars wider than the estimate, and the -1% vs -22% split between arms is not resolvable at this n. Do NOT budget a specific cost saving from this lever.",
+    "recommendation": "Adopt it anyway, but not for the money: it is strictly fewer turns, it removes two failure modes (a ToolSearch that can miss and a SendMessage that can wander), it shrinks transcripts, and it costs nothing scientifically. Treat any cost saving as a rounding-error bonus, not as a reason the study got cheaper."
+  },
+  "study_cost_projection": {
+    "arms_named": 18789957,
+    "arms_lean": 16123907,
+    "grading": 25244909,
+    "total_named": 44034866,
+    "total_lean": 41368816,
+    "dominant_cost": "GRADING, at ~57% of the total -- more than both arms combined. Its driver is grader OUTPUT tokens (8k-21k per call at a 5x weight), which is the judgment being paid for, plus the 2.0 calls-per-output trigger multiplier. Lean dispatch does not touch either. The single largest uncertainty in this projection is the trigger rate, which the pilot cannot estimate because both its scenarios were twin_defective."
   }
 }

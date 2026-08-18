@@ -30,6 +30,14 @@ PROJECTS = Path.home() / ".claude" / "projects"
 
 
 def _transcripts(agent_name: str) -> list[Path]:
+    """A NAMED subagent lands under the project's subagents/ dir. An UNNAMED one is dispatched as
+    an async task and its transcript is the task output file instead -- so a name that looks like
+    a path is treated as one. Lean dispatch (no teammate name) is the cheaper mode, and it must
+    not cost us per-pair spend accountability: the plan requires spend committed as the run
+    proceeds, not reconstructed at the end."""
+    if "/" in agent_name:
+        path = Path(agent_name)
+        return [path] if path.is_file() else []
     return sorted(PROJECTS.glob(f"*/*/subagents/agent-a{agent_name}-*.jsonl"))
 
 
