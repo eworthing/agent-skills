@@ -1721,5 +1721,43 @@
     "the_finding_that_actually_decides_it": "BOTH of Haiku's differences ran the SAME DIRECTION: `over_flagged` where Sonnet said `held`. That is precisely the failure mode this repo already measured at ~5M tokens in the reviewer tier experiment -- 'haiku over-rejects legitimate refactors (GATE B fail); never false-approves (GATE A clean)'. Two independent experiments, two different ROLES (reviewing code, grading restraint), same directional bias. A raw agreement count of 2/4 is noise at this n; a replicated DIRECTION is not.",
     "consequence": "Disqualifying for unsupervised restraint grading: Decision 4 is a veto and reads the 4 restraint twins on exactly the semantic tier where the bias lands. A grader biased toward `over_flagged` would manufacture restraint regressions and veto programme retargeting on an artifact. But the SAME evidence says Haiku's LENIENT verdicts are trustworthy -- it never false-approves -- which is what makes an asymmetric cascade sound rather than hopeful.",
     "arms_stay_sonnet": "Unrelated to cost and not negotiable on cost grounds. The mechanical rule is 'caught iff (verdict==rejected OR blocks_95) AND target dimension < 9.5'. A model that over-rejects scores as CATCHING flags for free, and over-flags the twins. Haiku arms would ceiling the flag half and floor the twin half in BOTH arms at once -- less money to measure nothing."
+  },
+  "rung_1": {
+    "scenario": "principal-consistency-boundary-flag",
+    "pairs": 5,
+    "slots": 10,
+    "result": {
+      "mechanical": {
+        "with_skill": "5/5 caught",
+        "without_skill": "5/5 caught"
+      },
+      "semantic": {
+        "with_skill": "5/5 caught",
+        "without_skill": "5/5 caught"
+      },
+      "reading": "Both arms caught the defect on every rep, on the scenario prior measurement names as one of the three HARDEST cross-module flags. The bare arm named CONTEXT §4 and §6 unaided in all five reps. Under decision_rules.decision_1 this scenario contributes to the 'both arms >=4/5' row, NOT to the 'gap located' row.",
+      "what_this_does_not_license": "Decision 1 requires all 4 headline-eligible principal flags. One scenario cannot return 'no recall gap detected' and cannot license any programme statement -- Decision 3 is a conjunction across both layers. The binding language rule holds: this is NO LIFT DETECTED AT THIS N on one scenario, never 'the skill adds nothing'.",
+      "observed_but_not_a_decision_input": "Severity calibration differed: without_skill returned `rejected` in 4/5 reps with data_flow 3-6; with_skill returned `conditional` in 5/5 with data_flow 6.5-8. Same catch, different severity. No decision rule reads this and K=5 cannot separate it from noise, so it is recorded as an observation only."
+    },
+    "cost": {
+      "arms_10_slots": 1279830,
+      "spec_author_1_call": 183136,
+      "haiku_grades_10_calls": 568900,
+      "sonnet_escalations_8_calls": 960869,
+      "total": 2992734,
+      "projected": 2500000,
+      "unit": "cost-equivalent base tokens (input 1x, cache-write 1.25x, cache-read 0.1x, output 5x)"
+    },
+    "cascade_verdict": {
+      "outcome": "FAILED ON COST -- 8 of 10 outputs escalated; grading cost +49% versus sonnet-only",
+      "escalation_causes": {
+        "malformed_json": "3 of 10 haiku replies did not parse (unescaped quotes inside evidence_span)",
+        "no_cited_span_trigger": "5 of 10 fired on spans joined with an ellipsis",
+        "genuine_judgment_escalation": "0"
+      },
+      "attribution": "NOT a judgment failure. Every haiku grade that parsed reached the same tier as the sonnet grade that replaced it (7/7 on semantic_grade). One per-assertion difference appeared (assertion 3 on OUT-e741b552001b: haiku true, sonnet false) and the spec absorbed it without flipping the tier, which is what spec-first grading is for. Both escalation causes are defects in MY frozen harness contract -- a JSON schema that demands verbatim quotes inside JSON strings, and a span check that rejects standard elided quotation.",
+      "why_not_fixed_mid_run": "The amendment window closed at first study dispatch. Loosening a validity check after watching it fire is exactly the move the freeze exists to prevent, and the over-firing is in the SAFE direction -- it escalates to the stronger grader, so it costs money and biases no result. Both fixes belong to the next preregistration: accept ellipsis-joined spans fragment-wise, and carry evidence spans outside the JSON payload so quoting cannot corrupt the envelope."
+    },
+    "process_failure": "One of the ten grades (OUT-411ccc908d3b) was never dispatched -- a batch of five went out as four. It surfaced only because the tally script crashed on the missing file. A more forgiving tally would have reported rung 1 on nine outputs with nothing flagging the gap. Dispatch completeness must be asserted against the blind map before any tally runs, not discovered by a crash."
   }
 }

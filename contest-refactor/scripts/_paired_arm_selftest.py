@@ -202,7 +202,7 @@ def main() -> int:
         tmpdir = Path(td)
 
         # ==== GREEN: the real committed record ======================================
-        print("== GREEN: real committed record (record_state=preregistered) ==")
+        print("== GREEN: real committed record, whatever state it is in ==")
         rc, out, err = _run(tmpdir, "green.json", real)
         _check("exit code 0", rc == 0, f"got {rc}: {err[:300]}")
         _check("stdout reports OK", "OK" in out, out.strip())
@@ -235,13 +235,20 @@ def main() -> int:
         _check("unknown record_state -> exit 1", rc == 1, f"got {rc}")
 
         print("== RED: preregistered attempts/per_scenario must be empty ==")
+        # record_state is PINNED here rather than inherited from the live record. These fixtures
+        # test the `preregistered` branch; once the study actually starts, the real record moves to
+        # `in_progress` and an inherited state would route them to a different branch that happily
+        # accepts what they are asserting must be rejected -- coverage silently degrading as the
+        # run progresses, which is the worst way for a check to die.
         bad = copy.deepcopy(real)
+        bad["record_state"] = "preregistered"
         bad["attempts"] = [{"scenario_id": "x"}]
         rc, _, err = _run(tmpdir, "attempts_nonempty.json", bad)
         _check("non-empty attempts at preregistered -> exit 1", rc == 1, f"got {rc}")
         _check("names the violation", "attempts must be empty" in err, err[:200])
 
         bad = copy.deepcopy(real)
+        bad["record_state"] = "preregistered"
         bad["per_scenario"] = {"x": {}}
         rc, _, err = _run(tmpdir, "per_scenario_nonempty.json", bad)
         _check("non-empty per_scenario at preregistered -> exit 1", rc == 1, f"got {rc}")

@@ -1,0 +1,72 @@
+{
+  "OUT-1889c4152939": {
+    "pair": "pair-016",
+    "arm": "with_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-016/attempt1/with_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-1889c4152939.prompt.md"
+  },
+  "OUT-e741b552001b": {
+    "pair": "pair-016",
+    "arm": "without_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-016/attempt1/without_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-e741b552001b.prompt.md"
+  },
+  "OUT-ca3452adf4cd": {
+    "pair": "pair-022",
+    "arm": "with_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-022/attempt1/with_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-ca3452adf4cd.prompt.md"
+  },
+  "OUT-f00a90e03fd9": {
+    "pair": "pair-022",
+    "arm": "without_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-022/attempt1/without_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-f00a90e03fd9.prompt.md"
+  },
+  "OUT-11fb11851b92": {
+    "pair": "pair-031",
+    "arm": "with_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-031/attempt1/with_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-11fb11851b92.prompt.md"
+  },
+  "OUT-882fd2b274b6": {
+    "pair": "pair-031",
+    "arm": "without_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-031/attempt1/without_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-882fd2b274b6.prompt.md"
+  },
+  "OUT-28d405f7e006": {
+    "pair": "pair-041",
+    "arm": "with_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-041/attempt1/with_skill/review-verdict.md",
+    "in_subsample": true,
+    "prompt": "/tmp/paired-arm/grading/OUT-28d405f7e006.prompt.md"
+  },
+  "OUT-00bd72c7bebf": {
+    "pair": "pair-041",
+    "arm": "without_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-041/attempt1/without_skill/review-verdict.md",
+    "in_subsample": true,
+    "prompt": "/tmp/paired-arm/grading/OUT-00bd72c7bebf.prompt.md"
+  },
+  "OUT-06fb8e56c581": {
+    "pair": "pair-047",
+    "arm": "with_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-047/attempt1/with_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-06fb8e56c581.prompt.md"
+  },
+  "OUT-411ccc908d3b": {
+    "pair": "pair-047",
+    "arm": "without_skill",
+    "candidate": "evals/paired-arm-outputs/study/pair-047/attempt1/without_skill/review-verdict.md",
+    "in_subsample": false,
+    "prompt": "/tmp/paired-arm/grading/OUT-411ccc908d3b.prompt.md"
+  }
+}
