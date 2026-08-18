@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "record_state": "preregistered",
+  "record_state": "in_progress",
   "note": "Paired with_skill / without_skill replication on the principal + core Layer-2 flags (11 scenarios x 5 reps x 2 arms = 55 pairs / 110 slots). Phase 1: prereg + validator only, committed before any dispatch -- attempts and per_scenario are empty by design. See the plan for full design/rationale; evals/README.md Layer-2 subsection for the corpus context; scripts/validate-paired-arm.py for the record_state lifecycle this file is validated against.",
   "prereg_sha256": "b2b95214f30cfe65f939d1d19842860a824616b8c0bdf940afc617467c176448",
   "prereg": {
@@ -883,5 +883,245 @@
   },
   "captured_at": null,
   "per_scenario": {},
-  "attempts": []
+  "attempts": [
+    {
+      "pair_id": "pair-016",
+      "scenario_id": "principal-consistency-boundary-flag",
+      "arm": "with_skill",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "blocking_severity": "Serious deduction",
+        "dimension_scores": {
+          "data_flow": 8
+        },
+        "flagged_smells": [
+          "persistence leakage",
+          "temporal coupling"
+        ],
+        "evidence_demanded": [
+          "Explicit disclosure in loop_result of the conflict with CONTEXT.md §4 (committed roadmap: Inventory moves to its own InventoryService/datastore next quarter) and a stated disposition for this transaction post-split",
+          "file:line citation of the decrementInventory logic showing how oversell is actually prevented, since that is the invariant CONTEXT.md §6 requires, not order/inventory atomicity",
+          "A named test exercising concurrent placeOrder calls against the same inventory item asserting no oversell, not just an aggregate 2,488-test pass count"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-consistency-boundary-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['persistence leakage', 'temporal coupling']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
+          "[validity] Acknowledges the transaction is correct and race-free against current source"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['persistence leakage', 'temporal coupling']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-016/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-016",
+      "scenario_id": "principal-consistency-boundary-flag",
+      "arm": "without_skill",
+      "slot_index": 5,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical",
+        "dimension_scores": {
+          "data_flow": 3
+        },
+        "flagged_smells": [
+          "roadmap-conflicting coupling",
+          "stricter-than-spec over-engineering",
+          "wrong-problem-solved (atomicity substituted for oversell prevention)",
+          "green-suite-as-proof without targeted test evidence"
+        ],
+        "evidence_demanded": [
+          "Sign-off from the owner of the §4 InventoryService migration that this transactional coupling is an acceptable interim step, with a stated unwind plan (e.g. outbox/saga) for when Inventory moves to its own datastore",
+          "A concurrency test demonstrating no oversell occurs under N parallel placeOrder calls against the same low-stock item, since transaction wrapping alone does not guarantee this",
+          "The body of decrementInventory (not shown in the diff), confirming an atomic conditional decrement rather than a blind read-then-write, since oversell risk persists inside the transaction otherwise",
+          "Identification of which of the 2,488 passing tests actually exercise the new transaction path or any oversell scenario"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-consistency-boundary-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['roadmap-conflicting coupling', 'stricter-than-spec over-engineering', 'wrong-problem-solved (atomicity substituted for oversell prevention)', 'green-suite-as-proof without targeted test evidence']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
+          "[validity] Acknowledges the transaction is correct and race-free against current source"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['roadmap-conflicting coupling', 'stricter-than-spec over-engineering', 'wrong-problem-solved (atomicity substituted for oversell prevention)', 'green-suite-as-proof without targeted test evidence']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-016/attempt1/without_skill/review-verdict.md"
+    }
+  ]
 }
