@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "description": "Baseline manifest for principal-defect (cross-module / domain-grain) scenarios. Every principal-* scenario directory must be registered here. The selftest scripts/_principal_baseline_selftest.py enforces this contract mechanically. expected_baseline records the PRE-REGISTERED hypothesis; baseline_observed records the ACTUAL measured result (do not rewrite the hypothesis).",
   "thresholds": {
     "recall_target": 0.8,

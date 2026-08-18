@@ -41,6 +41,7 @@ class Canon:
     finding_families: tuple[str, ...]
     effort_levels: tuple[str, ...]
     repair_revalidation_outcomes: tuple[str, ...]
+    invalid_reasons: tuple[str, ...]
     validation_gates: Mapping[str, str]
     # Extended enums that are useful to validators but not common enough to
     # promote into first-class Canon fields live in .extra.
@@ -183,6 +184,21 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         remediation_fields_data, "repair_revalidation_outcomes", remediation_fields_path
     )
 
+    trial_validity_path = canon_dir / "trial-validity.toml"
+    trial_validity_data = _load_toml(trial_validity_path)
+    invalid_reasons = _require_list(trial_validity_data, "invalid_reasons", trial_validity_path)
+    trial_validity_max_invalid_rate_per_arm = trial_validity_data.get("max_invalid_rate_per_arm")
+    trial_validity_max_between_arm_asymmetry = trial_validity_data.get("max_between_arm_asymmetry")
+    if (
+        trial_validity_max_invalid_rate_per_arm is None
+        or trial_validity_max_between_arm_asymmetry is None
+    ):
+        sys.stderr.write(
+            f"error: canon file {trial_validity_path}: missing 'max_invalid_rate_per_arm' or "
+            "'max_between_arm_asymmetry'\n"
+        )
+        sys.exit(2)
+
     gates_data = _load_toml(canon_dir / "validation-gates.toml")
     if not isinstance(gates_data, dict) or "validation_gates" not in gates_data:
         sys.stderr.write(
@@ -233,6 +249,10 @@ def load_canon(skill_root: Path | None = None) -> Canon:
     extra["states_schema_version"] = states_data.get("schema_version", 1)
     extra["transition_guards"] = tuple(states_data.get("guards", ()))
     extra["transitions"] = states_data.get("transitions", {})
+    # Trial-validity void-rule thresholds (backlog item 21, D4): scalars, not enums, so they
+    # live in .extra rather than as typed dataclass fields (see the class docstring above).
+    extra["trial_validity_max_invalid_rate_per_arm"] = trial_validity_max_invalid_rate_per_arm
+    extra["trial_validity_max_between_arm_asymmetry"] = trial_validity_max_between_arm_asymmetry
 
     return Canon(
         states=states,
@@ -253,6 +273,7 @@ def load_canon(skill_root: Path | None = None) -> Canon:
         finding_families=finding_families,
         effort_levels=effort_levels,
         repair_revalidation_outcomes=repair_revalidation_outcomes,
+        invalid_reasons=invalid_reasons,
         validation_gates=MappingProxyType(gates_map),
         extra=MappingProxyType(extra),
     )
@@ -292,6 +313,7 @@ if __name__ == "__main__":
         f"repair_revalidation_outcomes ({len(canon.repair_revalidation_outcomes)}): "
         f"{', '.join(canon.repair_revalidation_outcomes)}"
     )
+    print(f"invalid_reasons ({len(canon.invalid_reasons)}): {', '.join(canon.invalid_reasons)}")
     print(
         f"validation_gates ({len(canon.validation_gates)}): {', '.join(canon.validation_gates.keys())}"
     )

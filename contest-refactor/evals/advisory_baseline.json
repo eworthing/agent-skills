@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "description": "Baseline manifest for advisory-audit scenarios (evals.json #35-#48). Every advisory scenario directory (one of the families below) must be registered here. The selftest scripts/_advisory_baseline_selftest.py enforces this contract mechanically and also cross-checks that every evals/scenarios/* directory is referenced by an evals.json entry (global no-orphan check). expected_baseline records the PRE-REGISTERED hypothesis (flags: miss; restraints: hold); baseline_observed records the ACTUAL measured result (null until a K=5 run is recorded). Do not rewrite the hypothesis after measuring.",
   "families": [
     "reentrancy-reserve",

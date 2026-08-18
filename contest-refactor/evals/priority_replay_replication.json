@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "description": "Raw per-rep outputs from the Tier-1P arms (2026-08-04, model claude-sonnet-5, 15 reps across three arms). Stored because both arms produced NEGATIVE results and a negative result is only re-checkable if the raw reps survive: the summary in priority_replay_baseline.json says the fixtures did not discriminate, and this file is what lets someone disagree with that reading. Includes the discarded first stalled-domain-1 arm, whose fixture shipped no tests \u2014 kept so the invalidation is auditable rather than asserted. Only the backlog, dispositioned findings and the Priority-1 accounting are retained per rep; full finding prose would bloat the repo without adding a re-gradable fact.",
   "prereg_ref": "priority_replay_baseline.json#prereg",
   "attempts": [

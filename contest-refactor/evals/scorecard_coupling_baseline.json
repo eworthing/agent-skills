@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "note": "Layer 6 — scorecard coupling. Measures whether the per-dimension scorecard tracks the source it scores, in BOTH directions: repeatability (same source => same score) and sensitivity (changed source => moved score). Every other eval layer measures a judgment (flag/no-flag, approve/reject, replay equivalence); the scorecard numbers are the skill's headline output and were unmeasured. attempt 0 in each probe is OBSERVATIONAL — harvested from production runs, not a designed replication — and is seeded so the layer starts from real evidence rather than an empty file. Controlled attempts (>= 1) must pin skill_rev, which G19 records as of the commit that added this layer.",
   "prereg": {
     "repeatability": "N >= 3 independent Critic passes over one corpus at a pinned source SHA, fresh context each, no prior artifacts on disk, skill_rev pinned and identical across attempts. Report per-dimension mean, spread, and max pairwise gap. PREDICTION: max pairwise gap <= 1.0 on every dimension. The observational attempt 0 measured 3.0, so a controlled run reproducing >= 2.0 CONFIRMS the defect rather than refuting the design.",

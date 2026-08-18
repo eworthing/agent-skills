@@ -3,6 +3,114 @@
 This directory holds the test material for the skill. It has **two layers** that test
 different things — keep them distinct when reasoning about coverage.
 
+## Trial validity (backlog item 21 — applies to every host-dispatched layer, 2–6)
+
+Every layer past Layer 1 host-dispatches a model and grades what comes back. A trial can fail
+to produce a usable outcome for a reason that has nothing to do with the candidate being graded
+— a rate limit, an expired credential, a harness hang, a verdict file that never got written.
+Scoring that trial as a failing candidate silently poisons the comparison; silently dropping it
+shrinks the denominator (see Layer 3's "no-silent-exclusion contract" below — this section
+extends the same discipline to *outcomes*, not just *registration*). Gap 19
+(`docs/review-skill-deep-dive-2026-08-17.md:822`) names the boundary; this section and
+`canon/trial-validity.toml` / `scripts/_trial_validity.py` are its implementation.
+
+### The taxonomy
+
+A **trial** is one arm/rep execution inside a paired or multi-arm comparison — one case × one
+arm × one rep, whatever grain the layer runs at (reviewer_baseline's case × arm × K; exec_replay's
+arm × K; advisory/principal's no_skill/pre_edit/current arms). Every trial is exactly one of:
+
+- **valid** — the candidate ran and produced a scoreable outcome, whatever that outcome was.
+- **invalid** — the trial's non-outcome was **exogenous**: `canon/trial-validity.toml`'s closed
+  `invalid_reasons` enum — `rate_limited`, `auth_failure`, `infra_timeout`, `artifact_lost`.
+  Scores `null`, never `0`; the trial carries no verdict about the candidate at all.
+- (everything else) — a **counted failure**, graded through the layer's ordinary path exactly
+  like any other outcome. This is not a third `trial_validity` state; it is simply every trial
+  that isn't exogenously invalid.
+
+### The adherence-vs-exogenous boundary, worked
+
+The enum is deliberately narrow. Two examples, side by side, on the *same* kind of harness
+event — a spawned subagent that produces nothing:
+
+- **Exogenous → `invalid` (`artifact_lost`).** `reviewer_baseline_replication.json`'s own
+  description records exactly this, pre-dating this taxonomy: *"the run targeted K=5 × 20
+  cases × 2 arms = 200 reviews but ~65 spawned reviewers idled without writing their verdict
+  file (a harness write-dropout, not a reviewer verdict)."* The reviewer was correctly
+  dispatched with a correct prompt; the harness's own capture path never got a file to read.
+  There is no reviewer judgment to grade — voiding it loses nothing, because nothing about the
+  candidate was ever produced.
+- **Adherence → counted failure, never invalid.** A spawned subagent that *does* write a
+  verdict file, but the file shows it never invoked the skill (the with-skill arm), or shows it
+  invoked the skill anyway (the without-skill arm) — skilllens's own "manipulation check," the
+  design this taxonomy corrects against (deep-dive:829–833). Voiding that trial would erase
+  precisely the failure a trigger eval exists to see: the skill was reachable and didn't get
+  used. It is graded and counted like any other trial. The same rule covers a trial that
+  invoked the skill but skipped a step, produced malformed output, ran away on its own until a
+  wall-clock budget ended it, or blew its spend budget — five adherence/candidate failure modes
+  the canon file's header lists explicitly as unrepresentable, by name, so the boundary can't
+  drift by someone adding a token later that happens to also cover one of them.
+
+### The void rule (mechanical, D4)
+
+A comparison — not a single trial — is **void** when either preregistered, unfitted threshold
+in `canon/trial-validity.toml` is exceeded (strictly greater-than; exactly at a threshold does
+not void):
+
+- **`max_invalid_rate_per_arm = 0.20`** — more than one trial in five lost to exogenous causes
+  in a single arm.
+- **`max_between_arm_asymmetry = 0.10`** — a ten-point-or-more gap between the two arms'
+  invalid rates, evidence the arms aren't failing for the same exogenous reason (e.g. a longer
+  with-skill transcript crossing a shared rate limit more often), which would bias the
+  *surviving* scored trials even though every individual classification was correct.
+
+Both numbers are round and unfitted — there is no measured invalid-trial corpus yet to fit
+against (this item ships vocabulary and mechanism, not a measurement run). Revise only from
+data: tighten if real invalid rates cluster well under the floor, loosen if legitimate infra
+volatility on innocent runs routinely exceeds it. `scripts/_trial_validity.py`'s
+`compute_void_verdict()` computes the verdict from per-arm invalid counts; it does not judge —
+a comparison flagged void is reported, never used for a lift claim.
+
+### The denominator rule (D5)
+
+An invalid trial stays attached to its admitted case. `scripts/_trial_validity.py`'s
+`cases_in_corpus()` is the denominator — every case with at least one recorded trial,
+regardless of that trial's validity — and it is a strictly separate count from
+`scoreable_trials()`, which drops invalid ones. A case whose *every* trial goes invalid still
+appears in `cases_in_corpus()`, reported with zero scoreable trials for that unit (retried under
+a preregistered policy, or marked unscoreable) — never silently removed from the corpus, which
+would recreate the shrinkage Gap 19 exists to prevent. `scripts/_trial_validity_selftest.py`
+proves this directly: it builds a case with only invalid trials and asserts the corpus size is
+unchanged before and after computing the scoreable subset.
+
+### Historical baselines are not back-filled (D3)
+
+`trial_validity` is new. The eight baseline files that already carried a `schema_version` field
+before this item — `advisory_baseline.json`, `advisory_baseline_replication.json`,
+`principal_baseline.json`, `principal_baseline_replication.json`, `reviewer_baseline.json`,
+`reviewer_baseline_replication.json`, `scorecard_coupling_baseline.json`, and
+`priority_replay_replication.json` — had that field bumped from `1` to `2`. The bump touches
+**only** the version number: not one existing rep/attempt/case record in any of those files
+was edited. `schema_version: 2` means *future* records in that file may carry a per-record
+`trial_validity` object (`{"status": "valid"|"invalid", "reason": <enum token>|null}`); it does
+not assert anything about the records already there. Writing `valid: true` onto a run measured
+before this concept existed would be fabrication — asserting an observation nobody made — not a
+retrofit (contrast backlog item 28, where fixtures are *constructed* artifacts and retrofitting
+was correct; measured data is different in kind).
+
+Any reader of these files' historical records must go through
+`scripts/_trial_validity.py`'s `historical_validity(record)`, which returns `"not_recorded"`
+for a record with no `trial_validity` key (or a malformed one) — **never** `"valid"` by
+default. `exec_replay_baseline.json`, `loop_replay_baseline.json`, `priority_replay_baseline.json`,
+and `panel_gate_results.json` were deliberately left without a `schema_version` bump: the first
+three have no `schema_version` field at all today (they key off `layer` instead), and
+retrofitting a new versioning axis onto them is out of scope here — `historical_validity()`'s
+"absent key ⇒ not_recorded" rule already covers them correctly with zero edits. `panel_gate_results.json`
+already has its own discard/exclusion mechanism for G32 panel-certification runs
+(`post_hoc_discard` / `capability_recordable: false`, budget-exhaustion-scoped) that predates
+and is semantically distinct from this taxonomy; conflating the two was judged more likely to
+introduce a mismatch than to help, so it was left alone.
+
 ## Layer 1 — artifact-rule (`evals.json` #0–#11, `fixtures/`, `artifact-smoke/`)
 
 Does a reviewer correctly apply the skill's **deterministic gate rules** (G1–G31, halt

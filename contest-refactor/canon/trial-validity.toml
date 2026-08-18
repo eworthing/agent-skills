@@ -1,0 +1,80 @@
+# Canonical trial-validity vocabulary for the paired skill-lift harness (backlog item 21,
+# Gap 19: docs/review-skill-deep-dive-2026-08-17.md:822). Generalizes the two-way exit-code
+# split in scripts/exec_replay_grade.py (structural/safety FAIL vs missing-inputs FAIL, folded
+# into one exit code today -- see docs/review-skill-deep-dive-2026-08-17.md:686) into a
+# suite-wide, closed vocabulary: was a trial's OUTCOME a measurement of the candidate at all?
+#
+# The boundary, from review (Gap 19, second paragraph): `invalid` is reserved for EXOGENOUS
+# harness failures. A correctly-supplied skill that failed to trigger or was not followed is an
+# ADHERENCE FAILURE the suite must count -- voiding it would erase exactly the failure a trigger
+# eval exists to see. Candidate-induced timeouts, malformed output, and runaway spend likewise
+# count against the candidate unless independently classified as infrastructure.
+#
+# invalid_reasons -- CLOSED. Every member is exogenous to both arms' candidate behavior; each
+# is drawn verbatim from the gap's own enumeration ("rate limits, auth errors, infrastructure
+# timeouts, lost artifacts", deep-dive:833) so no token here needs an invented justification:
+#
+#   rate_limited    a provider/API rate limit fired during dispatch or grading -- a transport
+#                   condition external to what either arm produced, identical hazard on both
+#                   arms of a paired trial regardless of which one happened to hit it first
+#   auth_failure    an API key, session token, or credential expired/failed mid-harness --
+#                   a harness operations fault, not a claim about the candidate's output
+#   infra_timeout   the HARNESS's OWN dispatch/transport hung or was killed (host process died,
+#                   network partition, subagent spawn never returned control) before the
+#                   candidate produced a scoreable result. Distinct from a candidate spinning on
+#                   its OWN runaway work until a wall-clock budget ends it -- that is the
+#                   candidate's timeout and stays a counted failure (see the exclusion list below)
+#   artifact_lost   the expected output record was never written, or was truncated/corrupted, by
+#                   the harness's OWN write path -- not by anything the candidate did. Precedent
+#                   already on file, pre-dating this taxonomy: reviewer_baseline_replication.json
+#                   documents "~65 spawned reviewers idled without writing their verdict file (a
+#                   harness write-dropout, not a reviewer verdict)" from the 2026-06-27 K-run
+#
+# Deliberately UNREPRESENTABLE here (D2 of the item-21 brief) -- each of these is an ADHERENCE or
+# CANDIDATE failure a trigger/lift eval exists to see, and voiding it would erase that signal.
+# There is no token above, and none may be added, that stretches to cover:
+#   - the with-skill arm never invoked the skill, or the without-skill arm did (skilllens's own
+#     "manipulation check" failure mode -- explicitly the boundary this file corrects against,
+#     deep-dive:829-833) -- this is exactly what a trigger eval measures; voiding it erases the
+#     miss instead of counting it
+#   - the skill was invoked but not followed (a step skipped, a gate ignored)
+#   - malformed or empty candidate output
+#   - a candidate-induced timeout: the candidate itself ran away (a loop, an oversized plan) and
+#     a wall-clock/step budget ended the trial -- self-inflicted, not exogenous
+#   - the candidate burned through or exceeded its spend/token budget
+# All five are counted failures against whichever arm produced them, normally through the
+# suite's ordinary grading path, never through this enum.
+#
+# Cross-references: evals/README.md ("Trial validity" section), scripts/_trial_validity.py
+# (mark_invalid / compute_void_verdict / denominator functions), scripts/_trial_validity_selftest.py,
+# scripts/exec_replay_grade.py (candidate for consuming this taxonomy -- see item-21 report).
+invalid_reasons = [
+    "rate_limited",
+    "auth_failure",
+    "infra_timeout",
+    "artifact_lost",
+]
+
+# Mechanical void rule (D4 of the item-21 brief): a comparison is void -- reported but never
+# used for a lift claim -- when EITHER threshold below is exceeded (strictly greater than; a
+# value exactly at the threshold does not void). Both are PREREGISTERED AND UNFITTED: there is
+# no measured corpus of real invalid-trial rates yet to fit against (this item ships vocabulary,
+# not measurement -- see the item-21 brief's Scope section). They are defensible round numbers,
+# not derived ones, and this file is the place to revise them once real data exists.
+#
+#   max_invalid_rate_per_arm     0.20 -- more than one trial in five lost to exogenous causes
+#                                 is treated as "we can no longer trust what's left of that arm's
+#                                 sample," independent of the other arm. Revise UP only if
+#                                 measured infra volatility (rate limits, auth expiry) on
+#                                 otherwise-clean runs routinely exceeds this; revise DOWN if
+#                                 real invalid-trial rates cluster well under it.
+#   max_between_arm_asymmetry    0.10 -- a ten-point-or-more gap between the two arms' invalid
+#                                 rates is treated as evidence the arms are not failing for the
+#                                 same exogenous reason (e.g. a longer with-skill transcript
+#                                 crossing a shared rate limit more often than the shorter
+#                                 without-skill one) -- which would make the SURVIVING scored
+#                                 trials a non-random subset of each arm, biasing the comparison
+#                                 even though every individual invalid trial was correctly
+#                                 classified. Revise only from measured dual-arm asymmetry data.
+max_invalid_rate_per_arm = 0.20
+max_between_arm_asymmetry = 0.10

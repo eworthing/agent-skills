@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "note": "Raw per-slot record for the Phase-1 reproducibility pass (Lever 1). Current-arm only (no no-skill arm). This file is the auditable source; principal_baseline.json only summarizes it.",
   "prereg": {
     "prompt_sha256": "0e228d4bb7f2044e504c7723fbefbaee814959fece76848afa13d07b8f569e24",

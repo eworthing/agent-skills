@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "description": "Raw per-rep reviewer verdicts from the K-run (2026-06-27). NOTE: the run targeted K=5 x 20 cases x 2 arms = 200 reviews but ~65 spawned reviewers idled without writing their verdict file (a harness write-dropout, not a reviewer verdict); achieved 2-4 usable reps per cell. The decision below is robust to the dropouts because GATE A is unanimous and GATE B fails already at the achieved K.",
   "prereg_ref": "reviewer_baseline.json#prereg",
   "attempts": [

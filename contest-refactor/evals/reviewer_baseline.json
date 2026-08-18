@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "description": "Reviewer-judgment baseline. Measures the implementation reviewer (references/implementation-reviewer.md) at its own input grain: {targeted finding, diff} -> verdict JSON. Every evals/reviewer-cases/<id>/ dir must be registered in cases[]; scripts/_reviewer_baseline_selftest.py enforces this mechanically. Arm A = current claude_code reviewer default (claude-sonnet-4-6); Arm B = proposed cheaper default (claude-haiku-4-5). The default flip in references/provider-adapters.md is GATED on Arm B holding the thresholds below on every case. expected_verdict / expected_reason_class are the PRE-REGISTERED contract; the arms[] blocks record the ACTUAL measured verdicts (do not rewrite the contract to match a result). 20 cases across 10 categories: 4 look-alike axes (reality / seam / suppression / invariant), each a reject<->approve(restraint) pair via pair_id, plus two standalone approve positive controls (pass-through-deletion) and two standalone conditional cases (small-fixable).",
   "thresholds": {
     "decision_reps_K": 5,
