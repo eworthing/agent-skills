@@ -137,6 +137,22 @@ def _guard() -> int:
 
 check(_guard() == 0, "budget guard fails at HEAD")
 
+# A heuristic tokenizer must refuse to render a verdict, not render a wrong one. The ceilings
+# are hand-set from tiktoken counts, so a heuristic count is not comparable to them in either
+# direction -- and exit 2 (plumbing: cannot measure) must stay distinguishable from exit 1
+# (over budget), or "the tokenizer is missing" silently reads as "the budget is fine".
+with contextlib.redirect_stdout(io.StringIO()) as _buf:
+    _rc = tb.cmd_check(_Args(), count_fn, "heuristic(max(words/0.75, bytes/4))")
+check(_rc == 2, f"a heuristic tokenizer must exit 2 (cannot measure), got {_rc}")
+check(
+    "CANNOT MEASURE" in _buf.getvalue(),
+    "the heuristic refusal must say plainly that it could not measure",
+)
+check(
+    "budget-guard: OK" not in _buf.getvalue(),
+    "a heuristic run must never print an OK verdict",
+)
+
 # A ceiling must actually bite.
 _real = dict(tb.CEILINGS)
 try:

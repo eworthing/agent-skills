@@ -318,6 +318,22 @@ def cmd_check(args, count_fn, method) -> int:
                 f"Trim, or raise the ceiling deliberately and say why in the commit."
             )
 
+    # CEILINGS are hand-set from tiktoken counts, so a heuristic run compares numbers from a
+    # different measuring stick against them and its verdict means nothing. RUNTIME-COST-AUDIT
+    # -2026-08-14 measured this exact case: the same command returned 89,690 / 907,566 against a
+    # then-ceiling of 84,197 in a restricted environment -- and exited 0. Refuse to render a
+    # verdict instead, with exit 2 (plumbing) so "cannot measure" is distinguishable from
+    # exit 1 "over budget"; conflating the two is the same defect Gap 19 flags in
+    # exec_replay_grade.py, which folds "inputs missing" into "invariant failed".
+    if method != "tiktoken/cl100k_base":
+        print(f"# budget guard ({method}, lens={args.lens})")
+        print(
+            f"budget-guard: CANNOT MEASURE -- ceilings are tiktoken-derived but the tokenizer is "
+            f"{method!r}. Install tiktoken (pip install tiktoken); a heuristic count is not "
+            f"comparable to these ceilings in either direction."
+        )
+        return 2
+
     print(f"# budget guard ({method}, lens={args.lens})")
     print(f"  per-loop fixed reload : {per_loop:>8} / {CEILINGS['loop']:,}")
     print(f"  SKILL.md trigger      : {skill_md:>8} / {CEILINGS['skill_md']:,}")

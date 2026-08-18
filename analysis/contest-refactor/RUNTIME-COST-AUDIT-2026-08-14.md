@@ -45,7 +45,7 @@ Instruction text only — before target-source reads, reviewer sidecars, or outp
 
 **Working directory.** Every command above except the `git ls-tree` row runs from `contest-refactor/` (prefix with `cd contest-refactor &&`). The `git ls-tree -- contest-refactor/...` command runs from the repository root.
 
-**Tokenizer hard-gate required.** `token-budget.py` silently falls back to a byte/word heuristic when tiktoken is unimportable — in a restricted environment the same command returned `89,690 / 907,566` while exiting 0. Any figure quoted from it must be confirmed via `--json` with `method == "tiktoken/cl100k_base"`. Adding `--require-tiktoken` is a prerequisite to calling these numbers reproducible.
+**Tokenizer hard-gate required.** `token-budget.py` silently falls back to a byte/word heuristic when tiktoken is unimportable — in a restricted environment the same command returned `89,690 / 907,566` while exiting 0. Any figure quoted from it must be confirmed via `--json` with `method == "tiktoken/cl100k_base"`. Adding `--require-tiktoken` is a prerequisite to calling these numbers reproducible. **Both halves shipped**: `--require-tiktoken` for quoting figures, and (2026-08-18) `--check` itself now refuses to render a verdict under a heuristic tokenizer, exiting **2** (cannot measure) rather than 0. The ceilings are hand-set from tiktoken counts, so a heuristic count is not comparable to them in either direction — the restricted-environment run above exited **0** while reporting 89,690 against a then-ceiling of 84,197, i.e. the guard said OK on numbers it had no basis to compare. Exit 2 keeps "cannot measure" distinct from exit 1 "over budget", the same distinction Gap 19 flags as missing in `exec_replay_grade.py`.
 
 ---
 
