@@ -13,8 +13,8 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 ## study
 
 - pairs complete: **50 / 55**
-- next in frozen order: **none — complete** _(within rung 3 only)_
-- interrupted (started, no terminal record — attempt index spent): none
+- next in frozen order: **pair-005 (principal-abstraction-seam-flag rep 5, attempt 2)** _(within rung 4 only)_
+- interrupted (started, no terminal record — attempt index spent): ['pair-005']
 - exhausted (2 attempts spent, unresolved): none
 
 ## Operational
@@ -27,8 +27,8 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 ```bash
 cd contest-refactor
-python3 scripts/paired_arm_run.py next --mode study --rung 3
+python3 scripts/paired_arm_run.py next --mode study --rung 4
 ```
 
-Rung 3 is the active rung. Do **not** drop `--rung 3` to reach the next pending pair: the unrestricted order runs through rungs that have not been authorised, and `prereg.execution_ladder.continuation_rule` requires explicit authorisation per rung — a rung is never auto-continued and never auto-stopped.
+Rung 4 is the active rung. Do **not** drop `--rung 4` to reach the next pending pair: the unrestricted order runs through rungs that have not been authorised, and `prereg.execution_ladder.continuation_rule` requires explicit authorisation per rung — a rung is never auto-continued and never auto-stopped.
 
