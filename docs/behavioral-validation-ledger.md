@@ -13,34 +13,77 @@ re-run against intermediate commits to bisect.
 Sweep trigger: ~3–5 pending probes, or before any dependent enforcement flips, or on request.
 Each sweep's measured token spend is recorded when it closes.
 
-## Pending sweep #3
+## Pending sweep #4
 
 (empty — next behavioral changes accumulate here)
 
-## Open run — paired-arm recall measurement (sweep #3)
+## Closed run — paired-arm recall measurement (sweep #3)
 
-Opened 2026-08-18. A third distinct kind: not a with/without-**change** probe and not an A/A
-floor, but a with/without-**skill** arm study. It answers the one question every
-measurement-dependent backlog item is blocked on — *does the skill lift recall anywhere?* — which
-the repo currently answers in opposite directions at two grains (advisory: recall lift measured 0,
+Opened 2026-08-18, **closed 2026-08-19**. A third distinct kind: not a with/without-**change** probe
+and not an A/A floor, but a with/without-**skill** arm study. It answered the one question every
+measurement-dependent backlog item was blocked on — *does the skill lift recall anywhere?* — which
+the repo previously answered in opposite directions at two grains (advisory: recall lift measured 0,
 three rounds, two models; principal: "where recall lift lives", but measured current-arm only).
 
 - **Design:** 11 scenarios × K=5 × 2 arms = 55 pairs / 110 dispatch slots, both arms fresh on
-  `claude-sonnet-5`. Preregistered in `contest-refactor/evals/paired_arm_replication.json` and
-  frozen before any output existed — materials, dispatch envelope, the four grading rules, the
-  grading protocol, four independent decision rules, per-scenario `expected_baseline` hypotheses,
-  and the 55-pair dispatch order.
-- **Deliverable:** a descriptive diagnostic, never a lift claim. No A/A floor exists, so
-  `evaluate_lift()` returns `unreportable` by construction; the binding readout rule is *"no lift
-  detected at this n"*, never *"lift is zero"*.
-- **Execution:** git-as-checkpoint. A pair is complete iff a committed terminal attempt record
-  says so; `started` records land before dispatch so an interrupted session is counted rather than
-  silently re-dispatched. Expected to span sessions.
-- **Spend:** recorded per pair in `paired-arm-outputs/execution.json` as the run proceeds, not
-  reconstructed at the end. At ~220 agents across an unknown number of sessions, sweep #2's
-  sum-at-the-end method is not reproducible.
+  `claude-sonnet-5`. Preregistered in `contest-refactor/evals/paired_arm_replication.json` and frozen
+  before any output existed. Executed frontier-first over four authorised rungs.
+- **Completed:** 110/110 slots `valid` + `ok`. No exogenous invalids, no technical reruns, one
+  harness artifact (pair-015 burned three attempts dispatching zero arms — host checkpoints landing
+  between the `started` commit and dispatch; root cause was the host's own procedure, recorded as
+  such and fixed by issuing `start` and both dispatches in one turn). `record_state: complete`.
 
-Closes with the routed decision-table outcome and measured total.
+### Routed outcome
+
+| Decision | Result |
+|---|---|
+| **1 — principal corpus growth** | **Both arms ≥4/5 on all four eligible flags** → do *not* grow the principal corpus for recall. Phase 6 twin rework does not proceed. |
+| **2 — core suite acceptance** | **Not met, and unsettled.** Needs `without_skill ≤2/5`; the bare arm passed ≥4/5 on all seven eligible assertions. At ceiling, so the criterion's gap cannot appear. Not a skill failure. |
+| **3 — global recall** | **BLOCKED.** Conditions 1 and 2 hold; condition 3 fails on the flag negative, and Decision 4 is a veto. Programme retargeting **not licensed**. |
+| **4 — negative regression** | **Restraint lift CORROBORATED** (`principal-invariant-owner-restraint`: with 5/5 vs without 1/5), **zero restraint regression** on any twin, and a **NEGATIVE FLAG RESULT** on `crossplat-flag` (bare 5/5 vs skill 4/5) reported explicitly as *"the skill may be hurting"*. |
+
+The binding readout rule holds throughout: an observed zero or negative delta is *"no lift detected
+at this n"*, never *"lift is zero"*. No A/A floor exists, so `evaluate_lift()` returns `unreportable`
+by construction and no lift claim is made. `principal-abstraction-seam-flag` saturated at 5/5 on both
+arms and entered no decision — pre-classified contaminated before any output existed, so the tie
+measures the scenario's floor rather than the lens.
+
+### Measured spend — and where the method fell short of its own rule
+
+**Arm dispatch: 27,887,523 context tokens**, summed from 58 committed per-pair `execution.json`
+records rather than reconstructed at the end. That part of the rule held.
+
+**Grading spend was not recorded per call for rungs 2–4**, so a single comparable study total is
+**not reconstructible from committed records**. Rung 1's grading is on record (2,992,734
+cost-equivalent tokens including arms, spec authoring and the haiku→sonnet cascade) and rung 3's arm
+spend carries both units, but rungs 2–4 recorded arm context tokens only. This is a real shortfall
+against this ledger's own stated method — *"recorded per pair as the run proceeds, not reconstructed
+at the end"* — and it is logged as a shortfall rather than papered over with an estimate. The
+Phase-2 projection put grading at ~57% of total cost, which if roughly right means **the majority of
+this sweep's spend is unmeasured**. Any future run of this shape should commit grading usage per
+call the way dispatch commits arm usage.
+
+Four of rung 4's ten slots additionally reported arithmetically impossible output-token counts
+(145–573 tokens against complete 7–9KB verdicts), matching an anomaly first seen on pair-001.
+Classified as incomplete *usage records*, not truncated candidates — every affected verdict is whole
+and parses. It splits 2 `with_skill` / 2 `without_skill`, so it cannot bias the arm contrast; it
+makes the spend figure a floor.
+
+### Grading quality
+
+Trigger rate improved across the run: rung 1 tripped the no-cited-span check 5 times; rung 3 had 2
+`grader_uncertain` in 60; rung 4 had **zero triggers in 10**. Preregistered-subsample disagreement
+came in at **1/58 semantic assertions but 1/14 tiers** — graders agree on assertions far more
+readily than on the tier they roll up to, which locates the fragility in the tier rule rather than
+in assertion judgment.
+
+Two findings are carried forward rather than acted on mid-run. Seven-plus graders across four
+scenarios and two independent spec-authoring runs each invented the same unschema'd `outside_spec`
+field — a genuine spec gap, left for the next preregistration, since adding a trigger mid-run is the
+post-hoc change the frozen trigger list exists to prevent. And an audit of the grade recorder found
+it had no concept of the `-g2`/`-g3` adjudication chain, so it wrote first-pass grades over final
+ones; re-deriving all 110 slots surfaced exactly two mis-handled rung-3 slots, both host errors, both
+corrected on the record. No decision moved.
 
 ## Pending calibration run — A/A noise floor (item 20)
 

@@ -827,8 +827,63 @@ defect is documented by a comment in the diff itself, and both arms cite that co
 remain sound as regression fixtures — their built purpose — and are weak as recall discriminators.
 That is an observation about the corpus, filed in `execution.json`; it changes no routed action.
 
-Still open: Decisions 2 and 4 need the core layer (rung 3), and **no restraint reading exists yet**
-at either grain. Decision 3 is a conjunction and stays uncomputable until then.
+#### Result — rungs 3–4, the run complete
+
+Rung 3 added the core layer and the four restraint twins (30 pairs / 60 slots); rung 4 closed the
+corpus with the one contaminated flag (5 pairs / 10 slots). All 55 pairs / 110 slots are dispatched,
+graded, and committed; `record_state` is `complete`.
+
+**Restraint lift is corroborated — the study's one positive differential.** On the semantic tier,
+which is the operative measure for every twin:
+
+| twin | `with_skill` held | `without_skill` held |
+|---|---|---|
+| `principal-invariant-owner-restraint` | **5/5** | **1/5** |
+| `principal-consistency-boundary-restraint` | 5/5 | 5/5 |
+| `suppression-restraint` | 3/5 | 0/5 |
+| `crossplat-restraint` | 3/5 | 1/5 |
+
+The bare arm over-flags a legitimate carve-out in four of five reps on the invariant-owner twin
+while the skill arm holds all five, and **no twin shows `with_skill` below `without_skill`** — so
+Decision 4 records restraint lift with zero restraint regression, matching the advisory layer rather
+than contradicting it.
+
+**A negative flag result, reported rather than absorbed.** On `crossplat-flag` the **bare arm caught
+5/5 and the skill arm 4/5**. The frozen rule routes any `without > with` on a flag, at any margin, to
+*"the skill may be hurting"* — never into a saturation row. One slot at K=5 against no measured noise
+floor is a signal to investigate, not demonstrated harm; the same underpowering that forbids reading
+a zero delta as "no lift" forbids reading this as proof of damage.
+
+**Decision 2 is not met, and unsettled — which is not a skill failure.** The criterion needs
+`without_skill ≤2/5`; the bare arm passed ≥4/5 on all seven eligible `[discriminating]` ∧ `outcome`
+assertions. It is at ceiling, so the gap the criterion looks for cannot appear there.
+
+**Decision 3 is BLOCKED.** Conditions 1 (Decision 1's no-gap) and 2 (core no-gap) both hold;
+condition 3 fails on the flag negative, and Decision 4 is a veto. Programme retargeting is therefore
+**not licensed** — and the tension is worth stating rather than smoothing: the thing retargeting
+would aim at is corroborated here, yet a one-slot flag negative blocks it. That rule was written
+before these numbers existed, which is why it is applied rather than argued with.
+
+**Rung 4 enters no decision.** `principal-abstraction-seam-flag` saturates at 5/5 on both arms and
+both tiers, which measures the floor rather than the lens: its bare `PushProvider` protocol trips the
+Unified Seam Policy on present-tense structure alone, so the rubric can reject the diff without ever
+engaging the force under test. The prereg pre-classified it contaminated before any output existed,
+and a 5/5 tie there is **not** evidence of no gap.
+
+Two grading findings. Graders agree far more readily on individual assertions than on the tier those
+assertions roll up to — **1/58 assertions vs 1/14 tiers** on the preregistered subsample — so the
+tier rule, not assertion judgment, is where restraint grading is fragile. And seven-plus graders
+across four scenarios and two independent spec-authoring runs each invented the same unschema'd
+`outside_spec` field for reviewers rejecting on grounds their spec never enumerated: a real spec gap,
+recorded and left for the next preregistration to close, since adding a trigger mid-run is the
+post-hoc change the frozen trigger list exists to prevent.
+
+One correction on the record: `paired_arm_record_grades.py` originally had no concept of the
+`-g2`/`-g3` adjudication chain and recorded first-pass grades over final ones. The audit re-derived
+all 110 slots and found two mis-handled rung-3 slots, both host errors — one third grader dispatched
+where the frozen rule (an `uncertain` is an abstention, not a disagreement) never called for one, and
+one real disagreement that was owed an adjudicator and never got one. Fixed in the script, corrected
+in `execution.json`, and no decision moves.
 
 ## Layer 3 — reviewer-judgment (`reviewer-cases/`, `reviewer_baseline.json`)
 
