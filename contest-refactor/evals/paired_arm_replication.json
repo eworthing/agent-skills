@@ -9869,6 +9869,245 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-012/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-013",
+      "scenario_id": "crossplat-restraint",
+      "arm": "with_skill",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "blocking_severity": "Noticeable weakness",
+        "dimension_scores": {
+          "framework_idioms": 8.5
+        },
+        "flagged_smells": [
+          "fake-clean reward",
+          "polished shallow structure"
+        ],
+        "evidence_demanded": [
+          "Reconcile the claimed '22 lines' NowPlayingView reduction against the diff, which shows roughly -3 lines",
+          "Cite a second real or concretely planned call site for Haptics.tap(), or a test at the new interface, to establish Leverage under the Deletion Test",
+          "Confirm (or add an explicit import UIKit for) Haptics.swift's dependency on UIImpactFeedbackGenerator, since only import SwiftUI is present"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "crossplat-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['polished shallow structure']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Noticeable weakness'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag a cross-platform / tvOS compile problem (the guard is #if os(iOS), which is correct)",
+          "[restraint] Recognizes the recorded per-target compile evidence satisfies Meta-Rule 4",
+          "[restraint] verdict is not \"rejected\" for cross-platform reasons; does not demand changing #if os(iOS) to canImport (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Attributes no framework_idioms deduction to the #if os(iOS) guard; any sub-9.5 score rests on the missing-residual rule, not on the cross-platform guard"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['polished shallow structure']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Noticeable weakness'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-013/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-013",
+      "scenario_id": "crossplat-restraint",
+      "arm": "without_skill",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical — compile failure on the primary (iOS) target, contradicting the reported green build/test results",
+        "dimension_scores": {
+          "framework_idioms": 3
+        },
+        "flagged_smells": [
+          "missing platform-conditional import (UIKit) in new file causing iOS compile failure",
+          "unverifiable/contradicted build-and-test claim (report says iOS build + 1,312 tests green; diff shows a type that cannot resolve on iOS)",
+          "unnecessary import (SwiftUI imported in Haptics.swift but unused)",
+          "quantitative claim mismatch (report says -22 lines; diff shows ~-4 lines net in NowPlayingView.swift)"
+        ],
+        "evidence_demanded": [
+          "Corrected Haptics.swift with `import UIKit` (platform-guarded) and a fresh, attached xcodebuild log for the iOS destination showing it actually compiles",
+          "Actual raw xcodebuild/xcodebuild test output (not a summarized claim) for the iOS Simulator run this report cites",
+          "Full before/after contents of NowPlayingView.swift to verify the claimed 22-line reduction",
+          "Confirmation that macOS/tvOS builds were run against the same corrected source, since the diff shown does not support the iOS build claim as stated"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "crossplat-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['missing platform-conditional import (UIKit) in new file causing iOS compile failure', 'unverifiable/contradicted build-and-test claim (report says iOS build + 1,312 tests green; diff shows a type that cannot resolve on iOS)', 'unnecessary import (SwiftUI imported in Haptics.swift but unused)', 'quantitative claim mismatch (report says -22 lines; diff shows ~-4 lines net in NowPlayingView.swift)']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — compile failure on the primary (iOS) target, contradicting the reported green build/test results'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag a cross-platform / tvOS compile problem (the guard is #if os(iOS), which is correct)",
+          "[restraint] Recognizes the recorded per-target compile evidence satisfies Meta-Rule 4",
+          "[restraint] verdict is not \"rejected\" for cross-platform reasons; does not demand changing #if os(iOS) to canImport (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Attributes no framework_idioms deduction to the #if os(iOS) guard; any sub-9.5 score rests on the missing-residual rule, not on the cross-platform guard"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['missing platform-conditional import (UIKit) in new file causing iOS compile failure', 'unverifiable/contradicted build-and-test claim (report says iOS build + 1,312 tests green; diff shows a type that cannot resolve on iOS)', 'unnecessary import (SwiftUI imported in Haptics.swift but unused)', 'quantitative claim mismatch (report says -22 lines; diff shows ~-4 lines net in NowPlayingView.swift)']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — compile failure on the primary (iOS) target, contradicting the reported green build/test results'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-013/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
