@@ -7322,5 +7322,27 @@
       "not_retrofitted": "assertion_results is NOT being rewritten to carry semantic judgments. The record is complete and its attempt entries are committed history; editing 110 of them now to change what a field means would be the retroactive record edit D3 exists to forbid. The correct fix belongs to the next preregistration: either store per-assertion semantic judgments alongside the structural ones, or state in the prereg that compute_lift() scores the structural tier only.",
       "authoritative_result": "The caught/held tables in per_scenario and in the rung_2/rung_3/rung_4 result blocks. Not compute_lift()."
     }
+  },
+  "crossplat_flag_negative_diagnosed_2026_08_19": {
+    "status": "DIAGNOSIS of a frozen result, NOT a re-grade. The grade stands: pair-028 with_skill is `missed`, and crossplat-flag remains a NEGATIVE FLAG RESULT (bare 5/5 vs skill 4/5) in every readout. What follows is what the miss consists of, derived entirely from committed data with no new dispatch.",
+    "the_single_miss": {
+      "slot": "pair-028 with_skill (OUT-35f46cab5090)",
+      "assertion_profile": "0 PASS, 1 FAIL, 2 PASS, 4 PASS, 5 PASS. Nine of the ten crossplat-flag slots pass assertion 1; this is the only failure anywhere in the scenario.",
+      "what_it_did_right": "It named the defect mechanism in full -- that canImport(UIKit) is true on tvOS, so Haptics.swift's guarded body including UIImpactFeedbackGenerator compiles into the tvOS target rather than being skipped as it is on macOS. It demanded exactly the right evidence (xcodebuild against the macOS and tvOS destinations, explicitly NOT more iOS testing), stated that an iOS-only test run can never surface a tvOS/macOS compile break, and held framework_idioms at 8.0 with blocks_95 true and a 'Serious deduction' anchor.",
+      "what_it_failed": "Assertion 1 -- naming #if os(iOS) (or any OS-based guard) as the correct fix. It explicitly declined: 'I'm not asserting the tvOS build is broken -- I don't have a tvOS compile log, and the guard's logic is unchanged from what already shipped before this loop.'",
+      "so_the_miss_is": "a refusal to prescribe a fix it could not verify, NOT a failure to see the defect. Mechanically the same slot grades `caught` (verdict rejected, dimension < 9.5); only the semantic tier's required conjunction of assertions 0 AND 1 fails it."
+    },
+    "the_second_grader_flagged_the_framing_independently": {
+      "why_this_matters": "This reframing is not a post-hoc rescue by the host after seeing an unwelcome number. The g2 grader, blind to the arm label and grading before any of this analysis existed, wrote it into its own rationale.",
+      "verbatim": "the response also does not fit 'missed', whose operative test is a hold that stops at insufficient evidence 'without naming the mechanism', which is not true here; this is a genuine gap between the two literal definitions that the binary framing does not resolve",
+      "consequence": "g2 returned `uncertain` -- an abstention, which under the frozen rule leaves g1's definite `missed` standing. The tier is correct under the rule. The rule's binary framing is what has no box for this response."
+    },
+    "unifying_hypothesis": {
+      "claim": "One lever plausibly explains both of this study's directional results: the lens raises epistemic restraint. On restraint twins that is exactly right and produces the study's only positive differential (principal-invariant-owner-restraint, 5/5 vs 1/5, where the bare arm over-flags a legitimate carve-out in 4 of 5 reps). On this one flag slot the same disposition led the reviewer to withhold a fix-prescription that five bare reviewers made freely. Same mechanism, opposite signs on the two case kinds.",
+      "epistemic_status": "HYPOTHESIS CONSISTENT WITH THE DATA, not a measured causal claim. n=1 on the negative side, K=5, no noise floor. It is recorded because it is the most economical account of both results and because it is testable, not because it is established.",
+      "what_would_test_it": "The A/A floor (item 20) first, to establish whether a 1-slot difference is distinguishable from noise at all. Then a targeted probe: flag scenarios where the correct fix is NOT inferable from the diff without external evidence, which is the exact condition under which restraint and recall should trade against each other.",
+      "what_it_does_NOT_license": "Softening the negative finding. Decision 4's flag row is unchanged, Decision 3 stays BLOCKED, and 'the skill may be hurting' remains the reported reading. A mechanism that explains a result is not a reason to stop counting it."
+    },
+    "spec_gap_recorded": "crossplat-flag's grading spec has no category for 'named the mechanism, demanded the right evidence, declined to prescribe the fix'. That is a third outcome its binary caught/missed framing cannot express. Filed with the outside_spec gap for the next preregistration; not fixed mid-run."
   }
 }

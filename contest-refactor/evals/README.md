@@ -854,6 +854,21 @@ than contradicting it.
 floor is a signal to investigate, not demonstrated harm; the same underpowering that forbids reading
 a zero delta as "no lift" forbids reading this as proof of damage.
 
+*What that negative consists of*, diagnosed from committed data and **not** a re-grade — the grade
+stands and the finding is unchanged. Nine of the ten `crossplat-flag` slots pass the assertion that
+names `#if os(iOS)` as the correct guard; the sole failure is `pair-028` with_skill, which named the
+defect mechanism in full (`canImport(UIKit)` is true on tvOS, so the guarded body compiles there),
+demanded exactly the right evidence (a tvOS/macOS build, explicitly not more iOS testing), and held
+`framework_idioms` at 8.0 — then declined to assert the guard was wrong without a compile log. So the
+miss is a refusal to prescribe an unverified fix, not a failure to see the defect; mechanically the
+same slot grades `caught`. The second grader, blind to the arm, flagged the framing itself: the
+response "does not fit `missed`, whose operative test is a hold … `without naming the mechanism`,
+which is not true here". One lever plausibly explains both directions — the lens raises epistemic
+restraint, which is right on twins and cost it a fix-prescription here. That is a **hypothesis
+consistent with the data at n=1**, not a measured claim, and it licenses no softening: Decision 4's
+flag row is unchanged and Decision 3 stays blocked. A mechanism that explains a result is not a
+reason to stop counting it.
+
 **Decision 2 is not met, and unsettled — which is not a skill failure.** The criterion needs
 `without_skill ≤2/5`; the bare arm passed ≥4/5 on all seven eligible `[discriminating]` ∧ `outcome`
 assertions. It is at ceiling, so the gap the criterion looks for cannot appear there.
