@@ -10608,6 +10608,246 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-015/attempt4/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-019",
+      "scenario_id": "principal-invariant-owner-restraint",
+      "arm": "with_skill",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "domain_modeling": 3.5
+        },
+        "flagged_smells": [
+          "fake-clean reward"
+        ],
+        "evidence_demanded": [
+          "A successful build log for RosterStore.swift and RosterView.swift as diffed, proving rosters[idx].addPlayer(player, checking: rosters) and the non-exhaustive catch in RosterView.handleAdd actually compile",
+          "If it compiles: a debug-configuration (dynamic exclusivity enforcement on) test/run log showing addPlayerToCurrentRoster and addPlayer(toLeague:) execute without a 'Simultaneous accesses... exclusive access' trap",
+          "Specific test file(s) + test name(s) that exercise the two-roster-same-league conflict path end-to-end through RosterStore (not just LeagueRoster.addPlayer(checking:) unit-tested in isolation with a hand-built allRosters array)",
+          "Confirmation of Player's Equatable conformance (identity-based vs structural) used by activePlayers.contains(player)",
+          "Clarification on whether a league can hold multiple rosters, and if so how ImportService/CSVRow identifies which specific roster a row targets (vs. addPlayer(toLeague:) picking the first leagueID match)"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": true,
+            "detail": "all canon-exact"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+          "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+          "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 5,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": true
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": true,
+          "rationale": "all canon-exact"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-019/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-019",
+      "scenario_id": "principal-invariant-owner-restraint",
+      "arm": "without_skill",
+      "slot_index": 2,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "blocking / correctness-critical — likely runtime crash at the only two call sites adopting the new domain invariant method, unproven by the cited test run",
+        "dimension_scores": {
+          "domain_modeling": 3
+        },
+        "flagged_smells": [
+          "exclusivity violation: mutating array-element call sites pass the same array as a second argument (self + snapshot overlap)",
+          "coverage theater: 'full suite green' claimed for a code path no cited test appears to exercise",
+          "incomplete migration: old unguarded RosterStore.addPlayer(_:) not shown removed, so 'exclusive' enforcement is unverified",
+          "silent behavior change: ImportService batch import now aborts mid-batch on first conflict with no rollback/recovery, unaddressed"
+        ],
+        "evidence_demanded": [
+          "A build/run log or targeted test proving RosterStore.addPlayerToCurrentRoster and RosterStore.addPlayer(_:toLeague:) can each be invoked (both throw and success paths) without an exclusivity trap",
+          "The actual implementation of the checking: rosters call sites — confirm whether rosters is copied to a local before indexing/mutating, since the diff as shown passes it directly, which is the known-bad pattern",
+          "A full-repo grep or diff hunk showing RosterStore's old unguarded addPlayer(_:) is deleted or now itself routes through the domain check, with no remaining caller of an unguarded path",
+          "A stated decision (and test) for whether ImportService should stop, skip, or roll back on a mid-batch One-League conflict"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['exclusivity violation: mutating array-element call sites pass the same array as a second argument (self + snapshot overlap)', \"coverage theater: 'full suite green' claimed for a code path no cited test appears to exercise\", \"incomplete migration: old unguarded RosterStore.addPlayer(_:) not shown removed, so 'exclusive' enforcement is unverified\", 'silent behavior change: ImportService batch import now aborts mid-batch on first conflict with no rollback/recovery, unaddressed']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'blocking / correctness-critical — likely runtime crash at the only two call sites adopting the new domain invariant method, unproven by the cited test run'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+          "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+          "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['exclusivity violation: mutating array-element call sites pass the same array as a second argument (self + snapshot overlap)', \"coverage theater: 'full suite green' claimed for a code path no cited test appears to exercise\", \"incomplete migration: old unguarded RosterStore.addPlayer(_:) not shown removed, so 'exclusive' enforcement is unverified\", 'silent behavior change: ImportService batch import now aborts mid-batch on first conflict with no rollback/recovery, unaddressed']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'blocking / correctness-critical — likely runtime crash at the only two call sites adopting the new domain invariant method, unproven by the cited test run'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-019/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
