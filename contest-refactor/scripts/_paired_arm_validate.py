@@ -12,6 +12,7 @@ and are re-exported here so the CLI and the selftests keep importing from one pl
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,30 @@ from _paired_arm_prereg import (  # noqa: E402
 # ---- attempts ---------------------------------------------------------------------------------
 
 
+def _attempt_cap(pair_id: Any) -> int:
+    """2 by default; execution.json may grant a NAMED pair extra attempts.
+
+    Read from the OPERATIONAL record, never the prereg: the prereg freezes at first dispatch, and a
+    grant is a fact measured afterwards. A missing or unreadable execution.json falls back to the
+    preregistered 2 -- an absent operational file must never WIDEN a bound, only fail to widen it.
+    Mirrors `attempt_cap()` in paired_arm_run.py, which gates dispatch; this gates the record, and
+    the two must agree or a dispatched attempt cannot be stored.
+    """
+    if not isinstance(pair_id, str):
+        return 2
+    try:
+        grants = json.loads(
+            (SKILL_ROOT / "evals" / "paired-arm-outputs" / "execution.json").read_text()
+        ).get("attempt_grants", [])
+    except (OSError, ValueError):
+        return 2
+    return 2 + sum(
+        int(g.get("extra_attempts", 0))
+        for g in grants
+        if isinstance(g, dict) and g.get("pair_id") == pair_id
+    )
+
+
 def validate_attempt(
     attempt: Any,
     idx: int,
@@ -69,8 +94,9 @@ def validate_attempt(
     slot_index, attempt_index = attempt.get("slot_index"), attempt.get("attempt_index")
     if not isinstance(slot_index, int) or not (1 <= slot_index <= K):
         add(f"[{p}] slot_index must be an int in 1..{K}, got {slot_index!r}")
-    if not isinstance(attempt_index, int) or attempt_index not in (1, 2):
-        add(f"[{p}] attempt_index must be 1 or 2, got {attempt_index!r}")
+    cap = _attempt_cap(attempt.get("pair_id"))
+    if not isinstance(attempt_index, int) or not (1 <= attempt_index <= cap):
+        add(f"[{p}] attempt_index must be an int in 1..{cap}, got {attempt_index!r}")
 
     tv = attempt.get("trial_validity")
     if not isinstance(tv, dict) or tv.get("status") not in VALID_TRIAL_STATUSES:
