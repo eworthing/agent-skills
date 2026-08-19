@@ -2,6 +2,33 @@
 
 Historical schema-version migration notes for `CURRENT_REVIEW.json` / `REVIEW_HISTORY.json` / `findings_registry.json`. **Loaded only on the resume path** (Step -1, when reading an artifact whose `schema_version` is below current) — a loop emitting a fresh current-schema artifact never needs this. Kept out of the per-loop investigation payload. The current-schema field definitions live in [output-format-json.md](output-format-json.md); the gates that apply these defaults live in [validation.md](validation.md) (G29).
 
+## Adding a required field — the rule that governs every bump below
+
+A new **required** field or record introduced at an *existing* `schema_version` retroactively
+invalidates every artifact already written at that version. `schema_version` cannot distinguish
+"v4 before the field existed" from "v4 after", so a validator has no way to judge an old artifact
+by the rules that were actually in force when it was written.
+
+The v2 → v3 bump is the pattern to follow: it added gates G27/G28/G29 **and** bumped the version
+**and** shipped the default-fill table below, so old artifacts stayed readable.
+
+So, when a new gate needs a field that did not exist before, do one of:
+
+1. **Bump the schema version** and add a default-fill entry here (the v2 → v3 precedent); or
+2. **Scope the gate** to artifacts written at or after the ruleset that introduced it, read from
+   `skill_rev` (G19) — which is why that field exists; or
+3. **Make the field optional**, and gate only its *shape* when present.
+
+Never a fourth option. A required field added silently at an existing version is a retroactive
+invalidation of committed history, and the repo's compatibility policy — committed reviews and
+history stay readable, validators dual-read across schema versions — cannot be delivered without
+one of the three above.
+
+**Known outstanding violation (recorded 2026-08-19):** G43 (2026-08-06) and G46 (2026-08-18) both
+added required v4 records/fields without a bump or a default-fill entry. A v4 artifact written
+before those dates now fails `validate-artifact.py --mode strict` on rules that did not exist when
+it was emitted. See the backlog item in `docs/review-skill-deep-dive-2026-08-17.md`.
+
 ## Schema version 4 → 5
 
 Additive. A persisted **v4** candidate finishes under the legacy
