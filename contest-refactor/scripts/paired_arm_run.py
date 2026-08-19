@@ -195,9 +195,21 @@ def pair_states(mode: str, rung: int | None = None) -> list[dict]:
     return states
 
 
+def attempt_cap(pair_id: str) -> int:
+    """2 by default. execution.json may grant a NAMED pair extra attempts, with a reason.
+
+    The general cap stays 2 -- it is preregistered and a grant does not loosen it. A grant is
+    data, not a code path: it names one pair, states why, and is committed BEFORE any output for
+    that pair exists, so git history proves it was not fitted to a result. That ordering is the
+    whole integrity property; a grant recorded after seeing output would be worthless.
+    """
+    grants = read_json(EXEC_PATH).get("attempt_grants", [])
+    return 2 + sum(g["extra_attempts"] for g in grants if g["pair_id"] == pair_id)
+
+
 def next_pair(mode: str, rung: int | None = None) -> dict | None:
     for st in pair_states(mode, rung):
-        if st["resolved"] or st["attempts_spent"] >= 2:
+        if st["resolved"] or st["attempts_spent"] >= attempt_cap(st["pair_id"]):
             continue
         return st
     return None
@@ -430,7 +442,11 @@ def write_resume(mode: str, rung: int | None = None) -> None:
             continue
         done = [s for s in states if s["resolved"]]
         interrupted = [s for s in states if s["interrupted"]]
-        exhausted = [s for s in states if not s["resolved"] and s["attempts_spent"] >= 2]
+        exhausted = [
+            s
+            for s in states
+            if not s["resolved"] and s["attempts_spent"] >= attempt_cap(s["pair_id"])
+        ]
         nxt = next_pair(m, rung if m == mode else None)
         lines += [
             f"## {m}",

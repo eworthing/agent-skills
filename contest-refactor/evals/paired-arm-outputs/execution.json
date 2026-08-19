@@ -4571,5 +4571,16 @@
       "NOT_decided_here": "Whether to grant pair-015 a third attempt is a live question and is deliberately left open rather than resolved in my own favour. Granting one is defensible (no candidate was ever conditioned on, so no post-hoc selection is possible) and so is refusing one (the retry cap is preregistered, and 'the harness fumbled it' is exactly the excuse a cap exists to refuse). Recorded for the owner to route.",
       "no_attempt_3_was_taken": true
     }
-  }
+  },
+  "attempt_grants": [
+    {
+      "pair_id": "pair-015",
+      "extra_attempts": 1,
+      "granted_before_any_output_for_this_pair_existed": true,
+      "reason": "Attempts 1 and 2 dispatched ZERO arms -- the host checkpointed between the `started` commit and dispatch, twice. No subagent ran; no candidate output has ever existed for this pair. The retry cap exists to stop the corpus being conditioned on 'survived long enough to commit', and that selection effect requires a candidate that existed and was discarded. With none, a third attempt cannot be post-hoc selection: there is nothing to select from.",
+      "why_this_is_not_self-serving": "The grant is committed BEFORE the first pair-015 arm is dispatched, so git history proves it was not fitted to a result -- the same spec-first ordering the grading specs use. The alternative was to let a preregistered restraint twin fall to `inconclusive` (suppression-restraint would drop to 4 scoreable pairs, below the <5 rule) for a purely operational cause, in the rung that exists to produce the study's first restraint reading.",
+      "what_it_does_NOT_do": "It does not loosen the general cap, which stays 2 and stays preregistered. It names one pair. Any pair whose attempt burned a real dispatch stays capped -- an adherence failure is still counted, never voided.",
+      "authorised_by": "user instruction to use my judgement, after the tradeoff and both readings were put to them."
+    }
+  ]
 }
