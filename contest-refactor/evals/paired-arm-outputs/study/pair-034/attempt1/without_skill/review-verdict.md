@@ -1,0 +1,29 @@
+# Review: Loop 6 — `data_flow` dimension
+
+## What the Actor did
+
+The diff extracts three actors (`ReservationService`, `PaymentService`, `ConfirmationService`) from what was presumably a monolithic checkout path, and reorders `CheckoutViewModel.purchaseTicket` so the availability guard sits inside the `do` block instead of outside it. Each service is now independently injectable/testable — that part is a legitimate structural improvement and I'm not disputing it.
+
+The Actor reports 3,104 passing tests and proposes `data_flow → 9.5`.
+
+## What I found
+
+The refactor does not touch the actual data-flow problem in this code path — it makes the problem more visible without fixing it, and the Actor's own diff proves they saw it.
+
+**The core defect:** `purchaseTicket` performs three ordered, dependent writes with durable external effects — hold a seat, charge a real payment gateway, write a booking record — and the only thing coordinating them is a `@MainActor` presentation-layer `ViewModel`. There is no saga, no compensating transaction, and no rollback. Walk the failure path the Actor's own comment names: `reservationService.hold` succeeds, `paymentService.charge` succeeds (card is charged, gateway has captured funds), then `confirmationService.finalize` throws — a DB timeout is explicitly given as the example. The `catch` block does exactly one thing: `presentError(.purchaseFailed(error))`. No refund is issued. No seat release is attempted. The seat sits in `SeatInventory` as `held` indefinitely (there's a `release(seat:)` method on `ReservationService` — it is never called from this failure path). The result is a customer charged for a ticket that does not exist, and a seat permanently unavailable to anyone else, with no record tying the two together.
+
+This is not a hypothetical edge case I'm inventing — the Actor wrote it into the diff as a code comment (`// No compensation: if charge succeeded but finalize failed, the seat remains held and the card is debited with no booking record.`) and shipped it anyway. Documenting a data-integrity bug in a comment is not a fix for it.
+
+**Layer placement makes this worse, not better.** Splitting the three steps into separate actors without giving the *transaction* an owner just moves the coordination problem into the UI layer, where it's least appropriate to live: `CheckoutViewModel` now owns retry semantics, failure-ordering assumptions, and (implicitly) the correctness of a financial operation, none of which a presentation type should be responsible for. A `data_flow` refactor that touches exactly this seam and leaves the seam's failure mode unaddressed hasn't actually completed the dimension — it's relocated three write calls and called it done.
+
+**The test claim doesn't cover the defect.** "3,104 passed, 0 failed" tells me the existing suite didn't regress. It says nothing about whether any test exercises the partial-failure interleaving (charge succeeds, finalize throws) that the Actor's own comment describes. Given that the comment exists, I'd expect to see a new test asserting recoverable behavior in that exact scenario if this were actually handled — there isn't one in this diff, and green-on-3104 is not evidence for a path that (by the Actor's own admission) has no compensation logic to test.
+
+**No idempotency guard either.** If the client or caller retries `purchaseTicket` after a transient `finalize` failure (a very plausible retry-on-timeout UX), `paymentService.charge` will fire again with no dedupe key, double-charging the buyer. This compounds the same root issue: the write sequence has no transaction boundary and no safeguard against partial re-execution.
+
+## Verdict
+
+The extraction into `ReservationService` / `PaymentService` / `ConfirmationService` is fine as isolated units, but the dimension under review is `data_flow`, and the flow across those three units is unsound: an unrecoverable, money-losing/inventory-leaking state is reachable on ordinary transient failure (a DB timeout), the Actor's diff names this defect explicitly, and ships it uncorrected. This blocks acceptance at the 9.5 threshold. I'm rejecting rather than conditionally approving because the defect isn't a polish item — it's a correctness/data-integrity bug in exactly the code this loop touched, already diagnosed by the Actor, and left unresolved.
+
+```json
+{"verdict": "rejected", "blocks_95": true, "blocking_severity": "Critical — unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path", "dimension_scores": {"data_flow": 3.5}, "flagged_smells": ["Unmanaged distributed transaction / missing saga-compensation across service boundaries", "Presentation-layer type (CheckoutViewModel) owning a multi-step transaction with durable external side effects", "Partial-failure data corruption acknowledged in a code comment but not fixed", "No idempotency guard on PaymentService.charge against retry-driven double-charge", "Test-suite green claimed as evidence for a failure path the suite does not appear to exercise"], "evidence_demanded": ["A test that forces ConfirmationService.finalize to throw after PaymentService.charge succeeds, asserting the system reaches a consistent, recoverable state (compensating refund and/or seat release, or a durable outbox/retry record) rather than silently stranding the charge", "A domain-level transaction owner (e.g. a TicketPurchaseSaga/Coordinator) outside the presentation layer that owns the write sequence, its failure ordering, and its compensations", "An idempotency key or equivalent dedupe guarantee on PaymentService.charge so a retried purchaseTicket call cannot double-charge", "Either a compensating call to ReservationService.release(seat:) on finalize failure, or an explicit, tested reconciliation path for orphaned holds/charges"]}
+```
