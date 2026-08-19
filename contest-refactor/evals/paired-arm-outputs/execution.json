@@ -5064,6 +5064,67 @@
         },
         "pair_total_context_tokens": 581364
       }
+    },
+    {
+      "mode": "study",
+      "prereg_sha256_at_first_dispatch": "b2b95214f30cfe65f939d1d19842860a824616b8c0bdf940afc617467c176448",
+      "pair_id": "pair-032",
+      "scenario_id": "crossplat-flag",
+      "rep": 3,
+      "attempt_index": 1,
+      "arm_order": [
+        "with_skill",
+        "without_skill"
+      ],
+      "session_id": "sess-rung3f",
+      "state": "started",
+      "pre_dispatch_head": "21d4458188e4d5fb7c1f0a1e0083ff7f58b30295",
+      "arms": {
+        "with_skill": {
+          "task_template": "evals/paired_arm_task_with_skill.md",
+          "task_template_sha256": "6f2fec8e8b62e7ac43e05e04624f7c377c61fc8bff916e7f58a9521f7c3021c1",
+          "materials": [
+            {
+              "material": "evals/scenarios/crossplat-flag/scenario.md",
+              "copied_to": "/tmp/paired-arm/study/pair-032/attempt1/with_skill/materials/scenario.md",
+              "sha256": "8a9f5e4c7fe86e9974b3a740891d2411ecac6861838ddaee69914ac1fa5ccbe2",
+              "frozen": "8a9f5e4c7fe86e9974b3a740891d2411ecac6861838ddaee69914ac1fa5ccbe2"
+            },
+            {
+              "material": "references/architecture-rubric.md",
+              "copied_to": "/tmp/paired-arm/study/pair-032/attempt1/with_skill/materials/architecture-rubric.md",
+              "sha256": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
+              "frozen": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d"
+            },
+            {
+              "material": "references/method.md",
+              "copied_to": "/tmp/paired-arm/study/pair-032/attempt1/with_skill/materials/method.md",
+              "sha256": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
+              "frozen": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/study/pair-032/attempt1/with_skill/prompt.md",
+          "prompt_sha256": "ed47f4199aee761cb2d2ad590063c88844e32d4720041043f8740855ab494dc0",
+          "expected_output": "/tmp/paired-arm/study/pair-032/attempt1/with_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/study/pair-032/attempt1/with_skill"
+        },
+        "without_skill": {
+          "task_template": "evals/paired_arm_task_without_skill.md",
+          "task_template_sha256": "973d1738090c29f013315d61ba3ae63e9ee2c5627322ab39252da708e9f03545",
+          "materials": [
+            {
+              "material": "evals/scenarios/crossplat-flag/scenario.md",
+              "copied_to": "/tmp/paired-arm/study/pair-032/attempt1/without_skill/materials/scenario.md",
+              "sha256": "8a9f5e4c7fe86e9974b3a740891d2411ecac6861838ddaee69914ac1fa5ccbe2",
+              "frozen": "8a9f5e4c7fe86e9974b3a740891d2411ecac6861838ddaee69914ac1fa5ccbe2"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/study/pair-032/attempt1/without_skill/prompt.md",
+          "prompt_sha256": "ddd9204ab1e7ba0a578cf9dc3f1a3358bf23fd3e057b0ce2e1cfe684ebdcff7c",
+          "expected_output": "/tmp/paired-arm/study/pair-032/attempt1/without_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/study/pair-032/attempt1/without_skill"
+        }
+      }
     }
   ],
   "pairs_per_session_cap_basis": "Measured ~1.24M context tokens / ~336k fresh tokens per pair INCLUDING its two grading calls. There is no API here to query remaining session budget, so this is a fixed cap with generous headroom rather than a prediction -- a session stops at 8 pairs regardless of how much budget appears to remain. 55 pairs therefore span ~7 sessions. With per-pair commits the cap governs predictable progress, not loss: an unplanned halt costs one pair either way.",
