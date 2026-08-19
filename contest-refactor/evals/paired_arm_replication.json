@@ -6002,6 +6002,334 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-048/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-049",
+      "scenario_id": "principal-process-owner-flag",
+      "arm": "with_skill",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "data_flow": 4.0,
+          "concurrency": 4.5
+        },
+        "flagged_smells": [
+          "reservation after suspension",
+          "unclear ownership",
+          "fake-clean reward"
+        ],
+        "evidence_demanded": [
+          "A durable saga owner (domain-layer coordinator, not CheckoutViewModel) for purchaseTicket with a persisted purchase-intent record written before charging, so a crash/timeout mid-sequence is reconcilable instead of silently stuck.",
+          "Explicit compensating actions (refund via PaymentService, seat release via ReservationService.release) invoked when ConfirmationService.finalize fails after a successful charge, with idempotency guarantees against duplicate compensation or duplicate refund.",
+          "ReservationService.hold must atomically recheck-and-claim inside the actor-isolated call (not rely on a prior isAvailable check across an await gap), closing the reservation-after-suspension race.",
+          "An executable concurrency test issuing two simultaneous purchaseTicket calls for the same seat, proving only one succeeds — not just the generic 3,104-test pass count, per meta-rule 4's risk-boundary evidence requirement for newly introduced actor isolation."
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-process-owner-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['unclear ownership']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+          }
+        ],
+        "assertions": [
+          {
+            "text": "[discriminating] Maps the finding to data_flow (or architecture_quality) with a score < 9.5",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "dimension_scores subset {'data_flow': 4.0} vs <9.5"
+          },
+          {
+            "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocking_severity='Likely disqualifier' expected in ['Serious deduction', 'Likely disqualifier']"
+          },
+          {
+            "text": "[validity] blocks_95 is true for the touched dimension",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocks_95=True expected==True"
+          }
+        ],
+        "residue": [
+          "[discriminating] Identifies that CheckoutViewModel (presentation layer) sequences three cross-module writes with no process owner",
+          "[discriminating] Names the partial-failure scenario: charge succeeds but finalize throws, leaving an unrecoverable inconsistency (charged card, held seat, no Booking)",
+          "[validity] Does not accept the passing test suite as proof the partial-failure path is handled"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 3,
+          "deterministic_assertions_pass": 3,
+          "semantic_residue": 3
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['unclear ownership']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 2,
+          "assertion_text": "[discriminating] Maps the finding to data_flow (or architecture_quality) with a score < 9.5",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "dimension_scores subset {'data_flow': 4.0} vs <9.5"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 3,
+          "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+          "criterion_class": "skill_contract",
+          "passed": true,
+          "rationale": "blocking_severity='Likely disqualifier' expected in ['Serious deduction', 'Likely disqualifier']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 4,
+          "assertion_text": "[validity] blocks_95 is true for the touched dimension",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "blocks_95=True expected==True"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-049/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-049",
+      "scenario_id": "principal-process-owner-flag",
+      "arm": "without_skill",
+      "slot_index": 4,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path",
+        "dimension_scores": {
+          "data_flow": 3
+        },
+        "flagged_smells": [
+          "Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)",
+          "Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator",
+          "Testing theater — green suite has no coverage for the exact partial-failure path the Actor's own comment names",
+          "Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed",
+          "Unbounded stuck state — seat held indefinitely with no timeout/expiry/release mechanism on partial failure"
+        ],
+        "evidence_demanded": [
+          "A test that drives PaymentService.charge to succeed and ConfirmationService.finalize to throw, then asserts the system reaches a consistent, recoverable state",
+          "A defined transaction/saga owner (domain or application layer, not CheckoutViewModel) responsible for the hold→charge→finalize sequence and its failure semantics",
+          "A compensating action on finalize failure: refund the charge, release the seat hold, or persist a durable pending-reconciliation record — at minimum one of these, ideally issued automatically rather than left to manual support",
+          "An idempotency key or equivalent guard on PaymentService.charge if retry-based recovery is the chosen strategy, to prevent double-charging on retry",
+          "Removal or resolution of the in-line comment documenting the unhandled case — a comment acknowledging a known data-corruption path is not a fix"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-process-owner-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)', 'Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator', \"Testing theater — green suite has no coverage for the exact partial-failure path the Actor's own comment names\", 'Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed', 'Unbounded stuck state — seat held indefinitely with no timeout/expiry/release mechanism on partial failure']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path'"
+          }
+        ],
+        "assertions": [
+          {
+            "text": "[discriminating] Maps the finding to data_flow (or architecture_quality) with a score < 9.5",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "dimension_scores subset {'data_flow': 3} vs <9.5"
+          },
+          {
+            "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+            "method": "deterministic",
+            "pass": false,
+            "detail": "blocking_severity='critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path' expected in ['Serious deduction', 'Likely disqualifier']"
+          },
+          {
+            "text": "[validity] blocks_95 is true for the touched dimension",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocks_95=True expected==True"
+          }
+        ],
+        "residue": [
+          "[discriminating] Identifies that CheckoutViewModel (presentation layer) sequences three cross-module writes with no process owner",
+          "[discriminating] Names the partial-failure scenario: charge succeeds but finalize throws, leaving an unrecoverable inconsistency (charged card, held seat, no Booking)",
+          "[validity] Does not accept the passing test suite as proof the partial-failure path is handled"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 3,
+          "deterministic_assertions_pass": 2,
+          "semantic_residue": 3
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)', 'Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator', \"Testing theater — green suite has no coverage for the exact partial-failure path the Actor's own comment names\", 'Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed', 'Unbounded stuck state — seat held indefinitely with no timeout/expiry/release mechanism on partial failure']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path'"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 2,
+          "assertion_text": "[discriminating] Maps the finding to data_flow (or architecture_quality) with a score < 9.5",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "dimension_scores subset {'data_flow': 3} vs <9.5"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 3,
+          "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "blocking_severity='critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path' expected in ['Serious deduction', 'Likely disqualifier']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 4,
+          "assertion_text": "[validity] blocks_95 is true for the touched dimension",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "blocks_95=True expected==True"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-049/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
