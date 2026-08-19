@@ -617,7 +617,13 @@ The result is consistent and load-bearing:
   code. Rebuilding the flag scenarios so the defect is a *static* property of plausible finished
   code (rather than the visible diff delta) did **not** change this. **Do not read a passing flag
   case as evidence the skill lifts recall here.** It doesn't; these component-grain defects are too
-  legible. (The `principal-*` layer, whose defects are cross-module, is where recall lift lives.)
+  legible. (This sentence used to end "— the `principal-*` layer, whose defects are cross-module,
+  is where recall lift lives." That was a **conjecture**, never measured: `principal_baseline.json
+  § replication_summary.confound_noted` says the principal layer was run current-arm only, so it
+  could not speak to lift over a bare model. `paired_arm_replication.json` measured it directly on
+  all four headline-eligible principal flags — **both arms caught every one, 5/5 vs 5/5** — so the
+  conjecture is struck rather than softened. Read the binding language rule with it: that is *no
+  lift detected at this n*, not *lift is zero*.)
 - **Restraint lift is real.** On the `stable-workflow-identity` and `adapter-output-contract`
   twins, bare/older reviewers over-flag the legitimate carve-out; the current lens carve-out prose
   makes the reviewer hold. That over-flag repair is the discriminating signal.
@@ -802,6 +808,27 @@ committed records, not from files on disk, so uncommitted work simply does not e
 
 Per D3, neither historical principal record is edited: both stay byte-identical, and the
 supersession relationship lives here and in the new file.
+
+#### Result so far — rungs 1–2, Decision 1 RESOLVED
+
+The run executes **frontier-first**: `prereg.execution_ladder` splits the 55 pairs into four rungs,
+each a *subsequence* of the frozen order (never a re-sort), each reporting before the next is
+authorised. Rungs 1–2 covered the four headline-eligible principal flags — 20 pairs / 40 slots.
+
+**Both arms caught the defect 5/5 on all four, mechanically and semantically, with the two tiers
+agreeing on every one of the 40 outputs.** That is Decision 1's "both arms ≥4/5" row: **do not grow
+the principal corpus for recall**, and Phase 6's twin rework — conditional on a gap being located —
+does not proceed. Per the binding language rule this is *no lift detected at this n*, not *lift is
+zero*: K=5 with no measured noise floor cannot separate a true null from an underpowered one, and
+the estimand is the review lens as deployed, not the skill end-to-end.
+
+Recorded with it, and **not** used to rescue the null: in every one of those scenarios the planted
+defect is documented by a comment in the diff itself, and both arms cite that comment. The cases
+remain sound as regression fixtures — their built purpose — and are weak as recall discriminators.
+That is an observation about the corpus, filed in `execution.json`; it changes no routed action.
+
+Still open: Decisions 2 and 4 need the core layer (rung 3), and **no restraint reading exists yet**
+at either grain. Decision 3 is a conjunction and stays uncomputable until then.
 
 ## Layer 3 — reviewer-judgment (`reviewer-cases/`, `reviewer_baseline.json`)
 
