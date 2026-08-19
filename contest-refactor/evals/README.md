@@ -878,6 +878,18 @@ across four scenarios and two independent spec-authoring runs each invented the 
 recorded and left for the next preregistration to close, since adding a trigger mid-run is the
 post-hoc change the frozen trigger list exists to prevent.
 
+**Read the caught/held tables, not `compute_lift()`.** The end-to-end verification runs clean — 55
+`PairedTrial`s in, 55 signed `LiftResult`s out, zero `None`, counts reconciling exactly, and
+`evaluate_lift()` correctly `unreportable` with no floor on file — but it also surfaced a misreading
+hazard worth naming. `attempts[].assertion_results` stores the **structural** report's deterministic
+checks (`required_fields_present`, `boolean_coherence`, …), not the eval's semantic assertions; only
+80 of 700 are `outcome`-classed, they exist on 4 of 11 scenarios, and both arms pass them. So
+`compute_lift()` returns a delta of exactly `0.000` on all 55 pairs. That zero is an artifact of
+which assertions the record stores — the semantic tier that carries every finding here lives in
+`semantic_grade` and the committed grader replies and never reaches `compute_lift()`. Reporting
+"mean delta +0.0000" as the study's outcome would contradict the restraint lift measured above.
+The record is not being retrofitted; the fix belongs to the next preregistration.
+
 One correction on the record: `paired_arm_record_grades.py` originally had no concept of the
 `-g2`/`-g3` adjudication chain and recorded first-pass grades over final ones. The audit re-derived
 all 110 slots and found two mis-handled rung-3 slots, both host errors — one third grader dispatched

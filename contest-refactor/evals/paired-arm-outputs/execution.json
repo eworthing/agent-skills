@@ -7302,5 +7302,25 @@
       "reading_unchanged": "The qualitative finding survives and is if anything sharper: graders agree on individual assertions far more readily than on the tier those assertions roll up to, and the tier rule is where restraint grading is fragile."
     },
     "decisions_unaffected": "No decision moves. Decision 4 still reports restraint lift CORROBORATED (principal-invariant-owner-restraint 5/5 vs 1/5), no restraint regression on any twin (no twin has with_skill < without_skill), and the crossplat-flag NEGATIVE FLAG RESULT (bare 5/5 vs skill 4/5). Decision 2 is per-assertion and untouched. Decision 3 stays BLOCKED on that flag negative."
+  },
+  "end_to_end_verification_2026_08_19": {
+    "ran": "The plan's Verification section, in full, against the completed record.",
+    "green": [
+      "ruff 0.15.6 pin enforced; ruff check + ruff format --check clean",
+      "validate-paired-arm.py exit 0 at record_state=complete",
+      "all 54 scripts/_*selftest*.py pass",
+      "git provenance: nothing uncommitted under evals/paired-arm-outputs",
+      "D3: both historical principal records byte-identical to their preregistered hashes",
+      "the 0-55 rule, BOTH halves: 55 PairedTrials built from the committed record -> 55 signed LiftResults, 0 None, counts reconcile to 55 exactly",
+      "evaluate_lift() returns status='unreportable' with 0 floors on file -- the CORRECT outcome and part of verification, not a failure"
+    ],
+    "finding_the_verification_exposed": {
+      "what": "compute_lift() over the committed record produces a delta of EXACTLY 0.000 on all 55 pairs, with outcome_n of 1 or 3 per trial and both arms scoring 1.0.",
+      "why": "attempts[].assertion_results carries the STRUCTURAL report's deterministic checks -- required_fields_present, verdict_word_membership, flagged_smells_canon_exact, dimension_scores_shape, boolean_coherence -- not the eval's semantic assertions. Only 80 of those 700 recorded results are criterion_class='outcome', they exist on just 4 of the 11 scenarios, and both arms pass them. The SEMANTIC judgment -- the tier that carries every finding this study actually reports -- lives in attempts[].semantic_grade and the committed grader replies, and never enters compute_lift() at all.",
+      "severity": "This is a live MISREADING HAZARD, not a broken result. A later reader who runs compute_lift() over this record and reports 'mean signed delta +0.0000 across 55 pairs' would conclude no lift anywhere -- flatly contradicting the corroborated restraint lift in rung 3 (principal-invariant-owner-restraint: with 5/5 vs without 1/5). The zero is an artifact of which assertions the record stores, and says nothing whatsoever about the study's outcome.",
+      "the_plan_assumed_otherwise": "The plan's 'Path to compute_lift(), concretely' assumed assertion_results would carry the graded semantic judgments per assertion. The built harness records the structural report there instead and keeps the semantic grade as a tier label. That divergence was never noticed until the end-to-end check ran, because every intermediate step was internally consistent.",
+      "not_retrofitted": "assertion_results is NOT being rewritten to carry semantic judgments. The record is complete and its attempt entries are committed history; editing 110 of them now to change what a field means would be the retroactive record edit D3 exists to forbid. The correct fix belongs to the next preregistration: either store per-assertion semantic judgments alongside the structural ones, or state in the prereg that compute_lift() scores the structural tier only.",
+      "authoritative_result": "The caught/held tables in per_scenario and in the rung_2/rung_3/rung_4 result blocks. Not compute_lift()."
+    }
   }
 }
