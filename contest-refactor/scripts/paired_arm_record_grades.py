@@ -24,10 +24,70 @@ RECORD = ROOT / "evals" / "paired_arm_replication.json"
 OUTPUTS = ROOT / "evals" / "paired-arm-outputs"
 
 
+class PlumbingError(RuntimeError):
+    """Cannot measure: a required input is missing or self-contradictory."""
+
+
 def load_reply(path: Path) -> dict:
     text = path.read_text()
     m = re.search(r"```json\s*\n(.*?)```", text, re.S)
     return json.loads(m.group(1) if m else text)
+
+
+def terminal_reply(grades_dir: Path, oid: str) -> tuple[Path, list[str]]:
+    """The reply carrying the TERMINAL grade for one output, per the frozen adjudication rule.
+
+    prereg.grading.adjudication.disagreement_defined_as is the whole of it: "Two graders DISAGREE on
+    a field iff BOTH returned a non-uncertain value and those values differ. An 'uncertain' from one
+    grader and a definite value from the other is NOT a disagreement: 'uncertain' is an abstention by
+    construction ... so the second grader's definite value stands. If BOTH return uncertain, the
+    third adjudicator is dispatched; if that is also uncertain, the item is RECORDED as uncertain and
+    reported, never forced to a boolean."
+
+    Recording the first-pass grade where a third adjudicator has genuinely ruled discards the
+    preregistered final verdict. Recording a third adjudicator's verdict where the rule never called
+    for one is the mirror error -- it lets an out-of-protocol dispatch move a result, which is the
+    host tie-breaking that prereg.grading.adjudication.host_may_not_decide forbids. Both are wrong,
+    so the rule is applied literally in both directions and any ignored `-g3` is reported.
+
+    `-sonnet` is rung 1's haiku->sonnet cascade escalation: there the base reply is the superseded
+    haiku grade (3 of which are unparseable JSON, which is why they escalated), so the sonnet reply
+    IS the first-pass grade for adjudication purposes.
+
+    Returns the reply path and a list of human-readable notes about anything unusual.
+    """
+    notes: list[str] = []
+    escalated = grades_dir / f"{oid}-sonnet.reply.md"
+    base = escalated if escalated.is_file() else grades_dir / f"{oid}.reply.md"
+    g2, g3 = grades_dir / f"{oid}-g2.reply.md", grades_dir / f"{oid}-g3.reply.md"
+    if not g2.is_file():
+        return base, notes
+
+    v1 = load_reply(base).get("semantic_grade")
+    v2 = load_reply(g2).get("semantic_grade")
+    u1, u2 = v1 == "uncertain", v2 == "uncertain"
+
+    if u1 and u2:
+        if not g3.is_file():
+            raise PlumbingError(f"{oid}: both graders returned uncertain and no -g3 exists")
+        return g3, notes
+    if u1 or u2:
+        # An abstention, not a disagreement: the definite value stands.
+        winner = g2 if u1 else base
+        if g3.is_file():
+            notes.append(
+                f"{oid}: -g3 exists but the frozen rule never called for one "
+                f"(g1={v1!r} vs g2={v2!r} is an abstention, not a disagreement); "
+                f"the definite grade {load_reply(winner).get('semantic_grade')!r} stands"
+            )
+        return winner, notes
+    if v1 == v2:
+        return base, notes
+    if not g3.is_file():
+        raise PlumbingError(
+            f"{oid}: real disagreement (g1={v1!r} vs g2={v2!r}) and no -g3 adjudication exists"
+        )
+    return g3, notes
 
 
 def mechanical(scenario: str, candidate: str) -> str | None:
@@ -81,11 +141,13 @@ def main() -> int:
             if attempt is None:
                 print(f"no attempt for {v['pair']}/{v['arm']}", file=sys.stderr)
                 return 2
-            # Rung 1 ran a haiku->sonnet cascade: where an escalation happened, the
-            # `-sonnet` reply is the TERMINAL grade and the base reply is the superseded
-            # haiku one (3 of which are unparseable JSON, which is why it escalated).
-            escalated = grades_dir / f"{oid}-sonnet.reply.md"
-            reply_path = escalated if escalated.is_file() else grades_dir / f"{oid}.reply.md"
+            try:
+                reply_path, notes = terminal_reply(grades_dir, oid)
+            except PlumbingError as exc:
+                print(str(exc), file=sys.stderr)
+                return 2
+            for note in notes:
+                print(f"NOTE {note}", file=sys.stderr)
             if not reply_path.is_file():
                 print(f"missing reply for {oid}", file=sys.stderr)
                 return 2

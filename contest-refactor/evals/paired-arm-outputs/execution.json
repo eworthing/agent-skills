@@ -7017,7 +7017,8 @@
         "tier_disagreements": 2,
         "rate_reported_as": "1/58 assertions and 2/14 tiers, with denominators stated -- an ESTIMATE, never a reliability claim.",
         "note": "Tier disagreement (2/14) runs materially higher than assertion disagreement (1/58): graders agree on the individual assertions far more often than on the tier those assertions roll up to. That gap is itself the finding -- the tier rule, not assertion judgment, is where restraint grading is fragile."
-      }
+      },
+      "correction_2026_08_19": "The semantic table below was published before the adjudication-rule audit. One cell is superseded: suppression-restraint without_skill is held 0/5, not 1/5. See adjudication_rule_audit_2026_08_19 for the reasoning and for the two grader-agreement figures it corrects. The table is left as published rather than edited in place, so the correction is visible instead of invisible."
     },
     "decisions": {
       "decision_2_core_suite_acceptance": {
@@ -7265,5 +7266,41 @@
       "wrapper_prompt": "Identical for all 14 grader dispatches (10 first-pass + 4 second-pass). No mid-run steering sentence was added -- the rung-3 wrapper change on 4 of 60 slots is disclosed in commit 0d903ef and was not repeated.",
       "grades_committed": "evals/paired-arm-outputs/rung4-grades/ -- 14 reply files."
     }
+  },
+  "adjudication_rule_audit_2026_08_19": {
+    "what_prompted_it": "Folding rung-3/4 grades into the record with paired_arm_record_grades.py raised a conflict against an already-recorded grade. The conflict was real, not spurious.",
+    "defect_found": "paired_arm_record_grades.py implemented only rung 1's haiku->sonnet cascade and had NO concept of the -g2/-g3 adjudication chain introduced in rungs 2+. It therefore recorded the FIRST-PASS grade even where a third adjudicator had ruled, silently discarding the preregistered final verdict.",
+    "fix": "terminal_reply() now applies prereg.grading.adjudication.disagreement_defined_as literally, in BOTH directions: a genuine third-adjudicator verdict is final, AND a -g3 that the rule never called for is ignored rather than allowed to move a result. Letting an out-of-protocol dispatch decide is the host tie-breaking prereg.grading.adjudication.host_may_not_decide forbids, so honouring a stray -g3 would be as wrong as dropping a real one. An unadjudicated real disagreement, or a both-uncertain pair with no -g3, is now a hard error (exit 2) instead of a silent first-pass record.",
+    "audit_scope": "All 110 slots across all 4 rungs, re-derived from the committed reply files.",
+    "findings": [
+      {
+        "output_id": "OUT-5e54921b19e7",
+        "slot": "pair-006 without_skill (suppression-restraint)",
+        "grades": "g1=uncertain, g2=over_flagged, g3=held",
+        "host_error": "The host treated uncertain-vs-definite as a disagreement and dispatched a third adjudicator. The frozen rule says the opposite: 'an uncertain from one grader and a definite value from the other is NOT a disagreement ... the second grader's definite value stands.' No third grader was warranted.",
+        "terminal_grade_now": "over_flagged (g2)",
+        "previously_reported": "held (g3), described in the rung-3 readout as 'three different tiers from three graders' and 'unresolved by design'",
+        "effect": "suppression-restraint without_skill moves from held 1/5 to held 0/5.",
+        "direction_disclosure": "This correction WIDENS the restraint gap in the skill's favour (3/5 vs 0/5 instead of 3/5 vs 1/5). It is applied because the frozen rule requires it, and would have been applied identically had it cut the other way. Flagged explicitly because a correction that helps the thing under test deserves more scrutiny, not less."
+      },
+      {
+        "output_id": "OUT-b6e25a42968d",
+        "slot": "pair-012 without_skill (crossplat-restraint)",
+        "grades": "g1=over_flagged, g2=held -- both definite and different, a REAL disagreement",
+        "host_error": "The rung-3 run owed this slot a third adjudicator under the frozen rule and never dispatched one. A genuine miss, caught only because the recorder fix turned it into a hard error.",
+        "resolution": "Third adjudicator dispatched 2026-08-19 under the identical masked prompt. Its verdict: uncertain -- it grounded that in the crossplat-restraint spec's own residual-ambiguity note, which admits it could not close this exact fact pattern.",
+        "terminal_grade_now": "uncertain -- FINAL. The frozen rule makes the third adjudicator's verdict final and forbids the host forcing it to a boolean; 'recorded as uncertain and reported, never forced' is the preregistered handling.",
+        "effect": "No count changes: uncertain was not held before the fix and is not held now. crossplat-restraint without_skill stays 1/5, but is now honestly 1 held / 1 uncertain / 3 over_flagged rather than 1/5 with a silently mis-recorded slot.",
+        "spec_gap_corroborated": "The adjudicator cited the spec's own declared residual ambiguity as the reason it could not decide. That is the spec-first protocol working as designed -- an assertion marked undecidable routed to a stronger grader and stayed undecided -- not a grader failure."
+      }
+    ],
+    "no_other_slots_affected": "Those two are the only findings across all 110 slots and all four rungs.",
+    "corrected_disagreement_estimate": {
+      "assertions": "1/58 -- UNCHANGED",
+      "tiers": "1/14, corrected from the 2/14 previously reported",
+      "why_the_tier_figure_moved": "pair-028 with_skill graded missed vs uncertain. The host counted that as a tier split; the frozen definition says an abstention is not a disagreement, so it is not one. The single real tier disagreement in the subsample is pair-012 without_skill.",
+      "reading_unchanged": "The qualitative finding survives and is if anything sharper: graders agree on individual assertions far more readily than on the tier those assertions roll up to, and the tier rule is where restraint grading is fragile."
+    },
+    "decisions_unaffected": "No decision moves. Decision 4 still reports restraint lift CORROBORATED (principal-invariant-owner-restraint 5/5 vs 1/5), no restraint regression on any twin (no twin has with_skill < without_skill), and the crossplat-flag NEGATIVE FLAG RESULT (bare 5/5 vs skill 4/5). Decision 2 is per-assertion and untouched. Decision 3 stays BLOCKED on that flag negative."
   }
 }
