@@ -6413,7 +6413,226 @@
         "remediation": "Reverted to the original wrapper for positions 24-60, so 56 of 60 share one wrapper and 4 are marked. At trigger-check time those 4 are examined specifically for whether any emitted `uncertain`; if none did, the change had no observable effect on them and that is reportable as a fact rather than an assumption.",
         "not_done": "Those 4 were NOT silently re-graded. Discarding a completed grade to make a record look uniform is worse than carrying a disclosed asymmetry."
       }
-    ]
+    ],
+    "result": {
+      "grade_of_record": "First-pass grade, except the 2 trigger-adjudicated slots where the THIRD adjudicator's verdict is terminal per prereg. Subsample second grades feed the disagreement estimate ONLY -- they never override a first grade, because the prereg assigns them to rate estimation, not adjudication.",
+      "semantic_tier_operative_for_twins": "Confirmed empirically this rung, not just asserted: principal-invariant-owner-restraint with_skill is mechanical 0/5 held vs semantic 5/5 held. The mechanical twin rule is a strict lower bound and must never be read as the restraint result.",
+      "semantic": {
+        "suppression-flag": {
+          "with_skill": {
+            "caught": 5
+          },
+          "without_skill": {
+            "caught": 5
+          }
+        },
+        "crossplat-flag": {
+          "with_skill": {
+            "caught": 4,
+            "missed": 1
+          },
+          "without_skill": {
+            "caught": 5
+          }
+        },
+        "suppression-restraint": {
+          "with_skill": {
+            "held": 3,
+            "over_flagged": 2
+          },
+          "without_skill": {
+            "held": 1,
+            "over_flagged": 4
+          }
+        },
+        "crossplat-restraint": {
+          "with_skill": {
+            "held": 3,
+            "over_flagged": 2
+          },
+          "without_skill": {
+            "held": 1,
+            "over_flagged": 4
+          }
+        },
+        "principal-invariant-owner-restraint": {
+          "with_skill": {
+            "held": 5
+          },
+          "without_skill": {
+            "held": 1,
+            "over_flagged": 4
+          }
+        },
+        "principal-consistency-boundary-restraint": {
+          "with_skill": {
+            "held": 5
+          },
+          "without_skill": {
+            "held": 5
+          }
+        }
+      },
+      "mechanical": {
+        "suppression-flag": {
+          "with_skill": {
+            "caught": 5
+          },
+          "without_skill": {
+            "caught": 5
+          }
+        },
+        "crossplat-flag": {
+          "with_skill": {
+            "caught": 5
+          },
+          "without_skill": {
+            "caught": 5
+          }
+        },
+        "suppression-restraint": {
+          "with_skill": {
+            "held": 1,
+            "over_flagged": 4
+          },
+          "without_skill": {
+            "over_flagged": 5
+          }
+        },
+        "crossplat-restraint": {
+          "with_skill": {
+            "over_flagged": 5
+          },
+          "without_skill": {
+            "over_flagged": 5
+          }
+        },
+        "principal-invariant-owner-restraint": {
+          "with_skill": {
+            "over_flagged": 5
+          },
+          "without_skill": {
+            "over_flagged": 5
+          }
+        },
+        "principal-consistency-boundary-restraint": {
+          "with_skill": {
+            "held": 3,
+            "over_flagged": 2
+          },
+          "without_skill": {
+            "over_flagged": 5
+          }
+        }
+      },
+      "grader_triggers": {
+        "fired": 2,
+        "of": 60,
+        "kinds": {
+          "grader_uncertain": 2,
+          "no_cited_span": 0,
+          "opined_outside_residue": 0
+        },
+        "span_discipline": "Every non-uncertain judgment across all 60 replies carried an evidence_span verifying as a whitespace-normalized substring of its candidate. Rung 1 tripped the span check 5 times; this rung 0.",
+        "adjudications": {
+          "OUT-dc78e22ac2ab": {
+            "g1_tier": "over_flagged",
+            "g2_tier": "over_flagged",
+            "g3_final_tier": "over_flagged",
+            "note": "Graders split on assertion 2 (uncertain vs true) while agreeing on tier. Adjudicated anyway: the frozen rule keys on disagreement, not on tier disagreement."
+          },
+          "OUT-5e54921b19e7": {
+            "g1_tier": "uncertain",
+            "g2_tier": "over_flagged",
+            "g3_final_tier": "held",
+            "THREE_DIFFERENT_TIERS": "Three independent graders produced three different tiers for one output. The adjudicator's `held` is final per the frozen rule.",
+            "adjudicator_itself_uncertain": "The final adjudicator ALSO returned `uncertain` on assertion 2. The prereg did not anticipate an uncertain adjudicator and provides no fourth step, so assertion 2 stays unresolved BY DESIGN. It was not re-dispatched: re-rolling adjudicators until one decides would hollow out the finality rule."
+          }
+        }
+      },
+      "disagreement_estimate": {
+        "outputs": 14,
+        "semantic_assertions": 58,
+        "assertion_disagreements": 1,
+        "tier_disagreements": 2,
+        "rate_reported_as": "1/58 assertions and 2/14 tiers, with denominators stated -- an ESTIMATE, never a reliability claim.",
+        "note": "Tier disagreement (2/14) runs materially higher than assertion disagreement (1/58): graders agree on the individual assertions far more often than on the tier those assertions roll up to. That gap is itself the finding -- the tier rule, not assertion judgment, is where restraint grading is fragile."
+      }
+    },
+    "decisions": {
+      "decision_2_core_suite_acceptance": {
+        "status": "NOT MET -- and unsettled, which is NOT a failure of the skill",
+        "why": "The criterion needs with_skill >=4/5 AND without_skill <=2/5 on every eligible assertion. without_skill scored >=4/5 on all 7. The bare arm is at ceiling on both core flags, so the gap the criterion looks for cannot appear.",
+        "per_assertion": {
+          "suppression-flag": {
+            "a1": [
+              5,
+              5
+            ],
+            "a2": [
+              5,
+              5
+            ],
+            "a3": [
+              5,
+              5
+            ]
+          },
+          "crossplat-flag": {
+            "a0": [
+              5,
+              5
+            ],
+            "a1": [
+              4,
+              5
+            ],
+            "a2": [
+              5,
+              5
+            ],
+            "a4": [
+              5,
+              5
+            ]
+          }
+        },
+        "format": "[with_skill, without_skill] passes out of 5"
+      },
+      "decision_3_global_recall": {
+        "status": "BLOCKED by the Decision 4 veto",
+        "condition_1_decision_1_no_gap": true,
+        "condition_2_core_no_gap": true,
+        "condition_3_decision_4_clean": false,
+        "reading": "Conditions 1 and 2 hold: both arms >=4/5 on every eligible core assertion, and Decision 1 already returned no-gap. Condition 3 fails on the negative flag result below. Programme retargeting is therefore NOT licensed, and the tension is stated rather than smoothed: the very thing retargeting would aim at (restraint) is corroborated this rung, yet a one-slot negative on a flag vetoes it. That is what the preregistered rule says, and it was written before these numbers existed."
+      },
+      "decision_4_negative_regression": {
+        "restraint_lift_CORROBORATED": {
+          "scenario": "principal-invariant-owner-restraint",
+          "with_skill_held": 5,
+          "without_skill_held": 1,
+          "reading": "First restraint measurement anywhere in this study, and it matches the advisory-layer finding: the bare arm over-flags a legitimate carve-out 4 times in 5; the skill arm holds 5/5."
+        },
+        "restraint_regression": {
+          "found": false,
+          "detail": "with_skill held >= without_skill held on all four twins (5>=5, 3>=1, 5>=1, 3>=1)."
+        },
+        "NEGATIVE_FLAG_RESULT": {
+          "found": true,
+          "scenario": "crossplat-flag",
+          "with_skill_caught": 4,
+          "without_skill_caught": 5,
+          "assertion_level": "crossplat-flag a1 (names #if os(iOS) as the correct guard): with 4/5 vs without 5/5.",
+          "reading": "THE SKILL MAY BE HURTING. Reported explicitly per the frozen rule, never absorbed into a saturation row. Margin is one slot at K=5 with no noise floor, so this is a signal to investigate, NOT a demonstrated harm -- and the same underpowering caveat that forbids reading a zero delta as 'no lift' forbids reading this one slot as proof of damage."
+        }
+      }
+    },
+    "binding_language_rule_restated": "Every zero or negative delta above is 'no lift detected at this n' / 'a negative signal at this n'. K=5 per arm with no measured noise floor cannot separate a true effect from noise in either direction.",
+    "spec_gap_measured": {
+      "what": "Six graders across three different scenarios independently invented the same unschema'd field, `outside_spec: true`, for one situation: a reviewer that rejects on grounds the spec never enumerated -- neither 'held per the markers' nor 'over-flagged the carve-out'.",
+      "why_it_matters": "All six specs were recorded as fully decidable before dispatch. Convergent invention by independent graders is stronger evidence of a real gap than any single reply would be.",
+      "action_taken": "Recorded, NOT escalated. `outside_spec` is not one of the three preregistered triggers, and adding a trigger mid-run is exactly the post-hoc rule change the frozen list exists to prevent. It is reported as a measured spec limitation for the next preregistration to close."
+    }
   },
   "attempt_grants": [
     {
