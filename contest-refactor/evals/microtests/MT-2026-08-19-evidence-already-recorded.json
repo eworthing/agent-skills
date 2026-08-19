@@ -1,0 +1,101 @@
+{
+  "microtest_id": "MT-2026-08-19-evidence-already-recorded",
+  "date": "2026-08-19",
+  "verdict": "REJECTED \u2014 net zero. Change reverted; references/method.md is byte-identical to its pre-change baseline (sha256 a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be).",
+  "hypothesis": "The paired-arm study's four with_skill restraint failures shared one failure mode: the reviewer clears the carve-out on its merits, then blocks the 9.5 by demanding evidence the scenario already supplied (a TSAN run over storage stipulated lock-protected; verbatim per-target compile logs 'beyond what was already recorded'). references/method.md's risk-boundary rule tells the reviewer to require executable evidence and names those very forms, but never says what to do when the evidence is already recorded. Adding that stopping condition should raise the held rate.",
+  "change_tested": "Two sentences appended to the risk-boundary rule in references/method.md: 'Evidence already recorded is evidence -- do not re-demand it in a different form' plus the accept-unless-you-can-name-a-specific-defect clause.",
+  "design": {
+    "slots": "All 10 with_skill slots on both core restraint twins -- NOT only the 4 that failed. Re-running only the failures would have been confounded by regression to the mean at a measured 40% failure rate.",
+    "held_constant": "scenario.md and architecture-rubric.md copied byte-identical from the study's own scratch bundles; same task template; same model (claude-sonnet-5); grading specs unchanged and hash-verified against the study's recorded values (suppression-restraint fd91d857..., crossplat-restraint 655b1e3b...). method.md was the ONLY difference.",
+    "baseline": "the study's own committed grades for those 10 slots: 6/10 held (3/5 on each twin)."
+  },
+  "result": {
+    "held_before": 6,
+    "held_after": 6,
+    "net": 0,
+    "fixed": 4,
+    "regressed": 4,
+    "suppression_restraint": "3/5 -> 3/5",
+    "crossplat_restraint": "3/5 -> 3/5",
+    "slots": [
+      {
+        "slot": "pair-006",
+        "twin": "suppression-restraint",
+        "role": "treatment",
+        "before": "over_flagged",
+        "after": "held"
+      },
+      {
+        "slot": "pair-009",
+        "twin": "suppression-restraint",
+        "role": "treatment",
+        "before": "over_flagged",
+        "after": "held"
+      },
+      {
+        "slot": "pair-012",
+        "twin": "crossplat-restraint",
+        "role": "treatment",
+        "before": "over_flagged",
+        "after": "held"
+      },
+      {
+        "slot": "pair-037",
+        "twin": "crossplat-restraint",
+        "role": "treatment",
+        "before": "over_flagged",
+        "after": "held"
+      },
+      {
+        "slot": "pair-013",
+        "twin": "crossplat-restraint",
+        "role": "control",
+        "before": "held",
+        "after": "over_flagged"
+      },
+      {
+        "slot": "pair-015",
+        "twin": "suppression-restraint",
+        "role": "control",
+        "before": "held",
+        "after": "held"
+      },
+      {
+        "slot": "pair-038",
+        "twin": "crossplat-restraint",
+        "role": "control",
+        "before": "held",
+        "after": "held"
+      },
+      {
+        "slot": "pair-046",
+        "twin": "crossplat-restraint",
+        "role": "control",
+        "before": "held",
+        "after": "uncertain"
+      },
+      {
+        "slot": "pair-050",
+        "twin": "suppression-restraint",
+        "role": "control",
+        "before": "held",
+        "after": "over_flagged"
+      },
+      {
+        "slot": "pair-051",
+        "twin": "suppression-restraint",
+        "role": "control",
+        "before": "held",
+        "after": "over_flagged"
+      }
+    ]
+  },
+  "what_this_actually_establishes": {
+    "primary": "The clause does not work. It moved four slots into held and four different slots out of it, leaving both twins exactly where they started.",
+    "more_valuable_secondary_finding": "The over-flag failure mode is STOCHASTIC ACROSS RUNS, not a property of particular scenarios. The same slot lands on either side between runs at fixed prose. Two of the four regressed controls regressed with the SAME rationale the clause targets ('demands fresh compile evidence beyond what Meta-Rule 4 already certified'; a claimed TSAN-coverage gap) -- so the clause did not even suppress the behaviour it names.",
+    "methodological_warning": "Had this been scored on the 4 selected failures alone -- the cheaper design that was initially proposed and correctly rejected -- it would have read 4/4 FIXED and shipped a change worth nothing. Slot-level noise fully accounts for a 4-slot 'improvement' at n=10. This is concrete, measured evidence for why the deferred A/A noise floor (item 20) gates prose-change claims, not just lift claims.",
+    "residual_confound_stated": "There is no same-prose re-run of these 10 slots, so the 6/10 baseline is itself a single sample. That does not weaken the negative -- a change that cannot beat its own baseline sample is not shippable -- but it does mean the true unchanged-prose held rate is unknown and could be anywhere near 6/10."
+  },
+  "cost": "20 agent dispatches (10 arms + 10 grades), roughly 1.5M tokens. Cheap for a definitive negative.",
+  "do_not_retry_without": "an A/A floor for this scenario pair, or a slot count large enough that a 4-slot swing is separable from noise. Re-proposing this same clause without one should be treated as already-answered."
+}
