@@ -3211,6 +3211,103 @@
       ],
       "rung_1_discrepancy": "rung1-blind-map.json flags pair-041 as in_subsample. pair-041 is NOT in the canonical selection, and no committed generator reproduces that flag -- rung 1's map was built ad hoc in-session. Under the canonical derivation rung 1 contained ZERO subsample pairs. Its committed grades are untouched; the consequence is reporting-only: pair-041's double grade is an EXTRA, not a subsample draw, and per the prereg's own rule it is reported as a COUNT and never folded into the disagreement rate.",
       "class": "process failure, disclosed -- same class as the dropped rung-1 dispatch"
+    },
+    "result": {
+      "pairs": 15,
+      "slots": 30,
+      "trial_validity": "valid 30/30; candidate_output_status ok 30/30; no reruns, no exogenous invalids",
+      "mechanical": {
+        "principal-invariant-owner-flag": {
+          "with_skill": "5/5 caught",
+          "without_skill": "5/5 caught"
+        },
+        "principal-duplicated-rule-flag": {
+          "with_skill": "5/5 caught",
+          "without_skill": "5/5 caught"
+        },
+        "principal-process-owner-flag": {
+          "with_skill": "5/5 caught",
+          "without_skill": "5/5 caught"
+        }
+      },
+      "semantic": {
+        "principal-invariant-owner-flag": {
+          "with_skill": "5/5 caught",
+          "without_skill": "5/5 caught"
+        },
+        "principal-duplicated-rule-flag": {
+          "with_skill": "5/5 caught",
+          "without_skill": "5/5 caught"
+        },
+        "principal-process-owner-flag": {
+          "with_skill": "5/5 caught",
+          "without_skill": "5/5 caught"
+        }
+      },
+      "tiers_agree": "mechanical and semantic agree on all 30 outputs; the arm-conditional subset invariant (semantic.caught <= mechanical.caught, with_skill only) holds trivially at 5/5 = 5/5",
+      "grader_triggers": {
+        "fired": 1,
+        "detail": "OUT-1362bc32252d, no_cited_span on assertion_index 1 -- a non-uncertain judgment with no verbatim span. Escalated to a second independent grader per the frozen rule; the second grader supplied spans and reached the same three assertion values and the same semantic_grade. No disagreement, so no third adjudicator.",
+        "judgment_caused_escalations": 0
+      },
+      "grading_process_failure": {
+        "what": "One first-pass grader returned its JSON in its final message but never wrote the reply file. Detected by a file-presence check before any tally, not by a crash.",
+        "fix": "Re-dispatched that output; every subsequent grader prompt carries an explicit 'writing the file is required; returning JSON in your final message does not count' clause plus a verbatim-span requirement.",
+        "class": "process failure, disclosed -- same class as the rung-1 dropped dispatch"
+      },
+      "disagreement_estimate": {
+        "design": "preregistered subsample, 2 of 15 rung-2 pairs (pair-010, pair-021), both arms = 4 outputs, double-graded regardless of triggers",
+        "unit": "the semantic assertion",
+        "denominator": 12,
+        "disagreements": 0,
+        "rate": "0/12",
+        "caveat": "12 assertions across 4 outputs of one rung is a SMALL denominator and an estimate, never a population rate. It says the graders agreed where they were compared; it does not establish grader reliability. Reported per the prereg with its denominator stated.",
+        "trigger_adjudications_outside_subsample": 1,
+        "trigger_count_not_folded_into_rate": true
+      }
+    }
+  },
+  "decision_1": {
+    "status": "RESOLVED",
+    "reads": "the 4 headline-eligible principal flags (abstraction-seam excluded as contaminated)",
+    "observed": {
+      "principal-consistency-boundary-flag": {
+        "with_skill": "5/5",
+        "without_skill": "5/5",
+        "rung": 1
+      },
+      "principal-invariant-owner-flag": {
+        "with_skill": "5/5",
+        "without_skill": "5/5",
+        "rung": 2
+      },
+      "principal-duplicated-rule-flag": {
+        "with_skill": "5/5",
+        "without_skill": "5/5",
+        "rung": 2
+      },
+      "principal-process-owner-flag": {
+        "with_skill": "5/5",
+        "without_skill": "5/5",
+        "rung": 2
+      }
+    },
+    "row": "both arms >=4/5 on all 4",
+    "routed_action": "No recall gap detected here -> do NOT grow the principal corpus for recall. Phase 6 twin rework does NOT proceed; it was conditional on 'recall gap located'.",
+    "language_rule": "NO LIFT DETECTED AT THIS N. Never 'lift is zero', never 'the skill adds nothing'. K=5 per arm with no measured noise floor cannot separate a true null from an underpowered one.",
+    "what_it_does_not_settle": [
+      "Decision 2 and 3 need the core layer (rungs 3-4), which are unauthorised.",
+      "Decision 4's restraint twins are not in rungs 1-2 at all; no restraint reading exists yet.",
+      "This measures the review LENS as deployed (architecture-rubric.md + method.md), not the skill end-to-end."
+    ],
+    "corpus_legibility_caveat": {
+      "observation": "In the three rung-2 scenarios the planted defect is documented BY THE DIFF ITSELF -- e.g. '// No compensation: if charge succeeded but finalize failed...' and '// NOTE: prior_orders threshold uses hard-coded literal; DiscountThresholds not referenced here'. Both arms cite those comments.",
+      "consequence": "A self-documenting defect cannot discriminate a reviewer who performs cross-module analysis from one who reads comments. These scenarios are sound as regression fixtures for a skill-equipped reviewer -- their built purpose -- and weak as recall discriminators, which is a DIFFERENT purpose.",
+      "status": "an observation about the corpus, NOT a preregistered analysis and NOT a rescue of the null. It does not change Decision 1's routed action."
+    },
+    "observed_but_not_a_decision_input": {
+      "vocabulary_axis": "with_skill returned canon severity anchors ('Likely disqualifier') and canon smell names ('fake-clean reward', 'architecture costume layer'); without_skill returned ad-hoc equivalents ('critical', 'Shotgun Surgery', 'testing theater'). The design classifies this as skill_contract and forbids it from entering outcome lift.",
+      "second_finding_on_process_owner": "2 of 5 with_skill reps raised the ReservationService.hold check-then-claim race (canon 'reservation after suspension'), which is NOT self-documented in the diff; 1 of those called it blocking, the other scoped it out of the graded dimension. No without_skill rep raised it. n=5, no rule reads it, and it is recorded as an observation only."
     }
   }
 }

@@ -907,8 +907,8 @@
           "temporal coupling"
         ],
         "evidence_demanded": [
-          "Explicit disclosure in loop_result of the conflict with CONTEXT.md §4 (committed roadmap: Inventory moves to its own InventoryService/datastore next quarter) and a stated disposition for this transaction post-split",
-          "file:line citation of the decrementInventory logic showing how oversell is actually prevented, since that is the invariant CONTEXT.md §6 requires, not order/inventory atomicity",
+          "Explicit disclosure in loop_result of the conflict with CONTEXT.md \u00a74 (committed roadmap: Inventory moves to its own InventoryService/datastore next quarter) and a stated disposition for this transaction post-split",
+          "file:line citation of the decrementInventory logic showing how oversell is actually prevented, since that is the invariant CONTEXT.md \u00a76 requires, not order/inventory atomicity",
           "A named test exercising concurrent placeOrder calls against the same inventory item asserting no oversell, not just an aggregate 2,488-test pass count"
         ]
       },
@@ -944,8 +944,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1000,7 +1000,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-016/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-016/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-1889c4152939",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-1889c4152939-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-016",
@@ -1027,7 +1034,7 @@
           "green-suite-as-proof without targeted test evidence"
         ],
         "evidence_demanded": [
-          "Sign-off from the owner of the §4 InventoryService migration that this transactional coupling is an acceptable interim step, with a stated unwind plan (e.g. outbox/saga) for when Inventory moves to its own datastore",
+          "Sign-off from the owner of the \u00a74 InventoryService migration that this transactional coupling is an acceptable interim step, with a stated unwind plan (e.g. outbox/saga) for when Inventory moves to its own datastore",
           "A concurrency test demonstrating no oversell occurs under N parallel placeOrder calls against the same low-stock item, since transaction wrapping alone does not guarantee this",
           "The body of decrementInventory (not shown in the diff), confirming an atomic conditional decrement rather than a blind read-then-write, since oversell risk persists inside the transaction otherwise",
           "Identification of which of the 2,488 passing tests actually exercise the new transaction path or any oversell scenario"
@@ -1065,8 +1072,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1121,7 +1128,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-016/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-016/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-e741b552001b",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-e741b552001b-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-022",
@@ -1146,9 +1160,9 @@
           "fake-clean reward"
         ],
         "evidence_demanded": [
-          "Source citation of decrementInventory's own implementation proving oversell-prevention (§6) is enforced atomically at the inventory row/write itself, independent of this outer transaction",
-          "Explicit reconciliation of this same-database ACID transaction with the §4 committed InventoryService extraction — either documented as a named temporary bridge with a follow-up plan, or replaced with a design that tolerates §6's sanctioned few-seconds lag (e.g. outbox/event reconciliation) and survives the datastore split",
-          "A direct test (file:line) asserting the new rollback/atomicity behavior — e.g. order insert rolled back when decrementInventory throws — rather than citing aggregate suite pass count as evidence for this specific property"
+          "Source citation of decrementInventory's own implementation proving oversell-prevention (\u00a76) is enforced atomically at the inventory row/write itself, independent of this outer transaction",
+          "Explicit reconciliation of this same-database ACID transaction with the \u00a74 committed InventoryService extraction \u2014 either documented as a named temporary bridge with a follow-up plan, or replaced with a design that tolerates \u00a76's sanctioned few-seconds lag (e.g. outbox/event reconciliation) and survives the datastore split",
+          "A direct test (file:line) asserting the new rollback/atomicity behavior \u2014 e.g. order insert rolled back when decrementInventory throws \u2014 rather than citing aggregate suite pass count as evidence for this specific property"
         ]
       },
       "structural_report": {
@@ -1183,8 +1197,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1239,7 +1253,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-022/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-022/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-ca3452adf4cd",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-ca3452adf4cd-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-022",
@@ -1255,21 +1276,21 @@
       "verdict_json": {
         "verdict": "conditional",
         "blocks_95": true,
-        "blocking_severity": "high — introduces coupling that directly contradicts a committed, dated architectural roadmap item (§4) and over-satisfies a relaxed consistency requirement (§6) using the exact mechanism the roadmap will make impossible",
+        "blocking_severity": "high \u2014 introduces coupling that directly contradicts a committed, dated architectural roadmap item (\u00a74) and over-satisfies a relaxed consistency requirement (\u00a76) using the exact mechanism the roadmap will make impossible",
         "dimension_scores": {
           "data_flow": 6
         },
         "flagged_smells": [
           "roadmap-blind coupling (couples Order+Inventory writes tighter just before a committed split)",
-          "over-engineered consistency (ACID transaction used where §6 explicitly permits eventual consistency)",
-          "unacknowledged context (loop_result never reconciles the change with CONTEXT.md §4/§6)",
+          "over-engineered consistency (ACID transaction used where \u00a76 explicitly permits eventual consistency)",
+          "unacknowledged context (loop_result never reconciles the change with CONTEXT.md \u00a74/\u00a76)",
           "temporary-fix-presented-as-final (no tracked follow-up for the post-migration unwind)"
         ],
         "evidence_demanded": [
           "A design (or explicit interim-bridge note with a tracked ticket) for how oversell prevention will work once Inventory moves to its own datastore, given the transaction as written cannot span two datastores",
-          "Justification for choosing synchronous ACID coupling over a reservation/hold or idempotent-async pattern that would satisfy §6's 'may lag a few seconds' allowance and remain valid post-migration",
+          "Justification for choosing synchronous ACID coupling over a reservation/hold or idempotent-async pattern that would satisfy \u00a76's 'may lag a few seconds' allowance and remain valid post-migration",
           "Confirmation of what Database.transaction actually guarantees (local-only vs. distributed) so the co-location assumption is explicit rather than implied by the diff's closing sentence",
-          "An updated loop_result that shows CONTEXT.md §4/§6 were read and reconciled, not just the narrow before/after diff framing"
+          "An updated loop_result that shows CONTEXT.md \u00a74/\u00a76 were read and reconciled, not just the narrow before/after diff framing"
         ]
       },
       "structural_report": {
@@ -1289,7 +1310,7 @@
           {
             "name": "flagged_smells_canon_exact",
             "pass": false,
-            "detail": "non-canon values: ['roadmap-blind coupling (couples Order+Inventory writes tighter just before a committed split)', 'over-engineered consistency (ACID transaction used where §6 explicitly permits eventual consistency)', 'unacknowledged context (loop_result never reconciles the change with CONTEXT.md §4/§6)', 'temporary-fix-presented-as-final (no tracked follow-up for the post-migration unwind)']"
+            "detail": "non-canon values: ['roadmap-blind coupling (couples Order+Inventory writes tighter just before a committed split)', 'over-engineered consistency (ACID transaction used where \u00a76 explicitly permits eventual consistency)', 'unacknowledged context (loop_result never reconciles the change with CONTEXT.md \u00a74/\u00a76)', 'temporary-fix-presented-as-final (no tracked follow-up for the post-migration unwind)']"
           },
           {
             "name": "dimension_scores_shape",
@@ -1299,13 +1320,13 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'high — introduces coupling that directly contradicts a committed, dated architectural roadmap item (§4) and over-satisfies a relaxed consistency requirement (§6) using the exact mechanism the roadmap will make impossible'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'high \u2014 introduces coupling that directly contradicts a committed, dated architectural roadmap item (\u00a74) and over-satisfies a relaxed consistency requirement (\u00a76) using the exact mechanism the roadmap will make impossible'"
           }
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1341,7 +1362,7 @@
           "assertion_text": "flagged_smells_canon_exact",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "non-canon values: ['roadmap-blind coupling (couples Order+Inventory writes tighter just before a committed split)', 'over-engineered consistency (ACID transaction used where §6 explicitly permits eventual consistency)', 'unacknowledged context (loop_result never reconciles the change with CONTEXT.md §4/§6)', 'temporary-fix-presented-as-final (no tracked follow-up for the post-migration unwind)']"
+          "rationale": "non-canon values: ['roadmap-blind coupling (couples Order+Inventory writes tighter just before a committed split)', 'over-engineered consistency (ACID transaction used where \u00a76 explicitly permits eventual consistency)', 'unacknowledged context (loop_result never reconciles the change with CONTEXT.md \u00a74/\u00a76)', 'temporary-fix-presented-as-final (no tracked follow-up for the post-migration unwind)']"
         },
         {
           "source": "general_check",
@@ -1357,10 +1378,17 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'high — introduces coupling that directly contradicts a committed, dated architectural roadmap item (§4) and over-satisfies a relaxed consistency requirement (§6) using the exact mechanism the roadmap will make impossible'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'high \u2014 introduces coupling that directly contradicts a committed, dated architectural roadmap item (\u00a74) and over-satisfies a relaxed consistency requirement (\u00a76) using the exact mechanism the roadmap will make impossible'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-022/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-022/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-f00a90e03fd9",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-f00a90e03fd9-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-031",
@@ -1386,9 +1414,9 @@
           "fake-clean reward"
         ],
         "evidence_demanded": [
-          "Explicit reconciliation of this Database.transaction design with CONTEXT.md §4 (Inventory moving to a dedicated InventoryService/datastore next quarter) — how does this mechanism survive Order and Inventory no longer sharing a database?",
-          "Justification for choosing single-database ACID strength when §6 only requires oversell prevention and explicitly tolerates inventory lag, rather than a lighter, migration-compatible mechanism (e.g. an atomic/conditioned decrement at the inventory row, decoupled from order-insert atomicity)",
-          "A disclosed-tradeoff record (ADR or CONTEXT.md addendum) if the joint transaction is a deliberate near-term choice, naming the removal condition tied to the §4 migration"
+          "Explicit reconciliation of this Database.transaction design with CONTEXT.md \u00a74 (Inventory moving to a dedicated InventoryService/datastore next quarter) \u2014 how does this mechanism survive Order and Inventory no longer sharing a database?",
+          "Justification for choosing single-database ACID strength when \u00a76 only requires oversell prevention and explicitly tolerates inventory lag, rather than a lighter, migration-compatible mechanism (e.g. an atomic/conditioned decrement at the inventory row, decoupled from order-insert atomicity)",
+          "A disclosed-tradeoff record (ADR or CONTEXT.md addendum) if the joint transaction is a deliberate near-term choice, naming the removal condition tied to the \u00a74 migration"
         ]
       },
       "structural_report": {
@@ -1423,8 +1451,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1479,7 +1507,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-031/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-031/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-11fb11851b92",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-11fb11851b92-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-031",
@@ -1495,20 +1530,20 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — change contradicts a committed architectural roadmap decision (CONTEXT.md §4) and does not demonstrate the actual named invariant (CONTEXT.md §6 oversell prevention); passing tests do not cover either concern",
+        "blocking_severity": "critical \u2014 change contradicts a committed architectural roadmap decision (CONTEXT.md \u00a74) and does not demonstrate the actual named invariant (CONTEXT.md \u00a76 oversell prevention); passing tests do not cover either concern",
         "dimension_scores": {
           "data_flow": 4
         },
         "flagged_smells": [
-          "roadmap-contradicting coupling (ties Order+Inventory into one local ACID transaction while committed §4 plan splits them into separate services/datastores next quarter)",
-          "over-tightened consistency (imposes synchronous ACID consistency where §6 explicitly permits a few seconds of lag)",
+          "roadmap-contradicting coupling (ties Order+Inventory into one local ACID transaction while committed \u00a74 plan splits them into separate services/datastores next quarter)",
+          "over-tightened consistency (imposes synchronous ACID consistency where \u00a76 explicitly permits a few seconds of lag)",
           "narrow/local fix mismatched to the stated requirement (solves partial-write atomicity, not the named 'never oversell' invariant)",
           "unverified invariant (no oversell/availability check shown or tested; green suite doesn't exercise the concurrent-oversell case)",
           "unscoped temporary architecture (no migration/unwind plan for when InventoryService lands)"
         ],
         "evidence_demanded": [
           "A concurrency test demonstrating two simultaneous orders competing for the last unit of inventory cannot oversell",
-          "Confirmation the Actor read CONTEXT.md §4 and either has a documented plan for decomposing this transaction when InventoryService is extracted, or an explicit rationale for why the roadmap doesn't apply here",
+          "Confirmation the Actor read CONTEXT.md \u00a74 and either has a documented plan for decomposing this transaction when InventoryService is extracted, or an explicit rationale for why the roadmap doesn't apply here",
           "Evidence (code or design note) that decrementInventory enforces a non-negative/availability constraint independent of the transaction wrapper",
           "A decoupling boundary (e.g., an InventoryPort/protocol OrderService calls) so the future cross-service split doesn't require rewriting placeOrder's control flow"
         ]
@@ -1530,7 +1565,7 @@
           {
             "name": "flagged_smells_canon_exact",
             "pass": false,
-            "detail": "non-canon values: ['roadmap-contradicting coupling (ties Order+Inventory into one local ACID transaction while committed §4 plan splits them into separate services/datastores next quarter)', 'over-tightened consistency (imposes synchronous ACID consistency where §6 explicitly permits a few seconds of lag)', \"narrow/local fix mismatched to the stated requirement (solves partial-write atomicity, not the named 'never oversell' invariant)\", \"unverified invariant (no oversell/availability check shown or tested; green suite doesn't exercise the concurrent-oversell case)\", 'unscoped temporary architecture (no migration/unwind plan for when InventoryService lands)']"
+            "detail": "non-canon values: ['roadmap-contradicting coupling (ties Order+Inventory into one local ACID transaction while committed \u00a74 plan splits them into separate services/datastores next quarter)', 'over-tightened consistency (imposes synchronous ACID consistency where \u00a76 explicitly permits a few seconds of lag)', \"narrow/local fix mismatched to the stated requirement (solves partial-write atomicity, not the named 'never oversell' invariant)\", \"unverified invariant (no oversell/availability check shown or tested; green suite doesn't exercise the concurrent-oversell case)\", 'unscoped temporary architecture (no migration/unwind plan for when InventoryService lands)']"
           },
           {
             "name": "dimension_scores_shape",
@@ -1540,13 +1575,13 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — change contradicts a committed architectural roadmap decision (CONTEXT.md §4) and does not demonstrate the actual named invariant (CONTEXT.md §6 oversell prevention); passing tests do not cover either concern'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 change contradicts a committed architectural roadmap decision (CONTEXT.md \u00a74) and does not demonstrate the actual named invariant (CONTEXT.md \u00a76 oversell prevention); passing tests do not cover either concern'"
           }
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1582,7 +1617,7 @@
           "assertion_text": "flagged_smells_canon_exact",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "non-canon values: ['roadmap-contradicting coupling (ties Order+Inventory into one local ACID transaction while committed §4 plan splits them into separate services/datastores next quarter)', 'over-tightened consistency (imposes synchronous ACID consistency where §6 explicitly permits a few seconds of lag)', \"narrow/local fix mismatched to the stated requirement (solves partial-write atomicity, not the named 'never oversell' invariant)\", \"unverified invariant (no oversell/availability check shown or tested; green suite doesn't exercise the concurrent-oversell case)\", 'unscoped temporary architecture (no migration/unwind plan for when InventoryService lands)']"
+          "rationale": "non-canon values: ['roadmap-contradicting coupling (ties Order+Inventory into one local ACID transaction while committed \u00a74 plan splits them into separate services/datastores next quarter)', 'over-tightened consistency (imposes synchronous ACID consistency where \u00a76 explicitly permits a few seconds of lag)', \"narrow/local fix mismatched to the stated requirement (solves partial-write atomicity, not the named 'never oversell' invariant)\", \"unverified invariant (no oversell/availability check shown or tested; green suite doesn't exercise the concurrent-oversell case)\", 'unscoped temporary architecture (no migration/unwind plan for when InventoryService lands)']"
         },
         {
           "source": "general_check",
@@ -1598,10 +1633,17 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — change contradicts a committed architectural roadmap decision (CONTEXT.md §4) and does not demonstrate the actual named invariant (CONTEXT.md §6 oversell prevention); passing tests do not cover either concern'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 change contradicts a committed architectural roadmap decision (CONTEXT.md \u00a74) and does not demonstrate the actual named invariant (CONTEXT.md \u00a76 oversell prevention); passing tests do not cover either concern'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-031/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-031/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-882fd2b274b6",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-882fd2b274b6-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-041",
@@ -1625,10 +1667,10 @@
           "fake-clean reward"
         ],
         "evidence_demanded": [
-          "Explicit acknowledgment/scoping of the CONTEXT.md §4 roadmap conflict: how this transaction-based coupling will be replaced when InventoryService moves to its own datastore next quarter, with a removal condition tied to that migration",
-          "A concurrency/oversell test: two competing orders against a single remaining inventory unit, asserting only one commits — testing the §6 invariant directly rather than relying on aggregate suite size",
+          "Explicit acknowledgment/scoping of the CONTEXT.md \u00a74 roadmap conflict: how this transaction-based coupling will be replaced when InventoryService moves to its own datastore next quarter, with a removal condition tied to that migration",
+          "A concurrency/oversell test: two competing orders against a single remaining inventory unit, asserting only one commits \u2014 testing the \u00a76 invariant directly rather than relying on aggregate suite size",
           "Confirmation of decrementInventory's write shape (atomic conditional decrement e.g. WHERE qty >= n, vs. read-then-write) and the transaction's isolation level, since the wrapping transaction only guarantees the insert+decrement pair is atomic, not that oversell is prevented",
-          "Justification for choosing synchronous same-database ACID coupling over a migration-compatible design (reservation/conditional-decrement, outbox, or saga), given §6 explicitly tolerates inventory lag"
+          "Justification for choosing synchronous same-database ACID coupling over a migration-compatible design (reservation/conditional-decrement, outbox, or saga), given \u00a76 explicitly tolerates inventory lag"
         ]
       },
       "structural_report": {
@@ -1663,8 +1705,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1719,7 +1761,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-041/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-041/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-28d405f7e006",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-28d405f7e006.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-041",
@@ -1749,7 +1798,7 @@
           "design that satisfies the no-oversell requirement without assuming Order and inventory share a datastore (e.g. idempotent reservation/outbox pattern)",
           "contention/locking analysis under the anticipated 50x write-volume spike versus the pre-diff sequential writes",
           "explanation of how oversell prevention actually works today (row locking / stock check) since that is the real invariant, not write atomicity",
-          "explicit reconciliation of this change against CONTEXT.md §4 in the loop report, not just a green test run"
+          "explicit reconciliation of this change against CONTEXT.md \u00a74 in the loop report, not just a green test run"
         ]
       },
       "structural_report": {
@@ -1784,8 +1833,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1840,7 +1889,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-041/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-041/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-00bd72c7bebf",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-00bd72c7bebf-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-047",
@@ -1864,7 +1920,7 @@
         "evidence_demanded": [
           "decrementInventory implementation (file:line): does it perform a single atomic conditional update (e.g. `UPDATE inventory SET qty = qty - n WHERE qty >= n`) that prevents oversell under concurrent transactions, or does it read-then-write across a separate step?",
           "Isolation level configured for db.transaction, and whether it alone would serialize two concurrent placeOrder calls against the same inventory row absent an atomic conditional decrement",
-          "An explicit design note or migration plan reconciling this same-transaction coupling with the committed CONTEXT.md §4 move of Inventory to its own InventoryService/datastore next quarter — specifically how oversell-prevention will be re-implemented once decrementInventory can no longer share a local ACID transaction with the order insert",
+          "An explicit design note or migration plan reconciling this same-transaction coupling with the committed CONTEXT.md \u00a74 move of Inventory to its own InventoryService/datastore next quarter \u2014 specifically how oversell-prevention will be re-implemented once decrementInventory can no longer share a local ACID transaction with the order insert",
           "Confirmation of whether this loop intends the transaction wrap as a permanent data_flow answer or a named, time-boxed stopgap pending the InventoryService migration"
         ]
       },
@@ -1900,8 +1956,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -1956,7 +2012,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-047/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-047/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-06fb8e56c581",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-06fb8e56c581-sonnet.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-047",
@@ -1984,11 +2047,11 @@
           "test-suite blind spot: current suite cannot exercise the post-migration topology"
         ],
         "evidence_demanded": [
-          "Explicit acknowledgment that this transaction is an interim stopgap, tied to a tracked follow-up for the InventoryService migration in §4, not a permanent design",
+          "Explicit acknowledgment that this transaction is an interim stopgap, tied to a tracked follow-up for the InventoryService migration in \u00a74, not a permanent design",
           "A concrete plan for how oversell prevention will work once inventory lives in a separate datastore (reservation counters, idempotent decrement calls, outbox/saga pattern, optimistic recheck) that does not depend on a shared local transaction",
-          "Confirmation the Actor read CONTEXT.md §4/§6 before choosing full ACID atomicity over the documented lag-tolerant requirement, or a rationale for overriding that requirement",
+          "Confirmation the Actor read CONTEXT.md \u00a74/\u00a76 before choosing full ACID atomicity over the documented lag-tolerant requirement, or a rationale for overriding that requirement",
           "A test or contract pinned to the actual invariant (no oversell under concurrent load) independent of the transaction mechanism, so the fix is verified against the real requirement rather than against 'writes are atomic'",
-          "An estimate of the rework cost this coupling adds to the committed §4 migration, so the 'hardening' isn't quietly growing next quarter's migration bill"
+          "An estimate of the rework cost this coupling adds to the committed \u00a74 migration, so the 'hardening' isn't quietly growing next quarter's migration bill"
         ]
       },
       "structural_report": {
@@ -2023,8 +2086,8 @@
         ],
         "assertions": [],
         "residue": [
-          "[discriminating] Recognizes that CONTEXT §4 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
-          "[discriminating] Uses §6 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
+          "[discriminating] Recognizes that CONTEXT \u00a74 (committed roadmap) moves inventory to a separate datastore, so the order+inventory ACID transaction becomes a cross-service distributed transaction that cannot hold",
+          "[discriminating] Uses \u00a76 (eventual consistency explicitly allowed if oversell is prevented) to argue the strong cross-entity consistency boundary is the wrong choice, not just a future inconvenience",
           "[discriminating] Does not accept data_flow at 9.5: the structure is defensible today but shears under a committed, grounded change (forces/evolution reasoning, not present-tense only)",
           "[validity] Acknowledges the transaction is correct and race-free against current source"
         ],
@@ -2079,7 +2142,14 @@
           "rationale": "blocks_95=true requires a canon blocking_severity, got None"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-047/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-047/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-411ccc908d3b",
+      "grader_reply": "evals/paired-arm-outputs/rung1-grades/OUT-411ccc908d3b.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-002",
@@ -2161,8 +2231,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -2240,7 +2310,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-002/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-002/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-0fe2d7d163ea",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-0fe2d7d163ea.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-002",
@@ -2256,16 +2333,16 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)",
+        "blocking_severity": "critical \u2014 silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)",
         "dimension_scores": {
           "domain_modeling": 3
         },
         "flagged_smells": [
-          "duplicated business rule (shotgun surgery) — Discount Rule hand-written independently in three places, one in SQL",
-          "incomplete migration — prior_orders literal left un-migrated at OrderRepository despite loop_result claiming site-wide consistency",
-          "false single source of truth — DiscountThresholds centralizes constants but not the predicate, creating an illusion of DRY-ness",
-          "type-system-invisible drift — SQL string interpolation has no compiler linkage to DiscountThresholds, so future edits can silently diverge again",
-          "test-suite blind spot — no test asserts eligibility parity across CartView/OrderRepository/DiscountWorker, so a green suite masks the defect"
+          "duplicated business rule (shotgun surgery) \u2014 Discount Rule hand-written independently in three places, one in SQL",
+          "incomplete migration \u2014 prior_orders literal left un-migrated at OrderRepository despite loop_result claiming site-wide consistency",
+          "false single source of truth \u2014 DiscountThresholds centralizes constants but not the predicate, creating an illusion of DRY-ness",
+          "type-system-invisible drift \u2014 SQL string interpolation has no compiler linkage to DiscountThresholds, so future edits can silently diverge again",
+          "test-suite blind spot \u2014 no test asserts eligibility parity across CartView/OrderRepository/DiscountWorker, so a green suite masks the defect"
         ],
         "evidence_demanded": [
           "A single canonical eligibility predicate/spec type (e.g. DiscountEligibility.isEligible(member:cart:)) consumed by CartView and DiscountWorker, replacing the three hand-written boolean expressions",
@@ -2291,7 +2368,7 @@
           {
             "name": "flagged_smells_canon_exact",
             "pass": false,
-            "detail": "non-canon values: ['duplicated business rule (shotgun surgery) — Discount Rule hand-written independently in three places, one in SQL', 'incomplete migration — prior_orders literal left un-migrated at OrderRepository despite loop_result claiming site-wide consistency', 'false single source of truth — DiscountThresholds centralizes constants but not the predicate, creating an illusion of DRY-ness', 'type-system-invisible drift — SQL string interpolation has no compiler linkage to DiscountThresholds, so future edits can silently diverge again', 'test-suite blind spot — no test asserts eligibility parity across CartView/OrderRepository/DiscountWorker, so a green suite masks the defect']"
+            "detail": "non-canon values: ['duplicated business rule (shotgun surgery) \u2014 Discount Rule hand-written independently in three places, one in SQL', 'incomplete migration \u2014 prior_orders literal left un-migrated at OrderRepository despite loop_result claiming site-wide consistency', 'false single source of truth \u2014 DiscountThresholds centralizes constants but not the predicate, creating an illusion of DRY-ness', 'type-system-invisible drift \u2014 SQL string interpolation has no compiler linkage to DiscountThresholds, so future edits can silently diverge again', 'test-suite blind spot \u2014 no test asserts eligibility parity across CartView/OrderRepository/DiscountWorker, so a green suite masks the defect']"
           },
           {
             "name": "dimension_scores_shape",
@@ -2301,7 +2378,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)'"
           }
         ],
         "assertions": [
@@ -2315,7 +2392,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='critical — silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='critical \u2014 silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -2325,8 +2402,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -2361,7 +2438,7 @@
           "assertion_text": "flagged_smells_canon_exact",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "non-canon values: ['duplicated business rule (shotgun surgery) — Discount Rule hand-written independently in three places, one in SQL', 'incomplete migration — prior_orders literal left un-migrated at OrderRepository despite loop_result claiming site-wide consistency', 'false single source of truth — DiscountThresholds centralizes constants but not the predicate, creating an illusion of DRY-ness', 'type-system-invisible drift — SQL string interpolation has no compiler linkage to DiscountThresholds, so future edits can silently diverge again', 'test-suite blind spot — no test asserts eligibility parity across CartView/OrderRepository/DiscountWorker, so a green suite masks the defect']"
+          "rationale": "non-canon values: ['duplicated business rule (shotgun surgery) \u2014 Discount Rule hand-written independently in three places, one in SQL', 'incomplete migration \u2014 prior_orders literal left un-migrated at OrderRepository despite loop_result claiming site-wide consistency', 'false single source of truth \u2014 DiscountThresholds centralizes constants but not the predicate, creating an illusion of DRY-ness', 'type-system-invisible drift \u2014 SQL string interpolation has no compiler linkage to DiscountThresholds, so future edits can silently diverge again', 'test-suite blind spot \u2014 no test asserts eligibility parity across CartView/OrderRepository/DiscountWorker, so a green suite masks the defect']"
         },
         {
           "source": "general_check",
@@ -2377,7 +2454,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)'"
         },
         {
           "source": "evals_assertion",
@@ -2393,7 +2470,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='critical — silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='critical \u2014 silent cross-module divergence of a financial/business-eligibility rule, demonstrated to produce a live correctness bug (discount granted then clawed back)' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -2404,7 +2481,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-002/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-002/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-cc65ff90c50f",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-cc65ff90c50f.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-010",
@@ -2432,8 +2516,8 @@
         ],
         "evidence_demanded": [
           "A single authoritative method (e.g. RosterStore.addPlayer(_:to:) or an explicit domain service) that owns the One-League Rule check-and-claim as one atomic actor-isolated step, called by both RosterView and ImportService, replacing the two duplicated guards",
-          "Proof the check-and-claim is atomic under concurrent callers — a concurrency test firing a UI add and a CSV import for the same player/league concurrently asserting only one succeeds, or an equivalent actor-isolation argument",
-          "A test that fails if either existing guard (or its replacement) is deleted or weakened, per the mutation-test mental model — not aggregate suite-green counts",
+          "Proof the check-and-claim is atomic under concurrent callers \u2014 a concurrency test firing a UI add and a CSV import for the same player/league concurrently asserting only one succeeds, or an equivalent actor-isolation argument",
+          "A test that fails if either existing guard (or its replacement) is deleted or weakened, per the mutation-test mental model \u2014 not aggregate suite-green counts",
           "Removal of the redundant per-call-site guards once ownership is centralized"
         ]
       },
@@ -2489,7 +2573,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -2567,7 +2651,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-010/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-010/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-aafad30e2396",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-aafad30e2396.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-010",
@@ -2583,7 +2674,7 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import",
+        "blocking_severity": "critical \u2014 domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import",
         "dimension_scores": {
           "domain_modeling": 3
         },
@@ -2597,7 +2688,7 @@
         "evidence_demanded": [
           "LeagueRoster.addPlayer (or a domain service it owns) rejects/throws on One-League Rule violation, becoming the single enforcement point",
           "RosterView and ImportService refactored to call that single guarded entry point, with the ad-hoc filter blocks deleted rather than duplicated",
-          "A regression test through ImportService that would fail against the current diff — i.e., one that specifically exercises a case where row.leagueID and store.currentRoster.leagueID could diverge",
+          "A regression test through ImportService that would fail against the current diff \u2014 i.e., one that specifically exercises a case where row.leagueID and store.currentRoster.leagueID could diverge",
           "Confirmation that no existing test currently asserts the One-League Rule end-to-end for the import path (the reported 2,041-pass count does not establish this)"
         ]
       },
@@ -2628,7 +2719,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import'"
           }
         ],
         "assertions": [
@@ -2642,7 +2733,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='critical — domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='critical \u2014 domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -2653,7 +2744,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -2704,7 +2795,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import'"
         },
         {
           "source": "evals_assertion",
@@ -2720,7 +2811,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='critical — domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='critical \u2014 domain invariant enforcement duplicated outside the domain owner (anemic domain model), with two guards deriving league identity from different sources and no shared source of truth, risking silent invariant violation on import' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -2731,7 +2822,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-010/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-010/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-2ebbd34d5d8a",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-2ebbd34d5d8a.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-017",
@@ -2759,7 +2857,7 @@
         ],
         "evidence_demanded": [
           "A single domain-owned eligibility function/type (e.g. DiscountEligibility.isEligible(cart:member:)) that CartView and DiscountWorker both call directly, replacing their independent inline boolean expressions",
-          "OrderRepository's SQL built parametrically from DiscountThresholds (or an equivalent structural guarantee) so the prior_orders and subtotal literals cannot silently diverge from the domain constant again — not just a corrected literal, since a corrected literal reintroduces the same drift risk on the next edit",
+          "OrderRepository's SQL built parametrically from DiscountThresholds (or an equivalent structural guarantee) so the prior_orders and subtotal literals cannot silently diverge from the domain constant again \u2014 not just a corrected literal, since a corrected literal reintroduces the same drift risk on the next edit",
           "A regression test that changes DiscountThresholds.minimumPriorOrders and asserts CartView, OrderRepository's generated query, and DiscountWorker all agree on eligibility for the same fixture member/cart",
           "Removal of the self-admitted incomplete-migration comment in OrderRepository.swift, or its replacement with an accurate, resolved state"
         ]
@@ -2815,8 +2913,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -2894,7 +2992,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-017/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-017/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-cdce0c7fa516",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-cdce0c7fa516.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-017",
@@ -2917,7 +3022,7 @@
         "flagged_smells": [
           "shotgun surgery",
           "duplicated business rule (rule triplicated across layers)",
-          "primitive obsession (only partially resolved — constants extracted, predicate not)",
+          "primitive obsession (only partially resolved \u2014 constants extracted, predicate not)",
           "silent data/logic drift",
           "incomplete migration left with a self-admitting comment",
           "false completion claim in loop report"
@@ -2946,7 +3051,7 @@
           {
             "name": "flagged_smells_canon_exact",
             "pass": false,
-            "detail": "non-canon values: ['shotgun surgery', 'duplicated business rule (rule triplicated across layers)', 'primitive obsession (only partially resolved — constants extracted, predicate not)', 'silent data/logic drift', 'incomplete migration left with a self-admitting comment', 'false completion claim in loop report']"
+            "detail": "non-canon values: ['shotgun surgery', 'duplicated business rule (rule triplicated across layers)', 'primitive obsession (only partially resolved \u2014 constants extracted, predicate not)', 'silent data/logic drift', 'incomplete migration left with a self-admitting comment', 'false completion claim in loop report']"
           },
           {
             "name": "dimension_scores_shape",
@@ -2980,8 +3085,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -3016,7 +3121,7 @@
           "assertion_text": "flagged_smells_canon_exact",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "non-canon values: ['shotgun surgery', 'duplicated business rule (rule triplicated across layers)', 'primitive obsession (only partially resolved — constants extracted, predicate not)', 'silent data/logic drift', 'incomplete migration left with a self-admitting comment', 'false completion claim in loop report']"
+          "rationale": "non-canon values: ['shotgun surgery', 'duplicated business rule (rule triplicated across layers)', 'primitive obsession (only partially resolved \u2014 constants extracted, predicate not)', 'silent data/logic drift', 'incomplete migration left with a self-admitting comment', 'false completion claim in loop report']"
         },
         {
           "source": "general_check",
@@ -3059,7 +3164,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-017/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-017/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-3380bdb472bd",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-3380bdb472bd.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-018",
@@ -3220,7 +3332,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-018/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-018/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-5da4dbaa2164",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-5da4dbaa2164.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-018",
@@ -3236,7 +3355,7 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway",
+        "blocking_severity": "critical \u2014 data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway",
         "dimension_scores": {
           "data_flow": 3
         },
@@ -3281,7 +3400,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway'"
           }
         ],
         "assertions": [
@@ -3295,7 +3414,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='critical — data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='critical \u2014 data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -3357,7 +3476,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway'"
         },
         {
           "source": "evals_assertion",
@@ -3373,7 +3492,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='critical — data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='critical \u2014 data-integrity/financial-correctness defect: partial-failure across the charge/finalize boundary leaves a captured payment with no booking record and a seat held indefinitely, self-acknowledged in a code comment and shipped anyway' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -3384,7 +3503,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-018/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-018/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-4c8dddb01367",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-4c8dddb01367.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-021",
@@ -3471,7 +3597,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -3549,7 +3675,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-021/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-021/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-4e8ca5025ea5",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-4e8ca5025ea5.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-021",
@@ -3565,7 +3698,7 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence",
+        "blocking_severity": "critical \u2014 domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence",
         "dimension_scores": {
           "domain_modeling": 2
         },
@@ -3579,9 +3712,9 @@
         ],
         "evidence_demanded": [
           "A single domain-level enforcement point (e.g. LeagueRoster.addPlayer(_:) throws, or a validating method on the aggregate that owns all rosters for a league) that both RosterView and ImportService call through, with the duplicated filter/guard blocks deleted from both call sites",
-          "Removal of the 'callers are expected to pre-validate' comment in favor of actual enforcement — either a throwing/failable API or a type that makes constructing an invalid state impossible",
+          "Removal of the 'callers are expected to pre-validate' comment in favor of actual enforcement \u2014 either a throwing/failable API or a type that makes constructing an invalid state impossible",
           "A regression test that pins the exact divergence risk named in the diff's own commentary: store.currentRoster.leagueID vs row.leagueID resolving to different values, proving the invariant still holds (or currently doesn't) under that condition",
-          "A test demonstrating that a third, not-yet-written caller of the roster-mutation API cannot bypass the invariant — i.e. enforcement by construction, not by caller convention"
+          "A test demonstrating that a third, not-yet-written caller of the roster-mutation API cannot bypass the invariant \u2014 i.e. enforcement by construction, not by caller convention"
         ]
       },
       "structural_report": {
@@ -3611,7 +3744,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence'"
           }
         ],
         "assertions": [
@@ -3625,7 +3758,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='critical — domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='critical \u2014 domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -3636,7 +3769,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -3687,7 +3820,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence'"
         },
         {
           "source": "evals_assertion",
@@ -3703,7 +3836,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='critical — domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='critical \u2014 domain invariant enforcement duplicated across presentation and infrastructure layers instead of centralized in the domain owner; the two copies read divergent sources of truth (store.currentRoster.leagueID vs row.leagueID) with no test proving equivalence' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -3714,7 +3847,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-021/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-021/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-674063d25656",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-674063d25656.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-024",
@@ -3799,8 +3939,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -3878,7 +4018,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-024/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-024/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-63adaf258733",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-63adaf258733.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-024",
@@ -3894,7 +4041,7 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "high — incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite",
+        "blocking_severity": "high \u2014 incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite",
         "dimension_scores": {
           "domain_modeling": 3
         },
@@ -3907,7 +4054,7 @@
         ],
         "evidence_demanded": [
           "a single canonical eligibility predicate/type consumed by CartView, OrderRepository, and DiscountWorker instead of three independent && chains",
-          "elimination of the OrderRepository literal — the SQL threshold must be derived from DiscountThresholds.minimumPriorOrders, not hand-typed",
+          "elimination of the OrderRepository literal \u2014 the SQL threshold must be derived from DiscountThresholds.minimumPriorOrders, not hand-typed",
           "a test that changes DiscountThresholds.minimumPriorOrders and asserts all three call sites agree on the resulting eligibility decision",
           "an audit (grep or equivalent) proving no other hard-coded copies of the Discount Rule's literals remain in the codebase"
         ]
@@ -3939,7 +4086,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'high — incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'high \u2014 incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite'"
           }
         ],
         "assertions": [
@@ -3953,7 +4100,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='high — incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='high \u2014 incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -3963,8 +4110,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -4015,7 +4162,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'high — incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'high \u2014 incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite'"
         },
         {
           "source": "evals_assertion",
@@ -4031,7 +4178,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='high — incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='high \u2014 incomplete migration leaves a duplicated business rule with a silently unmigrated call site, producing a real member-visible correctness defect (one-day discount-eligibility inconsistency) not caught by the existing test suite' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -4042,7 +4189,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-024/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-024/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-d8181f7a645c",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-d8181f7a645c.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-026",
@@ -4127,7 +4281,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -4205,7 +4359,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-026/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-026/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-810e7953e72f",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-810e7953e72f.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-026",
@@ -4221,7 +4382,7 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers",
+        "blocking_severity": "critical \u2014 unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers",
         "dimension_scores": {
           "domain_modeling": 3
         },
@@ -4264,7 +4425,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers'"
           }
         ],
         "assertions": [
@@ -4278,7 +4439,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='critical — unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='critical \u2014 unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -4289,7 +4450,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -4340,7 +4501,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers'"
         },
         {
           "source": "evals_assertion",
@@ -4356,7 +4517,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='critical — unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='critical \u2014 unenforced domain invariant with duplicated, already-divergent guard logic across two independent layers' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -4367,7 +4528,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-026/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-026/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-958dfeae13d1",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-958dfeae13d1.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-034",
@@ -4394,9 +4562,9 @@
           "temporal coupling"
         ],
         "evidence_demanded": [
-          "A durable, non-presentation-layer owner for the reserve→charge→confirm saga with an explicit compensation path",
+          "A durable, non-presentation-layer owner for the reserve\u2192charge\u2192confirm saga with an explicit compensation path",
           "A compensating action on finalize failure after charge succeeds: refund/void via PaymentService and reservationService.release(seat:), surviving view-model deallocation",
-          "A test exercising PaymentService.charge succeeding followed by ConfirmationService.finalize throwing, asserting seat release and refund/void, cited by file and assertion range — not inferred from aggregate pass count",
+          "A test exercising PaymentService.charge succeeding followed by ConfirmationService.finalize throwing, asserting seat release and refund/void, cited by file and assertion range \u2014 not inferred from aggregate pass count",
           "A lease/expiry mechanism for held seats, or evidence one already exists, since release() is never called on the failure path shown"
         ]
       },
@@ -4530,7 +4698,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-034/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-034/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-204a824382fc",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-204a824382fc.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-034",
@@ -4546,7 +4721,7 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "Critical — unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path",
+        "blocking_severity": "Critical \u2014 unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path",
         "dimension_scores": {
           "data_flow": 3.5
         },
@@ -4591,7 +4766,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'Critical — unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Critical \u2014 unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path'"
           }
         ],
         "assertions": [
@@ -4605,7 +4780,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='Critical — unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='Critical \u2014 unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -4667,7 +4842,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Critical — unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Critical \u2014 unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path'"
         },
         {
           "source": "evals_assertion",
@@ -4683,7 +4858,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='Critical — unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='Critical \u2014 unrecoverable data-integrity defect (payment captured, no booking record, seat permanently stuck in held state) on a documented, reachable failure path' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -4694,7 +4869,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-034/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-034/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-386caf3e2d43",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-386caf3e2d43.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-039",
@@ -4854,7 +5036,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-039/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-039/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-77b494e1cefb",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-77b494e1cefb.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-039",
@@ -5018,7 +5207,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-039/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-039/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-3b7ca84664f0",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-3b7ca84664f0.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-042",
@@ -5047,7 +5243,7 @@
         "evidence_demanded": [
           "LeagueRoster owns the One-League Rule check inside a single method (e.g. addPlayer(_:) throws / Result-returning), replacing the plain trusting mutation",
           "RosterView.handleAdd and ImportService.importRoster both route through that single domain-owned check instead of each re-deriving league membership independently",
-          "A test exercising LeagueRoster directly (not RosterView/ImportService) that fails if the invariant check is removed or short-circuited — the Interface-is-test-surface requirement",
+          "A test exercising LeagueRoster directly (not RosterView/ImportService) that fails if the invariant check is removed or short-circuited \u2014 the Interface-is-test-surface requirement",
           "Removal of the two duplicated ad hoc guard blocks once the domain method absorbs the logic",
           "Confirmation (grep or enumeration) that no other current caller of LeagueRoster.addPlayer bypasses the new domain-owned check"
         ]
@@ -5104,7 +5300,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -5182,7 +5378,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-042/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-042/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-1362bc32252d",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-1362bc32252d.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-042",
@@ -5269,7 +5472,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -5347,7 +5550,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-042/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-042/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-91c77bfb9f99",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-91c77bfb9f99.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-043",
@@ -5430,8 +5640,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -5509,7 +5719,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-043/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-043/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-239054f26d98",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-239054f26d98.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-043",
@@ -5539,7 +5756,7 @@
         "evidence_demanded": [
           "OrderRepository.fetchOrdersWithDiscount migrated so prior_orders references DiscountThresholds.minimumPriorOrders, not a literal 3",
           "A single canonical predicate/evaluator for the Discount Rule (e.g. DiscountThresholds.isEligible(member:cart:) or a dedicated DiscountEligibility type) consumed identically by CartView, OrderRepository, and DiscountWorker, replacing the three hand-written boolean expressions",
-          "A regression test that changes minimumPriorOrders and asserts CartView, OrderRepository's query, and DiscountWorker all agree on eligibility for a boundary member (e.g. 4 prior orders across a 3→5 threshold change) — i.e. a test that reproduces the Context section's worked failure",
+          "A regression test that changes minimumPriorOrders and asserts CartView, OrderRepository's query, and DiscountWorker all agree on eligibility for a boundary member (e.g. 4 prior orders across a 3\u21925 threshold change) \u2014 i.e. a test that reproduces the Context section's worked failure",
           "A corrected loop report that does not claim site-wide consistency while a site remains unmigrated"
         ]
       },
@@ -5594,8 +5811,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -5673,7 +5890,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-043/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-043/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-8d5558a4a69d",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-8d5558a4a69d.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-048",
@@ -5758,8 +5982,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -5837,7 +6061,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-048/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-048/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-2e95b1da187a",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-2e95b1da187a.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-048",
@@ -5867,7 +6098,7 @@
         "evidence_demanded": [
           "A single domain-level predicate/type (e.g. a DiscountEligibility policy or Member.qualifiesForDiscount(cart:)) that CartView, OrderRepository, and DiscountWorker all call, so the Discount Rule exists in exactly one place",
           "OrderRepository's SQL updated to use DiscountThresholds.minimumPriorOrders (not a hard-coded 3), via a bound parameter rather than string interpolation",
-          "A test that varies DiscountThresholds.minimumPriorOrders (or exercises a member with 3-4 prior orders) and asserts CartView, OrderRepository, and DiscountWorker agree — the test that would have caught today's bug and does not exist despite 1,877 passing tests",
+          "A test that varies DiscountThresholds.minimumPriorOrders (or exercises a member with 3-4 prior orders) and asserts CartView, OrderRepository, and DiscountWorker agree \u2014 the test that would have caught today's bug and does not exist despite 1,877 passing tests",
           "A corrected loop report that states the centralization is partial rather than 'consistent...site-wide'"
         ]
       },
@@ -5922,8 +6153,8 @@
           }
         ],
         "residue": [
-          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker — not just the constants",
-          "[discriminating] Specifically notes that OrderRepository’s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
+          "[discriminating] Identifies that the eligibility predicate is duplicated across CartView, OrderRepository, and DiscountWorker \u2014 not just the constants",
+          "[discriminating] Specifically notes that OrderRepository\u2019s SQL literal hard-codes prior_orders >= 3 rather than using the DiscountThresholds constant, creating a drift path",
           "[validity] Does not accept the DiscountThresholds constants file as evidence that the rule is centralized"
         ],
         "counts": {
@@ -6001,7 +6232,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-048/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-048/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-489d608366b2",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-489d608366b2.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-049",
@@ -6031,7 +6269,7 @@
           "A durable saga owner (domain-layer coordinator, not CheckoutViewModel) for purchaseTicket with a persisted purchase-intent record written before charging, so a crash/timeout mid-sequence is reconcilable instead of silently stuck.",
           "Explicit compensating actions (refund via PaymentService, seat release via ReservationService.release) invoked when ConfirmationService.finalize fails after a successful charge, with idempotency guarantees against duplicate compensation or duplicate refund.",
           "ReservationService.hold must atomically recheck-and-claim inside the actor-isolated call (not rely on a prior isAvailable check across an await gap), closing the reservation-after-suspension race.",
-          "An executable concurrency test issuing two simultaneous purchaseTicket calls for the same seat, proving only one succeeds — not just the generic 3,104-test pass count, per meta-rule 4's risk-boundary evidence requirement for newly introduced actor isolation."
+          "An executable concurrency test issuing two simultaneous purchaseTicket calls for the same seat, proving only one succeeds \u2014 not just the generic 3,104-test pass count, per meta-rule 4's risk-boundary evidence requirement for newly introduced actor isolation."
         ]
       },
       "structural_report": {
@@ -6164,7 +6402,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-049/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-049/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-b37c00371f7d",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-b37c00371f7d.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-049",
@@ -6180,23 +6425,23 @@
       "verdict_json": {
         "verdict": "rejected",
         "blocks_95": true,
-        "blocking_severity": "critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path",
+        "blocking_severity": "critical \u2014 unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path",
         "dimension_scores": {
           "data_flow": 3
         },
         "flagged_smells": [
           "Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)",
           "Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator",
-          "Testing theater — green suite has no coverage for the exact partial-failure path the Actor's own comment names",
+          "Testing theater \u2014 green suite has no coverage for the exact partial-failure path the Actor's own comment names",
           "Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed",
-          "Unbounded stuck state — seat held indefinitely with no timeout/expiry/release mechanism on partial failure"
+          "Unbounded stuck state \u2014 seat held indefinitely with no timeout/expiry/release mechanism on partial failure"
         ],
         "evidence_demanded": [
           "A test that drives PaymentService.charge to succeed and ConfirmationService.finalize to throw, then asserts the system reaches a consistent, recoverable state",
-          "A defined transaction/saga owner (domain or application layer, not CheckoutViewModel) responsible for the hold→charge→finalize sequence and its failure semantics",
-          "A compensating action on finalize failure: refund the charge, release the seat hold, or persist a durable pending-reconciliation record — at minimum one of these, ideally issued automatically rather than left to manual support",
+          "A defined transaction/saga owner (domain or application layer, not CheckoutViewModel) responsible for the hold\u2192charge\u2192finalize sequence and its failure semantics",
+          "A compensating action on finalize failure: refund the charge, release the seat hold, or persist a durable pending-reconciliation record \u2014 at minimum one of these, ideally issued automatically rather than left to manual support",
           "An idempotency key or equivalent guard on PaymentService.charge if retry-based recovery is the chosen strategy, to prevent double-charging on retry",
-          "Removal or resolution of the in-line comment documenting the unhandled case — a comment acknowledging a known data-corruption path is not a fix"
+          "Removal or resolution of the in-line comment documenting the unhandled case \u2014 a comment acknowledging a known data-corruption path is not a fix"
         ]
       },
       "structural_report": {
@@ -6216,7 +6461,7 @@
           {
             "name": "flagged_smells_canon_exact",
             "pass": false,
-            "detail": "non-canon values: ['Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)', 'Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator', \"Testing theater — green suite has no coverage for the exact partial-failure path the Actor's own comment names\", 'Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed', 'Unbounded stuck state — seat held indefinitely with no timeout/expiry/release mechanism on partial failure']"
+            "detail": "non-canon values: ['Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)', 'Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator', \"Testing theater \u2014 green suite has no coverage for the exact partial-failure path the Actor's own comment names\", 'Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed', 'Unbounded stuck state \u2014 seat held indefinitely with no timeout/expiry/release mechanism on partial failure']"
           },
           {
             "name": "dimension_scores_shape",
@@ -6226,7 +6471,7 @@
           {
             "name": "boolean_coherence",
             "pass": false,
-            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path'"
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path'"
           }
         ],
         "assertions": [
@@ -6240,7 +6485,7 @@
             "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
             "method": "deterministic",
             "pass": false,
-            "detail": "blocking_severity='critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path' expected in ['Serious deduction', 'Likely disqualifier']"
+            "detail": "blocking_severity='critical \u2014 unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path' expected in ['Serious deduction', 'Likely disqualifier']"
           },
           {
             "text": "[validity] blocks_95 is true for the touched dimension",
@@ -6286,7 +6531,7 @@
           "assertion_text": "flagged_smells_canon_exact",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "non-canon values: ['Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)', 'Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator', \"Testing theater — green suite has no coverage for the exact partial-failure path the Actor's own comment names\", 'Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed', 'Unbounded stuck state — seat held indefinitely with no timeout/expiry/release mechanism on partial failure']"
+          "rationale": "non-canon values: ['Missing compensating transaction / saga anti-pattern (money captured with no rollback or reconciliation on downstream failure)', 'Orchestration of a durable, external, non-idempotent side effect owned by the presentation layer instead of a domain/application-layer coordinator', \"Testing theater \u2014 green suite has no coverage for the exact partial-failure path the Actor's own comment names\", 'Self-documented known defect shipped as done (\"No compensation\" comment) rather than fixed', 'Unbounded stuck state \u2014 seat held indefinitely with no timeout/expiry/release mechanism on partial failure']"
         },
         {
           "source": "general_check",
@@ -6302,7 +6547,7 @@
           "assertion_text": "boolean_coherence",
           "criterion_class": "unclassified",
           "passed": false,
-          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path'"
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical \u2014 unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path'"
         },
         {
           "source": "evals_assertion",
@@ -6318,7 +6563,7 @@
           "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
           "criterion_class": "skill_contract",
           "passed": false,
-          "rationale": "blocking_severity='critical — unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path' expected in ['Serious deduction', 'Likely disqualifier']"
+          "rationale": "blocking_severity='critical \u2014 unrecoverable data/financial inconsistency (charged customer, no booking record, seat stuck held) self-documented in the diff and left unresolved; no compensating transaction, no idempotency, no reconciliation path' expected in ['Serious deduction', 'Likely disqualifier']"
         },
         {
           "source": "evals_assertion",
@@ -6329,7 +6574,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-049/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-049/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-448b97e1a509",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-448b97e1a509.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-053",
@@ -6355,7 +6607,7 @@
         ],
         "evidence_demanded": [
           "A named saga/process owner outside CheckoutViewModel (or explicit compensations inside the existing services) that resolves a finalize-after-charge-succeeds failure into a consistent state",
-          "A test that drives ConfirmationService.finalize to throw after PaymentService.charge succeeds and asserts the resulting state is consistent (refund issued, seat released, or a durable reconciliation record written) — cited by file:line, not inferred from aggregate test count",
+          "A test that drives ConfirmationService.finalize to throw after PaymentService.charge succeeds and asserts the resulting state is consistent (refund issued, seat released, or a durable reconciliation record written) \u2014 cited by file:line, not inferred from aggregate test count",
           "Either a fix to the check-then-hold race in ReservationService.hold (atomic recheck-and-claim) or an explicit backlog entry tracking it under the concurrency dimension"
         ]
       },
@@ -6489,7 +6741,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-053/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-053/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-a405603d9eb7",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-a405603d9eb7.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-053",
@@ -6517,7 +6776,7 @@
           "green suite does not cover the failure path the diff itself documents"
         ],
         "evidence_demanded": [
-          "a test that drives PaymentService.charge to succeed and ConfirmationService.finalize to throw, asserting a defined recovery outcome (compensating refund/void, seat release, or a durable reconciliation record — not just presentError)",
+          "a test that drives PaymentService.charge to succeed and ConfirmationService.finalize to throw, asserting a defined recovery outcome (compensating refund/void, seat release, or a durable reconciliation record \u2014 not just presentError)",
           "an explicit owner for the purchase saga outside the presentation layer (e.g., a domain/application-level orchestrator or state machine) with a documented compensation or retry-safe design",
           "an idempotency mechanism (idempotency key or equivalent) on PaymentService.charge so a retried purchase attempt cannot double-charge",
           "a defined resolution path for seats left in `held` after a finalize failure (timeout-based release, manual ops queue, or equivalent) rather than indefinite hold"
@@ -6653,7 +6912,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-053/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-053/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-ae33f5e9bf5f",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-ae33f5e9bf5f.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-055",
@@ -6739,7 +7005,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -6817,7 +7083,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-055/attempt1/with_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-055/attempt1/with_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-5c7f05e83229",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-5c7f05e83229.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     },
     {
       "pair_id": "pair-055",
@@ -6904,7 +7177,7 @@
         ],
         "residue": [
           "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
-          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[discriminating] Names the cross-module split as the defect \u2014 two independent enforcement paths that can diverge, not a local bug in one module",
           "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
         ],
         "counts": {
@@ -6982,7 +7255,14 @@
           "rationale": "blocks_95=True expected==True"
         }
       ],
-      "raw_output_path": "evals/paired-arm-outputs/study/pair-055/attempt1/without_skill/review-verdict.md"
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-055/attempt1/without_skill/review-verdict.md",
+      "grade_status": "graded",
+      "mechanical_grade": "caught",
+      "semantic_grade": "caught",
+      "grader_id": "OUT-a0c0a5191666",
+      "grader_reply": "evals/paired-arm-outputs/rung2-grades/OUT-a0c0a5191666.reply.md",
+      "grader_model": "claude-sonnet-5",
+      "grader_prompt_sha256": "a659dca9a39de3d0b0f7be57aab901a789e55b7280b6efd5501185f89bd11ab5"
     }
   ]
 }
