@@ -1759,5 +1759,47 @@
       "why_not_fixed_mid_run": "The amendment window closed at first study dispatch. Loosening a validity check after watching it fire is exactly the move the freeze exists to prevent, and the over-firing is in the SAFE direction -- it escalates to the stronger grader, so it costs money and biases no result. Both fixes belong to the next preregistration: accept ellipsis-joined spans fragment-wise, and carry evidence spans outside the JSON payload so quoting cannot corrupt the envelope."
     },
     "process_failure": "One of the ten grades (OUT-411ccc908d3b) was never dispatched -- a batch of five went out as four. It surfaced only because the tally script crashed on the missing file. A more forgiving tally would have reported rung 1 on nine outputs with nothing flagging the gap. Dispatch completeness must be asserted against the blind map before any tally runs, not discovered by a crash."
+  },
+  "rung_2": {
+    "scenarios": [
+      "principal-invariant-owner-flag",
+      "principal-duplicated-rule-flag",
+      "principal-process-owner-flag"
+    ],
+    "pairs": 15,
+    "slots": 30,
+    "grading_configuration": {
+      "executor_model": "claude-sonnet-5",
+      "tiering_used": false,
+      "within_the_frozen_prereg": "prereg.grading.grader_model is already claude-sonnet-5 and prereg.grading.tiering is an OPTIONAL block -- check_grading_tiering() explicitly treats its absence as a valid configuration. Running sonnet-only is the un-tiered base case the prereg already specifies, so no amendment was needed and none was made. The frozen spec-first grading still applies; only the executor tier differs.",
+      "why": "Rung 1 measured the haiku cascade at +49% versus sonnet-only. 8 of 10 outputs escalated, none of them for judgment: 3 replies were invalid JSON and 5 tripped a span check that rejects elided quotation. Both are defects in the frozen harness contract that cannot be fixed inside this preregistration, so the cascade cannot pay for itself here."
+    },
+    "grading_specs": {
+      "evals/grading-specs/principal-invariant-owner-flag.md": {
+        "sha256": "668b459f8006bc68c8bdec2862cc1a1b16e8ed864743b6efb7da4bbc51e28df7",
+        "scenario_id": "principal-invariant-owner-flag",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/principal-duplicated-rule-flag.md": {
+        "sha256": "ef0b0d435db90ec84c792b833e2fe4011897a803c75fec16705f9cef7d24760c",
+        "scenario_id": "principal-duplicated-rule-flag",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/principal-process-owner-flag.md": {
+        "sha256": "96c39f4e649b2966fc58b8d36d968e8b320ad7295af80cb200b10d4173c20052",
+        "scenario_id": "principal-process-owner-flag",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      }
+    },
+    "spec_hashes_not_in_prereg": "Rung 1's spec hash went INTO prereg.material_hashes because it was authored before the first study dispatch. Rung 2's cannot: the amendment window closed at that dispatch, and adding hashes would change prereg_sha256 and trip enforce_amendment_window on the next study operation. They are recorded here instead, committed before any rung-2 arm runs. Git history carries the same 'authored before outputs existed' guarantee -- the spec commit provably precedes every dispatch commit. The asymmetry between rungs is stated rather than smoothed over.",
+    "residual_ambiguities_declared": {
+      "principal-invariant-owner-flag": 3,
+      "principal-duplicated-rule-flag": 3,
+      "principal-process-owner-flag": 3,
+      "note": "All three specs independently flagged the same class of open call: whether BOTH discriminating assertions must hit for `caught`, or whether one suffices. Each adopted a default and recorded the alternative. That convergence is itself a finding -- the tier rule's 'the cross-module/forces defect is named' does not say how many named sub-defects constitute naming it, and three independent authors all noticed."
+    }
   }
 }
