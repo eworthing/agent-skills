@@ -6365,7 +6365,7 @@
         "without_skill"
       ],
       "session_id": "sess-rung4a",
-      "state": "started",
+      "state": "finished",
       "pre_dispatch_head": "6906d3ee14b83e039fef68e1b711ad6b6b6e9baa",
       "arms": {
         "with_skill": {
@@ -6412,6 +6412,37 @@
           "expected_output": "/tmp/paired-arm/study/pair-044/attempt1/without_skill/review-verdict.md",
           "work_dir": "/tmp/paired-arm/study/pair-044/attempt1/without_skill"
         }
+      },
+      "usage": {
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/aca35080ff8c6fe8c.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/aca35080ff8c6fe8c.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 5,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/aca35080ff8c6fe8c.output"
+          ],
+          "input_tokens": 10,
+          "cache_creation_input_tokens": 64546,
+          "cache_read_input_tokens": 217481,
+          "output_tokens": 573,
+          "context_tokens_processed": 282610
+        },
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a4a2a6c5714592195.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a4a2a6c5714592195.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 4,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a4a2a6c5714592195.output"
+          ],
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 35302,
+          "cache_read_input_tokens": 150182,
+          "output_tokens": 7950,
+          "context_tokens_processed": 193442
+        },
+        "pair_total_context_tokens": 476052
       }
     }
   ],
