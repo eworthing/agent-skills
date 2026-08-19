@@ -9281,6 +9281,358 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-009/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-011",
+      "scenario_id": "suppression-flag",
+      "arm": "with_skill",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "concurrency": 3
+        },
+        "flagged_smells": [
+          "fake-clean reward (suppression-as-fix: bare @unchecked Sendable with no compensating invariant)",
+          "racing async flows that can corrupt user-visible state (unsynchronized Dictionary storage mutated by concurrent Task.detached writers on a primary flow)"
+        ],
+        "evidence_demanded": [
+          "Real synchronization for ImageCache.storage — convert to actor or add a serial queue/lock, replacing the bare @unchecked Sendable",
+          "If @unchecked Sendable is retained for any reason, a narrow-scope justification comment plus the compensating invariant that makes it safe",
+          "Executable concurrency evidence for the risk-boundary crossing (a focused concurrent-insert test or TSAN run), since the 1,312-test green run is single-config and does not exercise the race",
+          "Disclosure/justification for the undisclosed prefetch() Task -> Task.detached change and its cancellation/priority-propagation implications"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "suppression-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['fake-clean reward (suppression-as-fix: bare @unchecked Sendable with no compensating invariant)', 'racing async flows that can corrupt user-visible state (unsynchronized Dictionary storage mutated by concurrent Task.detached writers on a primary flow)']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+          }
+        ],
+        "assertions": [
+          {
+            "text": "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "flagged_smells contains a match for ['suppression-as-fix']"
+          },
+          {
+            "text": "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocks_95=True expected==True; dimension_scores subset {'concurrency': 3} vs <9.5"
+          },
+          {
+            "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocking_severity='Likely disqualifier' expected in ['Serious deduction', 'Likely disqualifier']"
+          },
+          {
+            "text": "[validity] verdict is \"rejected\"",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "verdict='rejected' expected=='rejected'"
+          }
+        ],
+        "residue": [
+          "[discriminating] evidence_demanded names a TSAN run or a focused concurrent/parallel test (Meta-Rule 4)",
+          "[discriminating] States the data race persists — @unchecked Sendable only silences the Sendable diagnostic; no lock/actor/value semantics added",
+          "[validity] Does not treat the green single-config suite as proof the race is fixed"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 4,
+          "deterministic_assertions_pass": 4,
+          "semantic_residue": 3
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['fake-clean reward (suppression-as-fix: bare @unchecked Sendable with no compensating invariant)', 'racing async flows that can corrupt user-visible state (unsynchronized Dictionary storage mutated by concurrent Task.detached writers on a primary flow)']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 0,
+          "assertion_text": "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
+          "criterion_class": "skill_contract",
+          "passed": true,
+          "rationale": "flagged_smells contains a match for ['suppression-as-fix']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 1,
+          "assertion_text": "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "blocks_95=True expected==True; dimension_scores subset {'concurrency': 3} vs <9.5"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 4,
+          "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+          "criterion_class": "skill_contract",
+          "passed": true,
+          "rationale": "blocking_severity='Likely disqualifier' expected in ['Serious deduction', 'Likely disqualifier']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 5,
+          "assertion_text": "[validity] verdict is \"rejected\"",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "verdict='rejected' expected=='rejected'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-011/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-011",
+      "scenario_id": "suppression-flag",
+      "arm": "without_skill",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical",
+        "dimension_scores": {
+          "concurrency": 3
+        },
+        "flagged_smells": [
+          "unchecked-sendable-without-synchronization",
+          "unsynchronized-shared-mutable-state-across-concurrent-tasks",
+          "undisclosed-behavioral-change (Task -> Task.detached in prefetch)",
+          "tests-green-treated-as-concurrency-proof"
+        ],
+        "evidence_demanded": [
+          "Replace @unchecked Sendable with real synchronization: actor-isolate ImageCache, or guard storage with a serial DispatchQueue/NSLock/os_unfair_lock",
+          "A Thread Sanitizer (TSan) run exercising prefetch(_:) and warmThumbnails(_:) executing concurrently against the same ImageCache instance",
+          "A concurrency-specific test that fails against the current @unchecked Sendable implementation and passes once synchronization is added",
+          "Explicit justification (or revert) of the Task -> Task.detached change in prefetch(_:), since it alters actor/priority/task-local inheritance and was not called out in the report"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "suppression-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['unchecked-sendable-without-synchronization', 'unsynchronized-shared-mutable-state-across-concurrent-tasks', 'undisclosed-behavioral-change (Task -> Task.detached in prefetch)', 'tests-green-treated-as-concurrency-proof']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical'"
+          }
+        ],
+        "assertions": [
+          {
+            "text": "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
+            "method": "deterministic",
+            "pass": false,
+            "detail": "flagged_smells=['unchecked-sendable-without-synchronization', 'unsynchronized-shared-mutable-state-across-concurrent-tasks', 'undisclosed-behavioral-change (Task -> Task.detached in prefetch)', 'tests-green-treated-as-concurrency-proof'] does not contain any of ['suppression-as-fix']"
+          },
+          {
+            "text": "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocks_95=True expected==True; dimension_scores subset {'concurrency': 3} vs <9.5"
+          },
+          {
+            "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+            "method": "deterministic",
+            "pass": false,
+            "detail": "blocking_severity='critical' expected in ['Serious deduction', 'Likely disqualifier']"
+          },
+          {
+            "text": "[validity] verdict is \"rejected\"",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "verdict='rejected' expected=='rejected'"
+          }
+        ],
+        "residue": [
+          "[discriminating] evidence_demanded names a TSAN run or a focused concurrent/parallel test (Meta-Rule 4)",
+          "[discriminating] States the data race persists — @unchecked Sendable only silences the Sendable diagnostic; no lock/actor/value semantics added",
+          "[validity] Does not treat the green single-config suite as proof the race is fixed"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 4,
+          "deterministic_assertions_pass": 2,
+          "semantic_residue": 3
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['unchecked-sendable-without-synchronization', 'unsynchronized-shared-mutable-state-across-concurrent-tasks', 'undisclosed-behavioral-change (Task -> Task.detached in prefetch)', 'tests-green-treated-as-concurrency-proof']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical'"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 0,
+          "assertion_text": "[discriminating] flagged_smells names suppression-as-fix (fake-clean reward via suppression)",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "flagged_smells=['unchecked-sendable-without-synchronization', 'unsynchronized-shared-mutable-state-across-concurrent-tasks', 'undisclosed-behavioral-change (Task -> Task.detached in prefetch)', 'tests-green-treated-as-concurrency-proof'] does not contain any of ['suppression-as-fix']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 1,
+          "assertion_text": "[discriminating] blocks_95 is true and the concurrency score is < 9.5",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "blocks_95=True expected==True; dimension_scores subset {'concurrency': 3} vs <9.5"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 4,
+          "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "blocking_severity='critical' expected in ['Serious deduction', 'Likely disqualifier']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 5,
+          "assertion_text": "[validity] verdict is \"rejected\"",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "verdict='rejected' expected=='rejected'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-011/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
