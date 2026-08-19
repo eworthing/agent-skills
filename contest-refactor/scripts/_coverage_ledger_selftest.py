@@ -191,6 +191,43 @@ def main() -> int:
             f"{led3['revision']}",
         )
 
+        # --- per-run split: what THIS run cited, not the union of all history --
+        # After --reset the loop counter restarts at 1, so REVIEW_HISTORY.json holds
+        # two runs whose loop numbers overlap, and run_id is null on the legacy side
+        # (14 of 15 loops on the real artifact). A cumulative figure cannot answer
+        # "what did this run cover", which is the only question a diagnostic asks.
+        two_runs = {
+            "loops": [
+                history["loops"][0],
+                {
+                    "loop": 1,  # counter restarted -> new run boundary
+                    "run_id": "run-2",
+                    "discovery": {"source_roots": ["src/"]},
+                    "findings": [
+                        {"stable_id": "F-003", "evidence": ["src/beta.py:1", "src/gamma.py:2"]}
+                    ],
+                },
+            ]
+        }
+        multi = cl.compute_ledger(repo, two_runs, registry, {1: sha})
+        runs = multi.get("per_run") or []
+        check(len(runs) == 2, f"a restarted loop counter must split runs, got {len(runs)}")
+        if len(runs) == 2:
+            check(
+                runs[1]["run_id"] == "run-2",
+                f"run_id must be carried when present, got {runs[1]['run_id']!r}",
+            )
+            # beta was already cited by run 1; only gamma is new to run 2.
+            check(
+                runs[1]["first_cited_here"] == 1,
+                f"marginal coverage wrong: run 2 cited beta (already seen) + gamma (new), so "
+                f"first_cited_here must be 1, got {runs[1].get('first_cited_here')}",
+            )
+            check(
+                runs[1]["cited"] == 2,
+                f"run 2 cited 2 in-denominator files, got {runs[1]['cited']}",
+            )
+
     # --- slice B2: the handoff disclosure, and its honesty guard -------------
     handoff = (SKILL_ROOT / "references" / "halt-handoff.md").read_text(encoding="utf-8")
     if "## Coverage disclosure" not in handoff:

@@ -171,6 +171,37 @@ def cited_paths(history: dict) -> dict[str, int]:
     return first
 
 
+def split_runs(history: dict) -> list[list[dict]]:
+    """Group loop entries into runs.
+
+    A run boundary is where the loop counter fails to advance -- `--reset` restarts it
+    at 1, so REVIEW_HISTORY.json legitimately holds several runs with overlapping loop
+    numbers -- or where a non-null `run_id` changes. Both rules are needed: `run_id` is
+    null on 14 of the 15 loops in this repo's own history, so grouping by it alone would
+    collapse everything into one run, and a run_id that merely appears or disappears is
+    not a boundary on its own.
+    """
+    runs: list[list[dict]] = []
+    current: list[dict] = []
+    prev_loop: int | None = None
+    prev_rid: str | None = None
+    for entry in history.get("loops") or []:
+        if not isinstance(entry, dict):
+            continue
+        loop, rid = entry.get("loop"), entry.get("run_id")
+        if current:
+            changed_rid = rid is not None and prev_rid is not None and rid != prev_rid
+            stalled = isinstance(loop, int) and isinstance(prev_loop, int) and loop <= prev_loop
+            if changed_rid or stalled:
+                runs.append(current)
+                current = []
+        current.append(entry)
+        prev_loop, prev_rid = loop, (rid if rid is not None else prev_rid)
+    if current:
+        runs.append(current)
+    return runs
+
+
 def _blob_sha(repo: Path, rev: str, path: str) -> str | None:
     proc = subprocess.run(
         ["git", "-C", str(repo), "rev-parse", f"{rev}:{path}"],
@@ -221,6 +252,29 @@ def compute_ledger(
         if e.get("primary_file") and e["primary_file"] not in first_cite
     ]
 
+    # Per run: what THIS run cited, and what it cited FIRST. A cumulative figure
+    # cannot answer "what did this run cover", which is the question a diagnostic run
+    # is asking; `first_cited_here` is the marginal contribution over everything
+    # earlier runs had already reached.
+    per_run: list[dict] = []
+    seen_before: set[str] = set()
+    for i, run in enumerate(split_runs(history)):
+        rid = next((e.get("run_id") for e in run if e.get("run_id")), None)
+        nums = [e.get("loop") for e in run if isinstance(e.get("loop"), int)]
+        here = sorted(p for p in cited_paths({"loops": run}) if p in denom_set)
+        first_here = [p for p in here if p not in seen_before]
+        seen_before.update(here)
+        per_run.append(
+            {
+                "index": i,
+                "run_id": rid,
+                "loops": len(run),
+                "loop_range": [min(nums), max(nums)] if nums else None,
+                "cited": len(here),
+                "first_cited_here": len(first_here),
+            }
+        )
+
     total = len(denominator)
     return {
         "schema": "coverage-ledger/1",
@@ -249,6 +303,7 @@ def compute_ledger(
             "uncited": len(uncited),
             "cited_pct": round(100.0 * len(cited) / total, 1) if total else None,
         },
+        "per_run": per_run,
         "revision": {"unavailable_loops": sorted(unavailable)},
         "registry_crosscheck": {
             "checked": len((registry or {}).get("entries") or []),
@@ -315,6 +370,12 @@ def main(argv: list[str] | None = None) -> int:
             f"stale={len(led['sets']['stale'])} "
             f"registry-inconsistent={len(led['registry_crosscheck']['inconsistent'])}"
         )
+        if len(led["per_run"]) > 1:
+            last = led["per_run"][-1]
+            print(
+                f"  latest run (loops {last['loop_range']}): cited {last['cited']}, "
+                f"{last['first_cited_here']} not reached by any earlier run"
+            )
         if led["revision"]["unavailable_loops"]:
             print(f"  no recorded revision for loop(s): {led['revision']['unavailable_loops']}")
     return 0
