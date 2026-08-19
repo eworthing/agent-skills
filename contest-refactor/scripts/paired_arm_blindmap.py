@@ -41,7 +41,24 @@ def subsample_pairs(prereg: dict) -> list[str]:
     )
 
 
-def build(prereg: dict, rung: int, pairs: list[str], outputs_root: Path) -> dict:
+def terminal_outputs(record: dict) -> dict[tuple[str, str], str]:
+    """(pair_id, arm) -> the TERMINAL attempt's committed raw_output_path.
+
+    Never construct `.../attempt1/...` by hand. Attempt 1 is not always terminal: pair-015's is
+    attempt 4 (three attempts burned dispatching zero arms, see execution.json attempt_grants), and
+    a superseded attempt must never be graded in place of the one that resolved the pair. The
+    record already names the right file per attempt, so read it rather than rebuilding it.
+    """
+    out: dict[tuple[str, str], str] = {}
+    for a in record["attempts"]:
+        if a.get("grade_status_reason") == "superseded" or not a.get("raw_output_path"):
+            continue
+        out[(a["pair_id"], a["arm"])] = a["raw_output_path"]
+    return out
+
+
+def build(prereg: dict, rung: int, pairs: list[str], outputs_root: Path, record: dict) -> dict:
+    terminal = terminal_outputs(record)
     rng = random.Random(f"{prereg['grading_subsample_seed']}:rung{rung}:blindmap")
     subsample = set(subsample_pairs(prereg))
 
@@ -53,7 +70,11 @@ def build(prereg: dict, rung: int, pairs: list[str], outputs_root: Path) -> dict
         per_pair[pair] = []
         for arm in arms:
             oid = f"OUT-{rng.getrandbits(48):012x}"
-            candidate = outputs_root / pair / "attempt1" / arm / "review-verdict.md"
+            rel = terminal.get((pair, arm))
+            if rel is None:
+                print(f"no terminal attempt recorded for {pair}/{arm}", file=sys.stderr)
+                raise SystemExit(2)
+            candidate = EVALS.parent / rel
             if not candidate.is_file():
                 print(f"missing candidate: {candidate}", file=sys.stderr)
                 raise SystemExit(2)
@@ -87,7 +108,7 @@ def main() -> int:
     wanted = set(rung.get("scenarios") or [rung["scenario"]])
     pairs = [e["pair_id"] for e in prereg["frozen_order"] if e["scenario_id"] in wanted]
 
-    built = build(prereg, args.rung, pairs, EVALS / "paired-arm-outputs" / "study")
+    built = build(prereg, args.rung, pairs, EVALS / "paired-arm-outputs" / "study", record)
     Path(args.out).write_text(json.dumps(built, indent=2) + "\n")
     print(
         json.dumps(
