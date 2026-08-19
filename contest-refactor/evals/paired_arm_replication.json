@@ -15971,6 +15971,249 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-036/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-040",
+      "scenario_id": "principal-abstraction-seam-flag",
+      "arm": "with_skill",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "blocking_severity": "Serious deduction",
+        "dimension_scores": {
+          "architecture_quality": 7.0
+        },
+        "flagged_smells": [
+          "fake simplification",
+          "protocol soup"
+        ],
+        "evidence_demanded": [
+          "A concrete extension point (channel/region resolution before delivery, e.g. a DeliveryChannel or per-region policy seam) showing NotificationService will not foreclose Region A's SMS-only requirement or EU's opt-in+audit requirement, both committed this quarter per CONTEXT.md §5",
+          "Citation of which Unified Seam Policy path (a) two-adapter or (b)(i)/(ii)/(iii) justifies NotificationSender as a protocol, or removal of the protocol in favor of the concrete NotificationService",
+          "A behavior-faithful test fake for NotificationSender if the protocol is kept",
+          "Confirmation of whether any Region A recipients currently route through this path today, which would escalate this from a committed near-term gap to a live delivery failure"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-abstraction-seam-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": true,
+            "detail": "all canon-exact"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[discriminating] Recognizes CONTEXT §5 (committed Q4) requires per-region divergence in eligibility/channel/retry/audit that a single send(_:) path cannot host cleanly",
+          "[discriminating] Identifies the seam/abstraction boundary as wrong for the committed change (design-for-change / Parnas: hide what is likely to change), not merely as resolved duplication",
+          "[discriminating] Does not accept architecture_quality at 9.5 despite the present-tense cleanliness, because a grounded committed force shears the seam",
+          "[validity] Acknowledges the unification removes real present-tense duplication and has a single owner"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 5,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": true
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": true,
+          "rationale": "all canon-exact"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Serious deduction'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-040/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-040",
+      "scenario_id": "principal-abstraction-seam-flag",
+      "arm": "without_skill",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "conditional",
+        "blocks_95": true,
+        "blocking_severity": "Blocking",
+        "dimension_scores": {
+          "architecture_quality": 6
+        },
+        "flagged_smells": [
+          "premature convergence: three call sites merged onto a single non-extensible path right before contractually-committed per-region divergence",
+          "hardcoded concrete dependency on PushProvider with no channel-selection seam (breaks SMS-only and push+email-fallback regions)",
+          "missing cross-cutting seams for eligibility/opt-in gate and audited/retained receipts (EU requirement)",
+          "no retry-policy injection point (Region A carrier-specific retry)",
+          "single-conformer protocol whose method signature is too thin to serve as the region-policy seam it would need to be",
+          "actor's self-assessment doesn't address the attached roadmap context at all"
+        ],
+        "evidence_demanded": [
+          "a channel-selection mechanism replacing the hardcoded PushProvider field, covering SMS-only and push+email-fallback delivery",
+          "an eligibility/opt-in gate that can run before dispatch without special-casing every caller",
+          "an audit/receipt persistence path with retention, invoked per delivery",
+          "an injectable or region-aware retry policy point",
+          "either proof the current shape already accommodates the above, or an explicit downgrade of the proposed score with a follow-up loop scoped to the region-policy seam before re-claiming 9.5"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-abstraction-seam-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['premature convergence: three call sites merged onto a single non-extensible path right before contractually-committed per-region divergence', 'hardcoded concrete dependency on PushProvider with no channel-selection seam (breaks SMS-only and push+email-fallback regions)', 'missing cross-cutting seams for eligibility/opt-in gate and audited/retained receipts (EU requirement)', 'no retry-policy injection point (Region A carrier-specific retry)', 'single-conformer protocol whose method signature is too thin to serve as the region-policy seam it would need to be', \"actor's self-assessment doesn't address the attached roadmap context at all\"]"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Blocking'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[discriminating] Recognizes CONTEXT §5 (committed Q4) requires per-region divergence in eligibility/channel/retry/audit that a single send(_:) path cannot host cleanly",
+          "[discriminating] Identifies the seam/abstraction boundary as wrong for the committed change (design-for-change / Parnas: hide what is likely to change), not merely as resolved duplication",
+          "[discriminating] Does not accept architecture_quality at 9.5 despite the present-tense cleanliness, because a grounded committed force shears the seam",
+          "[validity] Acknowledges the unification removes real present-tense duplication and has a single owner"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='conditional' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['premature convergence: three call sites merged onto a single non-extensible path right before contractually-committed per-region divergence', 'hardcoded concrete dependency on PushProvider with no channel-selection seam (breaks SMS-only and push+email-fallback regions)', 'missing cross-cutting seams for eligibility/opt-in gate and audited/retained receipts (EU requirement)', 'no retry-policy injection point (Region A carrier-specific retry)', 'single-conformer protocol whose method signature is too thin to serve as the region-policy seam it would need to be', \"actor's self-assessment doesn't address the attached roadmap context at all\"]"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Blocking'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-040/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
