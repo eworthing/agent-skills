@@ -153,6 +153,45 @@ that machinery before it was deleted in favour of git.
 - **Item 23's multi-run recall** — depends on this: prior-run gap targeting needs cross-run state
   keyed to fingerprints (`deep-dive:1233`). Item 24 is upstream of it.
 
+## 7b. Measured, 2026-08-19 — what the dogfood run actually recorded
+
+An attempt to harvest this session's defects as a discriminating corpus (the unblock item 23 needs)
+was **checked and abandoned**, and the check produced a better result than the idea would have.
+
+Across the 15 dogfood loops, findings cite **23 distinct files**: heaviest on
+`scripts/_artifact_halt.py` (6), `scripts/validate-artifact.py` (4),
+`scripts/candidate_fingerprint.py` (4), then a long tail of ones and twos.
+
+**None of this session's defects appear in that set** — not `scripts/token-budget.py` (the
+single-ceiling blind spot), not `scripts/audit_cochange.py` (the orphan), not
+`references/startup.md` (the unimplemented `--scope`), not the enumerate-only dispatch selftests.
+So they **cannot be claimed as misses**: the loops never cited those files, and a defect in
+something never examined is not a detection failure. The corpus idea does not survive its own
+evidence, and is dropped rather than argued for.
+
+**What the same data does establish, and it is squarely this item's subject:** a run reached
+`HALT_LOOP_CAP` at loop 15 having cited 23 files out of a repository with ~100 Python modules and
+27 reference files — and **nothing anywhere records what it examined**. Citation is not
+examination; the loops may well have read far more than they cited. That is exactly the point:
+the artifact cannot distinguish the two, so the question a reader actually has —
+
+> does this converged scorecard mean the repository is sound, or that the parts it happened to look
+> at are sound?
+
+— is unanswerable from the record. That is the coverage ledger's consumer, and it is a **human at
+halt time**, not a downstream mechanism. §9 previously gated slices B–D behind "a consumer exists";
+this is one, and it arrived from measurement rather than from the deep-dive's prose.
+
+**And the reporting half is free.** `halt-handoff.md` is *not* on the per-loop reload path (a
+declared divergence: it is scoped to "when emitting any HALT state"), verified against
+`token-budget.py`'s own load set. So a coverage line in the handoff costs **zero per-loop tokens** —
+which matters now that the loop path is effectively full (35 tokens apple, 13 generic, after
+`ee21bc8`). The ledger computation is a script, not prose, so it costs nothing there either.
+
+This does not make slices B–D cheap — the unit, fingerprinting, disjointness, and invalidation are
+still real work. It removes the *token* objection and supplies the *consumer* argument, which were
+the two things §9 named as missing.
+
 ## 8. Slice contract
 
 Per tranche-5's requirement that every slice carry a deterministic acceptance test, a cost ceiling,
