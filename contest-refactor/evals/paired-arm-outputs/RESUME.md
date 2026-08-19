@@ -14,7 +14,7 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 - pairs complete: **24 / 55**
 - next in frozen order: **pair-005 (principal-abstraction-seam-flag rep 5, attempt 1)**
-- interrupted (started, no terminal record — attempt index spent): none
+- interrupted (started, no terminal record — attempt index spent): ['pair-007']
 - exhausted (2 attempts spent, unresolved): none
 
 ## Operational
