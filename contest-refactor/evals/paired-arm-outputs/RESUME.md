@@ -13,8 +13,8 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 ## study
 
 - pairs complete: **34 / 55**
-- next in frozen order: **pair-023 (principal-consistency-boundary-restraint rep 1, attempt 1)** _(within rung 3 only)_
-- interrupted (started, no terminal record — attempt index spent): none
+- next in frozen order: **pair-023 (principal-consistency-boundary-restraint rep 1, attempt 2)** _(within rung 3 only)_
+- interrupted (started, no terminal record — attempt index spent): ['pair-023']
 - exhausted (2 attempts spent, unresolved): none
 
 ## Operational
