@@ -1034,6 +1034,21 @@ surfaced the pattern.
   to match one grader's wording instead of fixing the grader's judgment. Alignment gets
   measured and fixed as its own pass (backlog item 10), not patched criterion-by-criterion as
   findings turn up.
+- **Second trigger — the spec has no category for the response** (added 2026-08-19, measured).
+  Distinct from the substance/wording split above: here the grader does not concede-then-fail,
+  it cannot place the response at all, because the rubric's categories do not partition the
+  space. Two independent measurements from the paired-arm study:
+  **(a)** seven-plus graders across four scenarios and two separate spec-authoring runs each
+  invented the same unschema'd `outside_spec` field for reviewers rejecting on grounds their
+  spec never enumerated — convergent invention by blinded graders is stronger evidence of a
+  spec gap than any single verdict; **(b)** on `crossplat-flag`, a grader wrote that a response
+  "does not fit `missed`, whose operative test is a hold … `without naming the mechanism`,
+  which is not true here … a genuine gap between the two literal definitions that the binary
+  framing does not resolve", and abstained rather than forcing it. **Route both to the log.**
+  The rule is the same and for the same reason: do not add a category, a trigger, or a spec
+  clause mid-run. A frozen trigger list that can be extended the moment it proves inconvenient
+  is not frozen, and the extension would be fitted to responses already seen.
+
 - **Exception — canon smell names are not cosmetic.** `flagged_smells` values are consumed by
   gates and dedup (`canon/*.toml`), so a verdict that fails a response for not naming the exact
   canon smell (vs. describing it in prose) is a legitimate fail, not a judge finding — the name

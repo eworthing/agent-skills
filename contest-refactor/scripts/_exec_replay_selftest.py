@@ -48,6 +48,7 @@ from _canon import load_canon
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 EVALS_DIR = SKILL_ROOT / "evals"
 FIXTURES_DIR = EVALS_DIR / "exec-fixtures"
+SCRIPTS = SKILL_ROOT / "scripts"
 MANIFEST_PATH = EVALS_DIR / "exec_replay_baseline.json"
 TEMPLATE_PATH = EVALS_DIR / "exec_step3_executor_prompt.md"
 SKILL_MD = SKILL_ROOT / "SKILL.md"
@@ -229,6 +230,56 @@ def _check_reviewer_revert(failures: list[str]) -> None:
             failures.append("reviewer rejection restore did not recover HEAD content")
 
 
+def _check_grader_exit_classes(failures: list[str]) -> None:
+    """The Layer-5 grader must use the repo's 0/1/2 exit split, and mean it.
+
+    `exec_replay_grade.py` is the git-grounded safety gate -- it is what caught a cheaper executor
+    committing a @MainActor removal on a non-Sendable class, and what keeps Execution-unfuse
+    BLOCKED. Its verdict is consumed by exit code, so conflating "I could not measure" with "the
+    candidate failed its safety invariants" is not cosmetic: a mistyped artifact path would read as
+    a safety failure, and a genuinely missing artifact could be waved off as plumbing. Both
+    directions are wrong and neither is visible from the exit code alone.
+
+    The split, per item 21's taxonomy applied to this grader's own inputs:
+      2  cannot measure -- bad usage, unknown fixture, artifact dir absent
+      1  measured failure -- the artifact dir EXISTS but carries no CURRENT_REVIEW.json (the loop
+         did not write its artifact), or a required invariant failed
+      0  all required invariants hold
+
+    The dir-exists test is what lets this be decided here rather than deferred to harness dispatch
+    context: the filesystem already distinguishes "you pointed me somewhere wrong" from "the loop
+    ran and produced nothing".
+    """
+    grader = SCRIPTS / "exec_replay_grade.py"
+    if not grader.exists():
+        failures.append("exec_replay_grade.py missing")
+        return
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        real_dir = tmp / "artifact-present"
+        real_dir.mkdir()
+        absent = tmp / "no-such-dir"
+        fixture = next(iter(sorted(d.name for d in FIXTURES_DIR.iterdir() if d.is_dir())), None)
+
+        cases = [
+            ("bad usage (too few args)", ["only-one-arg"], 2),
+            ("unknown fixture id", ["no-such-fixture-xyz", str(real_dir), "HEAD"], 2),
+            ("artifact dir absent", [fixture or "x", str(absent), "HEAD"], 2),
+            ("dir present, no CURRENT_REVIEW.json", [fixture or "x", str(real_dir), "HEAD"], 1),
+        ]
+        for label, args, want in cases:
+            if fixture is None and "fixture" in label:
+                continue
+            rc = subprocess.run(
+                [sys.executable, str(grader), *args], capture_output=True, text=True
+            ).returncode
+            if rc != want:
+                failures.append(
+                    f"exec_replay_grade.py exit class: {label} -> exit {rc}, expected {want}"
+                )
+
+
 def main(argv: list[str]) -> int:
     canon = load_canon(SKILL_ROOT)
 
@@ -347,6 +398,7 @@ def main(argv: list[str]) -> int:
             )
 
     _check_reviewer_revert(failures)
+    _check_grader_exit_classes(failures)
 
     if failures:
         print(f"_exec_replay_selftest: FAIL ({len(failures)} issue(s))")

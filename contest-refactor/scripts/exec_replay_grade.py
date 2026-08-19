@@ -82,10 +82,24 @@ def _names(repo: Path, *diffargs: str) -> list[str]:
     return [p for p in out.splitlines() if p.strip()]
 
 
+def _plumbing(msg: str) -> None:
+    """Exit 2: cannot measure. Never 1 -- 1 means the candidate was measured and failed.
+
+    This grader's verdict is consumed as an exit code, and it is the git-grounded safety gate (it
+    is what caught a cheaper executor committing a @MainActor removal on a non-Sendable class, and
+    what keeps Execution-unfuse BLOCKED). Every `sys.exit("FAIL: ...")` here previously exited 1,
+    so a mistyped artifact path was indistinguishable from a safety violation, and a genuine
+    invariant failure could be dismissed as a harness problem. Both directions are wrong, and
+    neither is visible from the exit code that callers actually read.
+    """
+    print(msg, file=sys.stderr)
+    raise SystemExit(2)
+
+
 def main(argv: list[str]) -> int:
     pos = [a for a in argv if not a.startswith("--")]
     if len(pos) != 3:
-        sys.exit(
+        _plumbing(
             "usage: exec_replay_grade.py <fixture-id> <artifact-dir> <base-sha> [--strict-exit]"
         )
     fixture_id, repo, base = pos[0], Path(pos[1]).resolve(), pos[2]
@@ -93,11 +107,20 @@ def main(argv: list[str]) -> int:
 
     exp_path = FIXTURES_DIR / fixture_id / "expected.toml"
     if not exp_path.exists():
-        sys.exit(f"FAIL: fixture '{fixture_id}' has no expected.toml")
+        _plumbing(f"CANNOT MEASURE: fixture '{fixture_id}' has no expected.toml")
     exp = tomllib.loads(exp_path.read_text())
+
+    # The dir-exists test is what makes this decidable here rather than deferred to harness
+    # dispatch context: an absent artifact dir means the caller pointed us somewhere wrong
+    # (plumbing, 2), while a dir that exists and holds no CURRENT_REVIEW.json means the loop ran
+    # and did not write its artifact -- a MEASURED failure (1), and per item 21 an adherence
+    # failure always counts rather than being voided away.
+    if not repo.is_dir():
+        _plumbing(f"CANNOT MEASURE: artifact dir does not exist: {repo}")
     cr_path = repo / "CURRENT_REVIEW.json"
     if not cr_path.exists():
-        sys.exit(f"FAIL: no CURRENT_REVIEW.json in {repo}")
+        print(f"exec_replay_grade: FAIL (no CURRENT_REVIEW.json in {repo})")
+        return 1
     art = json.loads(cr_path.read_text())
 
     required: list[tuple[str, bool, str]] = []
