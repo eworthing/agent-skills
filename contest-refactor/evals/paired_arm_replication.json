@@ -12048,6 +12048,245 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-028/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-029",
+      "scenario_id": "principal-invariant-owner-restraint",
+      "arm": "with_skill",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "domain_modeling": 3.0
+        },
+        "flagged_smells": [
+          "fake-clean reward",
+          "old authority still alive"
+        ],
+        "evidence_demanded": [
+          "A fix removing the simultaneous inout+read access on `rosters` in both `addPlayerToCurrentRoster` and `addPlayer(_:toLeague:)` (e.g., snapshot `rosters` into a local `let` before the mutating subscript call)",
+          "A direct test that calls `addPlayerToCurrentRoster` and `addPlayer(_:toLeague:)` end-to-end (both success and the `playerAlreadyInLeague` conflict-throw branch) and runs to completion without a runtime exclusivity trap",
+          "Confirmation (diff or grep) that the prior un-suffixed, unguarded `RosterStore.addPlayer(_:)` entry point was removed or now routes through the same domain check, so no remaining call site can add a player without the One-League check"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['old authority still alive']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+          "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+          "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['old authority still alive']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-029/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-029",
+      "scenario_id": "principal-invariant-owner-restraint",
+      "arm": "without_skill",
+      "slot_index": 1,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical — silent data-integrity defect: aggregate/entity misidentification in the ImportService entry path (addPlayer(toLeague:) writes to an arbitrary roster sharing the leagueID rather than the intended one, with no error raised); no canon severity-anchor file was provided in this sandboxed review, so this label is a plain-language equivalent rather than a quoted rubric term",
+        "dimension_scores": {
+          "domain_modeling": 3
+        },
+        "flagged_smells": [
+          "aggregate misidentification / wrong-entity write in addPlayer(toLeague:) (firstIndex(where: leagueID) is not a unique key when a league has >1 roster)",
+          "invariant enforcement by caller convention, not by construction (checking: allRosters trusts any caller-supplied array; nothing prevents a stale or partial snapshot)",
+          "unverified coverage claim (no test diff shown for the new throwing paths despite a specific 'green' count)",
+          "silent behavior change in ImportService (batch import now fails fast on first conflict, previously non-throwing, undiscussed)"
+        ],
+        "evidence_demanded": [
+          "Confirm whether CSVRow carries a team/roster identifier distinct from leagueID; if so, fix addPlayer(toLeague:) to resolve the specific intended roster instead of firstIndex(where: leagueID); if not, explain how ImportService is supposed to target the correct team at all",
+          "A test with two rosters sharing one leagueID where importRoster is asked to add a player to the second one, proving it lands on the correct roster (not just that a true duplicate is blocked)",
+          "The actual test(s) — not just the 2,041 count — that exercise LeagueRoster.addPlayer(checking:) through both RosterStore call sites, including the conflict-thrown and leagueNotFound paths",
+          "Confirmation of intended ImportService semantics on partial failure: abort-the-batch (current behavior) vs. best-effort with a per-row error report"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['aggregate misidentification / wrong-entity write in addPlayer(toLeague:) (firstIndex(where: leagueID) is not a unique key when a league has >1 roster)', 'invariant enforcement by caller convention, not by construction (checking: allRosters trusts any caller-supplied array; nothing prevents a stale or partial snapshot)', \"unverified coverage claim (no test diff shown for the new throwing paths despite a specific 'green' count)\", 'silent behavior change in ImportService (batch import now fails fast on first conflict, previously non-throwing, undiscussed)']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — silent data-integrity defect: aggregate/entity misidentification in the ImportService entry path (addPlayer(toLeague:) writes to an arbitrary roster sharing the leagueID rather than the intended one, with no error raised); no canon severity-anchor file was provided in this sandboxed review, so this label is a plain-language equivalent rather than a quoted rubric term'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+          "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+          "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['aggregate misidentification / wrong-entity write in addPlayer(toLeague:) (firstIndex(where: leagueID) is not a unique key when a league has >1 roster)', 'invariant enforcement by caller convention, not by construction (checking: allRosters trusts any caller-supplied array; nothing prevents a stale or partial snapshot)', \"unverified coverage claim (no test diff shown for the new throwing paths despite a specific 'green' count)\", 'silent behavior change in ImportService (batch import now fails fast on first conflict, previously non-throwing, undiscussed)']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — silent data-integrity defect: aggregate/entity misidentification in the ImportService entry path (addPlayer(toLeague:) writes to an arbitrary roster sharing the leagueID rather than the intended one, with no error raised); no canon severity-anchor file was provided in this sandboxed review, so this label is a plain-language equivalent rather than a quoted rubric term'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-029/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
