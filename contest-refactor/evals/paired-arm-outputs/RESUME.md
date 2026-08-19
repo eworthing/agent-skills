@@ -12,9 +12,9 @@ this, then verifies it against `git log`. Uncommitted work does not exist.
 
 ## study
 
-- pairs complete: **21 / 55**
-- next in frozen order: **pair-003 (suppression-flag rep 5, attempt 2)**
-- interrupted (started, no terminal record — attempt index spent): ['pair-003']
+- pairs complete: **22 / 55**
+- next in frozen order: **pair-004 (crossplat-flag rep 4, attempt 1)**
+- interrupted (started, no terminal record — attempt index spent): none
 - exhausted (2 attempts spent, unresolved): none
 
 ## Operational
