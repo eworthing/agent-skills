@@ -17,7 +17,10 @@ So, when a new gate needs a field that did not exist before, do one of:
 1. **Bump the schema version** and add a default-fill entry here (the v2 → v3 precedent); or
 2. **Scope the gate** to artifacts written at or after the ruleset that introduced it, read from
    `skill_rev` (G19) — which is why that field exists; or
-3. **Make the field optional**, and gate only its *shape* when present.
+3. **Make the field optional**, and gate only its *shape* when present — the shipped precedent is
+   **G19** (`_artifact_history.py:307`), whose docstring states this exact reasoning: *"TYPE-only, not
+   presence: a reader cannot tell 'this version omitted it' from 'this run predates the field', so
+   presence is a Step -1 emit obligation (startup.md)."* Copy that shape.
 
 Never a fourth option. A required field added silently at an existing version is a retroactive
 invalidation of committed history, and the repo's compatibility policy — committed reviews and
