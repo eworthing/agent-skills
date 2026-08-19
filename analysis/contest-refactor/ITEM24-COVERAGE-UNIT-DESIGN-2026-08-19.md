@@ -53,13 +53,27 @@ The unit is deliberately *coarser* than the evidence grain. A coverage ledger an
 looked at", not "was this understood" — and conflating the two is how a coverage number becomes a
 quality claim it cannot support.
 
-## 3. The blocking prerequisite: the denominator is not recorded
+## 3. The blocking prerequisite — FIXED 2026-08-19, and worse than first written
 
-**`--scope <dir>` never reaches the artifact.** It is parsed in Step 0 and "recorded for later
-steps" in invocation memory (`references/startup.md:18`), but no field persists it: `discovery`
-carries `source_roots`, `test_command`, `lens`, `adrs`, `domain_terms`, `test_scope`, and
-`test_filter` — and `test_scope`/`test_filter` exist precisely because `--test-filter` needed the
-same honesty. `--scope` got no equivalent.
+> **Update.** The first draft of this section said `--scope` "is never persisted". Checking the
+> premise before building — the discipline item 26a's closure earned the hard way — showed the
+> defect was larger: **`--scope` had no defined effect at all.** Fixed the same day; the record
+> below is kept because the shape of the miss is the useful part.
+
+**`--scope <dir>` was advertised, recommended, and never read.** It appeared in SKILL.md's
+`argument-hint`, in startup.md's "Parse user flags" sentence ("Record for later steps"), and in
+`halt-handoff.md:136`, which actively tells users *"Scope down — re-invoke as
+`/contest-refactor --scope <dir>`"*. **No step ever read it.** Step 0 step 2 scanned CWD
+unconditionally; `source_roots` was never narrowed; nothing recorded the narrowing.
+
+Its one downstream consumer already expected it: `scripts/preflight.py`'s first positional is
+documented as `<scope-dir>`, "source/scope directory that must exist before review starts", and its
+docstring names "a scope dir that isn't there" as the canonical bad input. The consumer was built
+for the flag while the producer ignored it.
+
+A repo-wide audit put the miss in relief: every other advertised flag defines its effect at 3–40
+sites; `--scope` had **zero**, its only non-parse mention being the handoff recommending its use.
+So a user following the skill's own advice got a whole-repo run and a whole-repo scorecard.
 
 Two consequences, the second larger than item 24:
 
@@ -72,9 +86,21 @@ Two consequences, the second larger than item 24:
    artifact and would inherit the same blind spot, and `halt-handoff.md:136` actively *recommends*
    `--scope <dir>` as a remedy — so the flag sits on a path users are told to take.
 
-**This is the first thing item 24 should ship, and it is nearly free**: one persisted field
-(`discovery.scope`, null when unscoped), one G40-adjacent shape check, one fixture pair. It stands
-on its own merits as an honesty fix and does not require the rest of item 24 to exist.
+**Shipped, and cheaper than the field this section originally proposed.** Step 0 step 2 now
+carries the effect: under `--scope <dir>` the scan is restricted to `<dir>`, so
+`discovery.source_roots` records the narrowing and G40 carries it forward every loop, `<dir>` is
+the `<scope-dir>` preflight receives, and the Discovery section and any HALT handoff must state
+that the scorecard is a claim about `<dir>` rather than the repository. **No new field was needed**
+— `source_roots` already records it. The residual distinction (roots *detected* vs roots *imposed
+by the user*) has no consumer today and is deliberately not built.
+
+Guarded by `scripts/_flag_effect_selftest.py`: the flag set is **discovered** from SKILL.md's
+`argument-hint`, and each flag must have its effect defined at a registered site, counting neither
+the advertisement nor the parse list. Advertising a flag without registering where it acts fails;
+deleting the operative prose fails. That is the discovery-tripwire shape recommended in
+`ITEM3-HARD-RULE-PROPAGATION-2026-08-19.md` for the enumerate-only dispatch audits — applied here
+first because the flag list has a machine-readable source and the dispatch-prompt set does not.
+Verified in both directions, including a temporary fake flag that the guard rejected.
 
 ## 4. Snapshot and invalidation
 
@@ -134,15 +160,15 @@ a promotion threshold, and a rollback trigger:
 
 | Slice | Acceptance | Ceiling | Promotion | Rollback |
 |---|---|---|---|---|
-| **A. Persist `--scope`** | fixture pair — scoped run records it, unscoped records `null`; shape-checked | 1 field, 1 check, 2 fixtures; zero new loop-path prose if documented in the JSON reference already loaded at emit | ships on its own merits (honesty fix) | revert one field; artifacts stay readable (additive, nullable) |
+| **A. Give `--scope` an effect** — **DONE 2026-08-19** | `_flag_effect_selftest.py`: every advertised flag has a defined effect at a registered site; a new unregistered flag fails | 1 prose sentence + 1 selftest; **zero loop-path tokens** (`startup.md` is main-agent-only, budget unchanged at 84,115/84,200) | shipped on its own merits (honesty fix) | revert one sentence; no schema, no field, no artifact migration |
 | **B. Ledger + derived terminal state** | disjointness asserted; every registry `primary_file` appears `examined` at its loop | one module < 400 LoC, report-only first | the registry cross-check finds ≥1 real inconsistency, or a consumer exists | report-only flag, as `_artifact_transitions.py` |
 | **C. Fingerprint invalidation + resume** | a mutated file flips `covered → stale` deterministically | reuse `_fingerprint.py` normalisation | B stable across ≥5 real loops | drop to path-only identity |
 | **D. Churn prior + escalate-on-hit** | ordering reproducible from a fixed sha | tech-audit's top-30 heuristic | measured against flat ordering | ordering is advisory; disable |
 
 ## 9. Recommendation
 
-**Slice A when item 24 starts; B–D behind a consumer.** Slice A is a real artifact-honesty defect
-with a reader today — the challenger, and any human reading a scoped run's scorecard. B–D have no
-consumer until item 23's multi-run work exists, and item 23 is itself gated on a discriminating
-corpus. The lesson from item 26a applies directly: **machinery with no reader is speculative work**,
+**Slice A is done; B–D stay behind a consumer.** Slice A turned out to be a correctness bug rather
+than a coverage prerequisite — an advertised flag with no implementation — and it had a reader
+today: the challenger, and any human reading a scoped run's scorecard. B–D have no consumer until
+item 23's multi-run work exists, and item 23 is itself gated on a discriminating corpus. The lesson from item 26a applies directly: **machinery with no reader is speculative work**,
 and this repo has just spent a review cycle proving it.
