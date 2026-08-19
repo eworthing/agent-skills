@@ -182,7 +182,7 @@ preamble, explicit negative clauses, version conditioning:
 | Option | Cost | Note |
 |---|---|---|
 | Raise the ceiling | ~3k tokens on **every loop of every run** (~30k per 10-loop run) | The honest option if the packs prove their value; must be a measured decision, not a side effect |
-| **Conditional load by detected stack** | Swift pack on the apple path only; Python pack on the generic path | The generic path carries ~4.1k fewer tokens than apple (`lens-generic.md` 1,728 vs `lens-apple.md` 5,806), and the ceiling is set by the *apple* path — so **the Python pack likely fits under today's ceiling** while the Swift pack does not |
+| **Conditional load by detected stack** | Swift pack on the apple path only; Python pack on the generic path | **Corrected 2026-08-19.** The first draft said the Python pack "likely fits under today's ceiling" because generic counts ~4.1k fewer tokens than apple. That apparent slack was an artifact: the guard held **one** ceiling, measured on apple, and compared only `--lens` (default apple) against it, so generic growth was invisible until it crossed a number set for a different path. Fixed — each path now carries its own ceiling and one `--check` polices both: apple **84,115 / 84,200**, generic **80,037 / 80,100**. Real headroom on generic is **63 tokens**, not 4,163, so the Python pack (1,607) needs a deliberate generic bump to ~81,700 and the Swift pack (1,422) an apple bump to ~85,600. Both are now visible decisions rather than free lunches |
 | Displace | edit `lens-apple.md` to make room | Real regression risk; needs its own measurement |
 
 **Recommendation: neither pack ships without a measured reason.** A rule pack is judgment-shifting

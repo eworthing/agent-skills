@@ -234,7 +234,14 @@ CEILINGS = {
     # output-format-json-rules.md each needed an addition describing the new required
     # loop_result fields + the drift_notes coupling. Deliberate escape hatch per this dict's
     # own guard comment below -- measured at 84,115 tok, smallest 100-multiple headroom above it.
-    "loop": 84_200,  # per-loop fixed reload (unique loads, apple lens)
+    # ONE CEILING PER LENS PATH. A single "loop" ceiling measured on the apple lens left the
+    # generic path unpoliced: generic counts ~4.1k fewer tokens, so it sat that far under the
+    # apple number and could grow unnoticed until it crossed a ceiling set for a different
+    # path. An unmeasured dimension reading as compliant is the same defect shape as
+    # tool_runner.py's `absent` != `clean`. --check now polices both paths in one run,
+    # regardless of --lens (which still selects the load-matrix comparison only).
+    "loop_apple": 84_200,  # per-loop fixed reload, apple lens (measured 84,115)
+    "loop_generic": 80_100,  # per-loop fixed reload, generic lens (measured 80,037)
     "skill_md": 10_600,  # SKILL.md trigger read
 }
 
@@ -307,11 +314,20 @@ def cmd_check(args, count_fn, method) -> int:
                     f"(add it to the table, or declare it in DECLARED_DIVERGENCES with a reason)"
                 )
 
-    per_loop = sum(
-        count_fn(_resolve(f).read_text(encoding="utf-8")) for f in loaded_set("loop", args.lens)
-    )
+    def _per_loop(lens: str) -> int:
+        return sum(
+            count_fn(_resolve(f).read_text(encoding="utf-8")) for f in loaded_set("loop", lens)
+        )
+
+    # Both paths every run: --lens selects which load-matrix to compare, never which
+    # ceiling to enforce. Enforcing only the requested lens is what left generic unpoliced.
+    per_loop_by_lens = {"apple": _per_loop("apple"), "generic": _per_loop("generic")}
     skill_md = count_fn((SKILL_DIR / "SKILL.md").read_text(encoding="utf-8"))
-    for label, value in (("loop", per_loop), ("skill_md", skill_md)):
+    for label, value in (
+        ("loop_apple", per_loop_by_lens["apple"]),
+        ("loop_generic", per_loop_by_lens["generic"]),
+        ("skill_md", skill_md),
+    ):
         if value > CEILINGS[label]:
             failures.append(
                 f"[ceiling] {label} = {value:,} tok exceeds ceiling {CEILINGS[label]:,}. "
@@ -335,7 +351,10 @@ def cmd_check(args, count_fn, method) -> int:
         return 2
 
     print(f"# budget guard ({method}, lens={args.lens})")
-    print(f"  per-loop fixed reload : {per_loop:>8} / {CEILINGS['loop']:,}")
+    print(f"  per-loop (apple)      : {per_loop_by_lens['apple']:>8} / {CEILINGS['loop_apple']:,}")
+    print(
+        f"  per-loop (generic)    : {per_loop_by_lens['generic']:>8} / {CEILINGS['loop_generic']:,}"
+    )
     print(f"  SKILL.md trigger      : {skill_md:>8} / {CEILINGS['skill_md']:,}")
     print(
         f"  load-matrix sync      : {len(matrix)} steps, {len(DECLARED_DIVERGENCES)} declared divergences"

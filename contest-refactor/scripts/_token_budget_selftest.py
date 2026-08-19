@@ -153,11 +153,28 @@ check(
     "a heuristic run must never print an OK verdict",
 )
 
-# A ceiling must actually bite.
+# A ceiling must actually bite -- on EVERY lens path, not just the heaviest one.
+# The guard used to hold a single "loop" ceiling measured against the apple lens and
+# compare only args.lens (default apple) to it. The generic path counts ~4.1k fewer
+# tokens, so it sat that far under the apple ceiling and could grow unnoticed until it
+# passed a number set for a different path -- an unmeasured dimension reading as
+# compliant. Each path now carries its own ceiling and one --check polices both.
 _real = dict(tb.CEILINGS)
 try:
-    tb.CEILINGS["loop"] = 1
-    check(_guard() == 1, "ceiling breach not detected")
+    tb.CEILINGS["loop_apple"] = 1
+    check(_guard() == 1, "apple-path ceiling breach not detected")
+finally:
+    tb.CEILINGS.clear()
+    tb.CEILINGS.update(_real)
+
+_real = dict(tb.CEILINGS)
+try:
+    tb.CEILINGS["loop_generic"] = 1
+    check(
+        _guard() == 1,
+        "generic-path ceiling breach not detected -- a default --check must police the "
+        "generic lens too, or growth there is invisible until it passes the apple number",
+    )
 finally:
     tb.CEILINGS.clear()
     tb.CEILINGS.update(_real)
