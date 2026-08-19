@@ -3309,5 +3309,85 @@
       "vocabulary_axis": "with_skill returned canon severity anchors ('Likely disqualifier') and canon smell names ('fake-clean reward', 'architecture costume layer'); without_skill returned ad-hoc equivalents ('critical', 'Shotgun Surgery', 'testing theater'). The design classifies this as skill_contract and forbids it from entering outcome lift.",
       "second_finding_on_process_owner": "2 of 5 with_skill reps raised the ReservationService.hold check-then-claim race (canon 'reservation after suspension'), which is NOT self-documented in the diff; 1 of those called it blocking, the other scoped it out of the graded dimension. No without_skill rep raised it. n=5, no rule reads it, and it is recorded as an observation only."
     }
+  },
+  "rung_3": {
+    "scenarios": [
+      "suppression-flag",
+      "crossplat-flag",
+      "suppression-restraint",
+      "crossplat-restraint",
+      "principal-invariant-owner-restraint",
+      "principal-consistency-boundary-restraint"
+    ],
+    "pairs": 30,
+    "slots": 60,
+    "authorisation": {
+      "rule": "prereg.execution_ladder.continuation_rule -- a rung is NEVER auto-continued and NEVER auto-stopped; the next rung requires explicit authorisation.",
+      "granted_by": "user instruction 'work on next rung' following the rung-2 report (commit a27cf95).",
+      "what_it_answers": "Decisions 2 and 4. Decision 3 becomes computable only with this rung. This is also the FIRST restraint measurement anywhere in the study -- rungs 1-2 contained no twins."
+    },
+    "grading_configuration": {
+      "executor_model": "claude-sonnet-5",
+      "tiering_used": false,
+      "same_as_rung_2": "Sonnet-only, un-tiered. Rung 1 measured the haiku cascade at +49% over sonnet-only with zero judgment-caused escalations; nothing since changes that."
+    },
+    "grading_specs": {
+      "evals/grading-specs/suppression-flag.md": {
+        "sha256": "6ec4a821e8b64b7ebe65625f3c5255c44207e0df342ffdf06b99554b73347d2f",
+        "scenario_id": "suppression-flag",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/crossplat-flag.md": {
+        "sha256": "46d4df3a26e8fb04497f11c5fdcbd63dfe997c6d36b98e7a9f89bcc6e1704fd5",
+        "scenario_id": "crossplat-flag",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/suppression-restraint.md": {
+        "sha256": "fd91d85754b22248825e53f839ee87875f278be2ae5b12d4c2038226768d0137",
+        "scenario_id": "suppression-restraint",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/crossplat-restraint.md": {
+        "sha256": "655b1e3b336d63743ea17eff065e99bb89fa1654b2224298dbedd6377c831936",
+        "scenario_id": "crossplat-restraint",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/principal-invariant-owner-restraint.md": {
+        "sha256": "a98b8754b07b1183f6a1edd48b39df013957a2bc70822f72b30d87cb8e17f283",
+        "scenario_id": "principal-invariant-owner-restraint",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      },
+      "evals/grading-specs/principal-consistency-boundary-restraint.md": {
+        "sha256": "c5a5019ce99c5ff9b66efa0abfd640cc64c8cedeafcf2e142e1c8043670a69ea",
+        "scenario_id": "principal-consistency-boundary-restraint",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true
+      }
+    },
+    "spec_hashes_not_in_prereg": "Same reason as rung 2: the amendment window closed at the first study dispatch, so adding hashes to the prereg would change prereg_sha256 and trip enforce_amendment_window. Recorded here instead, committed before any rung-3 arm runs -- git history carries the same 'authored before outputs existed' guarantee.",
+    "decision_2_eligible_assertions": {
+      "rule": "prereg Decision 2 reads only assertions tagged [discriminating] AND classified criterion_class: 'outcome'. The skill_contract half of README:746's criterion is excluded and reported on the vocabulary axis -- the declared divergence already recorded in prereg.declared_divergences.",
+      "suppression-flag": [
+        1,
+        2,
+        3
+      ],
+      "crossplat-flag": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "total": 7,
+      "note": "suppression-flag assertion 1 is method=deterministic (grade_structural.py decides it); the other six are method=semantic. Decision 2 is evaluated per assertion, NOT per scenario -- unlike Decision 1."
+    },
+    "restraint_tier_caveat": "Four of the six rung-3 scenarios are restraint twins, and for ALL of them the SEMANTIC tier is the operative measure. The mechanical twin rule (held iff verdict==approved AND blocks_95==false) is a strict lower bound that under-counts by design: principal-invariant-owner-restraint measured mechanical 0/5 vs semantic 4/5 in principal_baseline.json, because a rubric-faithful reviewer may hold the score for a missing named residual while fully clearing the carve-out. Score-honesty is not a restraint miss.",
+    "known_asymmetry_declared_before_dispatch": "suppression-restraint assertion 0 ('flagged_smells does NOT contain suppression-as-fix') is a NEGATIVE canon check: a bare arm passes it trivially, having no canon vocabulary to emit. It is classified skill_contract and therefore never enters outcome scoring -- but it is the mirror image of the vocabulary problem Decision 2 already excludes, and is named here so it is not discovered in the results.",
+    "mechanical_target_dimensions": "paired_arm_record_grades.py invokes `mechanical` without --dimensions, so target_dimensions is None and the rule reads 'any scored dimension < 9.5' rather than 'the named target dimension < 9.5'. That is what rungs 1-2 did; rung 3 keeps it for consistency. The reading is arm-symmetric and cannot favour either arm, and the semantic tier is the operative measure on the four twins regardless."
   }
 }
