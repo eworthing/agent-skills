@@ -806,6 +806,17 @@ complete **iff a committed terminal attempt record says so** — `paired_arm_run
 committed records, not from files on disk, so uncommitted work simply does not exist on resume.
 `RESUME.md` is a convenience for a human; `git log` is the authority.
 
+**The study's tooling, in the order a resuming session needs it** — recorded because two of these were undocumented and had to be reconstructed from memory mid-run:
+
+| Script | Use |
+|---|---|
+| `paired_arm_run.py start\|finish` | dispatch and close one pair (`--mode study --rung N`) |
+| `paired_arm_usage.py <with>.output <without>.output` | per-pair token accounting → the `--usage` file `finish` expects. **Never `Read`/`tail` a subagent `.output` transcript directly — it overflows context; this script is the reason it exists** |
+| `paired_arm_blindmap.py --rung N --out …` | freeze the rung's opaque-id → candidate map *and* its grading order, committed before grading starts so it survives a session boundary |
+| `paired_arm_grade.py spec-render\|render\|check-triggers\|mechanical` | grading-spec and candidate prompt rendering, trigger checks, mechanical tier |
+| `paired_arm_record_grades.py --rung N …` | write graded verdicts back into the record, honouring the frozen adjudication rule (see the correction below) |
+| `validate-paired-arm.py evals/paired_arm_replication.json` | 0 valid / 1 measured failure / 2 plumbing |
+
 Per D3, neither historical principal record is edited: both stay byte-identical, and the
 supersession relationship lives here and in the new file.
 
