@@ -6646,5 +6646,68 @@
       "attempt_3_also_burned_undispatched": "Attempt 3 burned the same way: the host checkpointed between the `started` commit and dispatch. Three attempts, zero arms dispatched, zero candidates. The grant is extended to 2 extra attempts (cap 4) on the SAME reasoning -- still no candidate has ever existed -- and again recorded before any pair-015 output exists.",
       "root_cause_is_MY_procedure_not_the_harness": "The recurrence is my own dispatch procedure, and extending a grant without fixing it would be exactly the self-serving pattern the first grant warned against. `start` commits the started record and materializes prompts; I was then issuing the two Agent dispatches in the NEXT turn, so any checkpoint in between burns an attempt for nothing. Fix: issue `start` and both Agent dispatches in the SAME turn, with the agent prompt told to retry its Read once if the prompt file is not there yet -- which closes the start/dispatch race without weakening the started-before-dispatch rule that makes a real crash visible."
     }
-  ]
+  ],
+  "rung_4": {
+    "scenarios": [
+      "principal-abstraction-seam-flag"
+    ],
+    "pairs": 5,
+    "slots": 10,
+    "authorisation": {
+      "rule": "prereg.execution_ladder.continuation_rule -- a rung is NEVER auto-continued and NEVER auto-stopped; the next rung requires explicit authorisation.",
+      "granted_by": "user instruction 'then continue with rung 4' following the rung-3 report (commit 7b4761d).",
+      "what_it_answers": "NOTHING in the decision table. This rung completes corpus coverage; it is not a decision input. See headline_exclusion below."
+    },
+    "headline_exclusion": {
+      "prereg_rule_verbatim": "A flag is headline_excluded iff its diff carries a present-tense/structural smell sufficient for the rubric to reject it independent of the cross-module/forces force under test. Pre-classified: abstraction-seam-flag contaminated (bare protocol trips the Unified Seam Policy).",
+      "consequence": "principal-abstraction-seam-flag is measured and reported for completeness and enters NO decision. Decision 1 reads only the 4 headline-eligible principal flags; Decision 2 reads only the 2 core flags; Decision 3 is a conjunction over those two; Decision 4's flag row reads flags that carry a clean signal. A caught/missed count from this rung must never be added to any of them.",
+      "why_it_is_contaminated": "The diff introduces a bare PushProvider protocol whose single conformer trips the rubric's Unified Seam Policy on present-tense structure alone. A reviewer can therefore reject this diff at architecture_quality < 9.5 without ever engaging the force under test (CONTEXT 5's committed Q4 per-region divergence). A 'caught' here is not evidence the lens found the forces defect.",
+      "declared_before_dispatch": true
+    },
+    "assertion_classes": {
+      "all_four_are_outcome_classed": true,
+      "discriminating": [
+        0,
+        1,
+        2
+      ],
+      "note": "On criterion_class alone these look Decision-1-eligible. They are not: Decision 1's population is the 4 headline-eligible principal flags, and this scenario is excluded from it by the contamination rule above. Recorded because the class tags alone would mislead a later reader."
+    },
+    "grading_configuration": {
+      "executor_model": "claude-sonnet-5",
+      "tiering_used": false,
+      "same_as_rungs_2_3": "Sonnet-only, un-tiered."
+    },
+    "grading_specs": {
+      "evals/grading-specs/principal-abstraction-seam-flag.md": {
+        "sha256": "5cd6770f4fc91bfe4b2a6a9dce0d1b451f951cfbd2fc484da433a918cb5dfff4",
+        "scenario_id": "principal-abstraction-seam-flag",
+        "authored_by": "claude-sonnet-5",
+        "authored_before_any_response_to_this_scenario_existed": true,
+        "all_assertions_marked_decidable": true
+      }
+    },
+    "spec_hashes_not_in_prereg": "Same reason as rungs 2-3: the amendment window closed at the first study dispatch, so adding hashes to the prereg would change prereg_sha256 and trip enforce_amendment_window. Recorded here instead, committed before any rung-4 arm runs -- git history carries the same 'authored before outputs existed' guarantee.",
+    "spec_combination_rule_observed_not_edited": {
+      "what": "This spec's 'overall tier call' resolves the frozen tier rule into a strict conjunction: all three discriminating assertions (0, 1, 2) must hold for caught. The spec names that as its own inference under 'residual ambiguity'.",
+      "comparison": "Stricter than two of the four sibling principal-flag specs: principal-consistency-boundary-flag explicitly DECLINES an AND ('the tier rule text speaks of a single defect ... not two independently gating requirements'), and principal-duplicated-rule-flag admits a catch on assertion 0 alone. principal-invariant-owner-flag and principal-process-owner-flag do require both halves.",
+      "action": "Recorded, NOT edited. The spec was authored blind, before any candidate existed, and the host tuning a spec after reading it is exactly the post-hoc move the spec-first protocol exists to prevent. It is also immaterial to every decision, since this scenario enters none.",
+      "direction_of_the_effect": "The strict conjunction works AGAINST the contamination, not with it: it refuses a caught to a reviewer who rejects on the bare-protocol seam smell alone without naming CONTEXT 5. That makes the reported count a tighter read of the forces defect than the tier rule alone would give -- which is worth knowing when reading the number, and is still not a licence to feed it into a decision."
+    },
+    "mechanical_target_dimensions": "Unchanged from rungs 1-3: paired_arm_record_grades.py invokes `mechanical` without --dimensions, so the rule reads 'any scored dimension < 9.5'. Arm-symmetric.",
+    "double_grade_subsample": {
+      "pairs_in_subsample": [
+        "pair-040",
+        "pair-044"
+      ],
+      "outputs": 4,
+      "source": "the preregistered 20% subsample, seed frozen in prereg -- not chosen for this rung."
+    },
+    "session_log": [],
+    "progress": {
+      "pairs_dispatched": 0,
+      "pairs_remaining": 5,
+      "fits_in_one_session": "5 pairs is under the recorded operational cap of 8."
+    }
+  }
 }
