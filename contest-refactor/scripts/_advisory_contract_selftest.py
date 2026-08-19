@@ -89,6 +89,11 @@ def main() -> int:
 
     # 4. the instruction is still there
     text = VALIDATION_MD.read_text(encoding="utf-8")
+    if "--json" not in text.split("**Mechanical sweep**")[-1].split("\n")[0]:
+        failures.append(
+            "the Step-3 sweep no longer writes --json: advisory WARNs would live only in the loop "
+            "subagent's stderr and die with it, leaving nothing to analyse after a run"
+        )
     if "validate-artifact.py" not in text or "--mode advisory" not in text:
         failures.append(
             "validation.md no longer instructs the Step-3 mechanical sweep "

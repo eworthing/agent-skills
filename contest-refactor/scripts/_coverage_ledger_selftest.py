@@ -200,6 +200,12 @@ def main() -> int:
         )
     if "coverage_ledger.py" not in handoff:
         failures.append("halt-handoff.md no longer tells the loop to run coverage_ledger.py")
+    ledger_cmd = handoff.split("coverage_ledger.py")[-1].split("```")[0]
+    if "--json" not in ledger_cmd:
+        failures.append(
+            "the handoff no longer writes the ledger to --json: only the narrated percentage would "
+            "survive, and the structured detail (which files, which stale) would be lost"
+        )
 
     # The wording IS the contract. "cited" is a floor on attention; "reviewed"/"examined"
     # would assert something the ledger cannot measure and the artifact cannot support.

@@ -62,7 +62,8 @@ strongest claim; the others carry it by this rule, not by omission.
 Before emitting, run:
 
 ```
-python3 "$SKILL_DIR/scripts/coverage_ledger.py" <repo-root>
+python3 "$SKILL_DIR/scripts/coverage_ledger.py" <repo-root> \
+    --json .contest-refactor/diagnostics/coverage.json
 ```
 
 and carry its figure into the handoff:
@@ -84,7 +85,8 @@ sound" from "the parts it cited are sound".
 The ledger excludes fixture corpora, vendored and build trees, test files, and generated
 files, each with a typed reason and a count — it never shrinks the denominator silently.
 If it cannot run (no `REVIEW_HISTORY.json`, no git), say so and omit the figure. Never
-estimate it.
+estimate it. The JSON is a working artifact, not a committed one — it is written for a
+human to read after the run, and is not added to the Step-3 commit file list.
 
 ---
 

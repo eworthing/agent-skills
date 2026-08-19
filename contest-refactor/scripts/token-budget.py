@@ -241,7 +241,14 @@ CEILINGS = {
     # tool_runner.py's `absent` != `clean`. --check now polices both paths in one run,
     # regardless of --lens (which still selects the load-matrix comparison only).
     "loop_apple": 84_200,  # per-loop fixed reload, apple lens (measured 84,115)
-    "loop_generic": 80_100,  # per-loop fixed reload, generic lens (measured 80,037)
+    # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
+    # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
+    # advisory WARNs written only to the loop subagent's stderr die with the subagent and
+    # leave nothing to analyse after a run. A shorter path fit under 80,100 with 2 tokens
+    # spare; that was rejected as false economy — a 2-token margin turns the guard into a
+    # tripwire on the next edit of any kind. Deliberate escape hatch per this dict's own
+    # guard comment; measured at 80,102, smallest 100-multiple headroom above it.
+    "loop_generic": 80_200,  # per-loop fixed reload, generic lens (measured 80,102)
     "skill_md": 10_600,  # SKILL.md trigger read
 }
 
