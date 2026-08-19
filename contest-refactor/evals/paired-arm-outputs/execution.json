@@ -207,7 +207,7 @@
         "verdict_json": {
           "verdict": "conditional",
           "blocks_95": true,
-          "blocking_severity": "high \u2014 unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case",
+          "blocking_severity": "high — unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case",
           "dimension_scores": {
             "domain_modeling": 7
           },
@@ -251,7 +251,7 @@
             {
               "name": "boolean_coherence",
               "pass": false,
-              "detail": "blocks_95=true requires a canon blocking_severity, got 'high \u2014 unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case'"
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'high — unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case'"
             }
           ],
           "assertions": [],
@@ -309,7 +309,7 @@
             "assertion_text": "boolean_coherence",
             "criterion_class": "unclassified",
             "passed": false,
-            "rationale": "blocks_95=true requires a canon blocking_severity, got 'high \u2014 unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case'"
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'high — unacknowledged behavior change (SQL row-snapshot filter replaced by live-member-state filter) in OrderRepository.fetchOrdersWithDiscount, reported as a pure delegation refactor and unverified by any test targeting the divergent case'"
           }
         ],
         "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-001/attempt2/without_skill/review-verdict.md",
@@ -339,7 +339,7 @@
           ],
           "evidence_demanded": [
             "Test file + test name exercising PurchaseCoordinator.purchase's confirm-fails path where paymentService.void ALSO throws, asserting some distinguishing signal (log/telemetry/error case) fires, not merely that the hold is retained",
-            "Concrete implementation or citation of the ADR-0031 reconciliation mechanism the doc comment claims 'the error surfaces' to \u2014 a log call, telemetry emit, queue write, or distinct thrown error case, not just the retained hold",
+            "Concrete implementation or citation of the ADR-0031 reconciliation mechanism the doc comment claims 'the error surfaces' to — a log call, telemetry emit, queue write, or distinct thrown error case, not just the retained hold",
             "ReservationService.hold's source, to confirm whether it performs an atomic recheck-and-claim (satisfying the reservation-after-suspension carve-out) or whether the isAvailable/hold split is genuinely reentrant"
           ]
         },
@@ -447,7 +447,7 @@
         "verdict_json": {
           "verdict": "conditional",
           "blocks_95": true,
-          "blocking_severity": "major \u2014 unverified correctness of new saga/compensation logic plus a silently-dropped error path in a financial transaction handler (no formal rubric severity scale was included in the provided materials, so this is a plain-language equivalent, not a quoted rubric anchor)",
+          "blocking_severity": "major — unverified correctness of new saga/compensation logic plus a silently-dropped error path in a financial transaction handler (no formal rubric severity scale was included in the provided materials, so this is a plain-language equivalent, not a quoted rubric anchor)",
           "dimension_scores": {
             "data_flow": 7.5
           },
@@ -459,7 +459,7 @@
             "pre-existing TOCTOU race between availability check and hold, unacknowledged in the new saga's documentation"
           ],
           "evidence_demanded": [
-            "unit/integration tests exercising each compensation branch: charge-fail\u2192release, confirm-fail+void-succeed\u2192void-then-release, confirm-fail+void-fail\u2192hold-retained",
+            "unit/integration tests exercising each compensation branch: charge-fail→release, confirm-fail+void-succeed→void-then-release, confirm-fail+void-fail→hold-retained",
             "an actual log, metric, or reconciliation-queue write for the void-failure branch, matching what the doc comment claims happens",
             "either a fix for or an explicit documented acknowledgment of the actor-reentrancy gap between isAvailable and hold for concurrent purchases of the same seat",
             "the PurchaseError case definitions, to confirm Sendable-compatibility for throwing across the actor boundary under strict concurrency"
@@ -492,7 +492,7 @@
             {
               "name": "boolean_coherence",
               "pass": false,
-              "detail": "blocks_95=true requires a canon blocking_severity, got 'major \u2014 unverified correctness of new saga/compensation logic plus a silently-dropped error path in a financial transaction handler (no formal rubric severity scale was included in the provided materials, so this is a plain-language equivalent, not a quoted rubric anchor)'"
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'major — unverified correctness of new saga/compensation logic plus a silently-dropped error path in a financial transaction handler (no formal rubric severity scale was included in the provided materials, so this is a plain-language equivalent, not a quoted rubric anchor)'"
             }
           ],
           "assertions": [],
@@ -550,7 +550,7 @@
             "assertion_text": "boolean_coherence",
             "criterion_class": "unclassified",
             "passed": false,
-            "rationale": "blocks_95=true requires a canon blocking_severity, got 'major \u2014 unverified correctness of new saga/compensation logic plus a silently-dropped error path in a financial transaction handler (no formal rubric severity scale was included in the provided materials, so this is a plain-language equivalent, not a quoted rubric anchor)'"
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'major — unverified correctness of new saga/compensation logic plus a silently-dropped error path in a financial transaction handler (no formal rubric severity scale was included in the provided materials, so this is a plain-language equivalent, not a quoted rubric anchor)'"
           }
         ],
         "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-002/attempt1/without_skill/review-verdict.md"
@@ -616,7 +616,7 @@
           ],
           "assertions": [],
           "residue": [
-            "[restraint] Does NOT flag the single Clock abstraction: \u00a75 states time is uniform with no planned variation, so the unified seam is correct",
+            "[restraint] Does NOT flag the single Clock abstraction: §5 states time is uniform with no planned variation, so the unified seam is correct",
             "[restraint] Does not demand speculative generalization (per-region clocks, pluggable time policies) for a variation CONTEXT does not state",
             "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
             "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape"
@@ -688,7 +688,7 @@
         "verdict_json": {
           "verdict": "conditional",
           "blocks_95": true,
-          "blocking_severity": "major \u2014 claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff",
+          "blocking_severity": "major — claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff",
           "dimension_scores": {
             "architecture_quality": 7.5
           },
@@ -733,12 +733,12 @@
             {
               "name": "boolean_coherence",
               "pass": false,
-              "detail": "blocks_95=true requires a canon blocking_severity, got 'major \u2014 claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff'"
+              "detail": "blocks_95=true requires a canon blocking_severity, got 'major — claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff'"
             }
           ],
           "assertions": [],
           "residue": [
-            "[restraint] Does NOT flag the single Clock abstraction: \u00a75 states time is uniform with no planned variation, so the unified seam is correct",
+            "[restraint] Does NOT flag the single Clock abstraction: §5 states time is uniform with no planned variation, so the unified seam is correct",
             "[restraint] Does not demand speculative generalization (per-region clocks, pluggable time policies) for a variation CONTEXT does not state",
             "[restraint] Does not treat 'one protocol with one implementation' as a smell in itself",
             "[restraint] Distinguishes this from the notification seam: the difference is a grounded committed force, not the structural shape"
@@ -791,7 +791,7 @@
             "assertion_text": "boolean_coherence",
             "criterion_class": "unclassified",
             "passed": false,
-            "rationale": "blocks_95=true requires a canon blocking_severity, got 'major \u2014 claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff'"
+            "rationale": "blocks_95=true requires a canon blocking_severity, got 'major — claimed benefit (test-injectability) and claimed scope (3 call sites) are asserted but not evidenced in the diff'"
           }
         ],
         "raw_output_path": "evals/paired-arm-outputs/pilot/pilot-003/attempt1/without_skill/review-verdict.md"
@@ -4165,6 +4165,67 @@
           "work_dir": "/tmp/paired-arm/study/pair-015/attempt2/without_skill"
         }
       }
+    },
+    {
+      "mode": "study",
+      "prereg_sha256_at_first_dispatch": "b2b95214f30cfe65f939d1d19842860a824616b8c0bdf940afc617467c176448",
+      "pair_id": "pair-015",
+      "scenario_id": "suppression-restraint",
+      "rep": 1,
+      "attempt_index": 3,
+      "arm_order": [
+        "with_skill",
+        "without_skill"
+      ],
+      "session_id": "sess-rung3d",
+      "state": "started",
+      "pre_dispatch_head": "49ce7b1cd0a8b58519710998ee33c03050d2c706",
+      "arms": {
+        "with_skill": {
+          "task_template": "evals/paired_arm_task_with_skill.md",
+          "task_template_sha256": "6f2fec8e8b62e7ac43e05e04624f7c377c61fc8bff916e7f58a9521f7c3021c1",
+          "materials": [
+            {
+              "material": "evals/scenarios/suppression-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/study/pair-015/attempt3/with_skill/materials/scenario.md",
+              "sha256": "fd76754b6351898ecce73561b652905da7f0ed5d5360506c4bd291689bb3ccf0",
+              "frozen": "fd76754b6351898ecce73561b652905da7f0ed5d5360506c4bd291689bb3ccf0"
+            },
+            {
+              "material": "references/architecture-rubric.md",
+              "copied_to": "/tmp/paired-arm/study/pair-015/attempt3/with_skill/materials/architecture-rubric.md",
+              "sha256": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
+              "frozen": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d"
+            },
+            {
+              "material": "references/method.md",
+              "copied_to": "/tmp/paired-arm/study/pair-015/attempt3/with_skill/materials/method.md",
+              "sha256": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
+              "frozen": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/study/pair-015/attempt3/with_skill/prompt.md",
+          "prompt_sha256": "b9f668ec27c518b8fe2137ee9fd7fecbbf1e44251bbcdcc974b04afd97d45a29",
+          "expected_output": "/tmp/paired-arm/study/pair-015/attempt3/with_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/study/pair-015/attempt3/with_skill"
+        },
+        "without_skill": {
+          "task_template": "evals/paired_arm_task_without_skill.md",
+          "task_template_sha256": "973d1738090c29f013315d61ba3ae63e9ee2c5627322ab39252da708e9f03545",
+          "materials": [
+            {
+              "material": "evals/scenarios/suppression-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/study/pair-015/attempt3/without_skill/materials/scenario.md",
+              "sha256": "fd76754b6351898ecce73561b652905da7f0ed5d5360506c4bd291689bb3ccf0",
+              "frozen": "fd76754b6351898ecce73561b652905da7f0ed5d5360506c4bd291689bb3ccf0"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/study/pair-015/attempt3/without_skill/prompt.md",
+          "prompt_sha256": "b9556077ba3e408a3d569780d686541efe56e7368fd156bfa762cd76cae5c870",
+          "expected_output": "/tmp/paired-arm/study/pair-015/attempt3/without_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/study/pair-015/attempt3/without_skill"
+        }
+      }
     }
   ],
   "pairs_per_session_cap_basis": "Measured ~1.24M context tokens / ~336k fresh tokens per pair INCLUDING its two grading calls. There is no API here to query remaining session budget, so this is a fixed cap with generous headroom rather than a prediction -- a session stops at 8 pairs regardless of how much budget appears to remain. 55 pairs therefore span ~7 sessions. With per-pair commits the cap governs predictable progress, not loss: an unplanned halt costs one pair either way.",
@@ -4249,7 +4310,7 @@
         "with_skill": "5/5 caught",
         "without_skill": "5/5 caught"
       },
-      "reading": "Both arms caught the defect on every rep, on the scenario prior measurement names as one of the three HARDEST cross-module flags. The bare arm named CONTEXT \u00a74 and \u00a76 unaided in all five reps. Under decision_rules.decision_1 this scenario contributes to the 'both arms >=4/5' row, NOT to the 'gap located' row.",
+      "reading": "Both arms caught the defect on every rep, on the scenario prior measurement names as one of the three HARDEST cross-module flags. The bare arm named CONTEXT §4 and §6 unaided in all five reps. Under decision_rules.decision_1 this scenario contributes to the 'both arms >=4/5' row, NOT to the 'gap located' row.",
       "what_this_does_not_license": "Decision 1 requires all 4 headline-eligible principal flags. One scenario cannot return 'no recall gap detected' and cannot license any programme statement -- Decision 3 is a conjunction across both layers. The binding language rule holds: this is NO LIFT DETECTED AT THIS N on one scenario, never 'the skill adds nothing'.",
       "observed_but_not_a_decision_input": "Severity calibration differed: without_skill returned `rejected` in 4/5 reps with data_flow 3-6; with_skill returned `conditional` in 5/5 with data_flow 6.5-8. Same catch, different severity. No decision rule reads this and K=5 cannot separate it from noise, so it is recorded as an observation only."
     },
