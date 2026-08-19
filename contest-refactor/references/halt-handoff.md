@@ -53,6 +53,41 @@ Emit one such line per finding that transitioned to `unresolvable` in this loop.
 
 ---
 
+## Coverage disclosure (every terminal handoff)
+
+Applies to **every** terminal handoff — HALT_SUCCESS, HALT_LOOP_CAP, HALT_STAGNATION,
+HALT_EXHAUSTION. Only the HALT_SUCCESS template spells it out inline, because that is the
+strongest claim; the others carry it by this rule, not by omission.
+
+Before emitting, run:
+
+```
+python3 "$SKILL_DIR/scripts/coverage_ledger.py" <repo-root>
+```
+
+and carry its figure into the handoff:
+
+```
+Citation coverage: <cited>/<denominator> first-party source files were cited as
+evidence across <N> loops (<pct>%); <stale> have changed since they were cited.
+```
+
+**Say "cited" — never "reviewed", "examined", or "covered".** The ledger measures
+citation, which is a *floor on attention*, not a record of what was read: an uncited file
+may have been read and found clean, or never opened. Nothing in the artifact separates
+those, and asking the loop to self-report what it read would be exactly the unverifiable
+evidence the trust model refuses. Stating the weaker true thing is the point. A converged
+scorecard already scopes its claim by **dimension** ("architecture-clean by this rubric,
+NOT bug-free"); this scopes it by **extent**, so a reader can tell "the repository is
+sound" from "the parts it cited are sound".
+
+The ledger excludes fixture corpora, vendored and build trees, test files, and generated
+files, each with a typed reason and a count — it never shrinks the denominator silently.
+If it cannot run (no `REVIEW_HISTORY.json`, no git), say so and omit the figure. Never
+estimate it.
+
+---
+
 ## HALT_SUCCESS
 
 Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` residual disposition (per `architecture-rubric-scoring.md` Score Anchors).
@@ -74,6 +109,10 @@ correctness, security, or runtime bugs; run your own test, security, and coverag
 audits before shipping. This is an architecture milestone, not a release gate.
 
 Final scorecard: <list dimensions and scores from CURRENT_REVIEW.json>
+
+Citation coverage: <cited>/<denominator> first-party source files were cited as
+evidence across <N> loops (<pct>%) — a floor on attention, not a claim about what was
+read. Uncited files may have been read and found clean, or never opened.
 
 Accepted residuals (won't be revisited unless you ask):
   - <category>: <residual_blocking_10> — <residual_rationale>

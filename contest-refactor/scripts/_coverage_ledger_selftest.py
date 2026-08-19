@@ -191,6 +191,40 @@ def main() -> int:
             f"{led3['revision']}",
         )
 
+    # --- slice B2: the handoff disclosure, and its honesty guard -------------
+    handoff = (SKILL_ROOT / "references" / "halt-handoff.md").read_text(encoding="utf-8")
+    if "## Coverage disclosure" not in handoff:
+        failures.append(
+            "halt-handoff.md lost its Coverage disclosure section -- a converged scorecard goes "
+            "back to scoping its claim by dimension only, with nothing about extent"
+        )
+    if "coverage_ledger.py" not in handoff:
+        failures.append("halt-handoff.md no longer tells the loop to run coverage_ledger.py")
+
+    # The wording IS the contract. "cited" is a floor on attention; "reviewed"/"examined"
+    # would assert something the ledger cannot measure and the artifact cannot support.
+    for banned in ('never "reviewed"', "examined"):
+        if banned not in handoff:
+            failures.append(
+                f"halt-handoff.md no longer carries the say-cited-not-{banned} guard -- without "
+                f"it the disclosure can be reworded into a claim the data does not support"
+            )
+            break
+
+    lines = [ln for ln in handoff.splitlines() if ln.startswith("Citation coverage:")]
+    if not lines:
+        failures.append("the HALT_SUCCESS template no longer renders a 'Citation coverage:' line")
+    else:
+        rendered = lines[0]
+        if "cited" not in rendered:
+            failures.append(f"rendered coverage line does not say 'cited': {rendered!r}")
+        for overclaim in ("reviewed", "examined", "audited"):
+            if overclaim in rendered:
+                failures.append(
+                    f"rendered coverage line claims {overclaim!r}: {rendered!r} -- the ledger "
+                    f"measures citation only"
+                )
+
     # CLI: reports, never gates
     p = subprocess.run(
         [
