@@ -7220,6 +7220,50 @@
       "outputs": 10,
       "double_graded_outputs": 4,
       "built_after_all_5_pairs_dispatched": "same discipline as rungs 2-3: opaque ids come from a seeded RNG walking the pair list, so a map built over a partial rung would assign different ids and orphan any grade recorded against it."
+    },
+    "result": {
+      "scenario": "principal-abstraction-seam-flag",
+      "semantic": {
+        "with_skill": "caught 5/5",
+        "without_skill": "caught 5/5"
+      },
+      "mechanical": {
+        "with_skill": "caught 5/5",
+        "without_skill": "caught 5/5"
+      },
+      "assertions": "40/40 true (4 assertions x 10 slots). Every slot satisfied all three discriminating assertions plus the validity assertion.",
+      "grader_triggers": {
+        "count": 0,
+        "detail": "Zero of 10 slots tripped any of the three frozen triggers -- no grader_uncertain, no no_cited_span, no opined_outside_residue. Best trigger record of any rung (rung 1 tripped the span check 5 times; rung 3 had 2 grader_uncertain in 60)."
+      },
+      "disagreement_estimate": {
+        "assertions": "0/16",
+        "tiers": "0/4",
+        "subsample": [
+          "pair-040",
+          "pair-044"
+        ],
+        "adjudications_required": 0,
+        "reading": "Perfect agreement, and it is NOT evidence that grading got more reliable. A saturated scenario is the easiest possible agreement test: when every candidate satisfies every assertion, two graders agree trivially. The rung-3 estimate (1/58 assertions, 2/14 tiers) came from scenarios with real spread and remains the informative one."
+      },
+      "tier_agreement": "Mechanical and semantic agree completely here, unlike the restraint twins where they diverged sharply (invariant-owner with_skill: mechanical 0/5 vs semantic 5/5). Agreement is expected when a diff is rejected on structure both tiers can see.",
+      "spec_strictness_was_moot": "The rung-4 spec's strict three-assertion conjunction, recorded before dispatch as a possible depressant on the count, made no difference: every slot satisfied all three discriminating assertions independently. The concern was recorded honestly and is resolved by the data, not by argument."
+    },
+    "decisions": {
+      "enters": "NOTHING.",
+      "why": "principal-abstraction-seam-flag is pre-classified contaminated in the frozen prereg. Decision 1 reads only the 4 headline-eligible principal flags; Decisions 2 and 3 read the 2 core flags; Decision 4's flag row requires a clean signal. This rung supplies none of those populations.",
+      "what_a_5_5_tie_here_does_NOT_mean": "It is NOT evidence of 'no recall gap'. Both arms saturate because the diff carries a bare PushProvider protocol whose single conformer trips the Unified Seam Policy on present-tense structure alone -- the rubric can reject it without engaging the force under test at all. A scenario whose floor is low enough that neither arm can miss measures the floor, not the lens. That is precisely what headline-excluded means, and it is why the exclusion was fixed in the prereg BEFORE any output existed rather than chosen now that the numbers are in.",
+      "decision_3_unaffected": "Decision 3 remains BLOCKED on the rung-3 crossplat-flag negative. Nothing in rung 4 touches its three conditions.",
+      "binding_language_rule": "An observed zero or negative delta is 'no lift detected at this n' -- never 'lift is zero'. A 5/5 vs 5/5 tie on a contaminated scenario is not even that: it is no measurement of lift at all."
+    },
+    "outside_spec_field_recurrence": {
+      "observed": "At least one rung-4 grader again emitted the unschema'd `outside_spec` field, under a spec authored by a separate run from any rung-3 spec.",
+      "running_total": "7+ graders across 4 scenarios and 2 independent spec-authoring runs have now independently invented the same field.",
+      "action": "Recorded, still NOT escalated. `outside_spec` is not one of the three preregistered triggers, and adding a trigger mid-run is exactly the post-hoc change the frozen trigger list exists to prevent. It is filed for the next preregistration to close, now with stronger evidence than rung 3 alone gave."
+    },
+    "grading_process_notes": {
+      "wrapper_prompt": "Identical for all 14 grader dispatches (10 first-pass + 4 second-pass). No mid-run steering sentence was added -- the rung-3 wrapper change on 4 of 60 slots is disclosed in commit 0d903ef and was not repeated.",
+      "grades_committed": "evals/paired-arm-outputs/rung4-grades/ -- 14 reply files."
     }
   }
 }
