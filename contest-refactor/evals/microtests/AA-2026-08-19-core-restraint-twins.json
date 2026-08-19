@@ -1,0 +1,109 @@
+{
+  "run_id": "AA-2026-08-19-core-restraint-twins",
+  "date": "2026-08-19",
+  "what": "An A/A run: the same 10 with_skill slots on the two core restraint twins, re-dispatched with materials byte-identical to the study's own (method.md sha256 a0a57067... verified equal to the study bundle). Nothing changed. It measures how much apparent movement pure resampling produces.",
+  "why": "The MT-2026-08-19 micro-test recorded a confound against itself: its 6/10 baseline was a single sample, so a change that produced 6/10 could not be told from one that did nothing. This is that missing control.",
+  "held_counts": {
+    "study": 6,
+    "aa_same_prose": 5,
+    "microtest_with_clause": 6,
+    "of": 10
+  },
+  "headline": "FIVE OF TEN SLOTS FLIPPED LABEL WITH NO CHANGE WHATSOEVER.",
+  "slots": [
+    {
+      "slot": "pair-006",
+      "twin": "suppression-restraint",
+      "study": "over_flagged",
+      "aa_same_prose": "held",
+      "microtest_with_clause": "held",
+      "flipped_at_zero_change": true
+    },
+    {
+      "slot": "pair-009",
+      "twin": "suppression-restraint",
+      "study": "over_flagged",
+      "aa_same_prose": "held",
+      "microtest_with_clause": "held",
+      "flipped_at_zero_change": true
+    },
+    {
+      "slot": "pair-012",
+      "twin": "crossplat-restraint",
+      "study": "over_flagged",
+      "aa_same_prose": "over_flagged",
+      "microtest_with_clause": "held",
+      "flipped_at_zero_change": false
+    },
+    {
+      "slot": "pair-037",
+      "twin": "crossplat-restraint",
+      "study": "over_flagged",
+      "aa_same_prose": "over_flagged",
+      "microtest_with_clause": "held",
+      "flipped_at_zero_change": false
+    },
+    {
+      "slot": "pair-013",
+      "twin": "crossplat-restraint",
+      "study": "held",
+      "aa_same_prose": "over_flagged",
+      "microtest_with_clause": "over_flagged",
+      "flipped_at_zero_change": true
+    },
+    {
+      "slot": "pair-015",
+      "twin": "suppression-restraint",
+      "study": "held",
+      "aa_same_prose": "over_flagged",
+      "microtest_with_clause": "held",
+      "flipped_at_zero_change": true
+    },
+    {
+      "slot": "pair-038",
+      "twin": "crossplat-restraint",
+      "study": "held",
+      "aa_same_prose": "held",
+      "microtest_with_clause": "held",
+      "flipped_at_zero_change": false
+    },
+    {
+      "slot": "pair-046",
+      "twin": "crossplat-restraint",
+      "study": "held",
+      "aa_same_prose": "held",
+      "microtest_with_clause": "uncertain",
+      "flipped_at_zero_change": false
+    },
+    {
+      "slot": "pair-050",
+      "twin": "suppression-restraint",
+      "study": "held",
+      "aa_same_prose": "held",
+      "microtest_with_clause": "over_flagged",
+      "flipped_at_zero_change": false
+    },
+    {
+      "slot": "pair-051",
+      "twin": "suppression-restraint",
+      "study": "held",
+      "aa_same_prose": "over_flagged",
+      "microtest_with_clause": "over_flagged",
+      "flipped_at_zero_change": true
+    }
+  ],
+  "what_it_establishes": {
+    "1_individual_slot_labels_are_near_coin_flips": "On these restraint twins an individual slot's held/over_flagged label reproduces about half the time. No conclusion may rest on what a single slot did. Two of the four slots the clause appeared to 'fix' (pair-006, pair-009) flip to held at unchanged prose as well.",
+    "2_aggregate_rate_is_stable_to_about_one_slot": "study 6/10, A/A 5/10, micro-test 6/10 -- all within 1 of each other, because flips run both directions. So the aggregate rate is the reportable quantity and the per-slot label is not.",
+    "3_the_clause_rejection_is_confirmed": "The clause's 4-slot swing sits inside a noise band that moves 5 slots on its own. REJECTED stands, now measured rather than inferred.",
+    "4_a_number_for_the_repo": "First A/A datapoint in this repo. Any claimed improvement on a 10-slot restraint panel must beat roughly +-1 in aggregate rate; a 4-slot reshuffle is nothing."
+  },
+  "consequence_for_the_paired_arm_study": {
+    "restraint_lift_SURVIVES": "principal-invariant-owner-restraint measured with 5/5 vs without 1/5 -- a 4-slot ARM-TO-ARM gap in aggregate rate, far outside the +-1 reproducibility bound. The study's one positive finding is unaffected.",
+    "crossplat_flag_negative_is_now_QUESTIONABLE": "That result is bare 5/5 vs skill 4/5 -- a ONE-slot aggregate difference, i.e. at or below the reproducibility bound measured here. It should not have been read as a signal worth investigating, and the diagnosis effort spent on it was probably spent on noise.",
+    "caveat_on_transferring_this_estimate": "The estimate was measured on RESTRAINT twins, which sit mid-range and are free to move in both directions. The flag scenarios saturate near 5/5 on both arms, a regime with less room to vary, so this noise band is NOT established for them. Treat the crossplat-flag downgrade as indicated, not proven.",
+    "what_is_NOT_being_done": "Decision 3 is NOT being unblocked and Decision 4's flag row is NOT being rewritten. Those were routed by a frozen rule on committed data, and retroactively reversing a decision because a later measurement makes its trigger look like noise is exactly the post-hoc move the preregistration exists to prevent. This is recorded as the input the NEXT preregistration should carry."
+  },
+  "cost": "20 agent dispatches (10 arms + 10 grades), roughly 1.5M tokens.",
+  "next_time": "Before any prose micro-test on this panel, budget for the A/A arm alongside it. A treatment run without its own control was worth less than half of what the pair is worth."
+}

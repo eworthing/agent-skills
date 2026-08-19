@@ -869,6 +869,20 @@ consistent with the data at n=1**, not a measured claim, and it licenses no soft
 flag row is unchanged and Decision 3 stays blocked. A mechanism that explains a result is not a
 reason to stop counting it.
 
+*Measured afterwards, and it bears on this row.* An A/A run on 2026-08-19 re-dispatched 10
+`with_skill` restraint slots with materials byte-identical to the study's own — nothing changed at
+all — and **5 of 10 slots flipped label**. Individual slot labels on restraint twins reproduce only
+about half the time; the aggregate rate is stable to roughly ±1 slot (study 6/10, A/A 5/10). The
+restraint lift is unaffected: `principal-invariant-owner-restraint`'s 5/5-vs-1/5 is a **4-slot**
+arm-to-arm gap, far outside that band. But the `crossplat-flag` negative is a **1-slot** difference —
+at or below the reproducibility bound — so it is weaker than the readout above implies and probably
+should not have been called a signal worth chasing. The estimate comes from restraint twins, which
+have room to move in both directions; the flag scenarios saturate, so the band is not established
+there and the downgrade is *indicated, not proven*. Decision 3 stays blocked and Decision 4's flag
+row stands as routed — reversing a frozen decision because a later measurement makes its trigger
+look like noise is the post-hoc move preregistration exists to prevent. It is recorded as an input
+for the next one. See `evals/microtests/AA-2026-08-19-core-restraint-twins.json`.
+
 **Decision 2 is not met, and unsettled — which is not a skill failure.** The criterion needs
 `without_skill ≤2/5`; the bare arm passed ≥4/5 on all seven eligible `[discriminating]` ∧ `outcome`
 assertions. It is at ceiling, so the gap the criterion looks for cannot appear there.
