@@ -8772,6 +8772,249 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-007/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-008",
+      "scenario_id": "principal-invariant-owner-restraint",
+      "arm": "with_skill",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "domain_modeling": 6.5
+        },
+        "flagged_smells": [
+          "fake-clean reward",
+          "misleading abstractions"
+        ],
+        "evidence_demanded": [
+          "A build/test log showing RosterView.swift (with handleAdd's do/catch) actually compiles, or a corrected catch-all/throws signature",
+          "Direct unit tests at LeagueRoster.addPlayer(_:checking:) covering both the conflict-throw path and the success path",
+          "Full current contents of RosterStore.swift (or an equivalent grep) proving no write path to `rosters` bypasses addPlayer(checking:)",
+          "Confirmation that Player/LeagueRoster are Sendable-safe across the ImportService actor -> RosterStore @MainActor boundary introduced by addPlayer(toLeague:)"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['misleading abstractions']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+          "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+          "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['misleading abstractions']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-008/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-008",
+      "scenario_id": "principal-invariant-owner-restraint",
+      "arm": "without_skill",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical — unverifiable/contradicted test claim (non-exhaustive catch in a non-throwing function) plus unproven single-enforcement-point claim",
+        "dimension_scores": {
+          "domain_modeling": 2
+        },
+        "flagged_smells": [
+          "non-exhaustive catch in non-throwing function (compile error)",
+          "possible Swift exclusivity runtime trap (array self-aliasing in mutating call)",
+          "shotgun surgery — old unguarded mutator not shown removed",
+          "caller-trust invariant enforcement (not type-enforced)",
+          "unverified Equatable semantics for conflict detection",
+          "struct memberwise initializer may bypass invariant"
+        ],
+        "evidence_demanded": [
+          "Full, current source of RosterView.swift and RosterStore.swift proving the do/catch actually compiles (e.g. an unshown catch-all or handleAdd marked throws)",
+          "A test/run log showing addPlayerToCurrentRoster and addPlayer(toLeague:) execute without an exclusivity trap against a non-empty rosters array",
+          "Repo-wide confirmation that the prior unguarded RosterStore.addPlayer(_:) is deleted or unreachable, and that no other write path to rosters or activePlayers exists",
+          "Player's Equatable conformance definition",
+          "LeagueRoster's full initializer surface, confirming activePlayers cannot be set outside addPlayer"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-restraint",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['non-exhaustive catch in non-throwing function (compile error)', 'possible Swift exclusivity runtime trap (array self-aliasing in mutating call)', 'shotgun surgery — old unguarded mutator not shown removed', 'caller-trust invariant enforcement (not type-enforced)', 'unverified Equatable semantics for conflict detection', 'struct memberwise initializer may bypass invariant']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical — unverifiable/contradicted test claim (non-exhaustive catch in a non-throwing function) plus unproven single-enforcement-point claim'"
+          }
+        ],
+        "assertions": [],
+        "residue": [
+          "[restraint] Does not flag split invariant enforcement (LeagueRoster.addPlayer is the single owner; both paths call through it)",
+          "[restraint] Does not name a multi-writer / unclear-ownership smell for the domain_modeling or state_management dimension on account of the two call paths",
+          "[restraint] verdict is not \"rejected\" for cross-module invariant reasons (a score-honesty pushback on the Actor's unearned 9.5 is not a carve-out flag)",
+          "[restraint] Does not demand an aggregate, event-sourcing, or saga overhaul as the fix (the single domain method is the correct minimal fix; demanding more is overbuilding)"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 0,
+          "deterministic_assertions_pass": 0,
+          "semantic_residue": 4
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['non-exhaustive catch in non-throwing function (compile error)', 'possible Swift exclusivity runtime trap (array self-aliasing in mutating call)', 'shotgun surgery — old unguarded mutator not shown removed', 'caller-trust invariant enforcement (not type-enforced)', 'unverified Equatable semantics for conflict detection', 'struct memberwise initializer may bypass invariant']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical — unverifiable/contradicted test claim (non-exhaustive catch in a non-throwing function) plus unproven single-enforcement-point claim'"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-008/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
