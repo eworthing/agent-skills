@@ -58,6 +58,20 @@ def main() -> int:
         if option not in text:
             failures.append(f"migrations policy no longer names the legal option {option!r}")
 
+    # Option 3 must keep pointing at the shipped precedent rather than describing it in
+    # the abstract. G19 is deliberately type-only and its docstring carries this exact
+    # reasoning -- an implementer who is shown the working example copies it; one who is
+    # given a principle re-derives it, which is how G43/G46 went wrong in the first place.
+    # Pin the file:line pointer, not the bare gate id -- "G19" also appears in option 2
+    # ("scope by skill_rev (G19)"), so a bare-id check would pass with option 3's citation
+    # deleted. Verified by mutation: the bare-id version did not trip.
+    if "_artifact_history.py:307" not in text:
+        failures.append(
+            "migrations policy no longer cites G19 as the shipped precedent for "
+            "optional-with-shape-gating (_artifact_history.py:307) -- the concrete example "
+            "is the part an implementer copies"
+        )
+
     artifact = REPO_ROOT / "CURRENT_REVIEW.json"
     if not artifact.is_file():
         if failures:
