@@ -5019,6 +5019,335 @@
         }
       ],
       "raw_output_path": "evals/paired-arm-outputs/study/pair-039/attempt1/without_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-042",
+      "scenario_id": "principal-invariant-owner-flag",
+      "arm": "with_skill",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "Likely disqualifier",
+        "dimension_scores": {
+          "domain_modeling": 4
+        },
+        "flagged_smells": [
+          "weak domain model",
+          "duplicate abstractions",
+          "unclear ownership",
+          "fake-clean reward"
+        ],
+        "evidence_demanded": [
+          "LeagueRoster owns the One-League Rule check inside a single method (e.g. addPlayer(_:) throws / Result-returning), replacing the plain trusting mutation",
+          "RosterView.handleAdd and ImportService.importRoster both route through that single domain-owned check instead of each re-deriving league membership independently",
+          "A test exercising LeagueRoster directly (not RosterView/ImportService) that fails if the invariant check is removed or short-circuited — the Interface-is-test-surface requirement",
+          "Removal of the two duplicated ad hoc guard blocks once the domain method absorbs the logic",
+          "Confirmation (grep or enumeration) that no other current caller of LeagueRoster.addPlayer bypasses the new domain-owned check"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['weak domain model', 'duplicate abstractions', 'unclear ownership']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": true,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+          }
+        ],
+        "assertions": [
+          {
+            "text": "[discriminating] Maps the finding to domain_modeling (or state_management) with a score < 9.5",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "dimension_scores subset {'domain_modeling': 4} vs <9.5"
+          },
+          {
+            "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocking_severity='Likely disqualifier' expected in ['Serious deduction', 'Likely disqualifier']"
+          },
+          {
+            "text": "[validity] blocks_95 is true for the touched dimension",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocks_95=True expected==True"
+          }
+        ],
+        "residue": [
+          "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
+          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 4,
+          "deterministic_assertions_total": 3,
+          "deterministic_assertions_pass": 3,
+          "semantic_residue": 3
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['weak domain model', 'duplicate abstractions', 'unclear ownership']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'Likely disqualifier'"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 2,
+          "assertion_text": "[discriminating] Maps the finding to domain_modeling (or state_management) with a score < 9.5",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "dimension_scores subset {'domain_modeling': 4} vs <9.5"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 3,
+          "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+          "criterion_class": "skill_contract",
+          "passed": true,
+          "rationale": "blocking_severity='Likely disqualifier' expected in ['Serious deduction', 'Likely disqualifier']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 4,
+          "assertion_text": "[validity] blocks_95 is true for the touched dimension",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "blocks_95=True expected==True"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-042/attempt1/with_skill/review-verdict.md"
+    },
+    {
+      "pair_id": "pair-042",
+      "scenario_id": "principal-invariant-owner-flag",
+      "arm": "without_skill",
+      "slot_index": 3,
+      "attempt_index": 1,
+      "trial_validity": {
+        "status": "valid",
+        "reason": null
+      },
+      "candidate_output_status": "ok",
+      "verdict_json": {
+        "verdict": "rejected",
+        "blocks_95": true,
+        "blocking_severity": "critical",
+        "dimension_scores": {
+          "domain_modeling": 3
+        },
+        "flagged_smells": [
+          "anemic domain model",
+          "duplicated business logic (shotgun surgery)",
+          "divergent duplication of a safety invariant",
+          "comment-only contract / unenforced precondition",
+          "bypassable invariant"
+        ],
+        "evidence_demanded": [
+          "LeagueRoster.addPlayer (or a dedicated domain factory/service it owns) enforces the One-League Rule internally, so the invariant cannot be violated by any caller including ones not yet written",
+          "A single shared implementation of the invariant check used by both RosterView and ImportService, replacing the two independent filter blocks",
+          "A regression test that calls LeagueRoster.addPlayer directly, bypassing both UI and ImportService guards, and asserts the invariant still holds",
+          "A test exercising the exact divergence scenario described in the context: an import row whose leagueID resolution differs from store.currentRoster.leagueID for the same real-world league",
+          "At least one new test in the diff demonstrating the invariant is actually exercised (e.g. ImportError.playerAlreadyInLeague thrown on duplicate import), not just an unchanged green count on the existing 2,041 tests"
+        ]
+      },
+      "structural_report": {
+        "layer": 2,
+        "id": "principal-invariant-owner-flag",
+        "general_checks": [
+          {
+            "name": "required_fields_present",
+            "pass": true,
+            "detail": "all present"
+          },
+          {
+            "name": "verdict_word_membership",
+            "pass": true,
+            "detail": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+          },
+          {
+            "name": "flagged_smells_canon_exact",
+            "pass": false,
+            "detail": "non-canon values: ['anemic domain model', 'duplicated business logic (shotgun surgery)', 'divergent duplication of a safety invariant', 'comment-only contract / unenforced precondition', 'bypassable invariant']"
+          },
+          {
+            "name": "dimension_scores_shape",
+            "pass": true,
+            "detail": "shape OK"
+          },
+          {
+            "name": "boolean_coherence",
+            "pass": false,
+            "detail": "blocks_95=true requires a canon blocking_severity, got 'critical'"
+          }
+        ],
+        "assertions": [
+          {
+            "text": "[discriminating] Maps the finding to domain_modeling (or state_management) with a score < 9.5",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "dimension_scores subset {'domain_modeling': 3} vs <9.5"
+          },
+          {
+            "text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+            "method": "deterministic",
+            "pass": false,
+            "detail": "blocking_severity='critical' expected in ['Serious deduction', 'Likely disqualifier']"
+          },
+          {
+            "text": "[validity] blocks_95 is true for the touched dimension",
+            "method": "deterministic",
+            "pass": true,
+            "detail": "blocks_95=True expected==True"
+          }
+        ],
+        "residue": [
+          "[discriminating] Identifies that the invariant guard is duplicated across RosterView and ImportService rather than owned by LeagueRoster (the domain type)",
+          "[discriminating] Names the cross-module split as the defect — two independent enforcement paths that can diverge, not a local bug in one module",
+          "[validity] Does not accept the green test suite as proof the invariant is always enforced across both paths"
+        ],
+        "counts": {
+          "general_checks_total": 5,
+          "general_checks_pass": 3,
+          "deterministic_assertions_total": 3,
+          "deterministic_assertions_pass": 2,
+          "semantic_residue": 3
+        },
+        "all_deterministic_pass": false
+      },
+      "assertion_results": [
+        {
+          "source": "general_check",
+          "assertion_index": 0,
+          "assertion_text": "required_fields_present",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "all present"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 1,
+          "assertion_text": "verdict_word_membership",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "verdict='rejected' canon=('approved', 'rejected', 'conditional')"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 2,
+          "assertion_text": "flagged_smells_canon_exact",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "non-canon values: ['anemic domain model', 'duplicated business logic (shotgun surgery)', 'divergent duplication of a safety invariant', 'comment-only contract / unenforced precondition', 'bypassable invariant']"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 3,
+          "assertion_text": "dimension_scores_shape",
+          "criterion_class": "unclassified",
+          "passed": true,
+          "rationale": "shape OK"
+        },
+        {
+          "source": "general_check",
+          "assertion_index": 4,
+          "assertion_text": "boolean_coherence",
+          "criterion_class": "unclassified",
+          "passed": false,
+          "rationale": "blocks_95=true requires a canon blocking_severity, got 'critical'"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 2,
+          "assertion_text": "[discriminating] Maps the finding to domain_modeling (or state_management) with a score < 9.5",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "dimension_scores subset {'domain_modeling': 3} vs <9.5"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 3,
+          "assertion_text": "[discriminating] blocking_severity is \"Serious deduction\" or \"Likely disqualifier\"",
+          "criterion_class": "skill_contract",
+          "passed": false,
+          "rationale": "blocking_severity='critical' expected in ['Serious deduction', 'Likely disqualifier']"
+        },
+        {
+          "source": "evals_assertion",
+          "assertion_index": 4,
+          "assertion_text": "[validity] blocks_95 is true for the touched dimension",
+          "criterion_class": "outcome",
+          "passed": true,
+          "rationale": "blocks_95=True expected==True"
+        }
+      ],
+      "raw_output_path": "evals/paired-arm-outputs/study/pair-042/attempt1/without_skill/review-verdict.md"
     }
   ]
 }
