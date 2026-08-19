@@ -226,6 +226,8 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
 
   Run G46 at Step 1 emit. Failure → fix the offending field's shape/membership, or null/fill `drift_notes` to match `outcome`.
 
+- [ ] **Mechanical sweep** — once all five artifacts are on disk and before the commit, run `scripts/validate-artifact.py <dir> --mode advisory`. Advisory never blocks; each WARN is a defect in your own emit.
+
 ## Quality Pass (improve if cheap; never block emit)
 
 Each Q-pass has a detection rule + remediation. Failures are quality issues — improve if cheap, never block emit.
