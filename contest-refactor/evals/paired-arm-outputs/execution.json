@@ -6181,7 +6181,7 @@
         "without_skill"
       ],
       "session_id": "sess-rung4a",
-      "state": "started",
+      "state": "finished",
       "pre_dispatch_head": "06dc2a8ecb9df7e7c731887a50a1c2ce60ab9fbf",
       "arms": {
         "with_skill": {
@@ -6228,6 +6228,37 @@
           "expected_output": "/tmp/paired-arm/study/pair-036/attempt1/without_skill/review-verdict.md",
           "work_dir": "/tmp/paired-arm/study/pair-036/attempt1/without_skill"
         }
+      },
+      "usage": {
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a1f7cd861defe04fb.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a1f7cd861defe04fb.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 4,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a1f7cd861defe04fb.output"
+          ],
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 63602,
+          "cache_read_input_tokens": 170474,
+          "output_tokens": 16053,
+          "context_tokens_processed": 250137
+        },
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a90422094a6df9996.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a90422094a6df9996.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 4,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a90422094a6df9996.output"
+          ],
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 34770,
+          "cache_read_input_tokens": 150099,
+          "output_tokens": 7380,
+          "context_tokens_processed": 192257
+        },
+        "pair_total_context_tokens": 442394
       }
     }
   ],
