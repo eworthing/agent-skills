@@ -409,7 +409,12 @@ def build_attempt(
 # ---- RESUME --------------------------------------------------------------------------------
 
 
-def write_resume(mode: str) -> None:
+def write_resume(mode: str, rung: int | None = None) -> None:
+    """The handoff note. `rung` is load-bearing, not decoration: without it the "next in frozen
+    order" line reports the next pair in the WHOLE order, which under a frontier-first ladder is
+    routinely a pair from a rung nobody has authorised yet. A resuming session that followed that
+    line verbatim would dispatch out of ladder order. The note names the active rung and carries it
+    into the command it prints."""
     execution = read_json(EXEC_PATH)
     lines = [
         "# Paired-arm run — handoff note",
@@ -426,12 +431,13 @@ def write_resume(mode: str) -> None:
         done = [s for s in states if s["resolved"]]
         interrupted = [s for s in states if s["interrupted"]]
         exhausted = [s for s in states if not s["resolved"] and s["attempts_spent"] >= 2]
-        nxt = next_pair(m)
+        nxt = next_pair(m, rung if m == mode else None)
         lines += [
             f"## {m}",
             "",
             f"- pairs complete: **{len(done)} / {len(states)}**",
-            f"- next in frozen order: **{nxt['pair_id'] + ' (' + nxt['scenario_id'] + ' rep ' + str(nxt['rep']) + ', attempt ' + str(nxt['attempts_spent'] + 1) + ')' if nxt else 'none — mode complete'}**",
+            f"- next in frozen order: **{nxt['pair_id'] + ' (' + nxt['scenario_id'] + ' rep ' + str(nxt['rep']) + ', attempt ' + str(nxt['attempts_spent'] + 1) + ')' if nxt else 'none — complete'}**"
+            + (f" _(within rung {rung} only)_" if rung is not None and m == mode else ""),
             f"- interrupted (started, no terminal record — attempt index spent): {[s['pair_id'] for s in interrupted] or 'none'}",
             f"- exhausted (2 attempts spent, unresolved): {[s['pair_id'] for s in exhausted] or 'none'}",
             "",
@@ -449,9 +455,19 @@ def write_resume(mode: str) -> None:
         "",
         "```bash",
         "cd contest-refactor",
-        f"python3 scripts/paired_arm_run.py next --mode {mode}",
+        f"python3 scripts/paired_arm_run.py next --mode {mode}"
+        + (f" --rung {rung}" if rung is not None else ""),
         "```",
+        "",
     ]
+    if rung is not None:
+        lines += [
+            f"Rung {rung} is the active rung. Do **not** drop `--rung {rung}` to reach the next "
+            "pending pair: the unrestricted order runs through rungs that have not been "
+            "authorised, and `prereg.execution_ladder.continuation_rule` requires explicit "
+            "authorisation per rung — a rung is never auto-continued and never auto-stopped.",
+            "",
+        ]
     RESUME_PATH.parent.mkdir(parents=True, exist_ok=True)
     RESUME_PATH.write_text("\n".join(lines) + "\n")
 
@@ -521,7 +537,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         }
     )
     write_json(EXEC_PATH, execution)
-    write_resume(args.mode)
+    write_resume(args.mode, args.rung)
     sha = commit_allowlist(
         [EXEC_PATH, RESUME_PATH],
         f"chore(contest-refactor): paired-arm {args.mode} {st['pair_id']} attempt {attempt} started",
@@ -604,7 +620,7 @@ def cmd_finish(args: argparse.Namespace) -> int:
         record["attempts"] += attempts_new
         write_json(STUDY_RECORD, record)
         committed_paths.append(STUDY_RECORD)
-    write_resume(args.mode)
+    write_resume(args.mode, args.rung)
     sha = commit_allowlist(
         committed_paths,
         f"chore(contest-refactor): paired-arm {args.mode} {args.pair} attempt {attempt} complete",
