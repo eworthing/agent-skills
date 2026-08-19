@@ -4604,6 +4604,67 @@
         },
         "pair_total_context_tokens": 538933
       }
+    },
+    {
+      "mode": "study",
+      "prereg_sha256_at_first_dispatch": "b2b95214f30cfe65f939d1d19842860a824616b8c0bdf940afc617467c176448",
+      "pair_id": "pair-025",
+      "scenario_id": "principal-consistency-boundary-restraint",
+      "rep": 4,
+      "attempt_index": 1,
+      "arm_order": [
+        "with_skill",
+        "without_skill"
+      ],
+      "session_id": "sess-rung3f",
+      "state": "started",
+      "pre_dispatch_head": "0a017ee3a8e6ec8e1f156eaded63ac65df476cc7",
+      "arms": {
+        "with_skill": {
+          "task_template": "evals/paired_arm_task_with_skill.md",
+          "task_template_sha256": "6f2fec8e8b62e7ac43e05e04624f7c377c61fc8bff916e7f58a9521f7c3021c1",
+          "materials": [
+            {
+              "material": "evals/scenarios/principal-consistency-boundary-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/study/pair-025/attempt1/with_skill/materials/scenario.md",
+              "sha256": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc",
+              "frozen": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc"
+            },
+            {
+              "material": "references/architecture-rubric.md",
+              "copied_to": "/tmp/paired-arm/study/pair-025/attempt1/with_skill/materials/architecture-rubric.md",
+              "sha256": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d",
+              "frozen": "38d0d104308ae2f59a3c97ee5f7e2cca5daee56b27a722a29da7b4b96d31bf7d"
+            },
+            {
+              "material": "references/method.md",
+              "copied_to": "/tmp/paired-arm/study/pair-025/attempt1/with_skill/materials/method.md",
+              "sha256": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be",
+              "frozen": "a0a57067c0d89033a0da6b790e562dac1ebba89f020da716ccf1781ea24149be"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/study/pair-025/attempt1/with_skill/prompt.md",
+          "prompt_sha256": "46e87692233fd87dd1cfacb7147f283c5ede394955c829bfb3c6bd49e2eecb51",
+          "expected_output": "/tmp/paired-arm/study/pair-025/attempt1/with_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/study/pair-025/attempt1/with_skill"
+        },
+        "without_skill": {
+          "task_template": "evals/paired_arm_task_without_skill.md",
+          "task_template_sha256": "973d1738090c29f013315d61ba3ae63e9ee2c5627322ab39252da708e9f03545",
+          "materials": [
+            {
+              "material": "evals/scenarios/principal-consistency-boundary-restraint/scenario.md",
+              "copied_to": "/tmp/paired-arm/study/pair-025/attempt1/without_skill/materials/scenario.md",
+              "sha256": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc",
+              "frozen": "a08080fb2333111cb7561e61b45834d6603da6e8b8fdc512b2067a33cf7b95cc"
+            }
+          ],
+          "prompt_path": "/tmp/paired-arm/study/pair-025/attempt1/without_skill/prompt.md",
+          "prompt_sha256": "94b4c993f6b4b2b63b8c7f59a0d007bc1b169b7bfafd8682a3c432066d910c84",
+          "expected_output": "/tmp/paired-arm/study/pair-025/attempt1/without_skill/review-verdict.md",
+          "work_dir": "/tmp/paired-arm/study/pair-025/attempt1/without_skill"
+        }
+      }
     }
   ],
   "pairs_per_session_cap_basis": "Measured ~1.24M context tokens / ~336k fresh tokens per pair INCLUDING its two grading calls. There is no API here to query remaining session budget, so this is a fixed cap with generous headroom rather than a prediction -- a session stops at 8 pairs regardless of how much budget appears to remain. 55 pairs therefore span ~7 sessions. With per-pair commits the cap governs predictable progress, not loss: an unplanned halt costs one pair either way.",
