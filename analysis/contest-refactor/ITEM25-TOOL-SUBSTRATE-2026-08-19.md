@@ -7,6 +7,10 @@ initially to the two or three languages the eval corpus actually exercises" (`de
 
 ## Verdict: split it. One half is buildable and nearly free; the other is budget-blocked.
 
+> **Status 2026-08-19:** Half A (slices A1–A4) is **shipped** — `scripts/tool_runner.py`,
+> `scripts/_tool_runner_selftest.py`, and Step-0 sub-step 6c, at **zero loop-path token cost**
+> (budget unchanged at 84,115/84,200). Half B remains blocked on the §7 budget decision.
+
 - **Half A — the bounded tool runner.** Buildable now, and it belongs in **Step 0 (main agent)**,
   not in the loop. That placement costs **zero loop-path tokens** and gives *better* isolation than
   running tools in-loop, because raw analyzer output never crosses the subagent boundary at all.
@@ -189,17 +193,17 @@ incremental lift cannot currently be measured either way.
 
 ## 8. Slice contract
 
-| Slice | Acceptance | Ceiling | Promotion | Rollback |
-|---|---|---|---|---|
-| **A1. `tool_runner.py` + typed outcomes** | selftest execs the shipped script and asserts all six outcomes, incl. `absent ≠ clean` and timeout-discards-partial | one module < 400 LoC; **zero loop-path tokens** | ships once RED fixtures pass | delete the Step-0 invocation line |
-| **A2. Redaction + injection RED fixtures** | analyzer output with planted credentials and injected instructions is sanitized/quarantined; G44 path reused, not duplicated | 2 fixtures | blocks A1 from shipping | — |
-| **A3. Wire 1–2 real tools** (`ruff`/`mypy` for Python; `swiftlint` if present) | coverage line distinguishes `ok` / `absent` / `version_incompatible` | 1 prose sentence in `startup.md` | A1+A2 green | remove from the ladder table |
-| **A4. Adopt or retire `audit_cochange.py`** | invoked from `method.md`, or deleted with its selftest | 1 line | independent | — |
-| **B. Per-language packs** | **BLOCKED** on the budget decision in §7 + a measurable lift | 3,029 tokens | not now | — |
+| Slice | Status | Acceptance as built | Cost |
+|---|---|---|---|
+| **A1. `tool_runner.py` + typed outcomes** | **SHIPPED** | `_tool_runner_selftest.py` asserts all six outcomes; **mutation-tested** — reintroducing counts on a timeout, keeping the raw message, or reporting `findings: 0` on `absent` each fail the suite | 245 LoC; **zero loop-path tokens** |
+| **A2. Redaction + injection containment** | **SHIPPED** | planted `AKIA…` credential never reaches the summary (recorded by pattern type only, via G44's `_scan_line` — reused, not duplicated); injected instruction text counted as payload and never reproduced. Both verified by mutation: keeping the message trips all three security assertions at once | — |
+| **A3. Wire a real tool** | **SHIPPED** | `ruff` wired with a `>= 0.15.0` floor and findings-exit `(0, 1)`. Live run against this skill returned `ok findings=2` — **and both were real defects in the selftest written minutes earlier** (two unused `noqa` directives), since fixed | 1 Step-0 sub-step (`startup.md` 6c) |
+| **A4. Adopt or retire `audit_cochange.py`** | **SHIPPED — adopted** | wired into the same 6c sub-step rather than `method.md`: it mines git history, which is Step-0 work beside the churn list (6b), so it costs nothing on the loop path | — |
+| **B. Per-language packs** | **BLOCKED** | the budget decision in §7 + a measurable lift | 3,029 tokens vs 85 |
 
 ## 9. Recommendation
 
-**Build A1–A4. Do not build B.** Half A is deterministic, testable, costs nothing on the loop path,
+**A1–A4 shipped 2026-08-19. B not built.** Half A is deterministic, testable, costs nothing on the loop path,
 and closes the real gap the row names — that every tool in the loop is one we wrote. Half B is
 3,029 tokens of judgment-shifting prose against 85 tokens of headroom, with no way to measure its
 value on a saturated instrument. Recording the wall is the deliverable for B; the budget decision
