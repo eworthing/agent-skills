@@ -5813,7 +5813,7 @@
         "with_skill"
       ],
       "session_id": "sess-rung3f",
-      "state": "started",
+      "state": "finished",
       "pre_dispatch_head": "d18c5dedb9febaf7b01f58daf3b9ed25342dfdb4",
       "arms": {
         "with_skill": {
@@ -5860,6 +5860,37 @@
           "expected_output": "/tmp/paired-arm/study/pair-052/attempt1/without_skill/review-verdict.md",
           "work_dir": "/tmp/paired-arm/study/pair-052/attempt1/without_skill"
         }
+      },
+      "usage": {
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a9b8d398a8f0d741a.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a9b8d398a8f0d741a.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 4,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a9b8d398a8f0d741a.output"
+          ],
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 77461,
+          "cache_read_input_tokens": 171371,
+          "output_tokens": 29212,
+          "context_tokens_processed": 278052
+        },
+        "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a8ce86aaf1d2fb61d.output": {
+          "agent": "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a8ce86aaf1d2fb61d.output",
+          "model": "claude-sonnet-5",
+          "measured": true,
+          "assistant_messages": 4,
+          "transcripts": [
+            "/private/tmp/claude-502/-Users-Shared-git-agent-skills/bd823358-3f4e-4c43-b2cf-32d2c4c02e7b/tasks/a8ce86aaf1d2fb61d.output"
+          ],
+          "input_tokens": 8,
+          "cache_creation_input_tokens": 51814,
+          "cache_read_input_tokens": 151080,
+          "output_tokens": 23559,
+          "context_tokens_processed": 226461
+        },
+        "pair_total_context_tokens": 504513
       }
     }
   ],
