@@ -200,6 +200,35 @@ def main() -> int:
             "HALT_SUCCESS -> HALT_SUCCESS_candidate within run-A must still fire"
         )
 
+    # --- deriving nothing is not passing -----------------------------------
+    # Scoping by run is one edit away from muting the check, and the dangerous
+    # version is not a deliberate edit -- it is data. `run_id` is specified
+    # run-scoped, but a loop that mints a fresh id per loop makes split_runs see
+    # one run per loop, so no pair exists anywhere and report-only mode renders
+    # that as silence. Observed live: a real run archived `run-2026-08-20-001`
+    # then `loop-2-302837137`.
+    per_loop_ids = {
+        "loops": [
+            {"loop": 1, "run_id": "loop-1-aaaaaaa", "state": "HALT_LOOP_CAP"},
+            {"loop": 2, "run_id": "loop-2-bbbbbbb", "state": "CONTINUE"},
+            {"loop": 3, "run_id": "loop-3-ccccccc", "state": "CONTINUE"},
+        ]
+    }
+    _, blind_out = _run_check(per_loop_ids, canon)
+    if "transition-check-blind" not in blind_out:
+        failures.append(
+            "a history whose run_id changes every loop leaves no in-run pair, so the "
+            "check cannot run -- that must be announced, not rendered as silence: "
+            f"got {blind_out.strip()!r}"
+        )
+
+    # ...and a history the check CAN read must not cry blind.
+    _, quiet_out = _run_check(legal_history, canon)
+    if "transition-check-blind" in quiet_out:
+        failures.append(
+            f"the legal multiloop fixture is readable; blind must not fire: {quiet_out.strip()!r}"
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

@@ -93,7 +93,28 @@ def check_transition_report_only(review_history: dict | None, canon) -> list[Iss
     """
     transitions = (getattr(canon, "extra", {}) or {}).get("transitions", {})
     fired: list[Issue] = []
-    for loop_a, state_a, loop_b, state_b in observed_transitions(review_history):
+    observed = observed_transitions(review_history)
+
+    # A check that derives nothing from a history with loops in it has not passed
+    # -- it has failed to run, and report-only mode would hide that as silence.
+    # The live case: `run_id` is specified as run-scoped ("identifies the loop run
+    # that produced the candidate", example `run-2026-06-21-001`), but a loop that
+    # mints a fresh id per loop makes split_runs see one run per loop, leaving no
+    # adjacent pair anywhere. Same discipline as exit code 2 elsewhere in this
+    # repo: cannot-measure is its own outcome, never a clean result.
+    loops = (review_history or {}).get("loops")
+    if (
+        isinstance(loops, list)
+        and len([x for x in loops if isinstance(x, dict)]) >= 2
+        and not observed
+    ):
+        print(
+            "[transition-check-blind reason=no adjacent in-run pair derived "
+            f"loops={len(loops)} runs={len(split_runs(review_history or {}))} "
+            "hint=run_id must be stable across the loops of one run]"
+        )
+
+    for loop_a, state_a, loop_b, state_b in observed:
         edges = (transitions.get(state_a) or {}).get("edges") or []
         legal_targets = {e.get("to") for e in edges if isinstance(e, dict)}
         if state_b in legal_targets:
