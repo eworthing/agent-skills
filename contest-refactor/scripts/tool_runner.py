@@ -82,6 +82,20 @@ _INJECTION_RE = re.compile(
 
 _VERSION_RE = re.compile(r"(\d+)\.(\d+)(?:\.(\d+))?")
 
+# Every way of not-running has a name, and Step 0's prose enumerates them so a
+# reader knows `absent` is not `clean`. Declared here rather than left as loose
+# literals so the selftest can assert the prose still names all of them -- a new
+# outcome that nobody documented should fail a test, not rot quietly.
+OUTCOMES: tuple[str, ...] = (
+    "ok",
+    "absent",
+    "not_applicable",
+    "version_incompatible",
+    "timed_out",
+    "partial",
+    "skipped_no_redacted_mode",
+)
+
 
 @dataclass(frozen=True)
 class ToolSpec:
@@ -92,6 +106,13 @@ class ToolSpec:
     min_version: tuple[int, ...] | None = None
     timeout_s: int = 60
     has_redacted_mode: bool = True
+    # Filename patterns this tool can actually analyze. Empty means "always
+    # applicable". A tool that is installed but has nothing of its language to
+    # read reports `not_applicable`, never `ok findings=0` -- an irrelevant tool
+    # is no more `clean` than a missing one.
+    globs: tuple[str, ...] = ()
+    # Hit shape, when the tool does not emit the `path:line:col: CODE ` default.
+    hit_pattern: str | None = None
 
 
 @dataclass
@@ -125,7 +146,18 @@ def _parse_version(text: str) -> tuple[int, ...] | None:
     return tuple(int(g) for g in m.groups() if g is not None)
 
 
-def _sanitize(raw: str) -> tuple[list[dict[str, str]], list[dict[str, str]], int]:
+def _is_applicable(spec: ToolSpec, cwd: Path) -> bool:
+    if not spec.globs:
+        return True
+    # ponytail: rglob short-circuits on the first match, so this is cheap on a
+    # hit and worst-case one tree walk on a miss. Swap for `git ls-files` if a
+    # miss on a very large non-git tree ever shows up in the timings.
+    return any(next(iter(cwd.rglob(g)), None) is not None for g in spec.globs)
+
+
+def _sanitize(
+    raw: str, hit_re: re.Pattern[str] = _HIT_RE
+) -> tuple[list[dict[str, str]], list[dict[str, str]], int]:
     """(hits, redactions, injection_markers) -- raw text is never returned."""
     hits: list[dict[str, str]] = []
     redactions: list[dict[str, str]] = []
@@ -135,7 +167,7 @@ def _sanitize(raw: str) -> tuple[list[dict[str, str]], list[dict[str, str]], int
             redactions.append({"pattern": name, "transform": transform})
         if _INJECTION_RE.search(line):
             injections += 1
-        m = _HIT_RE.match(line)
+        m = hit_re.match(line)
         if m:
             hits.append({"file": m.group("file"), "code": m.group("code")})
     return hits, redactions, injections
@@ -146,6 +178,9 @@ def run_tool(spec: ToolSpec, cwd: Path) -> ToolResult:
     # output is skipped and disclosed, never run and cleaned up afterwards.
     if not spec.has_redacted_mode:
         return ToolResult(spec.name, "skipped_no_redacted_mode", "no redacted output mode")
+
+    if not _is_applicable(spec, cwd):
+        return ToolResult(spec.name, "not_applicable", f"no files matching {'/'.join(spec.globs)}")
 
     if shutil.which(spec.argv[0]) is None and not Path(spec.argv[0]).is_file():
         return ToolResult(spec.name, "absent", f"{spec.argv[0]} not on PATH")
@@ -181,7 +216,8 @@ def run_tool(spec: ToolSpec, cwd: Path) -> ToolResult:
         return ToolResult(spec.name, "absent", f"could not execute: {exc}")
 
     raw = proc.stdout or ""
-    hits, redactions, injections = _sanitize(raw)
+    hit_re = re.compile(spec.hit_pattern) if spec.hit_pattern else _HIT_RE
+    hits, redactions, injections = _sanitize(raw, hit_re)
     outcome = "ok" if proc.returncode in spec.findings_exit_codes else "partial"
     detail = None if outcome == "ok" else f"undocumented exit {proc.returncode}"
     return ToolResult(
@@ -207,6 +243,25 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         version_argv=("ruff", "--version"),
         min_version=(0, 15, 0),
         timeout_s=120,
+        globs=("*.py",),
+    ),
+    ToolSpec(
+        name="swiftlint",
+        # `lint --quiet` writes only violations to stdout; cwd scopes the walk.
+        argv=("swiftlint", "lint", "--quiet"),
+        # 0 = no violations, 2 = violations found. Anything else is a real error.
+        findings_exit_codes=(0, 2),
+        version_argv=("swiftlint", "version"),
+        min_version=(0, 50, 0),
+        # A large Swift package takes far longer than a ruff pass over the same
+        # tree; a timeout discards partial output, so give it room to finish.
+        timeout_s=300,
+        globs=("*.swift",),
+        # `path:line:col: warning: Some Violation: prose (rule_id)` -- the rule
+        # id is the trailing paren, not the severity word the default shape
+        # would capture. The prose between them is matched and dropped, never
+        # captured, so nothing but file and rule id survives.
+        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+\w+:.*\((?P<code>[a-z_]+)\)\s*$",
     ),
 )
 

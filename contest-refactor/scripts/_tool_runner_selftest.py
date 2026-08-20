@@ -182,7 +182,82 @@ def main() -> int:
             f"a tool with no redacted mode must fail closed, got {r.outcome!r}",
         )
 
-    # --- 10. CLI exit classes: reports, never gates ------------------------
+        # --- 10. installed-but-irrelevant is not clean --------------------
+        # The failure this closes was measured, not imagined: the shipped
+        # registry ran only ruff, so a Swift repo reported `ruff ok findings=0`
+        # -- a zero that means "wrong language", presented as coverage.
+        (cwd / "only.swift").write_text("import Foundation\n", encoding="utf-8")
+        r = tr.run_tool(_spec("fake-py", _emit("a.py:1:1: F401 x\n"), globs=("*.py",)), cwd)
+        check(
+            r.outcome == "not_applicable",
+            f"a tool with nothing of its language to read must be not_applicable, got {r.outcome!r}",
+        )
+        check(
+            r.counts.get("findings") is None,
+            "not_applicable must NOT report a findings count -- 'wrong language' would read as 'found nothing'",
+        )
+        check(r.digest is None, "a tool that never ran cannot have an output digest")
+
+        # Inapplicable outranks absent: the more informative name wins, and the
+        # gate must fire before the binary lookup rather than after it.
+        r = tr.run_tool(
+            _spec("fake-gone", ("definitely-not-a-real-binary-xyz",), globs=("*.py",)), cwd
+        )
+        check(
+            r.outcome == "not_applicable",
+            f"inapplicable outranks absent, got {r.outcome!r}",
+        )
+
+        # Applicable again once a matching file exists -- proves the gate keys
+        # on the tree, not on the spec.
+        (cwd / "real.py").write_text("import os\n", encoding="utf-8")
+        r = tr.run_tool(_spec("fake-py2", _emit("a.py:1:1: F401 x\n"), globs=("*.py",)), cwd)
+        check(r.outcome == "ok", f"a matching file makes the tool applicable, got {r.outcome!r}")
+
+        # --- 11. per-tool hit shape ---------------------------------------
+        # swiftlint puts the rule id in a trailing paren and the severity word
+        # where the default shape expects a code. Without a per-tool pattern the
+        # hits parse to zero while the tool reports success -- a second false
+        # clean, worse than the first because the tool really did run.
+        swift_line = "Sources/A.swift:27:13: warning: Identifier Name Violation: name 'fm' is short (identifier_name)\n"
+        r = tr.run_tool(_spec("fake-default-shape", _emit(swift_line)), cwd)
+        check(
+            r.counts.get("findings") == 0,
+            "guard assumption: the DEFAULT hit shape must miss a swiftlint line "
+            f"(else the per-tool pattern proves nothing), got {r.counts}",
+        )
+        spec = next(x for x in tr.DEFAULT_REGISTRY if x.name == "swiftlint")
+        r = tr.run_tool(_spec("fake-swift", _emit(swift_line), hit_pattern=spec.hit_pattern), cwd)
+        check(r.counts.get("findings") == 1, f"swiftlint shape should yield 1 hit, got {r.counts}")
+        check(
+            r.hits and r.hits[0]["code"] == "identifier_name",
+            f"code must be the trailing rule id, not the severity word: {r.hits}",
+        )
+        check(
+            all("Violation" not in v for h in r.hits for v in h.values()),
+            f"the message must be dropped whole, never captured: {r.hits}",
+        )
+
+        # --- 12. every registry tool declares what it can read -------------
+        for spec in tr.DEFAULT_REGISTRY:
+            check(
+                bool(spec.globs),
+                f"registry tool {spec.name!r} has no globs -- it would report "
+                "`ok findings=0` on a repo it cannot read",
+            )
+
+    # --- 13. the prose still names every outcome ---------------------------
+    # Derived from the module, not a hand-copied list: a new outcome that Step 0
+    # never documents fails here instead of silently reaching a reader who has
+    # been taught the enumeration is complete.
+    startup = (SKILL_ROOT / "references" / "startup.md").read_text(encoding="utf-8")
+    undocumented = [o for o in tr.OUTCOMES if o != "ok" and f"`{o}`" not in startup]
+    check(
+        not undocumented,
+        f"startup.md Step 0 must name every not-running outcome; missing: {undocumented}",
+    )
+
+    # --- 14. CLI exit classes: reports, never gates ------------------------
     p = subprocess.run(
         [PY, str(SKILL_ROOT / "scripts" / "tool_runner.py"), str(SKILL_ROOT)],
         capture_output=True,
@@ -201,7 +276,8 @@ def main() -> int:
             print(f"FAIL: {f}")
         return 1
     print(
-        "OK: tool runner — 6 typed outcomes, absent!=clean, timeout discards, redaction + injection contained"
+        "OK: tool runner — typed outcomes, absent/not_applicable != clean, "
+        "per-tool hit shape, timeout discards, redaction + injection contained, prose in sync"
     )
     return 0
 
