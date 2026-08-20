@@ -406,7 +406,7 @@ Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Ro
 |---|---|---|
 | 5 | arm_b 2×2 factorial ({weak, strong executor} × {backlog, self-contained}) | Experiment protocol first; the 1×1 arm_b was measured 2026-06-28 and rejected |
 | 6 | Confidence two-stage experiment (does the Evidence Chain lose information) | Two-stage experiment, unrun |
-| 8 | Strictness as deterministic post-filter with pinned per-preset counts | RFC only |
+| 8 | Strictness as deterministic post-filter with pinned per-preset counts | RFC only. **Re-verified 2026-08-20: NO-GO for implementation** — blocked on item 6 (confidence-axis experiment, unrun) per the RFC's own prerequisites, and the RFC's post-filter-over-a-superset model is incompatible with current `--strictness` semantics (evidence bar for residuals, selftested finding-invariant via `_strictness_isolation_selftest.py`); building it needs an explicit owner decision (second axis vs. redefinition) plus loop-prose changes, precision/restraint fixtures, and periodic model sampling — not a contained script |
 | 11 | Axis-split graders, each declaring the axis it does not judge | Candidate in Tranche-3 comparison |
 | 13 | Cost-proportional stage skipping (`skip_when` by size) | Was gated on the runtime-cost audit, now consolidated below; the audit's measured cost model puts structural trims on a modestly-weighted axis, so weigh this against the behavioral levers first |
 | 14 | Host-attested execution-evidence ledger | **Design done** (`analysis/contest-refactor/ITEM14-…`), unbuilt |
