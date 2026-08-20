@@ -289,14 +289,6 @@ def check_gate_sequencing(canon: _canon.Canon) -> list[Violation]:
     return violations
 
 
-def _enum_tokens_from_text(text: str) -> set[str]:
-    """Pull every backticked token + enum entry from a markdown file."""
-    tokens: set[str] = set()
-    for match in re.findall(r"`([^`\n]+)`", text):
-        tokens.add(match)
-    return tokens
-
-
 def check_canon_alignment(canon: _canon.Canon) -> list[Violation]:
     """Spot-check that headline canon tokens appear in references."""
     violations: list[Violation] = []

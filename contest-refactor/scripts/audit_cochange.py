@@ -211,14 +211,6 @@ def _dir_distance(a: str, b: str) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _has_python_sources(files: list[str]) -> bool:
-    return any(Path(f).suffix in _PYTHON_EXTS for f in files)
-
-
-def _has_swift_sources(files: list[str]) -> bool:
-    return any(Path(f).suffix in _SWIFT_EXTS for f in files)
-
-
 def _module_tuple(rel: Path) -> tuple[str, ...]:
     """Repo-relative ``.py`` path → its fully-qualified module tuple.
 
