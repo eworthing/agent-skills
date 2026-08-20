@@ -1,0 +1,22 @@
+id = "g5-residual-95-null-evidence"
+purpose = "Negative v4 fixture: architecture_quality scores 9.5 with residual_disposition='accepted' but both residual_blocking_10 and residual_rationale_or_backlog_ref nulled -- an accepted residual with no named evidence for it. Must FAIL on G5 (forward half)."
+expected_result = "fail"
+pair_exception = "shared-baseline-mutation: derived from pass fixture 'halt-candidate-no-challenge' by mutating one dimension's two residual-evidence fields to null (residual_disposition left 'accepted') and recomputing candidate_fingerprint over the mutated scorecard; 'halt-candidate-no-challenge' is a shared clean baseline for other independent siblings, not this fixture's dedicated 1:1 twin."
+aspirational = false
+notes = "Reproduces the P1 finding: strict validation previously accepted a 9.5 score with no residual evidence, because only G5's converse half was mechanized (check_g5_sub95_residual_fields) and the forward half ('every score >= 9.5 names the residual blocking 10') was a Critic checklist item only. check_g5_forward_residual_fields (scripts/_artifact_residual.py) now mechanizes the forward half and fires on this shape. KNOWN GAP AT TIME OF WRITING: scripts/validate-artifact.py's run_checks() does not yet import/call check_g5_forward_residual_fields (that two-line wiring is outside this fixture-repair's file ownership) -- until it is wired in, `validate-artifact.py --mode strict` on this fixture exits 0 and `validate-fixtures.py` will report this fixture as expected-fail-but-passed. Verified directly: `check_g5_forward_residual_fields(CURRENT_REVIEW.json)` returns exactly one Issue citing architecture_quality. Derived from halt-candidate-no-challenge by nulling architecture_quality.residual_blocking_10 and .residual_rationale_or_backlog_ref in both CURRENT_REVIEW.json and REVIEW_HISTORY.json.loops[-1] (G18 equality), and recomputing top-level candidate_fingerprint (residual_blocking_10 is part of the architecture payload candidate_fingerprint.py hashes, so nulling it changes the canonical digest; the old digest would otherwise trip G32's separate fingerprint-mismatch check)."
+
+[[tested_rules]]
+kind = "gate"
+id = "G5"
+
+[[tested_rules]]
+kind = "residual-rule"
+id = "accepted-residual"
+
+[[tested_rules]]
+kind = "scorecard-dimension"
+id = "architecture_quality"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_SUCCESS_candidate"

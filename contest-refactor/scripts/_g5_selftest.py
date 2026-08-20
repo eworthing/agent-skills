@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
-"""Self-test for G5's converse -- residual fields belong only to a 9.5-to-just-under-10 score.
+"""Self-test for both halves of G5 -- residual fields belong exactly to [9.5, 10).
 
-Rule #12 has two halves. The FORWARD half ("every score >= 9.5 names the residual blocking
-10") stays a Critic checklist item: mechanizing it would reject `halt-loop-cap-clean`, an
-expected-pass fixture violating it on all 9 dimensions, and that is separate work. This is
-the CONVERSE half only -- a score below 9.5, or exactly 10, carries no residual fields --
-which had zero violations across the 65-artifact corpus when it landed, so it rejects only
-genuinely incoherent artifacts.
+Rule #12 has two halves. The CONVERSE half (`check_g5_sub95_residual_fields`) rejects
+residual fields OUTSIDE [9.5, 10) -- a score below 9.5, or exactly 10, carries no residual
+fields -- and had zero violations across the 65-artifact corpus when it landed, so it
+rejects only genuinely incoherent artifacts. The FORWARD half
+(`check_g5_forward_residual_fields`) rejects their ABSENCE INSIDE [9.5, 10): every score in
+that range must name the residual blocking 10. Both halves are tested here, against their
+respective functions, so together they pin the range exactly.
 
-REGRESSION_ACCEPTED_BELOW_95 is the production shape it exists for: `test_strategy: 8.5`
-carrying `residual_disposition: "accepted"`. The rubric puts an accepted residual at 9.5, so
-a score below that is not accepting a residual -- it is deferring one -- and no gate said so.
+REGRESSION_ACCEPTED_BELOW_95 is the production shape the converse exists for:
+`test_strategy: 8.5` carrying `residual_disposition: "accepted"`. The rubric puts an
+accepted residual at 9.5, so a score below that is not accepting a residual -- it is
+deferring one -- and no gate said so.
+
+The forward half is loaded directly from `_artifact_residual.py` rather than through
+`validate-artifact.py` (as the converse cases are) because at the time this test was
+written, `validate-artifact.py` had not yet been wired to call the forward check --
+`_load_residual_module()` exercises the gate function itself, independent of that wiring.
 
 Run: python3 scripts/_g5_selftest.py   (exit 0 = pass, 1 = fail)
 """
@@ -26,6 +33,16 @@ from pathlib import Path
 def _load_validator():
     path = Path(__file__).with_name("validate-artifact.py")
     spec = importlib.util.spec_from_file_location("_va_g5", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_residual_module():
+    """Load _artifact_residual.py directly -- the forward-half cases test the gate
+    function itself, not its wiring into validate-artifact.py's run_checks()."""
+    path = Path(__file__).with_name("_artifact_residual.py")
+    spec = importlib.util.spec_from_file_location("_ar_g5", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -94,9 +111,10 @@ def _cases():
             False,
         ),
         (
-            "9.5 with NO residual named -- forward half deliberately unmechanized",
-            # Would be a forward-half violation. Mechanizing it breaks halt-loop-cap-clean,
-            # an expected-pass fixture; this case pins that it is intentionally NOT checked.
+            "9.5 with NO residual named -- converse doesn't apply, forward half's territory",
+            # Not a converse case either way: the converse only ever fires on scores
+            # outside [9.5, 10). check_g5_forward_residual_fields tests the fire case
+            # for this exact shape below, in _forward_cases().
             _art({"domain_modeling": _dim(9.5)}),
             False,
         ),
@@ -109,6 +127,72 @@ def _cases():
         (
             "non-numeric score",
             _art({"data_flow": {"score": "n/a", "residual_disposition": "x"}}),
+            False,
+        ),
+        ("scorecard is not a dict", {"schema_version": 4, "scorecard": []}, False),
+        ("scorecard absent entirely", {"schema_version": 4}, False),
+    ]
+
+
+def _forward_cases():
+    """(label, artifact, expect_fire) against check_g5_forward_residual_fields."""
+    return [
+        # --- TRIGGER: [9.5, 10) missing one or both forward-required fields ---
+        (
+            "9.5 with NO residual named -- forward half now mechanized",
+            _art({"domain_modeling": _dim(9.5)}),
+            True,
+        ),
+        (
+            "9.5 with only residual_blocking_10 populated -- rationale still missing",
+            _art({"domain_modeling": _dim(9.5, blocking="parallel fields")}),
+            True,
+        ),
+        (
+            "9.5 with only the rationale populated -- blocking_10 still missing",
+            _art({"simplicity": _dim(9.5, rationale="see F-013")}),
+            True,
+        ),
+        (
+            "9.75 with both fields missing -- same [9.5, 10) territory as 9.5",
+            _art({"framework_idioms": _dim(9.75)}),
+            True,
+        ),
+        # --- BYPASS: restraint -- both required fields present ---
+        (
+            "9.5 with both fields populated -- restraint",
+            _art(
+                {
+                    "domain_modeling": _dim(
+                        9.5,
+                        blocking="parallel fields",
+                        disposition="accepted",
+                        rationale="see F-013",
+                    )
+                }
+            ),
+            False,
+        ),
+        (
+            "9.5 with both fields populated, disposition null -- disposition not required here",
+            _art({"data_flow": _dim(9.5, blocking="x", rationale="y")}),
+            False,
+        ),
+        # --- BOUNDARY: forward half doesn't apply outside [9.5, 10) ---
+        (
+            "score below 9.5 with nulls -- forward half doesn't apply",
+            _art({"data_flow": _dim(7.5)}),
+            False,
+        ),
+        (
+            "score exactly 10 with nulls -- forward half doesn't apply",
+            _art({"simplicity": _dim(10)}),
+            False,
+        ),
+        # --- BYPASS: shapes the gate must not crash on ---
+        (
+            "non-numeric score",
+            _art({"data_flow": {"score": "n/a", "residual_blocking_10": None}}),
             False,
         ),
         ("scorecard is not a dict", {"schema_version": 4, "scorecard": []}, False),
@@ -155,6 +239,7 @@ def _isolation(va) -> list[str]:
 
 def main() -> int:
     va = _load_validator()
+    ar = _load_residual_module()
     failures: list[str] = []
 
     for label, art, expect_fire in _cases():
@@ -163,6 +248,16 @@ def main() -> int:
         if fired != expect_fire:
             failures.append(
                 f"{label}: expected {'FIRE' if expect_fire else 'BYPASS'}, "
+                f"got {'FIRE' if fired else 'BYPASS'}"
+                + (f"\n  {issues[0].message}" if issues else "")
+            )
+
+    for label, art, expect_fire in _forward_cases():
+        issues = ar.check_g5_forward_residual_fields(copy.deepcopy(art))
+        fired = bool(issues)
+        if fired != expect_fire:
+            failures.append(
+                f"[forward] {label}: expected {'FIRE' if expect_fire else 'BYPASS'}, "
                 f"got {'FIRE' if fired else 'BYPASS'}"
                 + (f"\n  {issues[0].message}" if issues else "")
             )
@@ -176,8 +271,8 @@ def main() -> int:
         return 1
     print(
         f"OK: G5 converse fires on residual fields below 9.5 and at 10 across {len(_cases())} "
-        f"cases, leaves the forward half unmechanized, is version-independent, and stays "
-        f"disjoint from G37"
+        f"cases, forward half fires on missing residual fields inside [9.5, 10) across "
+        f"{len(_forward_cases())} cases, is version-independent, and stays disjoint from G37"
     )
     return 0
 

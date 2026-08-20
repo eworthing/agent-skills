@@ -1,4 +1,4 @@
-"""Residual and scorecard-coherence gates: G5 (converse), G37, G43.
+"""Residual and scorecard-coherence gates: G5 (forward + converse), G37, G43.
 
 G43's convergence-pass record is the third: a dimension that keeps reporting "nothing
 to do" must keep proposing something new to have found nothing about.
@@ -69,11 +69,10 @@ def _dims_named_by_backlog(backlog) -> set[str]:
 def check_g5_sub95_residual_fields(current_review: dict) -> list[Issue]:
     """G5 converse (rule #12): a score below 9.5, or exactly 10, carries no residual fields.
 
-    G5's forward half ("every score >= 9.5 names the residual blocking 10") stays a Critic
-    checklist item -- mechanizing it would break `halt-loop-cap-clean`, an expected-pass
-    fixture that violates it on all 9 dimensions, and that is separate work. This is the
-    converse only, and it had zero violations across the 65-artifact corpus at the time it
-    landed, so it rejects only genuinely incoherent artifacts.
+    G5's forward half ("every score >= 9.5 names the residual blocking 10") is mechanized
+    separately by `check_g5_forward_residual_fields` below. This is the converse only, and
+    it had zero violations across the 65-artifact corpus at the time it landed, so it
+    rejects only genuinely incoherent artifacts.
 
     The production shape it exists for: `test_strategy: 8.5` carrying
     `residual_disposition: "accepted"`. The rubric puts an accepted residual at 9.5 -- a
@@ -187,6 +186,51 @@ def check_g37_terminal_residual_accounting(current_review: dict) -> list[Issue]:
                 )
             )
         # any other non-null value is an unknown enum token -- owned by check_schema_enums
+    return issues
+
+
+_FORWARD_REQUIRED_FIELDS = ("residual_blocking_10", "residual_rationale_or_backlog_ref")
+
+
+def check_g5_forward_residual_fields(current_review: dict) -> list[Issue]:
+    """G5 forward half (rule #12): every score in [9.5, 10) names the residual blocking 10.
+
+    Complements `check_g5_sub95_residual_fields` above: that function rejects residual
+    fields OUTSIDE [9.5, 10); this rejects their ABSENCE INSIDE it. Together the two pin
+    the range exactly -- residual fields live at [9.5, 10) and nowhere else.
+
+    Only `residual_blocking_10` and `residual_rationale_or_backlog_ref` are required
+    non-null here. `residual_disposition` is deliberately not checked by this function:
+    G21-scorecard already requires `residual_disposition == "accepted"` on every
+    HALT_SUCCESS(_candidate) dimension in [9.5, 10), and G37 account (b) is intentionally
+    unimplemented, so a scorecard entry naming a residual and rationale but leaving
+    disposition null (e.g. a mid-loop CONTINUE dimension not yet dispositioned) is not
+    itself a forward-half violation.
+
+    Previously a Critic checklist item only: mechanizing it used to break
+    `halt-loop-cap-clean`, an expected-pass fixture that violated it on all 9 dimensions.
+    That fixture (and its six siblings in the same shape) has since been repaired to carry
+    both fields on every 9.5-and-above dimension, so the forward half is now mechanized.
+    """
+    issues: list[Issue] = []
+    scorecard = current_review.get("scorecard") or {}
+    if not isinstance(scorecard, dict):
+        return issues  # scorecard shape is check_schema_enums / G21's concern
+
+    for dim, score, entry in _scored_dimensions(scorecard):
+        if not (9.5 <= score < 10):
+            continue
+        missing = [f for f in _FORWARD_REQUIRED_FIELDS if entry.get(f) is None]
+        if missing:
+            issues.append(
+                Issue(
+                    "G5",
+                    f"dimension {dim!r} score={score} is in [9.5, 10) but missing "
+                    f"{', '.join(missing)}; rule #12 requires every 9.5-and-above dimension "
+                    f"to name the residual blocking 10 -- either supply both fields or move "
+                    f"the score outside [9.5, 10)",
+                )
+            )
     return issues
 
 

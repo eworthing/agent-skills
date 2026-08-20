@@ -77,6 +77,7 @@ from _artifact_independence import check_challenge_independence_report_only  # n
 from _artifact_panel import check_g32_halt_success_challenge  # noqa: E402
 from _artifact_remediation import check_g46_general_remediation_fields  # noqa: E402
 from _artifact_residual import (  # noqa: E402
+    check_g5_forward_residual_fields,
     check_g5_sub95_residual_fields,
     check_g37_terminal_residual_accounting,
     check_g43_convergence_pass,
@@ -150,6 +151,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_halt_success_gating(current_review, project_config))
     issues.extend(check_g21_scorecard(current_review))
     issues.extend(check_g5_sub95_residual_fields(current_review))
+    issues.extend(check_g5_forward_residual_fields(current_review))
     issues.extend(check_g32_halt_success_challenge(current_review))
     issues.extend(check_g33_risk_boundary_evidence(current_review, canon))
     issues.extend(check_g34_halt_tail_invariants(current_review, canon))

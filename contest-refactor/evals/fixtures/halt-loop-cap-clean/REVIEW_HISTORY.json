@@ -36,81 +36,81 @@
           "score": 9.5,
           "delta": "SAME",
           "proof": "Core/AppEngine.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in architecture_quality: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "state_management": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "Core/AppState.swift:8",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in state_management: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "domain_modeling": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "Domain/Order.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in domain_modeling: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "data_flow": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "Core/Effects.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in data_flow: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "framework_idioms": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "App/RootView.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in framework_idioms: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "concurrency": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "Adapters/Spotify.swift:18",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in concurrency: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "simplicity": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "Core/Reducer.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in simplicity: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "test_strategy": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "Tests/AppEngineTests.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in test_strategy: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         },
         "credibility": {
           "score": 9.5,
           "delta": "SAME",
           "proof": "App/AppEngine.swift:1",
-          "residual_blocking_10": null,
+          "residual_blocking_10": "Minor residual in credibility: no further source-backed improvement available this loop.",
           "residual_disposition": null,
-          "residual_rationale_or_backlog_ref": null,
+          "residual_rationale_or_backlog_ref": "SPT-rejected: smallest fix adds ceremony; not yet dispositioned.",
           "unverifiable_due_to_build_failure": false
         }
       },
@@ -130,7 +130,7 @@
       "deepening_candidates": [],
       "builder_notes": [],
       "narrative": "Certification-pending cap halt: the final fix cleared the backlog and met the score bar after the latest held challenge.",
-      "unresolved_reason": "loop counter reached cap of 10; backlog cleared — post-fix independent challenge not run within configured loop budget"
+      "unresolved_reason": "loop counter reached cap of 10; backlog cleared \u2014 post-fix independent challenge not run within configured loop budget"
     }
   ]
 }
