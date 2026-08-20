@@ -28,6 +28,7 @@ Run: python3 scripts/_provider_detection_selftest.py   (exit 0 = pass, 1 = fail)
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -137,6 +138,44 @@ def main() -> int:
             f"a known provider must not warn -- noise on the normal path trains readers to "
             f"ignore it; stderr={known.stderr!r}"
         )
+
+    # --- the validator's default-model table matches the prose ---------------
+    # G19 fails a loop whose *_model_source == "default" but whose model does not
+    # equal _PROVIDER_DEFAULTS. That makes the table a second copy of the prose,
+    # and on 2026-08-19 the two disagreed: the opencode profile had moved to the
+    # qualified `opencode-go/...` id (a bare id is rejected by the CLI) while the
+    # table still held the bare one -- so a correctly-spawned opencode loop
+    # tripped G19 on every emit, twice, on a live run. Derived from the prose
+    # headings rather than a hand-copied list, so a provider is covered the
+    # moment it is documented.
+    sys.path.insert(0, str(SKILL_ROOT / "scripts"))
+    import _artifact_core
+
+    section_re = re.compile(r"^### (?P<name>[a-z_]+)\b")
+    default_re = re.compile(r"^- \*\*Default model\*\*: `(?P<model>[^`]+)`")
+    pairs: list[tuple[str, str]] = []
+    provider: str | None = None
+    for line in adapters.splitlines():
+        m = section_re.match(line)
+        if m:
+            provider = m.group("name")
+            continue
+        d = default_re.match(line)
+        if d and provider:
+            pairs.append((provider, d.group("model")))
+    if len(pairs) < 3:
+        failures.append(
+            f"expected to parse >=3 documented default models, parsed {len(pairs)} -- the "
+            "prose heading or bullet shape changed and this guard has gone blind"
+        )
+    for provider_name, model in pairs:
+        expected = _artifact_core._PROVIDER_DEFAULTS.get(provider_name)
+        if expected != model:
+            failures.append(
+                f"provider-adapters.md documents {provider_name} default {model!r} but "
+                f"_artifact_core._PROVIDER_DEFAULTS says {expected!r} -- G19 would fire on "
+                "every loop of a correctly-spawned run"
+            )
 
     if failures:
         for f in failures:

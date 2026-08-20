@@ -32,13 +32,17 @@ DISPOSITION_SIDECARS = {
     "superseded": "superseded_by",
 }
 
-# Per-provider default models (per references/provider-adapters.md, verified 2026-07-13).
+# Per-provider default models (per references/provider-adapters.md, verified 2026-08-19).
 # When *_model_source == "default", the model value MUST equal this table's entry.
-# Used by check_g19_provider_model.
+# Used by check_g19_provider_model. Kept in sync with the prose by
+# _provider_detection_selftest -- the drift this table had on 2026-08-19 (a bare
+# `deepseek-v4-flash` against a prose that had moved to the qualified id) went
+# unnoticed because nothing cross-checked the two.
 _PROVIDER_DEFAULTS: dict[str, str | None] = {
     "claude_code": "claude-sonnet-5",
     "codex": "gpt-5.4-mini",
-    "opencode": "deepseek-v4-flash",
+    # opencode's --model requires provider/model; a bare id is rejected by the CLI.
+    "opencode": "opencode-go/deepseek-v4-flash",
     "unknown": None,
 }
 
