@@ -54,6 +54,38 @@ def main() -> int:
             "what went stale last time (section dated 'verified 2026-05-09')"
         )
 
+    # The reviewer is contractually read-only. Under opencode its documented
+    # enforcement was `--read-only`, a flag that does not exist -- and opencode does
+    # not reject unknown flags, so it was silently ignored and the reviewer spawned
+    # with write allowed. A fictional safety control is worse than a missing one,
+    # because it reads as covered.
+    # Check the COMMAND, not the prose: the corrected text mentions --read-only in the
+    # negative ("there is no --read-only flag"), and a naive substring test cannot tell
+    # a warning from a prescription.
+    spawn_cmds = [ln for ln in adapters.splitlines() if ln.strip().startswith("opencode run")]
+    if not spawn_cmds:
+        failures.append("no `opencode run` spawn command found in provider-adapters.md")
+    for cmd in spawn_cmds:
+        if "--read-only" in cmd:
+            failures.append(
+                f"a spawn command prescribes --read-only again: {cmd.strip()!r} -- opencode has "
+                f"no such flag and silently ignores unknown ones, so the reviewer would spawn "
+                f"with WRITE allowed while the doc claims enforcement"
+            )
+    if '"edit": "deny"' not in adapters:
+        failures.append(
+            "the opencode reviewer profile no longer names the real read-only mechanism "
+            "(`permission` config, edit: deny) -- without it there is no way to actually "
+            "constrain the reviewer on that provider"
+        )
+    # --model takes provider/model; a bare id fails the spawn, which falls back to inline
+    # and quietly costs the run its independent challenger.
+    if "opencode-go/deepseek-v4-flash" not in adapters:
+        failures.append(
+            "the opencode model id lost its provider prefix; `--model` requires provider/model "
+            "and a bare id is not a valid model"
+        )
+
     if "--provider" not in STARTUP.read_text(encoding="utf-8"):
         failures.append(
             "startup.md's preflight invocation no longer passes --provider, so a run that will "

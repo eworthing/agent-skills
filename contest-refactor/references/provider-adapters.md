@@ -76,16 +76,16 @@ codex exec --model gpt-5.4-mini --no-ask-user --output-format json '<prompt>'
 - **Resume**: `--continue` flag picks up the most recent session
 - **Nested-spawn caveat**: a running codex session may not be able to spawn a child `codex exec` subprocess (host process model varies; sandboxes commonly block recursive CLI invocation). If the spawn returns nonzero, the binary is not on PATH for the subprocess, or the session has no shell tool available, **fall back to inline mode**: set `spawn_isolation: "inline"`, document at top of `CURRENT_REVIEW.md` "codex subprocess spawn unavailable; running inline", and rely on Continuation Discipline + G20 (per [SKILL.md § Continuation Discipline](../SKILL.md#continuation-discipline) and [validation.md § G20](validation.md)) to keep the run autonomous across loops. Do **not** silently emit a user-facing close-out after loop 1 — that's the failure mode G20 catches.
 
-### opencode (verified 2026-05-09)
+### opencode (verified 2026-08-19)
 
 Spawn via subprocess:
 
 ```
-opencode run --model deepseek-v4-flash '<prompt>'
-# resume: opencode run --session <id> --model deepseek-v4-flash '<prompt>'
+opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
+# resume: opencode run --session <id> --model opencode-go/deepseek-v4-flash '<prompt>'
 ```
 
-- **Default model**: `deepseek-v4-flash`
+- **Default model**: `opencode-go/deepseek-v4-flash` — `--model` takes `provider/model`; a bare id is invalid
 - **Permissions**: default mode (write allowed)
 - **Resume**: `--session <id>` flag
 
@@ -128,15 +128,15 @@ codex exec --model gpt-5.4-mini --deny-tool=write,memory --no-ask-user --output-
 - **Enforcement**: `--deny-tool=write,memory` blocks file writes and persistent memory. **Shell is allowed** (denying shell would block `git diff` and the inspection commands the reviewer needs); the reviewer's prompt restricts shell to the read-only allow-list.
 - **Reviewer-permitted tools**: shell commands from the read-only allow-list above (other shell commands → reviewer rejects)
 
-### opencode (verified 2026-05-09)
+### opencode (verified 2026-08-19)
 
 ```
-opencode run --model deepseek-v4-flash --read-only '<prompt>'
+opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
 ```
 
-- **Default model**: `deepseek-v4-flash`
-- **Enforcement**: `--read-only` mode flag enforces no writes globally. Shell still permitted; reviewer's prompt restricts to the read-only allow-list for cleanliness.
-- **Reviewer-permitted tools**: OpenCode native `read`, `grep`, `glob`; shell restricted to the read-only allow-list
+- **Default model**: `opencode-go/deepseek-v4-flash`
+- **Enforcement**: there is **no `--read-only` flag**, and unknown flags are silently ignored — relying on one runs with write allowed. Set `permission` in `opencode.json`: `{"edit": "deny"}` (values `ask|allow|deny`). `OPENCODE_PERMISSION` carries the same shape, unverified.
+- **Reviewer-permitted tools**: native `read`, `grep`, `glob`; shell restricted to the read-only allow-list
 
 ### unknown
 

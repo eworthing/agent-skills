@@ -240,7 +240,16 @@ CEILINGS = {
     # path. An unmeasured dimension reading as compliant is the same defect shape as
     # tool_runner.py's `absent` != `clean`. --check now polices both paths in one run,
     # regardless of --lens (which still selects the load-matrix comparison only).
-    "loop_apple": 84_200,  # per-loop fixed reload, apple lens (measured 84,115)
+    # Bumped 84,200 -> 84,300 to correct the opencode spawn profiles against the
+    # installed binary (2026-08-19). The section was dated "verified 2026-05-09" and
+    # made four wrong claims: OPENCODE_SESSION (does not exist -> opencode was
+    # undetectable), --read-only (does not exist AND unknown flags are silently
+    # ignored, so the reviewer spawned with WRITE allowed while the doc claimed
+    # enforcement), a bare model id where --model requires provider/model, and no
+    # mention of the real `permission` mechanism. A documented safety control that
+    # does not exist is worth 66 tokens per loop. Measured 84,258; smallest
+    # 100-multiple headroom above it.
+    "loop_apple": 84_300,  # per-loop fixed reload, apple lens (measured 84,258)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
