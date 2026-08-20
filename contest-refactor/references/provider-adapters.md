@@ -25,7 +25,7 @@ The main agent detects the active provider from environment variables. Binary pr
 |---|---|
 | `CLAUDECODE=1` | `claude_code` |
 | `CODEX_HOME` non-empty AND `CLAUDECODE` unset | `codex` |
-| `OPENCODE_SESSION` non-empty AND `CLAUDECODE` unset AND `CODEX_HOME` unset | `opencode` |
+| any `OPENCODE_*` var non-empty (e.g. `OPENCODE_PID`) AND `CLAUDECODE` unset AND `CODEX_HOME` unset | `opencode` |
 | 2+ provider env vars set simultaneously | error — require explicit `--provider <name>` flag from user |
 | none of the above | `unknown` (fall back to inline mode; no Loop Isolation) |
 
@@ -243,7 +243,7 @@ Helper scripts under `scripts/` (`dry-run.sh`, `purge.sh`, `audit-*.sh`) are inv
 |---|---|---|
 | `claude_code` | The agent's skill-loader exports the absolute path of the loaded skill as session-scoped state. Read it directly. Falls back to `$HOME/.claude/skills/contest-refactor`. | Default install per agent-skills/CLAUDE.md is a symlink at `~/.claude/skills/contest-refactor` → repo. |
 | `codex` | Skills under `$CODEX_HOME/skills/`. Compute `$SKILL_DIR="$CODEX_HOME/skills/contest-refactor"` if `$CODEX_HOME` set; else fall back to `$HOME/.codex/skills/contest-refactor`. | |
-| `opencode` | Skills under `$HOME/.config/opencode/skills/`. Compute `$SKILL_DIR="$HOME/.config/opencode/skills/contest-refactor"`. `$OPENCODE_SESSION` does not encode the install path; rely on the standard installation directory. | |
+| `opencode` | Skills under `$HOME/.config/opencode/skills/`. Compute `$SKILL_DIR="$HOME/.config/opencode/skills/contest-refactor"`. no `OPENCODE_*` var encodes the install path; rely on the standard installation directory. | |
 | `gemini` / `gemini-antigravity` | Skills under `$HOME/.agents/skills/` (shared community location) or `$HOME/.gemini/antigravity-cli/skills/` (Antigravity CLI). `$GEMINI_CONFIG_DIR` does not encode the install path; rely on standard directories. | |
 | `copilot` | Skills under `$HOME/.agents/skills/` (shared community location) — same as Gemini CLI. | |
 | `unknown` | Last-resort fallback chain in [resume-detection.md § Skill-script path resolution](resume-detection.md#skill-script-path-resolution). | |

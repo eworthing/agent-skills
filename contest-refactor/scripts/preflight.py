@@ -82,6 +82,30 @@ def _base_ref_resolves(base_ref: str) -> tuple[bool, str]:
     return False, f"base ref does not resolve: {base_ref}"
 
 
+def _provider_warning(provider: str | None) -> str | None:
+    """Non-fatal warning when the run will have no independent challenger.
+
+    provider == "unknown" is not a bad input -- the skill deliberately runs anywhere --
+    but it has a consequence the user only discovers at halt today: no subagent spawn,
+    so the HALT_SUCCESS challenge is administered by the same agent that produced the
+    scorecard, and G32 (challenger_model non-empty) cannot tell the difference.
+
+    Found live 2026-08-19 on a real opencode run that reached HALT_SUCCESS at loop 1
+    under an inline self-vet. Root cause was a stale detection rule, not a real
+    capability limit -- which is exactly why this belongs here, before dispatch: a
+    detection bug and a genuinely spawn-less host look identical from inside the loop,
+    and both silently weaken the terminal verdict.
+    """
+    if provider != "unknown":
+        return None
+    return (
+        "provider resolved to 'unknown': no subagent spawn, so any HALT_SUCCESS this run "
+        "reaches will rest on a challenge administered by the Critic itself. If your host "
+        "does support spawn, detection failed -- pass --provider <name> explicitly. "
+        "Otherwise treat a terminal success as provisional."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Fail-fast precondition gate before subagent dispatch."
@@ -89,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("scope_dir", help="source/scope directory that must exist")
     parser.add_argument("--test-cmd", help="discovered test/build command to sanity-check")
     parser.add_argument("--base-ref", help="optional base ref to verify with git rev-parse")
+    parser.add_argument("--provider", help="detected provider; warns (never fails) when 'unknown'")
     args = parser.parse_args(argv)
 
     failures: list[str] = []
@@ -115,6 +140,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
+    warning = _provider_warning(args.provider)
+    if warning:
+        print(f"preflight: WARNING: {warning}", file=sys.stderr)
     print("preflight: OK — scope dir, test command, and base ref all resolve.")
     return 0
 
