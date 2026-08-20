@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
@@ -159,6 +160,20 @@ def _check_replication(entries: list, failures: list[str]) -> None:
                 failures.append(
                     f"replication '{sid}': attempt arm={a.get('arm')!r} not in {sorted(VALID_ARMS)}"
                 )
+        # no attempt 2 after a valid attempt 1 (Lever-1 replication protocol: one
+        # logged technical rerun only for invalid output — cross-applied from
+        # _principal_baseline_selftest.py; keyed by (arm, slot_index) since this
+        # study is 3-arm, unlike principal's current-arm-only design)
+        first = {
+            (a.get("arm"), a.get("slot_index")): a for a in atts if a.get("attempt_index") == 1
+        }
+        for a in atts:
+            key = (a.get("arm"), a.get("slot_index"))
+            if a.get("attempt_index", 1) >= 2 and first.get(key, {}).get("status") == "valid":
+                failures.append(
+                    f"replication '{sid}': arm={a.get('arm')!r} slot {a.get('slot_index')} "
+                    "has a retry attempt after a valid attempt 1"
+                )
         # terminal slot per (arm, slot_index) for the `current` arm drives the decision
         current = [a for a in atts if a.get("arm") == "current"]
         terminal: dict = {}
@@ -187,6 +202,100 @@ def _check_replication(entries: list, failures: list[str]) -> None:
                 failures.append(
                     f"replication '{sid}': invalid slot {a.get('slot_index')} missing invalid_reason"
                 )
+
+
+def _check_replication_retry_synthetic(failures: list[str]) -> None:
+    """Regression proof for the cross-applied "no retry after a valid attempt 1" check.
+
+    advisory_baseline.json currently carries zero `replication` blocks, so
+    `_check_replication` returns early and the retry check above would pass
+    vacuously against the real baseline (D4 cross-apply hazard). This builds a
+    synthetic manifest entry + a synthetic attempts file (never touching the
+    frozen baselines) and drives `_check_replication` through both a clean and
+    a violating case to prove the check actually fires.
+    """
+    entry = {
+        "id": "synthetic-retry-check",
+        "kind": "flag",
+        "replication": {
+            "runs": 5,
+            "invalid_slots": 0,
+            "decision": "caught",
+            "mechanical": {"caught": 5},
+            "semantic": {"caught": 5},
+        },
+    }
+    base_attempts = [
+        {
+            "scenario_id": "synthetic-retry-check",
+            "arm": "current",
+            "slot_index": i,
+            "attempt_index": 1,
+            "status": "valid",
+            "verdict_json": {"verdict": "rejected"},
+            "host_grade": "caught",
+        }
+        for i in range(1, 6)
+    ]
+    # A second arm's slot 1, attempted once (attempt 1 valid, no retry) — clean.
+    clean_attempts = [
+        *base_attempts,
+        {
+            "scenario_id": "synthetic-retry-check",
+            "arm": "no_skill",
+            "slot_index": 1,
+            "attempt_index": 1,
+            "status": "valid",
+            "verdict_json": {"verdict": "approved"},
+            "host_grade": "held",
+        },
+    ]
+    # Same slot, but retried (attempt 2) even though attempt 1 was already valid.
+    violating_attempts = [
+        *clean_attempts,
+        {
+            "scenario_id": "synthetic-retry-check",
+            "arm": "no_skill",
+            "slot_index": 1,
+            "attempt_index": 2,
+            "status": "valid",
+            "verdict_json": {"verdict": "approved"},
+            "host_grade": "held",
+        },
+    ]
+
+    global REPLICATION_PATH
+    saved_path = REPLICATION_PATH
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir) / "synthetic_replication.json"
+
+            REPLICATION_PATH = tmp_path
+            tmp_path.write_text(json.dumps({"attempts": clean_attempts}), encoding="utf-8")
+            clean_failures: list[str] = []
+            _check_replication([entry], clean_failures)
+            if clean_failures:
+                failures.append(
+                    "synthetic retry-check self-test: clean case unexpectedly failed: "
+                    f"{clean_failures}"
+                )
+
+            tmp_path.write_text(json.dumps({"attempts": violating_attempts}), encoding="utf-8")
+            bad_failures: list[str] = []
+            _check_replication([entry], bad_failures)
+            retry_hits = [f for f in bad_failures if "retry attempt after a valid attempt 1" in f]
+            if not retry_hits:
+                failures.append(
+                    "synthetic retry-check self-test: violating case did NOT trigger the "
+                    f"retry check (got: {bad_failures})"
+                )
+            elif len(bad_failures) != 1:
+                failures.append(
+                    "synthetic retry-check self-test: violating case triggered unexpected "
+                    f"extra failures: {bad_failures}"
+                )
+    finally:
+        REPLICATION_PATH = saved_path
 
 
 def main() -> int:
@@ -262,6 +371,10 @@ def main() -> int:
 
     # (e) dormant replication shape check.
     _check_replication(entries, failures)
+
+    # (e2) synthetic proof that the cross-applied retry check actually executes
+    # (real manifest carries zero replication blocks, so (e) alone is vacuous).
+    _check_replication_retry_synthetic(failures)
 
     # global no-orphan contract.
     _check_global_no_orphan(failures)
