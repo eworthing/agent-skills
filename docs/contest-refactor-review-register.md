@@ -10,7 +10,7 @@ runtime-cost audit.
 **Scope:** `/Users/Shared/git/agent-skills/contest-refactor`
 **Review passes:** 2 code-review passes + 1 ponytail whole-skill audit + 1 duplication/clarity pass + 1 full revalidation + 1 cross-doc merge (deep-dive backlog, behavioral ledger, June research doc)
 **Revalidated:** 2026-08-20 against HEAD `cc3057b`. All five P1 and four P2 findings re-confirmed: every citation re-checked and all five reproductions re-run against the current tree (the two synthetic ones rebuilt from scratch). No finding overturned. Two findings' subject matter moved in the interim without resolving them — `a9ad8f3`/`e3f5aa8` added `challenger_isolation`/`reviewer_isolation` *recording* while the independence check stayed report-only, and `a9ad8f3` deleted the dead `validate-artifact.py` instruction the loop-path finding discusses. A dozen metrology corrections (counts and line spans) are folded in below; none changes a conclusion.
-**Verdict:** **Request changes.** Five P1 execution/certification gaps and four P2 contract/test-oracle gaps remain. The second pass confirmed all six original findings, strengthened the dirty-tree finding, corrected two proposed remedies, and added two report-only hard-gate findings. The separate ponytail pass found two material simplification cuts and one exact dead-code cleanup. A third pass, run with the skill's own advisory audit tools pointed at the skill, added one P2 contract finding, four behaviour-preserving duplication cuts, and one test-coverage gap. A cross-doc merge validated the still-open findings from the deep-dive backlog, the behavioral ledger, and the June research doc, adding one P2-class compatibility defect ([I1], live on the repo's own artifact) and three smaller gaps ([I2]–[I4]).
+**Verdict:** **Request changes.** Five P1 execution/certification gaps and four P2 contract/test-oracle gaps remain, plus one inherited P2-class compatibility defect ([I1]). The second pass confirmed all six original findings, strengthened the dirty-tree finding, corrected two proposed remedies, and added two report-only hard-gate findings. The separate ponytail pass found two material simplification cuts and one exact dead-code cleanup. A third pass, run with the skill's own advisory audit tools pointed at the skill, added one P2 contract finding, four behaviour-preserving duplication cuts, and one test-coverage gap. A cross-doc merge validated the still-open findings from the deep-dive backlog, the behavioral ledger, and the June research doc, adding one P2-class compatibility defect ([I1], live on the repo's own artifact) and three smaller gaps ([I2]–[I4]).
 
 ## Coverage
 
@@ -57,7 +57,7 @@ Passing these checks does not contradict the findings below: the gaps are either
 
 **Consequence.** Any allowed pre-existing tracked edit appears in `changed_paths` even when it is outside the plan, but an unrelated path has no `pre_step3_blob_shas` entry and therefore no safe rejection branch. G28 can diagnose that mismatch only at Step 3 sub-step 8 (`SKILL.md:211`), after rejection already ran at sub-step 6. Separately, a first-loop plan can select a dirty path after the Step-0 check had no plan to compare; that planned path is snapshotted from `HEAD` and then restored to `HEAD` on rejection. The latter path directly erases user work.
 
-**Smallest correction.** The safest minimal rule is to abort every mutating run when the tree is dirty. If non-overlapping dirt must remain supported, freeze its paths and bytes at Step 0, recheck the final Step-2 touch set before Step 3, and derive one loop-owned path set from changes relative to that baseline—not from the whole `HEAD` diff. Add replay cases for both an overlapping dirty file and an unrelated dirty file; rejection must preserve both original byte sequences.
+**Smallest correction.** The safest minimal rule is to abort every mutating run when the tree is dirty. If non-overlapping dirt must remain supported, freeze the complete baseline at Step 0 — every dirty tracked path's bytes *and* the untracked-file listing — recheck the final Step-2 touch set before Step 3, and derive the loop-owned path set as **every post-baseline delta**, not from the whole `HEAD` diff and not filtered to planned paths (a planned-only filter silently disowns unplanned loop side effects; the baseline is what distinguishes user dirt from loop output, so the filter is unnecessary as well as unsafe). A post-baseline change on a path the plan never named is a review-blocking integrity failure, not something to classify silently. Add replay cases for an overlapping dirty file, an unrelated dirty file, and an unplanned loop-side-effect file; rejection must preserve the original bytes of both dirty files and remove the side-effect file.
 
 ### [P1] Untracked files are absent from the implementation review and rollback set
 
@@ -67,7 +67,7 @@ Passing these checks does not contradict the findings below: the gaps are either
 
 **Second-pass confirmation.** The repository's own Layer-3 materializer runs `git add -A` before `git diff HEAD`, specifically so additions appear (`evals/README.md:952-959`). Production Step 3 has no equivalent pre-review staging instruction, so the eval topology masks the production gap.
 
-**Smallest correction.** Build one frozen **loop-owned** path set: planned tracked paths whose content changed from the Step-3 baseline plus planned untracked paths created after that baseline. Do not union all repository untracked paths; that would absorb pre-existing user files and repeat the first finding. Use the same set for reviewer input, `loop_result.changed_paths`, G28, staging, and rejection cleanup. Extend the reviewer-revert self-test with one loop-created untracked file and one pre-existing untracked restraint file.
+**Smallest correction.** Build one frozen **loop-owned** path set from the Step-3 baseline: tracked paths whose content changed after the baseline plus untracked paths created after it — **all** post-baseline deltas, planned or not. Do not union all repository untracked paths (that would absorb pre-existing user files and repeat the first finding), and do not restrict to planned paths either: an unplanned loop-created file is exactly the escape this finding documents, so a post-baseline path outside the plan is a review-blocking integrity failure the loop must surface, not silently exclude. Use the same set for reviewer input, `loop_result.changed_paths`, G28, staging, and rejection cleanup. Extend the reviewer-revert self-test with one loop-created untracked file, one loop-created *unplanned* file, and one pre-existing untracked restraint file.
 
 ### [P1] Strict validation accepts a 9.5 score with no residual evidence
 
@@ -84,7 +84,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 **Consequence.** A `HALT_SUCCESS_candidate` can clear strict validation while omitting the evidence that distinguishes an earned 9.5 from an inflated score. G21 checks the score and `accepted` disposition, so it does not close this hole.
 
-**Smallest correction.** Enforce the existing forward-half rule for every `[9.5, 10)` dimension. Repair `halt-loop-cap-clean` rather than preserving its invalid shape as the reason not to enforce the rule, and turn the reproduction above into a negative v4 fixture.
+**Smallest correction.** Enforce the existing forward-half rule for every `[9.5, 10)` dimension. The repair bill is larger than one fixture: **seven** non-aspirational expected-pass fixtures currently violate the forward rule (mechanically re-scanned 2026-08-20) — `halt-loop-cap-clean`, `g45-exhaustion-preventive-honest`, and five `panel-*` fixtures (`panel-pending-ambiguous-raw`, `panel-pending-deferred-sibling`, `panel-rule6-continue-two-findings`, `panel-rule6-dedup-one-finding`, `panel-rule6-user-decision-stage2`). Repair all seven rather than preserving their invalid shape as the reason not to enforce the rule, and turn the reproduction above into a negative v4 fixture. Five of the seven are panel fixtures, so the panel disposition (ponytail item 1) taken first shrinks the repair to two.
 
 ### [P1] Terminal success does not require an independently run reviewer or challenger
 
@@ -253,7 +253,7 @@ Whether `_g39` *should* pin a regression case is a separate call — G39 may gen
 
 Four checks exist in one copy and not the other. That is the expected end state of a 92-line copy-paste, and it has arrived. The open question is which asymmetries are deliberate — the two studies genuinely differ (multi-arm versus single-arm), so some are correct — and which are simply the edit that only landed once.
 
-**Do not unify first.** `evals/advisory_baseline.json`, `evals/principal_baseline.json` and both `*_replication.json` files are frozen historical records that must stay byte-identical, so a merged checker that is *stricter* would fail a committed baseline and one that is *looser* would silently stop checking something. Sequence it: (1) add each missing check to the copy lacking it, one at a time, and observe which baselines still pass — a check that passes on both was an omission, one that fails was a real difference; (2) only then factor the common core, passing the genuinely per-study checks in. Step 1 is the valuable half and is worth doing even if step 2 never happens.
+**Do not unify first.** `evals/advisory_baseline.json`, `evals/principal_baseline.json` and both `*_replication.json` files are frozen historical records that must stay byte-identical, so a merged checker that is *stricter* would fail a committed baseline and one that is *looser* would silently stop checking something. Sequence it: (1) add each missing check to the copy lacking it, one at a time — but observing the frozen baselines is only half an oracle, because the two sides are not symmetric: `advisory_baseline.json` contains **zero** `replication` blocks, and both copies of `_check_replication` return immediately when no entry carries one, so a principal-only check cross-applied to the advisory copy passes vacuously (the principal side, with 58 replication blocks and 35 recorded attempts, does exercise cross-applied checks). Each cross-applied check therefore also needs one synthetic positive and one synthetic negative case to prove it executes; only then does pass-on-both mean omission and fail mean real difference. (2) Only then factor the common core, passing the genuinely per-study checks in. Step 1 is the valuable half and is worth doing even if step 2 never happens.
 
 ### [D5] `_canon.py`'s 16 error paths are exercised by nothing
 
@@ -274,7 +274,7 @@ Not one passes a synthetic or malformed canon directory. `_canon.py` has **16 `s
 
 **Consequence.** The module that every validator treats as the single source of truth for enums will exit 2 with a specific diagnostic on every malformed-canon shape it is written to reject, and no test has ever confirmed that any of them fires, or that it names the right file when it does. This is also what makes D1's double-spelled-path hazard invisible: the wrong-file error message it produces would surface only on a path nothing exercises.
 
-**Correction.** `scripts/_canon_selftest.py`, feeding `load_canon` a `tempfile` copy of `canon/` with one file broken per case, asserting exit code 2. The 11 mutations from D1's proof are exactly this test and already cover every category: missing top-level key, key-not-a-list, duplicate gate id, gate entry missing `title`, duplicate scorecard id, scorecard entry missing `display_label`, multi-list file broken, optional file broken, canon file missing, canon file empty, canon file malformed.
+**Correction.** `scripts/_canon_selftest.py`, feeding `load_canon` a `tempfile` copy of `canon/` with one file broken per case, asserting exit code 2 **and that the diagnostic names the file that was broken** — the wrong-file hazard from D1 is invisible to an exit-code-only assertion. Keep D1's 21-field canon-equivalence check in the same file. The 11 mutations from D1's proof are exactly this test and already cover every category: missing top-level key, key-not-a-list, duplicate gate id, gate entry missing `title`, duplicate scorecard id, scorecard entry missing `display_label`, multi-list file broken, optional file broken, canon file missing, canon file empty, canon file malformed.
 
 **This is time-sensitive in a way the other items are not.** Those 11 mutations are the only thing that has ever executed those paths, they were written as throwaway session scratchpad scripts, and they are gone when the session ends. Every other item here can be re-derived from the repository at any time; this one has to be re-written from scratch once the harness is lost. It is roughly an hour's work either way — but an hour that has already been spent once.
 
@@ -313,7 +313,7 @@ Each step is independently shippable and revertable. 1) The dead-code deletion i
 
 ### [I2] `implementation_review.rounds` is specified and never read (backlog row 33)
 
-`output-format-json.md:440` specifies `rounds` as an int counting reviewer invocations; `grep '"rounds"' scripts/` returns zero, and both BenchHype production loops emitted `null` unchallenged. Blocked on a decision (any int? `{1,2}`? coupled to conditional re-spawn?), not on effort.
+`output-format-json.md:441` specifies `rounds` as an int counting reviewer invocations, and its comment already fixes the value set — "1 normally; 2 when conditional → re-spawn" — so the value-set decision this register previously listed as open is in fact already made by the spec. What remains open is enforcement semantics: a shape check (`rounds ∈ {1, 2}`, `2` only when the verdict history shows a conditional first pass) versus corroboration against recorded invocation evidence, which does not exist in the artifact. `grep '"rounds"' scripts/` still returns zero, and both BenchHype production loops emitted `null` unchallenged — which means any *required*-value enforcement retroactively invalidates those artifacts, the same defect class as [I1]. Enforcement is therefore sequenced after [I1]; the check itself is trivial once scoping exists.
 
 ### [I3] `source_rev` is ambiguous mid-loop, and `findings_carried_from_prior_loops` is emitted but specified nowhere (backlog row 34)
 
@@ -379,26 +379,40 @@ a shipped gate with selftest and fixtures has historically run 100–200k; one c
 is ~30k. Bands are honest to about ±2×. Items whose real price is **production runs** are priced in
 runs, not session tokens: the runtime-cost audit's measured model puts one BenchHype-scale run at
 ~20M+ resident context tokens (~241 messages × ~84k per-loop reload, 93.9 % cached), and sweep #3's
-arm dispatch alone was 27.9M. A run costs three orders of magnitude more than any session item below
-— which is why run-gated items sort last regardless of their small session cost, and why the one run
-that feeds several measurements at once is the only good buy in that tier.
+arm dispatch alone was 27.9M. A run costs 50× the largest engineering estimate below and roughly
+three orders of magnitude more than a Tier-1 item — which is why run-gated items sort last
+regardless of their small session cost, and why the one run that feeds several measurements at once
+is the only good buy in that tier.
 
-### Tier 1 — cheap and real (≤60k each; ~250k for the lot)
+### Decision gate — costs an owner call, not tokens
+
+**The panel disposition (ponytail item 1) comes first.** It is a decision, not work, and three
+priced items below hinge on it: five of the seven residual-rule fixture repairs are `panel-*`
+fixtures that removal would delete, D2's shared-loader placement (extend the panel-named testkit
+versus a neutral `_selftest_lib.py`), and the G29 prose correction's v5 clause (the routing
+contract currently authorizes no v5 profile). Deciding it early makes the work below cheaper;
+executing the removal (~80k) stays in Tier 2 either way.
+
+### Tier 1 — cheap and real (~290k for the lot)
 
 Recommended order within the tier. Everything here is independently shippable and closes something
-named in this review.
+named in this review. D5 and D1 carry two prices: the lower one assumes this session's scratchpad
+artifacts, the higher one is what a fresh engineer pays after they are gone.
 
 | # | Item | Est. | Why this price |
 | --- | --- | --- | --- |
-| 1 | **D5** — `scripts/_canon_selftest.py` | **~25k now, ~3× later** | `_canon_new.py` and the loader driver still exist in this session's scratchpad, and the 11 mutation cases are enumerated above; once the scratchpad is gone the harness is rebuilt from prose. The only item with an expiring discount. |
+| 1 | **D5** — `scripts/_canon_selftest.py` | **~25k now, ~75k later** | `_canon_new.py` and the loader driver still exist in this session's scratchpad, and the 11 mutation cases are enumerated above; once the scratchpad is gone the harness is rebuilt from prose. The only item with an expiring discount. Assert the diagnostic *names the offending file*, not just exit code 2 — the wrong-file hazard is D1's motivation and exit codes alone cannot see it. |
 | 2 | Ponytail 3 — dead-code deletion | ~5k | 14 lines; zero callers already proven twice. |
-| 3 | **D1** — `load_canon` refactor | ~40k | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Do D5 first — its selftest is D1's regression net. |
-| 4 | **P1** — 9.5-residual enforcement | ~50k | Pure validator change + repair one fixture + one negative fixture; touches no loop-path prose, so no behavioral probe is owed. Closes a full P1 — the cheapest P1 on the board. |
-| 5 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. The enforcement half inherits [I1] and is priced in Tier 2. |
+| 3 | **D1** — `load_canon` refactor | ~40k now, ~60k later | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Rebuilt from scratch it costs what it cost the first time (~60k). Do D5 first — its selftest (which keeps the 21-field equivalence check) is D1's regression net. |
+| 4 | **P1** — 9.5-residual enforcement | ~70k as-is, ~50k after the panel decision | Pure validator change + one negative fixture — but the repair bill is **seven** fixtures, not one (see the finding above); five are `panel-*` and vanish if removal is chosen. Touches no loop-path prose, so no behavioral probe is owed. Still the cheapest P1 on the board. |
+| 5 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. Write the v5 clause to match the panel decision. The enforcement half inherits [I1] and is priced in Tier 2. |
 | 6 | **I3** — `source_rev` + `findings_carried_from_prior_loops` spec | ~20k | One definition decision plus two spec paragraphs. |
-| 7 | **I2** — `rounds` decision + check | ~15k | One owner decision (any int vs `{1,2}`), then a trivial type check. |
-| 8 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit against the existing `_g32_panel_testkit.py` precedent. |
-| 9 | **D4 step 1** — cross-apply the four asymmetric checks | ~40k | One check at a time against frozen baselines; the pass/fail observation is the deliverable, no unification. |
+| 7 | Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. Moved out of the run-gated tier — it has no production-run dependency. |
+| 8 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit. If the panel decision leaves removal open, put the shared loader in a neutral `scripts/_selftest_lib.py` rather than extending the panel-named testkit. |
+| 9 | **D4 step 1** — cross-apply the four asymmetric checks | ~50k | One check at a time — with one synthetic positive and one synthetic negative case per check, because the advisory side's `_check_replication` is dormant (zero replication blocks) and passes cross-applied checks vacuously. The proven-to-execute pass/fail observation is the deliverable, no unification. |
+
+[I2] left this tier: the spec already fixes the `rounds` value set, and required-value enforcement
+retro-invalidates the null-emitting production artifacts — it is now priced after [I1] in Tier 2.
 
 ### Tier 2 — medium engineering (80k–300k)
 
@@ -407,6 +421,7 @@ named in this review.
 | **[I1]** — version/ruleset scoping fix | **~120k** | The highest-leverage single item on the board: it unblocks the independence flip, the transitions flip, and is prerequisite #1 of the loop-path hook. The design pattern already exists in-repo (v2→v3 bumped *and* default-filled); the work is the decision, the migration table, and scoping G43/G46. |
 | P1 — independence enforcement | ~50k after I1 | Small once scoping exists; blocked until then. |
 | P2 — transitions `REPORT_ONLY` flip | ~20k after I1 | Plus one decision: the disposition of the dogfood artifact's real `HALT_LOOP_CAP→CONTINUE` at loop 10→11. |
+| [I2] — `rounds` shape check | ~15k after I1 | The value set is already in the spec; enforcement waits on scoping because both production artifacts emitted `null`. |
 | P1 ×2 — loop-owned path set (dirty-tree + untracked, shared remedy) | ~120k combined | The two P1s share one correction; doing them together amortizes it. Loop-path prose changes, so this owes a keyed probe in the next behavioral sweep. |
 | P2 — aspirational-fixture repair | ~100k | Sub-rule label normalization first, then per-fixture completion; fiddly rather than hard. |
 | Ponytail 2 — fixture-history materialization | ~70k | Harness change is small; the 63-fixture rewrite is scriptable. −9,400 lines. |
@@ -417,19 +432,23 @@ named in this review.
 ### Tier 3 — the big build
 
 **Five-phase validator + host hook** (the loop-path P2's only untried remedy): **~250–400k**, strictly
-after [I1]. Phase-aware gate sets, commit-draft input, per-phase selftests, plus the hook itself.
-The most expensive engineering item here — and the one that makes the 27 already-mechanized gates
-actually execute. Price it as a deliberate project, not something to pick up alongside other work.
+after [I1]. The project **starts with a design document**, not code: the phase-to-gate matrix and
+expected artifact state per phase, the commit-draft input, the exact host-side interception point
+per provider (a hook the model cannot skip — a prose-invoked wrapper would reproduce the measured
+0/6 delivery failure), fail-closed behavior when the hook cannot run, installation and rollback,
+and end-to-end tests per phase. Then phase-aware gate sets, per-phase selftests, and the hook
+itself. The most expensive engineering item here — and the one that makes the 27 already-mechanized
+gates actually execute. Price it as a deliberate project, not something to pick up alongside other
+work.
 
 ### Run-gated — priced in production runs, not session work
 
 | Item | Price | Notes |
 | --- | --- | --- |
-| **Next production run, instrumented** | 1 run (~20M+ context) | The best buy in this tier because it settles four open items at once: it *is* the audit's end-to-end before/after measurement, supplies a G17 promotion datapoint, finally exercises the `--scope` probe (P1), and has a chance at G43's loop-4+ trigger. The next natural use of the skill should be this measurement — a run bought for any one of those four alone pays the same price for a quarter of the value. |
+| **Next production run, instrumented** | 1 run (~20M+ context) | The best buy in this tier because it advances four open items at once: it supplies the *after* arm of the audit's end-to-end cost measurement (the *before* arm must come from the audit's recorded pre-lever transcripts, whose comparability — same target, same scope — must be verified before any before/after claim; if none is comparable, this becomes the first of two matched runs), adds one G17 promotion datapoint (of the ≥5 required — it does not settle the bar), finally exercises the `--scope` probe (P1), and *may* reach G43's trigger, which needs loop 4+. The next natural use of the skill should be this measurement — a run bought for any one of those four alone pays the same price for a quarter of the value. |
 | G17 `REPORT_ONLY` flip | ~30k session, gated on runs | The bar stands at roughly 1/5 applicable runs, one language, zero adjudications. Session cost is trivial; the data is the cost. |
 | Lever F +5 reps/arm | moderate (order 1M context) | Settles the −20.2 % cost claim; the quality half needs no more data. |
 | A/A noise-floor run | moderate, **low yield at current n** | Required before *any* Tranche-3 lift claim, but `required_n = 778` discordant pairs means the honest outcome now is `inconclusive`. Run it when a Tranche-3 claim actually matters, not before. |
-| Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. |
 | Backlog 5, 6, 11, 15, 23, 27 | multi-run or gated | Experiments (5 is ≥4 arms × reps at run scale) or blocked on decisions/pilots named in the backlog table. Parked. |
 
 ### Declined by default — recorded so the price stays visible
@@ -447,14 +466,16 @@ actually execute. Price it as a deliberate project, not something to pick up alo
 
 ### Reading of the board
 
-Tier 1 in order: ~250k closes one P1 outright, the canon test gap, the dead code, three spec
-ambiguities, and banks the already-proven D1 — the densest value on the list, led by the one item
-whose price triples when the session ends. The single most leveraged spend after that is **[I1] at
-~120k**, which converts three blocked flips into ~90k of Tier-1-grade work. The loop-path P2 — this
-review's most consequential finding — cannot be bought for less than the Tier-3 project, and no
-cheaper route remains untried; treat it as its own funded effort. Spend nothing on the run-gated
-tier until the skill's next natural production use, then instrument that run to collect all four
-measurements at once.
+The panel decision costs nothing and reprices three items — take it first. Tier 1 in order:
+~290k closes one P1 outright, the canon test gap, the dead code, two spec ambiguities, and the
+audit's last unreviewed revision, and banks the already-proven D1 — the densest value on the list,
+led by the one item whose price triples when the session ends. The single most leveraged spend
+after that is **[I1] at ~120k**, which converts three blocked flips ([I2] now among them) into
+~105k of Tier-1-grade work. The loop-path P2 — this review's most consequential finding — cannot
+be bought for less than the Tier-3 project, and no cheaper route remains untried; treat it as its
+own funded effort, starting with its design document. Spend nothing on the run-gated tier until
+the skill's next natural production use, then instrument that run to advance all four measurements
+at once.
 
 
 ## Priority summary
