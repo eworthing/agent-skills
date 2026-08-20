@@ -57,7 +57,7 @@ Passing these checks does not contradict the findings below: the gaps are either
 
 **Consequence.** Any allowed pre-existing tracked edit appears in `changed_paths` even when it is outside the plan, but an unrelated path has no `pre_step3_blob_shas` entry and therefore no safe rejection branch. G28 can diagnose that mismatch only at Step 3 sub-step 8 (`SKILL.md:211`), after rejection already ran at sub-step 6. Separately, a first-loop plan can select a dirty path after the Step-0 check had no plan to compare; that planned path is snapshotted from `HEAD` and then restored to `HEAD` on rejection. The latter path directly erases user work.
 
-**Smallest correction — the preferred branch, which closes both this finding and the next.** Require a clean tracked-and-untracked tree as a Step-0 precondition and state exclusive writership as an *assumed precondition, not a detected property* — without a provenance primitive, a concurrent write is indistinguishable from a loop write, so the register promises no detection. From a clean baseline, every post-Step-3-baseline delta — tracked content change or untracked creation, mechanically enumerated — is loop-owned *by construction*. Every planned delta goes through reviewer input, `changed_paths`, G28, staging, and rollback; any out-of-plan delta puts the run into a **persistent halt** that preserves the file and requires operator disposition. Replay cases: a planned edit, an unplanned loop-side-effect file, a deletion, and a symlink.
+**Smallest correction — the preferred branch, which closes both this finding and the next.** Require a clean tracked-and-untracked tree as a Step-0 precondition and state exclusive writership as an *assumed precondition, not a detected property* — without a provenance primitive, a concurrent write is indistinguishable from a loop write, so the register promises no detection. From a clean baseline, every post-Step-3-baseline delta — tracked content change or untracked creation, mechanically enumerated — is loop-owned *by construction*. Every planned delta goes through reviewer input, `changed_paths`, G28, staging, and rollback; any out-of-plan delta puts the run into a **persistent halt that reuses existing machinery rather than inventing any**: transition to `HALT_STAGNATION` with `halt_subtype: "user_decision"` and a `halt_handoff` whose text names the out-of-plan paths and whose `expected_actions` enumerate the permitted operator dispositions (adopt the file into the plan, delete it, or abort the run). The halt commits the artifact only, leaves `LOOP_STATE.json` in place, and touches none of the preserved files; re-entry must resume from the recorded halt, not replay the interrupted Step-3 sub-step. Replay cases: a planned edit, an unplanned loop-side-effect file, a deletion, a symlink, and one **end-to-end halt-and-resume case** proving restart neither re-applies the interrupted edit nor deletes the preserved file.
 
 **The dirty-tree-support branch is deferred, and deliberately unpriced.** Supporting pre-existing dirt requires distinguishing loop writes from other writes on a tree where both exist — a real provenance primitive (there is none today) — plus a defined, persisted halt/resume state for the fail-closed path. Until the register can name both mechanisms, pricing this branch would be pricing an unknown; Step 0's current allowance for non-overlapping dirt should be withdrawn when the preferred branch ships.
 
@@ -276,7 +276,7 @@ Not one passes a synthetic or malformed canon directory. `_canon.py` has **16 `s
 
 **Consequence.** The module that every validator treats as the single source of truth for enums will exit 2 with a specific diagnostic on every malformed-canon shape it is written to reject, and no test has ever confirmed that any of them fires, or that it names the right file when it does. This is also what makes D1's double-spelled-path hazard invisible: the wrong-file error message it produces would surface only on a path nothing exercises.
 
-**Correction.** `scripts/_canon_selftest.py`, feeding `load_canon` a `tempfile` copy of `canon/` with one file broken per case, asserting exit code 2 **and that the diagnostic names the file that was broken** — the wrong-file hazard from D1 is invisible to an exit-code-only assertion. Keep D1's 21-field canon-equivalence check in the same file. The 11 mutations from D1's proof are the seed, and they cover every *category* — but 11 cases cannot reach all 16 *sites*: the bar is **one case per `sys.exit(2)` site**, so extend the seed with the uncovered ones (canon directory absent entirely — `_canon.py:87`, hit by none of the 11 — plus the remaining inline per-entry sites) until each of the 16 is individually exercised. Seed categories: missing top-level key, key-not-a-list, duplicate gate id, gate entry missing `title`, duplicate scorecard id, scorecard entry missing `display_label`, multi-list file broken, optional file broken, canon file missing, canon file empty, canon file malformed.
+**Correction.** `scripts/_canon_selftest.py`, feeding `load_canon` a `tempfile` copy of `canon/` with one file broken per case, asserting exit code 2 **and that the diagnostic names the file that was broken** — the wrong-file hazard from D1 is invisible to an exit-code-only assertion. Keep the committed 21-field golden-snapshot oracle in the same file (old-vs-new equivalence is D1's one-time port gate, not a lasting test). The 11 mutations from D1's proof are the seed, and they cover every *category* — but 11 cases cannot reach all 16 *sites*: the bar is **one case per `sys.exit(2)` site**, so extend the seed with the uncovered ones (canon directory absent entirely — `_canon.py:87`, hit by none of the 11 — plus the remaining inline per-entry sites) until each of the 16 is individually exercised. Seed categories: missing top-level key, key-not-a-list, duplicate gate id, gate entry missing `title`, duplicate scorecard id, scorecard entry missing `display_label`, multi-list file broken, optional file broken, canon file missing, canon file empty, canon file malformed.
 
 **This is time-sensitive in a way the other items are not.** Those 11 mutations are the only thing that has ever executed those paths, they were written as throwaway session scratchpad scripts, and they are gone when the session ends. Every other item here can be re-derived from the repository at any time; this one has to be re-written from scratch once the harness is lost. It is roughly an hour's work either way — but an hour that has already been spent once.
 
@@ -397,18 +397,18 @@ nothing — the cheaper prices below require the removal to have been **executed
 branches sequence differently:
 
 - **Retain:** repair all seven residual fixtures, keep the v4/v5 G29 prose as drafted, materialize
-  83 histories in ponytail 2. Tier-1 + prerequisites total: ~290k scratchpad-assisted / ~360k
+  83 histories in ponytail 2. Tier-1 + prerequisites total: ~350k scratchpad-assisted / ~420k
   without (optional Tier-2 work such as ponytail 2's ~70k is extra on either branch).
 - **Remove:** execute ponytail 1 (~80k, Tier 2) *before* the residual repair, the G29 prose edit,
   and ponytail 2 — then repair the surviving two fixtures and materialize 63 histories. The Tier-1
-  numbers below are **subtotals**; Tier-1 + prerequisites on this branch is ~350k
-  scratchpad-assisted / ~420k without, because the ~80k removal is a prerequisite, not an option
+  numbers below are **subtotals**; Tier-1 + prerequisites on this branch is ~410k
+  scratchpad-assisted / ~480k without, because the ~80k removal is a prerequisite, not an option
   (optional Tier-2 work such as ponytail 2's ~70k is extra on either branch).
 
 [I1] needs the panel **decision** (it fixes the go-forward version topology, v4-only versus
 v4/v5) but not the removal's execution; either branch may start [I1] as soon as the call is made.
 
-### Tier 1 — cheap and real (~270–290k with this session's scratchpad; ~340–360k without)
+### Tier 1 — cheap and real (~330–350k with this session's scratchpad; ~400–420k without)
 
 Recommended order within the tier. Everything here is independently shippable and closes something
 named in this review. Two prices where they differ: D5 and D1's lower price assumes this session's
@@ -420,27 +420,33 @@ ends are retain-branch high / remove-branch low).
 | --- | --- | --- | --- |
 | 1 | **D5** — `scripts/_canon_selftest.py` | **~25k now, ~75k later** | `_canon_new.py` and the loader driver still exist in this session's scratchpad, and the 11 mutation cases are enumerated above; once the scratchpad is gone the harness is rebuilt from prose. The only item with an expiring discount. Acceptance: one case per each of the **16** `sys.exit(2)` sites (the 11 are the seed), each asserting the diagnostic *names the offending file* — not just exit code 2 — plus the committed 21-field golden snapshot. |
 | 2 | Ponytail 3 — dead-code deletion | ~5k | 14 lines; zero callers already proven twice. |
-| 3 | **D1** — `load_canon` refactor | ~40k now, ~60k later | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Rebuilt from scratch it costs what it cost the first time (~60k). Acceptance: the one-time old/new comparison passes **and the committed golden snapshot is unchanged**. Do D5 first — its golden is D1's regression net. |
-| 4 | **P1** — 9.5-residual enforcement | ~70k retain-branch, ~50k after removal executes | Pure validator change + one negative fixture — but the repair bill is **seven** fixtures, not one (see the finding above); five are `panel-*` and are deleted only when ponytail 1 has actually run, not by the decision itself. Touches no loop-path prose, so no behavioral probe is owed. Still the cheapest P1 on the board. |
-| 5 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. Write the v5 clause to match the panel decision. The enforcement half inherits [I1] and is priced in Tier 2. |
-| 6 | **I3** — `source_rev` + `findings_carried_from_prior_loops` spec | ~20k | One definition decision plus two spec paragraphs. |
-| 7 | Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. Moved out of the run-gated tier — it has no production-run dependency. |
-| 8 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit. If the panel decision leaves removal open, put the shared loader in a neutral `scripts/_selftest_lib.py` rather than extending the panel-named testkit. |
-| 9 | **D4 step 0–1** — adjudicate the four asymmetric checks, then cross-apply | ~50k | Adjudicate each asymmetry against the two study contracts first (shared versus study-specific — baselines cannot answer intent), then add each *shared* check with one synthetic positive and one synthetic negative case, because the advisory side's `_check_replication` is dormant (zero replication blocks) and passes cross-applied checks vacuously. The adjudication record is the deliverable, no unification. |
+| 3 | **P1 ×2** — loop ownership, preferred clean-tree branch | ~60k | Moved up from Tier 2: at this price there is no dependency that justifies deferring the two highest-severity findings — data loss — behind cheaper, lower-severity work. Covers the clean-tree precondition, by-construction ownership, the `HALT_STAGNATION`/`user_decision` persistent halt defined in the finding, and the replay matrix including halt-and-resume. Loop-path prose, so it owes a keyed probe in the next behavioral sweep. Dirty-tree support stays deferred and unpriced. |
+| 4 | **D1** — `load_canon` refactor | ~40k now, ~60k later | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Rebuilt from scratch it costs what it cost the first time (~60k). Acceptance: the one-time old/new comparison passes **and the committed golden snapshot is unchanged**. Do D5 first — its golden is D1's regression net. |
+| 5 | **P1** — 9.5-residual enforcement | ~70k retain-branch, ~50k after removal executes | Pure validator change + one negative fixture — but the repair bill is **seven** fixtures, not one (see the finding above); five are `panel-*` and are deleted only when ponytail 1 has actually run, not by the decision itself. Touches no loop-path prose, so no behavioral probe is owed. Still the cheapest P1 on the board. |
+| 6 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. Write the v5 clause to match the panel decision. The enforcement half inherits [I1] and is priced in Tier 2. |
+| 7 | **I3** — `source_rev` + `findings_carried_from_prior_loops` spec | ~20k | One definition decision plus two spec paragraphs. |
+| 8 | Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. Moved out of the run-gated tier — it has no production-run dependency. |
+| 9 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit. If the panel decision leaves removal open, put the shared loader in a neutral `scripts/_selftest_lib.py` rather than extending the panel-named testkit. |
+| 10 | **D4 step 0–1** — adjudicate the four asymmetric checks, then cross-apply | ~50k | Adjudicate each asymmetry against the two study contracts first (shared versus study-specific — baselines cannot answer intent), then add each *shared* check with one synthetic positive and one synthetic negative case, because the advisory side's `_check_replication` is dormant (zero replication blocks) and passes cross-applied checks vacuously. The adjudication record is the deliverable, no unification. |
 
 [I2] left this tier: the spec already fixes the `rounds` value set, and required-value enforcement
 retro-invalidates the null-emitting production artifacts — it is now priced after [I1] in Tier 2.
 
 ### Tier 2 — medium engineering (80k–300k)
 
+A caveat that applies to every validator flip below (independence, transitions, G29): each
+enforces in `validate-artifact.py`, which this register measures the production loop **never
+invokes** — so each flip closes its finding *at the validator only*. Live-path closure arrives
+with Tier 3 (or another guaranteed host check), and no P1/P2 should be marked fully closed on a
+validator flip alone.
+
 | Item | Est. | Notes |
 | --- | --- | --- |
 | **[I1]** — version/ruleset scoping fix | **~120k** | The highest-leverage single item on the board: it unblocks the independence flip, the transitions flip, [I2], G29 enforcement, and is prerequisite #1 of the loop-path hook. Its named deliverable is **one authoritative ruleset-epoch classifier plus compatibility matrix** that all of those consume — G43/G46 scoping is the first client, not the product. The design pattern already exists in-repo (v2→v3 bumped *and* default-filled); the work is the decision, the migration table, and the classifier. |
-| P1 — independence enforcement | ~50k after I1 | Small once scoping exists; blocked until then. |
+| P1 — independence enforcement (validator side) | ~50k after I1 | Small once scoping exists; blocked until then. The P1 itself closes only when the **live promotion route** refuses a terminal candidate with missing or inline reviewer/challenger isolation — that half is Tier-3-gated. |
 | P2 — transitions `REPORT_ONLY` flip | ~20k after I1 | Plus one decision: the disposition of the dogfood artifact's real `HALT_LOOP_CAP→CONTINUE` at loop 10→11. |
 | [I2] — `rounds` membership check | ~15k after I1 | Required exact-int `{1, 2}` on current-ruleset emits (`bool` excluded), null only on scoped older artifacts; the conditional-coupling clause stays an open residual. Waits on scoping because both production artifacts emitted `null`. |
 | P2 — G29 emission-version enforcement | ~20k after I1 | The other half of the Tier-1 prose fix; without it the P2 stays half-closed. Acceptance: a new emit's declared version must **equal** the capability-derived current version — every stale version (v1/v2/v3), missing, and null all fail strict; scoped older history stays readable. The alternative closure — stop calling G29 a hard gate — is a decision, not code; pick one. |
-| P1 ×2 — loop ownership (dirty-tree + untracked, shared remedy) | ~40k preferred branch; dirty support deferred, unpriced | The preferred clean-tree branch (precondition + by-construction ownership + persistent halt on out-of-plan deltas) closes both P1s and is mostly prose plus replay cases. Dirty-tree support is deferred until a provenance primitive and a persisted halt/resume state exist — pricing it now would price an unknown. Loop-path prose changes owe a keyed probe in the next behavioral sweep. |
 | P2 — aspirational-fixture repair | ~100k | Sub-rule label normalization first, then per-fixture completion; fiddly rather than hard. |
 | Ponytail 2 — fixture-history materialization | ~70k | Harness change is small; the rewrite is scriptable across 63 histories (remove branch) or 83 (retain branch — the −9,400-line figure is the remove branch's). Sequenced after the panel branch is executed. |
 | Ponytail 1 — panel-stack removal | ~80k, **owner call first** | Executing the deletion is mechanical; the decision to reverse a shipped-then-parked feature is not a reviewer's to make. |
@@ -474,7 +480,7 @@ deliberate project, not something to pick up alongside other work.
 | Item | Price | Notes |
 | --- | --- | --- |
 | **Next production run, instrumented** | 1 run (~20M+ context) | The best buy in this tier: **two guaranteed advances and up to two conditional ones**. Guaranteed: the *after* arm of the audit's end-to-end cost measurement (the *before* arm must come from the audit's recorded pre-lever transcripts, whose comparability — same target, same scope — must be verified before any before/after claim; if none is comparable, this becomes the first of two matched runs), and the `--scope` probe (P1). Conditional: one G17 promotion datapoint only if the run contains an applicable deepening loop *and* it is human-adjudicated (predeclare language and applicability first), and G43's live behavior only if a dimension answers `clean` three loops running (loop 4+). The next natural use of the skill should be this measurement — a run bought for any one of these alone pays the same price for a fraction of the value. |
-| G17 `REPORT_ONLY` flip | ~30k session, gated on runs | The bar stands at roughly 1/5 applicable runs, one language, zero adjudications. Session cost is trivial; the data is the cost. |
+| G17 `REPORT_ONLY` flip | ~30k session, gated on runs | The bar stands at **0/5 qualifying runs** — one candidate datapoint (BenchHype loop 2, Swift) exists but counts only after human adjudication. Session cost is trivial; the data is the cost. |
 | Lever F +5 reps/arm | moderate (order 1M context) | Settles the −20.2 % cost claim; the quality half needs no more data. |
 | A/A noise-floor run | moderate, **low yield at current n** | Required before *any* Tranche-3 lift claim, but `required_n = 778` discordant pairs means the honest outcome now is `inconclusive`. Run it when a Tranche-3 claim actually matters, not before. |
 | Backlog 5, 6, 11, 15, 23, 27 | multi-run or gated | Experiments (5 is ≥4 arms × reps at run scale) or blocked on decisions/pilots named in the backlog table. Parked. |
@@ -496,16 +502,18 @@ deliberate project, not something to pick up alongside other work.
 
 The panel decision costs nothing and re-sequences four items — take it first, remembering that
 the cheaper branch prices require the removal to be executed, not merely chosen. Tier 1 in order:
-~270–290k (scratchpad-assisted; ~340–360k without) closes one P1 outright, the canon test gap, the
-dead code, two spec ambiguities, and the audit's last unreviewed revision, and banks the
-already-proven D1 — the densest value on the list, led by the one item whose price triples when
+~330–350k (scratchpad-assisted; ~400–420k without) closes **three P1s outright** — the two
+data-loss ownership findings and the 9.5-residual hole — plus the canon test gap, the dead code,
+two spec ambiguities, and the audit's last unreviewed revision, and banks the already-proven D1 — the densest value on the list, led by the one item whose price triples when
 the session ends. The single most leveraged spend after that is **[I1] at ~120k**, which unblocks
 four items — the independence flip (~50k), the transitions flip (~20k), the [I2] membership check
 (~15k), and G29 enforcement (~20k) — ~105k of Tier-1-grade work. The loop-path P2 — this review's
 most consequential finding — cannot be bought for less than the Tier-3 project, and no cheaper
-route remains untried; treat it as its own funded effort, starting with its design document. Spend
-nothing on the run-gated tier until the skill's next natural production use, then instrument that
-run to advance all four measurements at once.
+route remains untried; its validator side is estimated at ~250–400k while **total closure cost
+stays unknown until the hook go/no-go passes**. Treat it as its own funded effort, starting with
+the feasibility gate. Spend nothing on the run-gated tier until the skill's next natural
+production use, then instrument that run to collect its two guaranteed advances and up to two
+conditional ones.
 
 
 ## Priority summary
