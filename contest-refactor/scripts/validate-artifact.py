@@ -47,6 +47,7 @@ from _artifact_core import (  # noqa: E402
     check_required_artifacts,
     check_schema_enums,
 )
+from _artifact_coverage_citation import check_g17_coverage_citation  # noqa: E402
 from _artifact_credentials import check_g44_credential_quarantine  # noqa: E402
 from _artifact_halt import (  # noqa: E402
     check_g21_scorecard,
@@ -158,6 +159,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g45_exhaustion_record(current_review, canon))
     issues.extend(check_g46_general_remediation_fields(current_review, canon))
+    issues.extend(check_g17_coverage_citation(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
     issues.extend(check_g41_cap_loop_executed(current_review))

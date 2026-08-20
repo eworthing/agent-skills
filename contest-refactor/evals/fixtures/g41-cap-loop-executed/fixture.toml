@@ -17,3 +17,7 @@ id = "G34"
 [[tested_rules]]
 kind = "canon-enum"
 id = "HALT_LOOP_CAP"
+
+[[tested_rules]]
+kind = "gate"
+id = "G17"

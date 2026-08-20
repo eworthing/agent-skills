@@ -127,6 +127,35 @@ P1 (`--scope`) is untested here — the invocation did not pass it. P2 and P3 ar
 run is at loop 1 / `CONTINUE` and has not reached a terminal handoff.
 
 
+### Report-only promotion bar — G17 (added 2026-08-20)
+
+`G17` (indirect coverage citation) shipped mechanized and **report-only** at
+`_artifact_coverage_citation.py`. Report-only is permanent by default unless the bar for
+flipping it is written down in advance — which is exactly what happened to item 12's
+transition table, dormant from the day it shipped until a live run exercised it this week.
+
+G17 flips `REPORT_ONLY = False` only on **all** of:
+
+| requirement | why this and not something cheaper |
+|---|---|
+| **≥5 applicable runs** — loops whose `what_changed` actually matched a canonical keyword | terminal loops that never trigger G17 say nothing about G17; counting them would graduate a dormant check |
+| **≥1 observed true violation** | a gate that has never fired has never been shown to work |
+| **≥2 restraint cases** — a triggering loop that *did* change a test file and was correctly silent | the failure mode is a false positive on a loop that met its obligation |
+| **≥2 languages** among the above | the classifier is the risky part, and it is language-shaped |
+| **zero blind lines**, **zero false positives** | a blind line means the evidence could not be read; that is not a pass |
+| each diagnostic **adjudicated by a human** and recorded here | the check's own output cannot certify the check |
+
+**Fixtures do not count.** `evals/fixtures/g41-cap-loop-executed` (C#) exercises the violation
+path and the selftest covers Swift/Python/TypeScript path shapes, but those are authored inputs,
+not observations. They are pre-promotion test coverage; every row above needs real runs.
+
+First datapoint, from the run that motivated the gate: BenchHype loop 2 —
+`what_changed` "…the three persist* arms **collapsed** to one-liner wrappers…",
+`changed_paths` a single non-test Swift file, `interface_test_coverage_path: null`. **1 applicable
+run, 1 true violation, 0 restraint cases, 0 languages beyond Swift.** Not adjudicated by hand yet,
+because it was found by reading the artifact rather than by the gate running.
+
+
 ## Closed run — paired-arm recall measurement (sweep #3)
 
 Opened 2026-08-18, **closed 2026-08-19**. A third distinct kind: not a with/without-**change** probe
