@@ -363,7 +363,97 @@ Still open, carried here:
 - **Lever A (carving the 11 audited-clean gates' prose) is default-no** — three review rounds shrank its value (10,475 → 6,249 tok) while growing its prerequisites (clause-level coverage matrix with negative fixtures, the five-phase validator above, a pre-registered behavioral experiment across ten loop shapes). Revisit only if the real-run measurement shows the shipped work fell short.
 - **Loop-count distribution unmeasured** (10 is a cap, not a mean; 15-loop runs appear in gate rationales), and **rev 3 was never re-reviewed** (round 3 returned REVISE; rev 3 adopted all of it; no round 4 confirmed).
 
+## Token-cost estimates and work order
+
+**Added 2026-08-20 at the owner's request**, so the open items can be sequenced by cost against the
+standing budget rule (significant improvements, or improvements that cost very little). **Method.**
+"Session tokens" prices the full read–implement–validate–commit cycle, calibrated against observed
+work in this repo: the D1 prototype plus its equivalence/mutation proof cost roughly 60k in-session;
+a shipped gate with selftest and fixtures has historically run 100–200k; one codex peer-review round
+is ~30k. Bands are honest to about ±2×. Items whose real price is **production runs** are priced in
+runs, not session tokens: the runtime-cost audit's measured model puts one BenchHype-scale run at
+~20M+ resident context tokens (~241 messages × ~84k per-loop reload, 93.9 % cached), and sweep #3's
+arm dispatch alone was 27.9M. A run costs three orders of magnitude more than any session item below
+— which is why run-gated items sort last regardless of their small session cost, and why the one run
+that feeds several measurements at once is the only good buy in that tier.
+
+### Tier 1 — cheap and real (≤60k each; ~250k for the lot)
+
+Recommended order within the tier. Everything here is independently shippable and closes something
+named in this review.
+
+| # | Item | Est. | Why this price |
+| --- | --- | --- | --- |
+| 1 | **D5** — `scripts/_canon_selftest.py` | **~25k now, ~3× later** | `_canon_new.py` and the loader driver still exist in this session's scratchpad, and the 11 mutation cases are enumerated above; once the scratchpad is gone the harness is rebuilt from prose. The only item with an expiring discount. |
+| 2 | Ponytail 3 — dead-code deletion | ~5k | 14 lines; zero callers already proven twice. |
+| 3 | **D1** — `load_canon` refactor | ~40k | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Do D5 first — its selftest is D1's regression net. |
+| 4 | **P1** — 9.5-residual enforcement | ~50k | Pure validator change + repair one fixture + one negative fixture; touches no loop-path prose, so no behavioral probe is owed. Closes a full P1 — the cheapest P1 on the board. |
+| 5 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. The enforcement half inherits [I1] and is priced in Tier 2. |
+| 6 | **I3** — `source_rev` + `findings_carried_from_prior_loops` spec | ~20k | One definition decision plus two spec paragraphs. |
+| 7 | **I2** — `rounds` decision + check | ~15k | One owner decision (any int vs `{1,2}`), then a trivial type check. |
+| 8 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit against the existing `_g32_panel_testkit.py` precedent. |
+| 9 | **D4 step 1** — cross-apply the four asymmetric checks | ~40k | One check at a time against frozen baselines; the pass/fail observation is the deliverable, no unification. |
+
+### Tier 2 — medium engineering (80k–300k)
+
+| Item | Est. | Notes |
+| --- | --- | --- |
+| **[I1]** — version/ruleset scoping fix | **~120k** | The highest-leverage single item on the board: it unblocks the independence flip, the transitions flip, and is prerequisite #1 of the loop-path hook. The design pattern already exists in-repo (v2→v3 bumped *and* default-filled); the work is the decision, the migration table, and scoping G43/G46. |
+| P1 — independence enforcement | ~50k after I1 | Small once scoping exists; blocked until then. |
+| P2 — transitions `REPORT_ONLY` flip | ~20k after I1 | Plus one decision: the disposition of the dogfood artifact's real `HALT_LOOP_CAP→CONTINUE` at loop 10→11. |
+| P1 ×2 — loop-owned path set (dirty-tree + untracked, shared remedy) | ~120k combined | The two P1s share one correction; doing them together amortizes it. Loop-path prose changes, so this owes a keyed probe in the next behavioral sweep. |
+| P2 — aspirational-fixture repair | ~100k | Sub-rule label normalization first, then per-fixture completion; fiddly rather than hard. |
+| Ponytail 2 — fixture-history materialization | ~70k | Harness change is small; the 63-fixture rewrite is scriptable. −9,400 lines. |
+| Ponytail 1 — panel-stack removal | ~80k, **owner call first** | Executing the deletion is mechanical; the decision to reverse a shipped-then-parked feature is not a reviewer's to make. |
+| Backlog 8 — strictness post-filter | ~80k | RFC exists; implementation unstarted. |
+| **D3** — gate-driver factoring | ~30k, deferred by design | Priced for when the next gate is written; doing it now designs against a guessed caller. |
+
+### Tier 3 — the big build
+
+**Five-phase validator + host hook** (the loop-path P2's only untried remedy): **~250–400k**, strictly
+after [I1]. Phase-aware gate sets, commit-draft input, per-phase selftests, plus the hook itself.
+The most expensive engineering item here — and the one that makes the 27 already-mechanized gates
+actually execute. Price it as a deliberate project, not something to pick up alongside other work.
+
+### Run-gated — priced in production runs, not session work
+
+| Item | Price | Notes |
+| --- | --- | --- |
+| **Next production run, instrumented** | 1 run (~20M+ context) | The best buy in this tier because it settles four open items at once: it *is* the audit's end-to-end before/after measurement, supplies a G17 promotion datapoint, finally exercises the `--scope` probe (P1), and has a chance at G43's loop-4+ trigger. The next natural use of the skill should be this measurement — a run bought for any one of those four alone pays the same price for a quarter of the value. |
+| G17 `REPORT_ONLY` flip | ~30k session, gated on runs | The bar stands at roughly 1/5 applicable runs, one language, zero adjudications. Session cost is trivial; the data is the cost. |
+| Lever F +5 reps/arm | moderate (order 1M context) | Settles the −20.2 % cost claim; the quality half needs no more data. |
+| A/A noise-floor run | moderate, **low yield at current n** | Required before *any* Tranche-3 lift claim, but `required_n = 778` discordant pairs means the honest outcome now is `inconclusive`. Run it when a Tranche-3 claim actually matters, not before. |
+| Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. |
+| Backlog 5, 6, 11, 15, 23, 27 | multi-run or gated | Experiments (5 is ≥4 arms × reps at run scale) or blocked on decisions/pilots named in the backlog table. Parked. |
+
+### Declined by default — recorded so the price stays visible
+
+- **Lever A** (carving audited-clean gate prose): prerequisites (clause-level coverage matrix,
+  the Tier-3 validator, a pre-registered ten-shape experiment) cost multiples of the 6,249 tok/loop
+  payoff. Stays default-no unless the instrumented run shows the shipped levers fell short.
+- **Backlog 13** (`skip_when` stage skipping): ~40k to build, but the audit's measured cost model
+  puts structural trims on the weak axis; weigh against behavioral levers first.
+- **[I4]** (grading-spend recording): ~20k, worth nothing until the next paired study exists — fold
+  it into that study's preregistration rather than shipping it cold.
+- **Builds 14 / 24 / 25** (host attestation, coverage manifest, tool substrate): ~150–400k each.
+  Designs are done and kept; these are feature investments, not defect work, and should be chosen
+  deliberately, not picked from this list by cost.
+
+### Reading of the board
+
+Tier 1 in order: ~250k closes one P1 outright, the canon test gap, the dead code, three spec
+ambiguities, and banks the already-proven D1 — the densest value on the list, led by the one item
+whose price triples when the session ends. The single most leveraged spend after that is **[I1] at
+~120k**, which converts three blocked flips into ~90k of Tier-1-grade work. The loop-path P2 — this
+review's most consequential finding — cannot be bought for less than the Tier-3 project, and no
+cheaper route remains untried; treat it as its own funded effort. Spend nothing on the run-gated
+tier until the skill's next natural production use, then instrument that run to collect all four
+measurements at once.
+
+
 ## Priority summary
+
+Per-item token-cost estimates and the recommended sequence are in *Token-cost estimates and work order* above; this list is severity order, not work order.
 
 - **P1:** pre-existing dirty edits can be mistaken for loop-owned paths and overwritten on rejection.
 - **P1:** untracked files can bypass both implementation review and rollback.
