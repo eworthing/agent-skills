@@ -1,6 +1,7 @@
 # Gap Register — contest-refactor competitive analysis, consolidated
 
-**Created 2026-08-20** by consolidating this directory from 44 files (~9,700 lines) to 5.
+**Created 2026-08-20** by consolidating this directory from 44 files (~9,700 lines) to 5,
+then to 4 the same day when the runtime-cost audit was consolidated into the code review.
 Every retired file was validated against HEAD before retirement; each row below records the
 06-28 audit verdict and the disposition re-checked 2026-08-20. **Full text of every retired
 file is in git history** (`git log --follow -- analysis/contest-refactor/<name>` and
@@ -9,10 +10,9 @@ resolvable the same way. Gate numbers **G37+** inside the retired corpus are UNB
 proposals from May — they are not the G37–G46 that later shipped with the same numbers.
 
 **Surviving files:** this register, `ITEM14-HOST-ATTESTATION-DESIGN-2026-08-18.md` (design
-done, unbuilt — backlog row 14), `ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md` (row 24),
-`ITEM25-TOOL-SUBSTRATE-2026-08-19.md` (row 25), `RUNTIME-COST-AUDIT-2026-08-14.md` (open
-audit; the loop-path P2 finding in `docs/contest-refactor-code-review-2026-08-20.md` is its
-sharpest consequence).
+done, unbuilt — backlog row 14), `ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md` (row 24), and
+`ITEM25-TOOL-SUBSTRATE-2026-08-19.md` (row 25). The three design docs retire here when
+their rows ship or are declined.
 
 ## Competitor corpus (was `INVENTORY.md`, `SOURCE-STATUS.md`)
 
@@ -73,6 +73,7 @@ generic senior-engineer prompts.
 | `ITEM3-HARD-RULE-PROPAGATION-2026-08-19.md` | Verified shipped; the enumerated-sites residual is recorded in the code review's inherited section |
 | `ITEM26-EVIDENCE-ANCHORING-2026-08-19.md` | Measured 2026-08-19 → not warranted |
 | `ITEM28-REMEDIATION-INVENTORY-2026-08-18.md` | Executed; G46 + `repair_revalidation` shipped, sweep-#2 validated (typed field's marginal value = machine-readability) |
+| `RUNTIME-COST-AUDIT-2026-08-14.md` (rev 3) | Consolidated 2026-08-20 into the code review (§ *Carried from the runtime-cost audit*). Shipped levers re-verified at HEAD (canon-derived gate range + freshness pin, Lever-E provenance carve, Lever-D budget guard, Lever-F reading discipline); killed/withdrawn negatives recorded there so they stay dead (Lever B <0.1 %, Lever C, prose-trim non-causes); open items carried (end-to-end before/after run, Lever-F cost power, G43 re-baseline, Lever-A default-no + five-phase-validator prerequisite) |
 
 ## Open ADOPT calls carried from `CLAIM-DELTA-2026-08-17.md`
 
