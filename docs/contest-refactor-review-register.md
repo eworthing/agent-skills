@@ -7,6 +7,7 @@ absorbed the retired deep-dive backlog, behavioral-validation ledger, June resea
 runtime-cost audit.
 
 **Review date:** 2026-08-20
+**Peer-reviewed:** codex `gpt-5.6-sol` (xhigh), 11 rounds, 2026-08-20 — rounds 1–10 returned REVISE with 60 findings total, every finding verified against the repo before adoption and all 60 adopted; round 11 **APPROVED** with zero findings. Revisions are commits `a88da54`…`c5debd4`.
 **Scope:** `/Users/Shared/git/agent-skills/contest-refactor`
 **Review passes:** 2 code-review passes + 1 ponytail whole-skill audit + 1 duplication/clarity pass + 1 full revalidation + 1 cross-doc merge (deep-dive backlog, behavioral ledger, June research doc)
 **Revalidated:** 2026-08-20 against HEAD `cc3057b`. All five P1 and four P2 findings re-confirmed: every citation re-checked and all five reproductions re-run against the current tree (the two synthetic ones rebuilt from scratch). No finding overturned. Two findings' subject matter moved in the interim without resolving them — `a9ad8f3`/`e3f5aa8` added `challenger_isolation`/`reviewer_isolation` *recording* while the independence check stayed report-only, and `a9ad8f3` deleted the dead `validate-artifact.py` instruction the loop-path finding discusses. A dozen metrology corrections (counts and line spans) are folded in below; none changes a conclusion.
