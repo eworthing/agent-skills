@@ -2,9 +2,9 @@
 
 **Date:** 2026-08-20
 **Scope:** `/Users/Shared/git/agent-skills/contest-refactor`
-**Review passes:** 2 code-review passes + 1 ponytail whole-skill audit + 1 duplication/clarity pass + 1 full revalidation
+**Review passes:** 2 code-review passes + 1 ponytail whole-skill audit + 1 duplication/clarity pass + 1 full revalidation + 1 cross-doc merge (deep-dive backlog, behavioral ledger, June research doc)
 **Revalidated:** 2026-08-20 against HEAD `cc3057b`. All five P1 and four P2 findings re-confirmed: every citation re-checked and all five reproductions re-run against the current tree (the two synthetic ones rebuilt from scratch). No finding overturned. Two findings' subject matter moved in the interim without resolving them — `a9ad8f3`/`e3f5aa8` added `challenger_isolation`/`reviewer_isolation` *recording* while the independence check stayed report-only, and `a9ad8f3` deleted the dead `validate-artifact.py` instruction the loop-path finding discusses. A dozen metrology corrections (counts and line spans) are folded in below; none changes a conclusion.
-**Verdict:** **Request changes.** Five P1 execution/certification gaps and four P2 contract/test-oracle gaps remain. The second pass confirmed all six original findings, strengthened the dirty-tree finding, corrected two proposed remedies, and added two report-only hard-gate findings. The separate ponytail pass found two material simplification cuts and one exact dead-code cleanup. A third pass, run with the skill's own advisory audit tools pointed at the skill, added one P2 contract finding, four behaviour-preserving duplication cuts, and one test-coverage gap.
+**Verdict:** **Request changes.** Five P1 execution/certification gaps and four P2 contract/test-oracle gaps remain. The second pass confirmed all six original findings, strengthened the dirty-tree finding, corrected two proposed remedies, and added two report-only hard-gate findings. The separate ponytail pass found two material simplification cuts and one exact dead-code cleanup. A third pass, run with the skill's own advisory audit tools pointed at the skill, added one P2 contract finding, four behaviour-preserving duplication cuts, and one test-coverage gap. A cross-doc merge validated the still-open findings from the deep-dive backlog, the behavioral ledger, and the June research doc, adding one P2-class compatibility defect ([I1], live on the repo's own artifact) and three smaller gaps ([I2]–[I4]).
 
 ## Coverage
 
@@ -124,7 +124,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 **Source.** The transition validator prints violations but deliberately returns no issues while `REPORT_ONLY = True` (`scripts/_artifact_transitions.py:23-30,55` and `scripts/_artifact_transitions.py:117-136`). The dedicated `transition-illegal-post-cap-continue` fixture declares `expected_result = "pass"` even though it contains `HALT_LOOP_CAP -> CONTINUE` without a reset (`evals/fixtures/transition-illegal-post-cap-continue/fixture.toml:1-7`).
 
-**Consequence.** `validate-artifact.py --mode strict` exits zero for history that continues past a terminal state. Automation can therefore accept a run whose state history contradicts the canonical transition table.
+**Consequence.** `validate-artifact.py --mode strict` exits zero for history that continues past a terminal state. Automation can therefore accept a run whose state history contradicts the canonical transition table. This is not hypothetical: the repo's own dogfood artifact trips the same checker with `HALT_LOOP_CAP→CONTINUE` at loop 10→11 (see [I1]).
 
 **Smallest correction.** Finish the existing shadow rollout: set `REPORT_ONLY = False`, change the illegal-transition fixture to an expected failure, and keep the existing transition-table self-test as the restraint check for legal histories.
 
@@ -138,7 +138,7 @@ A second-order effect compounds it. Registering `G<n>` obliges a `validation.md`
 
 **This is measured, not inferred.** `docs/behavioral-validation-ledger.md` sweep #4 recorded it directly: across ~6 Step-3 passes over two production runs, in both inline and subagent isolation, the loop never ran `validate-artifact.py` (P2, **0/2**), while output-shaping prose was followed (P3, **2/2**). Run by hand against the same artifact the validator reported 15 WARNs mid-run and a real G17 violation at terminal. Corroboration: asked for concerns about its own run, the loop's provider hand-audited the artifact and produced 12 findings, **5 of which are defects `validate-artifact.py` already implements**.
 
-**Smallest correction.** Invoke the validator outside the model's discretion — a host hook or a wrapper around the commit step — not a prose instruction. Adding "run `validate-artifact.py`" to the checklist is the obvious fix and is **already measured dead**: that instruction shipped 2026-08-19 (`ee21bc8`, the "Mechanical sweep" bullet in `validation.md`), fired 0/6 across two production runs, and was deleted 2026-08-20 (`a9ad8f3`) at a measured 64 tokens per loop. The full prose-instruction lifecycle — added, measured never firing, withdrawn — ran to completion in under 40 hours, between this review's first pass and its revalidation; the host-hook route is now the only one not yet tried. The ledger's own conclusion stands: *enforcement cannot be reached through an instruction that never executes.* Only once invocation is guaranteed does compressing the bullets it subsumes become safe; until then `validation.md` must keep carrying all 46.
+**Smallest correction.** Invoke the validator outside the model's discretion — a host hook or a wrapper around the commit step — not a prose instruction. Adding "run `validate-artifact.py`" to the checklist is the obvious fix and is **already measured dead**: that instruction shipped 2026-08-19 (`ee21bc8`, the "Mechanical sweep" bullet in `validation.md`), fired 0/6 across two production runs, and was deleted 2026-08-20 (`a9ad8f3`) at a measured 64 tokens per loop. The full prose-instruction lifecycle — added, measured never firing, withdrawn — ran to completion in under 40 hours, between this review's first pass and its revalidation; the host-hook route is now the only one not yet tried. The ledger's own conclusion stands: *enforcement cannot be reached through an instruction that never executes.* Only once invocation is guaranteed does compressing the bullets it subsumes become safe; until then `validation.md` must keep carrying all 46. One prerequisite before any hook ships: the retroactive-invalidation gap in [I1] — a hook that runs strict validation inherits the false failures on every pre-existing artifact.
 
 ## Ponytail over-engineering audit
 
@@ -293,6 +293,37 @@ Static analysis over-rates severity, so the calibration matters as much as the f
 Each step is independently shippable and revertable. 1) The dead-code deletion in ponytail item 3 above — minutes, zero risk. 2) **D1**, with `scripts/_canon_selftest.py` carrying the equivalence and mutation tests; highest value, and the proof already exists. 3) **D2**, extending the `_g32_panel_testkit.py` precedent. 4) **D3**, when the next gate is written. 5) **D4 step 1** only — cross-apply the four asymmetric checks and record which were omissions; do not unify yet. **D5 is not in this order**: it is independent of D1 and should be written while the mutation set that proves it still exists. Steps 1–3 are ~260 lines and behaviour-preserving; step 5 is the one that might find something real.
 
 
+## Findings inherited from the deep-dive backlog, the behavioral ledger, and the June research doc
+
+**Boundary.** A merge pass over `docs/review-skill-deep-dive-2026-08-17.md` (35-row backlog), `docs/behavioral-validation-ledger.md`, and `temp/contest-refactor_research.md` (2026-06-24), keeping only findings that are (a) defect-shaped, (b) still open at HEAD, and (c) not already covered above. Most of both documents dedups away: sweep #4's P2/P3 measurements are the evidence base of the loop-path P2 above; the G17 promotion bar is cross-referenced there; backlog item 12 became the transitions P2; rows 31/32 shipped the morning of this review (`a9ad8f3`/`e3f5aa8`); rows 1–4, 14, 16–22, 24–26, 29 are shipped, designed, measured-and-declined, or parked with recorded evidence.
+
+### [I1] G43/G46 added required v4 fields with no version bump — the repo's own artifact now fails strict validation (backlog row 30)
+
+**Re-validated at HEAD.** The repo's own dogfood artifact (`CURRENT_REVIEW.json`, loop 15, `HALT_LOOP_CAP`, committed 2026-08-05, `schema_version: 4`) fails `validate-artifact.py --mode strict` with **10 issues**: 3 × G46 (`finding_family`/`effort`/`repair_revalidation` required; gate landed 2026-08-18) and 7 × G43 (convergence-pass records owed; landed 2026-08-06). Both gates added required v4 fields without a bump or default-fill — the pattern `output-format-migrations.md` itself forbids by example (v2→v3 bumped *and* shipped a default-fill table). `skill_rev`, the field designed to scope rules to rulesets, is **null on this artifact**, so ruleset-scoping has no signal for existing history. The correct pattern ships one gate over: G19 is deliberately type-only, and this week's isolation fields used optional-with-shape-gating for exactly this reason.
+
+**This blocks the loop-path P2's remedy.** `validate-artifact.py` cannot safely be wired into the loop or run over `REVIEW_HISTORY.json` until an old artifact can be judged by the rules in force when it was emitted — enforcement-by-hook inherits this problem on any repo with pre-existing artifacts.
+
+**Corroboration found during this validation, free of charge:** the same artifact also trips the report-only transition checker — `[transition-violation HALT_LOOP_CAP→CONTINUE loop=10->11]` — so the illegal-transition P2 above now has a real-data instance in the repo's own history, not just a fixture.
+
+### [I2] `implementation_review.rounds` is specified and never read (backlog row 33)
+
+`output-format-json.md:440` specifies `rounds` as an int counting reviewer invocations; `grep '"rounds"' scripts/` returns zero, and both BenchHype production loops emitted `null` unchallenged. Blocked on a decision (any int? `{1,2}`? coupled to conditional re-spawn?), not on effort.
+
+### [I3] `source_rev` is ambiguous mid-loop, and `findings_carried_from_prior_loops` is emitted but specified nowhere (backlog row 34)
+
+Re-verified: `source_rev` is defined twice as "HEAD sha of the analyzed source tree at emit time" (`output-format-json.md:126,193`) — *analyzed source* and *at emit time* diverge when Step 3 commits mid-loop, and two consecutive production loops read it differently. `findings_carried_from_prior_loops[]` is emitted by real runs and appears in zero reference files.
+
+### [I4] The paired-arm harness does not record grading spend, against the ledger's own rule
+
+Sweep #3 recorded arm dispatch per pair (27.9M context tokens) but grading spend for rungs 2–4 was never committed per call, so the study's total is not reconstructible — with grading projected at ~57 % of cost, **the majority of the sweep's spend is unmeasured**. `paired_arm_record_grades.py` still records no usage at HEAD. Companion observations from the same closed run, recorded in the ledger and still open: four arithmetically impossible usage records (classified incomplete-usage, arm-balanced), grader agreement of 1/58 on assertions but 1/14 on tiers (the fragility is the tier roll-up rule), and 7+ graders independently inventing the same unschema'd `outside_spec` field (a spec gap deferred to the next preregistration by design).
+
+### Adjudicated, recorded here so the disposition is findable
+
+- **Row 35, `repair_revalidation` unknown keys** — accepted debt with a written reopening trigger (unknown keys shown to *mislead audit interpretation*); deliberately not re-flagged.
+- **Row 3 residual** — both dispatch-boundary selftests *enumerate* their sites (4 G14, 3 redaction), so a fifth boundary would carry neither hard rule and fail no test. Recorded closure: a discovery tripwire on prompt-bearing files when the next boundary is added.
+- **Ledger, phantom-signal generalization** — the bare-model-id class got its class guard (`b2b96ef`); the phantom-detection-signal class (`OPENCODE_SESSION`, an env var opencode never set, degrading silently into a gate-approved fallback) has no equivalent guard yet.
+- **The June research doc's program is almost fully adjudicated by later work:** change-coupling shipped as candidate evidence (`audit_cochange.py`), the context-sufficiency cap shipped as prose (measured: over-claim 2/5 → 0/5), the domain-integrity lens was parked on a measured recall lift of 0 (bare rubric 6/6), expert panels shipped as the v5 certification stack and are parked (ponytail item 1 above), and benchmark-first became the principal corpus plus the paired-arm study (Decision 3: retargeting not licensed). Two requirements were **never built and never formally adjudicated**: the Serious+ grounded `change_scenario` requirement and the minimal `tradeoff_analysis` requirement — `git log -S` shows no commit ever introduced either field. Given the judgment-lever program's measured zero recall lift, non-adoption is evidence-consistent; it is recorded here so it reads as a decision rather than an omission.
+
 ## Priority summary
 
 - **P1:** pre-existing dirty edits can be mistaken for loop-owned paths and overwritten on rejection.
@@ -304,6 +335,8 @@ Each step is independently shippable and revertable. 1) The dead-code deletion i
 - **P2:** eight fixtures can pass for the wrong reason.
 - **P2:** illegal terminal transitions are report-only.
 - **P2:** the loop is instructed to run hard gates but never to run the module implementing 27 of them; measured 0/2 in production.
+- **P2 (inherited, [I1]):** G43/G46 required fields with no version bump retroactively invalidate committed artifacts — the repo's own loop-15 artifact fails strict with 10 issues, and this blocks wiring the validator into the loop.
+- **Inherited, smaller ([I2]–[I4]):** `rounds` specified but read by nothing; `source_rev` ambiguous mid-loop and `findings_carried_from_prior_loops` specified nowhere; paired-arm grading spend unrecorded (majority of sweep #3's cost unmeasured).
 - **Test gap:** `_canon.py` is the enum single-source-of-truth for every validator; its 16 `sys.exit(2)` paths are unreachable from the 62-selftest suite because all 29 call sites pass the real canon.
 - **Simplification (behaviour-preserving):** `load_canon` repeats one idiom 20× with ten double-spelled paths (−91 lines, proven equivalent); `_load_validator` is copy-pasted into 14 files; the G39–G42 selftest driver is duplicated and its vacuity guards are already 3-of-4; `_check_replication` is duplicated across two baseline selftests and has diverged by four checks.
 
