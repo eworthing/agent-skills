@@ -86,6 +86,24 @@ def main() -> int:
             "and a bare id is not a valid model"
         )
 
+    # codex hard-errors (exit 2) on unknown flags, unlike opencode which ignores them.
+    # So every documented codex spawn command failed outright and fell back to inline --
+    # the same lost-challenger outcome as the opencode bug, by a different mechanism.
+    # Verified against codex-cli 0.147.0: --no-ask-user, --output-format and --deny-tool
+    # do not exist; --json and --sandbox {read-only|workspace-write|danger-full-access} do.
+    for phantom in ("--no-ask-user", "--deny-tool", "--output-format json"):
+        if phantom in adapters:
+            failures.append(
+                f"provider-adapters.md prescribes {phantom!r} again -- codex exits 2 on it, so "
+                f"the spawn fails and the run silently degrades to inline with no independent "
+                f"challenger"
+            )
+    if "--sandbox read-only" not in adapters:
+        failures.append(
+            "the codex reviewer profile no longer uses --sandbox read-only -- that is a REAL "
+            "enforcement gate, and losing it drops the reviewer back to a prompt-only contract"
+        )
+
     if "--provider" not in STARTUP.read_text(encoding="utf-8"):
         failures.append(
             "startup.md's preflight invocation no longer passes --provider, so a run that will "

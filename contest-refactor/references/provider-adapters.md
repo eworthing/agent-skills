@@ -62,17 +62,17 @@ Agent({
 - **Permissions**: subagent inherits parent permissions (write + shell + test execution all allowed)
 - **Resume**: not supported by Agent tool; each loop is a fresh subagent invocation. State flows via files (`CURRENT_REVIEW.md`, `findings_registry.json`, etc.)
 
-### codex (verified 2026-05-09)
+### codex (verified 2026-08-19)
 
 Spawn via subprocess:
 
 ```
-codex exec --model gpt-5.4-mini --no-ask-user --output-format json '<prompt>'
-# resume: codex exec --continue --model gpt-5.4-mini --no-ask-user --output-format json '<prompt>'
+codex exec --model gpt-5.4-mini --sandbox workspace-write --json '<prompt>'
+# resume: codex exec --continue --model gpt-5.4-mini --sandbox workspace-write --json '<prompt>'
 ```
 
 - **Default model**: `gpt-5.4-mini`
-- **Permissions**: no `--deny-tool` for the loop — write, shell, and test execution all allowed
+- **Permissions**: `--sandbox workspace-write` — write, shell, and test execution all allowed
 - **Resume**: `--continue` flag picks up the most recent session
 - **Nested-spawn caveat**: a running codex session may not be able to spawn a child `codex exec` subprocess (host process model varies; sandboxes commonly block recursive CLI invocation). If the spawn returns nonzero, the binary is not on PATH for the subprocess, or the session has no shell tool available, **fall back to inline mode**: set `spawn_isolation: "inline"`, document at top of `CURRENT_REVIEW.md` "codex subprocess spawn unavailable; running inline", and rely on Continuation Discipline + G20 (per [SKILL.md § Continuation Discipline](../SKILL.md#continuation-discipline) and [validation.md § G20](validation.md)) to keep the run autonomous across loops. Do **not** silently emit a user-facing close-out after loop 1 — that's the failure mode G20 catches.
 
@@ -118,14 +118,14 @@ Agent({
 - **Enforcement**: no enforcement gate available; the reviewer's prompt is the only read-only contract. The reviewer is instructed to use `Grep`, `Glob`, `Read` tools (not bash `cat`) for file reads, and to restrict `Bash` to the read-only shell allow-list.
 - **Reviewer-permitted tools**: `Grep`, `Glob`, `Read`, `Bash` (restricted by prompt to the allow-list)
 
-### codex (verified 2026-05-09)
+### codex (verified 2026-08-19)
 
 ```
-codex exec --model gpt-5.4-mini --deny-tool=write,memory --no-ask-user --output-format json '<prompt>'
+codex exec --model gpt-5.4-mini --sandbox read-only --json '<prompt>'
 ```
 
 - **Default model**: `gpt-5.4-mini`
-- **Enforcement**: `--deny-tool=write,memory` blocks file writes and persistent memory. **Shell is allowed** (denying shell would block `git diff` and the inspection commands the reviewer needs); the reviewer's prompt restricts shell to the read-only allow-list.
+- **Enforcement**: `--sandbox read-only` (values `read-only|workspace-write|danger-full-access`) is a real gate — stronger than the prompt-only contract other providers fall back to.
 - **Reviewer-permitted tools**: shell commands from the read-only allow-list above (other shell commands → reviewer rejects)
 
 ### opencode (verified 2026-08-19)
