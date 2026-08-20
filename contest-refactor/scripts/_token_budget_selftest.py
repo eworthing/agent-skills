@@ -210,6 +210,52 @@ for (step, name), reason in tb.DECLARED_DIVERGENCES.items():
     check(bool(reason.strip()), f"DECLARED_DIVERGENCES ({step}, {name}) has an empty reason")
 
 
+# --- the soft margin warns; it must never become a second gate ---------------
+# Added with the 2026-08-20 proactive bump. A ~500-token margin is only safe if the
+# approach is visible, but a soft cap that fails is just a tighter hard cap moved
+# without deliberation -- the exact thing the bump was meant to stop doing by accident.
+import subprocess
+
+_tb = str(Path(__file__).resolve().parent / "token-budget.py")
+_r = subprocess.run([sys.executable, _tb, "--check"], capture_output=True, text=True)
+check(_r.returncode == 0, f"--check must pass at the current ceilings; got {_r.returncode}")
+check("budget-guard: OK" in _r.stdout, f"--check should report OK; got: {_r.stdout[-200:]!r}")
+
+for label, ceiling_name in (("loop_generic", "loop_generic"), ("loop_apple", "loop_apple")):
+    src = Path(_tb).read_text(encoding="utf-8")
+    measured = tb.CEILINGS[ceiling_name]
+    # Squeeze the ceiling to just inside the soft margin, leaving the value under it.
+    import re as _re
+
+    tight = _re.sub(
+        rf'"{ceiling_name}": [\d_]+',
+        f'"{ceiling_name}": {measured - 400}',
+        src,
+        count=1,
+    )
+    tmp = Path(__file__).resolve().parent / f"_tb_soft_probe_{label}.py"
+    try:
+        tmp.write_text(tight, encoding="utf-8")
+        r = subprocess.run([sys.executable, str(tmp), "--check"], capture_output=True, text=True)
+        check(
+            "ceiling-soft" in r.stdout,
+            f"{label}: a value inside the soft margin must WARN; got: {r.stdout[-220:]!r}",
+        )
+        check(
+            r.returncode == 0,
+            f"{label}: the soft margin must never fail the run -- that would make it a second "
+            f"gate raised without deliberation. Got exit {r.returncode}",
+        )
+        check(
+            "FAIL" not in r.stdout,
+            f"{label}: soft-margin output must not read as a failure; got: {r.stdout[-220:]!r}",
+        )
+    finally:
+        tmp.unlink(missing_ok=True)
+
+check(tb.SOFT_MARGIN > 0, "SOFT_MARGIN must be positive or the warning can never fire")
+
+
 if failures:
     print(f"FAIL ({len(failures)}):")
     for f in failures:

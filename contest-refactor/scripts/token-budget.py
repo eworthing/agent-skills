@@ -249,7 +249,31 @@ CEILINGS = {
     # mention of the real `permission` mechanism. A documented safety control that
     # does not exist is worth 66 tokens per loop. Measured 84,258; smallest
     # 100-multiple headroom above it.
-    "loop_apple": 84_300,  # per-loop fixed reload, apple lens (measured 84,258)
+    # --- 2026-08-20: the first PROACTIVE bump, and it is a different act from the four
+    # above. Every earlier bump was reactive -- measured a specific change, took the
+    # smallest 100-multiple above it. That rule is what left all three ceilings sitting on
+    # a 2-token margin, which this dict's own loop_generic note already calls out as false
+    # economy: "a 2-token margin turns the guard into a tripwire on the next edit of any
+    # kind." Reactive-minimal is correct for sizing a change; it is wrong for sizing a
+    # guard, because it guarantees the guard fires on the next edit regardless of merit.
+    #
+    # Sized against observed post-guard growth, not appetite. Before the guard existed the
+    # loop path grew 61,100 -> 84,197 in six weeks. Since it landed, the same path moved
+    # 84,115 -> 84,276 (+161) over weeks of active work, and individual changes run ~8-66
+    # tokens. A ~500 margin is therefore roughly 8-10 deliberate changes of room while
+    # still catching anything resembling the original runaway an order of magnitude early.
+    #
+    # The honest cost: for those ~8 changes, additions land without a bump conversation.
+    # That is real, and it is the trade being made knowingly. Two things keep it bounded --
+    # every addition is still measured and reported on both lens paths every run, and
+    # `--check` still fails hard at the new number rather than warning.
+    #
+    # Note also that 100 of the current loop_generic ceiling was bought on 2026-08-19 for
+    # the Step-3 sweep's `--json` flag, and that whole instruction was deleted on
+    # 2026-08-20 after firing 0/6 times in production (sweep #4, probe P2). Part of what
+    # is being re-baselined here was paid for dead weight, which is the argument for
+    # auditing the loop path for other never-executed instructions BEFORE the next bump.
+    "loop_apple": 84_800,  # per-loop fixed reload, apple lens (measured 84,276, margin 524)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
@@ -257,9 +281,15 @@ CEILINGS = {
     # spare; that was rejected as false economy — a 2-token margin turns the guard into a
     # tripwire on the next edit of any kind. Deliberate escape hatch per this dict's own
     # guard comment; measured at 80,102, smallest 100-multiple headroom above it.
-    "loop_generic": 80_200,  # per-loop fixed reload, generic lens (measured 80,102)
-    "skill_md": 10_600,  # SKILL.md trigger read
+    "loop_generic": 80_700,  # per-loop fixed reload, generic lens (measured 80,198, margin 502)
+    "skill_md": 11_000,  # SKILL.md trigger read (measured 10,598, margin 402)
 }
+
+# Soft margin, paired with the 2026-08-20 bump. A generous ceiling only works if the
+# approach is visible; otherwise growth is silent right up to a hard failure, which is
+# the same "nothing to notice it" the guard was built for. Mirrors check_module_size.py's
+# soft-cap/hard-cap split: this WARNS and never fails, so it cannot become a second gate.
+SOFT_MARGIN = 150
 
 DECLARED_DIVERGENCES = {
     (
@@ -314,6 +344,7 @@ def _matrix_always() -> dict:
 
 def cmd_check(args, count_fn, method) -> int:
     failures = []
+    warnings: list[str] = []
     matrix = _matrix_always()
     for step, declared in sorted(matrix.items()):
         actual = set(loaded_set(step, args.lens))
@@ -349,6 +380,11 @@ def cmd_check(args, count_fn, method) -> int:
                 f"[ceiling] {label} = {value:,} tok exceeds ceiling {CEILINGS[label]:,}. "
                 f"Trim, or raise the ceiling deliberately and say why in the commit."
             )
+        elif CEILINGS[label] - value < SOFT_MARGIN:
+            warnings.append(
+                f"[ceiling-soft] {label} = {value:,} tok, {CEILINGS[label] - value} below the "
+                f"{CEILINGS[label]:,} ceiling. Not a failure; the next addition or two will be."
+            )
 
     # CEILINGS are hand-set from tiktoken counts, so a heuristic run compares numbers from a
     # different measuring stick against them and its verdict means nothing. RUNTIME-COST-AUDIT
@@ -375,9 +411,14 @@ def cmd_check(args, count_fn, method) -> int:
     print(
         f"  load-matrix sync      : {len(matrix)} steps, {len(DECLARED_DIVERGENCES)} declared divergences"
     )
+    for w in warnings:
+        print(f"WARN {w}")
     for f in failures:
         print(f"FAIL {f}")
-    print("budget-guard: OK" if not failures else f"budget-guard: {len(failures)} failure(s)")
+    if failures:
+        print(f"budget-guard: {len(failures)} failure(s)")
+    else:
+        print(f"budget-guard: OK{f' ({len(warnings)} approaching)' if warnings else ''}")
     return 1 if failures else 0
 
 
