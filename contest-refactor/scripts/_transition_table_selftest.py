@@ -163,6 +163,43 @@ def main() -> int:
             "(the illegal fixture's expected_result becomes a failure) in the same change"
         )
 
+    # --- a `--reset` boundary is not a transition ---------------------------
+    # REVIEW_HISTORY.json legitimately holds several runs; --reset starts a new
+    # one and the state machine restarts with it. Measured on a real repo: a run
+    # that ended terminal HALT_SUCCESS, then --reset, then a fresh run reported a
+    # bogus HALT_SUCCESS -> HALT_SUCCESS_candidate violation. The loop-adjacency
+    # guard missed it because the numbering stayed contiguous across the
+    # boundary -- exactly when a cross-run pair looks most like a real one.
+    reset_history = {
+        "loops": [
+            {"loop": 1, "run_id": "run-A", "state": "HALT_SUCCESS"},
+            {"loop": 2, "run_id": "run-B", "state": "HALT_SUCCESS_candidate"},
+        ]
+    }
+    if trans.observed_transitions(reset_history):
+        failures.append(
+            "a run_id change is a --reset boundary, not a transition: "
+            f"observed_transitions paired across it -> {trans.observed_transitions(reset_history)}"
+        )
+    _, reset_out = _run_check(reset_history, canon)
+    if "transition-violation" in reset_out:
+        failures.append(f"cross-run pair reported a violation: {reset_out.strip()!r}")
+
+    # The same two states WITHIN one run must still fire -- otherwise the fix
+    # above silences the check rather than scoping it.
+    same_run = {
+        "loops": [
+            {"loop": 1, "run_id": "run-A", "state": "HALT_SUCCESS"},
+            {"loop": 2, "run_id": "run-A", "state": "HALT_SUCCESS_candidate"},
+        ]
+    }
+    _, same_out = _run_check(same_run, canon)
+    if "transition-violation" not in same_out:
+        failures.append(
+            "scoping by run silenced a real in-run violation: "
+            "HALT_SUCCESS -> HALT_SUCCESS_candidate within run-A must still fire"
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

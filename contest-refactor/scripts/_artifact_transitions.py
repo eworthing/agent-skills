@@ -47,6 +47,11 @@ from itertools import pairwise
 
 from _artifact_core import Issue
 
+# The run-boundary rule already exists and is already tested; a second copy here
+# would be a second thing to keep correct. coverage_ledger has no import-time
+# side effects (argparse lives under __main__).
+from coverage_ledger import split_runs
+
 REPORT_ONLY = True
 
 
@@ -60,16 +65,25 @@ def observed_transitions(review_history: dict | None) -> list[tuple[int, str, in
     if not isinstance(loops, list):
         return []
     pairs: list[tuple[int, str, int, str]] = []
-    for a, b in pairwise(loops):
-        if not isinstance(a, dict) or not isinstance(b, dict):
-            continue
-        loop_a, state_a = a.get("loop"), a.get("state")
-        loop_b, state_b = b.get("loop"), b.get("state")
-        if not isinstance(loop_a, int) or not isinstance(loop_b, int):
-            continue
-        if loop_b != loop_a + 1:
-            continue  # numbering gap (e.g. a minimal fixture) -- not a real pair
-        pairs.append((loop_a, state_a, loop_b, state_b))
+    # Pair only WITHIN a run. REVIEW_HISTORY.json legitimately holds several runs
+    # -- `--reset` starts a new one -- and the state machine restarts at each
+    # boundary, so the last loop of one run does not transition into the first
+    # loop of the next. Measured on a real repo: a run that ended terminal
+    # HALT_SUCCESS, then `--reset`, reported a bogus
+    # HALT_SUCCESS -> HALT_SUCCESS_candidate violation. The loop-adjacency guard
+    # below did not catch it because the numbering happened to stay contiguous
+    # across the boundary, which is precisely when it looks most like a real pair.
+    for run in split_runs(review_history):
+        for a, b in pairwise(run):
+            if not isinstance(a, dict) or not isinstance(b, dict):
+                continue
+            loop_a, state_a = a.get("loop"), a.get("state")
+            loop_b, state_b = b.get("loop"), b.get("state")
+            if not isinstance(loop_a, int) or not isinstance(loop_b, int):
+                continue
+            if loop_b != loop_a + 1:
+                continue  # numbering gap (e.g. a minimal fixture) -- not a real pair
+            pairs.append((loop_a, state_a, loop_b, state_b))
     return pairs
 
 
