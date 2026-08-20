@@ -161,8 +161,7 @@
             "why_failed": "Every candidate was Cosmetic or failed the Simplify Pressure Test."
           }
         ],
-        "reason": "No Serious-or-worse finding and no accepted-residual refutation survives SPT.",
-        "challenger_isolation": "subagent"
+        "reason": "No Serious-or-worse finding and no accepted-residual refutation survives SPT."
       },
       "skill_rev": "2b81c10"
     }

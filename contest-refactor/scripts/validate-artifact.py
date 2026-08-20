@@ -82,6 +82,10 @@ from _artifact_residual import (  # noqa: E402
     check_g37_terminal_residual_accounting,
     check_g43_convergence_pass,
 )
+from _artifact_review_contract import (  # noqa: E402
+    check_g29_schema_version,
+    check_rounds_membership,
+)
 from _artifact_transitions import check_transition_report_only  # noqa: E402
 
 SKILL_ROOT = SCRIPT_DIR.parent
@@ -170,7 +174,9 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g44_credential_quarantine(artifact_dir))
     issues.extend(check_continue_backlog(current_review))
     issues.extend(check_challenge_independence_report_only(current_review))
-    issues.extend(check_transition_report_only(history, canon))
+    issues.extend(check_transition_report_only(current_review, history, canon))
+    issues.extend(check_rounds_membership(current_review))
+    issues.extend(check_g29_schema_version(current_review))
     return issues
 
 

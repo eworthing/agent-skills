@@ -23,14 +23,23 @@ both Critic and Challenger ran in this same conversation"). That disclosure was
 model-volunteered, not gate-enforced: a less careful model emits the same terminal with
 no note and passes every gate. This check is the difference between lucky and reliable.
 
-REPORT-ONLY, deliberately. Making it a hard failure would require a new required field
-or a coupling the schema cannot express at the current version, which is exactly the
-retroactive-invalidation defect backlog item 30 records (G43/G46 added required v4
-fields with no bump, so artifacts written before them now fail). Per
-references/output-format-migrations.md, the legal routes are bump-and-default-fill,
-scope-by-skill_rev, or optional-with-shape-gating -- and none is warranted before the
-signal is measured. So this prints and returns no Issue, mirroring
-_artifact_transitions.py. Flip REPORT_ONLY to False once there is evidence.
+REAL ISSUES for CURRENT-epoch artifacts, backlog item [I1] item 1. Still print-only
+for LEGACY (marker-less) artifacts -- unverified independence there stays a visible
+warning, never a failure, per the retroactive-invalidation rule backlog item 30
+records (G43/G46 added required v4 fields with no bump, so artifacts written before
+them fail on fields that did not exist yet when they were written). See
+_ruleset_epoch.py for the classifier and REQUIREMENT_EPOCHS["INDEPENDENCE_ISOLATION_FIELDS"]
+for this requirement's epoch floor.
+
+Two independent claims a terminal success rests on, both gated the same way:
+  (a) terminal promotion (HALT_SUCCESS / HALT_SUCCESS_candidate) requires
+      halt_success_challenge.challenger_isolation == "subagent"
+  (b) an APPROVED implementation_review requires
+      implementation_review.reviewer_isolation == "subagent"
+Missing or "inline" fails either one, for CURRENT-epoch artifacts only. The
+live-promotion half of this (the loop refusing to commit a violating terminal
+mid-run, rather than a validator catching it after the fact) stays open --
+this module is the validator side only, per the register.
 
 Deliberately unnumbered (no G<n>): registering a gate forces a validation.md checklist
 bullet, and validation.md is on the per-loop reload path with 20 tokens of apple
@@ -39,21 +48,22 @@ headroom. Same reasoning as _artifact_transitions.py's docstring.
 
 from __future__ import annotations
 
+import _ruleset_epoch
 from _artifact_core import Issue
 
-REPORT_ONLY = True
-
 _TERMINAL_SUCCESS = ("HALT_SUCCESS", "HALT_SUCCESS_candidate")
+_REQUIREMENT = "INDEPENDENCE_ISOLATION_FIELDS"
 
 
 def check_challenge_independence_report_only(current_review: dict) -> list[Issue]:
-    """Flag a terminal success whose challenger was not independently spawned.
+    """Flag a terminal success whose challenger (or approving reviewer) was not
+    independently spawned. Real Issue at CURRENT epoch; print-only at LEGACY.
 
-    Three outcomes, because the middle one is what the first version of this check
-    got wrong: it returned silently whenever top-level `spawn_isolation` was
-    `subagent`, treating "the LOOP was isolated" as proof the CHALLENGE was. Those
-    are different spawns. A real run (BenchHype, 2026-08-19) walked straight through
-    that gap -- `spawn_isolation: subagent` with
+    Three challenger outcomes, because the middle one is what the first version of
+    this check got wrong: it returned silently whenever top-level `spawn_isolation`
+    was `subagent`, treating "the LOOP was isolated" as proof the CHALLENGE was.
+    Those are different spawns. A real run (BenchHype, 2026-08-19) walked straight
+    through that gap -- `spawn_isolation: subagent` with
     `implementation_review.spawn_mode: "inline (no subagent tool available in this
     opencode session)"`, because an opencode subagent cannot nest-spawn. The loop was
     isolated; the challenge that promoted it to HALT_SUCCESS was not.
@@ -61,31 +71,53 @@ def check_challenge_independence_report_only(current_review: dict) -> list[Issue
       inline recorded    -> fires: the challenge shared the Critic's context
       subagent recorded  -> silent: independence is established
       neither recorded   -> UNVERIFIED: absence of evidence is not evidence of
-                            independence, so it is reported rather than passed
+                            independence, so it is reported (and, at CURRENT epoch,
+                            failed) rather than passed
     """
     state = current_review.get("state")
-    if state not in _TERMINAL_SUCCESS:
-        return []
-    if (current_review.get("schema_version") or 1) < 4:
-        return []
-
-    challenge = current_review.get("halt_success_challenge") or {}
     provider = current_review.get("provider") or "<unrecorded>"
-    model = challenge.get("challenger_model") or "<unrecorded>"
+    is_current_epoch = _ruleset_epoch.applies(_REQUIREMENT, current_review)
+    fired: list[Issue] = []
 
+    # --- (b) the implementation reviewer ------------------------------------
     # A terminal success rests on TWO verifications: the implementation reviewer
     # approving the change, and the challenger failing to break the candidate. An
     # inline reviewer is a self-review for the same reason an inline challenger is a
     # self-vet, so it is disclosed alongside rather than silently ignored.
-    reviewer_isolation = (current_review.get("implementation_review") or {}).get(
-        "reviewer_isolation"
-    )
+    review = current_review.get("implementation_review") or {}
+    reviewer_isolation = review.get("reviewer_isolation")
+    verdict = review.get("verdict")
     if reviewer_isolation == "inline":
         print(
             f"[reviewer-independence state={state} provider={provider}] the implementation "
             f"review that approved this loop ran inline; its verdict shares the context it judges"
         )
+    elif verdict == "approved" and reviewer_isolation != "subagent":
+        # Absent on an APPROVED review -- same "absence is not evidence of
+        # independence" reasoning as the challenger's unverified branch below.
+        print(
+            f"[reviewer-independence-unverified state={state} provider={provider}] "
+            f"implementation_review.verdict == 'approved' but reviewer_isolation is absent; "
+            f"independence is unverified, which is not the same as verified"
+        )
+    if verdict == "approved" and reviewer_isolation != "subagent" and is_current_epoch:
+        fired.append(
+            Issue(
+                "reviewer-independence",
+                f"implementation_review.verdict == 'approved' but reviewer_isolation="
+                f"{reviewer_isolation!r} (must be 'subagent'): an approved review must be "
+                f"independently spawned, not a self-review of the context it judges.",
+            )
+        )
 
+    # --- (a) the terminal challenge -----------------------------------------
+    if state not in _TERMINAL_SUCCESS:
+        return fired
+    if (current_review.get("schema_version") or 1) < 4:
+        return fired
+
+    challenge = current_review.get("halt_success_challenge") or {}
+    model = challenge.get("challenger_model") or "<unrecorded>"
     challenger_isolation = challenge.get("challenger_isolation")
     loop_isolation = current_review.get("spawn_isolation")
 
@@ -102,25 +134,34 @@ def check_challenge_independence_report_only(current_review: dict) -> list[Issue
             f"absent, and spawn_isolation={loop_isolation!r} describes the LOOP spawn, not "
             f"the challenge. Independence is unverified, which is not the same as verified"
         )
-        return []
+        if is_current_epoch:
+            fired.append(
+                Issue(
+                    "challenge-independence",
+                    f"{state} promoted with halt_success_challenge.challenger_isolation "
+                    f"absent (spawn_isolation={loop_isolation!r} describes the LOOP spawn, "
+                    f"not the challenge): independence is unverified, which does not satisfy "
+                    f"the requirement that it be established.",
+                )
+            )
+        return fired
 
     if effective == "subagent":
-        return []
+        return fired
 
     print(
         f"[challenge-independence state={state} provider={provider} source={source} "
         f"challenger_model={model!r}] terminal success rests on a challenger that shared "
         f"the Critic's context; G32 checks challenger_model is non-empty and cannot see this"
     )
-    fired = [
-        Issue(
-            "challenge-independence",
-            f"{state} promoted by a challenge that ran inline (per {source}, provider="
-            f"{provider}): no fresh-context verification backs the verdict. Re-run on a "
-            f"provider whose subagents can nest-spawn, or treat the terminal as provisional "
-            f"and say so in the handoff.",
+    if is_current_epoch:
+        fired.append(
+            Issue(
+                "challenge-independence",
+                f"{state} promoted by a challenge that ran inline (per {source}, provider="
+                f"{provider}): no fresh-context verification backs the verdict. Re-run on a "
+                f"provider whose subagents can nest-spawn, or treat the terminal as provisional "
+                f"and say so in the handoff.",
+            )
         )
-    ]
-    if REPORT_ONLY:
-        return []
     return fired

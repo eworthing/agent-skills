@@ -20,14 +20,16 @@ appended separately. Only PAIRS of entries with adjacent loop numbers
 loop numbers (a minimal repro for an unrelated gate) is skipped rather than
 misread as a real transition.
 
---- The flip switch -------------------------------------------------------
-Shadow-first (this change, per repo convention — mirrors
-common/scripts/eval_guard.py's REPORT_ONLY idiom): every illegal transition
-prints a '[transition-violation ...]' line, but check_transition_report_only
-always returns an empty Issue list, so it can never fail validate-artifact.py
---mode strict or block validate-fixtures.py. Flip REPORT_ONLY to False below
-to make it return a real Issue instead. This is the ONE place that decision
-is made.
+--- Enforcement (backlog item [I1] item 2) ---------------------------------
+Was a global shadow-first flag (every illegal transition printed, the function
+always returned []). Now epoch-scoped instead of globally switched: an illegal
+transition in a CURRENT-epoch artifact's history is a real Issue; the same
+violation in a LEGACY (marker-less) artifact still only prints, per the
+retroactive-invalidation rule (`_ruleset_epoch.py`,
+REQUIREMENT_EPOCHS["TRANSITIONS_REQUIRED_FIELDS"]) -- canon/states.toml's
+transition table existed before skill_rev did, but this checker only started
+reading it as a hard gate after [I1], so a marker-less artifact cannot be
+proven to have run under a ruleset that enforced it.
 ---------------------------------------------------------------------------
 
 Deliberately unnumbered (no G<n> id): validation.md and canon/validation-gates.toml
@@ -45,6 +47,7 @@ from __future__ import annotations
 
 from itertools import pairwise
 
+import _ruleset_epoch
 from _artifact_core import Issue
 
 # The run-boundary rule already exists and is already tested; a second copy here
@@ -52,7 +55,7 @@ from _artifact_core import Issue
 # side effects (argparse lives under __main__).
 from coverage_ledger import split_runs
 
-REPORT_ONLY = True
+_REQUIREMENT = "TRANSITIONS_REQUIRED_FIELDS"
 
 
 def observed_transitions(review_history: dict | None) -> list[tuple[int, str, int, str]]:
@@ -87,11 +90,22 @@ def observed_transitions(review_history: dict | None) -> list[tuple[int, str, in
     return pairs
 
 
-def check_transition_report_only(review_history: dict | None, canon) -> list[Issue]:
+def check_transition_report_only(
+    current_review: dict, review_history: dict | None, canon
+) -> list[Issue]:
     """Print a diagnostic line for every observed transition absent from
-    canon/states.toml's transition table. Report-only: see module docstring.
+    canon/states.toml's transition table; return it as a real Issue when
+    `current_review` classifies CURRENT-epoch, print-only otherwise. See
+    module docstring.
+
+    `current_review` (not the tail of `review_history`) is what decides the
+    epoch, matching the classifier's own contract and the `check_g43_*`/
+    `check_g46_*` precedent -- G18 already requires `review_history.loops[-1]`
+    to equal `current_review` verbatim, so the two never disagree on a valid
+    artifact, but only one of them is the classifier's documented input.
     """
     transitions = (getattr(canon, "extra", {}) or {}).get("transitions", {})
+    is_current_epoch = _ruleset_epoch.applies(_REQUIREMENT, current_review)
     fired: list[Issue] = []
     observed = observed_transitions(review_history)
 
@@ -125,12 +139,11 @@ def check_transition_report_only(review_history: dict | None, canon) -> list[Iss
             else f"no declared edge {state_a!r} -> {state_b!r} in canon/states.toml"
         )
         print(f"[transition-violation {state_a}→{state_b} reason={reason} loop={loop_a}->{loop_b}]")
-        fired.append(
-            Issue(
-                "transition-legality",
-                f"loop {loop_a} ({state_a}) -> loop {loop_b} ({state_b}): {reason}",
+        if is_current_epoch:
+            fired.append(
+                Issue(
+                    "transition-legality",
+                    f"loop {loop_a} ({state_a}) -> loop {loop_b} ({state_b}): {reason}",
+                )
             )
-        )
-    if REPORT_ONLY:
-        return []
     return fired

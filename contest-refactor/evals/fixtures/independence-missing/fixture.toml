@@ -1,0 +1,10 @@
+id = "independence-missing"
+purpose = "Negative fixture for [I1] item 1: terminal HALT_SUCCESS, CURRENT epoch (skill_rev present), halt_success_challenge.challenger_isolation entirely absent. Independence is unverified, and at CURRENT epoch unverified now fails -- not just prints."
+expected_result = "fail"
+pair_exception = "epoch-scoping proof, twin of halt-terminal-held: byte-identical except challenger_isolation is stripped from halt_success_challenge. halt-terminal-held is the must-pass control (challenger_isolation='subagent'); this fixture is the must-fail control for the same field's absence. See _artifact_independence.py and _independence_selftest.py for the checker's own unit coverage of both directions (and the inline variant, which this fixture does not separately cover)."
+aspirational = false
+notes = "Cloned from halt-terminal-held post-[I1]-repair, then challenger_isolation deleted from halt_success_challenge. skill_rev='2b81c10' makes this CURRENT-epoch, so check_challenge_independence_report_only's 'neither recorded -> UNVERIFIED' branch fires a real 'challenge-independence' Issue (rule id is unnumbered -- deliberately, per _artifact_independence.py's docstring -- so it cannot be cited here as a `kind = \"gate\"` tested_rule; canon/validation-gates.toml has no entry for it)."
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "HALT_SUCCESS"

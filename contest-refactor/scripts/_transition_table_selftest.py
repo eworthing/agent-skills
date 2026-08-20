@@ -16,11 +16,12 @@ unknown token is a typo, and a declared token no edge uses is vocabulary that
 outlived its rule -- the same "retired prose stays retired" hygiene
 _retired_prose_selftest.py applies to reference text.
 
-Report-only status is itself under test: _artifact_transitions.REPORT_ONLY is
-True while the check is in shadow, so check_transition_report_only must print
-its diagnostics and still return zero Issues. When that flag flips, case
-`report_only_returns_no_issues` is the one that fails first -- by design, so the
-flip cannot happen silently.
+Enforcement is now epoch-scoped (backlog item [I1] item 2), not a single global
+flag: check_transition_report_only always prints its `[transition-violation ...]`
+diagnostics, but only returns a real Issue for a CURRENT-epoch `current_review`
+(skill_rev present and shaped like a short SHA -- see _ruleset_epoch.py). A
+LEGACY (marker-less) artifact's violation still prints and returns no Issue,
+matching the original shadow-first behavior.
 
 Run: python3 scripts/_transition_table_selftest.py   (exit 0 = pass, 1 = fail)
 """
@@ -37,22 +38,29 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SKILL_ROOT / "scripts"))
 
 import _artifact_transitions as trans
+import _ruleset_epoch as epoch
 from _canon import load_canon
 
 FIXTURES = SKILL_ROOT / "evals" / "fixtures"
 LEGAL_FIXTURE = FIXTURES / "transition-legal-multiloop"
 ILLEGAL_FIXTURE = FIXTURES / "transition-illegal-post-cap-continue"
 
+_LEGACY_REVIEW = {"schema_version": 3}  # no skill_rev -> LEGACY epoch
+
 
 def _history(fixture_dir: Path) -> dict:
     return json.loads((fixture_dir / "REVIEW_HISTORY.json").read_text(encoding="utf-8"))
 
 
-def _run_check(history: dict, canon) -> tuple[list, str]:
+def _current_review(fixture_dir: Path) -> dict:
+    return json.loads((fixture_dir / "CURRENT_REVIEW.json").read_text(encoding="utf-8"))
+
+
+def _run_check(current_review: dict, history: dict, canon) -> tuple[list, str]:
     """Return (issues, captured stdout) for one check_transition_report_only call."""
     buf = io.StringIO()
     with redirect_stdout(buf):
-        issues = trans.check_transition_report_only(history, canon)
+        issues = trans.check_transition_report_only(current_review, history, canon)
     return issues, buf.getvalue()
 
 
@@ -129,7 +137,7 @@ def main() -> int:
             f"{LEGAL_FIXTURE.name}: expected >=2 adjacent loop pairs, derived {len(pairs)} "
             f"-- the fixture or the derivation stopped seeing the loop sequence"
         )
-    _, legal_out = _run_check(legal_history, canon)
+    _, legal_out = _run_check(_current_review(LEGAL_FIXTURE), legal_history, canon)
     if "[transition-violation" in legal_out:
         failures.append(
             f"{LEGAL_FIXTURE.name}: an all-CONTINUE run fired a violation "
@@ -137,7 +145,8 @@ def main() -> int:
         )
 
     illegal_history = _history(ILLEGAL_FIXTURE)
-    illegal_issues, illegal_out = _run_check(illegal_history, canon)
+    illegal_current = _current_review(ILLEGAL_FIXTURE)
+    illegal_issues, illegal_out = _run_check(illegal_current, illegal_history, canon)
     fired = illegal_out.count("[transition-violation")
     if fired != 1:
         failures.append(
@@ -150,18 +159,30 @@ def main() -> int:
             f"why it is illegal; got {illegal_out.strip()!r}"
         )
 
-    # --- report-only invariant (the flip tripwire) ------------------------
-    if trans.REPORT_ONLY and illegal_issues:
+    # --- epoch-gated enforcement (backlog item [I1] item 2) -----------------
+    # The committed fixture now carries skill_rev (repaired as part of [I1]),
+    # so it classifies CURRENT and the same violation must be a real Issue.
+    if epoch.classify(illegal_current) != epoch.CURRENT:
         failures.append(
-            "check_transition_report_only returned Issues while REPORT_ONLY is True -- "
-            "shadow mode must never contribute to an exit code"
+            f"{ILLEGAL_FIXTURE.name}'s CURRENT_REVIEW.json must classify CURRENT-epoch "
+            f"post-[I1] repair (missing/malformed skill_rev?)"
         )
-    if not trans.REPORT_ONLY:
+    if not any(i.rule == "transition-legality" for i in illegal_issues):
         failures.append(
-            "REPORT_ONLY is False: the transition check has been flipped to enforcing. "
-            "That is a deliberate promotion -- update this selftest's expectations "
-            "(the illegal fixture's expected_result becomes a failure) in the same change"
+            f"a CURRENT-epoch artifact's illegal transition must fire a real "
+            f"transition-legality Issue; got {[i.rule for i in illegal_issues]}"
         )
+
+    # The identical violation on a LEGACY (marker-less) artifact must still
+    # print-only, matching the pre-[I1] shadow behavior exactly.
+    legacy_issues, legacy_out = _run_check(_LEGACY_REVIEW, illegal_history, canon)
+    if legacy_issues:
+        failures.append(
+            f"a LEGACY-epoch artifact's illegal transition must return no Issue "
+            f"(print-only); got {[i.rule for i in legacy_issues]}"
+        )
+    if "[transition-violation" not in legacy_out:
+        failures.append("a LEGACY-epoch illegal transition must still print its diagnostic")
 
     # --- a `--reset` boundary is not a transition ---------------------------
     # REVIEW_HISTORY.json legitimately holds several runs; --reset starts a new
@@ -181,7 +202,7 @@ def main() -> int:
             "a run_id change is a --reset boundary, not a transition: "
             f"observed_transitions paired across it -> {trans.observed_transitions(reset_history)}"
         )
-    _, reset_out = _run_check(reset_history, canon)
+    _, reset_out = _run_check(_LEGACY_REVIEW, reset_history, canon)
     if "transition-violation" in reset_out:
         failures.append(f"cross-run pair reported a violation: {reset_out.strip()!r}")
 
@@ -193,7 +214,7 @@ def main() -> int:
             {"loop": 2, "run_id": "run-A", "state": "HALT_SUCCESS_candidate"},
         ]
     }
-    _, same_out = _run_check(same_run, canon)
+    _, same_out = _run_check(_LEGACY_REVIEW, same_run, canon)
     if "transition-violation" not in same_out:
         failures.append(
             "scoping by run silenced a real in-run violation: "
@@ -214,7 +235,7 @@ def main() -> int:
             {"loop": 3, "run_id": "loop-3-ccccccc", "state": "CONTINUE"},
         ]
     }
-    _, blind_out = _run_check(per_loop_ids, canon)
+    _, blind_out = _run_check(_LEGACY_REVIEW, per_loop_ids, canon)
     if "transition-check-blind" not in blind_out:
         failures.append(
             "a history whose run_id changes every loop leaves no in-run pair, so the "
@@ -223,7 +244,7 @@ def main() -> int:
         )
 
     # ...and a history the check CAN read must not cry blind.
-    _, quiet_out = _run_check(legal_history, canon)
+    _, quiet_out = _run_check(_LEGACY_REVIEW, legal_history, canon)
     if "transition-check-blind" in quiet_out:
         failures.append(
             f"the legal multiloop fixture is readable; blind must not fire: {quiet_out.strip()!r}"

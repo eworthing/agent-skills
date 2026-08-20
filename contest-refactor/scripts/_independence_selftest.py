@@ -158,6 +158,61 @@ def main() -> int:
             f"read as inline. Got: {out!r}"
         )
 
+    # --- [I1] item 1: CURRENT-epoch flips print-only into a real Issue -------
+    # Every case above carries no skill_rev (LEGACY), so none of it changes.
+    # skill_rev="2b81c10" is a valid current-epoch marker (_ruleset_epoch.py).
+    current = _artifact(skill_rev="2b81c10", spawn_isolation="subagent")
+    issues, out = _run(current)  # halt_success_challenge has no challenger_isolation -> unverified
+    if not any(i.rule == "challenge-independence" for i in issues):
+        failures.append(
+            f"CURRENT-epoch + unverified challenger independence at a terminal must fail "
+            f"(not just print); got issues={[i.rule for i in issues]!r} out={out!r}"
+        )
+
+    held = _artifact(
+        skill_rev="2b81c10", spawn_isolation="subagent", challenger_isolation="subagent"
+    )
+    issues, out = _run(held)
+    if issues:
+        failures.append(
+            f"CURRENT-epoch + subagent challenger_isolation is the compliant case and must "
+            f"stay silent; got {[i.rule for i in issues]!r}"
+        )
+
+    inline_current = _artifact(
+        skill_rev="2b81c10", spawn_isolation="subagent", challenger_isolation="inline"
+    )
+    issues, _ = _run(inline_current)
+    if not any(i.rule == "challenge-independence" for i in issues):
+        failures.append("CURRENT-epoch + inline challenger_isolation must fail")
+
+    # (b) approved review, CURRENT epoch.
+    b = _artifact(skill_rev="2b81c10", spawn_isolation="subagent", challenger_isolation="subagent")
+    b["implementation_review"] = {"verdict": "approved", "reviewer_isolation": "inline"}
+    issues, _ = _run(b)
+    if not any(i.rule == "reviewer-independence" for i in issues):
+        failures.append("CURRENT-epoch + approved review + inline reviewer_isolation must fail")
+
+    b["implementation_review"] = {"verdict": "approved"}  # reviewer_isolation missing
+    issues, _ = _run(b)
+    if not any(i.rule == "reviewer-independence" for i in issues):
+        failures.append("CURRENT-epoch + approved review + missing reviewer_isolation must fail")
+
+    b["implementation_review"] = {"verdict": "approved", "reviewer_isolation": "subagent"}
+    issues, _ = _run(b)
+    if any(i.rule == "reviewer-independence" for i in issues):
+        failures.append("CURRENT-epoch + approved review + subagent reviewer_isolation must pass")
+
+    b["implementation_review"] = {"verdict": "rejected", "reviewer_isolation": "inline"}
+    issues, out = _run(b)
+    if any(i.rule == "reviewer-independence" for i in issues):
+        failures.append(
+            f"a REJECTED review is not a promotion claim -- inline reviewer_isolation there "
+            f"must still print (unchanged) but never fail; got {[i.rule for i in issues]!r}"
+        )
+    if "reviewer-independence" not in out:
+        failures.append("a rejected+inline review must still print the informational diagnostic")
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

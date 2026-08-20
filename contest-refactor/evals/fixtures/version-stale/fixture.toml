@@ -1,0 +1,14 @@
+id = "version-stale"
+purpose = "Negative fixture for [I1] item 4 (G29): CURRENT epoch (skill_rev present) but schema_version declares 3 -- a stale value against the capability-derived current version (v4, since canon/panel-certification.toml's manifest has zero entries and every profile emits v4 today)."
+expected_result = "fail"
+pair_exception = "epoch-scoping proof, not a flag/restraint pair: clones g46-current-epoch-fields-missing (CURRENT epoch) with the G46 drift_notes flaw neutralized (repair_revalidation.outcome flipped to INVARIANT_HOLDS, drift_notes set null) and schema_version dropped to 3 so G29-version-equality is the intended failure. See _artifact_review_contract_selftest.py for the checker's own unit coverage of every stale/malformed declaration (v1, v2, v3, missing, non-int, bool, and the v5-unauthorized case)."
+aspirational = false
+notes = "G29 is a real canon gate id (canon/validation-gates.toml), so the rule id this check emits is the sub-rule 'G29-version-equality' (satisfies the harness's cited-gate matching via the 'G29-' prefix, _gate_satisfies in validate-fixtures.py)."
+
+[[tested_rules]]
+kind = "gate"
+id = "G29"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

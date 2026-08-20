@@ -1,0 +1,10 @@
+id = "rounds-bool-or-missing"
+purpose = "Negative fixture for [I1] item 3: implementation_review.rounds = true (a bool), CURRENT epoch. Python's bool is an int subclass, so `True in (1, 2)` silently passes an isinstance-style check -- this fixture pins the type(rounds) is int discipline that rejects it anyway."
+expected_result = "fail"
+pair_exception = "epoch-scoping proof, not a flag/restraint pair: clones g46-current-epoch-fields-missing (CURRENT epoch, schema_version 4) with the G46 drift_notes flaw neutralized (repair_revalidation.outcome flipped to INVARIANT_HOLDS, drift_notes set null) so rounds is the only rule that fires. See _artifact_review_contract_selftest.py for the checker's own unit coverage of every invalid shape (missing, null, bool, 0, 3, string)."
+aspirational = false
+notes = "rounds-membership is deliberately unnumbered (no canon G<n>), matching _artifact_transitions.py's precedent, so it cannot be cited here as a `kind = \"gate\"` tested_rule."
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

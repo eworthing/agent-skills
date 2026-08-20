@@ -149,6 +149,7 @@
       "reviewer_model": "claude-sonnet-5",
       "reviewer_model_source": "default",
       "spawn_isolation": "subagent",
+      "skill_rev": "2b81c10",
       "findings_registry_path": "./findings_registry.json",
       "discovery": {
         "test_command": "swift test",

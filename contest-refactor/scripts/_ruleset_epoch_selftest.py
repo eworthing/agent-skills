@@ -113,6 +113,24 @@ for name, value in epoch.REQUIREMENT_EPOCHS.items():
     if value not in epoch.EPOCHS:
         failures.append(f"REQUIREMENT_EPOCHS[{name!r}] = {value!r} is not a member of EPOCHS")
 
+# [I1] items 1-4: the four requirement keys the new enforcement checkers read
+# (_artifact_independence.py, _artifact_transitions.py,
+# _artifact_review_contract.py) must be present and CURRENT-scoped -- this is
+# the one place their wiring to the matrix is pinned, independent of each
+# checker's own selftest.
+for name in (
+    "INDEPENDENCE_ISOLATION_FIELDS",
+    "TRANSITIONS_REQUIRED_FIELDS",
+    "ROUNDS_REQUIRED_FIELDS",
+    "G29_VERSION_EQUALITY",
+):
+    if epoch.REQUIREMENT_EPOCHS.get(name) != epoch.CURRENT:
+        failures.append(f"REQUIREMENT_EPOCHS[{name!r}] must be CURRENT-scoped")
+    if epoch.applies(name, _LEGACY_ART):
+        failures.append(f"applies: {name} must NOT apply to a legacy-epoch artifact")
+    if not epoch.applies(name, _CURRENT_ART):
+        failures.append(f"applies: {name} must apply to a current-epoch artifact")
+
 
 # --- acceptance: G43/G46 scoped through the classifier, both directions ---
 

@@ -1,8 +1,9 @@
 id = "halt-terminal-held"
-purpose = "Terminal HALT_SUCCESS with a valid held challenge and matching binding. Positive case: G32 passes."
+purpose = "Terminal HALT_SUCCESS with a valid held challenge, matching binding, and (since [I1] item 1) a recorded independent challenger_isolation. Positive case: G32 passes and the challenge-independence check stays silent."
 expected_result = "pass"
 pair_exception = "independent-branch: terminal HALT_SUCCESS with a valid held challenge and matching binding. G32 carries several independent valid-shape branches in this corpus; no single fixture is this one's dedicated must-flag counterpart."
 aspirational = false
+notes = "[I1] item 1 (2026-08-20) repaired this fixture: it was previously LEGACY-epoch (no skill_rev) with challenger_isolation entirely absent from halt_success_challenge -- a real gap in the register's independence repro, since a genuinely CURRENT-epoch artifact in this same shape would have failed the new challenge-independence enforcement. CURRENT_REVIEW.json and REVIEW_HISTORY.json.loops[-1] now both carry skill_rev='2b81c10' (CURRENT epoch) and halt_success_challenge.challenger_isolation='subagent' (a genuine independent-spawn record), so this fixture is now what its purpose always claimed: a terminal HALT_SUCCESS whose independence is actually established, not merely unrecorded. The FAIL direction (challenger_isolation missing/inline at CURRENT epoch) is pinned separately by evals/fixtures/independence-missing/."
 
 [[tested_rules]]
 kind = "gate"

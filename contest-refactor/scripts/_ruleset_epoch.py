@@ -101,15 +101,16 @@ REQUIREMENT_EPOCHS: dict[str, str] = {
     # G46: loop_result.finding_family / effort / repair_revalidation.
     # Landed 2026-08-18, commit 9528774.
     "G46_REMEDIATION_FIELDS": CURRENT,
-    # Slots for future clients named in the [I1] task. Each ships as an entry
-    # here, not a new inline check, the day its checker starts requiring the
-    # field unconditionally. Until then these fields stay optional-with-shape-
-    # gating (the G19 precedent; see _artifact_independence.py's docstring for
-    # why that route was chosen there instead) or report-only.
-    # "INDEPENDENCE_ISOLATION_FIELDS": CURRENT,
-    # "TRANSITIONS_REQUIRED_FIELDS": CURRENT,
-    # "ROUNDS_REQUIRED_FIELDS": CURRENT,
-    # "G29_VERSION_EQUALITY": CURRENT,
+    # [I1] items 1-4 (2026-08-20): challenger/reviewer isolation, transition
+    # legality, implementation_review.rounds membership, and G29 schema_version
+    # equality all became real enforcement for CURRENT-epoch artifacts only --
+    # see _artifact_independence.py, _artifact_transitions.py, and
+    # _artifact_review_contract.py for the checkers that read these keys.
+    "INDEPENDENCE_ISOLATION_FIELDS": CURRENT,
+    "TRANSITIONS_REQUIRED_FIELDS": CURRENT,
+    "ROUNDS_REQUIRED_FIELDS": CURRENT,
+    "G29_VERSION_EQUALITY": CURRENT,
+    # Slot for a future client, still unclaimed.
     # "G17_COVERAGE_CITATION": CURRENT,
 }
 
