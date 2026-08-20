@@ -3,7 +3,7 @@ purpose = "Loop emits HALT_DRY_RUN at end of Step 2 when --dry-run is set, ran S
 expected_result = "fail"
 pair_exception = "independent-branch: HALT_DRY_RUN emitted after Step 2 with schema_version 3 dry-run invariants. G29 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = true
-notes = "Fixture ships only CURRENT_REVIEW.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. G29 + HALT_DRY_RUN behavior is the original intent."
+notes = "Fixture ships only CURRENT_REVIEW.json (schema_version 3). Strict mode rejects on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json. G29 + HALT_DRY_RUN behavior is the original intent. Precisely: as of this writing no function in scripts/_artifact_*.py emits Issue(\"G29\", ...) or any \"G29-\"-prefixed sub-rule (verified by a full source scan of every Issue(...) call site) -- schema_version-3 dry-run invariants as a named gate are not a structural check yet (schema_version>=3 individual fields are covered piecemeal by G33/G34/G35/G36, not under the G29 label). validate-fixtures.py's aspirational-gate-implemented check will flag this fixture automatically the moment G29 starts firing."
 
 [[tested_rules]]
 kind = "gate"

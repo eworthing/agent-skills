@@ -24,6 +24,17 @@ Checks every `<fixtures-dir>/<id>/fixture.toml`:
 - Negative fixtures (`expected_result: fail`) actually fail
   `validate-artifact.py --mode strict`.
 - Positive fixtures (`expected_result: pass`) actually pass it.
+- Negative fixtures with gate-kind `tested_rules` must fail for the *cited*
+  gate: at least one fired issue's rule must equal the cited gate id or be one
+  of its documented sub-rules (`<gate>-<suffix>`, e.g. `G21-scorecard` for
+  `G21`; see `_gate_satisfies`). `aspirational = true` marks a citation whose
+  gate has no emitting code path yet — the assertion is skipped only in the
+  direction of *not yet firing*; if the cited gate ever DOES fire, that is
+  itself reported (`aspirational-gate-implemented`) so the flag can't go
+  stale silently. `example = true` marks a fixture with no gate-kind
+  `tested_rules` at all (e.g. only `method-step`/`canon-enum`) — a
+  scenario/documentation fixture with nothing for the cited-gate assertion to
+  check; it is an error to combine `example = true` with a gate-kind citation.
 - Flag/restraint pairing: every fixture declares either (`pair_id` +
   `pair_role` in {flag, restraint}) or an explicit `pair_exception` reason —
   silence is an error. Each `pair_id` must resolve to exactly one flag and
@@ -59,7 +70,7 @@ ARTIFACT_VALIDATOR = SCRIPT_DIR / "validate-artifact.py"
 
 REQUIRED_FIXTURE_FIELDS = ("id", "purpose", "tested_rules", "expected_result")
 EXPECTED_RESULT_VALUES = {"pass", "fail"}
-OPTIONAL_BOOL_FIELDS = ("aspirational",)
+OPTIONAL_BOOL_FIELDS = ("aspirational", "example")
 PAIR_ROLE_VALUES = {"flag", "restraint"}
 
 RESIDUAL_RULES = {
@@ -372,6 +383,16 @@ def _validate_one_fixture(
                     toml_path,
                 )
             )
+    if data.get("example") is True and _extract_cited_gates(data):
+        violations.append(
+            Violation(
+                "example-with-gate",
+                "example = true fixtures must not cite gate-kind tested_rules "
+                "(there is nothing for the cited-gate assertion to skip); drop "
+                "`example` or drop the gate citation",
+                toml_path,
+            )
+        )
     pair_violations, pair_role_entry = _validate_pair_fields(fixture_dir, data, toml_path)
     violations.extend(pair_violations)
     pair_entry = (pair_role_entry[0], pair_role_entry[1], toml_path) if pair_role_entry else None
@@ -440,15 +461,33 @@ def _extract_cited_gates(fixture_data: dict) -> list[str]:
     return out
 
 
+def _gate_satisfies(cited: str, fired: str) -> bool:
+    """True when a fired issue rule id satisfies a cited canonical gate id.
+
+    A canonical gate (e.g. `G21`) may be structurally mechanized under a
+    sub-rule label (e.g. `G21-scorecard`) rather than emitted verbatim --
+    `validate-artifact.py`'s check_* functions do this deliberately so a
+    single canonical gate can cover several independently-firing structural
+    checks. A sub-rule satisfies its gate when it is exactly the gate id, or
+    the gate id followed by a `-` (never a bare prefix: `G2` must not match
+    `G21-scorecard`, hence the split on `-` rather than `str.startswith`).
+    """
+    return fired == cited or fired.startswith(f"{cited}-")
+
+
 def _cross_check_expected_result(fixture_dir: Path, fixture_data: dict) -> list[Violation]:
     """Run validate-artifact.py --mode strict, confirm exit code matches
-    expected_result, and (for non-aspirational fail fixtures with cited gates)
-    assert that at least one fired issue's rule matches a cited gate id.
+    expected_result, and (for fail fixtures with cited gates) assert that at
+    least one fired issue's rule satisfies a cited gate id (see
+    `_gate_satisfies`).
 
-    The aspirational flag (top-level boolean, default false) exempts a fixture
-    from the rule-id assertion. Use it for fixtures whose cited gate is not yet
-    validator-implemented; the fixture continues to regression-test exit code
-    only until the gate is wired.
+    `aspirational = true` marks a fixture whose cited gate has no emitting
+    code path in `_artifact_*.py` yet -- the assertion is one-directional for
+    those: it does not fail when the cited gate stays silent (that's the
+    expected, documented state), but it DOES fail
+    (`aspirational-gate-implemented`) if the cited gate ever starts firing,
+    so a stale flag on a now-implemented gate can't hide silently the way a
+    blanket skip would.
     """
     violations: list[Violation] = []
     expected = fixture_data.get("expected_result")
@@ -479,13 +518,26 @@ def _cross_check_expected_result(fixture_dir: Path, fixture_data: dict) -> list[
         return violations
     if expected != "fail":
         return violations  # only fail-fixtures get the rule-id assertion
-    if fixture_data.get("aspirational") is True:
-        return violations  # aspirational fixtures skip the rule-id assertion
     cited_gates = _extract_cited_gates(fixture_data)
     if not cited_gates:
-        return violations  # nothing to assert against
+        return violations  # nothing to assert against (e.g. example fixtures)
     fired_rules = {issue.get("rule") for issue in issues if issue.get("rule")}
-    if not (fired_rules & set(cited_gates)):
+    matched = any(_gate_satisfies(cited, fired) for cited in cited_gates for fired in fired_rules)
+    aspirational = fixture_data.get("aspirational") is True
+    if aspirational:
+        if matched:
+            violations.append(
+                Violation(
+                    "aspirational-gate-implemented",
+                    f"aspirational=true but cited gate(s) {cited_gates} already fire "
+                    f"(fired rules: {sorted(r for r in fired_rules if r)}); the validator "
+                    "now covers this behavior -- remove `aspirational = true` from "
+                    "fixture.toml.",
+                    fixture_dir,
+                )
+            )
+        return violations
+    if not matched:
         violations.append(
             Violation(
                 "wrong-gate-fired",

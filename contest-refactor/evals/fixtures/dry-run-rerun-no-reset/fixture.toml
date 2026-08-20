@@ -3,7 +3,7 @@ purpose = "Second --dry-run invocation must produce the same HALT_DRY_RUN artifa
 expected_result = "fail"
 pair_exception = "independent-branch: second --dry-run invocation resetting prior state instead of reproducing it. G29 carries several independent violation modes in this corpus; no single fixture is this one's dedicated must-not-flag restraint twin."
 aspirational = true
-notes = "Fixture's CURRENT_REVIEW.json is intentionally identical to dry-run-halt-after-step2 (re-run must be idempotent). Strict mode rejects on missing required artifacts at schema_version 3. Original intent is dry-run re-entry semantics; tested_rules best-fit-guess covers schema_version 3 invariants + the HALT_DRY_RUN canon-enum that gates this behavior."
+notes = "Fixture's CURRENT_REVIEW.json is intentionally identical to dry-run-halt-after-step2 (re-run must be idempotent). Strict mode rejects on missing required artifacts at schema_version 3. Original intent is dry-run re-entry semantics; tested_rules best-fit-guess covers schema_version 3 invariants + the HALT_DRY_RUN canon-enum that gates this behavior. Precisely: as of this writing no function in scripts/_artifact_*.py emits Issue(\"G29\", ...) or any \"G29-\"-prefixed sub-rule (verified by a full source scan of every Issue(...) call site), and re-entry idempotency specifically (second --dry-run must reproduce, not reset, prior state) has no dedicated check under any gate id -- it is a Step -1 resume-precedence concern, not something validate-artifact.py inspects at all. validate-fixtures.py's aspirational-gate-implemented check will flag this fixture automatically if G29 starts firing."
 
 [[tested_rules]]
 kind = "gate"
