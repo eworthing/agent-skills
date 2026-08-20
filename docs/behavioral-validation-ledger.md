@@ -26,6 +26,12 @@ n=1, uncontrolled, and on one model — it sets a hypothesis, not a result.
 | P3 | Coverage disclosure (`halt-handoff.md`, `fe0d4ec` + `5936630`) | does the terminal handoff carry the figure, and does it say **cited** rather than reviewed/examined? |
 | P4 | Step-0 tool sweep (`startup.md` 6c, `7c67f5e` + `5936630`) | does the main agent run `tool_runner.py --json`? |
 
+**P4 is void below `a017c07`** and must be re-run above it. The instrument it probes was
+defective: the registry shipped with ruff as its only analyzer, so on a non-Python repo the
+sweep could only ever have reported `ruff ok findings=0`. Running it would have produced a
+false clean, so a negative P4 below that commit measures nothing about the instrument's
+worth — only about whether the loop invoked it. See the second field observation.
+
 ### Field observation — BenchHype, opencode + minimax-3, 2026-08-19 (n=1, uncontrolled)
 
 Not a sweep. An opportunistic real run, observed after the fact. Recorded because it is the
@@ -59,6 +65,66 @@ felt applicable".
 sweep, run by hand against that artifact, reported **0 WARNs** — the first datapoint for the
 preregistered advisory-sweep reading. Citation coverage was **3 / 591 source files (0.5%)** at
 a terminal HALT_SUCCESS.
+
+### Field observation 2 — BenchHype, opencode, `--reset --cap`, 2026-08-19 (live at time of writing)
+
+A second opportunistic run against the same target, four hours after the first, at
+`skill_rev: 4fe8cdf`. Observed read-only while in flight; nothing was written to the target.
+
+**The provider fix is confirmed in the field.** Same repo, same host, same operator, two runs
+either side of three commits — the closest thing to a controlled with/without-change trial
+this repo has produced outside a designed sweep:
+
+| | run 1 (`skill_rev 5936630`) | run 2 (`skill_rev 4fe8cdf`) |
+|---|---|---|
+| `provider` | `unknown` | `opencode` |
+| `spawn_isolation` | `inline` | `subagent` |
+| `loop_model` | `null` | `opencode-go/deepseek-v4-flash` |
+
+`b76df07` is the cause: the detection rule tested `OPENCODE_SESSION`, an env var opencode does
+not set, so detection fell to `unknown` and `unknown` routes to inline. Run 1's artifact was
+*internally consistent* while being wrong — `loop_model: null` is exactly what G19 requires when
+`provider == "unknown"`, so no gate could have caught it. The only visible symptom was a loop
+running inline on a host that supports subagents, which reads as a host limitation rather than a
+skill defect. **A detection rule keyed on a phantom signal degrades silently into a documented,
+gate-approved fallback.** Worth generalising past this one env var.
+
+`spawn_isolation: subagent` survives into the loop subagent's own Step-1 emit, so the spawned
+agent independently reports the isolation it was spawned under, rather than the main agent
+asserting it.
+
+**P4 fired negative again, but the run is not the reason it is uninformative.** No `tool_sweep`
+key reached `discovery`, no `--json` output exists anywhere on disk, and this time the loop was
+genuinely spawned as a subagent — killing the "inline mode swallowed it" confound from run 1.
+That would be n=2 for the command-execution hypothesis. It is not, because checking whether the
+instrument was worth running is what surfaced that it was not: `tool_runner.py` against
+`BenchHypeKit/Sources/` reported `ruff ok findings=0` on a ~591-file Swift tree with
+`.swiftlint.yml` in the repo root. Fixed at `a017c07`; the same command now reports
+`ruff not_applicable` + `swiftlint ok findings=334` in 1.1s. **The hypothesis stands at n=1, not
+n=2** — a probe against a vacuous instrument is not evidence about compliance.
+
+Two operational notes, neither a defect in the run:
+
+- **`loop_model` is the profile default, not the host's model.** The operator's opencode session
+  runs minimax-3; the loop subagent was spawned on `opencode-go/deepseek-v4-flash` because that
+  is what `provider-adapters.md` names as the opencode default. This matches every other
+  provider (claude_code defaults to `claude-sonnet-5` regardless of the host's model) and is the
+  intended cost behaviour, but it is invisible to an operator who assumes the loop inherits the
+  session model. `--loop-model <id>` overrides it.
+- **Editing the skill during a live run breaks `skill_rev` attribution.** Installs are symlinks
+  into this repo, so a commit lands in the running loop's reload path immediately while the
+  artifact still records the `skill_rev` captured at Step -1. `skill_rev` exists precisely to
+  attribute a run to its ruleset, and a mid-run commit to a loop-path file silently invalidates
+  it. `a017c07` was safe only because `startup.md` is off the reload path and the two scripts are
+  read on invocation. **Treat loop-path prose as frozen while a run is in flight.**
+
+`--reset` behaved correctly and disclosed itself: it deleted `CURRENT_REVIEW.{md,json}` and
+appended a divider to `REVIEW_HISTORY.md`, and Step 0 recorded
+`_working_tree_at_step0: "Artifact-only paths from --reset itself … no source paths dirty"`
+rather than reporting a dirty tree it had caused.
+
+P1 (`--scope`) is untested here — the invocation did not pass it. P2 and P3 are still open: the
+run is at loop 1 / `CONTINUE` and has not reached a terminal handoff.
 
 
 ## Closed run — paired-arm recall measurement (sweep #3)
