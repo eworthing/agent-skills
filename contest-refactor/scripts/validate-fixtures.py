@@ -52,6 +52,7 @@ import contextlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -80,6 +81,30 @@ RESIDUAL_RULES = {
     "expired-residual",
     "terminal-normalization",
 }
+
+# --- Fixture storage: materialized final history --------------------------
+# G18 (_artifact_history.py:check_g18_review_history_append) requires
+# REVIEW_HISTORY.json.loops[-1] to equal CURRENT_REVIEW.json verbatim. Most
+# fixtures satisfy this by literally repeating CURRENT_REVIEW.json as their
+# last loops[] entry -- hundreds of duplicated lines that must be hand-
+# mirrored on every fixture edit. This is a FIXTURE-STORAGE convention only;
+# the production artifact contract (a real run's REVIEW_HISTORY.json) is
+# unchanged.
+#
+# A fixture opts in by setting a top-level `"materialize_final_history":
+# true` key in its REVIEW_HISTORY.json, alongside storing only the PREFIX
+# loops (everything before the current one) in `loops[]` -- `loops: []` for
+# a single-loop fixture. `_materialized_fixture()` below then builds a
+# throwaway copy of the fixture directory with a parsed copy of
+# CURRENT_REVIEW.json appended as the final loops[] entry, and hands that
+# copy to validate-artifact.py. Fixtures without the key are used unchanged
+# (no copy, no behavior change) -- this is what keeps explicit full
+# histories possible for fixtures that deliberately store a NON-matching
+# last entry to exercise a G18 failure (`expected_result = "fail"`), and for
+# the two `transition-*` fixtures that `_transition_table_selftest.py` reads
+# directly off disk (bypassing this script entirely, so they cannot rely on
+# materialization and must keep their full explicit `loops[]`).
+MATERIALIZE_FINAL_HISTORY_KEY = "materialize_final_history"
 
 
 class Violation:
@@ -399,6 +424,47 @@ def _validate_one_fixture(
     return violations, pair_entry
 
 
+def _needs_materialization(fixture_dir: Path) -> bool:
+    """True when REVIEW_HISTORY.json opts into final-entry materialization.
+
+    See the "Fixture storage: materialized final history" comment above.
+    """
+    hist_path = fixture_dir / "REVIEW_HISTORY.json"
+    if not hist_path.is_file():
+        return False
+    try:
+        hist = json.loads(hist_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    return isinstance(hist, dict) and hist.get(MATERIALIZE_FINAL_HISTORY_KEY) is True
+
+
+@contextlib.contextmanager
+def _materialized_fixture(fixture_dir: Path):
+    """Yield a directory ready to hand to validate-artifact.py.
+
+    Fixtures without the opt-in key are yielded unchanged -- no copy, byte-
+    identical behavior to before this convention existed. Opted-in fixtures
+    are copied to a throwaway temp dir where REVIEW_HISTORY.json.loops gets a
+    parsed copy of CURRENT_REVIEW.json appended as its final entry, so the
+    copy looks exactly like a real G18-compliant artifact on disk.
+    """
+    if not _needs_materialization(fixture_dir):
+        yield fixture_dir
+        return
+    with tempfile.TemporaryDirectory(prefix="validate-fixtures-materialize-") as td:
+        materialized = Path(td) / fixture_dir.name
+        shutil.copytree(fixture_dir, materialized)
+        hist_path = materialized / "REVIEW_HISTORY.json"
+        hist = json.loads(hist_path.read_text(encoding="utf-8"))
+        current = json.loads((materialized / "CURRENT_REVIEW.json").read_text(encoding="utf-8"))
+        hist.pop(MATERIALIZE_FINAL_HISTORY_KEY, None)
+        loops = hist.get("loops")
+        hist["loops"] = [*loops, current] if isinstance(loops, list) else [current]
+        hist_path.write_text(json.dumps(hist, indent=2) + "\n", encoding="utf-8")
+        yield materialized
+
+
 def _run_artifact_check(
     fixture_dir: Path, reference_now: str | None = None
 ) -> tuple[int, str, list[dict]]:
@@ -406,7 +472,9 @@ def _run_artifact_check(
 
     Returns (exit_code, combined_text_output, issues_list). The issues list is
     parsed from the --json sidecar payload; empty if the run produced no JSON
-    file or it failed to parse.
+    file or it failed to parse. Runs against a materialized copy when the
+    fixture opts in (see `_materialized_fixture`); otherwise against
+    `fixture_dir` directly, same as always.
     """
     with tempfile.NamedTemporaryFile(
         mode="r", suffix=".json", delete=False, encoding="utf-8"
@@ -416,25 +484,26 @@ def _run_artifact_check(
         env = os.environ.copy()
         if reference_now:
             env["CONTEST_REFACTOR_NOW"] = reference_now
-        result = subprocess.run(
-            [
-                # sys.executable, not "python3": on Windows the bare name resolves to an
-                # App Execution Alias stub that exits 9009, so every cross-check reported
-                # expected-pass/wrong-gate-fired for an environment reason. Matches the
-                # convention already used by _smoke_check.py.
-                sys.executable,
-                str(ARTIFACT_VALIDATOR),
-                str(fixture_dir),
-                "--mode",
-                "strict",
-                "--json",
-                str(json_path),
-                "--quiet",
-            ],
-            capture_output=True,
-            text=True,
-            env=env,
-        )
+        with _materialized_fixture(fixture_dir) as run_dir:
+            result = subprocess.run(
+                [
+                    # sys.executable, not "python3": on Windows the bare name resolves to an
+                    # App Execution Alias stub that exits 9009, so every cross-check reported
+                    # expected-pass/wrong-gate-fired for an environment reason. Matches the
+                    # convention already used by _smoke_check.py.
+                    sys.executable,
+                    str(ARTIFACT_VALIDATOR),
+                    str(run_dir),
+                    "--mode",
+                    "strict",
+                    "--json",
+                    str(json_path),
+                    "--quiet",
+                ],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
         output = (result.stdout or "") + (result.stderr or "")
         issues: list[dict] = []
         try:
