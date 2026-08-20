@@ -1,0 +1,14 @@
+id = "out-of-plan-cleanup-mid-restore"
+purpose = "LOOP_STATE.json carries phase == \"out_of_plan_cleanup\" with cleanup_subphase == \"restoring\": Step 3 sub-step 6 found Core/GeneratedCache.tmp outside the Step 2 plan's predicted touch paths (planned_paths) and switched checkpoints before spawning the reviewer. Exercises the harness's ability to host a LOOP_STATE.json phase fixture for this new phase (the loop-state-post-commit-pre-delete fixture established that a LOOP_STATE.json can ship alongside a mid-loop CURRENT_REVIEW.json at all) and pins that a well-formed cleanup_state does NOT trip G28's phase-aware branch."
+expected_result = "fail"
+pair_exception = "independent-branch: a mid-out-of-plan-cleanup checkpoint, structurally unrelated to the flag/restraint pairing this corpus otherwise uses for G28 (see loop-state-post-commit-pre-delete's own pair_exception, same reasoning)."
+aspirational = true
+notes = "Fixture ships CURRENT_REVIEW.json + LOOP_STATE.json (schema_version 3 / 1) only. Strict mode fails on missing CURRENT_REVIEW.md, REVIEW_HISTORY.md, REVIEW_HISTORY.json, findings_registry.json — same shape as loop-state-post-commit-pre-delete. The point of this fixture is G28's phase branch: LOOP_STATE.json's well-formed cleanup_state produces ZERO G28 issues (verified directly against _artifact_snapshots.check_g28_loop_state_freshness, which returns []); the negative-case coverage (missing/malformed cleanup_state fields, bad cleanup_subphase) lives in scripts/_g28_cleanup_phase_selftest.py, which this fixture complements rather than duplicates."
+
+[[tested_rules]]
+kind = "gate"
+id = "G28"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

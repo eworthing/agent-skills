@@ -273,7 +273,17 @@ CEILINGS = {
     # 2026-08-20 after firing 0/6 times in production (sweep #4, probe P2). Part of what
     # is being re-baselined here was paid for dead weight, which is the argument for
     # auditing the loop path for other never-executed instructions BEFORE the next bump.
-    "loop_apple": 84_800,  # per-loop fixed reload, apple lens (measured 84,276, margin 524)
+    # Bumped 84,800 -> 86,200 (2026-08-20) for the loop-ownership P1 pair (register items:
+    # changed_paths conflating pre-existing dirt with loop-owned edits; untracked files
+    # absent from review and rollback). SKILL.md Step 3 sub-step 6 gained the out-of-plan
+    # gate + the Out-of-plan cleanup procedure; Guardrails and the HALT_STAGNATION
+    # `user_decision` entry each gained a short cross-reference. Sized with the SAME
+    # proactive ~500-margin convention as the bump directly above, not the reactive-
+    # minimal one -- _token_budget_selftest.py's soft-margin probe subtracts a fixed 400
+    # from the live ceiling and asserts the result still WARNs rather than FAILs, which
+    # only holds when margin (ceiling - measured) sits in [400, 550); a reactive-minimal
+    # bump breaks that probe. Measured at 85,688, margin 512.
+    "loop_apple": 86_200,  # per-loop fixed reload, apple lens (measured 85,688, margin 512)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
@@ -281,8 +291,16 @@ CEILINGS = {
     # spare; that was rejected as false economy — a 2-token margin turns the guard into a
     # tripwire on the next edit of any kind. Deliberate escape hatch per this dict's own
     # guard comment; measured at 80,102, smallest 100-multiple headroom above it.
-    "loop_generic": 80_700,  # per-loop fixed reload, generic lens (measured 80,198, margin 502)
-    "skill_md": 11_000,  # SKILL.md trigger read (measured 10,598, margin 402)
+    # Bumped 80,700 -> 82,100 (2026-08-20) for the same loop-ownership P1 pair as loop_apple
+    # above (SKILL.md Step 3 sub-step 6's out-of-plan gate + cleanup procedure is lens-
+    # independent prose). Same proactive ~500-margin convention. Measured at 81,610, margin 490.
+    "loop_generic": 82_100,  # per-loop fixed reload, generic lens (measured 81,610, margin 490)
+    # Bumped 11,000 -> 12,200 (2026-08-20) for the same loop-ownership P1 pair: the out-of-
+    # plan gate, cleanup procedure, sub-step-0 cross-reference, Guardrails bullet, and
+    # HALT_STAGNATION `user_decision` cross-reference all land in SKILL.md itself, which is
+    # both the trigger read and the largest single contributor to loop_apple/loop_generic
+    # above. Same proactive ~500-margin convention. Measured at 11,726, margin 474.
+    "skill_md": 12_200,  # SKILL.md trigger read (measured 11,726, margin 474)
 }
 
 # Soft margin, paired with the 2026-08-20 bump. A generous ceiling only works if the

@@ -1,0 +1,176 @@
+{
+  "schema_version": 3,
+  "loop": 3,
+  "loop_cap": 10,
+  "state": "CONTINUE",
+  "halt_subtype": null,
+  "halt_handoff_text": null,
+  "halt_handoff": null,
+  "re_validated_at_sha": null,
+  "re_validation_context": null,
+  "dry_run": false,
+  "provider": "claude_code",
+  "loop_model": "claude-sonnet-5",
+  "loop_model_source": "default",
+  "reviewer_model": "claude-sonnet-5",
+  "reviewer_model_source": "default",
+  "spawn_isolation": "subagent",
+  "findings_registry_path": "./findings_registry.json",
+  "discovery": null,
+  "verdict": "Good app, but not top-tier yet",
+  "verdict_explanation": "Loop 3 mid-Step-3: an out-of-plan delta was found at sub-step 6, so LOOP_STATE.json has switched to the out_of_plan_cleanup phase and every planned edit is being restored to baseline.",
+  "scorecard": {
+    "architecture_quality": {
+      "score": 8.5,
+      "delta": "UP",
+      "proof": "Core/NavigationStore.swift:42",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "state_management": {
+      "score": 8.5,
+      "delta": "UP",
+      "proof": "Core/NavigationStore.swift:12",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "domain_modeling": {
+      "score": 8.0,
+      "delta": "SAME",
+      "proof": "Core/Models.swift",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "data_flow": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "Core/Effects.swift",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "framework_idioms": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "App/RootView.swift",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "concurrency": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "Core/Adapters/Spotify.swift",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "simplicity": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "Core/Reducer.swift",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "test_strategy": {
+      "score": 8.0,
+      "delta": "SAME",
+      "proof": "Tests/",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    },
+    "credibility": {
+      "score": 8.5,
+      "delta": "SAME",
+      "proof": "App/AppEngine.swift",
+      "residual_blocking_10": null,
+      "residual_disposition": null,
+      "residual_rationale_or_backlog_ref": null,
+      "unverifiable_due_to_build_failure": false
+    }
+  },
+  "authority_map": [],
+  "strengths": [
+    "Navigation now single-writer post-loop-3 refactor attempt"
+  ],
+  "findings": [
+    {
+      "loop_local_id": "F1",
+      "stable_id": "F-001",
+      "title": "Navigation has two writers",
+      "why_it_matters": "Two owners of selectedTab makes the transition graph unauditable.",
+      "what_is_wrong": "RootView and LoginViewModel both assign selectedTab.",
+      "evidence": [
+        "Core/NavigationStore.swift:42"
+      ],
+      "test_failed": "Deletion test",
+      "dependency_category": null,
+      "leverage_impact": "Single-writer NavigationStore would collapse both call sites.",
+      "locality_impact": "Localized to NavigationStore.",
+      "metric_signal": "none",
+      "why_weakens_submission": "Split authority over one mutable concern.",
+      "severity": "Serious deduction",
+      "adr_conflicts": [],
+      "adr_reopen_justification": null,
+      "minimal_correction_path": "Make NavigationStore sole writer of selectedTab.",
+      "blast_radius": {
+        "change": [
+          "Core/NavigationStore.swift",
+          "App/RootView.swift"
+        ],
+        "avoid": []
+      }
+    }
+  ],
+  "simplification_check": {
+    "structurally_necessary": "Collapsing navigation writers — passes Deletion test",
+    "new_seam_justified": false,
+    "new_seam_adapters": [],
+    "should_not_be_done": "none",
+    "tests_after_fix": "Tests/NavigationStoreTests.swift updated"
+  },
+  "backlog": [
+    {
+      "priority": 1,
+      "title": "Navigation has two writers",
+      "kind": "structural",
+      "rank": "needed for winning",
+      "why_it_matters": "Split authority over one mutable concern",
+      "score_impact": "architecture_quality +0.5"
+    }
+  ],
+  "unresolved_reason": null,
+  "deepening_candidates": [],
+  "builder_notes": [
+    {
+      "pattern": "Single-writer authority",
+      "how_to_recognize": "Only one file mutates the field.",
+      "smallest_coding_rule": "Bind callers to the owner's projection."
+    }
+  ],
+  "narrative": "Loop 3 in progress. Step 3 sub-step 6 found a delta outside the Step 2 plan's predicted touch paths (Core/GeneratedCache.tmp) and switched to the out_of_plan_cleanup phase before the reviewer was ever spawned.",
+  "loop_result": {
+    "what_changed": "Attempted to make NavigationStore sole writer of selectedTab.",
+    "evidence_change_is_honest": "swift test not yet re-run — cleanup fires before the reviewer",
+    "targeted_finding_status": "resolved",
+    "unintended_regression": null,
+    "changed_paths": [
+      "Core/NavigationStore.swift",
+      "App/RootView.swift",
+      "Core/GeneratedCache.tmp"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "phase": "out_of_plan_cleanup",
+  "cleanup_state": {
+    "planned_paths": {
+      "Core/NavigationStore.swift": "9b2a13c4f0e1d2a3b4c5d6e7f8a9b0c1d2e3f4a5",
+      "App/RootView.swift": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b"
+    },
+    "unexpected_paths": [
+      "Core/GeneratedCache.tmp"
+    ],
+    "cleanup_subphase": "restoring",
+    "halt_commit_draft": {
+      "subject": "loop 3: halt — out-of-plan changes require disposition; finding F1 (stable_id F-001) carried_forward"
+    }
+  }
+}

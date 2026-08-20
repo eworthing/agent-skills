@@ -28,10 +28,10 @@ Mid-Step-3 checkpoint artifact. Created at Step 3 sub-step 0; updated before/aft
     "CURRENT_REVIEW.json",
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"
   ],
-  "changed_paths": [                            // copy of loop_result.changed_paths once Step 3 step 4 has run (the diff is final at that point). Empty before step 4.
+  "changed_paths": [                            // copy of loop_result.changed_paths once Step 3 sub-step 6 has computed it (tracked + untracked union, bookkeeping paths excluded; see output-format-json.md). Empty before sub-step 6.
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"
   ],
-  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 (pre-edit). path → blob sha; null = untracked. Narrow-revert classification: non-null → `git restore --source=HEAD --staged --worktree -- <path>`; null → unstage if needed, then delete the loop-created file.
+  "pre_step3_blob_shas": {                      // populated at Step 3 sub-step 0 (pre-edit), one entry per path the Step 2 plan predicted as a touch path — i.e. the PLANNED set. path → blob sha; null = untracked. Narrow-revert classification: non-null → `git restore --source=HEAD --staged --worktree -- <path>`; null → unstage if needed, then delete the loop-created file. Sub-step 6 diffs `changed_paths` against this set's keys to find out-of-plan deltas (see § Out-of-plan cleanup phase below).
     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift": "9b2a13c4...",
     "BenchHypeKit/Tests/AppReducerWorkflowTests.swift": null
   },
@@ -81,6 +81,89 @@ existing idempotency-key flush rules (§ Idempotency requirements below). The
 checkpoint is deleted after the routed transition commits. Resume keys on
 `phase`, not on `CURRENT_REVIEW.json.state` — see
 [resume-detection.md § Resume Precedence Matrix row 6b](resume-detection.md#resume-precedence-matrix).
+
+### Out-of-plan cleanup phase (`out_of_plan_cleanup`)
+
+The third value `phase` can take. Written by the **loop subagent itself**
+(unlike the panel phase above, which only main ever writes) at Step 3
+sub-step 6, the instant `loop_result.changed_paths[]` contains a path outside
+`LOOP_STATE.pre_step3_blob_shas` — a delta the Step 2 plan never predicted.
+Replaces the legacy step_started/step_completed schema for the duration of
+the cleanup transaction:
+
+```jsonc
+{
+  "schema_version": 1,
+  "phase": "out_of_plan_cleanup",
+  "cleanup_state": {
+    "planned_paths": {                      // copied verbatim from LOOP_STATE.pre_step3_blob_shas
+      "BenchHypeKit/Sources/.../AppReducer+Workflow.swift": "9b2a13c4...",
+      "BenchHypeKit/Tests/AppReducerWorkflowTests.swift": null
+    },
+    "unexpected_paths": [                   // changed_paths[] minus planned_paths keys minus the
+      "BenchHypeKit/Sources/.../GeneratedCache.tmp"  // bookkeeping allowance. Never touched by restoration.
+    ],
+    "cleanup_subphase": "restoring",        // "restoring" | "committing" | "done"
+    "halt_commit_draft": {
+      "subject": "loop 3: halt — out-of-plan changes require disposition; finding F1 (stable_id F-001) carried_forward"
+    }
+  }
+}
+```
+
+**Why this is a complete crash-safe transaction, not a bigger narrow-revert.**
+Every path in `planned_paths` is restored to its `pre_step3_blob_shas`
+baseline exactly the way Step 3 sub-step 6's `rejected` verdict already
+restores a path (non-null blob sha ⇒ `git restore --source=HEAD --staged
+--worktree`; `null` entry ⇒ `git rm --cached --ignore-unmatch` + delete the
+working-tree file) — this phase runs that same mechanic over every planned
+path regardless of what the reviewer would have said, because an out-of-plan
+delta means this loop's execution environment cannot be trusted for ANY of
+its edits this iteration, not only the unexpected one. The reviewer never
+runs for this path — there is nothing left it could approve into a commit —
+so the halt commit clears `loop_result` back to `null` (Step 3 sub-step 4
+already wrote a stub for the now-discarded attempt; none of it survives) and
+leaves `implementation_review` absent, so
+[G15](validation.md) / [G46](validation.md) (both scoped to "when
+`loop_result` is present") do not apply. Only `unexpected_paths` survive,
+untouched, for the operator to disposition.
+
+**`cleanup_subphase` lifecycle:**
+1. `"restoring"` — set the moment this checkpoint replaces the normal Step 3
+   schema, before any `git restore`/`git rm` runs. fsync.
+2. `"committing"` — set once every `planned_paths` entry is confirmed restored
+   to baseline. `CURRENT_REVIEW.md`/`.json` are rewritten to `state:
+   "HALT_STAGNATION"`, `halt_subtype: "user_decision"` (`halt_handoff.text`
+   names the `unexpected_paths`; see [SKILL.md § Halting
+   Conditions](../SKILL.md#halting-conditions)); `REVIEW_HISTORY.{md,json}`
+   archive via Step 3 sub-step 9's existing idempotent mechanics;
+   `findings_registry.json` flushes via sub-step 10 if anything is pending;
+   then `git commit` with `halt_commit_draft.subject` — review artifacts
+   only, no code, the same shape sub-step 6's `rejected` path already
+   commits. fsync before and after the commit attempt, same as sub-step 11.
+3. `"done"` — set once the commit is confirmed landed (below), immediately
+   before deleting `LOOP_STATE.json` (same atomic rename-then-unlink as
+   sub-step 11.f).
+
+**Landed-commit detection is subject/tree match, not a `commit_attempted_sha`
+field.** A field written post-commit carries the same crash window any
+post-commit field write has — sub-step 11's `commit_attempted_sha` exists
+only because nothing better was available there. Here,
+`halt_commit_draft.subject` is recorded BEFORE any git mutation, so resume
+re-derives landed-or-not from git state directly instead of trusting a
+second write that could itself be the thing that got interrupted: compare
+`git log -1 --format=%s HEAD` against `cleanup_state.halt_commit_draft.subject`,
+AND confirm the working tree carries no staged or unstaged changes to
+TRACKED paths (`git status --porcelain` has no non-`??` line — `??` lines are
+expected and legitimate when `unexpected_paths` includes untracked entries,
+which the halt commit never touches). Both true ⇒ the commit already landed.
+Either false ⇒ it has not (an unrelated-subject HEAD is treated the same as
+not-landed — resume re-attempts rather than trusting a coincidental match).
+
+G28 shape-checks this object at commit time and on any later strict
+validation run (`scripts/_artifact_snapshots.py`). Full resume routing:
+[resume-detection.md § Resume the out-of-plan cleanup
+transaction](resume-detection.md#resume-the-out-of-plan-cleanup-transaction-matrix-row-6c).
 
 ### Lifecycle
 
