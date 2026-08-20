@@ -15,7 +15,51 @@ Each sweep's measured token spend is recorded when it closes.
 
 ## Pending sweep #4
 
-(empty — next behavioral changes accumulate here)
+Four prose changes shipped 2026-08-19 that alter what the loop *does*, each needing its own
+keyed probe. One field observation (below) partially pre-answers three of them, but it is
+n=1, uncontrolled, and on one model — it sets a hypothesis, not a result.
+
+| # | Change | Probe question |
+|---|---|---|
+| P1 | `--scope` given an effect (`startup.md` Step 0 step 2, `ae272ec`) | does the loop actually narrow the scan, and does `discovery.source_roots` record the narrowing? |
+| P2 | Step-3 mechanical sweep (`validation.md`, `ee21bc8` + `5936630`) | does the loop run `validate-artifact.py --mode advisory --json`, and act on WARNs? |
+| P3 | Coverage disclosure (`halt-handoff.md`, `fe0d4ec` + `5936630`) | does the terminal handoff carry the figure, and does it say **cited** rather than reviewed/examined? |
+| P4 | Step-0 tool sweep (`startup.md` 6c, `7c67f5e` + `5936630`) | does the main agent run `tool_runner.py --json`? |
+
+### Field observation — BenchHype, opencode + minimax-3, 2026-08-19 (n=1, uncontrolled)
+
+Not a sweep. An opportunistic real run, observed after the fact. Recorded because it is the
+only real-world exercise of P2–P4 that exists, and because the ruleset is pinned: the
+artifact carries `skill_rev: 5936630`, which landed 18:33; the run's loop commits are
+19:14–19:17. The instructions were unambiguously present.
+
+**Split result, and the split is the interesting part:**
+
+- **Output-shaping instructions were followed.** The handoff carried
+  `Citation coverage: the loop cited …` using the honest word **cited**, and added an
+  unprompted provenance note — *"the challenger is structurally weaker than a fresh-context
+  independent verification — both Critic and Challenger ran in this same conversation."*
+  P3 passes on this run, including the wording guard.
+- **Command-execution instructions were not.** Neither `validate-artifact.py` (P2, Step 3,
+  loop subagent) nor `tool_runner.py` (P4, Step 0, **main agent**) wrote anything;
+  `.contest-refactor/diagnostics/` does not exist and the tree is clean. Not a
+  subagent-context effect — the P4 site is main-agent and also did not fire.
+
+**Hypothesis for the sweep to test, not a conclusion:** prose that shapes *narrative output*
+is followed more reliably than prose that requires *running a command*. If that holds, the
+diagnostics shipped this session will under-fire in practice, and the measurement plan they
+serve needs a mechanism that does not depend on the model choosing to invoke a script.
+
+Confounds, stated: one model (minimax-3), one host (opencode), one loop, and the run reached
+a terminal state on loop 1 — a longer run might have invoked the Step-3 sweep on a later
+pass. Nothing here separates "did not comply" from "did not reach the step in a way that
+felt applicable".
+
+**What the run did establish deterministically** (no model judgment involved): the mechanical
+sweep, run by hand against that artifact, reported **0 WARNs** — the first datapoint for the
+preregistered advisory-sweep reading. Citation coverage was **3 / 591 source files (0.5%)** at
+a terminal HALT_SUCCESS.
+
 
 ## Closed run — paired-arm recall measurement (sweep #3)
 
