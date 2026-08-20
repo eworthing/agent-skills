@@ -16,9 +16,9 @@ Run: python3 scripts/_g22_status_selftest.py   (exit 0 = pass, 1 = fail)
 
 from __future__ import annotations
 
-import importlib.util
 import sys
-from pathlib import Path
+
+from _selftest_lib import load_validator as _load_validator
 
 # Every status the occurrence enum can carry into a loop commit subject.
 # Keep in sync with output-format-state-schemas.md and validation.md G22.
@@ -29,14 +29,6 @@ COMMIT_STATUSES = (
     "rejected_attempt",
     "withdrawn",
 )
-
-
-def _load_validator():
-    path = Path(__file__).with_name("validate-artifact.py")
-    spec = importlib.util.spec_from_file_location("_va_g22", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def main() -> int:

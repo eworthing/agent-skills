@@ -7,19 +7,8 @@ deliberately without the _selftest suffix so the selftest sweep
 
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
-
 import candidate_fingerprint as _cfp
-
-
-def _load_validator():
-    path = Path(__file__).with_name("validate-artifact.py")
-    spec = importlib.util.spec_from_file_location("_va_g32_panel", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
+from _selftest_lib import load_validator as _load_validator  # noqa: F401
 
 RUN_ID = "run-1"
 SOURCE_REV = "rev-1"

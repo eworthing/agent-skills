@@ -28,7 +28,6 @@ Run: python3 scripts/_g41_selftest.py   (exit 0 = pass, 1 = fail)
 from __future__ import annotations
 
 import copy
-import importlib.util
 import sys
 from pathlib import Path
 
@@ -36,15 +35,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 from _canon import load_canon
-
-
-def _load_validator():
-    path = Path(__file__).with_name("validate-artifact.py")
-    spec = importlib.util.spec_from_file_location("_va_g41", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
+from _selftest_lib import load_validator as _load_validator
 
 DIMS = tuple(load_canon(HERE.parent).scorecard_dimensions)
 

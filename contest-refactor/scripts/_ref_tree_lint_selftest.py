@@ -21,18 +21,16 @@ Run: python3 scripts/_ref_tree_lint_selftest.py   (exit 0 = pass, 1 = fail)
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 import tempfile
 from pathlib import Path
 
+from _selftest_lib import load_validator
+
 
 def _load_validator():
-    path = Path(__file__).with_name("validate-repo.py")
-    spec = importlib.util.spec_from_file_location("_vr_reftree", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    # This file lints validate-repo.py, not the validate-artifact.py default.
+    return load_validator("validate-repo.py")
 
 
 def _make_clean_tree(root: Path) -> None:
