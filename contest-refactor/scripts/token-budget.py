@@ -283,7 +283,13 @@ CEILINGS = {
     # from the live ceiling and asserts the result still WARNs rather than FAILs, which
     # only holds when margin (ceiling - measured) sits in [400, 550); a reactive-minimal
     # bump breaks that probe. Measured at 85,688, margin 512.
-    "loop_apple": 86_200,  # per-loop fixed reload, apple lens (measured 85,688, margin 512)
+    # Bumped 86,200 -> 86,600 (2026-08-20) for the G29 prose correction + [I3] (register): G29
+    # was rewritten off the stale v2->v3 default-fill restatement onto the current capability-
+    # derived version rule (defers to output-format-json.md), and output-format-json.md gained
+    # the source_rev mid-loop-commit resolution (two definition sites) plus a new
+    # findings_carried_from_prior_loops spec paragraph. Same proactive ~500-margin convention.
+    # Measured at 86,131, margin 469.
+    "loop_apple": 86_600,  # per-loop fixed reload, apple lens (measured 86,131, margin 469)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
@@ -294,7 +300,10 @@ CEILINGS = {
     # Bumped 80,700 -> 82,100 (2026-08-20) for the same loop-ownership P1 pair as loop_apple
     # above (SKILL.md Step 3 sub-step 6's out-of-plan gate + cleanup procedure is lens-
     # independent prose). Same proactive ~500-margin convention. Measured at 81,610, margin 490.
-    "loop_generic": 82_100,  # per-loop fixed reload, generic lens (measured 81,610, margin 490)
+    # Bumped 82,100 -> 82,500 (2026-08-20) for the same G29/source_rev/[I3] pass as loop_apple
+    # above (lens-independent prose in validation.md + output-format-json.md). Same proactive
+    # ~500-margin convention. Measured at 82,053, margin 447.
+    "loop_generic": 82_500,  # per-loop fixed reload, generic lens (measured 82,053, margin 447)
     # Bumped 11,000 -> 12,200 (2026-08-20) for the same loop-ownership P1 pair: the out-of-
     # plan gate, cleanup procedure, sub-step-0 cross-reference, Guardrails bullet, and
     # HALT_STAGNATION `user_decision` cross-reference all land in SKILL.md itself, which is
