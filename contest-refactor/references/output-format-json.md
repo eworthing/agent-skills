@@ -197,9 +197,9 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
   // Provider/model state (v2+; required on every loop, not first-loop-only)
   "provider": "claude_code",                    // enum: claude_code | codex | opencode | unknown. Detected per references/provider-adapters.md Â§ Detection.
   "loop_model": "claude-sonnet-5",              // string, full canonical model ID. Default per provider-adapters.md loop-spawn table.
-  "loop_model_source": "default",               // enum: default | env_override | user_flag
+  "loop_model_source": "default",               // enum: default | env_override | user_flag | inherited
   "reviewer_model": "claude-sonnet-5",          // string, full canonical model ID. Default per provider-adapters.md reviewer-spawn table.
-  "reviewer_model_source": "default",           // enum: default | env_override | user_flag
+  "reviewer_model_source": "default",           // enum: default | env_override | user_flag | inherited
   "spawn_isolation": "subagent",                // enum: subagent | inline. "inline" only when provider == "unknown".
   "skill_rev": "2b81c10",                       // (v4+) string | null. Short SHA of $SKILL_DIR's HEAD when this loop ran, resolved in Step -1. Null when the skill is not a git checkout. Identifies WHICH RULESET produced the artifact: schema_version is the artifact format, source_rev is the TARGET repo, and neither pins the rules the loop obeyed. Enforced by G19.
   "premium_dry_run": null,                      // optional null|object. Non-null only when --premium-dry-run-model or CONTEST_REFACTOR_PREMIUM_DRY_RUN_MODEL forced dry_run. Shape: {"model": "...", "model_source": "user_flag|env_override", "activated_dry_run": true}.
@@ -436,6 +436,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
     },
     "regressions": [],                                                // array of strings; empty when verdict approved
     "conditions": [],                                                 // array of strings; empty when verdict approved (populated only mid-loop on conditional)
+    "reviewer_isolation": "subagent",                                 // enum: subagent | inline; see challenger_isolation.
     "rounds": 1,                                                      // int; number of reviewer invocations this loop (1 normally; 2 when conditional â†’ re-spawn)
     "retry_count": 1,                                                 // (v3+) int 1..2. 1 = first-attempt success/clean fail; 2 = retried after transient infra failure.
     "retry_cause": null,                                              // (v3+) null | "timeout" | "spawn_error" | "malformed_json". non-null iff retry_count == 2. Substantive verdict reasons stay in `reason`.

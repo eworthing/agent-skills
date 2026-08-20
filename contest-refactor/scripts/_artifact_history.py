@@ -353,7 +353,8 @@ def check_g19_provider_model(current_review: dict) -> list[Issue]:
     if not reviewer_source:
         issues.append(Issue("G19", "reviewer_model_source field required (non-empty)"))
 
-    valid_sources = {"default", "env_override", "user_flag"}
+    # `inherited` (row 32): without it this gate compelled the lie it validated.
+    valid_sources = {"default", "env_override", "user_flag", "inherited"}
     if loop_source is not None and loop_source not in valid_sources:
         issues.append(
             Issue(
@@ -408,8 +409,12 @@ def check_g19_provider_model(current_review: dict) -> list[Issue]:
                 )
             )
     elif provider in _PROVIDER_DEFAULTS:
-        # Known provider: both models must be non-null strings (and not the placeholder).
-        for field, value in (("loop_model", loop_model), ("reviewer_model", reviewer_model)):
+        for field, value, src in (
+            ("loop_model", loop_model, loop_source),
+            ("reviewer_model", reviewer_model, reviewer_source),
+        ):
+            if value is None and src == "inherited":
+                continue  # null is honest here: the spawn chose no model
             if value is None or not isinstance(value, str) or not value:
                 issues.append(
                     Issue(

@@ -97,6 +97,44 @@ def main() -> int:
     if len(baselines) != 1:
         failures.append("skill_rev changed the provider/model verdict; the checks must be disjoint")
 
+    # --- `inherited`: the honest record for a spawn that chose no model -------
+    # Before this, "source == default" REQUIRED the profile's prescribed model, so a
+    # spawn that took no model argument had to record one that never ran. Measured on
+    # a real run: an opencode in-session subagent recorded deepseek-v4-flash on three
+    # fields while minimax-m3 executed. The exemption must be scoped -- if `inherited`
+    # simply switched the gate off, a `default`-sourced null would stop firing too.
+    base = {
+        "schema_version": 4,
+        "provider": "opencode",
+        "spawn_isolation": "subagent",
+        "skill_rev": "abc1234",
+        "loop_model": None,
+        "loop_model_source": "inherited",
+        "reviewer_model": None,
+        "reviewer_model_source": "inherited",
+    }
+    if va.check_g19_provider_model(base):
+        failures.append(
+            "source='inherited' with a null model is the honest record when the spawn took "
+            f"no model argument; G19 rejected it: {[i.message for i in va.check_g19_provider_model(base)]}"
+        )
+
+    named = dict(base, loop_model="opencode-go/minimax-m3", reviewer_model="opencode-go/minimax-m3")
+    if va.check_g19_provider_model(named):
+        failures.append("source='inherited' naming the model that actually ran must also pass")
+
+    # RESTRAINT: the exemption is keyed on `inherited`, not on nullness.
+    still_bad = dict(base, loop_model_source="default", reviewer_model_source="default")
+    if not va.check_g19_provider_model(still_bad):
+        failures.append(
+            "a NULL model under source='default' must still fire for a known provider -- "
+            "`inherited` scopes the exemption, it does not disable the check"
+        )
+
+    unknown_src = dict(base, loop_model_source="inherited_maybe")
+    if not va.check_g19_provider_model(unknown_src):
+        failures.append("an unrecognised *_model_source must still fire")
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

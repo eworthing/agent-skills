@@ -136,6 +136,28 @@ def main() -> int:
             f"retroactive-invalidation rule). Got: {out!r}"
         )
 
+    # --- the reviewer is the other verification a terminal rests on ----------
+    a = _artifact(spawn_isolation="subagent", challenger_isolation="subagent")
+    a["implementation_review"] = {"reviewer_isolation": "inline"}
+    _, out = _run(a)
+    if "reviewer-independence" not in out:
+        failures.append(
+            f"an inline implementation review at a terminal must be disclosed; got: {out!r}"
+        )
+
+    a["implementation_review"] = {"reviewer_isolation": "subagent"}
+    _, out = _run(a)
+    if out.strip():
+        failures.append(f"an independently-spawned reviewer is the normal case; got: {out!r}")
+
+    a["implementation_review"] = {}
+    _, out = _run(a)
+    if "reviewer-independence" in out:
+        failures.append(
+            f"an ABSENT reviewer_isolation is an optional v4 field (item 30): it must not be "
+            f"read as inline. Got: {out!r}"
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

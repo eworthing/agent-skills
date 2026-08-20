@@ -73,6 +73,19 @@ def check_challenge_independence_report_only(current_review: dict) -> list[Issue
     provider = current_review.get("provider") or "<unrecorded>"
     model = challenge.get("challenger_model") or "<unrecorded>"
 
+    # A terminal success rests on TWO verifications: the implementation reviewer
+    # approving the change, and the challenger failing to break the candidate. An
+    # inline reviewer is a self-review for the same reason an inline challenger is a
+    # self-vet, so it is disclosed alongside rather than silently ignored.
+    reviewer_isolation = (current_review.get("implementation_review") or {}).get(
+        "reviewer_isolation"
+    )
+    if reviewer_isolation == "inline":
+        print(
+            f"[reviewer-independence state={state} provider={provider}] the implementation "
+            f"review that approved this loop ran inline; its verdict shares the context it judges"
+        )
+
     challenger_isolation = challenge.get("challenger_isolation")
     loop_isolation = current_review.get("spawn_isolation")
 
