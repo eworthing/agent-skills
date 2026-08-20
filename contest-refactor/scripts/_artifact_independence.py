@@ -47,32 +47,65 @@ _TERMINAL_SUCCESS = ("HALT_SUCCESS", "HALT_SUCCESS_candidate")
 
 
 def check_challenge_independence_report_only(current_review: dict) -> list[Issue]:
-    """Flag a terminal success promoted by a challenger that was not independently spawned."""
+    """Flag a terminal success whose challenger was not independently spawned.
+
+    Three outcomes, because the middle one is what the first version of this check
+    got wrong: it returned silently whenever top-level `spawn_isolation` was
+    `subagent`, treating "the LOOP was isolated" as proof the CHALLENGE was. Those
+    are different spawns. A real run (BenchHype, 2026-08-19) walked straight through
+    that gap -- `spawn_isolation: subagent` with
+    `implementation_review.spawn_mode: "inline (no subagent tool available in this
+    opencode session)"`, because an opencode subagent cannot nest-spawn. The loop was
+    isolated; the challenge that promoted it to HALT_SUCCESS was not.
+
+      inline recorded    -> fires: the challenge shared the Critic's context
+      subagent recorded  -> silent: independence is established
+      neither recorded   -> UNVERIFIED: absence of evidence is not evidence of
+                            independence, so it is reported rather than passed
+    """
     state = current_review.get("state")
     if state not in _TERMINAL_SUCCESS:
         return []
     if (current_review.get("schema_version") or 1) < 4:
         return []
 
-    isolation = current_review.get("spawn_isolation")
-    if isolation != "inline":
+    challenge = current_review.get("halt_success_challenge") or {}
+    provider = current_review.get("provider") or "<unrecorded>"
+    model = challenge.get("challenger_model") or "<unrecorded>"
+
+    challenger_isolation = challenge.get("challenger_isolation")
+    loop_isolation = current_review.get("spawn_isolation")
+
+    # The challenger's own record wins; the loop's isolation is a fallback signal
+    # only because a loop that itself ran inline cannot have spawned anything.
+    if challenger_isolation in ("subagent", "inline"):
+        effective, source = challenger_isolation, "challenger_isolation"
+    elif loop_isolation == "inline":
+        effective, source = "inline", "spawn_isolation (the loop itself ran inline)"
+    else:
+        print(
+            f"[challenge-independence-unverified state={state} provider={provider} "
+            f"challenger_model={model!r}] halt_success_challenge.challenger_isolation is "
+            f"absent, and spawn_isolation={loop_isolation!r} describes the LOOP spawn, not "
+            f"the challenge. Independence is unverified, which is not the same as verified"
+        )
         return []
 
-    challenge = current_review.get("halt_success_challenge") or {}
-    model = challenge.get("challenger_model") or "<unrecorded>"
-    provider = current_review.get("provider") or "<unrecorded>"
+    if effective == "subagent":
+        return []
+
     print(
-        f"[challenge-independence state={state} spawn_isolation=inline provider={provider} "
-        f"challenger_model={model!r}] terminal success rests on a challenger that shared the "
-        f"Critic's context; G32 checks challenger_model is non-empty and cannot see this"
+        f"[challenge-independence state={state} provider={provider} source={source} "
+        f"challenger_model={model!r}] terminal success rests on a challenger that shared "
+        f"the Critic's context; G32 checks challenger_model is non-empty and cannot see this"
     )
     fired = [
         Issue(
             "challenge-independence",
-            f"{state} promoted under spawn_isolation='inline' (provider={provider}): the "
-            f"challenge was not independently spawned, so the verdict carries no fresh-context "
-            f"verification. Re-run on a provider with subagent spawn, or treat the terminal as "
-            f"provisional and say so in the handoff.",
+            f"{state} promoted by a challenge that ran inline (per {source}, provider="
+            f"{provider}): no fresh-context verification backs the verdict. Re-run on a "
+            f"provider whose subagents can nest-spawn, or treat the terminal as provisional "
+            f"and say so in the handoff.",
         )
     ]
     if REPORT_ONLY:

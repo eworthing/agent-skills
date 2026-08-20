@@ -135,6 +135,7 @@ v5 replaces this object with a panel — see [§ Schema version 5 changelog](#sc
 ```jsonc
 "halt_success_challenge": {
   "challenger_model": "claude-opus-4-8",  // non-empty string; model that ran the challenge
+  "challenger_isolation": "subagent",     // enum: subagent | inline. How the challenge ACTUALLY ran; NOT implied by top-level spawn_isolation. Absent reads as unverified, never independent.
   "outcome": "held",                       // enum: "held" | "broke". "broke" with state=="HALT_SUCCESS" is ILLEGAL — downgrade first.
   "binding": {
     "candidate_commit_sha": "abc1234",    // non-empty string; commit sha of the candidate artifact being challenged

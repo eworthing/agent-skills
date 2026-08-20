@@ -1,33 +1,22 @@
 #!/usr/bin/env python3
-"""Self-test: the advisory-mode contract the Step-3 mechanical sweep depends on.
+"""Self-test: validate-artifact.py's mode contract.
 
-references/validation.md instructs the loop to run, once all five artifacts are on
-disk and before the commit:
+The validator is an operator/audit tool. Nothing in the runtime protocol invokes
+it: the Step-3 sweep instruction that used to was removed on 2026-08-20 after
+firing 0/6 times across two production runs (sweep #4, probe P2). Its value is
+realised when a human or a reviewing agent runs it against an artifact -- which
+on 2026-08-19/20 surfaced 15 WARNs mid-run, a shipped G19 table drift, and a real
+G17 violation at a terminal HALT_SUCCESS.
 
-    scripts/validate-artifact.py <dir> --mode advisory
+That makes the mode contract MORE load-bearing, not less, because an auditor
+needs to trust what an exit code means:
 
-That instruction rests on a behavioural promise -- **advisory never blocks** -- and
-the promise is load-bearing in a way a prose check cannot cover. If the default
-flipped, or advisory started returning non-zero on findings, every loop would begin
-dying at commit time on an artifact that is merely imperfect. The sweep exists to
-inform the emit, never to stop it.
-
-So this pins the contract, not the wording:
-
-  1. advisory on a KNOWN-FAILING fixture exits 0 and still prints WARN lines
-     (informative and non-blocking are both required -- silence would be useless,
-     and a non-zero exit would be dangerous).
+  1. advisory on a KNOWN-FAILING fixture exits 0 and still prints WARN lines --
+     informative and non-blocking (auditing must never be a gate).
   2. strict on the SAME fixture exits 1, so the two modes are provably different
-     and (1) is not passing vacuously on an artifact that simply has no issues.
+     and (1) is not vacuous.
   3. a missing directory exits 2 -- plumbing stays distinguishable from measured
-     failure, the discipline applied to exec_replay_grade.py.
-  4. validation.md still carries the instruction, naming the script and the flag.
-
-Fixture choice: g37-cap-open-backlog-stranded is declared `expected_result = "fail"`
-and carries the full sibling set (CURRENT_REVIEW.{md,json}, REVIEW_HISTORY.{md,json},
-findings_registry.json), so its failures are real gate findings rather than
-missing-artifact noise -- which is the same ordering hazard the sweep instruction
-itself guards against by requiring all five files on disk first.
+     failure, so "could not run" can never read as "found nothing".
 
 Run: python3 scripts/_advisory_contract_selftest.py   (exit 0 = pass, 1 = fail)
 """
@@ -41,7 +30,6 @@ from pathlib import Path
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 VALIDATOR = SKILL_ROOT / "scripts" / "validate-artifact.py"
 FIXTURE = SKILL_ROOT / "evals" / "fixtures" / "g37-cap-open-backlog-stranded"
-VALIDATION_MD = SKILL_ROOT / "references" / "validation.md"
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:
@@ -87,25 +75,18 @@ def main() -> int:
             f"Folding it into 0 would let the sweep silently not run"
         )
 
-    # 4. the instruction is still there
-    text = VALIDATION_MD.read_text(encoding="utf-8")
-    if "--json" not in text.split("**Mechanical sweep**")[-1].split("\n")[0]:
-        failures.append(
-            "the Step-3 sweep no longer writes --json: advisory WARNs would live only in the loop "
-            "subagent's stderr and die with it, leaving nothing to analyse after a run"
-        )
-    if "validate-artifact.py" not in text or "--mode advisory" not in text:
-        failures.append(
-            "validation.md no longer instructs the Step-3 mechanical sweep "
-            "(`validate-artifact.py <dir> --mode advisory`) -- the validator is wired to nothing "
-            "again, which is the state this change existed to fix"
-        )
+    # (4) previously asserted that validation.md still instructed the Step-3 sweep.
+    # Removed 2026-08-20 with the instruction itself: it fired 0/6 times across two
+    # production runs, so the repo was paying 64 per-loop tokens to advertise a step
+    # that never executed. Assertions 1-3 are unchanged and now matter MORE, not less
+    # -- they are the contract an operator or auditor relies on when running the
+    # validator by hand, which is where it demonstrably produces value.
 
     if failures:
         for f in failures:
             print(f"FAIL: {f}")
         return 1
-    print("OK: advisory contract holds — non-blocking, informative, mode-distinct, wired")
+    print("OK: advisory contract holds — non-blocking, informative, mode-distinct")
     return 0
 
 

@@ -43,7 +43,12 @@ def _artifact(**over) -> dict:
         "provider": "unknown",
         "halt_success_challenge": {"challenger_model": "inline-vetting", "outcome": "held"},
     }
+    ci = over.pop("challenger_isolation", None)
     base.update(over)
+    if ci is not None:
+        base["halt_success_challenge"] = dict(
+            base["halt_success_challenge"], challenger_isolation=ci
+        )
     return base
 
 
@@ -53,10 +58,12 @@ def main() -> int:
     issues, out = _run(_artifact())
     if "challenge-independence" not in out:
         failures.append("inline + HALT_SUCCESS must emit a diagnostic; got nothing")
-    if "spawn_isolation=inline" not in out:
+    # Intent unchanged, literal moved: the diagnostic must say WHICH field drove the
+    # verdict, now that two can (challenger_isolation, or the loop-level fallback).
+    if "source=spawn_isolation" not in out:
         failures.append(
-            f"the diagnostic must name spawn_isolation -- it is the typed field G32 ignores "
-            f"and the whole reason the check exists. Got: {out!r}"
+            f"the diagnostic must name the field it relied on -- these are the typed fields "
+            f"G32 ignores and the whole reason the check exists. Got: {out!r}"
         )
     if issues:
         failures.append(
@@ -64,11 +71,54 @@ def main() -> int:
             f"artifact); got {len(issues)}"
         )
 
+    # CHANGED 2026-08-20, deliberately. This case previously asserted SILENCE, and
+    # that assertion is what let the defect through: `spawn_isolation` describes the
+    # LOOP spawn, and a loop running as a subagent proves nothing about the challenge
+    # it then ran. BenchHype run 2 was exactly this shape -- subagent loop, inline
+    # challenger, because an opencode subagent cannot nest-spawn -- and reached a
+    # user-visible HALT_SUCCESS in silence.
     _, out = _run(_artifact(spawn_isolation="subagent", provider="opencode"))
+    if "challenge-independence-unverified" not in out:
+        failures.append(
+            f"a subagent LOOP does not establish an independent CHALLENGE; with no "
+            f"challenger_isolation recorded the result is unverified, not silent. Got: {out!r}"
+        )
+
+    # The challenger's own record is what settles it, in both directions.
+    _, out = _run(
+        _artifact(spawn_isolation="subagent", provider="opencode", challenger_isolation="subagent")
+    )
     if out.strip():
         failures.append(
-            f"an independently-spawned challenger is the normal case and must stay silent; "
-            f"got: {out!r}"
+            f"a recorded independent challenge is the normal case and must stay silent; got: {out!r}"
+        )
+
+    _, out = _run(
+        _artifact(spawn_isolation="subagent", provider="opencode", challenger_isolation="inline")
+    )
+    if "[challenge-independence " not in out:
+        failures.append(
+            f"challenger_isolation=inline under a SUBAGENT loop is the run-2 defect and must "
+            f"fire; got: {out!r}"
+        )
+    if "unverified" in out:
+        failures.append(
+            f"a recorded inline challenge is verified-not-independent, not unverified; got: {out!r}"
+        )
+
+    # challenger_isolation outranks the loop-level fallback when both are present.
+    _, out = _run(_artifact(spawn_isolation="inline", challenger_isolation="subagent"))
+    if out.strip():
+        failures.append(
+            f"an explicitly recorded independent challenge outranks the loop-level fallback "
+            f"signal; got: {out!r}"
+        )
+
+    # A garbage value must not be read as independence.
+    _, out = _run(_artifact(spawn_isolation="subagent", challenger_isolation="probably?"))
+    if "unverified" not in out:
+        failures.append(
+            f"an unrecognised challenger_isolation must be unverified, not silent; got: {out!r}"
         )
 
     _, out = _run(_artifact(state="CONTINUE"))
