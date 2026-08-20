@@ -6,7 +6,7 @@ for work that spans `contest-refactor`, `peer-plan-review`, and `quorum-review` 
 
 | Doc | What it covers |
 |---|---|
-| [contest-refactor-code-review-2026-08-20.md](contest-refactor-code-review-2026-08-20.md) | The consolidated `contest-refactor` review: five review passes plus the merged still-open findings from the retired deep-dive backlog, behavioral-validation ledger, and June research doc — including the open backlog and the operational measurement state those documents carried. |
+| [contest-refactor-review-register.md](contest-refactor-review-register.md) | The consolidated `contest-refactor` review register (formerly `contest-refactor-code-review-2026-08-20.md`): five review passes plus the merged still-open findings from the retired deep-dive backlog, behavioral-validation ledger, and June research doc — including the open backlog and the operational measurement state those documents carried, and the cost-ranked work order. |
 
 **Retired 2026-08-20** (merged into the doc above, full text in git history):
 `review-skill-deep-dive-2026-08-17.md` (four-pass landscape deep dive + 35-row backlog) and
