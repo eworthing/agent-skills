@@ -2,12 +2,13 @@
 
 **Date:** 2026-08-20
 **Scope:** `/Users/Shared/git/agent-skills/contest-refactor`
-**Review passes:** 2 code-review passes + 1 ponytail whole-skill audit + 1 duplication/clarity pass
+**Review passes:** 2 code-review passes + 1 ponytail whole-skill audit + 1 duplication/clarity pass + 1 full revalidation
+**Revalidated:** 2026-08-20 against HEAD `cc3057b`. All five P1 and four P2 findings re-confirmed: every citation re-checked and all five reproductions re-run against the current tree (the two synthetic ones rebuilt from scratch). No finding overturned. Two findings' subject matter moved in the interim without resolving them — `a9ad8f3`/`e3f5aa8` added `challenger_isolation`/`reviewer_isolation` *recording* while the independence check stayed report-only, and `a9ad8f3` deleted the dead `validate-artifact.py` instruction the loop-path finding discusses. A dozen metrology corrections (counts and line spans) are folded in below; none changes a conclusion.
 **Verdict:** **Request changes.** Five P1 execution/certification gaps and four P2 contract/test-oracle gaps remain. The second pass confirmed all six original findings, strengthened the dirty-tree finding, corrected two proposed remedies, and added two report-only hard-gate findings. The separate ponytail pass found two material simplification cuts and one exact dead-code cleanup. A third pass, run with the skill's own advisory audit tools pointed at the skill, added one P2 contract finding, four behaviour-preserving duplication cuts, and one test-coverage gap.
 
 ## Coverage
 
-The entire 1,347-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
+The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
 
 ### Validation run
 
@@ -23,8 +24,8 @@ The entire 1,347-file skill directory was in scope: `SKILL.md`, 26 reference doc
 | `bash -n contest-refactor/scripts/*.sh` | Pass |
 | Skill evaluator | 12/15 automated checks (80%): warnings for `SKILL.md` size, optional `tiktoken`, and a credential-pattern heuristic in a self-test |
 | `python3 contest-refactor/scripts/audit_boundaries.py .` | Pass: no first-party import cycles |
-| `python3 contest-refactor/scripts/audit_clones.py .` | 34 clone-candidate pairs (13 in `scripts/`, 21 in fixture trees) |
-| AST sweep: length + branch count per function | 769 functions; 49 over 80 lines; 28 over 120 |
+| `python3 contest-refactor/scripts/audit_clones.py .` | 34 clone-candidate pairs (16 in `scripts/`, 18 in fixture trees) |
+| AST sweep: length + branch count per function | 807 functions (nested defs included); 49 over 80 lines; 28 over 120 |
 | AST sweep: top-level defs referenced once and absent from prose | 3 candidates, all confirmed dead |
 
 Passing these checks does not contradict the findings below: the gaps are either outside the current test oracle or explicitly configured as report-only.
@@ -81,7 +82,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 ### [P1] Terminal success does not require an independently run reviewer or challenger
 
-**Source.** The v4 schema says `challenger_isolation` records how the challenge actually ran, that top-level loop isolation does not imply it, and that absence means unverified (`references/output-format-json.md:131-143`). The checker documents a live terminal self-vet, detects inline or missing isolation, but is deliberately `REPORT_ONLY` and returns no issue (`scripts/_artifact_independence.py:1-33,44-125`). It only prints when `implementation_review.reviewer_isolation == "inline"` and does not even construct a reviewer issue (`scripts/_artifact_independence.py:76-87`).
+**Source.** The v4 schema says `challenger_isolation` records how the challenge actually ran, that top-level loop isolation does not imply it, and that absence means unverified (`references/output-format-json.md:131-143`). The checker documents a live terminal self-vet, detects inline or missing isolation, but is deliberately `REPORT_ONLY` and returns no issue (`scripts/_artifact_independence.py:1-38,49-126`). It only prints when `implementation_review.reviewer_isolation == "inline"` and does not even construct a reviewer issue (`scripts/_artifact_independence.py:83-88`).
 
 **Reproduction.** The non-aspirational, expected-pass `halt-terminal-held` fixture claims valid G32 terminal success (`evals/fixtures/halt-terminal-held/fixture.toml:1-9`) but records neither reviewer nor challenger isolation. Strict validation prints `challenge-independence-unverified` and exits 0.
 
@@ -97,7 +98,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 **Consequence.** A model reviewer can approve a deepening refactor that has no test at the new interface, and the supposedly redundant hard gate still certifies the artifact. The fixture suite currently locks both violations in as valid successes.
 
-**Smallest correction.** Enforce G17 for new current-schema emits, add valid citations or test paths to the two positive fixtures, and keep an isolated negative fixture proving the missing-citation case exits nonzero. Preserve old-artifact compatibility through the same version/`skill_rev` policy used for the independence fix.
+**Smallest correction.** Enforce G17 for new current-schema emits, add valid citations or test paths to the two positive fixtures, and keep an isolated negative fixture proving the missing-citation case exits nonzero. Preserve old-artifact compatibility through the same version/`skill_rev` policy used for the independence fix. Since this was written, a promotion bar for flipping `REPORT_ONLY` was recorded in `docs/behavioral-validation-ledger.md` (≥5 applicable runs, ≥1 observed violation, ≥2 restraint cases, zero blind lines, human-adjudicated) — the flip condition now exists in writing; the gap stays open until a run history satisfies it.
 
 ### [P2] The current emission-version contract still tells agents to write schema v3
 
@@ -129,7 +130,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 ### [P2] The loop is told to run hard gates but never told to run the gate implementation
 
-**Source.** Step 3 sub-step 8 instructs the agent to "Run hard gates G15 + G16 + G17 + G19 + G22 ... + G38 before commit" (`SKILL.md:211`); sub-step 5 does the same for G1 + G2 (`SKILL.md:204`). Neither names a command. `canon/validation-gates.toml` registers 46 gates, and 27 of them have a deterministic implementation (`grep -ho 'def check_g[0-9]*' scripts/*.py | sort -u`). But `validate-artifact.py` appears only three times across the entire loop-path reference set, and none is an instruction: once in a script inventory (`SKILL.md:294`) and twice as descriptive asides naming which sub-check is mechanized (`references/validation.md:42,66`). Compare `repo_map.py` (`references/method.md:46,82`) and `audit_clones.py` (`references/method.md:85`), which *are* invoked as steps.
+**Source.** Step 3 sub-step 8 instructs the agent to "Run hard gates G15 + G16 + G17 + G19 + G22 ... + G38 before commit" (`SKILL.md:211`); sub-step 5 does the same for G1 + G2 (`SKILL.md:204`). Neither names a command. `canon/validation-gates.toml` registers 46 gates, and 27 of them have a deterministic implementation (`grep -rhoE 'def check_g[0-9]+' scripts/*.py | sort -u`; the digit is required — a `[0-9]*` variant also matches helper names like `check_gate_sequencing`). But `validate-artifact.py` appears only three times across the entire loop-path reference set, and none is an instruction: once in a script inventory (`SKILL.md:294`) and twice as descriptive asides naming which sub-check is mechanized (`references/validation.md:42,66`). Compare `repo_map.py` (`references/method.md:46,82`) and `audit_clones.py` (`references/method.md:85`), which *are* invoked as steps.
 
 **Consequence.** "Run hard gates" resolves to hand-checking against `references/validation.md` — 14,547 tokens, **17.3 % of the 84,276-token per-loop reload** — while a deterministic implementation of 27 of those same gates sits unexecuted. This is the delivery mechanism behind the two report-only findings above: flipping `REPORT_ONLY = False` on G17 or on the transition validator changes nothing on the loop path, because nothing on that path runs the module the flag lives in. Enforcement work lands in a component the loop does not reach.
 
@@ -137,14 +138,14 @@ A second-order effect compounds it. Registering `G<n>` obliges a `validation.md`
 
 **This is measured, not inferred.** `docs/behavioral-validation-ledger.md` sweep #4 recorded it directly: across ~6 Step-3 passes over two production runs, in both inline and subagent isolation, the loop never ran `validate-artifact.py` (P2, **0/2**), while output-shaping prose was followed (P3, **2/2**). Run by hand against the same artifact the validator reported 15 WARNs mid-run and a real G17 violation at terminal. Corroboration: asked for concerns about its own run, the loop's provider hand-audited the artifact and produced 12 findings, **5 of which are defects `validate-artifact.py` already implements**.
 
-**Smallest correction.** Invoke the validator outside the model's discretion — a host hook or a wrapper around the commit step — not a prose instruction. Adding "run `validate-artifact.py`" to the checklist is the obvious fix and is **already measured dead**: that instruction existed at `ee21bc8`, fired 0/6, and was deleted on 2026-08-19 for costing ~50 tokens per loop and doing nothing. The ledger's own conclusion stands: *enforcement cannot be reached through an instruction that never executes.* Only once invocation is guaranteed does compressing the bullets it subsumes become safe; until then `validation.md` must keep carrying all 46.
+**Smallest correction.** Invoke the validator outside the model's discretion — a host hook or a wrapper around the commit step — not a prose instruction. Adding "run `validate-artifact.py`" to the checklist is the obvious fix and is **already measured dead**: that instruction shipped 2026-08-19 (`ee21bc8`, the "Mechanical sweep" bullet in `validation.md`), fired 0/6 across two production runs, and was deleted 2026-08-20 (`a9ad8f3`) at a measured 64 tokens per loop. The full prose-instruction lifecycle — added, measured never firing, withdrawn — ran to completion in under 40 hours, between this review's first pass and its revalidation; the host-hook route is now the only one not yet tried. The ledger's own conclusion stands: *enforcement cannot be reached through an instruction that never executes.* Only once invocation is guaranteed does compressing the bullets it subsumes become safe; until then `validation.md` must keep carrying all 46.
 
 ## Ponytail over-engineering audit
 
 **Boundary.** This pass covered only tracked material under `/Users/Shared/git/agent-skills/contest-refactor`. It excluded ignored/generated `.build`, `__pycache__`, and `.DS_Store` content from the line estimate. The P1/P2 findings above—including the three report-only validators—remain correctness work and are intentionally not recast as simplification opportunities.
 
 1. `yagni:` `SKILL.md:140`, `canon/panel-certification.toml:5-39`, `plans/rec1-panel-certification.md:1-469`, panel scripts/evidence, and `evals/fixtures/panel-*` — remove the parked v5 panel stack from the shipped skill until a provider/model can actually satisfy its certification contract: the manifest has zero entries, the routing contract says no profile is v5-authorized, and the recorded owner decision parks the feature while v4 remains the live path everywhere. The 20 panel fixtures plus only the wholly attributable scripts, plan, canon, and recorded gate output total at least 14,666 tracked lines; mixed v4/v5 validator files and embedded prose are deliberately omitted from that estimate.
-2. `shrink:` `evals/fixtures/*/{CURRENT_REVIEW.json,REVIEW_HISTORY.json}` and `scripts/validate-fixtures.py` — materialize the final history entry from `CURRENT_REVIEW.json` inside the fixture harness instead of storing it twice. G18 requires parsed equality, and 83 of 85 fixture histories repeat the current review as their last entry; after excluding the panel fixtures above, 63 histories still duplicate 9,477 lines. Keep explicit prefixes for multi-loop cases and explicit full histories for the two current nonmatches; this preserves the production artifact contract while removing roughly 9,400 net fixture lines.
+2. `shrink:` `evals/fixtures/*/{CURRENT_REVIEW.json,REVIEW_HISTORY.json}` and `scripts/validate-fixtures.py` — materialize the final history entry from `CURRENT_REVIEW.json` inside the fixture harness instead of storing it twice. G18 requires parsed equality, and 83 of 85 fixture histories repeat the current review as their last entry; after excluding the panel fixtures above, 63 histories still duplicate 9,485 lines. Keep explicit prefixes for multi-loop cases and explicit full histories for the two current nonmatches; this preserves the production artifact contract while removing roughly 9,400 net fixture lines.
 3. `delete:` `scripts/audit_cochange.py:214-219` and `scripts/validate-repo.py:292-297` — remove `_has_python_sources`, `_has_swift_sources`, and `_enum_tokens_from_text`. The knowledge graph reports zero callers for the first two, and a repository-wide `git grep` across every tracked file returns only the three definitions themselves. The extension sets `_PYTHON_EXTS` / `_SWIFT_EXTS` remain live elsewhere (`audit_cochange.py:294,397,399`), so only the functions go. `_enum_tokens_from_text` was found by the third pass and is doubly removable: its entire body is `set(re.findall(...))`, so it is a redundant wrapper as well as an uncalled one. Fourteen dead lines total, no replacement needed.
 
 `net: -24,000 lines, -0 deps possible`
@@ -153,7 +154,7 @@ A second-order effect compounds it. Registering `G<n>` obliges a `validation.md`
 
 **Boundary.** This pass ran the skill's own advisory audit tools *against the skill* — the same tools Method Step 3 points at a target repo. Dogfooding them is cheaper than hand-rolling duplication analysis and doubles as a live test of whether they work. `audit_clones.py` produced D1 through D4 directly; D5 and the D6 notes came from the AST sweeps and from building D1's proof. It also correctly flagged the fixture trees (which are *supposed* to contain duplicates) and printed its own `promotion_allowed: false` doctrine note. Scope is **behaviour-preserving** cuts only: nothing here changes what the skill decides, which is what separates this section from the P1/P2 findings above. It does not overlap the ponytail audit — that section deletes whole features, this one factors repetition inside code that stays.
 
-The skill is in good shape by these measures: no import cycles, no lint debt, three dead functions in 31,468 lines, and selftests making up 46 % of the Python tree. Total mechanical saving below is ~260 lines — deliberately not a large number, because there is not a large one available. The value is in D1 (a live wrong-file-error hazard) and D4 (a divergence that has already happened), not the line count.
+The skill is in good shape by these measures: no import cycles, no lint debt, three dead functions in 31,851 lines, and selftests making up 45 % of the Python tree. Total mechanical saving below is ~260 lines — deliberately not a large number, because there is not a large one available. The value is in D1 (a live wrong-file-error hazard) and D4 (a divergence that has already happened), not the line count.
 
 | # | Item | Saving | Risk |
 |---|---|---|---|
@@ -210,7 +211,7 @@ def _load_validator():
     return module
 ```
 
-Two more files (`_project_config`, `_repo_map`) load a *different* module and are correctly excluded. The varying `"_va_g17"` string is cosmetic: `module_from_spec` never registers in `sys.modules`, so the name surfaces only in a traceback.
+Two more files (`_project_config_selftest`, `_repo_map_selftest`) load a *different* module and are correctly excluded. The varying `"_va_g17"` string is cosmetic: `module_from_spec` never registers in `sys.modules`, so the name surfaces only in a traceback.
 
 **The precedent already exists.** `scripts/_g32_panel_testkit.py` is a shared selftest helper imported by two G32 selftests, so the repository has already accepted a testkit module. Extend it or add `scripts/_selftest_lib.py` beside it: ~85 lines, and the importlib incantation stops being something 14 files can independently get wrong.
 
@@ -233,7 +234,7 @@ Whether `_g39` *should* pin a regression case is a separate call — G39 may gen
 
 ### [D4] `_check_replication` is duplicated and has already diverged
 
-`_advisory_baseline_selftest.py:98` (92 lines) and `_principal_baseline_selftest.py:52` (105 lines) — similarity 0.89, the largest pair in `scripts/`, **59 lines byte-identical**. This is the one item here with a correctness edge, because the two copies no longer agree on what they check:
+`_advisory_baseline_selftest.py:98` (92 lines) and `_principal_baseline_selftest.py:52` (105 lines) — similarity 0.89, the largest pair in `scripts/`, **79 lines matching verbatim** (difflib matching blocks across the two bodies). This is the one item here with a correctness edge, because the two copies no longer agree on what they check:
 
 | Check | advisory | principal |
 |---|---|---|
@@ -252,18 +253,18 @@ Four checks exist in one copy and not the other. That is the expected end state 
 
 Found while building D1's proof, and **independent of it** — this holds whether or not D1 is ever done.
 
-`_canon.py` has no dedicated selftest, but that is the wrong way to state the gap: `load_canon` is among the most-exercised code in the skill. 29 files call it across 31 call sites, and every run of the 62-selftest suite goes through it. The happy path is covered many times over.
+`_canon.py` has no dedicated selftest, but that is the wrong way to state the gap: `load_canon` is among the most-exercised code in the skill. 27 files call it across 29 call sites (AST-counted call expressions; an earlier grep count of 31 included two docstring mentions), and every run of the 62-selftest suite goes through it. The happy path is covered many times over.
 
-What is covered *only* by the happy path is the point. Every one of the 31 call sites passes the **real, shipped, valid canon**:
+What is covered *only* by the happy path is the point. Every one of the 29 call sites passes the **real, shipped, valid canon**:
 
 | Call shape | Sites |
 |---|---|
 | `load_canon(SKILL_ROOT)` | 22 |
 | `load_canon(HERE.parent)` | 5 |
-| `load_canon()` (defaults to the real root) | 3 |
+| `load_canon()` (defaults to the real root) | 1 |
 | `load_canon(vf.SKILL_ROOT)` | 1 |
 
-Not one passes a synthetic or malformed canon directory. `_canon.py` has **16 `sys.exit(2)` sites** — 3 in `_load_toml` (file missing / malformed TOML / empty), 2 in `_require_list` (key missing / key not a list), and 11 inline in `load_canon` (per-entry shape, duplicate ids, missing scalars). **All 16 are unreachable from the current test suite**, because nothing ever hands the loader a bad canon.
+Not one passes a synthetic or malformed canon directory. `_canon.py` has **16 `sys.exit(2)` sites** — 3 in `_load_toml` (file missing / malformed TOML / empty), 2 in `_require_list` (key missing / key not a list), and 11 inline in `load_canon` (per-entry shape, duplicate ids, missing scalars); split re-verified at HEAD. **All 16 are unreachable from the current test suite**, because nothing ever hands the loader a bad canon.
 
 **Consequence.** The module that every validator treats as the single source of truth for enums will exit 2 with a specific diagnostic on every malformed-canon shape it is written to reject, and no test has ever confirmed that any of them fires, or that it names the right file when it does. This is also what makes D1's double-spelled-path hazard invisible: the wrong-file error message it produces would surface only on a path nothing exercises.
 
@@ -273,7 +274,7 @@ Not one passes a synthetic or malformed canon directory. `_canon.py` has **16 `s
 
 ### [D6] Consistency notes — no action proposed
 
-- **Two selftest idioms.** 47 files accumulate `failures: list[str]`; `_panel_capability_selftest.py` and `_panel_gate_adapter_selftest.py` use a `[(label, test_fn)]` table with an `except AssertionError` driver (which `audit_clones` catches as a 51-line 0.94 pair). The assert style is better — per-case `ok:` output, failures name themselves. If a third file wants a driver, use that shape rather than adding a third.
+- **Two selftest idioms.** 56 files accumulate `failures: list[str]` (47 of them share the epilogue byte-for-byte); `_panel_capability_selftest.py` and `_panel_gate_adapter_selftest.py` use a `[(label, test_fn)]` table with an `except AssertionError` driver (which `audit_clones` catches as a 51-line 0.94 pair). The assert style is better — per-case `ok:` output, failures name themselves. If a third file wants a driver, use that shape rather than adding a third.
 - **Four spellings of one bootstrap.** 31 files put `scripts/` on `sys.path` as `HERE` (14), `SCRIPT_DIR` (10), `SKILL_ROOT / "scripts"` (6), and one inline `Path(__file__).resolve().parent`. Normalize opportunistically.
 - **`_artifact_history.py` is at 799 lines against the 800-line hard cap** enforced by `common/scripts/check_module_size.py` via `.githooks/pre-commit`. Comments were already compressed to fit rather than take a `# WAIVER: module-size`. One line of headroom: splitting the G19/G28 checks into their own module is a prerequisite for further work there, not a nice-to-have.
 
@@ -285,7 +286,7 @@ Static analysis over-rates severity, so the calibration matters as much as the f
 - **`_g32_panel_selftest._cases` (438 lines), `_g32_panel_coupling_selftest._cases` (282), `_g43_selftest._cases` (159)** — branch count **1**. Literal case tables: data, not logic. Long data is not complex data.
 - **`audit_cochange.py:496` ↔ `repo_map.py:323`** (43 lines, 0.91) — argparse CLI boilerplate, at n=2. Below the rule of three; a shared CLI factory for two scripts with different flags costs more than it saves. Revisit if a third advisory tool grows an argparse block.
 - **The `if failures: … return 1` epilogue — 47 byte-identical copies, 188 lines.** Deliberately **not** recommended for extraction despite being the largest raw duplication in the skill. Those four lines are not incantation; they *are* the contract `CLAUDE.md` states ("run each directly, exit 0 = pass"), visible where a reader needs them. Centralizing would make 47 standalone tests share a dependency whose breakage breaks all 47 at once, to save four lines each. The distinction against D2, and the whole judgment call in this section: **`_load_validator` is incantation — seven lines of importlib nobody reads and anybody could get wrong; the failure epilogue is contract — four lines everybody reads and nobody gets wrong. Factor incantation; leave contract at the call site.**
-- **21 of the 34 clone rows** — all in `evals/reviewer-cases/`, `evals/loop-fixtures/`, `evals/exec-fixtures/`: near-duplicate Swift in base/head and paired fixtures. That duplication is the test material; several of those fixtures exist precisely to give a reviewer duplicated code to find. Removing it would delete the tests.
+- **18 of the 34 clone rows** — all in `evals/reviewer-cases/`, `evals/loop-fixtures/`, `evals/exec-fixtures/`: near-duplicate Swift in base/head and paired fixtures. That duplication is the test material; several of those fixtures exist precisely to give a reviewer duplicated code to find. Removing it would delete the tests.
 
 ### Suggested sequence
 
@@ -303,7 +304,7 @@ Each step is independently shippable and revertable. 1) The dead-code deletion i
 - **P2:** eight fixtures can pass for the wrong reason.
 - **P2:** illegal terminal transitions are report-only.
 - **P2:** the loop is instructed to run hard gates but never to run the module implementing 27 of them; measured 0/2 in production.
-- **Test gap:** `_canon.py` is the enum single-source-of-truth for every validator; its 16 `sys.exit(2)` paths are unreachable from the 62-selftest suite because all 31 call sites pass the real canon.
+- **Test gap:** `_canon.py` is the enum single-source-of-truth for every validator; its 16 `sys.exit(2)` paths are unreachable from the 62-selftest suite because all 29 call sites pass the real canon.
 - **Simplification (behaviour-preserving):** `load_canon` repeats one idiom 20× with ten double-spelled paths (−91 lines, proven equivalent); `_load_validator` is copy-pasted into 14 files; the G39–G42 selftest driver is duplicated and its vacuity guards are already 3-of-4; `_check_replication` is duplicated across two baseline selftests and has diverged by four checks.
 
-No source changes were made as part of any of the three passes; this document is the only repository change. The D1 equivalence and mutation harnesses were session-scratchpad scripts and are **not committed**; they are lost when that session ends. They are the only code that has ever executed `_canon.py`'s 16 error paths. Re-creating them as `scripts/_canon_selftest.py` is **D5** — worth doing on its own merits even if D1 is declined, and cheapest to do before the harness is gone.
+No source changes were made as part of any of these passes; this document is the only repository change, now committed in its own docs commits so the revalidation lands as a reviewable diff. The D1 equivalence and mutation harnesses were session-scratchpad scripts and are **not committed**; they are lost when that session ends. They are the only code that has ever executed `_canon.py`'s 16 error paths. Re-creating them as `scripts/_canon_selftest.py` is **D5** — worth doing on its own merits even if D1 is declined, and cheapest to do before the harness is gone.
