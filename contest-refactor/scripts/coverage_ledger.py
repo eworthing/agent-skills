@@ -246,11 +246,44 @@ def compute_ledger(
         if then is not None and now is not None and then != now:
             stale.append(path)
 
-    inconsistent = [
-        e.get("stable_id")
-        for e in ((registry or {}).get("entries") or [])
-        if e.get("primary_file") and e["primary_file"] not in first_cite
-    ]
+    # Cross-check only entries whose first sighting is inside the history being
+    # measured. findings_registry.json outlives REVIEW_HISTORY.json -- `--reset` keeps
+    # the registry while history restarts -- so comparing every entry against this
+    # history's citations reports the LIFETIME MISMATCH as review inconsistency. Live
+    # example (BenchHype, 2026-08-19): 13 entries with first_seen_loop up to 10 against
+    # a 1-loop history produced 9 "inconsistencies", none of them real.
+    #
+    # Residual ambiguity, stated rather than hidden: loop numbers repeat across runs
+    # (the counter restarts at 1), so an old entry's first_seen_loop can collide with a
+    # new run's. Closing that needs run_id on both sides, and run_id is null on 14 of 15
+    # loops in the corpus. This is strictly better than unscoped, not exact.
+    history_loops = {e.get("loop") for e in loops if isinstance(e.get("loop"), int)}
+    in_scope: list[str] = []
+    out_of_scope: list[str] = []
+    inconsistent: list[str] = []
+    for entry in (registry or {}).get("entries") or []:
+        sid, primary = entry.get("stable_id"), entry.get("primary_file")
+        if not primary or not sid:
+            continue
+        seen_at = entry.get("first_seen_loop")
+        # A MISSING first_seen_loop stays in scope. We cannot prove such an entry is
+        # out of scope, and dropping unprovable cases silently is the same
+        # survivor-metric hazard the typed exclusions above exist to avoid. Only a
+        # first sighting demonstrably outside this history is set aside.
+        last_at = entry.get("last_seen_loop")
+        # Two independent out-of-scope signals, both from data already present:
+        # a first sighting not in this history, or a LAST sighting beyond its highest
+        # loop -- an entry that reached loop 2 cannot belong to a 1-loop history.
+        # Found on the live BenchHype run: F-003 (last_seen_loop=2 vs a 1-loop history)
+        # was reported as a review inconsistency until this rule set it aside.
+        max_loop = max(history_loops) if history_loops else None
+        beyond = isinstance(last_at, int) and max_loop is not None and last_at > max_loop
+        if (isinstance(seen_at, int) and seen_at not in history_loops) or beyond:
+            out_of_scope.append(sid)
+            continue
+        in_scope.append(sid)
+        if primary not in first_cite:
+            inconsistent.append(sid)
 
     # Per run: what THIS run cited, and what it cited FIRST. A cumulative figure
     # cannot answer "what did this run cover", which is the question a diagnostic run
@@ -306,8 +339,10 @@ def compute_ledger(
         "per_run": per_run,
         "revision": {"unavailable_loops": sorted(unavailable)},
         "registry_crosscheck": {
-            "checked": len((registry or {}).get("entries") or []),
-            "inconsistent": sorted(x for x in inconsistent if x),
+            "checked": len(in_scope),
+            "inconsistent": sorted(inconsistent),
+            # entries whose first sighting predates this history -- not judged
+            "out_of_scope": len(out_of_scope),
         },
     }
 

@@ -104,6 +104,9 @@ def main() -> int:
             "entries": [
                 {"stable_id": "F-001", "primary_file": "src/alpha.py"},
                 {"stable_id": "F-009", "primary_file": "src/gamma.py"},  # never cited
+                # first sighting outside this history (registry outlives history across
+                # --reset): must be set aside, not reported as a review inconsistency
+                {"stable_id": "F-099", "primary_file": "src/delta.py", "first_seen_loop": 99},
             ]
         }
         led = cl.compute_ledger(repo, history, registry, {1: sha})
@@ -163,6 +166,11 @@ def main() -> int:
             led["registry_crosscheck"]["inconsistent"] == ["F-009"],
             f"registry cross-check should flag F-009 (primary_file never cited), got "
             f"{led['registry_crosscheck']['inconsistent']}",
+        )
+        check(
+            led["registry_crosscheck"]["out_of_scope"] == 1,
+            f"an entry first seen outside this history must be set aside, not judged: "
+            f"{led['registry_crosscheck']}",
         )
 
         # 4. staleness binds to the recorded revision

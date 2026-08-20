@@ -72,6 +72,7 @@ from _artifact_history import (  # noqa: E402
     check_g31_fingerprint_integrity,
     check_retirement_rule,
 )
+from _artifact_independence import check_challenge_independence_report_only  # noqa: E402
 from _artifact_panel import check_g32_halt_success_challenge  # noqa: E402
 from _artifact_remediation import check_g46_general_remediation_fields  # noqa: E402
 from _artifact_residual import (  # noqa: E402
@@ -164,6 +165,7 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g43_convergence_pass(current_review, history, canon))
     issues.extend(check_g44_credential_quarantine(artifact_dir))
     issues.extend(check_continue_backlog(current_review))
+    issues.extend(check_challenge_independence_report_only(current_review))
     issues.extend(check_transition_report_only(history, canon))
     return issues
 
