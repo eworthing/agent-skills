@@ -16,7 +16,9 @@ So, when a new gate needs a field that did not exist before, do one of:
 
 1. **Bump the schema version** and add a default-fill entry here (the v2 → v3 precedent); or
 2. **Scope the gate** to artifacts written at or after the ruleset that introduced it, read from
-   `skill_rev` (G19) — which is why that field exists; or
+   `skill_rev` (G19) via `scripts/_ruleset_epoch.py` — which is why that field exists; add an entry
+   to that module's `REQUIREMENT_EPOCHS` table (data, not an inline `if` in the checker — see
+   "Ruleset epochs" below); or
 3. **Make the field optional**, and gate only its *shape* when present — the shipped precedent is
    **G19** (`_artifact_history.py:307`), whose docstring states this exact reasoning: *"TYPE-only, not
    presence: a reader cannot tell 'this version omitted it' from 'this run predates the field', so
@@ -27,10 +29,54 @@ invalidation of committed history, and the repo's compatibility policy — commi
 history stay readable, validators dual-read across schema versions — cannot be delivered without
 one of the three above.
 
-**Known outstanding violation (recorded 2026-08-19):** G43 (2026-08-06) and G46 (2026-08-18) both
-added required v4 records/fields without a bump or a default-fill entry. A v4 artifact written
-before those dates now fails `validate-artifact.py --mode strict` on rules that did not exist when
-it was emitted. See the backlog item in `docs/review-skill-deep-dive-2026-08-17.md`.
+**Resolved 2026-08-20 (backlog item [I1]):** G43 (2026-08-06) and G46 (2026-08-18) both added
+required v4 records/fields without a bump or a default-fill entry — this skill's own dogfood
+artifact (`CURRENT_REVIEW.json` at the repo root, loop 15, committed 2026-08-05) failed
+`validate-artifact.py --mode strict` on 10 issues that did not exist as rules when it was written.
+Fixed by option 2 above: `scripts/_ruleset_epoch.py` scopes both checks to artifacts it classifies
+CURRENT epoch; the dogfood artifact now passes strict with zero issues. See "Ruleset epochs" below.
+
+## Ruleset epochs — the `skill_rev` scoping mechanism (option 2, mechanized)
+
+`scripts/_ruleset_epoch.py` is the one classifier every epoch-scoped checker calls, so option 2
+above is an import, not a repeated inline `if`. It reads `current_review["skill_rev"]` — the only
+field naming *which ruleset* produced an artifact (G19) — and returns one of two epochs:
+
+- **`current`** — `skill_rev` is present and looks like a real git short SHA (`[0-9a-f]{4,40}`).
+- **`legacy`** — anything else: absent, `null`, empty, non-string, or malformed.
+
+Only two epochs, not one per commit that ever adds a requirement. `skill_rev` carries no
+timestamp, and ordering two arbitrary short SHAs against each other requires a live git repository
+containing both commits — unavailable for a fixture's synthetic `skill_rev`, unavailable for an
+artifact from a different clone's history, and wrong to depend on inside a selftest that must run
+standalone. The evidence only supports one boundary: does this artifact carry proof it was emitted
+by a loop that already attested to its own ruleset, or not. A finer boundary (e.g. "at-or-after
+G43 but before G46") gets a third `EPOCHS` entry the day a requirement actually needs one — not
+before.
+
+`REQUIREMENT_EPOCHS` is the compatibility matrix: a plain dict mapping a requirement name to the
+epoch it is owed at. G43 (`G43_CONVERGENCE_PASS`) and G46 (`G46_REMEDIATION_FIELDS`) are both
+`current`; a requirement absent from the table is not epoch-gated at all (unconditional at its own
+`schema_version` floor — e.g. G19's own type check, which stays TYPE-only per option 3, never
+presence). Add new requirements as table entries — independence/reviewer isolation fields,
+transitions, rounds, G29 version equality, and G17 are the named future clients — never as a new
+epoch `if` scattered into the checker.
+
+**Fail-closed direction.** This classifier backs *retroactive* requirements only (a field added
+after artifacts already existed, judged against artifacts already on disk). An artifact that
+cannot be *proven* current is legacy, never the reverse: a marker-less artifact goes unchecked
+rather than a genuinely-legacy artifact being wrongly failed. The cost is symmetric under-coverage,
+not false failure — and it lands broadly today, because no fixture or checker selftest in this
+corpus carries a `skill_rev` yet. `_g43_selftest.py` and the G46 remediation-fields selftest go
+fully silent on their "must fire" cases under this scoping (they assert directly against the
+checker functions with marker-less synthetic artifacts); `evals/fixtures/g43-clean-streak-restated`,
+`g43-clean-streak-reworded-note`, `g43-convergence-pass-missing`, and
+`g46-remediation-drift-notes-empty` flip from failing to passing for the same reason.
+**The fix for each is to add a valid `skill_rev` to the fixture/case, not to exempt it** — see
+`evals/fixtures/g46-current-epoch-fields-missing` for a fixture proving the shape still fails once
+the marker is present. Closing the gap for good is an **emitter** obligation: `skill_rev` capture
+is already mandatory at `schema_version >= 4` (startup.md Step -1); this validator-side classifier
+cannot compel presence any more than G19 can, for the identical reason.
 
 ## Schema version 4 → 5
 

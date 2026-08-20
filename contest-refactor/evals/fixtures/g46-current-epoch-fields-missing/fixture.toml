@@ -1,0 +1,14 @@
+id = "g46-current-epoch-fields-missing"
+purpose = "Negative v4 fixture for the [I1] ruleset-epoch classifier: skill_rev is a valid current-epoch marker (\"2b81c10\") and loop_result.repair_revalidation.drift_notes is empty, same shape as g46-remediation-drift-notes-empty. Must FAIL on G46 -- proves epoch scoping does not silence a genuinely current-epoch artifact, only a marker-less/legacy one."
+expected_result = "fail"
+pair_exception = "epoch-scoping proof, not a flag/restraint pair of g46-remediation-drift-notes-empty (drift_notes rewording is that pair's variable; skill_rev presence is this fixture's). See _ruleset_epoch.py and _ruleset_epoch_selftest.py for the classifier's own unit coverage of both directions."
+aspirational = false
+notes = "Byte-identical to g46-remediation-drift-notes-empty (drift_notes coupling still the only G46 sub-rule that fires) except CURRENT_REVIEW.json and REVIEW_HISTORY.json.loops[-1] both carry skill_rev='2b81c10' (a syntactically valid short SHA, so _ruleset_epoch.classify() returns CURRENT). g46-remediation-drift-notes-empty itself has no skill_rev, so under the [I1] scoping it is LEGACY-epoch and G46 no longer fires on it (see the [I1] task report for the full list of fixtures this scoping change flips). This fixture is the current-epoch control that pins G46 still fires when the marker IS present."
+
+[[tested_rules]]
+kind = "gate"
+id = "G46"
+
+[[tested_rules]]
+kind = "canon-enum"
+id = "CONTINUE"

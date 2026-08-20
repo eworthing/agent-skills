@@ -53,7 +53,8 @@ HONEST_LR = {
 def g46(loop_result, schema_version=4):
     return len(
         va.check_g46_general_remediation_fields(
-            {"schema_version": schema_version, "loop_result": loop_result}, canon
+            {"schema_version": schema_version, "skill_rev": "9528774", "loop_result": loop_result},
+            canon,
         )
     )
 

@@ -75,6 +75,7 @@ def _art(
 ):
     return {
         "schema_version": schema_version,
+        "skill_rev": "9346822",
         "loop": loop,
         "state": state,
         "scorecard": scorecard if scorecard is not None else {"architecture_quality": _dim(7.5)},

@@ -1,195 +1,196 @@
 {
- "schema_version": 3,
- "loops": [
-  {
-   "schema_version": 4,
-   "loop": 1,
-   "loop_cap": 10,
-   "state": "CONTINUE",
-   "halt_subtype": null,
-   "halt_handoff": null,
-   "halt_handoff_text": null,
-   "re_validated_at_sha": null,
-   "re_validation_context": null,
-   "dry_run": false,
-   "provider": "claude_code",
-   "loop_model": "claude-sonnet-5",
-   "loop_model_source": "default",
-   "reviewer_model": "claude-sonnet-5",
-   "reviewer_model_source": "default",
-   "spawn_isolation": "subagent",
-   "findings_registry_path": "./findings_registry.json",
-   "discovery": {
-    "test_command": "swift test",
-    "test_scope": "full",
-    "test_filter": null,
-    "source_roots": [
-     "src/"
-    ],
-    "lens": "Generic"
-   },
-   "verdict": "Promising, but architecturally immature",
-   "verdict_explanation": "Loop 1: reviewer rejected a contract-edge repair; G46 isolates the drift_notes coupling only.",
-   "scorecard": {
-    "architecture_quality": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Core/AppEngine.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "state_management": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Core/AppState.swift:8",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "domain_modeling": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Domain/Order.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "data_flow": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Core/Effects.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "framework_idioms": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "App/RootView.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "concurrency": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Adapters/Spotify.swift:18",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "simplicity": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Core/Reducer.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "unverifiable_due_to_build_failure": false
-    },
-    "test_strategy": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "Tests/AppEngineTests.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    },
-    "credibility": {
-     "score": 8.5,
-     "delta": "SAME",
-     "proof": "App/AppEngine.swift:1",
-     "residual_blocking_10": null,
-     "residual_disposition": null,
-     "residual_rationale_or_backlog_ref": null,
-     "residual_blocker_kind": "structural_anchor_unmet",
-     "unverifiable_due_to_build_failure": false
-    }
-   },
-   "authority_map": [],
-   "strengths": [
-    "Module graph enforced by source."
-   ],
-   "findings": [],
-   "simplification_check": {
-    "structurally_necessary": "Continue with backlog work.",
-    "new_seam_justified": false,
-    "new_seam_adapters": [],
-    "should_not_be_done": "Force a new protocol return.",
-    "tests_after_fix": "Existing tests pass."
-   },
-   "backlog": [
+  "schema_version": 3,
+  "loops": [
     {
-     "priority": 1,
-     "rank": 1,
-     "title": "Fold the two duplicate JSON-decoding helpers into one shared function (Finding F1)",
-     "kind": "structural",
-     "why_it_matters": "two near-identical decode helpers drift apart",
-     "score_impact": "simplicity +0.5",
-     "stable_id": "F-001"
+      "schema_version": 4,
+      "skill_rev": "9346822",
+      "loop": 1,
+      "loop_cap": 10,
+      "state": "CONTINUE",
+      "halt_subtype": null,
+      "halt_handoff": null,
+      "halt_handoff_text": null,
+      "re_validated_at_sha": null,
+      "re_validation_context": null,
+      "dry_run": false,
+      "provider": "claude_code",
+      "loop_model": "claude-sonnet-5",
+      "loop_model_source": "default",
+      "reviewer_model": "claude-sonnet-5",
+      "reviewer_model_source": "default",
+      "spawn_isolation": "subagent",
+      "findings_registry_path": "./findings_registry.json",
+      "discovery": {
+        "test_command": "swift test",
+        "test_scope": "full",
+        "test_filter": null,
+        "source_roots": [
+          "src/"
+        ],
+        "lens": "Generic"
+      },
+      "verdict": "Promising, but architecturally immature",
+      "verdict_explanation": "Loop 1: reviewer rejected a contract-edge repair; G46 isolates the drift_notes coupling only.",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/AppEngine.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "state_management": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/AppState.swift:8",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "domain_modeling": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Domain/Order.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "data_flow": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/Effects.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "framework_idioms": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "App/RootView.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "concurrency": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Adapters/Spotify.swift:18",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "simplicity": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Core/Reducer.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "unverifiable_due_to_build_failure": false
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "Tests/AppEngineTests.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        },
+        "credibility": {
+          "score": 8.5,
+          "delta": "SAME",
+          "proof": "App/AppEngine.swift:1",
+          "residual_blocking_10": null,
+          "residual_disposition": null,
+          "residual_rationale_or_backlog_ref": null,
+          "residual_blocker_kind": "structural_anchor_unmet",
+          "unverifiable_due_to_build_failure": false
+        }
+      },
+      "authority_map": [],
+      "strengths": [
+        "Module graph enforced by source."
+      ],
+      "findings": [],
+      "simplification_check": {
+        "structurally_necessary": "Continue with backlog work.",
+        "new_seam_justified": false,
+        "new_seam_adapters": [],
+        "should_not_be_done": "Force a new protocol return.",
+        "tests_after_fix": "Existing tests pass."
+      },
+      "backlog": [
+        {
+          "priority": 1,
+          "rank": 1,
+          "title": "Fold the two duplicate JSON-decoding helpers into one shared function (Finding F1)",
+          "kind": "structural",
+          "why_it_matters": "two near-identical decode helpers drift apart",
+          "score_impact": "simplicity +0.5",
+          "stable_id": "F-001"
+        }
+      ],
+      "deepening_candidates": [],
+      "builder_notes": [],
+      "narrative": "Loop 1 attempted a repair; the reviewer rejected it on a contract-edge mismatch the finding's original evidence did not anticipate. G46 fixture: isolates the drift_notes conditional on repair_revalidation.outcome == CONTRACT_REJECTED.",
+      "unresolved_reason": null,
+      "loop_result": {
+        "what_changed": "Attempted to fold the two duplicate JSON-decoding helpers into one shared function.",
+        "evidence_change_is_honest": "swift test 1439 passed pre-change; reviewer rejected post-diff on a contract-edge mismatch",
+        "risk_boundary_evidence": null,
+        "finding_family": "algorithm_fix",
+        "effort": "small",
+        "repair_revalidation": {
+          "outcome": "CONTRACT_REJECTED",
+          "detail": "re-ran JSONDecodeHelperTests against the consolidated function; it silently dropped the legacy snake_case key mapping the finding's cited call site depended on",
+          "mechanically_testable": true,
+          "drift_notes": ""
+        },
+        "targeted_finding_status": "carried_forward",
+        "unintended_regression": "consolidated decoder dropped the legacy snake_case key mapping; reviewer rejected",
+        "changed_paths": [
+          "Core/JSONDecodeHelper.swift"
+        ]
+      },
+      "implementation_review": {
+        "verdict": "rejected",
+        "reason": "consolidated decoder dropped the legacy snake_case key mapping; reviewer rejected",
+        "checks": {
+          "reality": "failed",
+          "honesty": "passed",
+          "regression": "passed"
+        },
+        "regressions": [
+          "Core/JSONDecodeHelper.swift: legacy snake_case key mapping silently dropped"
+        ],
+        "conditions": [],
+        "rounds": 1,
+        "retry_count": 1,
+        "retry_cause": null,
+        "retry_attempts": [
+          {
+            "attempt": 1,
+            "outcome": "ok",
+            "error": null,
+            "duration_ms": 8000
+          }
+        ]
+      }
     }
-   ],
-   "deepening_candidates": [],
-   "builder_notes": [],
-   "narrative": "Loop 1 attempted a repair; the reviewer rejected it on a contract-edge mismatch the finding's original evidence did not anticipate. G46 fixture: isolates the drift_notes conditional on repair_revalidation.outcome == CONTRACT_REJECTED.",
-   "unresolved_reason": null,
-   "loop_result": {
-    "what_changed": "Attempted to fold the two duplicate JSON-decoding helpers into one shared function.",
-    "evidence_change_is_honest": "swift test 1439 passed pre-change; reviewer rejected post-diff on a contract-edge mismatch",
-    "risk_boundary_evidence": null,
-    "finding_family": "algorithm_fix",
-    "effort": "small",
-    "repair_revalidation": {
-     "outcome": "CONTRACT_REJECTED",
-     "detail": "re-ran JSONDecodeHelperTests against the consolidated function; it silently dropped the legacy snake_case key mapping the finding's cited call site depended on",
-     "mechanically_testable": true,
-     "drift_notes": ""
-    },
-    "targeted_finding_status": "carried_forward",
-    "unintended_regression": "consolidated decoder dropped the legacy snake_case key mapping; reviewer rejected",
-    "changed_paths": [
-     "Core/JSONDecodeHelper.swift"
-    ]
-   },
-   "implementation_review": {
-    "verdict": "rejected",
-    "reason": "consolidated decoder dropped the legacy snake_case key mapping; reviewer rejected",
-    "checks": {
-     "reality": "failed",
-     "honesty": "passed",
-     "regression": "passed"
-    },
-    "regressions": [
-     "Core/JSONDecodeHelper.swift: legacy snake_case key mapping silently dropped"
-    ],
-    "conditions": [],
-    "rounds": 1,
-    "retry_count": 1,
-    "retry_cause": null,
-    "retry_attempts": [
-     {
-      "attempt": 1,
-      "outcome": "ok",
-      "error": null,
-      "duration_ms": 8000
-     }
-    ]
-   }
-  }
- ]
+  ]
 }

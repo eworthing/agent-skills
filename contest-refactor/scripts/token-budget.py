@@ -303,7 +303,11 @@ CEILINGS = {
     # Bumped 82,100 -> 82,500 (2026-08-20) for the same G29/source_rev/[I3] pass as loop_apple
     # above (lens-independent prose in validation.md + output-format-json.md). Same proactive
     # ~500-margin convention. Measured at 82,053, margin 447.
-    "loop_generic": 82_500,  # per-loop fixed reload, generic lens (measured 82,053, margin 447)
+    # Bumped 82,500 -> 82,600 (2026-08-20) for the [I1] skill_rev emitter-obligation sentence
+    # in output-format-json.md (omitting skill_rev silences every epoch-scoped requirement in
+    # _ruleset_epoch.py's matrix). Same proactive ~500-margin convention. Measured at 82,103,
+    # margin 497.
+    "loop_generic": 82_600,  # per-loop fixed reload, generic lens (measured 82,103, margin 497)
     # Bumped 11,000 -> 12,200 (2026-08-20) for the same loop-ownership P1 pair: the out-of-
     # plan gate, cleanup procedure, sub-step-0 cross-reference, Guardrails bullet, and
     # HALT_STAGNATION `user_decision` cross-reference all land in SKILL.md itself, which is

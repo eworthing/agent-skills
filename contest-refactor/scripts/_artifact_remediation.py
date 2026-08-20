@@ -30,6 +30,7 @@ family, a cost, and a revalidation outcome, whereas most repairs cross no risk b
 
 from __future__ import annotations
 
+import _ruleset_epoch
 from _artifact_core import Issue
 
 _INVARIANT_HOLDS = "INVARIANT_HOLDS"
@@ -42,9 +43,16 @@ def check_g46_general_remediation_fields(current_review: dict, canon) -> list[Is
     silently below the floor and when `loop_result` is absent or not a dict — the latter is not
     double-reported here because a malformed non-dict `loop_result` has no other owner in this
     validator today; this gate simply has nothing to check inside it.
+
+    Epoch-scoped (backlog item [I1]): this requirement was added 2026-08-18, after artifacts
+    already existed on disk. It applies only to artifacts `_ruleset_epoch` classifies at-or-
+    after CURRENT -- see that module for the skill_rev-based classifier and why a marker-less
+    artifact is never retroactively failed.
     """
     issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    if not _ruleset_epoch.applies("G46_REMEDIATION_FIELDS", current_review):
         return issues
     lr = current_review.get("loop_result")
     if not isinstance(lr, dict):

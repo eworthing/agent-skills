@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 
+import _ruleset_epoch
 from _artifact_core import Issue
 
 # Only "structural_anchor_unmet" licenses keeping a dimension below 9.5. The promotion
@@ -334,9 +335,16 @@ def check_g43_convergence_pass(
     Floor: schema_version >= 4 AND loop >= 4. Loop 1's delta is "SAME" by definition, so at
     loop 4 the three observations are loops 4/3/2 and loop 2's is the first real one -- firing
     at loop 3 would count a definitional SAME as evidence of a stall.
+
+    Epoch-scoped (backlog item [I1]): this requirement was added 2026-08-06, after artifacts
+    already existed on disk (this skill's own dogfood run among them). It applies only to
+    artifacts `_ruleset_epoch` classifies at-or-after CURRENT -- see that module for the
+    skill_rev-based classifier and why a marker-less artifact is never retroactively failed.
     """
     issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 4:
+        return issues
+    if not _ruleset_epoch.applies("G43_CONVERGENCE_PASS", current_review, history):
         return issues
     loop = current_review.get("loop")
     if isinstance(loop, bool) or not isinstance(loop, int) or loop < _G43_LOOP_FLOOR:
