@@ -31,6 +31,7 @@ every reported claim was re-verified by the orchestrator before commit. Landed:
 | D2 — `_selftest_lib` | `ac839c5` | Done: 14-file incantation factored, zero call-site changes |
 | P2 — aspirational fixtures | `13c947c` | Closed: sub-rule mapping + self-correcting exemption |
 | [I1] — ruleset-epoch classifier | `60e1294` | Shipped: dogfood artifact 10→0 strict issues; G43/G46 scoped |
+| Independence + transitions + [I2] + G29 enforcement | `d46360b` | All four flips real, epoch-scoped; validator-side |
 
 Side effects recorded: `evals/reviewer_baseline.json` prompt pin re-pinned (seventh
 staleness-log entry — this edit widens the reviewer's input surface, the closest yet to
@@ -122,6 +123,8 @@ The only output was the unrelated report-only challenge-independence warning.
 
 ### [P1] Terminal success does not require an independently run reviewer or challenger
 
+**Status: CLOSED at validator level 2026-08-20 (`d46360b`)** — for current-epoch artifacts, terminal promotion requires `challenger_isolation == "subagent"` and an approved implementation review requires `reviewer_isolation == "subagent"` (rule ids `challenge-independence` / `reviewer-independence`); legacy keeps the print-only warning. `halt-terminal-held` — this finding's repro, itself accidentally legacy-epoch — repaired into a compliant current-epoch control, with `independence-missing` as its negative twin. The live-promotion half (the loop refusing a violating terminal mid-run) remains open, Tier-3-gated.
+
 **Source.** The v4 schema says `challenger_isolation` records how the challenge actually ran, that top-level loop isolation does not imply it, and that absence means unverified (`references/output-format-json.md:131-143`). The checker documents a live terminal self-vet, detects inline or missing isolation, but is deliberately `REPORT_ONLY` and returns no issue (`scripts/_artifact_independence.py:1-38,49-126`). It only prints when `implementation_review.reviewer_isolation == "inline"` and does not even construct a reviewer issue (`scripts/_artifact_independence.py:83-88`).
 
 **Reproduction.** The non-aspirational, expected-pass `halt-terminal-held` fixture claims valid G32 terminal success (`evals/fixtures/halt-terminal-held/fixture.toml:1-9`) but records neither reviewer nor challenger isolation. Strict validation prints `challenge-independence-unverified` and exits 0.
@@ -142,7 +145,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 ### [P2] The current emission-version contract still tells agents to write schema v3
 
-**Status: prose half CLOSED 2026-08-20 (`62d5a71`)** — G29's bullet now states the capability-derived version rule (v4 today; v5 only where panel_certification authorizes — none does) and defers to output-format-json.md as the authority; the canon-pinned gate title keeps its historical label (coordinated rename flagged). The enforcement half is in flight behind [I1]'s matrix.
+**Status: prose half CLOSED 2026-08-20 (`62d5a71`)** — G29's bullet now states the capability-derived version rule (v4 today; v5 only where panel_certification authorizes — none does) and defers to output-format-json.md as the authority; the canon-pinned gate title keeps its historical label (coordinated rename flagged). **Enforcement half CLOSED 2026-08-20 (`d46360b`)** — `check_g29_schema_version`: a current-epoch artifact's declared `schema_version` must equal the capability-derived version via the same `_panel_capability.emit_check` lookup the emitter uses (no hardcoded literal, no blocklist); with the manifest empty, every v5 declaration fails naming `no_entry`. `version-stale` pins the direction.
 
 **Source.** The current format says capable profiles emit schema v5 and unentered profiles remain on v4 (`references/output-format-json.md:21-31`); the required-field example is v4 (`references/output-format-json.md:169-180`). G29 still says every artifact emitted by “this version of the skill” must use schema v3 and only describes v1-v3 mixed history (`references/validation.md:99-104`). Step 3 continues to require G29 before commit (`SKILL.md:211`). `validate-artifact.run_checks` has no G29/version-emission check at all (`scripts/validate-artifact.py:124-172`), and `check_schema_enums` does not validate `schema_version` (`scripts/_artifact_core.py:250-329`).
 
@@ -165,6 +168,8 @@ The only output was the unrelated report-only challenge-independence warning.
 **Smallest correction.** First normalize emitted sub-rule labels to canonical gate IDs (or declare an explicit sub-rule mapping). Make each remaining fixture complete enough to fail only for its intended behavior. Then remove the exemption from `halt-success-bad` and `loop-state-post-commit-pre-delete`; reclassify examples with no mechanized assertion rather than counting them as gate coverage.
 
 ### [P2] Illegal terminal-to-active transitions do not fail strict validation
+
+**Status: CLOSED at validator level 2026-08-20 (`d46360b`)** — the global `REPORT_ONLY` flag is gone; transition legality is enforced per-artifact for current-epoch histories. The dogfood artifact's real `HALT_LOOP_CAP→CONTINUE` at loop 10→11 is legacy-epoch and stays print-only — that is its recorded disposition. `transition-illegal-post-cap-continue` gained the epoch marker and flipped to expected-fail.
 
 **Source.** The transition validator prints violations but deliberately returns no issues while `REPORT_ONLY = True` (`scripts/_artifact_transitions.py:23-30,55` and `scripts/_artifact_transitions.py:117-136`). The dedicated `transition-illegal-post-cap-continue` fixture declares `expected_result = "pass"` even though it contains `HALT_LOOP_CAP -> CONTINUE` without a reset (`evals/fixtures/transition-illegal-post-cap-continue/fixture.toml:1-7`).
 
@@ -360,6 +365,8 @@ Superseded. This section originally carried its own ordering, which drifted from
 **Corroboration found during this validation, free of charge:** the same artifact also trips the report-only transition checker — `[transition-violation HALT_LOOP_CAP→CONTINUE loop=10->11]` — so the illegal-transition P2 above now has a real-data instance in the repo's own history, not just a fixture.
 
 ### [I2] `implementation_review.rounds` is specified and never read (backlog row 33)
+
+**Status: CLOSED at validator level 2026-08-20 (`d46360b`)** — `_artifact_review_contract.check_rounds_membership`: current-epoch `rounds` must satisfy `type(rounds) is int and rounds in (1, 2)` (bool excluded); legacy null-emitting artifacts tolerated. The conditional-coupling clause stays an open residual as this register specified.
 
 `output-format-json.md:440` specifies `rounds` as an int counting reviewer invocations, and its comment already fixes the value set — "1 normally; 2 when conditional → re-spawn" — so the value-set decision this register previously listed as open is in fact already made by the spec. **The check this register commits to is the membership check**: after [I1], `rounds` is *required* on current-ruleset emits and must be an exact integer in `{1, 2}` — exact meaning `type(rounds) is int`, since Python's `bool` is an `int` subclass and `True ∈ {1, 2}` — with null tolerated only on scoped older artifacts. Selftests: missing, null, boolean, out-of-range, and an old-artifact compatibility case. The contract's second clause — `2` is legal only after a conditional first pass — is *not* enforceable and **remains an open residual of this finding**: the artifact carries no durable first-pass verdict evidence to corroborate against, so enforcing it requires a schema addition first, unpriced until someone proposes one. `grep '"rounds"' scripts/` still returns zero, and both BenchHype production loops emitted `null` unchallenged — so any *required*-presence enforcement retroactively invalidates those artifacts, the same defect class as [I1]. The membership check is therefore sequenced after [I1]; it is trivial once scoping exists.
 
