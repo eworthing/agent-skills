@@ -6,10 +6,15 @@ for work that spans `contest-refactor`, `peer-plan-review`, and `quorum-review` 
 
 | Doc | What it covers |
 |---|---|
-| [review-skill-deep-dive-2026-08-17.md](review-skill-deep-dive-2026-08-17.md) | Four-pass deep dive into the external review/audit-skill landscape — six primary skills, the wider held corpus, and a ten-repo expansion — with a gap analysis against our three workflow skills, a peer-reviewed improvement backlog (26 gaps, 29 items — trust tranches 0-4 plus the fifth-pass capability tranche), and dependency-ordered execution tranches. |
+| [contest-refactor-code-review-2026-08-20.md](contest-refactor-code-review-2026-08-20.md) | The consolidated `contest-refactor` review: five review passes plus the merged still-open findings from the retired deep-dive backlog, behavioral-validation ledger, and June research doc — including the open backlog and the operational measurement state those documents carried. |
+
+**Retired 2026-08-20** (merged into the doc above, full text in git history):
+`review-skill-deep-dive-2026-08-17.md` (four-pass landscape deep dive + 35-row backlog) and
+`behavioral-validation-ledger.md` (LLM behavioral sweeps #1–#4, the paired-arm study, and
+promotion bars). Citations to those paths from shipped scripts and prose are provenance
+pointers; resolve them with `git log --follow` / `git show`.
 
 ## Related
 
-- [`analysis/contest-refactor/INVENTORY.md`](../analysis/contest-refactor/INVENTORY.md) — which competitor each gap doc references.
-- [`analysis/contest-refactor/CLAIM-DELTA-2026-08-17.md`](../analysis/contest-refactor/CLAIM-DELTA-2026-08-17.md) — what changed upstream in the refreshed corpus, with adopt/reevaluate calls.
+- [`analysis/contest-refactor/GAP-REGISTER.md`](../analysis/contest-refactor/GAP-REGISTER.md) — the consolidated competitive-analysis register (44 files → 5, with per-doc dispositions).
 - [`refs/competitors/README.md`](../refs/competitors/README.md) — the clone corpus itself (gitignored), bucketed by the skill each competitor targets.

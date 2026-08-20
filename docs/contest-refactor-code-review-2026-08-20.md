@@ -98,7 +98,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 **Consequence.** A model reviewer can approve a deepening refactor that has no test at the new interface, and the supposedly redundant hard gate still certifies the artifact. The fixture suite currently locks both violations in as valid successes.
 
-**Smallest correction.** Enforce G17 for new current-schema emits, add valid citations or test paths to the two positive fixtures, and keep an isolated negative fixture proving the missing-citation case exits nonzero. Preserve old-artifact compatibility through the same version/`skill_rev` policy used for the independence fix. Since this was written, a promotion bar for flipping `REPORT_ONLY` was recorded in `docs/behavioral-validation-ledger.md` (≥5 applicable runs, ≥1 observed violation, ≥2 restraint cases, zero blind lines, human-adjudicated) — the flip condition now exists in writing; the gap stays open until a run history satisfies it.
+**Smallest correction.** Enforce G17 for new current-schema emits, add valid citations or test paths to the two positive fixtures, and keep an isolated negative fixture proving the missing-citation case exits nonzero. Preserve old-artifact compatibility through the same version/`skill_rev` policy used for the independence fix. Since this was written, a promotion bar for flipping `REPORT_ONLY` was recorded in the behavioral-validation ledger (now merged here — see *Carried from the ledger* below) (≥5 applicable runs, ≥1 observed violation, ≥2 restraint cases, zero blind lines, human-adjudicated) — the flip condition now exists in writing; the gap stays open until a run history satisfies it.
 
 ### [P2] The current emission-version contract still tells agents to write schema v3
 
@@ -136,7 +136,7 @@ The only output was the unrelated report-only challenge-independence warning.
 
 A second-order effect compounds it. Registering `G<n>` obliges a `validation.md` checklist bullet, and `validation.md` is on the per-loop reload path — so every gate that gets mechanized makes the Critic's per-loop reading **longer**, never shorter. Nothing in the file marks a gate as mechanized, so the prose grows monotonically with the mechanization that was supposed to relieve it.
 
-**This is measured, not inferred.** `docs/behavioral-validation-ledger.md` sweep #4 recorded it directly: across ~6 Step-3 passes over two production runs, in both inline and subagent isolation, the loop never ran `validate-artifact.py` (P2, **0/2**), while output-shaping prose was followed (P3, **2/2**). Run by hand against the same artifact the validator reported 15 WARNs mid-run and a real G17 violation at terminal. Corroboration: asked for concerns about its own run, the loop's provider hand-audited the artifact and produced 12 findings, **5 of which are defects `validate-artifact.py` already implements**.
+**This is measured, not inferred.** The behavioral-validation ledger's sweep #4 (merged into this document and deleted 2026-08-20; full text in git history) recorded it directly: across ~6 Step-3 passes over two production runs, in both inline and subagent isolation, the loop never ran `validate-artifact.py` (P2, **0/2**), while output-shaping prose was followed (P3, **2/2**). Run by hand against the same artifact the validator reported 15 WARNs mid-run and a real G17 violation at terminal. Corroboration: asked for concerns about its own run, the loop's provider hand-audited the artifact and produced 12 findings, **5 of which are defects `validate-artifact.py` already implements**.
 
 **Smallest correction.** Invoke the validator outside the model's discretion — a host hook or a wrapper around the commit step — not a prose instruction. Adding "run `validate-artifact.py`" to the checklist is the obvious fix and is **already measured dead**: that instruction shipped 2026-08-19 (`ee21bc8`, the "Mechanical sweep" bullet in `validation.md`), fired 0/6 across two production runs, and was deleted 2026-08-20 (`a9ad8f3`) at a measured 64 tokens per loop. The full prose-instruction lifecycle — added, measured never firing, withdrawn — ran to completion in under 40 hours, between this review's first pass and its revalidation; the host-hook route is now the only one not yet tried. The ledger's own conclusion stands: *enforcement cannot be reached through an instruction that never executes.* Only once invocation is guaranteed does compressing the bullets it subsumes become safe; until then `validation.md` must keep carrying all 46. One prerequisite before any hook ships: the retroactive-invalidation gap in [I1] — a hook that runs strict validation inherits the false failures on every pre-existing artifact.
 
@@ -324,6 +324,33 @@ Sweep #3 recorded arm dispatch per pair (27.9M context tokens) but grading spend
 - **Ledger, phantom-signal generalization** — the bare-model-id class got its class guard (`b2b96ef`); the phantom-detection-signal class (`OPENCODE_SESSION`, an env var opencode never set, degrading silently into a gate-approved fallback) has no equivalent guard yet.
 - **The June research doc's program is almost fully adjudicated by later work:** change-coupling shipped as candidate evidence (`audit_cochange.py`), the context-sufficiency cap shipped as prose (measured: over-claim 2/5 → 0/5), the domain-integrity lens was parked on a measured recall lift of 0 (bare rubric 6/6), expert panels shipped as the v5 certification stack and are parked (ponytail item 1 above), and benchmark-first became the principal corpus plus the paired-arm study (Decision 3: retargeting not licensed). Two requirements were **never built and never formally adjudicated**: the Serious+ grounded `change_scenario` requirement and the minimal `tradeoff_analysis` requirement — `git log -S` shows no commit ever introduced either field. Given the judgment-lever program's measured zero recall lift, non-adoption is evidence-consistent; it is recorded here so it reads as a decision rather than an omission.
 
+### Carried from the ledger at its deletion (operational state, not findings)
+
+The ledger's merged findings are above; these four things were *live state* with no other home:
+
+- **Pending probe P1 (`--scope`)** — never tested: neither production run passed the flag. The instruction shipped at `ae272ec`; whether the loop narrows the scan and records `discovery.source_roots` is unmeasured.
+- **Pending A/A noise-floor run (backlog item 20)** — `evals/noise_floor.json` ships deliberately empty and `evaluate_lift()` returns `unreportable` for any key with no floor, so **no Tranche 3 lift claim is reportable until this runs**. It also supplies item 19's development-set outcomes (the discriminating-power classifier ships unfitted and refuses to classify). `required_n_for_power(0.10, 0.05, 0.80) = 778` discordant pairs — at this corpus size most honest verdicts will be `inconclusive`, which is the expected result. This is instrumentation that is complete as code and inert as measurement, by design.
+- **G17 promotion bar** — as summarized in the G17 finding above, plus one requirement omitted there: **≥2 languages** among the observed cases, because the path classifier is the risky part and it is language-shaped. First datapoint on record: BenchHype loop 2 (1 applicable run, 1 true violation, 0 restraint, Swift only, not yet human-adjudicated).
+- **Sweep protocol** — LLM behavioral probes are batched (~3–5 pending, disjoint failure signatures, one keyed probe per change, measured spend recorded per sweep). Sweeps #1, #2, #4 and the paired-arm study (#3) are closed; their results are quoted where merged above.
+
+### Open backlog carried from the deep-dive at its deletion
+
+Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Rows already shipped despite stale status columns: 1, 2, 4, 7, 9, 10, 17–22, 28, 31, 32. Still genuinely open:
+
+| Row | Item | State |
+|---|---|---|
+| 5 | arm_b 2×2 factorial ({weak, strong executor} × {backlog, self-contained}) | Experiment protocol first; the 1×1 arm_b was measured 2026-06-28 and rejected |
+| 6 | Confidence two-stage experiment (does the Evidence Chain lose information) | Two-stage experiment, unrun |
+| 8 | Strictness as deterministic post-filter with pinned per-preset counts | RFC only |
+| 11 | Axis-split graders, each declaring the axis it does not judge | Candidate in Tranche-3 comparison |
+| 13 | Cost-proportional stage skipping (`skip_when` by size) | Gated on the (kept) runtime-cost audit |
+| 14 | Host-attested execution-evidence ledger | **Design done** (`analysis/contest-refactor/ITEM14-…`), unbuilt |
+| 15 | DAG-shaped grading | Conditional on node-pilot |
+| 23 | Detection-lens expansion (latent-premises, retry-safety, operational) | Decompose per lens |
+| 24 | Deterministic selection + coverage manifest + resumable scan | **Design done** (`ITEM24-…`), unbuilt |
+| 25 | Tool-grounded substrate + per-language rules | **Unblocked, design done** (`ITEM25-…`), unbuilt |
+| 27 | Per-finding disproof pipeline | Gated on the finding-assurance decision |
+
 ## Priority summary
 
 - **P1:** pre-existing dirty edits can be mistaken for loop-owned paths and overwritten on rejection.
@@ -340,4 +367,4 @@ Sweep #3 recorded arm dispatch per pair (27.9M context tokens) but grading spend
 - **Test gap:** `_canon.py` is the enum single-source-of-truth for every validator; its 16 `sys.exit(2)` paths are unreachable from the 62-selftest suite because all 29 call sites pass the real canon.
 - **Simplification (behaviour-preserving):** `load_canon` repeats one idiom 20× with ten double-spelled paths (−91 lines, proven equivalent); `_load_validator` is copy-pasted into 14 files; the G39–G42 selftest driver is duplicated and its vacuity guards are already 3-of-4; `_check_replication` is duplicated across two baseline selftests and has diverged by four checks.
 
-No source changes were made as part of any of these passes; this document is the only repository change, now committed in its own docs commits so the revalidation lands as a reviewable diff. The D1 equivalence and mutation harnesses were session-scratchpad scripts and are **not committed**; they are lost when that session ends. They are the only code that has ever executed `_canon.py`'s 16 error paths. Re-creating them as `scripts/_canon_selftest.py` is **D5** — worth doing on its own merits even if D1 is declined, and cheapest to do before the harness is gone.
+No source changes were made as part of any of these passes. After the merges, both `docs/` source documents (the deep-dive and the ledger) and 40 of the 44 `analysis/contest-refactor/` files were **deleted at the owner's direction** — their still-open content lives in this document and in `analysis/contest-refactor/GAP-REGISTER.md`, and every retired file remains in git history. Citations to the retired paths from shipped scripts and prose are provenance pointers and resolve via `git show`. The D1 equivalence and mutation harnesses were session-scratchpad scripts and are **not committed**; they are lost when that session ends. They are the only code that has ever executed `_canon.py`'s 16 error paths. Re-creating them as `scripts/_canon_selftest.py` is **D5** — worth doing on its own merits even if D1 is declined, and cheapest to do before the harness is gone.
