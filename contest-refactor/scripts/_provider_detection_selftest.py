@@ -177,6 +177,19 @@ def main() -> int:
                 "every loop of a correctly-spawned run"
             )
 
+    # --- no bare opencode model id survives anywhere ------------------------
+    # opencode's --model requires provider/model; a bare id is rejected by the CLI.
+    # The qualified form landed in the loop and reviewer profiles first, leaving the
+    # helper tier and a descriptive line behind -- three sites, fixed one at a time
+    # across two days. A class guard is cheaper than finding the fourth.
+    for lineno, line in enumerate(adapters.splitlines(), 1):
+        for hit in re.finditer(r"(?<![\w/-])deepseek-v4-flash", line):
+            if not line[: hit.start()].endswith("opencode-go/"):
+                failures.append(
+                    f"provider-adapters.md:{lineno} names a BARE `deepseek-v4-flash`; "
+                    "opencode's --model requires provider/model and rejects a bare id"
+                )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

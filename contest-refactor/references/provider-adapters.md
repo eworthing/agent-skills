@@ -190,7 +190,7 @@ therefore emits v4, and the machinery is live while the capability is not.
 
 The loop subagent MAY spawn ≤2–3 read-only helper sub-agents for bounded analysis (interpret an `audit_*` output, grep public surface, summarize churn). Unlike the reviewer and challenger, a helper emits **no verdict** — it returns candidate evidence the loop subagent re-derives and synthesizes, and the Critic/reviewer do the real judgment — so nothing the loop commits is gated on a helper. That makes the helper the one role where the **cheapest** model is the right default.
 
-- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.4-mini`; opencode `deepseek-v4-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
+- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.4-mini`; opencode `opencode-go/deepseek-v4-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
 - **Evidence (2026-06-27):** on bounded read-only analysis, `claude-haiku-4-5` matched `claude-sonnet-4-6` exactly — same real concerns surfaced, same look-alikes dismissed, zero misleading output (3/3 tasks). See [evals/reviewer-model-experiment.md § Helpers](../evals/reviewer-model-experiment.md). This is the inverse of the reviewer result: haiku's weakness is open-ended *judgment* (where it over-rejects), and a helper makes no judgment call.
 - **Not recorded** in `CURRENT_REVIEW.json` — helpers are ephemeral and off the audit/gate path, so there is no `helper_model` field or gate (deliberate low scope; nothing consumes it).
 
@@ -223,7 +223,7 @@ If a resolved `loop_model` is premium and the invocation is not dry-run, the mai
 
 ## When to upgrade the model
 
-The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
+The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, opencode-go/deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
 
 **Prefer the default; upgrading is a precaution, not a measured win (evidence, 2026-06-27).** The default-tier (Sonnet) Critic caught **5/5** cross-module / forces-dependent defects in the `principal_baseline` benchmark, and a focused re-check found Sonnet catches the **3 hardest** principal flags (consistency-boundary, abstraction-seam, process-owner) decisively. So upgrading the Critic to Opus shows **no measured recall benefit** on the tested corpus — there is nothing in it Sonnet misses for Opus to catch. Treat the upgrade as an *unmeasured precaution* for codebases beyond what that corpus exercises (very large >100K LOC, dense concurrency, large state machines), or when a run visibly stalls — not as a default reflex on "this feels complex." Reflexively upgrading to Opus burns tokens for a benefit that is, so far, unmeasured. (Full method + result: [evals/reviewer-model-experiment.md § Critic tier](../evals/reviewer-model-experiment.md).) If you do upgrade:
 

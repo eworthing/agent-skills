@@ -127,6 +127,38 @@ P1 (`--scope`) is untested here — the invocation did not pass it. P2 and P3 ar
 run is at loop 1 / `CONTINUE` and has not reached a terminal handoff.
 
 
+### Sweep #4 — P2/P3/P4 closed on the second BenchHype run (2026-08-20)
+
+The run reached terminal `HALT_SUCCESS` at loop 2. Two probes are now answered at n=2, on a run
+where the loop genuinely ran as a subagent — so the "inline mode swallowed it" confound from run 1
+is gone.
+
+| probe | result | n |
+|---|---|---|
+| **P3** coverage disclosure | **PASS**, both runs. The terminal handoff carries `Citation coverage: the loop cited …` with the honest word **cited**, never "reviewed" or "examined" | 2/2 |
+| **P2** Step-3 mechanical sweep | **FAIL**, both runs. Across ~6 Step-3 passes the loop never ran `validate-artifact.py`; no `.contest-refactor/diagnostics/` was ever created | 0/2 |
+| **P4** Step-0 tool sweep | **FAIL**, both runs — but see the `a017c07` note above; the instrument was vacuous on this target below that commit, so P4 carries less weight than P2 | 0/2 |
+| **P1** `--scope` effect | **untested** — the invocation never passed the flag | 0 |
+
+**The hypothesis registered on 2026-08-19 is now supported, and P2 is the clean evidence.** Unlike
+P4's, P2's instrument was never vacuous: `validate-artifact.py` works, and run by hand against the
+same artifact it reported **15 WARNs** mid-run and a real `G17` violation at terminal. The loop was
+instructed to run it at Step 3 and did not, twice, in both inline and subagent isolation.
+
+**Prose that shapes narrative output is followed; prose that requires running a command is not.**
+
+The corroborating evidence is independent: asked for concerns about the run, the loop's own
+provider hand-audited the artifact and reported 12 findings, **5 of which are defects
+`validate-artifact.py` already implements** (`candidate_fingerprint` shape via
+`_artifact_panel.py:112`, G27's retry envelope, G46's required fields). An agent reasoned its way
+to what one command reports in 0.3s, because nothing ran the command.
+
+**Consequence for the measurement plan.** The Step-3 sweep instruction costs ~50 tokens on every
+loop of every run and has fired 0/6 times. The preregistered reading said "WARNs recur → consider
+`--mode strict`", but that reading assumed the sweep runs at all. Enforcement cannot be reached
+through an instruction that never executes. The open decision is whether to keep paying for it —
+recorded here rather than acted on, because it is an owner call.
+
 ### Report-only promotion bar — G17 (added 2026-08-20)
 
 `G17` (indirect coverage citation) shipped mechanized and **report-only** at
