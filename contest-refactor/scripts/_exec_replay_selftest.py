@@ -43,6 +43,7 @@ import tempfile
 import tomllib
 from pathlib import Path
 
+from _artifact_history import check_g19_provider_model
 from _canon import load_canon
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
@@ -160,6 +161,11 @@ def _check_seed(fid: str, seed_dir: Path, canon, failures: list[str]) -> None:
         failures.append(
             f"fixture '{fid}': seed state '{art.get('state')}' must be 'CONTINUE' (pre-Step-3)"
         )
+    # G19 on the raw seed: catches a stale default-sourced model at selftest time instead of
+    # mid-measurement (the 2026-08-20 sweep found reviewer_model=claude-sonnet-4-6/'default'
+    # tripping strict validation after the provider default moved to sonnet-5).
+    for issue in check_g19_provider_model(art):
+        failures.append(f"fixture '{fid}': seed fails G19 — {issue.message}")
     findings = art.get("findings") or []
     if not findings:
         failures.append(f"fixture '{fid}': seed has no findings[]")
