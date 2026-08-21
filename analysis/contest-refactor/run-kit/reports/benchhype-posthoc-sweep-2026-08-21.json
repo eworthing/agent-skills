@@ -1,0 +1,3181 @@
+{
+ "repo": "/Users/Shared/git/BenchHype",
+ "rows": [
+  {
+   "commit": "e08679bb05548266371f024d9ae20ee4d61f9681",
+   "date": "2026-05-09T16:56:25-05:00",
+   "subject": "loop 1: lift CueSaveWorkflow into LibraryEditorState.cue payload (F1 resolved)",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "a216dd52ffeecc2b1c9236e3e55761c671cc59bf",
+   "date": "2026-05-09T17:24:22-05:00",
+   "subject": "loop 2: adopt SessionEventKindCode typed enum (F1 resolved)",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "9a3c6d5fc83f21df6d3562672155743d0976c65f",
+   "date": "2026-05-09T17:50:50-05:00",
+   "subject": "loop 3: collapse save*Draft + applyXSaveFailedResult reducer arms (F1+F2 resolved)",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 3,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=8.5 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "b4dcc12dbab6659ce0236d8c6dc17ca39a97bc42",
+   "date": "2026-05-09T18:10:35-05:00",
+   "subject": "loop 4: flatten applyCueDeleteCascadeCompleted depth-5 nesting (F1 resolved)",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 4,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "9a1eb357dd35889ecbef7ca638e3abe93e67214a",
+   "date": "2026-05-09T18:28:59-05:00",
+   "subject": "loop 5: collapse apply{Sequence,Setlist,Script}SavedResult symmetric mirror (F1 resolved)",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 5,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'simplicity' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='accepted'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "6ef25d588694bcccbe8ffc862b4d0b90b5c9ecbf",
+   "date": "2026-05-09T18:45:58-05:00",
+   "subject": "loop 6: HALT_STAGNATION \u2014 no remaining structural finding passes Simplify Pressure Test",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 6,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": []
+  },
+  {
+   "commit": "254dfb6a04c195ed280f7f8e020caab20a79ca47",
+   "date": "2026-05-09T21:56:12-05:00",
+   "subject": "loop 7: HALT_STAGNATION \u2014 post-workflow-split critic refresh",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.md"
+   ],
+   "schema_version": null,
+   "loop": 7,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": []
+  },
+  {
+   "commit": "631652a99a9409a4ef08614b97b43f3b866ffcd3",
+   "date": "2026-05-09T21:59:59-05:00",
+   "subject": "archive contest-refactor review artifacts for fresh run",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "acbcd48dbf5a267ed73c4c20a535f41f13e448e0",
+   "date": "2026-05-09T23:30:17-05:00",
+   "subject": "loop 1: consolidate non-cue draft save invariant; finding F1 (F-001) resolved [registry: +3 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "provider='unknown' requires loop_model=null, got 'inline-current-model'"
+    },
+    {
+     "rule": "G19",
+     "message": "provider='unknown' requires reviewer_model=null, got 'inline-current-model'"
+    }
+   ],
+   "diagnostics": [
+    "[g17-check-blind reason=changed_paths absent or empty (v3+ field) loop=1]",
+    "[reviewer-independence-unverified state=CONTINUE provider=unknown] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "4e896fbc9710e3fa5e821477b56c11de29b7439b",
+   "date": "2026-05-09T23:53:05-05:00",
+   "subject": "contest loop 2: split persistence completion families",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "provider='unknown' requires loop_model=null, got 'inline-current-model'"
+    },
+    {
+     "rule": "G19",
+     "message": "provider='unknown' requires reviewer_model=null, got 'inline-current-model'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=unknown] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "9aadf2c0eb191253f27bc9c75d6b17aceb239411",
+   "date": "2026-05-09T23:59:43-05:00",
+   "subject": "contest loop 3: split demo seed fixtures",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 3,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "schema-enum",
+     "message": "halt_subtype 'success' not in canon",
+     "context": "halt_subtype"
+    },
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "provider='unknown' requires loop_model=null, got 'inline-current-model'"
+    },
+    {
+     "rule": "G19",
+     "message": "provider='unknown' requires reviewer_model=null, got 'inline-current-model'"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'architecture_quality' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'state_management' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'domain_modeling' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'data_flow' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'framework_idioms' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'concurrency' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'simplicity' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'test_strategy' score=9.0 < 9.5 (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'credibility' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=HALT_SUCCESS provider=unknown] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "ee0e598de2f37086f6d0a685fa7596a30df3140f",
+   "date": "2026-05-10T09:16:21-05:00",
+   "subject": "Remove malformed contest artifacts and add ideation note",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "f821951eb2ee9de04268886e3827e08a9a32a075",
+   "date": "2026-05-10T09:57:03-05:00",
+   "subject": "loop 1: hoist shared lookup bindings in tileSurface; finding F1 (stable_id F-001) resolved [registry: +3 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "2251a1cfe7942f52c02d382699cca72621c1a706",
+   "date": "2026-05-10T10:15:06-05:00",
+   "subject": "loop 2: replace LocalImportView parallel booleans with discriminated enum; finding F2 (stable_id F-002) resolved [registry: +2 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "0e44334d77357267a1eb412df0a6070ff47425be",
+   "date": "2026-05-10T10:24:41-05:00",
+   "subject": "loop 3: nil pollTask in AVAudioPreviewAdapter.pause(); finding F1 (stable_id F-003) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 3,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "b4f809b8fa865ac53b58ea1911ef633aeb2def4c",
+   "date": "2026-05-10T10:34:41-05:00",
+   "subject": "loop 4: document startPolling polling-vs-delegate trade-off; finding F1 (stable_id F-004) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 4,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "942920223d427e7dd1baceb86b63e714fe13b8d8",
+   "date": "2026-05-10T10:42:58-05:00",
+   "subject": "loop 5: HALT_STAGNATION no_backlog \u2014 F-005 correction path fulfilled in loop 4 Builder Notes; finding F1 (stable_id F-005) carried_forward [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 5,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "df43cdc8e3e0df5592fc6acec84181736dfba5d3",
+   "date": "2026-05-10T11:43:39-05:00",
+   "subject": "contest-refactor cleanup: archive reset loop, drop CURRENT_REVIEW artifacts",
+   "files": [
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "purged": true
+  },
+  {
+   "commit": "de00f4ef239fc6d0d7f49d945db5c84f2dfc8abe",
+   "date": "2026-05-10T12:07:37-05:00",
+   "subject": "loop 1: HALT_STAGNATION no_backlog \u2014 fresh-critic post-reset confirms prior verdict at 8.61 avg; finding F1 (stable_id F-005) carried_forward [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 7 loops[] entries; current_review.loop == 1 requires exactly 1 entries"
+    },
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "07a596febf8e4be6ee49d60c509f5c561f8d05b0",
+   "date": "2026-05-10T12:10:06-05:00",
+   "subject": "contest-refactor cleanup: remove all artifacts for fresh-run-from-zero",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "91ebcbff20debe58a4cea04bdbd50a96ebd75e7f",
+   "date": "2026-05-10T12:32:01-05:00",
+   "subject": "loop 1: HALT_SUCCESS \u2014 fresh critic pass confirms all 9 dims at 9.5 accepted; no structural findings above Cosmetic for contest; 1243 tests pass [registry: +0 findings]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 2,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G22",
+     "message": "REVIEW_HISTORY.md line 1: archive divider does not match `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+     "context": "--- Loop 1 (UTC 2026-05-10T17:29:30Z) HALT_SUCCESS ---"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "3113b7e66154aad3869a6382a0728b1bb6f3fbfe",
+   "date": "2026-05-14T19:06:34-05:00",
+   "subject": "docs: refresh ADR 0001 + remove stale review artifacts",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "725bf6383a770bd16d2e79058028ba8af081a7f9",
+   "date": "2026-05-16T14:57:48-05:00",
+   "subject": "loop 1: inline AddSoundWorkflowTaskTracker into executor; correct stale Pattern 3 primer",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [],
+   "sidecar_error": true,
+   "diagnostics": []
+  },
+  {
+   "commit": "cb4465476ef430ccf07af778596cd222d70d7379",
+   "date": "2026-05-16T15:20:03-05:00",
+   "subject": "loop 2: add sequential-cancel executor test for AddSoundWorkflowEffectExecutor; finding F1 (stable_id F-004) resolved [registry: +1 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G22",
+     "message": "REVIEW_HISTORY.md line 1: archive divider does not match `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+     "context": "--- Loop 1 (UTC 2026-05-16) ---"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "742208b9288856c7721b94ce2b7138c67afb1e42",
+   "date": "2026-05-16T15:31:22-05:00",
+   "subject": "loop 3: HALT_SUCCESS \u2014 residual accounting reaches all-9.5+; finding (none) n/a [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 3,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G22",
+     "message": "REVIEW_HISTORY.md line 1: archive divider does not match `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+     "context": "--- Loop 1 (UTC 2026-05-16) ---"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "38592d1aa4b908de0f54cc75d0ed5dc34f08f704",
+   "date": "2026-05-19T14:48:10-05:00",
+   "subject": "loop 3: revalidate HALT_SUCCESS post Apple Music pivot; finding (none) n/a [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 3,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G22",
+     "message": "REVIEW_HISTORY.md line 1: archive divider does not match `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+     "context": "--- Loop 1 (UTC 2026-05-16) ---"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "af09e610b034a51d09474d5f3c0b3820398f0e1a",
+   "date": "2026-05-19T16:38:57-05:00",
+   "subject": "loop 1: re-established baseline scorecard; finding (none) n/a [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 3 loops[] entries; current_review.loop == 1 requires exactly 1 entries"
+    },
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G22",
+     "message": "REVIEW_HISTORY.md line 1: archive divider does not match `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+     "context": "--- Loop 1 (UTC 2026-05-16) ---"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "72d5b31344c263e68c627870762ece424c8259a7",
+   "date": "2026-05-20T15:05:14-05:00",
+   "subject": "chore: remove contest-refactor artifacts and skills-lock from repo",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "2caa30e4b7a31e089d8b24fff6b6a287f9bb47ce",
+   "date": "2026-05-25T17:51:08-05:00",
+   "subject": "loop 1: collapse stale 3-pattern framing in core-architecture-primer to 2 choreography models; finding F1 (stable_id F-001) resolved [registry: +3 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json",
+    "LOOP_STATE.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G28",
+     "message": "LOOP_STATE.last_checkpoint_at='2026-05-25T22:50:30Z' is 2103.7h old (>24h orphan threshold); routes to --reset recommendation per Resume Precedence Matrix row 2"
+    }
+   ],
+   "diagnostics": [
+    "[G17] loop 1: what_changed is a deepening refactor and no test file appears in changed_paths, so loop_result.interface_test_coverage_path must be a non-empty list",
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "040322433b71e48c3e18587156098b5935f528d9",
+   "date": "2026-05-25T18:11:06-05:00",
+   "subject": "loop 2: extract RootSplitView selectTabIntent static helper + 5-case test file; finding F1 (stable_id F-003) resolved [registry: +0 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "0309e561fcb2e61ba80f19fbd3c6c75a2d64084c",
+   "date": "2026-05-25T18:26:52-05:00",
+   "subject": "loop 3: guard RootScene.useIPadSplitView with #if DEBUG so release builds compile out the @AppStorage lookup; finding F1 (stable_id F-002) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 3,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=HALT_SUCCESS provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "b7f3f3e21ebef693cbb439311ce748aff1c56321",
+   "date": "2026-05-25T21:39:03-05:00",
+   "subject": "loop 1: HALT_SUCCESS re-derived from source after --reset; no findings (codebase at 9.5+ contest target) [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 4 loops[] entries; current_review.loop == 1 requires exactly 1 entries"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "5877b0f6ec9851b7d4b8f20dca1cdeede5386d24",
+   "date": "2026-05-28T19:30:28-05:00",
+   "subject": "loop 1: gate roster prototype-layout bodies behind #if DEBUG; finding F1 (stable_id F-004) resolved [registry: +3 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 5 loops[] entries; current_review.loop == 1 requires exactly 1 entries"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "4f49b7c6039f6ed62b7a22642e0609dde445f5b4",
+   "date": "2026-05-28T19:42:17-05:00",
+   "subject": "loop 2: gate dead prototype-only projection accessors behind #if DEBUG; finding F1 (stable_id F-007) resolved [registry: +1 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 6 loops[] entries; current_review.loop == 2 requires exactly 2 entries"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "8ba44cdc440f352a2edaffa518f5ecb24445bf55",
+   "date": "2026-05-28T19:49:32-05:00",
+   "subject": "loop 3: re-derive scorecard from source, all dimensions 9.5 with accepted residuals; finding F1 (stable_id F-005) carried_forward [registry: +0 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 3,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 7 loops[] entries; current_review.loop == 3 requires exactly 3 entries"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "f2e8fcff9e7c4d28b9a682b93dc10cdc840c060f",
+   "date": "2026-05-28T19:57:53-05:00",
+   "subject": "chore: purge contest-refactor state (deep-reset to first-install)",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "e6673d9f91bff72ff443638825ff3746b444c959",
+   "date": "2026-05-28T20:13:16-05:00",
+   "subject": "loop 1: annotate AudioRouteObserver device-name logs with privacy: .private; finding F1 (stable_id F-001) resolved [registry: +2 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "c84ccfd9f30091fbe894435b677c92d212535cf8",
+   "date": "2026-05-28T20:26:33-05:00",
+   "subject": "loop 2: F-001 resolved at source lifts framework_idioms to 9.5, halt for keep-vs-delete decision on roster-layout study; finding F1 (stable_id F-002) carried_forward [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 2,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": []
+  },
+  {
+   "commit": "bd4d1a4c1e16c132e1d793b9e0a1ff84fec52b48",
+   "date": "2026-05-28T21:04:42-05:00",
+   "subject": "loop 3: test AudioRouteObserver snapshot-mapping at the RouteObservationController Interface; finding F1 (stable_id F-003) resolved [registry: +1 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 3,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=2->3]"
+   ]
+  },
+  {
+   "commit": "0066a5d2da64a081f3628e907f1a90d97b735605",
+   "date": "2026-05-28T21:18:29-05:00",
+   "subject": "loop 4: re-derive scorecard from source \u2014 all nine dimensions 9.5 with accepted residuals; HALT_SUCCESS [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 4,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": [
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=2->3]",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=3->4]"
+   ]
+  },
+  {
+   "commit": "6f0b109d882b6942db7886a531157a4329ad8929",
+   "date": "2026-05-31T13:26:37-05:00",
+   "subject": "loop 5: re-validate after Apple Music + NOW BATTING + per-player-color drift; all nine dimensions hold at 9.5, HALT_SUCCESS [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 5,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-opus-4-8' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-opus-4-8' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=2->3]",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=3->4]",
+    "[transition-violation HALT_SUCCESS\u2192HALT_SUCCESS reason=terminal state has no legal next state loop=4->5]"
+   ]
+  },
+  {
+   "commit": "f803395399036095f82bb5d891708035faa581f4",
+   "date": "2026-05-31T13:45:07-05:00",
+   "subject": "loop 1: first-install walk post-purge \u2014 all nine dimensions 9.5 with accepted residuals, HALT_SUCCESS [registry: +1 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "loop_model='claude-opus-4-8' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-opus-4-8' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G35",
+     "message": "expected_actions['promote-keep-decision-to-adr'] has non-empty match_paths so match_kind must be 'all_of' (rule #18 coupling); got 'any_of'"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "1548d59a12a5bdb05e1a213eec6d024ba44793fe",
+   "date": "2026-06-11T11:31:23-05:00",
+   "subject": "loop 1: inject orphan-cleanup deleter, remove ambient global; finding F1 (stable_id F-002) resolved [registry: +1 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json has 2 loops[] entries; current_review.loop == 1 requires exactly 1 entries"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=HALT_SUCCESS provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-check-blind reason=no adjacent in-run pair derived loops=2 runs=2 hint=run_id must be stable across the loops of one run]"
+   ]
+  },
+  {
+   "commit": "a36a42bc62d751e4b30ab363174f709c4d374fac",
+   "date": "2026-06-21T08:12:04-05:00",
+   "subject": "loop 1: halt at HALT_SUCCESS \u2014 fresh first-time walk scores 9.5+ all dimensions; no finding [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 3,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_SUCCESS",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": []
+  },
+  {
+   "commit": "9976c153b6896ba232288194befcc149c58a709f",
+   "date": "2026-06-21T22:32:15-05:00",
+   "subject": "chore: remove contest-refactor review-loop artifacts",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "408129927bace264c8e2a2ba996b399a2937a2ea",
+   "date": "2026-06-23T22:46:22-05:00",
+   "subject": "loop 1: critic pass \u2014 all surfaces contest-grade; finding F1 (stable_id F-001) carried_forward [registry: +3 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'framework_idioms' score=9.0 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'simplicity' score=9.0 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'credibility + simplicity each +0.5 to 9.5 once the probes are removed (or accepted as a residual if kept).' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "90429d5723dd1412f6828f357e6c57aa72d22e47",
+   "date": "2026-06-23T23:05:20-05:00",
+   "subject": "loop 2: gate bhdiag trace probes behind runtime flag; finding F1 (stable_id F-001) resolved [registry: +0 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'framework_idioms +0.5 to 9.5 (or 10 if all sites prove justified).' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G40",
+     "message": "discovery is required on every loop, not only the first \u2014 carry the Step-0 object forward verbatim (rule #32). Repopulate it from the prior loop's artifact or a real Step-0 re-run; never invent values, which would substitute a plausible test command for the verified one",
+     "context": "discovery (loop 2)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=1->2]"
+   ]
+  },
+  {
+   "commit": "3a1b76d538bfc580ac9ad6d7e208ecd93790713f",
+   "date": "2026-06-23T23:11:45-05:00",
+   "subject": "loop 3: audit F3 (all icon-sizing) + verify F2 deep; HALT_SUCCESS candidate; finding F3 (stable_id F-003) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 3,
+   "run_id": "run-2026-06-23-benchhype-contest",
+   "state": "HALT_SUCCESS_candidate",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='fp-sha256-05bceb31bc01bd1dcf8fc04728c6156c' != canonical 'fp-sha256-25cabc70749aa82ea0d9218380a1badd'"
+    },
+    {
+     "rule": "G40",
+     "message": "discovery is required on every loop, not only the first \u2014 carry the Step-0 object forward verbatim (rule #32). Repopulate it from the prior loop's artifact or a real Step-0 re-run; never invent values, which would substitute a plausible test command for the verified one",
+     "context": "discovery (loop 3)"
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence-unverified state=HALT_SUCCESS_candidate provider=claude_code challenger_model='<unrecorded>'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=1->2]"
+   ]
+  },
+  {
+   "commit": "dee624481a2b02461bcec21c86abd18a1f7443a7",
+   "date": "2026-06-23T23:17:47-05:00",
+   "subject": "loop 3: promote to HALT_SUCCESS \u2014 independent challenge held (G32); finding F3 (stable_id F-003) resolved [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 3,
+   "run_id": "run-2026-06-23-benchhype-contest",
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='fp-sha256-05bceb31bc01bd1dcf8fc04728c6156c' != canonical 'fp-sha256-4e1bc400f95a43527c340196ff1ec35a'"
+    },
+    {
+     "rule": "G32",
+     "message": "halt_success_challenge.attempts needs a new_finding arm on simplicity/domain_modeling"
+    },
+    {
+     "rule": "G40",
+     "message": "discovery is required on every loop, not only the first \u2014 carry the Step-0 object forward verbatim (rule #32). Repopulate it from the prior loop's artifact or a real Step-0 re-run; never invent values, which would substitute a plausible test command for the verified one",
+     "context": "discovery (loop 3)"
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence-unverified state=HALT_SUCCESS provider=claude_code challenger_model='claude-opus-4-8'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=1->2]",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=2->3]"
+   ]
+  },
+  {
+   "commit": "b63e93835e8bbedaf6a454cf2d09c1e5e6e6f6a2",
+   "date": "2026-06-26T10:20:22-05:00",
+   "subject": "loop 1: own import-orphan cleanup at the file store; finding F1 (stable_id F-001) resolved [registry: +3 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Architecture quality +0.5, Overall credibility +0.5' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Code simplicity +0.5' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[1] (priority 2)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Test strategy gains a feature-surface assertion' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[1] (priority 2)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Framework/platform best practices +0.5' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[2] (priority 3)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[1] (priority 2)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[2] (priority 3)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "0f8604fc52ec882d5c1a18cc1c187d3c2f4b7dc9",
+   "date": "2026-06-26T11:00:21-05:00",
+   "subject": "loop 2: wire the Edit-Each sequential import ignition; finding F2 (stable_id F-002) resolved [registry: +0 findings, ~2 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Code simplicity +0.5' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Overall credibility +0.5' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Test strategy gains a feature-surface assertion' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Framework/platform best practices +0.5' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[1] (priority 2)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[1] (priority 2)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "c7dfcf60f00d4953ad15e4605f76faa42f5df337",
+   "date": "2026-06-26T12:50:36-05:00",
+   "subject": "loop 3: drop spurious nonisolated(unsafe) on AppleMusicTransport.activeTrimBounds; finding F3 (stable_id F-003) resolved [registry: +0 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 3,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Framework/platform best practices residual cleared (queued -> resolved)' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "a03b12abffe6fd42c1560470d24a2cf8336580a1",
+   "date": "2026-06-26T15:52:13-05:00",
+   "subject": "loop 4: promote to HALT_SUCCESS candidate \u2014 all dimensions 9.5, full suite green; finding F3 (stable_id F-003) resolved [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 4,
+   "run_id": "run-c7dfcf60-l4",
+   "state": "HALT_SUCCESS_candidate",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='fp-sha256-7ad29f833730a0b62d27df7237abc42b' != canonical 'fp-sha256-2c324f4c5defb057e71494b54796e92a'"
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence-unverified state=HALT_SUCCESS_candidate provider=claude_code challenger_model='<unrecorded>'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "a5b049947fd1c903f0c1d9aa1a664050af674e2d",
+   "date": "2026-06-26T16:02:27-05:00",
+   "subject": "loop 4: promote to HALT_SUCCESS \u2014 independent challenge held (G32); finding F3 (stable_id F-003) resolved [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 4,
+   "run_id": "run-c7dfcf60-l4",
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='fp-sha256-7ad29f833730a0b62d27df7237abc42b' != canonical 'fp-sha256-2c324f4c5defb057e71494b54796e92a'"
+    },
+    {
+     "rule": "G32",
+     "message": "halt_success_challenge.attempts needs a new_finding arm on simplicity/domain_modeling"
+    },
+    {
+     "rule": "G34",
+     "message": "state=HALT_SUCCESS requires a non-null halt_handoff (rule #18 presence)"
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence-unverified state=HALT_SUCCESS provider=claude_code challenger_model='claude-opus-4-8'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified",
+    "[transition-violation CONTINUE\u2192HALT_SUCCESS reason=no declared edge 'CONTINUE' -> 'HALT_SUCCESS' in canon/states.toml loop=3->4]"
+   ]
+  },
+  {
+   "commit": "520aa846189e17914de37cc5dd292dbd659bce53",
+   "date": "2026-07-01T18:22:53-05:00",
+   "subject": "chore(contest-refactor): purge review state files after loop-4 HALT_SUCCESS",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "8aefda32d94f163e3dc4b23b5c0c1b24404b8680",
+   "date": "2026-07-02T13:00:32-05:00",
+   "subject": "loop 1: delete dead always-true promotion predicate in playback admission; finding F1 (stable_id F-001) resolved [registry: +3 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_LOOP_CAP",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G19",
+     "message": "reviewer_model='claude-sonnet-4-6' marked source='default' but provider 'claude_code' default is 'claude-sonnet-5'"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Clears the queued residual on test_strategy.' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Clears the queued residual on framework_idioms.' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[1] (priority 2)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[1] (priority 2)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=HALT_LOOP_CAP provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "baea159259c76769cf230f86f73d7a9ad3faf29c",
+   "date": "2026-07-08T08:22:52-05:00",
+   "subject": "purge contest-refactor state; backup .contest-refactor-backup-20260708-132151",
+   "files": [],
+   "purged": true
+  },
+  {
+   "commit": "13949f53d018574acbec1e7374c471ac5575febd",
+   "date": "2026-07-08T08:45:50-05:00",
+   "subject": "loop 1: HALT_SUCCESS_candidate \u2014 no structural finding after full-spine audit [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": "run-2026-07-08-benchhype-loop1",
+   "state": "HALT_SUCCESS_candidate",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='sha256:6cadf961b0dfb51f0e16d77314f498e8ccdd22f6d2f4ac8271fe5538453878fb' != canonical 'fp-sha256-b3ee58756b8ee99a6843a7d654e1a5ad'"
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence-unverified state=HALT_SUCCESS_candidate provider=claude_code challenger_model='<unrecorded>'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "04e38d29aea3430a4c6ad6fab1aec22818a44aea",
+   "date": "2026-07-08T08:53:46-05:00",
+   "subject": "loop 1: promote HALT_SUCCESS_candidate to HALT_SUCCESS \u2014 independent challenge held [registry: +0 findings, ~0 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": "run-2026-07-08-benchhype-loop1",
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='sha256:6cadf961b0dfb51f0e16d77314f498e8ccdd22f6d2f4ac8271fe5538453878fb' != canonical 'fp-sha256-b3ee58756b8ee99a6843a7d654e1a5ad'"
+    },
+    {
+     "rule": "G32",
+     "message": "halt_success_challenge.attempts needs a new_finding arm on simplicity/domain_modeling"
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence-unverified state=HALT_SUCCESS provider=claude_code challenger_model='claude-opus-4-8'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "6c3b7ba50b84ced355eb05eb6d5d3955f73a69eb",
+   "date": "2026-07-08T14:38:19-05:00",
+   "subject": "loop 1: halt for PlaybackOrigin mapping decision; finding F1 (stable_id F-001) carried_forward [registry: +1 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'architecture_quality' score=8.5 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'state_management' score=9.0 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'domain_modeling' score=8.5 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'data_flow' score=8.5 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'framework_idioms' score=8.5 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'concurrency' score=9.0 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'simplicity' score=8.0 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'test_strategy' score=8.5 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_STAGNATION/user_decision dimension 'credibility' score=8.5 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'Raises code simplicity, domain modeling, and data flow credibility.' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G42",
+     "message": "stable_id is required on every backlog item \u2014 the F-NNN id of the Finding it derives from. Without it the item has no identity a rule can follow across loops, and its id survives only inside the title prose",
+     "context": "backlog[0] (priority 1)"
+    }
+   ],
+   "diagnostics": []
+  },
+  {
+   "commit": "75f984018a45e53ede26c5e6f673af743147d7f2",
+   "date": "2026-07-08T15:15:19-05:00",
+   "subject": "loop 1: centralize PlaybackOrigin persistence coding; finding F1 (stable_id F-001) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.0 < 9.5 carries residual_rationale_or_backlog_ref (residual_disposition=None); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'domain_modeling' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'simplicity' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=HALT_STAGNATION provider=unknown] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "3b8856fb1f724aa25b24bb3a4ae5dffc52aa3cf7",
+   "date": "2026-07-24T22:33:11-05:00",
+   "subject": "fix(audio+storekit+app): Close 2026-07-24 review findings F1-F10",
+   "files": [
+    "findings_registry.json"
+   ],
+   "purged": true
+  },
+  {
+   "commit": "c5133132087fe62156d9573e7b50ec1c94efb522",
+   "date": "2026-08-09T11:48:39-05:00",
+   "subject": "loop 1: centralize Apple Music bulk selection; finding F1 (stable_id F-002) resolved [registry: +3 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=codex] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "2e23cd2711df820a776e83b33089d3810686bade",
+   "date": "2026-08-09T12:39:35-05:00",
+   "subject": "loop 2: share Apple Music trim-start policy; finding F2 (stable_id F-003) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 2,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=codex] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "46a96dde850e26b227e21d8aa9375e29d1ad983d",
+   "date": "2026-08-09T13:04:34-05:00",
+   "subject": "loop 3: halt for bulk workflow ownership decision; finding F1 (stable_id F-005) carried_forward [registry: +1 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 3,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 0,
+   "issues": [],
+   "diagnostics": []
+  },
+  {
+   "commit": "bc4e6333f46736e42af62c6f823bbd389ed6fcbc",
+   "date": "2026-08-10T12:43:24-05:00",
+   "subject": "loop 4: discriminate bulk workflow storage; finding F1 (stable_id F-005) resolved [registry: +0 findings, ~1 occurrence]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 4,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=codex] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]"
+   ]
+  },
+  {
+   "commit": "e024a19b71139d459554225d2c11b3a20d3d66f4",
+   "date": "2026-08-10T22:05:53-05:00",
+   "subject": "loop 5: reclaim unowned staged game-package assets on successful collision; finding F1 (stable_id F-006) resolved [registry: +2 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 5,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]"
+   ]
+  },
+  {
+   "commit": "02bcdb35913c1a29a427f67a2ec91724a093cc2e",
+   "date": "2026-08-10T23:16:15-05:00",
+   "subject": "loop 6: collapse the duplicated flat playback status enum into BenchHypeDomain; finding F1 (stable_id F-008) resolved [registry: +2 findings, ~4 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 6,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]"
+   ]
+  },
+  {
+   "commit": "052e46baa77143e1cb4ca3a71bb9113b158ddfd2",
+   "date": "2026-08-11T00:22:51-05:00",
+   "subject": "loop 7: collapse the duplicated tile playback severity vocabulary into the Domain status type; finding F1 (stable_id F-009) resolved [registry: +1 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 7,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]"
+   ]
+  },
+  {
+   "commit": "fc44da86852f46a84e84e2a10ffb1b5b1eda6ce9",
+   "date": "2026-08-11T02:33:27-05:00",
+   "subject": "loop 8: revert derived add-sound step attempt \u2014 reviewer rejected; finding F1 (stable_id F-010) carried_forward [registry: +1 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 8,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]"
+   ]
+  },
+  {
+   "commit": "be54b1e64d5116458d9dd05d5c844f7f9ec95f12",
+   "date": "2026-08-11T07:19:51-05:00",
+   "subject": "loop 9: revert derived add-sound step + reducer-owned dismissal \u2014 reviewer rejected on the uninventoried sequential arm; finding F1 (stable_id F-010) rejected_attempt [registry: +0 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 9,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 8 (HALT_STAGNATION) -> loop 9 (HALT_STAGNATION): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_STAGNATION reason=terminal state has no legal next state loop=8->9]"
+   ]
+  },
+  {
+   "commit": "a46a725968d45d1c5549c3a6d2b198930bb428c5",
+   "date": "2026-08-11T09:34:34-05:00",
+   "subject": "loop 10: move sequential-import ignition to the Edit-Each gesture and cover the step machine at the projection; finding F1 (stable_id F-012) resolved [registry: +2 findings, ~5 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 10,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 8 (HALT_STAGNATION) -> loop 9 (HALT_STAGNATION): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 9 (HALT_STAGNATION) -> loop 10 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "rounds-membership",
+     "message": "implementation_review.rounds must be an int in {1, 2} (1 normally, 2 only when a conditional first pass re-spawned the reviewer); got None"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_STAGNATION reason=terminal state has no legal next state loop=8->9]",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=9->10]"
+   ]
+  },
+  {
+   "commit": "462c8678f1a3bb3578ab4f3e75b144cd40600974",
+   "date": "2026-08-11T12:41:43-05:00",
+   "subject": "loop 11: revert derived add-sound step + gesture ignition \u2014 reviewer rejected on an understated macOS behaviour delta and three uninventoried sites; finding F1 (stable_id F-010) rejected_attempt [registry: +0 findings, ~3 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 11,
+   "run_id": null,
+   "state": "HALT_STAGNATION",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 8 (HALT_STAGNATION) -> loop 9 (HALT_STAGNATION): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 9 (HALT_STAGNATION) -> loop 10 (CONTINUE): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_STAGNATION reason=terminal state has no legal next state loop=8->9]",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=9->10]"
+   ]
+  },
+  {
+   "commit": "d19cfd214c0b5c765a16171631a6e73e0cae9005",
+   "date": "2026-08-16T21:24:21-05:00",
+   "subject": "loop 12: derive add-sound step from projection and arm bulk import from gesture; finding F1 (stable_id F-010) resolved [registry: +0 findings, ~4 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 12,
+   "run_id": null,
+   "state": "HALT_LOOP_CAP",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G33",
+     "message": "risk_boundary_evidence must be an object or null"
+    },
+    {
+     "rule": "G37",
+     "message": "HALT_LOOP_CAP dimension 'credibility' score=9.0 < 9.5 is unaccounted: no backlog[] item's score_impact names it and residual_blocker_kind is not 'structural_anchor_unmet'. A terminal scorecard may not strand a dimension -- file it to the backlog, tag the structural blocker, or promote to 9.5-accepted"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'test_strategy +0 (already 9.5)' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[0] (priority 1)"
+    },
+    {
+     "rule": "G39",
+     "message": "score_impact entry 'simplicity +0 (already 9.5)' is not '<canon_dim_id> <+/-delta>' (e.g. 'data_flow +0.5'); join multiple dimensions with ';'",
+     "context": "backlog[1] (priority 2)"
+    },
+    {
+     "rule": "G43",
+     "message": "dimension 'domain_modeling' repeated the SAME proposed_fix target as the prior loop ('move', 'BenchHypeKit/Sources/BenchHypeApplication/State/BulkAddSoundSession.swift', 'BulkCleanDraftQueue.board') on a 3-loop clean streak. Novelty is judged on (fix_kind, target_path, target_symbol), never on the prose: rewording `note` or `clean_rationale` does not make a proposal new"
+    },
+    {
+     "rule": "G43",
+     "message": "dimension 'framework_idioms' repeated the SAME proposed_fix target as the prior loop ('delete', 'BenchHype/BenchHype/RootSplitView.swift', 'RootSplitView.SidebarItem') on a 3-loop clean streak. Novelty is judged on (fix_kind, target_path, target_symbol), never on the prose: rewording `note` or `clean_rationale` does not make a proposal new"
+    },
+    {
+     "rule": "G43",
+     "message": "dimension 'concurrency' repeated the SAME proposed_fix target as the prior loop ('gate', 'BenchHypeKit/Sources/BenchHypeAudio/AudioSessionConfigurator.swift', 'AudioSessionConfigurator.Lease') on a 3-loop clean streak. Novelty is judged on (fix_kind, target_path, target_symbol), never on the prose: rewording `note` or `clean_rationale` does not make a proposal new"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 8 (HALT_STAGNATION) -> loop 9 (HALT_STAGNATION): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 9 (HALT_STAGNATION) -> loop 10 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 11 (HALT_STAGNATION) -> loop 12 (HALT_LOOP_CAP): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[G17] loop 12: what_changed is a deepening refactor and no test file appears in changed_paths, so loop_result.interface_test_coverage_path must be a non-empty list",
+    "[reviewer-independence-unverified state=HALT_LOOP_CAP provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_STAGNATION reason=terminal state has no legal next state loop=8->9]",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=9->10]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_LOOP_CAP reason=terminal state has no legal next state loop=11->12]"
+   ]
+  },
+  {
+   "commit": "f03b9fcc993cec88be38d696f884bb765132f98d",
+   "date": "2026-08-16T21:27:10-05:00",
+   "subject": "loop 12: validator passes; finalize loop 12 artifacts [registry: +0 findings, ~4 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 12,
+   "run_id": null,
+   "state": "HALT_LOOP_CAP",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 3 (HALT_STAGNATION) -> loop 4 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 8 (HALT_STAGNATION) -> loop 9 (HALT_STAGNATION): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 9 (HALT_STAGNATION) -> loop 10 (CONTINUE): terminal state has no legal next state"
+    },
+    {
+     "rule": "transition-legality",
+     "message": "loop 11 (HALT_STAGNATION) -> loop 12 (HALT_LOOP_CAP): terminal state has no legal next state"
+    }
+   ],
+   "diagnostics": [
+    "[G17] loop 12: what_changed is a deepening refactor and no test file appears in changed_paths, so loop_result.interface_test_coverage_path must be a non-empty list",
+    "[reviewer-independence-unverified state=HALT_LOOP_CAP provider=claude_code] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=3->4]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_STAGNATION reason=terminal state has no legal next state loop=8->9]",
+    "[transition-violation HALT_STAGNATION\u2192CONTINUE reason=terminal state has no legal next state loop=9->10]",
+    "[transition-violation HALT_STAGNATION\u2192HALT_LOOP_CAP reason=terminal state has no legal next state loop=11->12]"
+   ]
+  },
+  {
+   "commit": "0f2935143d7d2bcad820a872f3560b93c498f6a6",
+   "date": "2026-08-19T19:14:22-05:00",
+   "subject": "loop 1: re-derive scorecard at 9.5+ on every dimension; HALT_SUCCESS_candidate; finding F1 (stable_id F-007) withdrawn [registry: +0 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": "run-2026-08-20-001",
+   "state": "HALT_SUCCESS_candidate",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "challenge-independence",
+     "message": "HALT_SUCCESS_candidate promoted by a challenge that ran inline (per spawn_isolation (the loop itself ran inline), provider=unknown): no fresh-context verification backs the verdict. Re-run on a provider whose subagents can nest-spawn, or treat the terminal as provisional and say so in the handoff."
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence state=HALT_SUCCESS_candidate provider=unknown source=spawn_isolation (the loop itself ran inline) challenger_model='<unrecorded>'] terminal success rests on a challenger that shared the Critic's context; G32 checks challenger_model is non-empty and cannot see this"
+   ]
+  },
+  {
+   "commit": "2bf170dda86ec9ee9d889544a8f2219ba663b04a",
+   "date": "2026-08-19T19:17:33-05:00",
+   "subject": "loop 1: inline-vetted HALT_SUCCESS Challenge held; promote to terminal HALT_SUCCESS; finding F1 (stable_id F-007) withdrawn [registry: +0 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": "run-2026-08-20-001",
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "challenge-independence",
+     "message": "HALT_SUCCESS promoted by a challenge that ran inline (per spawn_isolation (the loop itself ran inline), provider=unknown): no fresh-context verification backs the verdict. Re-run on a provider whose subagents can nest-spawn, or treat the terminal as provisional and say so in the handoff."
+    }
+   ],
+   "diagnostics": [
+    "[challenge-independence state=HALT_SUCCESS provider=unknown source=spawn_isolation (the loop itself ran inline) challenger_model='inline-vetting (provider=unknown, no subagent spawn)'] terminal success rests on a challenger that shared the Critic's context; G32 checks challenger_model is non-empty and cannot see this"
+   ]
+  },
+  {
+   "commit": "b871e8803a6025b02f6ea4917d5a9feaa34300ac",
+   "date": "2026-08-19T22:17:45-05:00",
+   "subject": "loop 1: correct two doc-vs-code leaks loop 12 claimed but did not apply; finding F1 (stable_id F-014) resolved [registry: +1 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "schema-enum",
+     "message": "severity 'Noticeable weakness (cosmetic for contest; accepted residual at 9.5)' not in canon",
+     "context": "finding F2"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "severity 'Cosmetic for contest (accepted residual at 9.5)' not in canon",
+     "context": "finding F3"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "scorecard key 'code_simplicity' not in canon (allowed: ['architecture_quality', 'concurrency', 'credibility', 'data_flow', 'domain_modeling', 'framework_idioms', 'simplicity', 'state_management', 'test_strategy'])",
+     "context": "scorecard"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "scorecard key 'implementation_credibility' not in canon (allowed: ['architecture_quality', 'concurrency', 'credibility', 'data_flow', 'domain_modeling', 'framework_idioms', 'simplicity', 'state_management', 'test_strategy'])",
+     "context": "scorecard"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'why_it_matters' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'what_is_wrong' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Source field 'evidence[]' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Consequence field 'why_weakens_submission' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'why_it_matters' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'what_is_wrong' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Source field 'evidence[]' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Consequence field 'why_weakens_submission' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'why_it_matters' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'what_is_wrong' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Source field 'evidence[]' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Consequence field 'why_weakens_submission' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G27",
+     "message": "retry_count=1 requires retry_cause=null, got 'format lint tripped on first attempt \u2014 wrapSingleLineComments at --max-width 120; corrected in place'"
+    },
+    {
+     "rule": "G27",
+     "message": "retry_count=1 requires retry_attempts length 1, got 2"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'domain_modeling' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'code_simplicity' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'implementation_credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "CONTINUE",
+     "message": "state=CONTINUE requires non-empty backlog[] or next_actions[]"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "rounds-membership",
+     "message": "implementation_review.rounds must be an int in {1, 2} (1 normally, 2 only when a conditional first pass re-spawned the reviewer); got None"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=opencode] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "95c530a56838d3de2d2b80806bff4ecba4260396",
+   "date": "2026-08-19T22:19:03-05:00",
+   "subject": "loop 1: promote review to HALT_SUCCESS_candidate (post-fix artifacts; F-014 resolved; all dimensions 9.5+)",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": "run-2026-08-20-002",
+   "state": "HALT_SUCCESS_candidate",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "schema-enum",
+     "message": "severity 'Noticeable weakness (cosmetic for contest; accepted residual at 9.5)' not in canon",
+     "context": "finding F2"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "severity 'Cosmetic for contest (accepted residual at 9.5)' not in canon",
+     "context": "finding F3"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "scorecard key 'code_simplicity' not in canon (allowed: ['architecture_quality', 'concurrency', 'credibility', 'data_flow', 'domain_modeling', 'framework_idioms', 'simplicity', 'state_management', 'test_strategy'])",
+     "context": "scorecard"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "scorecard key 'implementation_credibility' not in canon (allowed: ['architecture_quality', 'concurrency', 'credibility', 'data_flow', 'domain_modeling', 'framework_idioms', 'simplicity', 'state_management', 'test_strategy'])",
+     "context": "scorecard"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'why_it_matters' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'what_is_wrong' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Source field 'evidence[]' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Consequence field 'why_weakens_submission' empty or missing",
+     "context": "finding F1"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'why_it_matters' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'what_is_wrong' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Source field 'evidence[]' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Consequence field 'why_weakens_submission' empty or missing",
+     "context": "finding F2"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'why_it_matters' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Claim field 'what_is_wrong' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Source field 'evidence[]' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "evidence-chain",
+     "message": "Consequence field 'why_weakens_submission' empty or missing",
+     "context": "finding F3"
+    },
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G27",
+     "message": "retry_count=1 requires retry_cause=null, got 'format lint tripped on first attempt \u2014 wrapSingleLineComments at --max-width 120; corrected in place'"
+    },
+    {
+     "rule": "G27",
+     "message": "retry_count=1 requires retry_attempts length 1, got 2"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'architecture_quality' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'state_management' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'domain_modeling' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'data_flow' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'framework_idioms' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'concurrency' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'code_simplicity' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'test_strategy' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G21-scorecard",
+     "message": "HALT_SUCCESS dimension 'implementation_credibility' score=9.5 residual_disposition=None (every scorecard dimension must satisfy score == 10 OR (score >= 9.5 AND residual_disposition == 'accepted'))"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'domain_modeling' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'code_simplicity' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'implementation_credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G32",
+     "message": "candidate_fingerprint='fp-sha256-pending-challenger-binding' != canonical 'fp-sha256-824a5d566b443a3009c959c661ec5143'"
+    },
+    {
+     "rule": "G34",
+     "message": "state=HALT_SUCCESS_candidate requires halt_handoff=null (rule #18); CONTINUE and the non-terminal HALT_SUCCESS_candidate carry no user-facing handoff"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "challenge-independence",
+     "message": "HALT_SUCCESS_candidate promoted with halt_success_challenge.challenger_isolation absent (spawn_isolation='subagent' describes the LOOP spawn, not the challenge): independence is unverified, which does not satisfy the requirement that it be established."
+    },
+    {
+     "rule": "rounds-membership",
+     "message": "implementation_review.rounds must be an int in {1, 2} (1 normally, 2 only when a conditional first pass re-spawned the reviewer); got None"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=HALT_SUCCESS_candidate provider=opencode] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[challenge-independence-unverified state=HALT_SUCCESS_candidate provider=opencode challenger_model='<unrecorded>'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "3028371374160ad7ae79d670d374e94aafdc5006",
+   "date": "2026-08-19T22:29:01-05:00",
+   "subject": "loop 1: demote HALT_SUCCESS_candidate to CONTINUE on Challenger break; finding F1 (stable_id F-011) re-opened [registry: +0 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 1,
+   "run_id": null,
+   "state": "CONTINUE",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "schema-enum",
+     "message": "scorecard key 'code_simplicity' not in canon (allowed: ['architecture_quality', 'concurrency', 'credibility', 'data_flow', 'domain_modeling', 'framework_idioms', 'simplicity', 'state_management', 'test_strategy'])",
+     "context": "scorecard"
+    },
+    {
+     "rule": "schema-enum",
+     "message": "scorecard key 'implementation_credibility' not in canon (allowed: ['architecture_quality', 'concurrency', 'credibility', 'data_flow', 'domain_modeling', 'framework_idioms', 'simplicity', 'state_management', 'test_strategy'])",
+     "context": "scorecard"
+    },
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G27",
+     "message": "retry_count=1 requires retry_cause=null, got 'format lint tripped on first attempt \u2014 wrapSingleLineComments at --max-width 120; corrected in place'"
+    },
+    {
+     "rule": "G27",
+     "message": "retry_count=1 requires retry_attempts length 1, got 2"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'code_simplicity' score=9.0 < 9.5 carries residual_blocking_10, residual_disposition, residual_rationale_or_backlog_ref (residual_disposition='queued'); the rubric puts an accepted residual at 9.5 -- either raise the score to 9.5 with a named residual, or null the residual fields and account for the gap via the backlog or residual_blocker_kind"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'domain_modeling' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'implementation_credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10, residual_rationale_or_backlog_ref; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.finding_family is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.effort is required (non-empty string)"
+    },
+    {
+     "rule": "G46",
+     "message": "loop_result.repair_revalidation is required (not null)"
+    },
+    {
+     "rule": "CONTINUE",
+     "message": "state=CONTINUE requires non-empty backlog[] or next_actions[]"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "rounds-membership",
+     "message": "implementation_review.rounds must be an int in {1, 2} (1 normally, 2 only when a conditional first pass re-spawned the reviewer); got None"
+    }
+   ],
+   "diagnostics": [
+    "[reviewer-independence-unverified state=CONTINUE provider=opencode] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified"
+   ]
+  },
+  {
+   "commit": "be0f1c66137a615242cdf2819094b22ce0403763",
+   "date": "2026-08-19T22:51:44-05:00",
+   "subject": "loop 2: extract persistSettingsChange(state:context:compose:) helper; finding F1 (stable_id F-011) resolved [registry: +0 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 2,
+   "run_id": "loop-2-302837137",
+   "state": "HALT_SUCCESS_candidate",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'domain_modeling' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "challenge-independence",
+     "message": "HALT_SUCCESS_candidate promoted with halt_success_challenge.challenger_isolation absent (spawn_isolation='subagent' describes the LOOP spawn, not the challenge): independence is unverified, which does not satisfy the requirement that it be established."
+    },
+    {
+     "rule": "rounds-membership",
+     "message": "implementation_review.rounds must be an int in {1, 2} (1 normally, 2 only when a conditional first pass re-spawned the reviewer); got None"
+    }
+   ],
+   "diagnostics": [
+    "[G17] loop 2: what_changed is a deepening refactor and no test file appears in changed_paths, so loop_result.interface_test_coverage_path must be a non-empty list",
+    "[reviewer-independence-unverified state=HALT_SUCCESS_candidate provider=opencode] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[challenge-independence-unverified state=HALT_SUCCESS_candidate provider=opencode challenger_model='<unrecorded>'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified",
+    "[transition-check-blind reason=no adjacent in-run pair derived loops=2 runs=2 hint=run_id must be stable across the loops of one run]"
+   ]
+  },
+  {
+   "commit": "b731a849d56b9b8beaf1187e92dda356538b3845",
+   "date": "2026-08-19T22:57:30-05:00",
+   "subject": "loop 2: promote candidate to terminal HALT_SUCCESS on Challenger hold; F-011 closed via persistSettingsChange helper [registry: +0 findings, ~1 occurrences]",
+   "files": [
+    "CURRENT_REVIEW.json",
+    "CURRENT_REVIEW.md",
+    "REVIEW_HISTORY.json",
+    "REVIEW_HISTORY.md",
+    "findings_registry.json"
+   ],
+   "schema_version": 4,
+   "loop": 2,
+   "run_id": "loop-2-302837137",
+   "state": "HALT_SUCCESS",
+   "exit": 1,
+   "issues": [
+    {
+     "rule": "G18",
+     "message": "REVIEW_HISTORY.json.loops[-1] must equal CURRENT_REVIEW.json verbatim (parsed-dict equality)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'architecture_quality' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'state_management' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'domain_modeling' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'data_flow' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'framework_idioms' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'concurrency' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'test_strategy' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "G5",
+     "message": "dimension 'credibility' score=9.5 is in [9.5, 10) but missing residual_blocking_10; rule #12 requires every 9.5-and-above dimension to name the residual blocking 10 -- either supply both fields or move the score outside [9.5, 10)"
+    },
+    {
+     "rule": "reviewer-independence",
+     "message": "implementation_review.verdict == 'approved' but reviewer_isolation=None (must be 'subagent'): an approved review must be independently spawned, not a self-review of the context it judges."
+    },
+    {
+     "rule": "challenge-independence",
+     "message": "HALT_SUCCESS promoted with halt_success_challenge.challenger_isolation absent (spawn_isolation='subagent' describes the LOOP spawn, not the challenge): independence is unverified, which does not satisfy the requirement that it be established."
+    },
+    {
+     "rule": "rounds-membership",
+     "message": "implementation_review.rounds must be an int in {1, 2} (1 normally, 2 only when a conditional first pass re-spawned the reviewer); got None"
+    }
+   ],
+   "diagnostics": [
+    "[G17] loop 2: what_changed is a deepening refactor and no test file appears in changed_paths, so loop_result.interface_test_coverage_path must be a non-empty list",
+    "[reviewer-independence-unverified state=HALT_SUCCESS provider=opencode] implementation_review.verdict == 'approved' but reviewer_isolation is absent; independence is unverified, which is not the same as verified",
+    "[challenge-independence-unverified state=HALT_SUCCESS provider=opencode challenger_model='opencode-go/minimax-m3'] halt_success_challenge.challenger_isolation is absent, and spawn_isolation='subagent' describes the LOOP spawn, not the challenge. Independence is unverified, which is not the same as verified",
+    "[transition-check-blind reason=no adjacent in-run pair derived loops=2 runs=2 hint=run_id must be stable across the loops of one run]"
+   ]
+  }
+ ]
+}

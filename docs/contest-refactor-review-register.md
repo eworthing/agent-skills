@@ -44,6 +44,43 @@ re-measure trigger (b)); `check_g28` split into `scripts/_artifact_snapshots.py`
 (`_artifact_history.py` 799→650, G19 left at its selftest-pinned line); token ceilings bumped
 proactive-margin (loop_apple 86,200 / loop_generic 82,100 / skill_md 12,200).
 
+## Run kit — 2026-08-21 (pre-run instrumentation, all off-loop-path)
+
+The owner directed building the instrumented-run kit ("do these", 2026-08-21). Shipped under
+`analysis/contest-refactor/run-kit/` — nothing touches the loop path, so the tranche being
+measured is unchanged:
+
+| Tool | Purpose | Validated against |
+|---|---|---|
+| `posthoc_gate_sweep.py` | phase-to-gate matrix from artifact history (subprocesses the shipped validator) | full BenchHype history (May→Aug, 4 runs) |
+| `coverage_citations.py` | item-24 decision data: real citation coverage vs inventory | same corpus |
+| `cost_accounting.py` | opencode sqlite (db-backed ≥1.18) cost/resident accounting, read-only | the Aug-19 run's 6 sessions |
+| `observe-tools.ts` | observe-only opencode plugin (`tool.execute.before/after` → JSONL); never blocks | scratch opencode session, PASS |
+| `PREDECLARATION.md` | D4 predeclaration: M1–M8 measurement definitions + launch checklist | — |
+
+Banked findings from validating the kit (reports committed under `run-kit/reports/`):
+
+- **run_id lifecycle violation in the Aug-19 run (new)**: `run_id` minted per loop
+  (`loop-2-302837137`, loop 1 null) — wrong format, wrong lifecycle — the direct cause of the
+  `transition-check-blind` lines. Predeclared as M2, a PASS/FAIL probe the next run answers for
+  free.
+- **G17 historical datapoints (Swift, adjudication pending)**: 3 applicable loop-events, all
+  violations (no citation), 0 restraint, 1 expected-blind (v2-era `changed_paths` absent). The
+  ≥2-languages promotion bar cannot close on the next run (Swift again).
+- **Item-24 justification data**: coverage is heavily uneven — 302/1313 files ever cited across
+  all runs; `BenchHypeKit` 24%, `compliance/` and `tools/` 0%.
+- **Cost baseline (M6)**: Aug-19 run = $9.30, 500 assistant messages, 92.6M resident tokens
+  (parent + 2 loop executors + 2 challengers, `opencode-go/minimax-m3`).
+- **Item-14 uncertain cell resolved by observation**: opencode `tool.execute.after` metadata is
+  `{output, exit, truncated}` — a raw exit code IS present. Both `.opencode/plugin/` and
+  `plugins/` load (install in exactly one).
+- **Phase-to-gate matrix (Tier-3 input)**: 30+ artifact states validated under the current gate
+  set; top strict rules G5x91, G46x45, G19x34, G18x26; 42 `transition-violation` diagnostics.
+  Strict failures on pre-epoch artifacts are epoch observations, not violations.
+
+The queued wrapper-adoption keyed probe's production datapoint is now predeclared as M3
+(observation only, n=1, no adoption-rate claim).
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.

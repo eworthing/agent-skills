@@ -1,0 +1,170 @@
+[
+ {
+  "id": "ses_fe3928299ffedNz4mATzioUSet",
+  "title": "Contest refactor reset with loop cap 5",
+  "directory": "/Users/Shared/git/BenchHype",
+  "parent_id": null,
+  "time_created": 1787183332710,
+  "time_updated": 1787185087073,
+  "model": "{\"id\":\"minimax-m3\",\"providerID\":\"opencode-go\",\"variant\":\"thinking\"}",
+  "cost": 1.2084489,
+  "tokens_input": 270997,
+  "tokens_output": 56269,
+  "tokens_reasoning": 0,
+  "tokens_cache_read": 15960064,
+  "tokens_cache_write": 0,
+  "message_rows": 106,
+  "per_model": {
+   "opencode-go/minimax-m3": {
+    "messages": 105,
+    "input": 270997,
+    "output": 56269,
+    "reasoning": 0,
+    "cache_read": 15960064,
+    "cache_write": 0,
+    "resident": 16231061,
+    "cost": 1.2084489
+   }
+  }
+ },
+ {
+  "id": "ses_fe2e5c4aeffeyMmLXe3tORymOE",
+  "title": "Contest Refactor Protocol Overview",
+  "directory": "/Users/Shared/git/BenchHype",
+  "parent_id": null,
+  "time_created": 1787194653521,
+  "time_updated": 1787198501112,
+  "model": "{\"id\":\"minimax-m3\",\"providerID\":\"opencode-go\",\"variant\":\"thinking\"}",
+  "cost": 1.97227614,
+  "tokens_input": 536945,
+  "tokens_output": 59113,
+  "tokens_reasoning": 0,
+  "tokens_cache_read": 16831232,
+  "tokens_cache_write": 0,
+  "message_rows": 93,
+  "per_model": {
+   "opencode-go/minimax-m3": {
+    "messages": 90,
+    "input": 536945,
+    "output": 59113,
+    "reasoning": 0,
+    "cache_read": 16831232,
+    "cache_write": 0,
+    "resident": 17368177,
+    "cost": 1.97227614
+   }
+  }
+ },
+ {
+  "id": "ses_fe2e39d83ffejyNp6SKgiDKwQO",
+  "title": "Loop 1 contest-refactor execution (@general subagent)",
+  "directory": "/Users/Shared/git/BenchHype",
+  "parent_id": "ses_fe2e5c4aeffeyMmLXe3tORymOE",
+  "time_created": 1787194794620,
+  "time_updated": 1787196035958,
+  "model": "{\"id\":\"minimax-m3\",\"providerID\":\"opencode-go\",\"variant\":\"thinking\"}",
+  "cost": 4.686964920000001,
+  "tokens_input": 286024,
+  "tokens_output": 63458,
+  "tokens_reasoning": 0,
+  "tokens_cache_read": 38346357,
+  "tokens_cache_write": 0,
+  "message_rows": 156,
+  "per_model": {
+   "opencode-go/minimax-m3": {
+    "messages": 155,
+    "input": 286024,
+    "output": 63458,
+    "reasoning": 0,
+    "cache_read": 38346357,
+    "cache_write": 0,
+    "resident": 38632381,
+    "cost": 4.686964920000001
+   }
+  }
+ },
+ {
+  "id": "ses_fe2cf9e65ffe1CqOxvhj3julSg",
+  "title": "HALT_SUCCESS Challenger (@general subagent)",
+  "directory": "/Users/Shared/git/BenchHype",
+  "parent_id": "ses_fe2e5c4aeffeyMmLXe3tORymOE",
+  "time_created": 1787196105114,
+  "time_updated": 1787196304139,
+  "model": "{\"id\":\"minimax-m3\",\"providerID\":\"opencode-go\",\"variant\":\"thinking\"}",
+  "cost": 0.14577990000000002,
+  "tokens_input": 125446,
+  "tokens_output": 15458,
+  "tokens_reasoning": 0,
+  "tokens_cache_read": 1493275,
+  "tokens_cache_write": 0,
+  "message_rows": 16,
+  "per_model": {
+   "opencode-go/minimax-m3": {
+    "messages": 15,
+    "input": 125446,
+    "output": 15458,
+    "reasoning": 0,
+    "cache_read": 1493275,
+    "cache_write": 0,
+    "resident": 1618721,
+    "cost": 0.14577990000000002
+   }
+  }
+ },
+ {
+  "id": "ses_fe2c88f7dffebpd0VGg45DItIH",
+  "title": "Loop 2 contest-refactor execution (@general subagent)",
+  "directory": "/Users/Shared/git/BenchHype",
+  "parent_id": "ses_fe2e5c4aeffeyMmLXe3tORymOE",
+  "time_created": 1787196567682,
+  "time_updated": 1787197931429,
+  "model": "{\"id\":\"minimax-m3\",\"providerID\":\"opencode-go\",\"variant\":\"thinking\"}",
+  "cost": 0.9615270600000001,
+  "tokens_input": 237011,
+  "tokens_output": 46647,
+  "tokens_reasoning": 0,
+  "tokens_cache_read": 13907456,
+  "tokens_cache_write": 0,
+  "message_rows": 95,
+  "per_model": {
+   "opencode-go/minimax-m3": {
+    "messages": 94,
+    "input": 237011,
+    "output": 46647,
+    "reasoning": 0,
+    "cache_read": 13907456,
+    "cache_write": 0,
+    "resident": 14144467,
+    "cost": 0.9615270600000001
+   }
+  }
+ },
+ {
+  "id": "ses_fe2b348d9ffeRYjYWlHCgAQhdK",
+  "title": "HALT_SUCCESS Challenger for loop 2 (@general subagent)",
+  "directory": "/Users/Shared/git/BenchHype",
+  "parent_id": "ses_fe2e5c4aeffeyMmLXe3tORymOE",
+  "time_created": 1787197962022,
+  "time_updated": 1787198147878,
+  "model": "{\"id\":\"minimax-m3\",\"providerID\":\"opencode-go\",\"variant\":\"thinking\"}",
+  "cost": 0.3288549,
+  "tokens_input": 142370,
+  "tokens_output": 12905,
+  "tokens_reasoning": 0,
+  "tokens_cache_read": 4510965,
+  "tokens_cache_write": 0,
+  "message_rows": 42,
+  "per_model": {
+   "opencode-go/minimax-m3": {
+    "messages": 41,
+    "input": 142370,
+    "output": 12905,
+    "reasoning": 0,
+    "cache_read": 4510965,
+    "cache_write": 0,
+    "resident": 4653335,
+    "cost": 0.3288549
+   }
+  }
+ }
+]
