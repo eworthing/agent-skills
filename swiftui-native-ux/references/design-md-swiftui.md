@@ -98,15 +98,15 @@ Do not encode typography as fixed pixels.
 
 ## Spacing Rules
 
-Use an 8-point rhythm unless a native component dictates otherwise.
+Use the skill's default scale from `references/visual-hierarchy.md` (4 pt grid) unless the project's tokens define another:
 
 ```yaml
 spacing:
   xs: 4
   sm: 8
-  md: 16
-  lg: 24
-  xl: 32
+  md: 12
+  lg: 16
+  xl: 24
 ```
 
 ## Radius Rules

@@ -12,12 +12,12 @@ See `references/anti-web-smells.md` for the full anti-pattern catalogue. This fi
 
 ## House-rule severity scheme
 
-The CSV at `data/stitch-negative-constraints.csv` carries a `severity` column with two values:
+Two severity tiers apply, both defined in the rejection inventory at `references/anti-web-smells.md`:
 
-- `hard_reject` — automatic rejection. Do not implement. Revise the Stitch prompt to remove the pattern, or discard the variant.
-- `revise` — flag and request a focused fix. May survive if the rest of the design is strong.
+- **Hard reject** — automatic rejection. Do not implement. Revise the Stitch prompt to remove the pattern, or discard the variant.
+- **Likely wrong (revise)** — flag and request a focused fix. May survive if the rest of the design is strong.
 
-This severity scheme is a **house rule**, not part of Apple HIG. HIG describes platform conventions; it does not enumerate Stitch-specific rejection severities. The CSV header does not include this note because comment lines would break `csv.DictReader`. The note lives here instead.
+The tier split and the documented-tradeoff escape hatch are **house rules**, not part of Apple HIG. HIG describes platform conventions; it does not enumerate Stitch-specific rejection severities.
 
 ## Rubric
 
@@ -168,29 +168,10 @@ Score against `references/liquid-glass.md`. Authoritative material placement liv
 
 ## Automatic Rejection Conditions
 
-Reject or revise immediately if any are present. These echo the 10 non-negotiable rules from `workflows/stitch-design-handoff.md` plus the `hard_reject` rows of `data/stitch-negative-constraints.csv`:
+Reject or revise immediately on any hard-reject pattern in the inventory at `references/anti-web-smells.md`, plus these Stitch-specific conditions:
 
-- Material Floating Action Button.
-- Hamburger menu on iPhone.
-- Custom tab bar.
-- Custom navigation bar.
-- Dashboard grid as primary iPhone structure.
-- Hero CTA inside app workflow.
-- Website header/footer/breadcrumbs.
-- Glass content cards.
-- Glass-on-glass.
-- Decorative gradient blob background.
-- Tiny gray essential text.
-- Hover-only affordances.
-- Right-rail chatbot on iPhone.
-- iPad design is only a stretched iPhone layout.
 - Missing empty/error states when requested.
-- Essential meaning conveyed only by color.
-- Fixed-height text containers likely to break Dynamic Type.
-
-Also reject:
-
-- Stitch HTML/CSS hierarchy ported verbatim into SwiftUI view tree (house rule — no HIG rule against it; SwiftUI-implementability rationale).
+- Stitch HTML/CSS hierarchy ported verbatim into SwiftUI view tree (house rule — no HIG rule against it; SwiftUI-implementability rationale; see Non-Negotiable Rule 1 in `workflows/stitch-design-handoff.md`).
 
 ## Review Output Format
 

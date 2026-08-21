@@ -4,107 +4,24 @@ Use this format when creating a prompt for Stitch. Keep the prompt short enough 
 
 The reusable template lives at `templates/stitch-apple-native-brief.md`. This file is the spec the template implements.
 
-## Template
+## Required Brief Sections
 
-```
-Create a high-fidelity native iOS/iPadOS app screen concept.
+Every brief must carry, in order:
 
-Platform:
-- Target iOS 27 and iPadOS 27.
-- Design for native SwiftUI implementation.
-- Use Apple-native interaction and layout patterns.
+1. Platform — iOS 27 / iPadOS 27, native SwiftUI implementation, Apple-native interaction and layout patterns.
+2. Screen, user goal, and task topology.
+3. Native Apple structure — chosen locally before prompting, per `references/navigation-patterns.md`.
+4. Content hierarchy — primary, secondary, supporting metadata, then state content.
+5. Primary action with placement; secondary actions.
+6. States to represent — loaded, empty, loading, error, permission, offline, selection, editing, as relevant.
+7. iPhone behavior — compact, single column, reachable, safe areas, no dashboard grid.
+8. iPad behavior — regular width used intentionally, split view / inspector / multi-pane where useful, never a stretched iPhone layout.
+9. Accessibility — Dynamic Type, VoiceOver order, Reduce Motion, Reduce Transparency, Increase Contrast, Differentiate Without Color, light and dark mode.
+10. Liquid Glass scope — navigation layers, toolbars, floating controls, accessory surfaces only; opaque fallback for Reduce Transparency.
+11. Hard exclusions — the hard-reject tier of `references/anti-web-smells.md`, phrased as "No ..." lines.
+12. A request for 3 variants: conservative native, dense iPad-aware, expressive but still Apple-native.
 
-Screen:
-- [screen name]
-
-User goal:
-- [what the user is trying to accomplish]
-
-Task topology:
-- [linear drill-down / settings form / collection-detail / playback controls / creation flow / review flow]
-
-Native Apple structure:
-- [NavigationStack / NavigationSplitView / TabView / List / Form / sheet / inspector / toolbar]
-
-Content hierarchy:
-1. [primary content]
-2. [secondary content]
-3. [supporting metadata]
-4. [empty/error/loading state content]
-
-Primary action:
-- [action]
-- Placement: [top trailing toolbar / bottom toolbar / prominent row / sheet confirmation]
-
-Secondary actions:
-- [actions and placement]
-
-States to represent:
-- Loaded
-- Empty
-- Loading
-- Error
-- Permission denied
-- Offline, if relevant
-- Selection state, if relevant
-- Editing state, if relevant
-
-iPhone behavior:
-- Compact width.
-- One primary column.
-- No dashboard grid as primary structure.
-- Controls must be reachable and touch-friendly.
-- Respect safe areas and keyboard.
-
-iPad behavior:
-- Use regular-width space intentionally.
-- Prefer NavigationSplitView for collection/detail.
-- Use inspector for secondary metadata or AI assistance when appropriate.
-- Do not simply stretch the iPhone layout.
-
-Accessibility:
-- Support Dynamic Type.
-- Support VoiceOver reading order.
-- Support Reduce Motion.
-- Support Reduce Transparency.
-- Support Increase Contrast.
-- Support Differentiate Without Color.
-- Work in light and dark mode.
-- Avoid tiny gray essential text.
-- Avoid fixed-height text containers.
-
-Liquid Glass:
-- Use only for navigation layers, toolbars, tab bars, floating controls, and accessory surfaces.
-- Do not use Liquid Glass for content cards, list rows, dense text, ordinary settings, dashboard tiles, or full-screen backgrounds.
-- Provide an opaque fallback for Reduce Transparency.
-
-Hard exclusions:
-- No Material Floating Action Button.
-- No hamburger menu on iPhone.
-- No custom tab bar.
-- No custom navigation bar.
-- No dashboard card grid on iPhone.
-- No hero CTA section inside app workflow.
-- No glass content cards.
-- No glass-on-glass.
-- No decorative gradient blob background.
-- No tiny gray essential text.
-- No hover-only affordances.
-- No right-rail AI assistant on iPhone.
-- No Tailwind/SaaS/dashboard visual grammar.
-
-Generate 3 variants:
-1. Conservative native.
-2. Dense iPad-aware.
-3. Expressive but still Apple-native.
-
-For each variant, briefly explain:
-- hierarchy
-- density
-- interaction model
-- accessibility considerations
-- what changed from the base structure
-```
+The exclusion list does the heavy lifting: `deviceType` alone does not constrain Stitch to Apple HIG (see `workflows/stitch-design-handoff.md` Step 4b).
 
 ## Prompting Notes
 

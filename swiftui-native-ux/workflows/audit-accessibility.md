@@ -161,12 +161,12 @@ Flag:
 
 ## Step 10: Output Findings
 
-Use severity:
+Use severity, matching the critique workflow's four tiers:
 
-- critical
-- serious
-- moderate
-- polish
+- likely disqualifier
+- serious deduction
+- noticeable weakness
+- polish issue
 
 Template:
 

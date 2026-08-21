@@ -56,20 +56,7 @@ Flag severe structure issues before visual details.
 
 ## Step 4: Run Anti-Web-Smells
 
-Look for:
-
-- hero section
-- dashboard grid
-- card grid
-- Material FAB
-- custom tab bar
-- hamburger menu
-- right-rail AI panel
-- Tailwind spacing
-- glass content cards
-- neutral SaaS palette
-- emoji icons
-- hover-only controls
+Run the full inventory in `references/anti-web-smells.md` (loaded in Step 2).
 
 If three or more AI-generated silhouette smells occur, recommend regenerating from structure upward.
 
@@ -102,21 +89,7 @@ Check:
 
 ## Step 7: Score Rubric
 
-Score 1 to 5:
-
-1. Native Apple feel
-2. Task clarity
-3. Information hierarchy
-4. Navigation fit
-5. iPhone ergonomics
-6. iPad adaptation
-7. Accessibility resilience
-8. Visual restraint
-9. State coverage
-10. SwiftUI maintainability
-11. Reductionist pass
-
-Any score below 3 needs a concrete fix.
+Score all 11 dimensions using `references/critique-rubric.md` (loaded in Step 2).
 
 ## Step 8: Prioritize Findings
 
@@ -148,53 +121,6 @@ Rewrite order:
 6. visual polish
 7. previews
 
-## Output Template
+## Output
 
-```md
-## Verdict
-
-...
-
-## Rubric Scores
-
-| Dimension | Score | Fix Required |
-|---|---:|---|
-| Native Apple feel |  |  |
-| Task clarity |  |  |
-| Information hierarchy |  |  |
-| Navigation fit |  |  |
-| iPhone ergonomics |  |  |
-| iPad adaptation |  |  |
-| Accessibility resilience |  |  |
-| Visual restraint |  |  |
-| State coverage |  |  |
-| SwiftUI maintainability |  |  |
-| Reductionist pass |  |  |
-
-## Serious Findings
-
-### 1. ...
-- Evidence:
-- Why it matters:
-- Fix:
-
-## Quick Wins
-
-- ...
-
-## Rewrite Plan
-
-1. ...
-```
-
-## Review Tone
-
-Be precise. Do not flatter. Do not bury serious structure problems under visual polish.
-
-Prefer:
-
-"Replace the card dashboard with a grouped List because this is scannable item content."
-
-Avoid:
-
-"Maybe make it more native."
+Use the Required Review Output template in `references/critique-rubric.md`.

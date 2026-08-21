@@ -4,7 +4,6 @@
 
 - Core Principle
 - Skill Structure
-- Source Of Truth
 - Evidence Tiers
 - Normalized Confidence Scale
 - Ranked Source Table
@@ -12,7 +11,6 @@
 - What Belongs In SKILL.md
 - What Belongs In References
 - What Belongs In Workflows
-- What Belongs In Data
 - Demoted Claims
 - Maintenance Rule
 
@@ -35,8 +33,6 @@ swiftui-native-ux/
   SKILL.md
   references/
   workflows/
-  data/
-  scripts/
   templates/
 ```
 
@@ -46,32 +42,9 @@ References are knowledge.
 
 Workflows are repeatable capabilities.
 
-Data files are searchable rule stores.
-
-Scripts support search, validation, and installation.
-
 Templates support multi-agent packaging.
 
-## Source Of Truth
-
-Maintain one source-of-truth skill directory.
-
-Example:
-
-```text
-src/swiftui-native-ux/
-```
-
-Agent-specific folders should be generated or symlinked from source when possible:
-
-```text
-.claude/skills/swiftui-native-ux/
-.codex/skills/swiftui-native-ux/
-.gemini/skills/swiftui-native-ux/
-.opencode/skills/swiftui-native-ux/
-```
-
-Do not manually maintain divergent copies.
+Installation (symlinking into each agent's skills directory) follows the repo-wide pattern in the repository `AGENTS.md` — it is not duplicated here.
 
 ## Evidence Tiers
 
@@ -276,26 +249,6 @@ Workflows contain repeatable processes:
 - audit accessibility
 
 Workflows should tell the agent what to do in order.
-
-## What Belongs In Data
-
-Future searchable data files should store:
-
-- rule IDs
-- triggers
-- prefer/reject pairs
-- severity
-- source IDs
-- reference file mapping
-
-Example schema:
-
-```csv
-rule_id,category,trigger,prefer,reject,severity,source_ids,reference_file
-NAV001,navigation,collection detail app,NavigationSplitView on regular width,stretched NavigationStack on iPad,reject,APPLE_HIG;VITICCI,navigation-patterns.md
-WEB001,anti_web,hero header in app screen,List/Form/native grouped section,marketing hero section,reject,APPLE_HIG;REF_UI_TRANSLATED,anti-web-smells.md
-GLASS001,liquid_glass,text over material,opaque or tinted readable surface,thin text over glass,reject,APPLE_LG;BYRNE_HABER,liquid-glass.md
-```
 
 ## Demoted Claims
 

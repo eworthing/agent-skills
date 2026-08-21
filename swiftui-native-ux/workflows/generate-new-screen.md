@@ -37,15 +37,7 @@ If the project has design tokens (named spring/timed motion tokens, project `Pal
 
 ## Step 3: Choose Native Structure
 
-Choose one primary structure:
-
-- `TabView` for flat top-level sections
-- `NavigationStack` for linear drill-down
-- `NavigationSplitView` for collection/detail or hierarchy on regular width
-- `.sheet` for bounded tasks
-- `.inspector` for secondary editing on iPad/Mac
-- `Form` for settings/editing
-- `List` for scannable collections
+Choose one primary structure using the decision tree in `references/navigation-patterns.md` (loaded in Step 2).
 
 Write the choice and reason before code.
 
@@ -81,20 +73,7 @@ Check:
 
 ## Step 6: Detect Web Gravity Before Code
 
-Reject if the initial idea includes:
-
-- hero section
-- dashboard card grid
-- Material FAB
-- hamburger menu
-- right-rail AI assistant
-- Tailwind spacing
-- decorative gradient blob
-- custom tab bar
-- custom back button
-- glass content cards
-
-Replace with native structure.
+Check the initial idea against the hard-reject tier of `references/anti-web-smells.md`. Replace any match with native structure.
 
 ## Step 7: Generate Component Plan
 
@@ -148,35 +127,9 @@ Report:
 - iPad adaptation note
 - any justified deviations
 
-## Output Template
+## Output
 
-```md
-## Native Structure
-
-...
-
-## State Coverage
-
-...
-
-## Accessibility Notes
-
-...
-
-## SwiftUI Code
-
-\`\`\`swift
-...
-\`\`\`
-
-## Preview Coverage
-
-...
-
-## Self-Review
-
-...
-```
+Use the Generated Output Template in `references/generation-output-format.md`.
 
 ## Failure Conditions
 

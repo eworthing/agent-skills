@@ -7,6 +7,7 @@
 - NavigationStack Rules
 - NavigationSplitView Rules
 - TabView Rules
+- Content Containers
 - Sheets
 - Inspectors
 - Confirmation Dialogs and Alerts
@@ -199,6 +200,19 @@ Reject:
 - tabs that are actually filters
 - tabs as a replacement for segmented control
 - custom tab bars
+
+## Content Containers
+
+Use `List` for scannable collections; `Form` for settings, preferences, and structured editing.
+
+Good for:
+
+- feeds and item collections
+- settings screens
+- grouped editing forms
+- key/value rows (`LabeledContent`)
+
+Platform specifics: `references/iphone-layout.md` (compact width), `references/ipad-layout.md` (regular width).
 
 ## Sheets
 

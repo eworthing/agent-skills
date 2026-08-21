@@ -22,9 +22,14 @@ This file is the attack dog. It should bark early.
 
 ## Core Principle
 
-Most LLM-generated SwiftUI smells like a generic web dashboard unless forced otherwise.
+Most LLM-generated SwiftUI has **web gravity**: it drifts toward generic React/Tailwind/Material/SaaS-dashboard structure unless forced otherwise.
 
 If the screen could be a React admin template with Swift syntax, reject the structure before polishing details.
+
+This file is the skill's single rejection inventory. Every pattern carries a severity:
+
+- **Hard reject** — reject unless the user explicitly asks for it and the tradeoff is documented (the escape hatch).
+- **Likely wrong** — flag and request a fix. May survive if the rest of the design is strong.
 
 ## The AI-Generated App Silhouette
 
@@ -53,6 +58,8 @@ Hard reject:
 - dashboard grid on iPhone
 - three or four metric cards across compact width
 - Material FAB
+- bottom-right floating Add button — toolbar primary action instead
+- absolute-positioned primary controls — native toolbar or safe-area inset instead
 - stretched iPhone layout on iPad
 - right-rail AI assistant glued onto an app
 - desktop SaaS density on touch UI
@@ -61,6 +68,7 @@ Likely wrong:
 
 - card-on-card-on-card nesting
 - horizontal card carousel as primary navigation
+- masonry grid on iPhone — List, or adaptive `LazyVGrid` only when content is visual
 - giant decorative illustration pushing action below fold
 - huge gradient blob as visual identity
 - layout built from arbitrary fixed frames
@@ -83,14 +91,16 @@ Hard reject:
 
 - hamburger menu on iPhone
 - custom tab bar
+- custom navigation bar
 - custom back button
-- breadcrumb trail
 - custom router replacing native navigation
+- website header or footer — native navigation title and toolbar, or a settings/about screen
 - hidden sidebar toggle without replacement
 - modal dialog made from custom `ZStack`
 
 Likely wrong:
 
+- breadcrumb trail — `NavigationStack` back behavior or sidebar selection instead
 - toolbar with many unlabeled icons
 - multiple primary actions
 - destructive action next to confirmation action
@@ -137,6 +147,7 @@ Hard reject:
 - glass-on-glass
 - glass content cards
 - glass list rows
+- full-screen glass background
 - thin text over glass
 - gradient blob as hierarchy
 - stacked shadows pretending to be depth
@@ -194,6 +205,7 @@ Hard reject:
 - long-press as only key-action path
 - haptic on every routine tap
 - animation that blocks input
+- motion-dependent meaning — state readable only through animation; static equivalent indicator instead
 
 Likely wrong:
 
@@ -280,6 +292,8 @@ Likely wrong:
 - custom design tokens scattered in view bodies
 - repeated literal paddings/colors/fonts
 - view model doing navigation, networking, and formatting all at once
+- DOM-like nested wrappers — semantic SwiftUI containers instead
+- pixel-perfect CSS layout — native adaptive layout instead
 
 Prefer:
 
