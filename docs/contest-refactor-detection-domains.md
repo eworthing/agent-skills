@@ -217,16 +217,21 @@ proposed insertion point. Both survived on corrected reasoning, but neither woul
 report had been taken at face value. Cheap check, high yield — the same *compliance is not
 clearance* discipline the skill applies to its own targets, applied to its own research.
 
-**Reading the "next unmet criterion" column.** Of fourteen candidates, only **six** — DD-02,
-DD-03, DD-05, DD-08, DD-10, DD-11 — have the expensive measurement run as their genuine next step.
-The other eight are cheaper than they looked: three (DD-01, DD-12, DD-14) sit at a *contested*
-criterion 1, where the sweep's blindness claim survives a heading-level read but not a line-level
-one, and clearing them costs a worked example rather than a run; two (DD-06, DD-07) are tool specs
-whose criterion 3 collapses because a deterministic detector's lift is 5/5 by construction; one
-(DD-04) owes a token count before it can justify an experiment; one (DD-13) inverts the bar toward
-restraint fixtures; and one (DD-09) is closed by merge into row 24. That reordering is the useful
-output of decomposing — the measurement queue is six items long, not fourteen, and eight items can
-advance with no measurement at all.
+**Reading the "next unmet criterion" column** (recounted after the 2026-08-21 adjudication pass).
+Of fourteen candidates, **nine** now have the expensive measurement run as their genuine next step:
+DD-02, DD-03, DD-05, DD-08, DD-10, DD-11, plus DD-12 and DD-14 which reached it by clearing a
+contested criterion 1, plus DD-04 at `min` scope only. The other **five** never need one: DD-01 is
+**parked**; DD-06 and DD-07 are tool specs whose criterion 3 collapses because a deterministic
+detector's lift is 5/5 by construction; DD-13 inverts the bar toward restraint fixtures; and DD-09
+is closed by merge into row 24.
+
+Note the queue got *longer*, not shorter, and that is the pass working correctly. Resolving a
+contested criterion 1 does not remove a candidate from the measurement queue — it either parks the
+candidate outright (DD-01, one of four) or promotes it into the queue with a **narrower** claim to
+test (DD-12, DD-14). The saving is not in the count but in the scope: each of the two promoted
+candidates now names a specific, much smaller thing for a run to measure than the sweep's original
+framing did, and one candidate was removed from consideration for the cost of a worked example
+rather than a run.
 
 ## Corroborated backlog items
 
