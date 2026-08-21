@@ -17,6 +17,7 @@ rows migrated out of the review register's open backlog (rows 23, 24, 25, 27).
 ## Contents
 
 - [Calibration discipline — read before adding any domain](#calibration-discipline--read-before-adding-any-domain)
+  - [Detection-domain promotion bar](#detection-domain-promotion-bar)
 - [Current coverage baseline](#current-coverage-baseline)
 - [Competitor domain sweep — 2026-08-21](#competitor-domain-sweep--2026-08-21)
 - [Corroborated backlog items](#corroborated-backlog-items)
@@ -32,21 +33,36 @@ The single most important fact in this document, and the reason it is not simply
 
 Three independent measurements say so. The advisory eval program (#35–#48) established that those
 evals measure *restraint and vocabulary, not recall* — recall lift was 0 on both Sonnet and Haiku
-because the seeded defects were too legible for the bare rubric to miss. The parked W3.2 domain lens
-measured a recall lift of 0 against a bare rubric that scored 6/6. And the June research doc's
-domain-integrity lens was parked on the same result. The Critic is already strong; the marginal
-checklist line is usually paying for nothing.
+because the seeded defects were legible. The parked W3.2 domain lens measured a recall lift of 0
+against a bare rubric that scored 6/6. And the June research doc's domain-integrity lens was parked
+on the same result. The Critic is already strong; the marginal checklist line is usually paying for
+nothing.
 
-Consequences for everything below:
+A defect is **legible** when the bare rubric already finds it. Legibility is measured, never
+assumed, and it is the property that decides whether a candidate domain can demonstrate anything:
+a legible defect leaves no lift for added prose to capture. Every zero above was a legible corpus.
 
-1. **A domain earns its place only if the current lens could not find the defect *in principle*** —
-   not merely "does not name it." Naming a defect the rubric already catches is pure token cost.
-2. **RED fixtures must be drawn from the illegible end of the class.** A defect a bare rubric finds
-   6/6 cannot demonstrate a lift no matter how many reps are run.
-3. **Micro-test against a no-guidance control before shipping** — 5+ reps, read the matches, per the
-   standing rule that static audits over-rate severity. Harness at `peer-plan-review/evals/`.
-4. **Restraint is the axis where added prose has actually paid.** Negative rules ("what not to flag")
-   have measurable value where positive rules do not; see the method note at the end of the sweep.
+### Detection-domain promotion bar
+
+A candidate domain ships when all six hold. The bar is uniform across every candidate in this
+document; each tier below binds to it rather than restating it.
+
+1. **Blind case** — one worked example the current lens misses, naming the lens sections that would
+   have had to fire. The bar is *the lens cannot find it*, not *the lens does not name it*: a defect
+   the rubric already catches under another name is pure token cost.
+2. **Illegible RED** — a seeded defect the bare-rubric control finds in at most 1 of 5 reps.
+3. **Measured lift** — the guided arm finds it in at least 4 of 5 reps, with the matches read rather
+   than counted; static audits over-rate severity. Harness at `peer-plan-review/evals/`.
+4. **Restraint** — at least 2 near-miss fixtures where the domain stays silent, and zero false
+   positives across them. Restraint is the axis where added prose has measurably paid.
+5. **Budget** — the prose delta measured with `scripts/token-budget.py --check`. An always-included
+   lens (`lens-security.md`, `lens-efficiency.md`) spends from **both** loop ceilings; a stack lens
+   spends from one. Live headroom on 2026-08-21: **429** tokens on the apple path, **407** on
+   generic. A larger delta buys a dated ceiling bump that lands the margin back inside [400, 550).
+6. **Adjudicated** — the owner signs the disposition, as with the G17 bar.
+
+Criteria 2 and 3 are one experiment, and it is the expensive one: budget a measurement run per
+candidate, not per tier.
 
 ## Current coverage baseline
 
@@ -68,8 +84,9 @@ micro-optimizations distinct from structural waste, generic filler, unsupported 
 
 **Method.** Four parallel survey agents over all 51 repos in `refs/competitors/contest-refactor`
 (49) and `refs/competitors/shared` (2), each asked for review domains *absent* from the baseline
-above. Findings were filtered by the "blind in principle" test in the calibration section, then
-ranked by cross-batch corroboration. All exemplar paths below were spot-verified to exist on
+above. Findings were filtered by criterion 1 of the promotion bar — the lens must be **blind** to
+the class, not merely silent about its name — then ranked by cross-batch corroboration. Every
+candidate below is a criterion-1 argument awaiting criteria 2–6. All exemplar paths below were spot-verified to exist on
 2026-08-21. **`refs/` is gitignored** (`.gitignore:9`) — these are provenance pointers into a local
 clone corpus, not tracked files; see [`refs/competitors/README.md`](../refs/competitors/README.md).
 
@@ -111,8 +128,11 @@ Each was found independently by 3–4 of the four batches. Ordered by contest re
 
 - **Per-domain "what not to flag" lists, co-located with each lens section.** Carried by
   `ce-reviewers`, `brooks-lint`, `ngmeyer-skills`, and `sentry-skills` independently. The lenses
-  today have one global `Ignore:` line. This is the cheapest candidate on the board *and* it targets
-  restraint — the one axis where added prose has measured value.
+  today have one global `Ignore:` line. Cheapest candidate on the board, and it targets restraint —
+  the one axis where added prose has measured value. Write each entry with its positive owner
+  attached, the way `ce-reviewers` does ("a slower response isn't a contract violation — that
+  belongs to the performance reviewer"): a bare prohibition raises the banned behaviour's
+  salience, while naming the owner routes it instead.
 - **Severity × confidence as independent axes with an asymmetric floor** — suppress below a
   confidence bar *except* the highest-severity class, which must never be silently dropped.
   `tech-audit-skill/tech-audit/templates/finding-phrasing.md`; `ngmeyer-skills/.../scoring-gating-validation.md`
@@ -145,17 +165,18 @@ Row numbers preserved for citation continuity with the retired deep-dive.
 
 | Row | Item | State |
 | --- | --- | --- |
-| 23 | Detection-lens expansion (latent-premises, retry-safety, operational) | Decompose per lens. The 2026-08-21 sweep supersedes the *shortlist* — Tier 1 above is the evidence-ranked replacement — but the decompose-per-lens instruction stands |
+| 23 | Detection-lens expansion (latent-premises, retry-safety, operational) | Decompose per lens. The 2026-08-21 sweep replaces the *shortlist* — Tier 1 above is the evidence-ranked successor — and the decompose-per-lens instruction stands. **Done when** each surviving lens carries its own promotion-bar entry, so "expansion" resolves into named candidates that pass or park individually |
 | 24 | Deterministic selection + coverage manifest + resumable scan | **Design done** ([`ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md`](../analysis/contest-refactor/ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md)), unbuilt. The 2026-08-21 coverage analyzer measured 302/1313 files cited across all historical BenchHype loops (BenchHypeKit 24%) — uneven-coverage proof for this item |
 | 25 | Tool-grounded substrate + per-language rules | **Unblocked, design done** ([`ITEM25-TOOL-SUBSTRATE-2026-08-19.md`](../analysis/contest-refactor/ITEM25-TOOL-SUBSTRATE-2026-08-19.md)), unbuilt |
-| 27 | Per-finding disproof pipeline | Gated on the finding-assurance decision |
+| 27 | Per-finding disproof pipeline | Gated on the finding-assurance decision: whether a finding's assurance is owned by the Critic's own pass or by a separate disproof stage. Costs an owner call, not tokens. The corroboration table above supplies three shipped designs to choose among |
 
-**Sweep candidates not yet promoted to rows** — Tier 1 items 1–5, Tier 2's four, and Tier 3's three
-above. None has a RED fixture or a micro-test yet; none should ship without one.
+**Sweep candidates not yet promoted to rows** — Tier 1 items 1–5, Tier 2's four, and Tier 3's
+three above. Each enters this table once it clears the [promotion bar](#detection-domain-promotion-bar); today every one of them sits at criterion 1.
 
 ## Parked and adjudicated detection levers
 
-Recorded so they read as decisions rather than omissions, and are not re-litigated:
+Recorded so they read as decisions rather than omissions. Re-open one by clearing the promotion
+bar with new evidence; the measured result stands until then:
 
 - **W3.2 domain lens — PARKED** on a measured recall lift of 0 (bare rubric 6/6). Re-measurement
   needs a precision RED, not another lens draft.
