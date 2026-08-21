@@ -133,7 +133,7 @@
   "deepening_candidates": [],
   "builder_notes": [],
   "narrative": "Terminal contest-grade state; residuals all accepted.",
-  "run_id": "run-2026-06-21-3f9a1c2b4d5e6f708192a3b4c5d6e7f8",
+  "run_id": "run-2026-08-21-9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f",
   "source_rev": "def5678abc",
   "candidate_fingerprint": "fp-sha256-a2ec84c8545aefaf922599de07005f45",
   "halt_success_challenge": {
@@ -141,7 +141,7 @@
     "outcome": "held",
     "binding": {
       "candidate_commit_sha": "abc1234def",
-      "run_id": "run-2026-06-21-3f9a1c2b4d5e6f708192a3b4c5d6e7f8",
+      "run_id": "run-2026-08-21-9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f",
       "source_rev": "def5678abc"
     },
     "attempts": [

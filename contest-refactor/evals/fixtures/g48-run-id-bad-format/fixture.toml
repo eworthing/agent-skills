@@ -1,0 +1,11 @@
+id = "g48-run-id-bad-format"
+purpose = "Trigger fixture for G48 (run_id identity discipline, REPORT-ONLY): a CURRENT-epoch terminal artifact whose run_id is the observed per-loop improvisation shape ('loop-2-302837137', BenchHype 2026-08-19) instead of the minted run-<UTC yyyy-mm-dd>-<uuid4().hex> format. G48 prints its [g48-run-id] format diagnostic on this artifact but emits no Issue (report-only until the module's written promotion bar is met), so expected_result stays 'pass' -- the g41-cap-loop-executed/G17 precedent for report-only gates. Derived from pass fixture 'halt-terminal-held' by replacing run_id at both the top level and halt_success_challenge.binding (equality kept so G32 stays green)."
+expected_result = "pass"
+pair_id = "g48-format"
+pair_role = "flag"
+aspirational = false
+notes = "Diagnostic-emission RED/GREEN (including the cross-loop stability sub-check, epoch behavior, and the REPORT_ONLY no-Issue guard) is asserted in scripts/_g48_selftest.py, which subprocesses the shipped validator; validate-fixtures asserts only exit codes, which a report-only gate never moves."
+
+[[tested_rules]]
+kind = "gate"
+id = "G48"

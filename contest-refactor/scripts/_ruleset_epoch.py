@@ -110,6 +110,11 @@ REQUIREMENT_EPOCHS: dict[str, str] = {
     "TRANSITIONS_REQUIRED_FIELDS": CURRENT,
     "ROUNDS_REQUIRED_FIELDS": CURRENT,
     "G29_VERSION_EQUALITY": CURRENT,
+    # G48 (run_id discipline) is deliberately NOT here: CURRENT is too coarse for it --
+    # the motivating run already emitted skill_rev, so a CURRENT-scoped Issue fails a
+    # committed artifact retroactively. Blocked on a third EPOCHS entry that provably
+    # post-dates the gate's ship; see _artifact_run_identity.py's promotion bar.
+    # "G48_RUN_ID_DISCIPLINE": <post-G48 epoch>,
     # Slot for a future client, still unclaimed.
     # "G17_COVERAGE_CITATION": CURRENT,
 }
