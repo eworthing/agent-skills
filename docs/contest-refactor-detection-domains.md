@@ -92,7 +92,8 @@ micro-optimizations distinct from structural waste, generic filler, unsupported 
 (49) and `refs/competitors/shared` (2), each asked for review domains *absent* from the baseline
 above. Findings were filtered by criterion 1 of the promotion bar — the lens must be **blind** to
 the class, not merely silent about its name — then ranked by cross-batch corroboration. Every
-candidate below is a criterion-1 argument awaiting criteria 2–6. All exemplar paths below were spot-verified to exist on
+candidate below *entered* as a criterion-1 argument; four were worked on 2026-08-21 and the
+[decomposition](#named-candidates--row-23-decomposition) carries each one's current state. All exemplar paths below were spot-verified to exist on
 2026-08-21. **`refs/` is gitignored** (`.gitignore:9`) — these are provenance pointers into a local
 clone corpus, not tracked files; see [`refs/competitors/README.md`](../refs/competitors/README.md).
 
