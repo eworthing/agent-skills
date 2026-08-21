@@ -1,0 +1,80 @@
+{
+  "skill_name": "peer-plan-review",
+  "evals": [
+    {
+      "id": 0,
+      "name": "standard-plan-review",
+      "prompt": "Use the peer-plan-review skill with reviewer codex gpt-5.6-sol high to critique my implementation plan at docs/plans/migration-plan.md before I start coding.",
+      "expected_output": "The agent validates the plan path, normalizes arguments to reviewer 'codex', model 'gpt-5.6-sol', effort 'high', launches the background reviewer with ppr_launch.sh, extracts structured findings ([B1], [N1]), independently verifies reviewer claims against the repo, and reports the verdict.",
+      "files": ["docs/plans/migration-plan.md"],
+      "assertions": [
+        {"id": "preflight-executed", "description": "Agent performs preflight self-check or validates reviewer binary availability", "type": "tool_call_check"},
+        {"id": "background-launch-used", "description": "Agent uses ppr_launch.sh with --review-id, --reviewer, --model, and --effort", "type": "tool_call_check"},
+        {"id": "structured-output-enforced", "description": "Prompt includes Pass A / Pass B structure and structured output template ([B1], [N1], VERDICT)", "type": "content_check"},
+        {"id": "adjudication-before-edit", "description": "Agent verifies reviewer claims against the codebase before editing the plan", "type": "behavior_check"}
+      ]
+    },
+    {
+      "id": 1,
+      "name": "adversarial-plan-review",
+      "prompt": "Run a skeptical, adversarial peer review on this payment service redesign plan using claude-code opus --stance adversarial.\n\nPlan is at docs/plans/payments-redesign.md",
+      "expected_output": "The agent loads references/adversarial.md, sets an aggressive critical stance, instructs the reviewer to actively attempt to break the plan, surface edge-case data corruptions, race conditions, and single-point-of-failure risks.",
+      "files": ["docs/plans/payments-redesign.md"],
+      "assertions": [
+        {"id": "adversarial-reference-loaded", "description": "Agent loads references/adversarial.md for adversarial prompt instructions", "type": "reference_check"},
+        {"id": "skeptical-framing-in-prompt", "description": "Prompt explicitly directs reviewer to falsify assumptions and search for failure modes", "type": "content_check"},
+        {"id": "blocking-issue-threshold", "description": "Blocking issues require concrete failure mechanisms rather than stylistic preferences", "type": "content_check"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "domain-context-two-pass-review",
+      "prompt": "Review this distributed ingestion pipeline plan using peer-plan-review codex high. Include domain context criteria for zero-downtime schema migrations, backpressure handling, and idempotent event retries.\n\nPlan is at docs/plans/ingestion-pipeline.md",
+      "expected_output": "The agent formats domain criteria as 3 to 6 testable bullets in the prompt, instructs the reviewer to run a two-pass critique (Pass A: independent critique, Pass B: domain criteria evaluation), and checks each criterion against the line-numbered plan.",
+      "files": ["docs/plans/ingestion-pipeline.md"],
+      "assertions": [
+        {"id": "domain-context-block-formed", "description": "Prompt includes ## Domain context block with 3 to 6 testable bullet criteria", "type": "content_check"},
+        {"id": "two-pass-structure-present", "description": "Output schema requires Pass A (independent) and Pass B (domain criteria)", "type": "format_check"},
+        {"id": "line-numbered-plan-supplied", "description": "Plan file is presented to reviewer with line numbers (cat -n)", "type": "format_check"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "multiround-revision-resume",
+      "prompt": "Here is my updated plan addressing the round 1 blocking findings (fixed B1 retry limit, added B2 circuit breaker). Resume the review session for review ID 75e32e48caa8 with codex to verify convergence.",
+      "expected_output": "The agent derives session paths, constructs round 2 prompt with prior findings and author responses, passes --resume flag to ppr_launch.sh, monitors session ID continuity, and checks for VERDICT: APPROVED or VERDICT: REVISE.",
+      "files": ["docs/plans/ingestion-pipeline.md"],
+      "assertions": [
+        {"id": "resume-flag-passed", "description": "ppr_launch.sh or run_review.py is invoked with --resume", "type": "tool_call_check"},
+        {"id": "adjudication-history-included", "description": "Round 2 prompt explicitly includes prior round findings and how the author responded", "type": "content_check"},
+        {"id": "session-degradation-handled", "description": "Agent handles resume degradation gracefully if session_id is missing without breaking execution", "type": "behavior_check"}
+      ]
+    }
+  ],
+  "trigger_evaluation": {
+    "should_trigger": [
+      "Can you run a peer review on my plan before I implement this feature?",
+      "Send this refactoring plan to codex for a second opinion",
+      "Use peer-plan-review with claude-code to pressure test my migration proposal",
+      "Get a codex review on docs/plans/oauth-flow.md",
+      "I want to validate my plan with another AI agent before starting work",
+      "Run an adversarial peer review on this security architecture plan",
+      "peer-plan-review codex gpt-5.6-sol high on @plan.md",
+      "Ask opencode to review this database sharding plan",
+      "Get a second pair of eyes on this design plan from antigravity agy",
+      "Perform a multi-round peer review on this deployment plan until approved"
+    ],
+    "should_not_trigger": [
+      "Review this git diff and tell me what changed",
+      "Run the pytest test suite and fix failing tests",
+      "Implement the OAuth login endpoint according to the spec",
+      "Review this pull request code changes on GitHub",
+      "Generate a mermaid diagram for my database schema",
+      "Check this python script for syntax and lint errors with ruff",
+      "Refactor this legacy module using contest-refactor",
+      "Benchmark the performance of our redis cache cluster",
+      "Write unit tests for UserService.java",
+      "Search the repository for all occurrences of deprecated API calls"
+    ]
+  }
+}

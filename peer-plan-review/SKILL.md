@@ -8,7 +8,7 @@ description: >
   review, mentions '<provider> review'
   (codex/claude/copilot/opencode/agy/antigravity/gemini), wants to validate a
   plan before executing it, or asks for peer review.
-argument-hint: "<claude|codex|agy|opencode|gemini|copilot> [fable|opus|sonnet|gpt-5.5|gpt-5.4-mini|flash|deepseek|glm|<model>] [low|medium|high|xhigh]"
+argument-hint: "<claude|codex|agy|opencode|gemini|copilot> [fable|opus|sonnet|gpt-5.6-sol|gpt-5.5|gpt-5.4-mini|flash|deepseek|glm|<model>] [low|medium|high|xhigh]"
 allowed-tools:
   - Read
   - Write
@@ -41,16 +41,19 @@ Pressure-test a plan before execution. The host agent owns the plan and revises 
 ## Bundled resources
 
 - `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. Do not reimplement it.
-- Provider references — read exactly one after reviewer chosen:
-  [`references/codex.md`](references/codex.md),
-  [`references/claude-code.md`](references/claude-code.md),
-  [`references/copilot.md`](references/copilot.md),
-  [`references/opencode.md`](references/opencode.md),
-  [`references/antigravity.md`](references/antigravity.md) (`agy` — experimental),
-  [`references/gemini.md`](references/gemini.md) (EOL 2026-06-18, retained for enterprise; successor is `agy`).
-- [`references/output-format.md`](references/output-format.md) — structured output template. Include in every prompt.
-- [`references/adapter-cli.md`](references/adapter-cli.md) — adapter CLI flags, session-file contract, and the env vars the runner reads (`GEMINI_CONFIG_DIR`, `CODEX_HOME`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`).
-- [`references/adversarial.md`](references/adversarial.md) — prompt additions for adversarial stance.
+
+| Open when you need to... | Read |
+|---|---|
+| understand runner CLI flags, session-file contracts, and environment variables | [`references/adapter-cli.md`](references/adapter-cli.md) |
+| configure or troubleshoot the **Codex** CLI reviewer (auth, sandbox, isolation) | [`references/codex.md`](references/codex.md) |
+| configure or troubleshoot the **Claude Code** CLI reviewer (plan mode, tools, effort) | [`references/claude-code.md`](references/claude-code.md) |
+| configure or troubleshoot the **Copilot** CLI reviewer (tool permissions, output) | [`references/copilot.md`](references/copilot.md) |
+| configure or troubleshoot the **OpenCode** CLI reviewer (deny policy, format) | [`references/opencode.md`](references/opencode.md) |
+| configure or troubleshoot the **Antigravity (`agy`)** reviewer (experimental, model naming) | [`references/antigravity.md`](references/antigravity.md) |
+| configure or troubleshoot the **Gemini** CLI reviewer (legacy/enterprise, thinking budget) | [`references/gemini.md`](references/gemini.md) |
+| copy the structured output template for prompt assembly | [`references/output-format.md`](references/output-format.md) |
+| author an optional project-specific domain context block (criteria-based rules) | [`references/domain-context.md`](references/domain-context.md) |
+| run a single-round, skeptical, adversarial review | [`references/adversarial.md`](references/adversarial.md) |
 
 For available models prefer:
 `python3 <skill-dir>/scripts/run_review.py --list-models --reviewer <provider>`
