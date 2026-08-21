@@ -82,9 +82,17 @@ Verified against the lens and rubric files at HEAD on 2026-08-21.
 | Security — input validation & deeplinks, secrets, PII in logs, keychain, biometrics, transport, dependency hygiene, plus stack-agnostic SQL/command injection, path traversal, WebView XSS, insecure deserialization | `references/lens-security.md` (always-included) |
 | Efficiency D1–D4 — recomputed derived values, sequential independent effects, hot-path/startup blocking, closure-capture retention | `references/lens-efficiency.md` (always-included) |
 | Apple-specific — SwiftUI discipline, continuation-bridge audit, feature-flow choreography, sheet/binding symmetry, accessibility audit, cross-platform compile correctness, Authority-Map test-surface cross-check | `references/lens-apple.md` |
+| Suppression & delivery-gate hygiene in the target — blanket (rule-less) suppressions, lint/type baselines with suppressed-entry counts, CI steps that run a checker then swallow its exit code. Rule-*coded* suppressions are disclosed, never flagged | `scripts/audit_suppressions.py`, Step-0 sub-step 6c (**DD-06**, shipped 2026-08-21; zero loop-path tokens) |
+| Public-contract back-compat — public declarations removed or signature-changed since a named revision, classified `removed` vs `changed` | `scripts/audit-public-surface.sh --since <rev>`, Step-0 sub-step 6c (**DD-07**, shipped 2026-08-21; zero loop-path tokens) |
 
 **Deliberately out of scope** (rubric's `Ignore:` line): stylistic concerns, naming nits,
 micro-optimizations distinct from structural waste, generic filler, unsupported speculation.
+
+The last two rows are **detectors, not lens prose** — they emit candidate evidence at Step 0 with
+`promotion_allowed: false`, and Method Step 3 re-derives every hit against source before it can
+become a finding (Meta-Rule 1). They are listed here because they change what the loop can find,
+which is this document's subject; they cost nothing on the loop path, which is why they shipped
+ahead of the nine candidates still queued behind a measurement run.
 
 ## Competitor domain sweep — 2026-08-21
 
