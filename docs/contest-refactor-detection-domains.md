@@ -282,6 +282,19 @@ further without breaking it: generic 83,293 + 42 + 465 + 242 = **84,042** agains
 leaving **241**. So the three measured candidates fit together, and the next one to land after them
 does not, on either path. That is the whole queue's budget, spent.
 
+**The displacement answer, and why it changes the sequencing question.** Contention this tight
+argues for buying headroom rather than rationing it. A loop-path inventory
+([`DISPLACEMENT-2026-08-21.md`](../analysis/contest-refactor/DISPLACEMENT-2026-08-21.md)) found
+**4,405 tok/loop** of pure file-role misclassification: `provider-adapters.md` is loaded whole at
+Step 3 for two of its eleven sections, while `SKILL.md:78`'s own matrix already scopes the Step-3
+need to *"(reviewer-spawn profile + read-only allow-list)"* — 882 tokens — and the other sections'
+headings name the steps they belong to (`Detection` is *"read by SKILL.md Step -1"*). Splitting it
+takes the generic margin from **407 to 4,812** and clears every candidate on this page, measured or
+not, without spending the authorised ceiling bump at all. A second candidate (v5 panel material,
+2,634 tok) is held as an owner call because the capability is dormant rather than absent. The
+biggest-looking win — the HALT-terminal judgment gates — was **rejected**: none has a script
+backstop, and G21 exists because of a documented production failure.
+
 **Consequence for sequencing.** Criterion 5 should be re-checked against the *then-current* headroom
 at promotion time, not treated as passed once. The measured delta is a durable fact; the fit is not.
 A candidate that cleared criterion 5 months earlier has to clear it again behind whatever landed in
