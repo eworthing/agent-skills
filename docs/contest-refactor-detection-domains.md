@@ -21,6 +21,7 @@ rows migrated out of the review register's open backlog (rows 23, 24, 25, 27).
 - [Current coverage baseline](#current-coverage-baseline)
 - [Competitor domain sweep — 2026-08-21](#competitor-domain-sweep--2026-08-21)
 - [Named candidates — row 23 decomposition](#named-candidates--row-23-decomposition)
+- [Shared-headroom contention](#shared-headroom-contention)
 - [Corroborated backlog items](#corroborated-backlog-items)
 - [Open detection backlog](#open-detection-backlog)
 - [Parked and adjudicated detection levers](#parked-and-adjudicated-detection-levers)
@@ -246,6 +247,39 @@ test (DD-12, DD-14). The saving is not in the count but in the scope: each of th
 candidates now names a specific, much smaller thing for a run to measure than the sweep's original
 framing did, and one candidate was removed from consideration for the cost of a worked example
 rather than a run.
+
+## Shared-headroom contention
+
+Criterion 5 is written per candidate, and every candidate has so far been sized on its own against
+the live headroom. **The headroom is shared.** Eleven items still want loop-path prose and they all
+draw on the same two numbers, so a set of individually-fitting candidates can collectively not fit.
+Worked from the measured deltas (2026-08-21):
+
+| State | apple | generic |
+| --- | --- | --- |
+| Baseline, nothing added | 87,371 / 87,800 — **429 left** | 83,293 / 83,700 — **407 left** |
+| + DD-14 clause (42 tok, `method.md`, both paths) | 87,413 — **387 left** | 83,335 — **365 left** |
+| + DD-04 `min` (301 tok, generic only) | 87,413 — 387 left | 83,636 — **64 left** |
+| + DD-04 `mid` instead, on the authorised 84,200 ceiling | 87,413 — 387 left | 83,800 / 84,200 — **400 left** |
+
+Three things fall out, none visible from any single candidate's row:
+
+1. **DD-14 and DD-04 `min` do not comfortably coexist.** Each fits alone. Together they leave 64
+   tokens on the generic path — below `SOFT_MARGIN` 150 (`token-budget.py:348`), so `--check`
+   warns. Two candidates that each passed criterion 5 produce a warning when both land.
+2. **The authorised +500 buys exactly DD-04 `mid` plus DD-14, and nothing else.** It lands the
+   generic margin at 400 — the floor of criterion 5's own [400, 550) band, with nine candidates
+   still queued behind it. The authorisation was sized against DD-04 alone, which was the right
+   question at the time and is not the whole question now.
+3. **A both-paths candidate is charged twice and shows up on the apple ceiling nobody is watching.**
+   DD-14's 42 tokens take apple from 429 to 387. That breaks nothing — 387 is far above
+   `SOFT_MARGIN` — but it is outside the [400, 550) band, and no apple-side ceiling decision exists
+   because every budget conversation so far has been about the binding generic number.
+
+**Consequence for sequencing.** Criterion 5 should be re-checked against the *then-current* headroom
+at promotion time, not treated as passed once. The measured delta is a durable fact; the fit is not.
+A candidate that cleared criterion 5 months earlier has to clear it again behind whatever landed in
+between — which is the same rule the coverage ledger applies to a stale file, for the same reason.
 
 ## Corroborated backlog items
 
