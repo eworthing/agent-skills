@@ -81,6 +81,39 @@ Banked findings from validating the kit (reports committed under `run-kit/report
 The queued wrapper-adoption keyed probe's production datapoint is now predeclared as M3
 (observation only, n=1, no adoption-rate claim).
 
+## run_id discipline + G17 adjudication packet — 2026-08-21
+
+Owner-approved plan (peer review explicitly skipped by owner choice; design verified by an
+exploration pass + an independent plan-agent breakage pass). Landed `0667642`:
+
+- **Mint-rule prose lift (M2 root cause)**: SKILL.md sub-step 3's `run-<UTC date>-<uuid4 hex>`
+  minting rule was scoped to the wrapped-run conditional — unpinned repos had NO minting
+  instruction, so loops improvised at terminal. Now unconditional; the wrapper references the
+  top-level run_id. output-format-json.md field spec + example aligned.
+- **G48 (run_id format + cross-loop stability) — shipped REPORT-ONLY, a deviation from the
+  approved plan recorded honestly**: the plan predicted the BenchHype terminal artifact would
+  classify LEGACY ("no retroactive invalidation"); verification falsified that — the Aug-19 run
+  already emitted `skill_rev` (`4fe8cdf`), so a CURRENT-epoch Issue retroactively fails its
+  committed HALT_SUCCESS artifact (exactly the item-30 class). The binary LEGACY/CURRENT
+  boundary is too coarse for a requirement this new. Promotion bar written in
+  `_artifact_run_identity.py`: (a) a post-G48 epoch boundary (e.g. third `EPOCHS` entry via a
+  skill-repo ancestor check on skill_rev), AND (b) M2 observed PASS on ≥1 instrumented run,
+  zero false diagnostics. Diagnostics (`[g48-run-id …]`) print for every epoch — the sweep and
+  M2 read those.
+- Sweep bonus finding: the Aug-19 run's loop-1 FINAL history entry carried `run-2026-08-20-001`
+  (not null as the mid-loop commit suggested) and the two loops ran under different skill revs
+  (`5936630` → `4fe8cdf`) — live mid-development dogfooding; both G48 sub-checks fire on it as
+  diagnostics.
+- Fixture hygiene: `halt-terminal-held` and `independence-missing` (both CURRENT-epoch) repaired
+  from the non-conformant `run-2026-06-21-001` to a conformant id; g48 flag/restraint pair added
+  (corpus 100 → 102); Step-3 section sha re-pinned; ceilings 87,800/83,700/12,500.
+- **G17 adjudication packet** (`analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md`):
+  4 datapoints with proposed dispositions — 2 TRUE violations (Aug-16 loop 12, Aug-19 loop 2),
+  1 expected-blind-loop-compliant (May-9, which actually cited a 4-entry coverage path), and
+  1 proposed **FALSE POSITIVE** (May-25 docs-only loop; keyword "consolidated" matched primer
+  prose). D2's disposition is load-bearing: adopting FP blocks promotion until a
+  code-file-in-changed_paths trigger refinement (costed in the packet, owner decision).
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.

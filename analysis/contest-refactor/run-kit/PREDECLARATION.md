@@ -49,6 +49,11 @@ carrying it unchanged. **PASS**: every loop artifact of the new run carries one
 identical `run-…` id and `[transition-check-blind]` does not fire for run_id
 instability. **FAIL**: either condition broken.
 
+*2026-08-21 (post-predeclaration note):* the fix landed — the mint rule is now
+unconditional in SKILL.md sub-step 3 and G48 (report-only) prints `[g48-run-id]`
+diagnostics on format/stability violations (`0667642`). M2's PASS/FAIL definition above is
+unchanged and now tests the fixed skill; the G48 diagnostics are the measurement channel.
+
 ### M3 — wrapper adoption (observation, 1 datapoint of the queued probe)
 Per loop: did Step-3 invoke `attested_run.py` and emit
 `loop_result.execution_evidence`? Record adopted / not-adopted / adopted-but-
