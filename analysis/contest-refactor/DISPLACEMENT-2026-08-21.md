@@ -5,7 +5,7 @@ Design note before code, per the convention the item 24 and item 25 notes follow
 > **Status 2026-08-21: candidate A is SHIPPED.** Measured saving **4,251 tok/loop** on both paths
 > (the estimate was 4,405; the new file's header and the two pointer stubs account for the
 > difference). Apple 87,371 → **83,120**, generic 83,293 → **79,042**. Candidate B remains an owner
-> call. §8 records what the split actually cost.
+> call — **declined 2026-08-21**, see §9. §8 records what the split actually cost.
 
 ## 1. Why now — the constraint moved
 
@@ -147,3 +147,19 @@ visible to a markdown-link grep, and the repo's own guards caught every one:
 finds the *documentation* consumers. Scripts that read a reference file as data are invisible to
 that search and are the ones that actually break. Run the full selftest suite against a stash of the
 change before believing a saving is free.
+
+
+## 9. Candidate B — declined
+
+Candidate A alone took the generic margin from 407 to **4,658** and apple to **4,680**. Every queued
+detection candidate now fits, including the six never measured, so the headroom pressure that
+motivated a displacement pass is gone.
+
+B was always the riskier half: it trades a **dormant but ready** capability for tokens. *"No loop can
+emit v5 today"* is a statement about today that one recorded `panel_certification` entry silently
+falsifies, and the cost of being wrong lands on the HALT_SUCCESS panel — the least-observed path in
+the system. Paying that risk to buy headroom the skill no longer needs is a bad trade at any price.
+
+**Declined, not deferred.** Re-open it only if the loop path tightens again *and* the panel
+capability is still dormant at that point. If the capability has landed by then, B is off the table
+permanently and the 2,634 tokens are simply the cost of a live feature.
