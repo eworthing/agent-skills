@@ -42,6 +42,8 @@ Pressure-test a plan before execution. The host agent owns the plan and revises 
 
 - `scripts/run_review.py` — provider-specific CLI invocation, resume, output capture, model normalization, metadata extraction. Do not reimplement it.
 
+After choosing the reviewer, read exactly one provider reference from the corresponding row below.
+
 | Open when you need to... | Read |
 |---|---|
 | understand runner CLI flags, session-file contracts, and environment variables | [`references/adapter-cli.md`](references/adapter-cli.md) |

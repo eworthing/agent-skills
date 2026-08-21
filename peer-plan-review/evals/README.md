@@ -11,7 +11,6 @@ This is an *efficacy* harness (does the reviewer output get better?), distinct f
 
 ```
 evals/
-  evals.json                    # standardized skill-creator evals + 20 trigger-optimization queries
   fixtures/
     digest-plan.md              # seeded-defect plan (6 blocking, 2 non-blocking, + clean tasks)
     digest-plan.answer-key.md   # ground truth + expected catch sets + domain-context block
