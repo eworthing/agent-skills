@@ -52,7 +52,7 @@ Read these in order before doing anything:
   1. <skill-dir>/references/implementation-reviewer.md (this file — your protocol)
   2. <skill-dir>/references/architecture-rubric.md (architectural tests + Unified Seam Policy + Indirect Interface coverage carve-out under Replace, don't layer)
   3. <skill-dir>/references/method.md (Simplify Pressure Test)
-  4. <skill-dir>/references/provider-adapters.md § <provider> reviewer-permitted tools (the tools you may use this run)
+  4. <skill-dir>/references/provider-adapters-reviewer.md § <provider> reviewer-permitted tools (the tools you may use this run)
   5. ./CURRENT_REVIEW.md — Findings section, identify the targeted Priority-1 finding by ID
   6. The diff — run `git diff HEAD` (uncommitted changes to tracked files) and read every
      changed hunk. `git diff HEAD` never shows untracked files: the "Changed paths this loop"
@@ -63,7 +63,7 @@ Read these in order before doing anything:
   7. Selected lens recorded in CURRENT_REVIEW.md Discovery section
 
 Tool restriction: use only the read-only inspection tools listed in
-provider-adapters.md § <provider> reviewer-permitted tools, plus shell commands
+provider-adapters-reviewer.md § <provider> reviewer-permitted tools, plus shell commands
 restricted to the read-only allow-list (cat, grep, rg, find, git diff, git show,
 git blame, git log, ls, head, tail, wc). NEVER run `git commit`, `rm`, `mv`,
 `swift test`, `npm`, or any write/exec command. If a check needs a tool/command
@@ -205,7 +205,7 @@ Rules:
 
 ## Verdict delivery (parent reads the final message)
 
-The reviewer is **strictly read-only** (see [provider-adapters.md § Reviewer read-only shell allow-list](provider-adapters.md#reviewer-read-only-shell-allow-list-uniform-across-providers) — codex denies writes, opencode runs `--read-only`), so the verdict **cannot** be written to a file by the reviewer. It travels only as the reviewer's **final message**, which the loop subagent reads as the spawn's synchronous result.
+The reviewer is **strictly read-only** (see [provider-adapters-reviewer.md § Reviewer read-only shell allow-list](provider-adapters-reviewer.md#reviewer-read-only-shell-allow-list-uniform-across-providers) — codex denies writes, opencode runs `--read-only`), so the verdict **cannot** be written to a file by the reviewer. It travels only as the reviewer's **final message**, which the loop subagent reads as the spawn's synchronous result.
 
 **Robustness for async / background-spawn harnesses** (where a completed subagent's final message is NOT delivered back to the parent as a tool result): the parent must **join** — await reviewer completion and read its last message from the runtime's run record / transcript — *before* routing. A missing tool-result from a reviewer that actually ran to completion is **not** a reviewer failure: do not treat it as a transient timeout/spawn-error (that would burn a retry and then revert good code as "reviewer unavailable"). Only the retry envelope below applies when the reviewer genuinely produced no verdict. **Never route on an empty result** — an unread verdict is not an approval and not a rejection.
 

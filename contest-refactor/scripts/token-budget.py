@@ -79,7 +79,10 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
             "output-format-markdown-archive.md",
             "validation.md",
             "implementation-reviewer.md",
-            "provider-adapters.md",
+            # Step 3 needs two sections of the provider adapters, not all ten. The
+            # split (DISPLACEMENT-2026-08-21.md candidate A) makes SKILL.md:78's
+            # already-declared narrow scope enforceable at file granularity.
+            "provider-adapters-reviewer.md",
         ],
     }
     if step == "loop":

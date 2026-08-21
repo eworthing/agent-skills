@@ -288,9 +288,11 @@ argues for buying headroom rather than rationing it. A loop-path inventory
 **4,405 tok/loop** of pure file-role misclassification: `provider-adapters.md` is loaded whole at
 Step 3 for two of its eleven sections, while `SKILL.md:78`'s own matrix already scopes the Step-3
 need to *"(reviewer-spawn profile + read-only allow-list)"* — 882 tokens — and the other sections'
-headings name the steps they belong to (`Detection` is *"read by SKILL.md Step -1"*). Splitting it
-takes the generic margin from **407 to 4,812** and clears every candidate on this page, measured or
-not, without spending the authorised ceiling bump at all. A second candidate (v5 panel material,
+headings name the steps they belong to (`Detection` is *"read by SKILL.md Step -1"*). **Shipped 2026-08-21**: the
+split took the generic margin from **407 to 4,658** and apple from 429 to **4,680** — a measured
+4,251 tok/loop on both paths — which clears every candidate on this page, measured or not, without
+spending the authorised ceiling bump at all. The **shared-headroom contention above is therefore
+resolved**, not rationed: the table's arithmetic stands as the record of why it mattered. A second candidate (v5 panel material,
 2,634 tok) is held as an owner call because the capability is dormant rather than absent. The
 biggest-looking win — the HALT-terminal judgment gates — was **rejected**: none has a script
 backstop, and G21 exists because of a documented production failure.

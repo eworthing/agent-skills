@@ -1,7 +1,11 @@
 # Loop-path displacement: inventory and design note (2026-08-21)
 
-Design note before code, per the convention the item 24 and item 25 notes follow. **No code in
-this pass.**
+Design note before code, per the convention the item 24 and item 25 notes follow.
+
+> **Status 2026-08-21: candidate A is SHIPPED.** Measured saving **4,251 tok/loop** on both paths
+> (the estimate was 4,405; the new file's header and the two pointer stubs account for the
+> difference). Apple 87,371 → **83,120**, generic 83,293 → **79,042**. Candidate B remains an owner
+> call. §8 records what the split actually cost.
 
 ## 1. Why now — the constraint moved
 
@@ -114,3 +118,32 @@ Generic 83,293 → 78,888 against 83,700: margin **407 → 4,812**. Apple 87,371
 87,800: margin **429 → 4,834**. That is roughly twelve times today's headroom from one file split,
 and it clears every measured candidate plus the six that have never been measured — without the
 authorised ceiling bump being spent at all.
+
+
+## 8. What shipping candidate A actually took — three consumers the inventory missed
+
+The split itself was one file move and one matrix row, as predicted. The consumers were not all
+visible to a markdown-link grep, and the repo's own guards caught every one:
+
+1. **`_provider_detection_selftest.py`** asserted against `provider-adapters.md` for the codex
+   `--sandbox read-only` flag and the opencode `permission` config — both in the moved reviewer
+   profile. It failed loudly and correctly. Fixed by reading **both** halves: they are still "the
+   provider adapters" for the assertions' purposes, and a guard that silently stops covering the
+   profiles it exists to protect is worse than a failing one.
+2. **`_reviewer_baseline_selftest.py`** failed on the prompt pin. Two of the repointed references
+   sit inside `implementation-reviewer.md`'s **verbatim reviewer prompt**, so the split changed the
+   prompt's sha. Re-pinned per the guard's own remediation instruction, with a sixth entry appended
+   to `measurement.prompt_staleness` recording that the allow-list content moved byte-identically
+   and the edit is unmeasured like the five before it.
+3. **The soft-margin probe in `_token_budget_selftest.py` was a test that could not fail.** It set
+   its probe ceiling to `shipped_ceiling - 400`, which only lands inside the soft margin while the
+   measurement sits near its ceiling. Cutting 4.3k tok/loop moved the measurement far below, and the
+   probe silently stopped exercising the soft margin at all. Rewritten to pin against the **current
+   measured value** (`actual + 100`). This is the DD-01 tautological-oracle shape — an assertion
+   that passes regardless of the behaviour it names — found in this repo's own suite, by a change
+   that had nothing to do with looking for it.
+
+**Lesson for candidate B and any later slice.** A displacement inventory that greps markdown links
+finds the *documentation* consumers. Scripts that read a reference file as data are invisible to
+that search and are the ones that actually break. Run the full selftest suite against a stash of the
+change before believing a saving is free.
