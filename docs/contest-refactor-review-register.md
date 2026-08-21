@@ -478,6 +478,8 @@ The ledger's merged findings are above; these four things were *live state* with
 
 Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Rows already shipped despite stale status columns: 1, 2, 4, 7, 9, 10, 17–22, 28, 31, 32. Still genuinely open:
 
+**Rows 23, 24, 25 and 27 moved 2026-08-21** to [`contest-refactor-detection-domains.md`](contest-refactor-detection-domains.md) — they are detection-reach items (what the loop looks for in the target codebase), and that document now owns them alongside the competitor domain sweep. Row numbers are preserved there for citation continuity.
+
 | Row | Item | State |
 |---|---|---|
 | 5 | arm_b 2×2 factorial ({weak, strong executor} × {backlog, self-contained}) | Experiment protocol first; the 1×1 arm_b was measured 2026-06-28 and rejected |
@@ -487,10 +489,6 @@ Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Ro
 | 13 | Cost-proportional stage skipping (`skip_when` by size) | Was gated on the runtime-cost audit, now consolidated below; the audit's measured cost model puts structural trims on a modestly-weighted axis, so weigh this against the behavioral levers first |
 | 14 | Host-attested execution-evidence ledger | **SHIPPED at Tier 1, 2026-08-21** — `attested_run.py` wrapper (true-child oracle, shlex-canonical command pin, per-stream digests, degrade-on-mid-run-edit) + `_wtree.py` source-scoped fingerprints + G47 linkage gate (opt-in via `loop_result.execution_evidence`, phase-aware freshness, fail-closed taxonomy) + canon `attestation-statuses` (`attested` withheld until a Tier-2 writer exists). Plan dual-peer-approved: codex gpt-5.6-sol xhigh (4 rounds) + claude (fresh seat after agy degraded), every load-bearing git-behavior claim verified in scratch repos before adoption. Tier-2 privilege separation stays open by design (design §5 rows 2/6) |
 | 15 | DAG-shaped grading | Conditional on node-pilot |
-| 23 | Detection-lens expansion (latent-premises, retry-safety, operational) | Decompose per lens |
-| 24 | Deterministic selection + coverage manifest + resumable scan | **Design done** (`ITEM24-…`), unbuilt |
-| 25 | Tool-grounded substrate + per-language rules | **Unblocked, design done** (`ITEM25-…`), unbuilt |
-| 27 | Per-finding disproof pipeline | Gated on the finding-assurance decision |
 
 ### Carried from the runtime-cost audit at its consolidation (2026-08-14 rev 3, retired 2026-08-20)
 
