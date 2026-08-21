@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Self-test for token-budget.py (R2-N1 from peer review).
 
-Asserts that --loaded-set matches the documented Reference Load Matrix in SKILL.md and
-the per-loop file set recorded in analysis/contest-refactor/TOKEN-USAGE-AUDIT.md, so a
-savings number is never trusted off a tool whose routing has silently drifted.
+Asserts that --loaded-set matches the documented Reference Load Matrix in SKILL.md, so a
+savings number is never trusted off a tool whose routing has silently drifted. SKILL.md's
+matrix is the only source the golden sets below are derived from; an earlier docstring also
+named analysis/contest-refactor/TOKEN-USAGE-AUDIT.md, which was retired in e6d549f and
+which this file never read.
 
 Run directly: `python3 scripts/_token_budget_selftest.py` (exit 0 = pass). Stdlib-only.
 """

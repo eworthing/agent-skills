@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """token-budget.py — tokenizer-based token accounting for the contest-refactor skill.
 
-Every token-saving claim in analysis/contest-refactor/TOKEN-USAGE-AUDIT.md and in the
-token-reduction plan depends on this tool, so it is the single source of truth for
-"how many tokens does X cost" and "which files does loop step Y load".
+This tool is the single source of truth for "how many tokens does X cost" and "which
+files does loop step Y load". It used to share that role with
+analysis/contest-refactor/TOKEN-USAGE-AUDIT.md, which was retired in the 44->5 analysis
+consolidation (e6d549f); the routing it recorded now lives in loaded_set() below, checked
+against SKILL.md's Reference Load Matrix by _token_budget_selftest.py.
 
 Three jobs:
   1. Per-file token counts (`--files`, default: SKILL.md + references/*.md).
@@ -16,7 +18,7 @@ falls back to a deterministic byte/word heuristic. The method in use is printed 
 report so a number is never silently a heuristic. Stdlib-only by default (Python 3.11+),
 matching the other contest-refactor validators.
 
-Multiplier basis (TOKEN-USAGE-AUDIT.md): SKILL.md is read once at trigger + once per loop
+Multiplier basis: SKILL.md is read once at trigger + once per loop
 (×(loops+1)); every other per-loop reference is read once per loop (×loops). A file read
 only by the main agent at startup (e.g. references/startup.md) is ×1 and must be passed via
 --once so it is not multiplied.
