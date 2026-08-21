@@ -183,13 +183,7 @@ Check:
 3: Some decoration remains but does not break use.
 5: Every element carries meaning, structure, navigation, feedback, or confidence.
 
-Ask:
-
-If this visual element disappeared, would the user lose meaning, structure, navigation, or feedback?
-
-If not, remove it.
-
-Apply to:
+Apply the reductionist pass from `references/visual-hierarchy.md` to:
 
 - gradients
 - shadows

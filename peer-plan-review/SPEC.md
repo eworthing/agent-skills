@@ -19,3 +19,5 @@ this file only pins the invariants a change must not break.
    repo-level `common/scripts/sync_common.py --check`, `common/scripts/check_shim_contract.py`,
    `common/scripts/check_module_size.py`, Ruff (0.15.6), the repository evaluator, and the
    skill-writer validator. Live count recorded once, in `EVAL.md` Runtime probes.
+7. **Evaluation standards:** Standardized workflow evals and trigger-optimization query sets
+   are maintained in `evals/evals.json` alongside the prompt efficacy harness.

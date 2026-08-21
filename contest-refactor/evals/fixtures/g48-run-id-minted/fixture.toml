@@ -1,0 +1,11 @@
+id = "g48-run-id-minted"
+purpose = "Restraint twin for G48 (REPORT-ONLY): byte-identical to g48-run-id-bad-format except run_id is a conformant minted value (run-2026-08-21-<32 hex>) at both sites. A CURRENT-epoch artifact (skill_rev set), so the format sub-check actually evaluates and stays silent -- no [g48-run-id] diagnostic, no Issue -- rather than being skipped by legacy classification."
+expected_result = "pass"
+pair_id = "g48-format"
+pair_role = "restraint"
+aspirational = false
+notes = "Derived from 'halt-terminal-held'; that fixture independently remains the corpus's organic CURRENT-epoch conformant-pass case after its 2026-08-21 run_id repair. The silence assertion (no diagnostic on the conformant twin) lives in scripts/_g48_selftest.py."
+
+[[tested_rules]]
+kind = "gate"
+id = "G48"

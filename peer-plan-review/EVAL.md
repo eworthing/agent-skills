@@ -1,9 +1,9 @@
 # peer-plan-review Evaluation
 
-**Date:** 2026-07-14 (transport hardening; original eval 2026-06-14)
-**Evaluator:** skill-evaluator-1.0.0 (Claude Opus 4.8)
+**Date:** 2026-08-21 (comprehensive audit & skill-writer/creator upgrade; original eval 2026-06-14)
+**Evaluator:** skill-evaluator-1.0.0 (Claude Opus 4.8 / Antigravity CLI)
 **Skill version:** branch `main`
-**Automated score:** 100% (13/13 checks passed).
+**Automated score:** 100% (15/15 checks passed).
 
 ---
 
@@ -18,10 +18,10 @@
                   ✅ no external deps (_common is a local vendored package)
   [SECURITY]      ✅ no hardcoded creds
                   ✅ env vars documented (references/adapter-cli.md)
-  Pass: 13  Warn: 0  Fail: 0  →  100%
+  Pass: 15  Warn: 0  Fail: 0  →  100%
 ```
 
-Runtime probes (2026-07-14):
+Runtime probes (2026-08-21):
 - `--self-check` → all 6 providers found and healthy (codex/gemini/claude/copilot/opencode/agy).
 - `--list-models` → aliases for claude/gemini/opencode/agy; doc-sourced known models for
   codex/copilot (the alias table short-circuits — no live listing).
@@ -93,3 +93,4 @@ The skill is structurally clean, well-tested (full suite green; count in Runtime
 | 2026-07-13 | 98/100 | Doc-hygiene refresh (codex gpt-5.6-sol peer-approved plan, 5 rounds; gpt-5.5 xhigh had approved an earlier draft in 2). Reconciled stale counts across README/EVAL: tests 116/118/119/121 → verified **136** (pytest collect), providers 5 → **6** (PROVIDERS registry), "6th provider" → 7th in Modifiability. Replaced dead `test_web_search.py` reference with `check_web_search.py` (manual per-provider headless web-fetch diagnostic, previously undocumented) and updated Testability to the `scripts/tests/` package layout. Removed untracked `.DS_Store` + orphaned `scripts/__pycache__/` bytecode (root `.gitignore` already covers `__pycache__/`). Header date/branch refreshed. No prose or behavior changes; score unchanged. |
 | 2026-07-14 | 98/100 | Transport hardening. Adopted current OpenCode `--auto` invocation with an explicit read-only `OPENCODE_PERMISSION` deny policy (`edit`/`bash`/`task`/`external_directory`/`question`), replacing the stale `--dangerously-skip-permissions` flag; `self_check` now validates the real `opencode run --help` surface and fails closed when `--auto` is absent. Terminal timeouts preserve captured review/events output and report `partial_output` in failure summaries. Added `SPEC.md` (maintenance invariants) + `SOURCES.md` (provenance, adopt/reject/defer, coverage, doc-honesty note that the OpenCode deny-key contract is asserted from docs and guarded at runtime by the live self-check). Tests 136 → **141**; shared-source sync and both consumer suites green; score unchanged (agy remains the lone Data-Safety deduction). |
 | 2026-07-14 | 98/100 | Full-skill audit + improvement pass (codex gpt-5.6-sol peer-approved plan, 5 rounds; every finding file:line-verified, several by live repro). SKILL.md operational fixes: round-2+ prompt rebuild now includes the output template (rounds 2+ silently lost structured parsing), agy preflight mapping, truthful `--list-models` docs, partial-output surfacing in the failure branch, per-call path re-export, Finalize 7-file accounting. Runner: empty-output sentinel 124→3, stale-home resume provenance (`session.pop`), timeout events carry drained stderr, launcher gates the `ppr_paths` eval. `common/`: kill-tree PGID capture + unconditional group SIGKILL, bounded `drain_process` at all three drain sites, verdict-parse normalization (wrappers/backticks/case), section-heading case-insensitivity, null-result guard, crash-orphaned codex-home sibling-manifest sweep (+ manifest mtime refresh on reuse), opencode extractor banner tolerance, `--id-prefix` validation, agy `--print-timeout` +30s. Evals honesty: missing-run exclusion, parse-validity definition, F2 section scoping, README recall reword. OpenCode edit/bash deny **live-verified** (opencode 1.17.19; policy strips the tools from the function schema — canaries blocked in both probes). Kill-tree mutation now caught by 6 tests (was 0). Tests 141 → **160** peer / 171 common / 190 quorum; floor docs unified at 3.11+; codex model list refreshed (gpt-5.6-sol, codex-cli 0.144.3). Score unchanged (agy remains the lone Data-Safety deduction). |
+| 2026-08-21 | 98/100 | Multi-framework audit & skill-writer/creator upgrade. Formatted `SKILL.md` Bundled resources into canonical router table with `references/domain-context.md` entry restored. Added `gpt-5.6-sol` to frontmatter `argument-hint`. Created standardized `evals/evals.json` with 4 workflow evals and 20 trigger-optimization query pairs. Analyzed 194 production tool invocations across `agent-skills` and `BenchHype` confirming 5-round multi-agent convergence and session degradation resilience. Structural checks 100% (15/15), 160 unit tests green, `sync_common --check` clean. Score unchanged (agy remains lone Data-Safety deduction). |

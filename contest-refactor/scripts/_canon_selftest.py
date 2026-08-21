@@ -252,7 +252,8 @@ GOLDEN_CANON_JSON = """{
     "G44": "Credential quarantine — persistence sinks scanned for hardcoded-secret shapes (plain + base64 + concat-split); fails closed, never reproduces the value",
     "G45": "Exhaustion halt record shape + detection↔kind honesty coupling (schema_version >= 4)",
     "G46": "General remediation fields — finding_family/effort/repair_revalidation shape + drift_notes coupling (schema_version >= 4)",
-    "G47": "Execution-evidence linkage — ledger record resolves, command human-pinned, source fingerprint fresh per phase, exit 0, consistency_check on both sides (opt-in via loop_result.execution_evidence; item 14 Tier 1)"
+    "G47": "Execution-evidence linkage — ledger record resolves, command human-pinned, source fingerprint fresh per phase, exit 0, consistency_check on both sides (opt-in via loop_result.execution_evidence; item 14 Tier 1)",
+    "G48": "run_id identity discipline — non-null run_id matches run-<UTC yyyy-mm-dd>-<uuid4().hex> and never changes across consecutive loops of one run (REPORT-ONLY: diagnostics print on detection, Issue withheld until a post-G48 epoch boundary exists — promotion bar in _artifact_run_identity.py)"
   },
   "extra": {
     "fixture_rule_kinds": [

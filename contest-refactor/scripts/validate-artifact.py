@@ -87,6 +87,7 @@ from _artifact_review_contract import (  # noqa: E402
     check_g29_schema_version,
     check_rounds_membership,
 )
+from _artifact_run_identity import check_g48_run_identity  # noqa: E402
 from _artifact_transitions import check_transition_report_only  # noqa: E402
 
 SKILL_ROOT = SCRIPT_DIR.parent
@@ -181,6 +182,7 @@ def run_checks(
             phase=attestation_phase,
         )
     )
+    issues.extend(check_g48_run_identity(current_review, history))
     issues.extend(check_g17_coverage_citation(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))

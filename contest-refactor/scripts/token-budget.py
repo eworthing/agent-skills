@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """token-budget.py — tokenizer-based token accounting for the contest-refactor skill.
 
-Every token-saving claim in analysis/contest-refactor/TOKEN-USAGE-AUDIT.md and in the
-token-reduction plan depends on this tool, so it is the single source of truth for
-"how many tokens does X cost" and "which files does loop step Y load".
+This tool is the single source of truth for "how many tokens does X cost" and "which
+files does loop step Y load". It used to share that role with
+analysis/contest-refactor/TOKEN-USAGE-AUDIT.md, which was retired in the 44->5 analysis
+consolidation (e6d549f); the routing it recorded now lives in loaded_set() below, checked
+against SKILL.md's Reference Load Matrix by _token_budget_selftest.py.
 
 Three jobs:
   1. Per-file token counts (`--files`, default: SKILL.md + references/*.md).
@@ -16,7 +18,7 @@ falls back to a deterministic byte/word heuristic. The method in use is printed 
 report so a number is never silently a heuristic. Stdlib-only by default (Python 3.11+),
 matching the other contest-refactor validators.
 
-Multiplier basis (TOKEN-USAGE-AUDIT.md): SKILL.md is read once at trigger + once per loop
+Multiplier basis: SKILL.md is read once at trigger + once per loop
 (×(loops+1)); every other per-loop reference is read once per loop (×loops). A file read
 only by the main agent at startup (e.g. references/startup.md) is ×1 and must be passed via
 --once so it is not multiplied.
@@ -77,7 +79,10 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
             "output-format-markdown-archive.md",
             "validation.md",
             "implementation-reviewer.md",
-            "provider-adapters.md",
+            # Step 3 needs two sections of the provider adapters, not all ten. The
+            # split (DISPLACEMENT-2026-08-21.md candidate A) makes SKILL.md:78's
+            # already-declared narrow scope enforceable at file granularity.
+            "provider-adapters-reviewer.md",
         ],
     }
     if step == "loop":
@@ -297,7 +302,12 @@ CEILINGS = {
     # gained the loop_result.execution_evidence field spec with the non-claim wording.
     # Dual-peer-approved plan (codex gpt-5.6-sol xhigh + claude, 4 rounds). Same proactive
     # ~500-margin convention. Measured at 87,053, margin 447.
-    "loop_apple": 87_500,  # per-loop fixed reload, apple lens (measured 87,053, margin 447)
+    # Bumped 87,500 -> 87,800 (2026-08-21) for the run_id discipline pass (M2/G48):
+    # SKILL.md sub-step 3's mint clause hoisted out of the wrapped-run conditional
+    # (unconditional minting), validation.md gained the G48 checklist entry,
+    # output-format-json.md's run_id field spec gained the format + lifecycle sentence.
+    # Same proactive ~500-margin convention. Measured at 87,330, margin 470.
+    "loop_apple": 87_800,  # per-loop fixed reload, apple lens (measured 87,330, margin 470)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
@@ -318,7 +328,10 @@ CEILINGS = {
     # Bumped 82,600 -> 83,400 (2026-08-21) for the same item-14 pass as loop_apple above
     # (the G47/execution_evidence prose is lens-independent). Same proactive ~500-margin
     # convention. Measured at 82,975, margin 425.
-    "loop_generic": 83_400,  # per-loop fixed reload, generic lens (measured 82,975, margin 425)
+    # Bumped 83,400 -> 83,700 (2026-08-21) for the same run_id/G48 pass as loop_apple
+    # above (lens-independent prose). Same proactive ~500-margin convention. Measured
+    # at 83,252, margin 448.
+    "loop_generic": 83_700,  # per-loop fixed reload, generic lens (measured 83,252, margin 448)
     # Bumped 11,000 -> 12,200 (2026-08-20) for the same loop-ownership P1 pair: the out-of-
     # plan gate, cleanup procedure, sub-step-0 cross-reference, Guardrails bullet, and
     # HALT_STAGNATION `user_decision` cross-reference all land in SKILL.md itself, which is
@@ -328,7 +341,9 @@ CEILINGS = {
     # (SKILL.md-resident prose; the sub-step-6/8 additions above also land here). Margin had
     # fallen to 227 -- inside the soft band, one edit from a tripwire. Same proactive
     # ~500-margin convention. Measured at 11,973, margin 427.
-    "skill_md": 12_400,  # SKILL.md trigger read (measured 11,973, margin 427)
+    # Bumped 12,400 -> 12,500 (2026-08-21) for the run_id mint-clause hoist (SKILL.md-
+    # resident prose). Same proactive ~500-margin convention. Measured at 11,998, margin 502.
+    "skill_md": 12_500,  # SKILL.md trigger read (measured 11,998, margin 502)
 }
 
 # Soft margin, paired with the 2026-08-20 bump. A generous ceiling only works if the

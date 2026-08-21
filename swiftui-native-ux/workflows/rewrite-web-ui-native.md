@@ -66,15 +66,7 @@ Keep:
 
 ## Step 4: Choose Correct Container
 
-Use:
-
-- `TabView` for flat sections
-- `NavigationStack` for drill-down
-- `NavigationSplitView` for collection/detail on iPad
-- `List` for scannable content
-- `Form` for settings/editing
-- `.sheet` for bounded tasks
-- `.inspector` for secondary editing
+Use the decision tree in `references/navigation-patterns.md`.
 
 ## Step 5: Rebuild Hierarchy
 

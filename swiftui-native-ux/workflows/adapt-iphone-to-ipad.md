@@ -23,14 +23,7 @@ Determine:
 
 ## Step 2: Choose iPad Structure
 
-Choose:
-
-- `TabView` for flat peer sections
-- `NavigationSplitView` for collection/detail or hierarchy
-- two columns for collection/detail
-- three columns for true global hierarchy
-- `.inspector` for secondary editing
-- `.sheet` for bounded tasks
+Choose per `references/navigation-patterns.md` (container decision tree) and `references/ipad-layout.md` (iPad structure, split-view column rules).
 
 Do not choose based only on device idiom.
 
@@ -74,22 +67,7 @@ final class NavigationModel {
 
 ## Step 5: Replace Sheets With Inspectors Where Appropriate
 
-Use inspector when:
-
-- editing selected item properties
-- toggling metadata
-- showing secondary controls
-- filtering within current context
-- keeping content visible matters
-
-Keep sheet when:
-
-- task is bounded
-- user needs Cancel/Done
-- creation/import flow is separate
-- modal focus is desirable
-
-Reject full-screen property editing.
+Choose per the Inspectors section of `references/ipad-layout.md`: inspector when the user should keep seeing the primary content; sheet for bounded Cancel/Done tasks.
 
 ## Step 6: Add Keyboard And Pointer Behavior
 

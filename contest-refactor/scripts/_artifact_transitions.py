@@ -112,7 +112,7 @@ def check_transition_report_only(
     # A check that derives nothing from a history with loops in it has not passed
     # -- it has failed to run, and report-only mode would hide that as silence.
     # The live case: `run_id` is specified as run-scoped ("identifies the loop run
-    # that produced the candidate", example `run-2026-06-21-001`), but a loop that
+    # that produced the candidate", example `run-2026-06-21-0a1b…`), but a loop that
     # mints a fresh id per loop makes split_runs see one run per loop, leaving no
     # adjacent pair anywhere. Same discipline as exit code 2 elsewhere in this
     # repo: cannot-measure is its own outcome, never a clean result.

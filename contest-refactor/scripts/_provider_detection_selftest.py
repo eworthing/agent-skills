@@ -35,6 +35,12 @@ from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 ADAPTERS = SKILL_ROOT / "references" / "provider-adapters.md"
+# The reviewer-spawn profile and the read-only allow-list were split into their own
+# file so Step 3 stops reloading the whole adapter set (DISPLACEMENT-2026-08-21.md
+# candidate A). Both halves are still "the provider adapters" for the assertions
+# below, so read them together -- otherwise this guard silently stops covering the
+# reviewer profiles it exists to protect.
+ADAPTERS_REVIEWER = SKILL_ROOT / "references" / "provider-adapters-reviewer.md"
 STARTUP = SKILL_ROOT / "references" / "startup.md"
 PREFLIGHT = SKILL_ROOT / "scripts" / "preflight.py"
 
@@ -42,7 +48,7 @@ PREFLIGHT = SKILL_ROOT / "scripts" / "preflight.py"
 def main() -> int:
     failures: list[str] = []
 
-    adapters = ADAPTERS.read_text(encoding="utf-8")
+    adapters = ADAPTERS.read_text(encoding="utf-8") + ADAPTERS_REVIEWER.read_text(encoding="utf-8")
     if "OPENCODE_SESSION" in adapters:
         failures.append(
             "provider-adapters.md references OPENCODE_SESSION again -- that variable does not "

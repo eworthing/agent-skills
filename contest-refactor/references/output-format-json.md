@@ -139,7 +139,7 @@ v5 replaces this object with a panel — see [§ Schema version 5 changelog](#sc
   "outcome": "held",                       // enum: "held" | "broke". "broke" with state=="HALT_SUCCESS" is ILLEGAL — downgrade first.
   "binding": {
     "candidate_commit_sha": "abc1234",    // non-empty string; commit sha of the candidate artifact being challenged
-    "run_id": "run-2026-06-21-001",       // must equal top-level run_id
+    "run_id": "run-2026-06-21-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d",       // must equal top-level run_id
     "source_rev": "def5678"               // must equal top-level source_rev
   },
   "attempts": [                            // non-empty list; each attempt the challenger made
@@ -189,7 +189,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   "loop_metrics": null,                         // optional object | null (absent ⇒ no metric trend this loop). Hard metrics captured in Step 0 when the tools exist: { "coverage_pct"?: number, "lint_count"?: number, "complexity"?: number }, all optional. ADVISORY ONLY — never consulted by any score/threshold gate (_metric_isolation_selftest.py proves gate-independence). Persisted so scripts/audit_metric_trend.py can flag a metric that moved the wrong way between loops as *evidence* for the Critic (Meta-Rule 1: metrics support judgment, never decide it). Never a score or gate.
 
   // v4+ challenge fields (required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS})
-  "run_id": null,                               // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Identifies the loop run that produced the candidate.
+  "run_id": null,                               // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Identifies the loop run that produced the candidate. Minted at Step 3 sub-step 3 when null — format `run-<UTC yyyy-mm-dd>-<uuid4().hex>` — and carried unchanged across loops; only `--reset`/`--purge` starts a new one. G48 enforces format + cross-loop stability (current-epoch artifacts).
   "source_rev": null,                           // (v4+) string sha | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. HEAD sha of the source tree the loop's review analyzed, captured at Step 1 before this loop's own Step 3 commit lands; stays pinned to that pre-commit value even though Step 3's own commit (possibly artifact-only) always advances HEAD to a new candidate_commit_sha.
   "candidate_fingerprint": null,                // (v4+) string | null. Required non-null when state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}. Canonical architecture payload hash; paired with source_rev for oscillation recurrence.
   "halt_success_challenge": null,               // (v4+) object | null. Required non-null ONLY when state == "HALT_SUCCESS" (terminal). Null for HALT_SUCCESS_candidate and all other states. Schema: see § Schema version 4 changelog.

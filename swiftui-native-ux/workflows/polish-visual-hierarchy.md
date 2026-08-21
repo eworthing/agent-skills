@@ -149,11 +149,7 @@ Error:
 
 ## Step 10: Reductionist Pass
 
-Ask for every element:
-
-Would the user lose meaning, structure, navigation, or feedback if this disappeared?
-
-If no, remove it.
+Run the reductionist pass from `references/visual-hierarchy.md` on every element.
 
 ## Output Template
 

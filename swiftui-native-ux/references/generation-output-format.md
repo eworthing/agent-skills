@@ -14,12 +14,6 @@
 - Preview Matrix
 - State Fixtures
 - Generated Output Template
-- Native Structure
-- State Coverage
-- Accessibility Notes
-- SwiftUI Code
-- Preview Notes
-- Self-Review
 - Do Not Generate
 
 Use this reference when generating SwiftUI code.
@@ -140,19 +134,12 @@ Prefer:
 
 - semantic ViewModifiers
 - style structs
-- named spacing constants
-- project tokens where they exist
+- the default spacing scale from `references/visual-hierarchy.md` (project tokens override)
 - extensions for repeated patterns
 
 Example:
 
 ```swift
-private enum AppSpacing {
-    static let small: CGFloat = 8
-    static let medium: CGFloat = 12
-    static let large: CGFloat = 16
-}
-
 private struct SecondaryDetailStyle: ViewModifier {
     func body(content: Content) -> some View {
         content

@@ -86,7 +86,7 @@ Reject:
 
 ## Spacing
 
-Use rhythm, not random numbers.
+Use rhythm, not random numbers. This is the skill's default spacing scale; project tokens (see the `swiftui-design-tokens` sibling skill) override it.
 
 Prefer:
 

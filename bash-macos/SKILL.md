@@ -3,150 +3,80 @@ name: bash-macos
 description: >-
   Keeps shell scripts portable across macOS (Bash 3.2, BSD userland) and Linux
   (Bash 4+, GNU coreutils). Use when writing or editing .sh files, debugging
-  "command not found", "invalid option", or "mapfile: command not found" errors,
-  fixing GNU-vs-BSD sed/grep/date/readlink issues, or renaming shell scripts
+  "command not found", "invalid option", "mapfile: command not found",
+  "declare: -A: invalid option", or "sed: illegal option -- r" errors,
+  fixing GNU-vs-BSD sed/grep/date/stat/readlink/base64 issues, or renaming shell scripts
   (snake_case verb-first).
 ---
 
 # Bash macOS Compatibility
 
-## Contents
-
-- Purpose
-- When to Use
-- References
-- Shell Target
-- Forbidden Features (Bash 4+ only)
-- Supported on Bash 3.2
-- BSD vs GNU Userland
-- Required Patterns
-- Verification Checklist
-- Token-Efficient Output
-- Common Gotcha: Arrays in Conditionals
-- Script Naming Conventions
-
-## Purpose
-
-Ensure shell scripts run on macOS's stock `/bin/bash` (3.2.x) and BSD userland.
-macOS does NOT ship Bash 4+ or GNU coreutils by default.
-
-## When to Use
-
-Use when:
-
-- Writing or editing any `*.sh` file
-- Proposing shell commands for macOS dev machines
-- Debugging "command not found" or "invalid option" errors in scripts
+Write shell scripts that execute reliably on stock macOS (`/bin/bash` 3.2.x, BSD userland) and Linux (`/bin/bash` 4+, GNU coreutils) without runtime dependencies.
 
 ## References
 
-- [references/forbidden-features.md](references/forbidden-features.md) — full Bash 4+ feature matrix + workarounds
-- [references/template.md](references/template.md) — minimal portable script template + shellcheck guide
-- [references/output-modes.md](references/output-modes.md) — three-mode compact/verbose/raw output helpers
-- [references/naming.md](references/naming.md) — full naming verb table and checklist
+| Open when you need to... | Read |
+|--------------------------|------|
+| replace Bash 4+ features (associative arrays, case conversion, globstar, `\|&`) with portable equivalents | [references/forbidden-features.md](references/forbidden-features.md) |
+| scaffold a new script with arg parsing, safe temp cleanup, and dry-run execution | [references/template.md](references/template.md) |
+| implement 3-mode (`compact`, `--verbose`, `--raw`) output for multi-stage automation | [references/output-modes.md](references/output-modes.md) |
+| choose script names, verb prefixes, directory layout, or avoid builtin collisions | [references/naming.md](references/naming.md) |
 
-## Shell Target
+## Shell Target & Strict Mode
 
-Target `/bin/bash` 3.2 explicitly. Verified on macOS 27 Golden Gate (Darwin 27,
-checked 2026-07): stock `/bin/bash` is `3.2.57`, userland still BSD (UNIX 03) —
-the premise holds on the current release. Note the macOS shell landscape:
+macOS ships Bash 3.2.57 at `/bin/bash` (GPLv2 freeze). Do not confuse targets:
+- `/bin/bash` (Bash 3.2.x): Skill target. Supports `[[ ... ]]`, indexed arrays, `local`, and process substitution `<(...)`.
+- `/bin/sh` (POSIX): Does **not** support `[[`, arrays, or `local`.
+- `/bin/zsh` (macOS login shell): 1-based array indexing, different glob rules.
 
-- `/bin/bash` — Bash 3.2.x (frozen since GPLv3). Skill target. See
-  [Supported on Bash 3.2](#supported-on-bash-32) for the explicit allow-list
-  of features that DO work here.
-- `/bin/sh` — separate binary; runs in POSIX mode. Does **not** honor `[[`,
-  `((`, arrays, or `local`. If your shebang is `#!/bin/sh`, none of the
-  bashisms in this skill apply.
-- `/bin/zsh` — default *user* login shell since Catalina (2019). Scripts with
-  `#!/bin/bash` still run under bash, not zsh. zsh has different array indexing
-  (1-based), different glob behavior, and no `set -o pipefail` by default.
-
-Shebang + version guard:
+Header template for all `.sh` scripts:
 
 ```bash
 #!/bin/bash
 set -euo pipefail
 
 if [[ -z "${BASH_VERSINFO:-}" ]] || [[ "${BASH_VERSINFO[0]}" -lt 3 ]]; then
-  echo "ERROR: Requires bash (macOS ships bash 3.2)" >&2
+  echo "ERROR: Requires bash 3.2+" >&2
   exit 2
 fi
 ```
 
-## Forbidden Features (Bash 4+ only)
-
-Bash 4+ features that don't exist on macOS's `/bin/bash`:
-
-- `declare -A` (associative arrays)
-- `mapfile` / `readarray`
-- `${var,,}` / `${var^^}` case conversion
-- `shopt -s globstar` (`**`)
-- `coproc`, `wait -n`, `local -n`
-
-See [references/forbidden-features.md](references/forbidden-features.md) for
-the full matrix with workarounds for each.
-
-## Supported on Bash 3.2
-
-These DO work — no need to drop to POSIX `sh`:
-
-- `[[ ... ]]`, `(( ... ))`, indexed arrays (`${arr[@]}`, `${#arr[@]}`)
-- `local` in functions; `printf -v` assignment
-- Process substitution `<(...)` / `>(...)`, herestrings `<<<`, `read -a`
-- `=~` regex (POSIX ERE; captures in `BASH_REMATCH`; engine differs BSD vs GNU)
-- `set -o pipefail`, `trap ... ERR` (with `set -E` for in-function propagation)
-- ANSI-C quoting `$'...'`
-
-Drop to `/bin/sh` only when the shebang demands it.
-
 ## BSD vs GNU Userland
 
-macOS uses BSD tools, not GNU. Common incompatibilities:
+macOS provides BSD userland utilities, not GNU coreutils:
 
-| GNU Flag | BSD Equivalent | Notes |
-|----------|----------------|-------|
+| GNU Tool / Flag | BSD Equivalent | Notes |
+|---|---|---|
 | `sed -r` | `sed -E` | Extended regex |
-| `sed -i` | `sed -i ''` | **In-place differs.** BSD `sed` requires a backup suffix arg (use `''` for none). GNU `sed` uses `-i` or `-i''` (no space). |
-| `grep -P` | `grep -E` | No PCRE; use extended regex |
-| `date -d` | `date -j -f` | Date parsing differs completely |
-| `readlink -f` | See below | Ships and works on macOS 13+ (confirmed macOS 27, 2026-07); `/bin/realpath` also ships now. Use `realpath_portable()` only for pre-Ventura or to avoid a subprocess |
-| `xargs -r` | Largely unneeded | BSD `xargs` already skips empty stdin; `-r` is accepted on modern macOS (tested 13+) but mostly cosmetic. For unknown versions, guard the pipeline: `[[ -n "$(cmd)" ]] && cmd \| xargs ...` |
-| `stat -c` | `stat -f` | Different format syntax |
+| `sed -i` | Atomic temp file + `mv` | BSD `sed -i ''` requires empty backup arg; GNU `sed -i` takes no backup arg. Prefer temp file + `mv`. |
+| `grep -P` | `grep -E` | BSD `grep` lacks PCRE; use POSIX ERE |
+| `date -d '7 days ago'` | `date -v-7d` | Date math differs; use epoch math or `-v` branching |
+| `stat -c %s` | `stat -f %z` | File size: GNU uses `-c %s`, BSD uses `-f %z` |
+| `base64 -w 0` | `base64 \| tr -d '\n'` | BSD `base64` wraps at 76 columns by default |
+| `head -n -1` | `sed '$d'` | Negative line count fails on BSD (`illegal line count`) |
+| `find . -name ...` | `find . -name ...` | BSD `find` strictly requires paths before flags |
+| `readlink -f` | `/bin/realpath` or helper | Ships on macOS 13+; use `realpath_portable()` for older OS |
+| `xargs -r` | Omit `-r` | BSD `xargs` skips empty input by default |
 
-### Avoid `sed -i` for portability
+### Portable `sed` In-Place Editing
 
-Prefer writing to a temp file and moving it into place (works on BSD and GNU `sed`):
+Avoid `sed -i` divergences by writing to a temporary file and moving into place:
 
 ```bash
 sed -E 's/pattern/replacement/g' "$file" > "$TMP_DIR/out" && mv "$TMP_DIR/out" "$file"
 ```
 
-### Portable date arithmetic
-
-BSD `date` has no `-d`. Use `-v±Nu` (BSD) or branch:
+### Portable Date Arithmetic
 
 ```bash
-seven_days_ago=$(date -v-7d +%s)              # BSD / macOS
-seven_days_ago=$(date -d '7 days ago' +%s)    # GNU / Linux — NOT macOS
-
-# Portable both ways:
 if date -v-7d +%s >/dev/null 2>&1; then
-  seven_days_ago=$(date -v-7d +%s)
+  seven_days_ago=$(date -v-7d +%s)            # macOS / BSD
 else
-  seven_days_ago=$(date -d '7 days ago' +%s)
+  seven_days_ago=$(date -d '7 days ago' +%s)  # Linux / GNU
 fi
 ```
 
-### Portable realpath
-
-macOS 13+ ships a working `/bin/realpath` and `readlink -f` (confirmed on macOS
-27, 2026-07), so on a current Mac either binary resolves paths directly. The
-pure-bash helper below is the zero-dependency fallback — reach for it only when
-targeting pre-Ventura macOS or avoiding a subprocess. It needs no external
-interpreter (relevant because macOS no longer ships a working `python3` at
-`/usr/bin/python3` — it's a CLT stub that prompts to install Xcode CLT). Resolves
-to an absolute path; does not follow symlinks beyond the final component —
-sufficient for most script-local path resolution:
+### Zero-Dependency Realpath
 
 ```bash
 realpath_portable() {
@@ -161,217 +91,110 @@ realpath_portable() {
 }
 ```
 
-### Command existence check
+## Essential Script Patterns
+
+### Array Mechanics (Bash 3.2)
+
+Indexed arrays are fully supported; associative arrays (`declare -A`) are **not**.
 
 ```bash
-have() { command -v "$1" >/dev/null 2>&1; }
+# Declaration and append
+arr=()
+arr+=("item 1" "item 2")
 
-if have jq; then
-  # use jq
-else
-  # fallback
-fi
+# Expansion under strict mode (set -u)
+# Outer ${arr[@]+...} is intentionally unquoted to avoid emitting an empty string on unset arrays
+for item in ${arr[@]+"${arr[@]}"}; do
+  printf 'Item: %s\n' "$item"
+done
+
+# Associative array replacement: use case statement lookup
+get_mime_type() {
+  case "$1" in
+    html|htm) echo "text/html" ;;
+    json)     echo "application/json" ;;
+    *)        echo "application/octet-stream" ;;
+  esac
+}
 ```
 
-## Required Patterns
+### Local Variable Assignment Split
 
-### Error handling
+`local` returns 0, masking failures in command substitutions under `set -e`:
 
 ```bash
-die() { echo "ERROR: $*" >&2; exit 1; }
+# WRONG: failure in failing_cmd is swallowed
+local result="$(failing_cmd)"
+
+# CORRECT: separate declaration from assignment
+local result
+result="$(failing_cmd)"
 ```
 
-**`set -E` for ERR trap in functions.** Bash 3.2's `ERR` trap does not
-propagate into shell functions, subshells, or command substitutions by default.
-If you want a `trap '...' ERR` handler to fire from inside functions, set
-`-E` (alias `set -o errtrace`):
+Apply the same separation to `declare`, `export`, and `readonly`.
+
+### Intentional Non-Zero Commands & Traps
+
+1. **Scanners and Grep under `set -e`**:
+   `grep` returning 1 (no match) is normal control flow, not an error:
+   ```bash
+   hits=$(grep -nE "$pattern" "$file" || true)
+   [[ -n "$hits" ]] || return 0
+   ```
+2. **Subshell Trap Propagation**:
+   Bash 3.2 does not inherit `ERR` traps into functions by default. Add `-E`:
+   ```bash
+   set -Eeuo pipefail
+   trap 'echo "FAILED at line $LINENO" >&2' ERR
+   ```
+3. **SIGPIPE with `pipefail`**:
+   `cmd | head -n1` fails under `pipefail` with exit 141. Drain stdout:
+   ```bash
+   producer | { head -n1; cat >/dev/null; }
+   ```
+
+### Safe Temp Directory & Cleanup
 
 ```bash
-set -Eeuo pipefail
-trap 'echo "FAILED at line $LINENO" >&2' ERR
-```
-
-Without `-E`, the trap silently never fires from helper functions and you lose
-the failure signal.
-
-### `local` + command substitution
-
-`local` returns 0, hiding the inner command's exit status from `set -e`:
-
-```bash
-# WRONG - failing_cmd's failure swallowed by local's exit 0
-local x="$(failing_cmd)"
-
-# CORRECT - separate declaration from assignment
-local x
-x="$(failing_cmd)"
-```
-
-Same trap with `declare`, `readonly`, `export`.
-
-### When NOT to use `set -e`
-
-`-e` aborts on **any** command that exits non-zero — including commands that do
-so by design: `grep` with no match, `diff`/`cmp` finding differences, a bare
-`[ ... ]` used as data. Scripts whose control flow *reads* these exit codes
-(scanners, audits, linters) break under a blanket `-e` — the no-match case is
-usually the healthy one, yet `-e` treats it as fatal.
-
-```bash
-# WRONG under set -e — aborts when grep finds nothing (the common, healthy case)
-hits=$(grep -nE "$pat" "$f")
-[ -n "$hits" ] || continue          # never reached; script already exited
-
-# CORRECT A — guard each intentional-nonzero command, then test the result
-hits=$(grep -nE "$pat" "$f" || true)
-[ -n "$hits" ] || continue
-
-# CORRECT B — omit -e; keep set -uo pipefail; branch explicitly
-set -uo pipefail                    # header note: grep no-match is expected
-if hits=$(grep -nE "$pat" "$f"); then handle "$hits"; fi
-```
-
-Either is correct. What's wrong is adding `-e` without auditing every command
-that may legitimately exit non-zero. When you choose B, say so in the header
-(`# set -u only: grep no-match is expected`) so the next reader doesn't "fix" it
-back to `-e` and silently break the scanner. See
-[references/output-modes.md](references/output-modes.md) for the `|| true` guard
-applied inside a logging gate.
-
-### `pipefail` + SIGPIPE
-
-Under `set -o pipefail`, `producer | head -n1` exits non-zero: `head` closes
-the pipe and `producer` dies of `SIGPIPE` (exit 141).
-
-```bash
-producer | head -n1                                # fires under set -eo pipefail
-
-# Mitigation A (preferred) — drain so producer finishes naturally:
-producer | { head -n1; cat >/dev/null; }
-
-# Mitigation B — swallow producer's exit; also hides real failures, not
-# just SIGPIPE:
-{ producer || true; } | head -n1
-```
-
-`awk 'NR==1 {print; exit}'` is **not** a fix — `exit` closes the pipe the
-same way `head` does.
-
-### Argument validation
-
-Fail fast on missing required input. Use `${VAR:-}` form under `set -u` —
-bare `$VAR` triggers "unbound variable" before the test runs:
-
-```bash
-[[ -z "${PROJECT_ROOT:-}" ]] && die "PROJECT_ROOT env var required"
-[[ $# -lt 1 ]] && { usage; die "missing <target> argument"; }
-[[ -f "$1" ]] || die "not a file: $1"
-```
-
-### Dry-run pattern
-
-Gate destructive operations behind a single `run_cmd` helper driven by
-`DRY_RUN="${DRY_RUN:-0}"` — easier to audit than scattering `if [[ $DRY_RUN ]]`
-everywhere. See [references/template.md](references/template.md) for the
-helper.
-
-### Color output helpers
-
-Use `printf '%b\n'` for ANSI-colored status output, not `echo -e` (`echo -e`
-is not POSIX and `/bin/sh` on macOS prints `-e` literally):
-
-```bash
-GREEN='\033[0;32m'; YELLOW='\033[0;33m'; RED='\033[0;31m'; NC='\033[0m'
-info() { printf '%b\n' "${GREEN}✓${NC} $1"; }
-warn() { printf '%b\n' "${YELLOW}⚠${NC} $1"; }
-fail() { printf '%b\n' "${RED}✗${NC} $1"; }
-```
-
-### Safe temp directory
-
-```bash
-TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/project.XXXXXX")"
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/$(basename "$0" .sh).XXXXXX")"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT INT TERM
 ```
 
-### Quoting rules
+### Dry-Run Wrapper & Quoting
 
-- **Always** quote variables: `"$var"`, `"${arr[@]}"`
-- **Never** parse `ls` output
-- Use `printf '%s\n'` instead of `echo -e`
-
-## Verification Checklist
-
-Before marking a script complete:
-
-- [ ] `#!/bin/bash` + `set -euo pipefail` — or a documented `set -uo pipefail`
-  for scanner/audit scripts that branch on non-zero exits (see [When NOT to use
-  `set -e`](#when-not-to-use-set--e)); add `-E` if using `trap ERR`
-- [ ] No Bash 4+ features ([forbidden-features.md](references/forbidden-features.md))
-- [ ] `sed -E` not `sed -r`; `grep -E` not `grep -P`
-- [ ] BSD `date` uses `-v` or `-j -f`, not `-d`
-- [ ] All variables quoted; never parses `ls`
-- [ ] `bash -n script.sh` + `shellcheck -s bash script.sh` pass
-- [ ] Runs on macOS: `/bin/bash script.sh --help`
-- [ ] Name is snake_case verb-first (see naming examples below)
-- [ ] Destructive ops gated behind `DRY_RUN` or confirmation
-- [ ] Verbose subprocess output uses 3-mode compact/verbose/raw pattern
-
-## Token-Efficient Output
-
-Scripts producing verbose subprocess output (builds, linters, tests, coverage)
-must offer three modes: `compact` (default; one-line-per-stage + top 10 lines
-on failure), `--verbose` (top 50 lines), `--raw` (passthrough teed to
-`${ROOT_DIR}/.artifacts/<tool>/latest.log`).
-
-See [references/output-modes.md](references/output-modes.md) for `capture_run`,
-`show_failure_detail`, per-stage functions, and mode dispatch.
-
-## Common Gotcha: Arrays in Conditionals
-
-On Bash 3.2 with `set -u`, an array that was never declared triggers
-"unbound variable" when expanded — even inside the `${#...}` length
-operator. The `:-` default does **not** apply inside `${#...}`; the
-unbound check fires first.
+Gate state-changing operations through a centralized `run_cmd` function:
 
 ```bash
-# WRONG - ${#name:-default} does not work; the :- never applies inside ${#...}
-if [[ ${#arr[@]:-0} -gt 0 ]]; then ...   # still errors if arr never declared
+DRY_RUN="${DRY_RUN:-0}"
+run_cmd() {
+  if [[ "$DRY_RUN" == "1" ]]; then
+    printf 'DRY-RUN: %s\n' "$*"
+  else
+    "$@"
+  fi
+}
 
-# CORRECT - declare the array empty before use
-arr=()
-if [[ ${#arr[@]} -gt 0 ]]; then ...
-
-# CORRECT - guard the expansion when the array may be unset
-for x in ${arr[@]+"${arr[@]}"}; do ...
+# Quoting rules:
+# - Double-quote all variable expansions: "$var", "${arr[@]}"
+# - Use printf '%b\n' for ANSI colors, not unportable echo -e
 ```
-
-**Note on the `${arr[@]+"${arr[@]}"}` idiom:** the outer `${arr[@]+...}`
-is deliberately left unquoted — the one documented exception to the
-"always quote variables" rule above. Quoting the whole expression
-(`"${arr[@]+\"${arr[@]}\"}"`) would expand to a single empty string when
-the array is unset, defeating the guard. The **inner** `"${arr[@]}"`
-stays quoted to preserve element boundaries.
 
 ## Script Naming Conventions
 
-Use **lowercase snake_case**, **verb-first**, max 4 words. Never collide with
-shell builtins (`test`, `exec`, `time`, `kill`, `wait`).
+Use **lowercase snake_case**, **verb-first**, maximum 4 words (`run_tests.sh`, `validate_config.py`, `build_image.sh`). Never name scripts after shell builtins (`test`, `exec`, `time`, `kill`, `wait`).
 
-See these naming examples (read for the convention, not commands to execute):
+See [references/naming.md](references/naming.md) for verb tables, prefixes, and extension rules.
 
-```
-run_tests.sh
-validate_config.py
-build_image.sh
-sync_logs.sh
-```
+## Token-Efficient Output
 
-Never `SyncLogs.sh` (PascalCase) or `sync-logs.sh` (kebab-case).
+Scripts running multi-stage tasks (linters, builds, tests) must provide 3 output modes: `compact` (default), `--verbose`, and `--raw`. See [references/output-modes.md](references/output-modes.md) for `capture_run` and stage dispatch patterns.
 
-Extensions: include `.sh`/`.py` for project-local scripts; omit for
-PATH-installed tools; none for git hooks (Git convention: `pre-commit`).
+## Verification Checklist
 
-See [references/naming.md](references/naming.md) for the full verb table,
-prefix vs subdirectory guidance, and naming checklist.
+Before completing any shell script:
+
+1. **Syntax Parse**: `bash -n <script.sh>` passes without errors.
+2. **Static Analysis**: `shellcheck -s bash <script.sh>` passes.
+3. **Portability Scan**: `python3 scripts/validate_portability.py <script.sh>` detects zero Bash 4+ or BSD/GNU violations.
+4. **macOS Execution**: `/bin/bash <script.sh> --help` and `--dry-run` run successfully.

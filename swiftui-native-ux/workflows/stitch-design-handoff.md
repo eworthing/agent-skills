@@ -6,6 +6,8 @@ Use this workflow when handing a SwiftUI screen brief off to Google Stitch (or a
 
 Use Google Stitch for visual ideation only. Do not use Stitch as the source of truth for SwiftUI architecture, navigation, state, persistence, accessibility correctness, or implementation structure.
 
+Stitch docs and MCP/tool documentation are authoritative for Stitch capabilities only — what the tool can fetch, which prompts it accepts, how to call its MCP. They are never authoritative for native app behavior; Apple HIG and SwiftUI platform rules outrank them on any visual or navigation decision. React/Tailwind Stitch prompt examples are workflow hints, not Apple-native design guidance — translate away the web framing before applying.
+
 ## Non-Negotiable Rules
 
 These are the 10 rules the rest of this workflow enforces. They are echoed in `references/stitch-output-review.md` as automatic rejection conditions.
@@ -40,19 +42,9 @@ Rule 1 is the critical rule. Rules 4–6 are house-rule sharpenings of HIG. See 
 
 ## Step 1: Define Native Structure First
 
-Before prompting Stitch, decide the native structure:
+Before prompting Stitch, decide the native structure using `references/navigation-patterns.md` (container decision tree).
 
-- Use `TabView` for flat peer sections.
-- Use `NavigationStack` for linear drill-down.
-- Use `NavigationSplitView` for iPad collection/detail.
-- Use `List` or `Form` for scannable content, settings, and grouped controls.
-- Use `sheet` for bounded modal tasks.
-- Use `inspector` for secondary editing on iPad/macOS-style layouts.
-- Use toolbars for primary navigation actions.
-- Use confirmation dialogs for destructive choices.
-- Use native search placement where appropriate.
-
-Do not ask Stitch to invent the structure from scratch. See `references/navigation-patterns.md` for the container decision table.
+Do not ask Stitch to invent the structure from scratch.
 
 ## Step 2: Keep Prompts Short and Plain
 
@@ -122,25 +114,7 @@ The review rubric in `references/stitch-output-review.md` works against any of t
 
 ## Step 5: Review Before Implementation
 
-Review Stitch output using `references/stitch-output-review.md`.
-
-Fast-fail if the design contains:
-
-- Material Floating Action Button
-- hamburger menu on iPhone
-- custom tab bar
-- custom navigation bar
-- dashboard grid as primary iPhone structure
-- hero CTA inside app workflow
-- glass content cards
-- glass-on-glass
-- decorative gradient blob background
-- tiny gray essential text
-- hover-only affordances
-- iPad that is just stretched iPhone
-- right-rail chatbot on iPhone
-
-The full machine-readable rejection table lives in `data/stitch-negative-constraints.csv`.
+Review Stitch output using `references/stitch-output-review.md`. Fast-fail on any hard-reject pattern in the inventory at `references/anti-web-smells.md`.
 
 ## Step 6: Revise in Focused Loops
 
@@ -212,12 +186,6 @@ When completing a Stitch workflow, return:
 6. SwiftUI-native translation plan.
 7. DESIGN.md / DESIGN-swiftui.md changes.
 8. Implementation guidance.
-
-## Critical Rule
-
-Never translate Stitch HTML/CSS structure directly into SwiftUI view hierarchy.
-
-Use Stitch output as visual evidence only. The SwiftUI agent owns containers, navigation, state, accessibility, and platform correctness.
 
 ## Failure Conditions
 

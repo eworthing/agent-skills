@@ -44,6 +44,76 @@ re-measure trigger (b)); `check_g28` split into `scripts/_artifact_snapshots.py`
 (`_artifact_history.py` 799→650, G19 left at its selftest-pinned line); token ceilings bumped
 proactive-margin (loop_apple 86,200 / loop_generic 82,100 / skill_md 12,200).
 
+## Run kit — 2026-08-21 (pre-run instrumentation, all off-loop-path)
+
+The owner directed building the instrumented-run kit ("do these", 2026-08-21). Shipped under
+`analysis/contest-refactor/run-kit/` — nothing touches the loop path, so the tranche being
+measured is unchanged:
+
+| Tool | Purpose | Validated against |
+|---|---|---|
+| `posthoc_gate_sweep.py` | phase-to-gate matrix from artifact history (subprocesses the shipped validator) | full BenchHype history (May→Aug, 4 runs) |
+| `coverage_citations.py` | item-24 decision data: real citation coverage vs inventory | same corpus |
+| `cost_accounting.py` | opencode sqlite (db-backed ≥1.18) cost/resident accounting, read-only | the Aug-19 run's 6 sessions |
+| `observe-tools.ts` | observe-only opencode plugin (`tool.execute.before/after` → JSONL); never blocks | scratch opencode session, PASS |
+| `PREDECLARATION.md` | D4 predeclaration: M1–M8 measurement definitions + launch checklist | — |
+
+Banked findings from validating the kit (reports committed under `run-kit/reports/`):
+
+- **run_id lifecycle violation in the Aug-19 run (new)**: `run_id` minted per loop
+  (`loop-2-302837137`, loop 1 null) — wrong format, wrong lifecycle — the direct cause of the
+  `transition-check-blind` lines. Predeclared as M2, a PASS/FAIL probe the next run answers for
+  free.
+- **G17 historical datapoints (Swift, adjudication pending)**: 3 applicable loop-events, all
+  violations (no citation), 0 restraint, 1 expected-blind (v2-era `changed_paths` absent). The
+  ≥2-languages promotion bar cannot close on the next run (Swift again).
+- **Item-24 justification data**: coverage is heavily uneven — 302/1313 files ever cited across
+  all runs; `BenchHypeKit` 24%, `compliance/` and `tools/` 0%.
+- **Cost baseline (M6)**: Aug-19 run = $9.30, 500 assistant messages, 92.6M resident tokens
+  (parent + 2 loop executors + 2 challengers, `opencode-go/minimax-m3`).
+- **Item-14 uncertain cell resolved by observation**: opencode `tool.execute.after` metadata is
+  `{output, exit, truncated}` — a raw exit code IS present. Both `.opencode/plugin/` and
+  `plugins/` load (install in exactly one).
+- **Phase-to-gate matrix (Tier-3 input)**: 30+ artifact states validated under the current gate
+  set; top strict rules G5x91, G46x45, G19x34, G18x26; 42 `transition-violation` diagnostics.
+  Strict failures on pre-epoch artifacts are epoch observations, not violations.
+
+The queued wrapper-adoption keyed probe's production datapoint is now predeclared as M3
+(observation only, n=1, no adoption-rate claim).
+
+## run_id discipline + G17 adjudication packet — 2026-08-21
+
+Owner-approved plan (peer review explicitly skipped by owner choice; design verified by an
+exploration pass + an independent plan-agent breakage pass). Landed `0667642`:
+
+- **Mint-rule prose lift (M2 root cause)**: SKILL.md sub-step 3's `run-<UTC date>-<uuid4 hex>`
+  minting rule was scoped to the wrapped-run conditional — unpinned repos had NO minting
+  instruction, so loops improvised at terminal. Now unconditional; the wrapper references the
+  top-level run_id. output-format-json.md field spec + example aligned.
+- **G48 (run_id format + cross-loop stability) — shipped REPORT-ONLY, a deviation from the
+  approved plan recorded honestly**: the plan predicted the BenchHype terminal artifact would
+  classify LEGACY ("no retroactive invalidation"); verification falsified that — the Aug-19 run
+  already emitted `skill_rev` (`4fe8cdf`), so a CURRENT-epoch Issue retroactively fails its
+  committed HALT_SUCCESS artifact (exactly the item-30 class). The binary LEGACY/CURRENT
+  boundary is too coarse for a requirement this new. Promotion bar written in
+  `_artifact_run_identity.py`: (a) a post-G48 epoch boundary (e.g. third `EPOCHS` entry via a
+  skill-repo ancestor check on skill_rev), AND (b) M2 observed PASS on ≥1 instrumented run,
+  zero false diagnostics. Diagnostics (`[g48-run-id …]`) print for every epoch — the sweep and
+  M2 read those.
+- Sweep bonus finding: the Aug-19 run's loop-1 FINAL history entry carried `run-2026-08-20-001`
+  (not null as the mid-loop commit suggested) and the two loops ran under different skill revs
+  (`5936630` → `4fe8cdf`) — live mid-development dogfooding; both G48 sub-checks fire on it as
+  diagnostics.
+- Fixture hygiene: `halt-terminal-held` and `independence-missing` (both CURRENT-epoch) repaired
+  from the non-conformant `run-2026-06-21-001` to a conformant id; g48 flag/restraint pair added
+  (corpus 100 → 102); Step-3 section sha re-pinned; ceilings 87,800/83,700/12,500.
+- **G17 adjudication packet** (`analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md`):
+  4 datapoints with proposed dispositions — 2 TRUE violations (Aug-16 loop 12, Aug-19 loop 2),
+  1 expected-blind-loop-compliant (May-9, which actually cited a 4-entry coverage path), and
+  1 proposed **FALSE POSITIVE** (May-25 docs-only loop; keyword "consolidated" matched primer
+  prose). D2's disposition is load-bearing: adopting FP blocks promotion until a
+  code-file-in-changed_paths trigger refinement (costed in the packet, owner decision).
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
@@ -408,6 +478,8 @@ The ledger's merged findings are above; these four things were *live state* with
 
 Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Rows already shipped despite stale status columns: 1, 2, 4, 7, 9, 10, 17–22, 28, 31, 32. Still genuinely open:
 
+**Rows 23, 24, 25 and 27 moved 2026-08-21** to [`contest-refactor-detection-domains.md`](contest-refactor-detection-domains.md) — they are detection-reach items (what the loop looks for in the target codebase), and that document now owns them alongside the competitor domain sweep. Row numbers are preserved there for citation continuity.
+
 | Row | Item | State |
 |---|---|---|
 | 5 | arm_b 2×2 factorial ({weak, strong executor} × {backlog, self-contained}) | Experiment protocol first; the 1×1 arm_b was measured 2026-06-28 and rejected |
@@ -417,10 +489,6 @@ Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Ro
 | 13 | Cost-proportional stage skipping (`skip_when` by size) | Was gated on the runtime-cost audit, now consolidated below; the audit's measured cost model puts structural trims on a modestly-weighted axis, so weigh this against the behavioral levers first |
 | 14 | Host-attested execution-evidence ledger | **SHIPPED at Tier 1, 2026-08-21** — `attested_run.py` wrapper (true-child oracle, shlex-canonical command pin, per-stream digests, degrade-on-mid-run-edit) + `_wtree.py` source-scoped fingerprints + G47 linkage gate (opt-in via `loop_result.execution_evidence`, phase-aware freshness, fail-closed taxonomy) + canon `attestation-statuses` (`attested` withheld until a Tier-2 writer exists). Plan dual-peer-approved: codex gpt-5.6-sol xhigh (4 rounds) + claude (fresh seat after agy degraded), every load-bearing git-behavior claim verified in scratch repos before adoption. Tier-2 privilege separation stays open by design (design §5 rows 2/6) |
 | 15 | DAG-shaped grading | Conditional on node-pilot |
-| 23 | Detection-lens expansion (latent-premises, retry-safety, operational) | Decompose per lens |
-| 24 | Deterministic selection + coverage manifest + resumable scan | **Design done** (`ITEM24-…`), unbuilt |
-| 25 | Tool-grounded substrate + per-language rules | **Unblocked, design done** (`ITEM25-…`), unbuilt |
-| 27 | Per-finding disproof pipeline | Gated on the finding-assurance decision |
 
 ### Carried from the runtime-cost audit at its consolidation (2026-08-14 rev 3, retired 2026-08-20)
 

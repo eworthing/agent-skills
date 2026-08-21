@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Self-test for token-budget.py (R2-N1 from peer review).
 
-Asserts that --loaded-set matches the documented Reference Load Matrix in SKILL.md and
-the per-loop file set recorded in analysis/contest-refactor/TOKEN-USAGE-AUDIT.md, so a
-savings number is never trusted off a tool whose routing has silently drifted.
+Asserts that --loaded-set matches the documented Reference Load Matrix in SKILL.md, so a
+savings number is never trusted off a tool whose routing has silently drifted. SKILL.md's
+matrix is the only source the golden sets below are derived from; an earlier docstring also
+named analysis/contest-refactor/TOKEN-USAGE-AUDIT.md, which was retired in e6d549f and
+which this file never read.
 
 Run directly: `python3 scripts/_token_budget_selftest.py` (exit 0 = pass). Stdlib-only.
 """
@@ -58,7 +60,7 @@ GOLDEN_APPLE = {
         "output-format-markdown-archive.md",
         "validation.md",
         "implementation-reviewer.md",
-        "provider-adapters.md",
+        "provider-adapters-reviewer.md",
     ],
 }
 
@@ -91,7 +93,7 @@ AUDIT_PER_LOOP = {
     "output-format-markdown-archive.md",
     "validation.md",
     "implementation-reviewer.md",
-    "provider-adapters.md",
+    "provider-adapters-reviewer.md",
 }
 loop_union = set(tb.loaded_set("loop", lens="apple"))
 check(
@@ -221,15 +223,25 @@ _r = subprocess.run([sys.executable, _tb, "--check"], capture_output=True, text=
 check(_r.returncode == 0, f"--check must pass at the current ceilings; got {_r.returncode}")
 check("budget-guard: OK" in _r.stdout, f"--check should report OK; got: {_r.stdout[-200:]!r}")
 
-for label, ceiling_name in (("loop_generic", "loop_generic"), ("loop_apple", "loop_apple")):
+for label, ceiling_name, _lens in (
+    ("loop_generic", "loop_generic", "generic"),
+    ("loop_apple", "loop_apple", "apple"),
+):
     src = Path(_tb).read_text(encoding="utf-8")
-    measured = tb.CEILINGS[ceiling_name]
-    # Squeeze the ceiling to just inside the soft margin, leaving the value under it.
+    # Pin the probe ceiling to the CURRENT MEASURED value, never to the shipped
+    # ceiling. The earlier form was `shipped_ceiling - 400`, which only lands
+    # inside the soft margin while the measurement happens to sit near its
+    # ceiling. The candidate-A load-path split (DISPLACEMENT-2026-08-21.md) cut
+    # ~4.3k tok/loop, and under the old form this probe silently stopped
+    # exercising the soft margin at all -- a test that cannot fail.
     import re as _re
 
+    actual = sum(
+        count_fn(tb._resolve(f).read_text(encoding="utf-8")) for f in tb.loaded_set("loop", _lens)
+    )
     tight = _re.sub(
         rf'"{ceiling_name}": [\d_]+',
-        f'"{ceiling_name}": {measured - 400}',
+        f'"{ceiling_name}": {actual + 100}',
         src,
         count=1,
     )
