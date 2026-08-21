@@ -35,7 +35,7 @@ every reported claim was re-verified by the orchestrator before commit. Landed:
 | Ponytail 2 — history materialization | `4d4f6ae` | Done: 86/97 fixtures, −15,174 lines; 4 explicit-by-design |
 | Backlog 8 — strictness post-filter | — | **NO-GO recorded** (`bceff1b`): blocked on item 6 + owner axis decision |
 
-**Fleet complete.** Everything agent-executable from the work order is landed or dispositioned. Still open by design: the Tier-3 hook project (feasibility gate first), the run-gated tier (next instrumented production run), the G17 flip (run bar 0/5), the audit rev-3 re-review (a codex round, not an agent fix), D3 (next new gate), and the live-promotion halves of the enforcement flips (Tier-3). Behavioral sweep #5 (2026-08-20) closed the ownership and G29-emission keyed probes — both PASS; only the run-gated `--scope` probe remains (ledger section).
+**Fleet complete.** Everything agent-executable from the work order is landed or dispositioned. Still open by design: the Tier-3 hook project (feasibility gate **PASSED — GO** 2026-08-20; build awaits owner pricing), the run-gated tier (next instrumented production run), the G17 flip (run bar 0/5), the audit rev-3 re-review (a codex round, not an agent fix), D3 (next new gate), and the live-promotion halves of the enforcement flips (Tier-3). Behavioral sweep #5 (2026-08-20) closed the ownership and G29-emission keyed probes — both PASS; only the run-gated `--scope` probe remains (ledger section).
 
 Side effects recorded: `evals/reviewer_baseline.json` prompt pin re-pinned (seventh
 staleness-log entry — this edit widens the reviewer's input surface, the closest yet to
@@ -515,6 +515,17 @@ validator flip alone.
 | **D3** — gate-driver factoring | ~30k, deferred by design | Priced for when the next gate is written; doing it now designs against a guessed caller. |
 
 ### Tier 3 — the big build
+
+**Feasibility gate: PASSED (GO), 2026-08-20** — threat model fixed at **automatic invocation**
+(the measured failure is forgetting — 0/6 prose fire rate — and Item-14 verified tamper
+resistance is not buildable today on any harness); one qualifying interception point
+demonstrated on claude_code `PreToolUse` in an isolated scratch repo: automatic fire with zero
+model cooperation, drafted commit subject captured pre-commit (the G22 input), fail-closed
+block with the staged change intact, validator stderr round-tripped to the model. Both stated
+prerequisites have since shipped ([I1] `60e1294`, G29 enforcement `d46360b`). Full record:
+`analysis/contest-refactor/TIER3-FEASIBILITY-GATE-2026-08-20.md`. The build itself remains
+unstarted — the owner prices it; opencode (the production runner) is first among providers to
+demonstrate in the build phase.
 
 **Five-phase validator + host hook** (the loop-path P2's only untried remedy): **~250–400k for the
 validator side**, strictly after [I1], then **either** G29 enforcement **or** independently derived host-side
