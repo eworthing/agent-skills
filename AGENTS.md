@@ -14,6 +14,7 @@ This repo holds reusable skills for AI coding agents (Claude Code, Codex CLI, op
 
 ## Workflow
 
+- Git: work directly on `main` — do not create branches in this repo.
 - Skill descriptions: lead with capabilities, include "Use when…" trigger phrases (required by `scripts/eval-skill.py`).
 - Shell scripts: write portable Bash targeting macOS 3.2 + Linux 4+. Use POSIX `while read` instead of `mapfile`; use BSD-compatible `sed`/`date` flags. Consult `bash-macos/SKILL.md` when writing.
 - Edits validate with: `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py <skill-dir>`. Aim for 100% on automated checks + ≥ 90 on the manual rubric.
