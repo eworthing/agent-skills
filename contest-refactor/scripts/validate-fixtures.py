@@ -499,6 +499,14 @@ def _run_artifact_check(
                     "--json",
                     str(json_path),
                     "--quiet",
+                    # G47 determinism: point the attestation config at nonexistent temp
+                    # paths so fixture outcomes never read the developer's real
+                    # ~/.contest-refactor state. Repo-independent G47 fixtures terminate
+                    # on artifact-local checks before any environment access.
+                    "--attestation-ledger",
+                    str(json_path.parent / f"{json_path.stem}-g47-no-ledger.jsonl"),
+                    "--attestation-trust",
+                    str(json_path.parent / f"{json_path.stem}-g47-no-trust.json"),
                 ],
                 capture_output=True,
                 text=True,

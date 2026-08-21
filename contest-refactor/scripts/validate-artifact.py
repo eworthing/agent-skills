@@ -34,6 +34,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import _canon  # type: ignore[import-not-found]  # noqa: E402
+from _artifact_attestation import check_g47_execution_evidence  # noqa: E402
 from _artifact_core import (  # noqa: E402
     Issue,
     _load_json,
@@ -126,7 +127,12 @@ def _load_project_config(artifact_dir: Path) -> dict | None:
     return None
 
 
-def run_checks(artifact_dir: Path) -> list[Issue]:
+def run_checks(
+    artifact_dir: Path,
+    attestation_ledger: Path | None = None,
+    attestation_trust: Path | None = None,
+    attestation_phase: str = "post-hoc",
+) -> list[Issue]:
     issues: list[Issue] = []
     canon = _canon.load_canon(SKILL_ROOT)
     current_review_path = artifact_dir / "CURRENT_REVIEW.json"
@@ -165,6 +171,16 @@ def run_checks(artifact_dir: Path) -> list[Issue]:
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g45_exhaustion_record(current_review, canon))
     issues.extend(check_g46_general_remediation_fields(current_review, canon))
+    issues.extend(
+        check_g47_execution_evidence(
+            current_review,
+            canon,
+            artifact_dir,
+            ledger_path=attestation_ledger,
+            trust_path=attestation_trust,
+            phase=attestation_phase,
+        )
+    )
     issues.extend(check_g17_coverage_citation(current_review, canon))
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
@@ -200,13 +216,36 @@ def main(argv: Iterable[str] | None = None) -> int:
         action="store_true",
         help="suppress passing-rule output (only print failures)",
     )
+    parser.add_argument(
+        "--attestation-ledger",
+        type=Path,
+        default=None,
+        help="G47: execution-evidence ledger path (default: $CONTEST_REFACTOR_HOME or ~/.contest-refactor)",
+    )
+    parser.add_argument(
+        "--attestation-trust",
+        type=Path,
+        default=None,
+        help="G47: command trust-store path (default: alongside the ledger)",
+    )
+    parser.add_argument(
+        "--attestation-phase",
+        choices=("pre-commit", "post-hoc"),
+        default="post-hoc",
+        help="G47 freshness phase: pre-commit compares the working tree; post-hoc resolves the loop commit",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     artifact_dir: Path = args.artifact_dir
     if not artifact_dir.is_dir():
         sys.stderr.write(f"error: not a directory: {artifact_dir}\n")
         return 2
-    issues = run_checks(artifact_dir)
+    issues = run_checks(
+        artifact_dir,
+        attestation_ledger=args.attestation_ledger,
+        attestation_trust=args.attestation_trust,
+        attestation_phase=args.attestation_phase,
+    )
     label_prefix = "WARN" if args.mode == "advisory" else "FAIL"
     if issues:
         for issue in issues:

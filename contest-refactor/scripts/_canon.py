@@ -42,6 +42,7 @@ class Canon:
     effort_levels: tuple[str, ...]
     repair_revalidation_outcomes: tuple[str, ...]
     invalid_reasons: tuple[str, ...]
+    attestation_statuses: tuple[str, ...]
     validation_gates: Mapping[str, str]
     # Extended enums that are useful to validators but not common enough to
     # promote into first-class Canon fields live in .extra.
@@ -131,6 +132,7 @@ def load_canon(skill_root: Path | None = None) -> Canon:
             ("risk-evidence-verifications.toml", "risk_evidence_verifications"),
             ("match-kinds.toml", "match_kinds"),
             ("residual-blocker-kinds.toml", "residual_blocker_kinds"),
+            ("attestation-statuses.toml", "attestation_statuses"),
         )
     }
 

@@ -201,6 +201,10 @@ GOLDEN_CANON_JSON = """{
     "infra_timeout",
     "artifact_lost"
   ],
+  "attestation_statuses": [
+    "consistency_check",
+    "unavailable"
+  ],
   "validation_gates": {
     "G1": "Output structure",
     "G2": "JSON schema fidelity",
@@ -247,7 +251,8 @@ GOLDEN_CANON_JSON = """{
     "G43": "Convergence-pass coverage — a repeated clean must propose anew (loop >= 4, schema_version >= 4)",
     "G44": "Credential quarantine — persistence sinks scanned for hardcoded-secret shapes (plain + base64 + concat-split); fails closed, never reproduces the value",
     "G45": "Exhaustion halt record shape + detection↔kind honesty coupling (schema_version >= 4)",
-    "G46": "General remediation fields — finding_family/effort/repair_revalidation shape + drift_notes coupling (schema_version >= 4)"
+    "G46": "General remediation fields — finding_family/effort/repair_revalidation shape + drift_notes coupling (schema_version >= 4)",
+    "G47": "Execution-evidence linkage — ledger record resolves, command human-pinned, source fingerprint fresh per phase, exit 0, consistency_check on both sides (opt-in via loop_result.execution_evidence; item 14 Tier 1)"
   },
   "extra": {
     "fixture_rule_kinds": [
@@ -408,8 +413,8 @@ def check_golden(failures: list[str]) -> None:
     print("golden snapshot: loading real shipped canon...")
     canon = load_canon(SKILL_ROOT)
     field_names = {f.name for f in dataclasses.fields(canon)}
-    if len(field_names) != 21:
-        failures.append(f"golden: expected 21 Canon dataclass fields, found {len(field_names)}")
+    if len(field_names) != 22:
+        failures.append(f"golden: expected 22 Canon dataclass fields, found {len(field_names)}")
         return
     if len(canon.extra) != 12:
         failures.append(f"golden: expected 12 keys in Canon.extra, found {len(canon.extra)}")
@@ -422,7 +427,7 @@ def check_golden(failures: list[str]) -> None:
             "canon edit, regenerate GOLDEN_CANON_JSON per the comment above it."
         )
         return
-    print("  OK: live Canon matches golden exactly (21 fields, extra has 12 keys, order-sensitive)")
+    print("  OK: live Canon matches golden exactly (22 fields, extra has 12 keys, order-sensitive)")
 
 
 # ---------------------------------------------------------------------------
@@ -499,6 +504,10 @@ def _run_case(failures: list[str], tmp_parent: str, site: str, broken_filename, 
 
 def _mut_file_missing(canon_dir: Path) -> None:
     (canon_dir / "halt-subtypes.toml").unlink()
+
+
+def _mut_attestation_missing(canon_dir: Path) -> None:
+    (canon_dir / "attestation-statuses.toml").unlink()
 
 
 def _mut_malformed(canon_dir: Path) -> None:
@@ -643,6 +652,11 @@ CASES = [
         "16/16 load_canon: noise-floor missing scalar key (_canon.py ~L259)",
         "noise-floor.toml",
         _mut_noise_floor_missing_key,
+    ),
+    (
+        "17/17 _list_from: attestation-statuses.toml missing (item-14 wiring guard)",
+        "attestation-statuses.toml",
+        _mut_attestation_missing,
     ),
 ]
 

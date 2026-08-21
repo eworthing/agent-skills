@@ -1,0 +1,10 @@
+id = "g47-carried-forward-cited"
+purpose = "Negative fixture for G47 (item 14): targeted_finding_status 'carried_forward' with non-null execution_evidence -- a reverted loop has no surviving tested change to cite, so the citation is dishonest regardless of what the ledger says. Must FAIL on G47's artifact-local carried-forward coupling, before any environment access. Derived from pass fixture 'g46-remediation-drift-notes-honest' (already carried_forward) by adding a well-shaped consistency_check citation plus a non-null run_id (so only the coupling condition fires)."
+expected_result = "fail"
+pair_exception = "restraint twin would be carried_forward with execution_evidence null, which is behaviorally identical to the shared g47-null-evidence control (the gate never fires on a null field regardless of targeted_finding_status); a duplicate restraint tree adds nothing."
+aspirational = false
+notes = "The reviewer-rejected narrow-revert branch clears only loop_result.execution_evidence (SKILL.md Step 3 sub-step 6); this fixture is the mechanical backstop for a loop that reverts but forgets to clear."
+
+[[tested_rules]]
+kind = "gate"
+id = "G47"

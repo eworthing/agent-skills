@@ -1,0 +1,11 @@
+id = "g47-null-evidence"
+purpose = "Restraint control for G47 (item 14): loop_result.execution_evidence explicitly null means NO ledger claim is made -- the gate must stay completely silent and the artifact is governed by G4 alone, exactly as before the field existed. Derived from pass fixture 'g41-cap-loop-executed' by adding execution_evidence: null to loop_result."
+expected_result = "pass"
+pair_id = "g47-trigger"
+pair_role = "restraint"
+aspirational = false
+notes = "G47 is opt-in by design: a null/absent field is today's behavior and must never fire the gate (no retroactive class, item 30). The flag twin g47-shape-bad-status shares pair_id g47-trigger."
+
+[[tested_rules]]
+kind = "gate"
+id = "G47"

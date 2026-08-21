@@ -1,0 +1,11 @@
+id = "g47-shape-bad-status"
+purpose = "Negative fixture for G47 (item 14): a citation claiming attestation_status 'unavailable' -- a degraded record is uncitable, and an artifact citation may only ever claim 'consistency_check' (canon/attestation-statuses.toml). Must FAIL on G47's artifact-local shape check, BEFORE any ledger or git access (the normative check order), so this fixture is repo-independent and deterministic under validate-fixtures' nonexistent attestation paths. Derived from pass fixture 'g41-cap-loop-executed' by adding the bad citation plus a non-null top-level run_id (so only the status condition fires)."
+expected_result = "fail"
+pair_id = "g47-trigger"
+pair_role = "flag"
+aspirational = false
+notes = "Repo-dependent G47 RED cases (missing record, replayed wtree, mismatched exit, unpinned command, run-id mismatch, duplicate event) live in scripts/_g47_selftest.py with temp git repos and real wrapper-produced ledgers; fixtures carry only the artifact-local conditions."
+
+[[tested_rules]]
+kind = "gate"
+id = "G47"

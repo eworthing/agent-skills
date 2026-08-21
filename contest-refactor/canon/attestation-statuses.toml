@@ -1,0 +1,16 @@
+# Canonical attestation statuses for execution-evidence ledger records (item 14, Tier 1).
+# `consistency_check` = same-privilege wrapper record: real child exit code, source-tree
+#   fingerprint binding, human-pinned command — genuinely useful, honestly NOT immune to
+#   a deliberate same-privilege forger (design §5 rows 2/6).
+# `unavailable` = the record certifies nothing (e.g. the source tree changed mid-run).
+# An artifact citation (loop_result.execution_evidence.attestation_status) may only ever
+# be "consistency_check"; G47 enforces both sides — prose can never upgrade a record.
+# "attested" is deliberately WITHHELD until a Tier-2 privilege-separated writer exists:
+# shipping the vocabulary ahead of a producer is dead enum (the same rule under which
+# canon/exhaustion-kinds.toml withholds host_meter). Cross-references:
+# references/output-format-json.md (execution_evidence), references/validation.md (G47),
+# analysis/contest-refactor/ITEM14-HOST-ATTESTATION-DESIGN-2026-08-18.md § 4.
+attestation_statuses = [
+    "consistency_check",
+    "unavailable",
+]

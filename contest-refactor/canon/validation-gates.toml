@@ -185,3 +185,7 @@ title = "Exhaustion halt record shape + detection↔kind honesty coupling (schem
 [[validation_gates]]
 id = "G46"
 title = "General remediation fields — finding_family/effort/repair_revalidation shape + drift_notes coupling (schema_version >= 4)"
+
+[[validation_gates]]
+id = "G47"
+title = "Execution-evidence linkage — ledger record resolves, command human-pinned, source fingerprint fresh per phase, exit 0, consistency_check on both sides (opt-in via loop_result.execution_evidence; item 14 Tier 1)"

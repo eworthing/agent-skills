@@ -289,7 +289,15 @@ CEILINGS = {
     # the source_rev mid-loop-commit resolution (two definition sites) plus a new
     # findings_carried_from_prior_loops spec paragraph. Same proactive ~500-margin convention.
     # Measured at 86,131, margin 469.
-    "loop_apple": 86_600,  # per-loop fixed reload, apple lens (measured 86,131, margin 469)
+    # Bumped 86,600 -> 87,500 (2026-08-21) for item 14 (execution-evidence ledger, G47):
+    # SKILL.md sub-step 3 gained the wrapped-run instruction (pin detection, --run-id with
+    # the run_id minting rule), sub-step 6's rejected branch gained the execution_evidence
+    # clearing clause, sub-step 8's gate list gained G47; validation.md gained the G47
+    # checklist entry (incl. the pre-commit invocation window); output-format-json.md
+    # gained the loop_result.execution_evidence field spec with the non-claim wording.
+    # Dual-peer-approved plan (codex gpt-5.6-sol xhigh + claude, 4 rounds). Same proactive
+    # ~500-margin convention. Measured at 87,053, margin 447.
+    "loop_apple": 87_500,  # per-loop fixed reload, apple lens (measured 87,053, margin 447)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
@@ -307,13 +315,20 @@ CEILINGS = {
     # in output-format-json.md (omitting skill_rev silences every epoch-scoped requirement in
     # _ruleset_epoch.py's matrix). Same proactive ~500-margin convention. Measured at 82,103,
     # margin 497.
-    "loop_generic": 82_600,  # per-loop fixed reload, generic lens (measured 82,103, margin 497)
+    # Bumped 82,600 -> 83,400 (2026-08-21) for the same item-14 pass as loop_apple above
+    # (the G47/execution_evidence prose is lens-independent). Same proactive ~500-margin
+    # convention. Measured at 82,975, margin 425.
+    "loop_generic": 83_400,  # per-loop fixed reload, generic lens (measured 82,975, margin 425)
     # Bumped 11,000 -> 12,200 (2026-08-20) for the same loop-ownership P1 pair: the out-of-
     # plan gate, cleanup procedure, sub-step-0 cross-reference, Guardrails bullet, and
     # HALT_STAGNATION `user_decision` cross-reference all land in SKILL.md itself, which is
     # both the trigger read and the largest single contributor to loop_apple/loop_generic
     # above. Same proactive ~500-margin convention. Measured at 11,726, margin 474.
-    "skill_md": 12_200,  # SKILL.md trigger read (measured 11,726, margin 474)
+    # Bumped 12,200 -> 12,400 (2026-08-21) for item 14's sub-step-3 wrapped-run sentence
+    # (SKILL.md-resident prose; the sub-step-6/8 additions above also land here). Margin had
+    # fallen to 227 -- inside the soft band, one edit from a tripwire. Same proactive
+    # ~500-margin convention. Measured at 11,973, margin 427.
+    "skill_md": 12_400,  # SKILL.md trigger read (measured 11,973, margin 427)
 }
 
 # Soft margin, paired with the 2026-08-20 bump. A generous ceiling only works if the
