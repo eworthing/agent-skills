@@ -397,7 +397,39 @@ and proved there is no third instance.
 (the batch-8 G46 epoch gap, the batch-6 `render_report` residual rendering) stand unchanged, so the
 stale-bytecode defect corrupted exactly one reading — the G28 one that exposed it.
 
-**Covered so far — 56 of 72; 19 proven vacuous, 17 fixed, 3 recorded, 1 withdrawn:**
+**Batch 10 (contracts + gate preconditions) — 6 tested, 2 findings, both fixed.**
+
+- **`_handoff_shape_selftest.py`**: G35's `isinstance(match_paths, list)` check had no fixture at
+  all — every case routes through an `act()` helper that always passes a real list, so deleting the
+  check left the file green. A bare string is the realistic wrong value (hand-authored JSON writing
+  `"src/a.py"` for `["src/a.py"]`), and a string *is* iterable, so the downstream coupling checks
+  would have treated it as a sequence of characters. Closed with string and dict cases plus a
+  restraint case.
+- **`_g22_status_selftest.py`**: the v1 and v2 subject regexes carry **independent copies** of the
+  same status alternation, and only the v2 copy was ever tested against garbage. v1 is what
+  distinguishes *"legacy subject in a v2+ artifact"* from *"malformed"*, so a permissive v1 silently
+  reclassifies malformed subjects into the tolerant branch. Closed with a v1 garbage case and a
+  suffix-strictness case.
+
+`_artifact_review_contract_selftest.py` is called out as **the most symmetric file in the sweep** —
+every valid-value case has an adjacent invalid one, every CURRENT-epoch case a mirrored
+LEGACY-tolerance case.
+
+### A fourth dead mutation, and the reason it is the sweep's biggest integrity risk
+
+Mutating `_g42`'s schema floor by text substitution silently landed in **`_g39`'s** code instead:
+the two functions share byte-identical preamble text, so `.replace(old, new, 1)` hit the first match
+in the file rather than the intended one. Caught by invoking the checker directly and seeing an
+empty issue list where the docstring promised a hit.
+
+That is now four dead mutations across this sweep — two caught by the agent (`_g37`,
+`_ruleset_epoch`), two by me (`_public_names`, the 2-line clone fixture) — plus the stale-bytecode
+defect, which is a *separate* axis. **A dead mutation and a vacuous assertion are the same failure
+wearing different clothes**: an instrument that reports a result unrelated to the thing it names.
+The sweep's own tooling produced that failure five times while hunting it, which is the strongest
+argument in this document for why mutation testing has to verify its own mutations.
+
+**Covered so far — 62 of 72; 21 proven vacuous, 19 fixed, 3 recorded, 1 withdrawn:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |

@@ -50,6 +50,22 @@ def main() -> int:
     if va._G22_COMMIT_SUBJECT_RE.match(garbage):
         failures.append("garbage status accepted (alternation too permissive)")
 
+    # The v1 regex carries its OWN independent copy of the status alternation, and
+    # only the v2 copy was ever tested against garbage -- loosening v1's alternation
+    # passed. v1 is what classifies "legacy subject in a v2+ artifact" versus
+    # "malformed", so a permissive v1 silently reclassifies malformed subjects as
+    # merely legacy, which is the tolerant branch.
+    garbage_v1 = "loop 4: bogus; finding F4 (stable_id F-010) bananas"
+    if va._G22_COMMIT_SUBJECT_V1_RE.match(garbage_v1):
+        failures.append("garbage status accepted by the v1 regex (alternation too permissive)")
+
+    # v1 must also stay strict about the suffix it exists to distinguish.
+    v1_with_suffix = (
+        "loop 4: audit F-010; finding F4 (stable_id F-010) resolved [registry: +0 findings]"
+    )
+    if va._G22_COMMIT_SUBJECT_V1_RE.match(v1_with_suffix):
+        failures.append("v1 regex matched a subject carrying the registry suffix")
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

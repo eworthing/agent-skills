@@ -109,6 +109,24 @@ check(
     g35("HALT_LOOP_CAP", {"text": "t", "expected_actions": [act("all_of", [])]}) == 1,
     "all_of with empty match_paths must raise one G35 issue (coupling)",
 )
+# match_paths TYPE. Every case above routes through act(), which always passes a
+# real list, so the `isinstance(match_paths, list)` check had no fixture at all --
+# deleting it outright left this file green. A string is the realistic wrong
+# value: JSON authored by hand writes "src/a.py" where ["src/a.py"] was meant, and
+# a bare string is iterable, so the coupling checks downstream would silently
+# treat it as a sequence of characters rather than a path list.
+check(
+    g35("HALT_LOOP_CAP", {"text": "t", "expected_actions": [act("all_of", "src/a.py")]}) >= 1,
+    "match_paths as a bare string must raise a G35 issue (type)",
+)
+check(
+    g35("HALT_LOOP_CAP", {"text": "t", "expected_actions": [act("all_of", {"p": 1})]}) >= 1,
+    "match_paths as a dict must raise a G35 issue (type)",
+)
+check(
+    g35("HALT_LOOP_CAP", {"text": "t", "expected_actions": [act("all_of", ["p"])]}) == 0,
+    "all_of with a real non-empty list stays silent (restraint)",
+)
 check(
     g35("HALT_LOOP_CAP", {"text": "t", "expected_actions": [act("any_of", ["p"])]}) == 1,
     "any_of with non-empty match_paths must raise one G35 issue (coupling)",
