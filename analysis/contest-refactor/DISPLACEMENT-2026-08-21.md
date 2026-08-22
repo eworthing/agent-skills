@@ -208,7 +208,27 @@ still exit 0. It does announce the skip in its output (*"dogfood artifact absent
 skipped"*), which is the repo's own `absent != clean` discipline honoured — but a runner that reads
 only exit codes would see full coverage. Not a defect today; a thing to not be surprised by.
 
-**Covered so far — 14 of 72; 2 proven vacuous, both fixed:**
+**Batch 3 (HALT/terminal gates) — 6 tested, 0 findings.** `_g17`, `_halt_tail`, `_g37`, `_g41`,
+`_g45_exhaustion`, `_risk_evidence` all hold. Three results worth keeping:
+
+- **`_g17` is the best-engineered test in the repo on this axis** and took three mutations, all
+  killed hard. It asserts on *printed diagnostics* rather than the `REPORT_ONLY` return value
+  specifically to avoid a vacuous pass, and every malformed-citation fixture perturbs exactly one
+  field so a broken check cannot hide behind a neighbour — the anti-shadowing discipline, already
+  applied, before anyone went looking for it. This matters beyond the sweep: G17 is a **[P1]** item
+  with a live adjudication packet, and its guard being sound is a precondition for that packet
+  meaning anything.
+- **`_risk_evidence` (G33) verifiably closed the bug it was written for.** The historical
+  free-text token-match false-pass was reconstructed and dies on exactly the FAKE-evidence case
+  whose docstring names it. A guard written to close a vacuous check, confirmed to have done so.
+- **`_halt_tail`'s three per-field blocks do not shadow each other** — isolating the null-otherwise
+  half of rule #18 killed exactly one case and nothing else.
+
+**Bearing on the displacement analysis.** §5 refused to move this bundle off the unconditional load
+path partly because none of these gates has a script backstop. That argument assumed the gates were
+soundly tested; the assumption now has evidence behind it rather than being taken on trust.
+
+**Covered so far — 20 of 72; 2 proven vacuous, both fixed:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
