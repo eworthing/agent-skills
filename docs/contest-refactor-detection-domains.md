@@ -293,6 +293,17 @@ that has nothing to do with the domain in question. What did pay in this cycle w
 *except* the lens additions — two shipped detectors at zero loop-path cost, 4,251 tok/loop returned
 by a load-path split, and 22 vacuous assertions closed in the skill's own test suite.
 
+> **Root cause found after the measurement: this is copy drift, not a missing rule.**
+> `lens-generic.md:64` — the canonical text — reads *"compensating return **that the caller can act
+> on**"*. `lens-apple.md:107`, which **inlines** the five generic categories because the Apple load
+> set excludes `lens-generic.md`, dropped that qualifier and reads only *"compensating return"*. The
+> over-flag was measured on the Apple path, against the copy that lost the words. Same defect class
+> as the G14 dispatch-site finding: a canonical rule and its inlined copy drifting apart, with only
+> the copy tested. Whether restoring the qualifier alone (**5 tokens**) reproduces the measured 0/5
+> is **unmeasured** — the reps flagged for *missing log detail*, which the qualifier does not address
+> but the measured 38-token clause's second half does. The cheaper fix is not obviously the
+> sufficient one.
+>
 > **The register's own prediction held, and only here.** It said restraint is *"the one axis where
 > added prose has measurably paid"*, and after three recall candidates failed at 5/5, the restraint
 > candidate produced the programme's only positive signal. But it is far narrower than DD-13 was
