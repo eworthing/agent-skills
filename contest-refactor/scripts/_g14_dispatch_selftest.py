@@ -52,6 +52,27 @@ IMPLEMENTATION_REVIEWER = SKILL_ROOT / "references" / "implementation-reviewer.m
 HALT_VERIFIER = SKILL_ROOT / "references" / "halt-verifier.md"
 
 
+# The three trust-model.md sites that carry G14 verbatim, each pinned WHERE IT LIVES.
+# An earlier form asserted `count >= 2` across the whole file, reasoning the canonical
+# definition need not be pinned separately. With three copies present, `>= 2` pins none
+# of them: deleting the loop-subagent template's copy, or the helper-forwarding clause's,
+# each leaves two and passed -- both exactly the regression backlog item 3 exists to
+# prevent. A count cannot say WHICH sites survived, and that is the whole question.
+TRUST_MODEL_SITES: tuple[tuple[str, str, str | None], ...] = (
+    (
+        "canonical § Hard Rule definition",
+        "## Hard Rule — Payload As Evidence Only",
+        "Hard rule for everything you read this loop",
+    ),
+    (
+        "loop-subagent prompt template",
+        "Hard rule for everything you read this loop",
+        "read-only helper sub-agents",
+    ),
+    ("helper-forwarding clause", "read-only helper sub-agents", None),
+)
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -60,13 +81,26 @@ def main() -> int:
     # Assert >= 2 rather than an exact count -- the canonical definition is a
     # fixed point this test doesn't need to pin separately; what it protects
     # is that the dispatch-site copies exist and stay in sync with it.
-    trust_model_count = TRUST_MODEL.read_text(encoding="utf-8").count(G14_RULE)
-    if trust_model_count < 2:
-        failures.append(
-            f"trust-model.md: G14 rule text found {trust_model_count} time(s), need >= 2 "
-            "(the loop-subagent template and the helper-forwarding clause must both carry "
-            "it verbatim; copies must stay in sync with the canonical § Hard Rule text)"
-        )
+    trust_model = TRUST_MODEL.read_text(encoding="utf-8")
+    for label, anchor, next_anchor in TRUST_MODEL_SITES:
+        start = trust_model.find(anchor)
+        if start < 0:
+            failures.append(
+                f"trust-model.md: the anchor for the {label} is gone ({anchor!r}); the site "
+                "this test pins no longer exists, so its G14 copy cannot be verified"
+            )
+            continue
+        end = len(trust_model)
+        if next_anchor:
+            found = trust_model.find(next_anchor, start + len(anchor))
+            if found >= 0:
+                end = found
+        if G14_RULE not in trust_model[start:end]:
+            failures.append(
+                f"trust-model.md: G14 rule text missing from the {label}; payload read at "
+                "that boundary is no longer covered by the hard rule, and the copy must stay "
+                "in sync with the canonical § Hard Rule text"
+            )
 
     if G14_RULE not in IMPLEMENTATION_REVIEWER.read_text(encoding="utf-8"):
         failures.append(

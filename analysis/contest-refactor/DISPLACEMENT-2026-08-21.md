@@ -228,7 +228,29 @@ only exit codes would see full coverage. Not a defect today; a thing to not be s
 path partly because none of these gates has a script backstop. That argument assumed the gates were
 soundly tested; the assumption now has evidence behind it rather than being taken on trust.
 
-**Covered so far — 20 of 72; 2 proven vacuous, both fixed:**
+**Batch 4 (isolation guards + dispatch gates) — 6 tested, 1 proven vacuous.**
+`_g14_dispatch_selftest.py` verified G14's presence in `trust-model.md` with
+`count(G14_RULE) >= 2`. The file carries **three** copies — canonical § Hard Rule, loop-subagent
+template, helper-forwarding clause — so `>= 2` pinned **none** of them: deleting any single copy
+leaves two and passed. Its own comment argued for the threshold ("the canonical definition is a
+fixed point this test doesn't need to pin separately"), which is precisely the reasoning that made
+it vacuous. Both surviving deletions are the regression **backlog item 3 exists to prevent**, one
+level down: a dispatch boundary silently losing the payload-is-not-instruction rule. Replaced with
+per-site window checks anchored on the text introducing each copy; all three deletions now killed.
+
+**Same shape as batch 1, and that is now a pattern worth naming.** Both findings were an
+**aggregate standing in for per-item verification** — a `{1,2}` count of stable_ids, a `>= 2` count
+of rule copies. A count cannot say *which* items survived, and which survived is always the
+question. Any assertion of the form `count(X) >= N` over a set whose members are individually
+load-bearing should be read as suspect on sight.
+
+**The isolation guards are genuinely proven, not merely undisturbed.** `_metric_isolation` and
+`_strictness_isolation` were tested by *violating* the isolation — routing `loop_metrics` and
+`strictness` into `check_g21_scorecard` / `check_halt_success_gating` — and both caught it
+immediately, including a message-text-only leak in the strictness case. That matters: Meta-Rule 1
+("metrics support judgment; they never decide it") rests on the first of those.
+
+**Covered so far — 26 of 72; 3 proven vacuous, all fixed:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
