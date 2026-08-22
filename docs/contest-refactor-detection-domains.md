@@ -304,6 +304,19 @@ by a load-path split, and 22 vacuous assertions closed in the skill's own test s
 > but the measured 38-token clause's second half does. The cheaper fix is not obviously the
 > sufficient one.
 >
+> **The over-flag has two routes, and only the full clause closes both — measured.** Restoring the
+> canonical qualifier alone (**+6 tokens**) left near-miss A at **5/5, no improvement**. All five
+> reps conceded the rationale requirement was now satisfied and then pivoted to `lens-apple.md`'s
+> **own adjacent rule** — item 4, *"Observability at adapter boundaries … Missing telemetry on
+> user-visible paths is a `credibility` finding"* — to flag the same code through a different door.
+> They did not hand-wave; they named a real rule. So the clause's second sentence is **load-bearing**
+> precisely because it speaks to the telemetry complaint that rule 4 licenses. Recall safety held
+> 15/15 under both variants, so the qualifier's wording is sufficient for *that* half.
+>
+> This is the shadowing shape from the selftest sweep, inverted: there, neighbouring checks absorbed
+> fixtures aimed at a third rule; here, a neighbouring rule supplies a second route to the same
+> over-flag. Closing one door is not closing the finding.
+>
 > **The register's own prediction held, and only here.** It said restraint is *"the one axis where
 > added prose has measurably paid"*, and after three recall candidates failed at 5/5, the restraint
 > candidate produced the programme's only positive signal. But it is far narrower than DD-13 was
