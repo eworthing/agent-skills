@@ -95,6 +95,46 @@
         {"name": "produces_correct_output", "check": "Retrieves port 443 for https"},
         {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
       ]
+    },
+    {
+      "id": 7,
+      "name": "required-arg-guardrail",
+      "prompt": "This deploy script assumes `$API_TOKEN` and `curl` are always available but doesn't check, so it fails deep into execution with a confusing error when either is missing. Add a guardrail at the top that validates required env vars and required external programs before doing any work, with a friendly error message:\n\n```bash\n#!/bin/bash\nset -euo pipefail\n\ncurl -H \"Authorization: Bearer $API_TOKEN\" https://api.example.com/deploy\necho \"Deployed\"\n```",
+      "expected_output": "Adds validation near the top of the script — either the require_env/require_programs helper pattern or an equivalent — that checks API_TOKEN is set and curl is on PATH, printing a friendly error to stderr and exiting non-zero before the curl call runs, rather than letting the script fail deep into execution with a confusing error.",
+      "files": [],
+      "assertions": [
+        {"name": "checks_env_var_set", "check": "Validates API_TOKEN is set before the curl call (e.g. `[[ -n \"${API_TOKEN:-}\" ]]` or equivalent)"},
+        {"name": "checks_program_present", "check": "Validates curl is on PATH before use (e.g. `command -v curl`)"},
+        {"name": "fails_before_side_effect", "check": "Validation happens before the curl network call, not after"},
+        {"name": "friendly_error_to_stderr", "check": "Error message routed to stderr (`>&2`) with an actionable message, not a bare failure"},
+        {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
+      ]
+    },
+    {
+      "id": 8,
+      "name": "gnu-timeout-portability",
+      "prompt": "This script calls `timeout 30 some_long_command` to bound how long a step can run, but a teammate on macOS reports `timeout: command not found`. Make it portable across macOS (no `timeout` binary by default) and Linux (has `timeout`):\n\n```bash\n#!/bin/bash\nset -euo pipefail\n\ntimeout 30 some_long_command\necho \"done\"\n```",
+      "expected_output": "Refactored to not hard-depend on GNU timeout — either detects/prefers gtimeout when present via Homebrew coreutils, falls back to a portable background-pid + kill watchdog, or otherwise documents the divergence, so the script runs on stock macOS without requiring timeout to be installed.",
+      "files": [],
+      "assertions": [
+        {"name": "no_bare_timeout_dependency", "check": "Does not assume plain `timeout` exists without a fallback/guard"},
+        {"name": "has_portable_fallback", "check": "Implements or documents a watchdog (background pid + kill) or `command -v gtimeout` fallback"},
+        {"name": "preserves_bound_behavior", "check": "The 30-second bound on some_long_command is still enforced in the fixed version"},
+        {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
+      ]
+    },
+    {
+      "id": 9,
+      "name": "negative-array-index-refactor",
+      "prompt": "This script reads the last element of an array with `${arr[-1]}`, which works on the team's Linux CI but throws `bad array subscript` on a macOS laptop. Fix it to work on Bash 3.2:\n\n```bash\n#!/bin/bash\nset -euo pipefail\n\narr=(a b c)\nlast=\"${arr[-1]}\"\necho \"last: $last\"\n```",
+      "expected_output": "Replaces `${arr[-1]}` with a Bash-3.2-safe equivalent such as `${arr[$((${#arr[@]}-1))]}`, preserving output of `c`.",
+      "files": [],
+      "assertions": [
+        {"name": "no_negative_index", "check": "Does NOT contain `${arr[-1]}` or other negative array index syntax"},
+        {"name": "uses_length_based_index", "check": "Computes the last index via `${#arr[@]}` arithmetic"},
+        {"name": "produces_correct_output", "check": "Retrieves 'c' as the last element"},
+        {"name": "syntax_valid", "check": "`bash -n` parses successfully"}
+      ]
     }
   ]
 }

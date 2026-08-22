@@ -4,9 +4,9 @@ description: >-
   Keeps shell scripts portable across macOS (Bash 3.2, BSD userland) and Linux
   (Bash 4+, GNU coreutils). Use when writing or editing .sh files, debugging
   "command not found", "invalid option", "mapfile: command not found",
-  "declare: -A: invalid option", or "sed: illegal option -- r" errors,
-  fixing GNU-vs-BSD sed/grep/date/stat/readlink/base64 issues, or renaming shell scripts
-  (snake_case verb-first).
+  "declare: -A: invalid option", "sed: illegal option -- r", or
+  "bad array subscript" errors, fixing GNU-vs-BSD sed/grep/date/stat/readlink/base64
+  issues, or renaming shell scripts (snake_case verb-first).
 ---
 
 # Bash macOS Compatibility
@@ -18,7 +18,7 @@ Write shell scripts that execute reliably on stock macOS (`/bin/bash` 3.2.x, BSD
 | Open when you need to... | Read |
 |--------------------------|------|
 | replace Bash 4+ features (associative arrays, case conversion, globstar, `\|&`) with portable equivalents | [references/forbidden-features.md](references/forbidden-features.md) |
-| scaffold a new script with arg parsing, safe temp cleanup, and dry-run execution | [references/template.md](references/template.md) |
+| scaffold a new script with arg parsing, required-arg/env/program checks, safe temp cleanup, and dry-run execution | [references/template.md](references/template.md) |
 | implement 3-mode (`compact`, `--verbose`, `--raw`) output for multi-stage automation | [references/output-modes.md](references/output-modes.md) |
 | choose script names, verb prefixes, directory layout, or avoid builtin collisions | [references/naming.md](references/naming.md) |
 
@@ -57,6 +57,13 @@ macOS provides BSD userland utilities, not GNU coreutils:
 | `find . -name ...` | `find . -name ...` | BSD `find` strictly requires paths before flags |
 | `readlink -f` | `/bin/realpath` or helper | Ships on macOS 13+; use `realpath_portable()` for older OS |
 | `xargs -r` | Omit `-r` | BSD `xargs` skips empty input by default |
+| `sha256sum f` | `shasum -a 256 f` | Checksum: `shasum -a 256` ships on every macOS release and is the portable choice; don't rely on `sha256sum` existing (present on some very recent macOS builds, undocumented, absent on anything older) |
+| `nproc` | `sysctl -n hw.ncpu` | CPU count: `getconf _NPROCESSORS_ONLN` works on both |
+| `timeout 30 cmd` | not present by default | macOS ships no `timeout` at all; `brew install coreutils` for `gtimeout`, or a portable watchdog (`cmd & pid=$!; (sleep 30; kill "$pid") & wait "$pid"`) |
+| `tac file` | `tail -r file` | Reverse a file's lines |
+| `find . -printf '%p\n'` | not present | BSD `find` lacks `-printf`; use `-exec stat …` or plain `-print` |
+
+Homebrew's `coreutils` installs GNU tools prefixed with `g` (`gsed`, `gdate`, `gstat`, `gtimeout`, ...). A script that can require Homebrew may prefer them over branching: `SED=$(command -v gsed || command -v sed)`.
 
 ### Portable `sed` In-Place Editing
 
@@ -90,6 +97,10 @@ realpath_portable() {
   fi
 }
 ```
+
+## Filesystem Case Sensitivity
+
+macOS's default filesystem (APFS) is case-insensitive but case-preserving: `File.txt` and `file.txt` are the same file. Linux filesystems are case-sensitive: they're two different files. A script generating filenames from user data or dynamic content can't rely on case alone to disambiguate on macOS — normalize case before comparing/writing, or verify uniqueness case-insensitively.
 
 ## Essential Script Patterns
 
@@ -177,7 +188,8 @@ run_cmd() {
 
 # Quoting rules:
 # - Double-quote all variable expansions: "$var", "${arr[@]}"
-# - Use printf '%b\n' for ANSI colors, not unportable echo -e
+# - Use printf, not echo -e: echo -e isn't POSIX-guaranteed, and echo breaks
+#   on any string starting with -n/-e or containing backslashes — not just ANSI colors
 ```
 
 ## Script Naming Conventions

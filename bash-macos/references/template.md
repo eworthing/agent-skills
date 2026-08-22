@@ -53,8 +53,23 @@ case "${1:-}" in
   -h|--help) usage; exit 0 ;;
 esac
 
-# --- Required env / args ---
-# [[ -z "${PROJECT_ROOT:-}" ]] && die "PROJECT_ROOT required"
+# --- Required env / args / programs ---
+require_env() {
+  local var
+  for var in "$@"; do
+    [[ -n "${!var:-}" ]] || die "$var required (set it before rerunning)"
+  done
+}
+
+require_programs() {
+  local prog
+  for prog in "$@"; do
+    have "$prog" || die "$prog not found on PATH — install it first"
+  done
+}
+
+# require_env PROJECT_ROOT
+# require_programs curl jq
 
 # --- Temp dir + cleanup ---
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/$(basename "$0" .sh).XXXXXX")"
@@ -64,6 +79,16 @@ trap cleanup EXIT INT TERM
 # --- Script logic ---
 # Replace this with the actual work.
 ```
+
+### Why Manual Flag Parsing, Not `getopt`
+
+`getopts` (the bash builtin) only handles single-character short flags — it
+never supports long options on any platform, so that's not a portability gap
+by itself. The real divergence is in the external `getopt(1)` command: GNU
+`getopt` supports long options via `-l`, but BSD `getopt` — what macOS ships —
+does not. So `--dry-run`/`--verbose`-style flags can't portably lean on
+`getopt(1)` either. Manual `case`-based parsing (above) is the portable
+choice on both fronts.
 
 ## Quick Syntax Check
 

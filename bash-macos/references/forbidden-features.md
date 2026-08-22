@@ -16,6 +16,8 @@ Scripts that must run on stock macOS cannot rely on any of the following feature
 | `coproc` | 4.0+ | Use named pipes (`mkfifo`) or subshells |
 | `wait -n` | 4.3+ | Use `wait` without `-n` |
 | `local -n` (nameref) | 4.3+ | Pass array by name or design function boundaries cleanly |
+| `${arr[-1]}` (negative index) | 4.3+ | Use `${arr[$((${#arr[@]}-1))]}` |
+| `[[ -v var ]]` (test if set) | 4.2+ | Use `[[ -n "${var+x}" ]]` |
 | `${parameter@operator}` transformations | 4.4+ | Avoid; use explicit conversions |
 | `head -n -N` (negative line counts) | GNU coreutils | Use `sed '$d'` or `sed -e :a -e '$d;N;2,3ba' -e 'P;D'` |
 | `base64 -w 0` (no line wrap) | GNU coreutils | Use `base64 \| tr -d '\n'` |
@@ -127,7 +129,7 @@ If you must conditionally support a Bash 4 feature:
 if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
   declare -A map
 else
-  # fallback path
+  : # fallback path
 fi
 ```
 
