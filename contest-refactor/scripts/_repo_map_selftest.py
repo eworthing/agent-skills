@@ -74,12 +74,44 @@ def _verdict(va, art: dict) -> list[str]:
     return sorted(f"{i.rule}: {i.message}" for i in issues)
 
 
+def _auto_engage_both_branches() -> list[str]:
+    """Exercise auto_engage on BOTH sides of the threshold.
+
+    Every fixture is small, so only the False branch ever ran: pushing
+    `_AUTO_ENGAGE_THRESHOLD` out by 100k passed. `method.md` cites the >300
+    first-party-file threshold as the reason the map auto-engages at all, so the
+    True branch is a documented behaviour that nothing exercised.
+    """
+    import repo_map as rm
+
+    out: list[str] = []
+    thr = rm._AUTO_ENGAGE_THRESHOLD
+    if thr != 300:
+        out.append(f"auto-engage threshold moved to {thr}; method.md documents 300")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        # One file over the threshold, in a package so the walker collects them.
+        pkg = root / "pkg"
+        pkg.mkdir()
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        for i in range(thr + 1):
+            (pkg / f"m{i}.py").write_text("def f():\n    return 1\n", encoding="utf-8")
+        res = _run_map(root)
+        if res.get("auto_engage") is not True:
+            out.append(
+                f"auto_engage False at {res.get('first_party_file_count')} files "
+                f"(> threshold {thr}); the True branch is unreachable in practice"
+            )
+    return out
+
+
 def main() -> int:
     if not REPO_MAP.is_file():
         print(f"FAIL: repo_map.py missing: {REPO_MAP}")
         return 1
 
     failures: list[str] = []
+    failures.extend(_auto_engage_both_branches())
 
     # -----------------------------------------------------------------------
     # Fixture A: 3-package DAG (no cycles)

@@ -292,13 +292,20 @@ selftest rather than by topic or code pattern.
   incident is precisely the one that must not be able to vanish quietly. Closed by asserting the
   warning fires and names the HALT_SUCCESS risk.
 
-**Confirmed and reproduced, not yet fixed** — each verified by me, mutation recorded:
+**Confirmed, reproduced, and now FIXED** — each verified against the mutation that exposed it:
 
-| Site | Mutation that survived |
-| --- | --- |
-| `audit_clones.py` | `_MIN_LINES = 8` → `0` (size floor removed); the whole Python function extractor returning `[]` — all four fixtures are Swift-only, so Python clone support is untested end to end |
-| `repo_map.py` | `auto_engage` threshold pushed out by 100k — the `>300 files` True branch that `method.md` relies on for auto-engage is never exercised |
-| `render_report.py` | residual/disposition rendering and the markdown findings section can both be emptied — fixture data contains them, nothing asserts they reach the output |
+| Site | Mutation that survived | Fix |
+| --- | --- | --- |
+| `audit_clones.py` | `_MIN_LINES = 8` → `0`; the Python extractor returning `[]` — all four fixtures were Swift-only, so Python clone support was untested end to end | two fixtures: a duplicated Python body, and a **6-line** duplicate that must stay silent below the 8-line floor |
+| `repo_map.py` | `auto_engage` threshold pushed out by 100k — the `>300 files` True branch `method.md` relies on was never exercised | a fixture that writes 301 modules and asserts `auto_engage is True`, plus a pin on the documented 300 constant |
+| `render_report.py` | residual/disposition rendering and the markdown findings section can both be emptied | **still open** — lowest stakes of the three (report rendering, no gate depends on it) |
+
+**A vacuous test written while fixing vacuous tests.** The first size-floor fixture used a *2-line*
+duplicate and passed at both `_MIN_LINES = 8` and `_MIN_LINES = 0` — a second gate excludes bodies
+that short regardless of the floor, so the fixture could not discriminate and proved nothing. Caught
+by running the mutation rather than trusting the new test. The shipped fixture is sized to
+**straddle** the floor: reported at 0, silent at 8. Writing a test that cannot fail is evidently
+easy to do even while hunting for tests that cannot fail.
 
 **One correction to my own verification.** My `_public_names` mutation inserted a bare `pass` at the
 top of the function, which changes nothing — a dead mutation that proves nothing either way, the
@@ -309,7 +316,7 @@ same trap the sweep agent caught itself in on `_g37` and `_ruleset_epoch`. That 
 death, stream-flood deadlock, shlex round-trip, trust pin, four distinct failure exit codes,
 home-isolation proof. A deliberate hunt for an uncovered branch came up empty.
 
-**Covered so far — 38 of 72; 10 proven vacuous, 6 fixed, 3 open, 1 withdrawn as a dead mutation:**
+**Covered so far — 38 of 72; 10 proven vacuous, 9 fixed, 1 open, 1 withdrawn as a dead mutation:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |

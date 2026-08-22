@@ -233,12 +233,68 @@ def case_d_unsupported_stack(base: Path) -> str | None:
     return None
 
 
+# --- (e) PYTHON support exists at all -------------------------------------
+# Every other fixture is Swift. The Python extractor could return [] for all
+# input -- i.e. Python clone detection simply not existing -- and this suite
+# stayed green, because nothing ever fed it Python.
+def case_e_python_clone(base: Path) -> str | None:
+    root = base / "e"
+    body = (
+        "    total = 0\n"
+        "    for row in rows:\n"
+        "        if row.get('active'):\n"
+        "            total += row['amount']\n"
+        "        else:\n"
+        "            total -= row['penalty']\n"
+        "    normalized = total / max(len(rows), 1)\n"
+        "    return round(normalized, 2)\n"
+    )
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "alpha.py").write_text(f"def settle(rows):\n{body}", encoding="utf-8")
+    (root / "beta.py").write_text(f"def reconcile(rows):\n{body}", encoding="utf-8")
+    out, err, rc = _run(root)
+    if rc not in (0, 1):
+        return f"unexpected exit {rc}: {err.strip()}"
+    if "alpha.py" not in out or "beta.py" not in out:
+        return (
+            "duplicated Python function body not reported -- the Python extractor "
+            f"is unproven; output was: {out.strip()[:200]!r}"
+        )
+    return None
+
+
+# --- (f) the size floor is real -------------------------------------------
+# `_MIN_LINES` could be set to 0 and nothing noticed, so trivially short
+# duplicate bodies were never proven excluded. The body below is deliberately
+# sized to STRADDLE the floor: it is reported when the floor is 0 and silent at
+# the shipped floor of 8. A shorter body does not work -- a 2-line duplicate is
+# excluded by a different gate regardless of `_MIN_LINES`, so a fixture that
+# small passes either way and proves nothing.
+def case_f_below_size_floor(base: Path) -> str | None:
+    root = base / "f"
+    root.mkdir(parents=True, exist_ok=True)
+    body = "".join(f"    x{i} = rows[{i}] * {i} + 1\n" for i in range(1, 6)) + "    return x1\n"
+    (root / "one.py").write_text(f"def alpha(rows):\n{body}", encoding="utf-8")
+    (root / "two.py").write_text(f"def beta(rows):\n{body}", encoding="utf-8")
+    out, err, rc = _run(root)
+    if rc not in (0, 1):
+        return f"unexpected exit {rc}: {err.strip()}"
+    if "one.py" in out and "two.py" in out:
+        return (
+            "a 6-line duplicate was reported below the 8-line floor; _MIN_LINES is "
+            "not enforced, so every short accessor pair becomes a finding"
+        )
+    return None
+
+
 CASES = [
     (
         "a: byte-identical body duplicated across two files -> ~1.0 similarity",
         case_a_byte_identical,
     ),
     ("b: renamed-identifier clone -> detected via ID-normalization", case_b_renamed_identifiers),
+    ("e: duplicated PYTHON body -> Python extractor actually runs", case_e_python_clone),
+    ("f: 2-line duplicate -> excluded by the _MIN_LINES size floor", case_f_below_size_floor),
     (
         "c: shallow structural resemblance across domains -> NOT flagged",
         case_c_shallow_resemblance_not_flagged,
