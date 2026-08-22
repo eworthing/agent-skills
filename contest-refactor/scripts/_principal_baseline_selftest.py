@@ -165,6 +165,23 @@ def main() -> int:
     # (b) Load manifest; fail fast if missing.
     manifest = _load_manifest()
     entries = manifest.get("scenarios", [])
+
+    # An empty corpus is not a clean corpus. Every check below iterates
+    # `principal_dirs` / `entries`, so with the scenario dirs moved aside and the
+    # manifest's `scenarios` list emptied this file printed "OK ... 0 scenario(s)"
+    # and exited 0. `absent != clean` is the rule `tool_runner.py` already applies
+    # to a tool that never ran, and the three replay selftests already carry this
+    # guard; the two baseline selftests did not.
+    if not principal_dirs:
+        failures.append(
+            "no principal-* scenario dirs under evals/scenarios/ (need >= 1) -- an "
+            "empty corpus makes every check below vacuous"
+        )
+    if not entries:
+        failures.append(
+            "manifest registers no scenarios (need >= 1) -- an empty corpus makes "
+            "every check below vacuous"
+        )
     registered_ids = {e["id"] for e in entries if isinstance(e, dict) and "id" in e}
 
     # Check (a): every on-disk principal-* dir is registered in the manifest.

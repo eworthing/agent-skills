@@ -308,6 +308,23 @@ def main() -> int:
     entries = manifest.get("scenarios", [])
     registered_ids = {e["id"] for e in entries if isinstance(e, dict) and "id" in e}
 
+    # An empty corpus is not a clean corpus. Every check below iterates `entries`
+    # or the on-disk family dirs. This file happens to survive an emptied corpus
+    # today, but only via the separate evals.json no-orphan check catching the
+    # stale references -- the save is redundancy, not this contract, and it moves
+    # if that check ever does. `absent != clean`, stated locally, the same guard
+    # the three replay selftests carry.
+    if not entries:
+        failures.append(
+            "manifest registers no scenarios (need >= 1) -- an empty corpus makes "
+            "every check below vacuous"
+        )
+    if not _collect_family_dirs(families):
+        failures.append(
+            "no advisory-family scenario dirs under evals/scenarios/ (need >= 1) -- "
+            "an empty corpus makes every check below vacuous"
+        )
+
     # (a) every on-disk advisory-family dir is registered.
     for dirname in _collect_family_dirs(families):
         if dirname not in registered_ids:

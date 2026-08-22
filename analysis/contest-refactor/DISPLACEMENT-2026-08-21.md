@@ -372,7 +372,32 @@ the general lesson is the sweep's own subject turned on itself: *a verification 
 result that has nothing to do with the code under test*, which is exactly what a vacuous assertion
 does. Clear the bytecode cache around every mutation.
 
-**Covered so far — 50 of 72; 18 proven vacuous, 15 fixed, 3 recorded, 1 withdrawn:**
+**Batch 9 (the corpus-consuming family) — 6 tested, 1 finding, and it closed the class.**
+`_principal_baseline_selftest.py` had the identical hole `_priority_replay` had: no guard, so every
+check is a no-op loop and an emptied corpus reports `OK … 0 scenario(s)`.
+
+**Two hits on one template was enough to stop testing file-by-file and enumerate the class instead.**
+A scan for selftests that both iterate a corpus directory and read a manifest list found exactly
+five, split cleanly by family:
+
+| Family | Guarded? |
+| --- | --- |
+| `_exec_replay`, `_loop_replay`, `_priority_replay` | **yes** — the replay template carries `if not entries` / `if not fixture_dirs` |
+| `_advisory_baseline`, `_principal_baseline` | **no** — the baseline template never had it |
+
+Both baselines now carry the guard. `_advisory_baseline` is the interesting half: it *does* fail an
+emptied corpus today, but via a separate `evals.json` no-orphan check catching the stale references
+— **the save is redundancy, not this contract**, and it moves if that check ever does. The guard is
+stated locally so the file no longer depends on a neighbour to be sound.
+
+That is the difference between fixing two files and closing a class: the enumeration cost one grep
+and proved there is no third instance.
+
+**The recheck came back clean.** Both Python-module verdicts re-tested under full cache discipline
+(the batch-8 G46 epoch gap, the batch-6 `render_report` residual rendering) stand unchanged, so the
+stale-bytecode defect corrupted exactly one reading — the G28 one that exposed it.
+
+**Covered so far — 56 of 72; 19 proven vacuous, 17 fixed, 3 recorded, 1 withdrawn:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
