@@ -163,3 +163,30 @@ the system. Paying that risk to buy headroom the skill no longer needs is a bad 
 **Declined, not deferred.** Re-open it only if the loop path tightens again *and* the panel
 capability is still dormant at that point. If the capability has landed by then, B is off the table
 permanently and the 2,634 tokens are simply the cost of a live feature.
+
+## 10. Outstanding — the vacuous-assertion sweep (blocked, not done)
+
+§8's third finding — a probe that had silently stopped testing anything — is a **class**, not a
+one-off, and this skill ships **72** `_*_selftest.py` files. A sweep of all of them was launched and
+**died on an account spend limit before producing anything**; it is outstanding work, not a
+completed clean bill.
+
+**Method, for whoever picks it up.** A finding must be *proven by mutation*: break the behaviour the
+test names, re-run it, and only report it if it still passes. Work on a copy of the tree so parallel
+mutation is safe, and restore between mutations. Prioritise by stakes — a vacuous guard on a hard
+gate or on redaction matters more than one on a reporting helper. Finding nothing is a good result;
+an honest empty report beats a padded one.
+
+**Covered so far — 3 of 72, all sound:**
+
+| Selftest | Mutation applied | Result |
+| --- | --- | --- |
+| `_g44_selftest.py` (credential quarantine) | `hits.append` → no-op; `_CREDENTIAL_PATTERNS` → empty | both **killed** |
+| `_redaction_dispatch_selftest.py` | redaction rule inverted (`never the value` → `always the value`) | **killed** |
+| `_token_budget_selftest.py` | — | the one **proven vacuous**; fixed in §8 |
+
+One near-miss worth recording so it is not re-raised: renaming method.md's *"Credential redaction."*
+heading **survives** `_redaction_dispatch_selftest.py`. That is **not** a vacuous assertion — the
+test's contract is that the redaction *rule* is forwarded verbatim into dispatch prompts, and
+inverting the rule is caught. A heading is not the rule. Reporting it would be the false positive
+the method above exists to prevent.
