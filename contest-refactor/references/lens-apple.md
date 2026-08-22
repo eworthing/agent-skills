@@ -104,7 +104,7 @@ Asymmetric sheet binding for a contest-relevant feature = Serious deduction (sta
 Apple repos load only `lens-apple.md` (plus always-included `lens-security.md` and `lens-efficiency.md`); `lens-generic.md` is **not** in the Apple load set. So this subsection inlines the five generic failure-mode categories alongside Apple-specific bullets. (Canonical detailed detection rules per language live in [lens-generic.md § Failure modes & observability](lens-generic.md#failure-modes--observability) for non-Apple stacks.)
 
 **Generic categories (always check on every loop)**:
-1. **Silent-swallow audit** — Swift hits: `try?`, `catch { }`, `_ = try`, `as? T` that drops the error. Each needs an inline rationale (comment, log, compensating return).
+1. **Silent-swallow audit** — Swift hits: `try?`, `catch { }`, `_ = try`, `as? T` that drops the error. Each needs an inline rationale (comment, log, or a compensating return the caller acts on). A consumed compensating return (the caller branches on it) already satisfies the rationale requirement; missing structured logging on top of it is a separate enhancement, not an additional silent-swallow finding.
 2. **Retry/backoff policy** — every external-call path (network, disk, IPC, subprocess) needs an explicit retry policy or a documented "// no retry: <reason>" comment.
 3. **Error-context preservation** — catch blocks must wrap (`throw .wrapped(original: err, ...)`), log with breadcrumb (`logger.error("...", error: err, file: #file, line: #line)`), or re-throw verbatim. Strip-and-rethrow loses provenance.
 4. **Observability at adapter boundaries** — every port crossing network/disk/IPC emits telemetry on entry/success/failure. Missing telemetry on user-visible paths is a `credibility` finding.
