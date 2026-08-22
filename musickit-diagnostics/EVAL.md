@@ -1,9 +1,9 @@
 # musickit-diagnostics Evaluation
 
-**Date:** 2026-07-14 (baseline 2026-05-19)
-**Evaluator:** agent (Claude Opus 4.8)
+**Date:** 2026-08-22 (manual rubric last scored 2026-07-14; baseline 2026-05-19)
+**Evaluator:** agent (Claude Sonnet 5)
 **Skill version:** iOS 27 accuracy + registration pass — see Revision History (2026-07-14, 98/100)
-**Automated score:** 100% (13/13 structural checks pass)
+**Automated score:** 100% (15/15 structural checks pass)
 
 ---
 
@@ -34,7 +34,7 @@ Scope demarcation:
 
 ## Verification
 
-- `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py musickit-diagnostics` → 100% (13/13 checks passed)
+- `python3 .claude/skills/skill-evaluator-1.0.0/scripts/eval-skill.py musickit-diagnostics` → 100% (15/15 checks passed; grew from 13→15 since 2026-07-14 as the checker gained a body-token-count check and a literal-secret-prefix check — both pass, this is tooling growth, not a regression)
 - SKILL.md body length: 351 lines (body = 373 total − 22 frontmatter lines through the closing `---`; within 10–500 band, under the 500-line warn threshold)
 - references/ total: 728 lines across 5 files
 - All 5 references files linked from SKILL.md (eval-skill.py "References are linked" check passes)
@@ -73,6 +73,7 @@ Path: /Users/Shared/git/agent-skills/musickit-diagnostics
 
   [DOCUMENTATION]
     ✅ SKILL.md body length
+    ✅ SKILL.md token count
     ✅ References are linked from SKILL.md
 
   [SCRIPTS]
@@ -81,11 +82,12 @@ Path: /Users/Shared/git/agent-skills/musickit-diagnostics
 
   [SECURITY]
     ✅ No hardcoded credentials or emails
+    ✅ No literal secret-prefix matches
     ✅ Environment variables documented
 
 ==================================================
-  ✅ Pass: 13  ⚠️  Warn: 0  ❌ Fail: 0
-  Structural score: 100% (13/13 checks passed)
+  ✅ Pass: 15  ⚠️  Warn: 0  ❌ Fail: 0
+  Structural score: 100% (15/15 checks passed)
 ```
 
 ## Manual Assessment
@@ -155,10 +157,76 @@ and code patterns appropriate for an agent reading the skill directly.
 - `apple-multiplatform`: cross-ref present for macOS / Catalyst boundary in Scope section.
 - `apple-tvos`: cross-ref present for tvOS boundary in Scope section.
 
+## writing-for-agents Audit (2026-08-22)
+
+Applied the context-pointer / information-hierarchy / co-location lens for the
+first time (distinct from the ISO/Shneiderman rubric above, which had never
+been checked against this framework before):
+
+- **Anti-pattern co-location — verified pass.** All 6 WRONG/CORRECT pairs
+  (SKILL.md ~lines 128–289) stay inline with their explanations rather than
+  being split out to references/. No change needed.
+- **"Remove the diagnostic before merging" appears twice** (SKILL.md ~102–104
+  in the diagnostic-first protocol, and ~321–323 in the pre-merge verification
+  checklist). Reviewed and kept as deliberate reinforcement at two distinct
+  points an agent actually passes through, not duplication to trim.
+- **Description length (942 chars)** exceeds this repo's established 400–800
+  target band (under the 1024 hard cap). Reviewed and left as-is: the
+  9-named-error-code breadth is what earned 8.1 Trigger Precision 4/4 below,
+  and trimming risks that strength for a sizing-convention gain. User-confirmed
+  2026-08-22.
+- **GitHub-anchor links functionally inert for agent consumption.** SKILL.md's
+  routing table links to `#icerrordomain--8200-...`-style anchors that only
+  resolve in GitHub's web renderer — an agent reading via `Read` gets the
+  whole file and never resolves markdown fragments (harmless in practice,
+  since the agent still gets the full target file either way — this is a
+  cosmetic/GitHub-only gap, not a functional break). Not unique to this
+  skill: a repo-wide grep (`grep -rlE ']\(#[a-z0-9-]+\)'`) confirmed the same
+  pattern in at least 8 other skills (apple-multiplatform, apple-tvos,
+  contest-refactor, peer-plan-review, quorum-review, swiftui-design-tokens,
+  swiftui-file-export) plus README.md and docs/. **Flagged as a repo-wide
+  convention question for a separate follow-up** (per user decision
+  2026-08-22), not fixed here in isolation.
+- iOS 27 beta/GA staleness in `references/ios27-additions.md` (also present
+  in 2–3 sibling skills) was raised and explicitly punted per user decision
+  2026-08-22 — out of scope for this pass.
+
+None of the above changed the manual rubric score — findings were confirmatory
+(verified-pass or reviewed-and-kept) or explicitly deferred, not corrective.
+
+## Behavioral Test — Iteration 1 (2026-08-22)
+
+First-ever behavioral test for this skill (previously had no `evals/`
+directory). 3 scenarios via `evals/evals.json`, each run with-skill and
+baseline (no skill) in `musickit-diagnostics-workspace/iteration-1/`, graded
+against per-scenario assertions, aggregated with skill-creator's
+`aggregate_benchmark.py`, and reviewed via a static `generate_review.py`
+HTML report.
+
+**Result: with-skill 100% (12/12 assertions) vs. baseline 83.3% (10/12).**
+
+| Scenario | With-skill | Baseline | Notes |
+|---|---|---|---|
+| Library-add Album silent failure | 4/4 | 3/4 | Baseline's fix passes raw `Track` values into `add(_:to:)` instead of unwrapping to `Song` — the skill's own Song-only rule says only `Song` reliably carries the needed identifier set. This is the clearest with-skill delta of the three: a plausible-looking baseline fix that may not actually resolve the bug. |
+| Speech + MusicKit tap crash | 4/4 | 4/4 | Smallest gap of the three. `AVAudioEngine`'s single-tap-per-bus constraint is a well-known iOS gotcha independent of MusicKit, so general model knowledge already covers it well. Both fixes are independently correct, though the with-skill answer additionally ties in the sibling `applicationQueuePlayer` timeout as sharing the same root cause. |
+| Generic ICError triage | 4/4 | 3/4 | Baseline correctly leads with diagnostic-first instrumentation (this is standard `NSError`-handling practice, not skill-unique), but recommends **keeping** structured domain/code capture permanently in production crash reporting — the opposite of the skill's explicit "remove before merging" instruction. This is a genuine product-judgment divergence surfaced by testing, not a knowledge gap, and is worth the skill's owner re-examining on its own merits rather than treating as a simple baseline miss. |
+
+Full transcripts, grading evidence, and the benchmark summary are in
+`musickit-diagnostics-workspace/iteration-1/` (`review.html`, `benchmark.md`,
+per-scenario `grading.json`). This did not change the manual rubric score —
+the skill already tests as behaviorally sound; the value here was surfacing
+the two findings above (a fix-correctness gap and a policy divergence) for
+the skill owner to weigh, not new documentation defects.
+
+Note: `benchmark.md`'s time/token columns read 0 — this dispatch environment's
+task-completion notifications didn't surface `total_tokens`/`duration_ms` to
+the coordinator, so those fields were left at their true default rather than
+fabricated. Pass-rate and grading data are unaffected.
+
 ## Priority Fixes
 
 ### P0 — Fix Before Publishing
-None. Skill passes structural checks (13/13) and exceeds the ≥90 manual threshold.
+None. Skill passes structural checks (15/15) and exceeds the ≥90 manual threshold.
 
 ### P1 — Should Fix
 None at present. Re-evaluate after first real use by an agent debugging an actual MusicKit failure.
@@ -181,6 +249,7 @@ None at present. Re-evaluate after first real use by an agent debugging an actua
 
 | Date       | Score   | Notes |
 |------------|---------|-------|
+| 2026-08-22 | 98/100  | Combined audit (superpowers:writing-skills + skill-creator + writing-for-agents) + first-ever behavioral test. **Structural:** eval-skill.py grew 13→15 checks since last run, all pass, no regression. **writing-for-agents pass (new):** anti-pattern co-location verified, "remove the diagnostic" duplication reviewed-and-kept (two distinct decision points), description length (942 chars, over the 400-800 band) reviewed-and-kept per user decision, GitHub-anchor links in the routing table found functionally inert for agent (`Read`-tool) consumption — flagged as a repo-wide convention question for a separate follow-up rather than a one-file fix. iOS 27 beta/GA staleness raised and punted per user decision. **Behavioral test (new):** first `evals/evals.json` (3 scenarios) + `musickit-diagnostics-workspace/iteration-1/` — with-skill 100% (12/12) vs. baseline 83.3% (10/12). Baseline's one miss on the library-add scenario is substantive (passes raw `Track` instead of unwrapping `Song`, risking the exact bug it's fixing); baseline's one miss on the ICError scenario is a genuine policy divergence (recommends keeping vs. removing the domain/code diagnostic) worth the skill owner's own review. No rubric criterion changed — findings were confirmatory/deferred, not corrective. Score held at 98/100. |
 | 2026-05-19 | 97/100  | Baseline — extracted from `LEARNINGS_MUSICKIT.md` field notes; complements user's general `musickit` skill. |
 | 2026-07-14 | 98/100  | iOS 27 accuracy + registration pass (peer-reviewed by codex gpt-5.6-sol @ high, 4 rounds to APPROVED). **Correctness:** fixed a false platform-availability claim in `references/ios27-additions.md` — Music Picker was documented as "iOS / iPadOS / **Mac Catalyst** 27.0+ (visionOS — metadata only)"; canonical DocC gives **iOS / iPadOS / visionOS 27.0, Beta, no Mac Catalyst** for both `musicPicker(...)` and `PickableMusicItem`. The omission is real, not a docs gap — `findEquivalents` *does* list Catalyst, so DocC surfaces it when supported. Removed the "Mac reaches the picker via Catalyst" guidance (it does not exist there) and stopped dismissing visionOS as metadata-only. **Coverage:** new Music Picker failure mode #4 — the `selection` binding persists/accumulates across presentations (derived from Apple's own `.onChange` count-diff sample, flagged as observed-not-documented); noted Pickable ≠ Addable (`Album` conforms to `MusicPlaylistAddable` but not `PickableMusicItem`). **Surface audit:** re-verified WWDC26 s254 + the framework availability index — `PickableMusicItem` is the only Beta symbol in MusicKit and `findEquivalents` (26.4) the only other 2026-cycle addition, so the two covered items are the *complete* new surface; the session's subscription-offer material (`MusicSubscriptionOffer.Options`, `messageIdentifier`) is iOS 15+ and correctly already marked pre-existing. **Registration:** added to the README Apple-platform catalog and the `SKILLS=()` install array (was absent from both). **Bookkeeping:** corrected stale counts (body 280→351, refs "607/4 files"→728/5, total "907/5"→1101/6). 13/13 structural retained. |
 | 2026-07-04 | 98/100  | Verify-facts pass (two apple-docs research rounds + iOS 27 SDK-header probe), peer-reviewed by codex gpt-5.4-mini (2 approval cycles). **Correctness:** removed the wrong "`Album` does not conform to `MusicPlaylistAddable`" claim — SDK confirms Album/Song/Track/MusicVideo/Playlist all conform; reframed §4 + library-playlists.md on the true *runtime* empty-identifier-set cause. Added undocumented-`ICErrorDomain`-codes honesty note steering to `MusicAuthorization.Status` / `canPlayCatalogContent` / `MusicDataRequest.Error`. **Coverage:** new anti-pattern §6 (subscription / Voice Plan gotcha); new `references/ios27-additions.md` (Music Picker `@MainActor` + empty-on-cancel + Song/Track/MusicVideo-only conformance; `findEquivalents` silent partial results). **Pruning:** deduped fallback snippet to a single source (SKILL.md §3). Term-validation P2 dropped as no-op. 13/13 structural retained; body 351 lines. |

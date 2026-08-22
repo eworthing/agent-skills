@@ -1,0 +1,44 @@
+{
+  "skill_name": "musickit-diagnostics",
+  "evals": [
+    {
+      "id": 0,
+      "name": "library-add-album-silent-failure",
+      "prompt": "In my SwiftUI app, I fetch an Album from MusicCatalogSearchRequest and let the user tap 'Save to Library'. The handler does `try await MusicLibrary.shared.add(album, to: playlist)`. The call doesn't throw, but when the user opens the Music app afterward, the playlist is empty — no songs got added, no error shown anywhere. What's going on and how do I fix it?",
+      "expected_output": "Diagnoses the root cause as passing an Album (or any non-Song catalog item) into add(_:to:) — the call silently produces an empty identifier set rather than throwing. States the Song-only rule: only catalog-fetched Song items should be passed to library-add APIs. Fix fetches/extracts the Album's Songs (e.g. via album.with(.tracks) or a tracks relationship) and adds those Song objects instead of the Album. Does NOT attribute the failure to authorization, network, or a generic 'add error handling' fix without naming the type mismatch.",
+      "files": [],
+      "expectations": [
+        "Identifies that passing a non-Song item (Album) to add(_:to:) is the actual root cause, not authorization/network/missing error handling",
+        "Names the mechanism as an empty identifier set / silent no-op, not a thrown error",
+        "The proposed fix adds Song objects (from the album's tracks), not the Album itself",
+        "Does not propose a generic try/catch or null-check as the primary fix"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "speech-musickit-tap-crash",
+      "prompt": "My app has a voice-command feature using SFSpeechRecognizer with an AVAudioEngine input tap, and separately plays music via ApplicationMusicPlayer. Ever since I added a 'while you were listening, want to play this?' flow that triggers playback right after a voice command, the app crashes with `CreateRecordingTap: nullptr == Tap()` sometimes when the same view triggers both features close together. What's causing this and how do I fix it?",
+      "expected_output": "Identifies this as a Speech + MusicKit audio-session/tap coexistence conflict, not a MusicKit playback bug in isolation. Names the specific mechanism: installing a new recording tap on the audio engine while a previous tap is still installed (double-installTap), or starting MusicKit playback while the speech recording session hasn't been fully torn down. Fix requires a full teardown sequence before any MusicKit call: removeTap before every installTap, stop the audio engine, end the recognition request, and enforce a single-flow rule so speech recording and playback never run concurrently (e.g. an isRecording guard).",
+      "files": [],
+      "expectations": [
+        "Identifies this as an audio-session/tap conflict between Speech and MusicKit, not an isolated MusicKit bug",
+        "Names double-installTap or an incomplete teardown (missing removeTap/engine stop) as the mechanism",
+        "Fix includes a full stop/removeTap/end-request sequence before any MusicKit call",
+        "Recommends a guard so speech recording and playback don't run concurrently (single-flow rule)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "generic-icerror-unknown-triage",
+      "prompt": "Users are reporting that MusicKit search sometimes just fails. In our crash reporting all I see is `error.localizedDescription` = 'unknown error' or sometimes empty. I don't have any more detail than that. How do I actually figure out what's wrong before I try to fix it?",
+      "expected_output": "Does not guess a specific fix from the symptom string alone. Instead prescribes a diagnostic-first step: before proposing any fix, instrument the catch block around the failing call (e.g. MusicCatalogSearchRequest.response()) to capture and log the NSError's domain, code, and any NSUnderlyingErrorKey value, then reproduce the failure once to read the actual domain/code. Only after that should it map the domain/code to a specific cause (e.g. ICErrorDomain -8200/-8102/-7010/-7013) and a targeted fix. Also notes the diagnostic should be removed before merging (debugging probe, not production telemetry).",
+      "files": [],
+      "expectations": [
+        "Does not jump straight to a specific guessed fix (e.g. 'it's probably auth' or 'it's probably network') without first getting more diagnostic information",
+        "Explicitly recommends capturing/logging the NSError domain, code, and underlying error before proposing a fix",
+        "Frames this as a required step prior to any targeted fix, not an optional nice-to-have",
+        "Mentions removing the diagnostic once the root cause is found (not leaving it as production code)"
+      ]
+    }
+  ]
+}
