@@ -72,7 +72,108 @@ SUPPRESSION_FLAG_PASS = {
 }
 
 
+def _eval_check_red_paths() -> None:
+    """Pin the deterministic evaluator's FAILING path, per op.
+
+    Every scenario fixture in this file drives `_eval_check` through cases that
+    PASS, so the evaluator itself was never proven to be able to say "no":
+    replacing its whole body with `return True, ""` left this suite -- and all 72
+    selftests in the repo -- green. `grade_structural.py` scores real reviewer
+    submissions against `evals/evals.json`, so an always-pass evaluator reports
+    100% for every candidate on every scenario that uses these ops, invisibly.
+
+    One True case and one False case per op. The False cases are the point; the
+    True cases are here so a mutation that inverts the operator cannot pass by
+    flipping both.
+    """
+    import grade_structural as gs
+
+    cases: list[tuple[str, dict, dict, bool]] = [
+        (
+            "eq",
+            {"field": "verdict", "op": "eq", "value": "rejected"},
+            {"verdict": "rejected"},
+            True,
+        ),
+        (
+            "eq",
+            {"field": "verdict", "op": "eq", "value": "rejected"},
+            {"verdict": "approved"},
+            False,
+        ),
+        (
+            "in",
+            {"field": "verdict", "op": "in", "value": ["approved", "conditional"]},
+            {"verdict": "approved"},
+            True,
+        ),
+        (
+            "in",
+            {"field": "verdict", "op": "in", "value": ["approved", "conditional"]},
+            {"verdict": "rejected"},
+            False,
+        ),
+        (
+            "any_lt",
+            {"field": "dimension_scores", "op": "any_lt", "dims": ["concurrency"], "value": 9.5},
+            {"dimension_scores": {"concurrency": 8.0}},
+            True,
+        ),
+        (
+            "any_lt",
+            {"field": "dimension_scores", "op": "any_lt", "dims": ["concurrency"], "value": 9.5},
+            {"dimension_scores": {"concurrency": 9.5}},
+            False,
+        ),
+        (
+            "any_lt (dim absent is not a pass)",
+            {"field": "dimension_scores", "op": "any_lt", "dims": ["concurrency"], "value": 9.5},
+            {"dimension_scores": {"data_flow": 1.0}},
+            False,
+        ),
+        (
+            "contains_any",
+            {"field": "flagged_smells", "op": "contains_any", "value": ["suppression-as-fix"]},
+            {"flagged_smells": ["suppression-as-fix"]},
+            True,
+        ),
+        (
+            "contains_any",
+            {"field": "flagged_smells", "op": "contains_any", "value": ["suppression-as-fix"]},
+            {"flagged_smells": ["costume layer"]},
+            False,
+        ),
+        (
+            "excludes_all",
+            {"field": "flagged_smells", "op": "excludes_all", "value": ["suppression-as-fix"]},
+            {"flagged_smells": ["costume layer"]},
+            True,
+        ),
+        (
+            "excludes_all",
+            {"field": "flagged_smells", "op": "excludes_all", "value": ["suppression-as-fix"]},
+            {"flagged_smells": ["suppression-as-fix"]},
+            False,
+        ),
+        (
+            "nonempty",
+            {"field": "flagged_smells", "op": "nonempty"},
+            {"flagged_smells": ["x"]},
+            True,
+        ),
+        ("nonempty", {"field": "flagged_smells", "op": "nonempty"}, {"flagged_smells": []}, False),
+    ]
+    for label, check, candidate, expected in cases:
+        got, detail = gs._eval_check(check, candidate)
+        _check(
+            f"_eval_check {label} -> {expected}",
+            got is expected,
+            f"got {got!r} ({detail})",
+        )
+
+
 def main() -> int:
+    _eval_check_red_paths()
     with tempfile.TemporaryDirectory() as td:
         tmpdir = Path(td)
 

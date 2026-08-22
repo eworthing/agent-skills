@@ -250,7 +250,30 @@ load-bearing should be read as suspect on sight.
 immediately, including a message-text-only leak in the strictness case. That matters: Meta-Rule 1
 ("metrics support judgment; they never decide it") rests on the first of those.
 
-**Covered so far — 26 of 72; 3 proven vacuous, all fixed:**
+**Batch 5 (targeted by shape) — 6 tested, 1 proven vacuous, and it is the most consequential of
+the four.** Batch 5 was selected by grepping the remaining files for count-style aggregate
+assertions, on the theory that two of three findings shared that shape. The finding it produced was
+a *different* shape, which is worth noting about targeting heuristics.
+
+`grade_structural.py`'s `_eval_check` — the deterministic per-assertion evaluator that scores real
+reviewer submissions against `evals/evals.json` — had **zero RED-path coverage**. Every scenario
+fixture drove it through cases that pass. Replacing its entire body with `return True, ""` left
+`_grade_structural_selftest.py` green *and* **all 72 selftests in the repo green**. An always-pass
+evaluator reports 100% for every candidate on every scenario using these ops, invisibly.
+
+Closed with one True and one False case per op (`eq`, `in`, `any_lt`, `contains_any`,
+`excludes_all`, `nonempty`) plus the absent-dimension case, asserted directly against
+`_eval_check`. The True cases exist so an operator inversion cannot pass by flipping both. Verified
+against three mutations — whole-body always-pass, `any_lt` neutralised, `excludes_all` inverted —
+all now killed.
+
+**Third distinct shape.** Batch 1 was two checks shadowing a third; batches 1 and 4 were aggregates
+standing in for per-item verification; this is **an entire computation with only GREEN fixtures**.
+The common thread across all four is not a code smell but a *fixture-design* failure: in every case
+the mechanism was fine and the coverage claim was hollow. Reading the tests suggested coverage in
+all four.
+
+**Covered so far — 32 of 72; 4 proven vacuous, all fixed:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
