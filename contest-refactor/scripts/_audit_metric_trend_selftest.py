@@ -46,12 +46,47 @@ def _run(path: Path) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(AUDIT), str(path)], capture_output=True, text=True)
 
 
+def _latest_transition_only() -> list[str]:
+    """Only the LATEST loop transition may alarm.
+
+    Every fixture here is exactly two loops long, so "the last two points" and
+    "any consecutive pair" are indistinguishable: a version that alarms on any
+    historical regression passed unchanged. Three loops separate them -- an old
+    regression that has since recovered must stay silent.
+    """
+    out: list[str] = []
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "history.json"
+        # loop1 -> loop2 regressed (90 -> 70); loop2 -> loop3 recovered (70 -> 95).
+        path.write_text(
+            json.dumps(
+                _history(
+                    [
+                        {"coverage_pct": 90.0},
+                        {"coverage_pct": 70.0},
+                        {"coverage_pct": 95.0},
+                    ]
+                )
+            ),
+            encoding="utf-8",
+        )
+        proc = _run(path)
+        blob = (proc.stdout + proc.stderr).lower()
+        if "coverage" in blob and "regress" in blob:
+            out.append(
+                "alarmed on a recovered historical regression; only the latest "
+                "transition is in scope, so this reports stale drops forever"
+            )
+    return out
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit script missing: {AUDIT}")
         return 1
 
     failures: list[str] = []
+    failures.extend(_latest_transition_only())
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
 

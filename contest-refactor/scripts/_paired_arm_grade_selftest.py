@@ -45,7 +45,64 @@ def _mech(tmp: Path, scenario: str, verdict: dict, dims: str | None = None) -> s
     return json.loads(out)["mechanical_grade"]
 
 
+def _top_level_triggers() -> None:
+    """Pin `check_triggers`' TOP-LEVEL grader checks.
+
+    `check_triggers` fires `grader_uncertain` / `no_cited_span` twice over: once
+    on the grade object's own `semantic_grade`, and once per assertion. Only the
+    per-assertion pair was covered, so the top-level block could be deleted
+    outright with the whole suite still green -- a grader that returns
+    `semantic_grade: "uncertain"` overall, or cites a span that is not in the
+    candidate text, would have gone unflagged.
+    """
+    import paired_arm_grade as pag
+
+    text = "the reviewer said the reducer owns the mutation"
+
+    fired = pag.check_triggers(
+        "principal-invariant-owner-restraint",
+        {"semantic_grade": "uncertain", "assertions": []},
+        text,
+    )
+    _check(
+        "top-level semantic_grade 'uncertain' fires grader_uncertain",
+        any(f["trigger"] == "grader_uncertain" for f in fired),
+        f"fired={fired!r}",
+    )
+
+    fired = pag.check_triggers(
+        "principal-invariant-owner-restraint",
+        {
+            "semantic_grade": "pass",
+            "semantic_grade_evidence_span": "a span that never appears verbatim",
+            "assertions": [],
+        },
+        text,
+    )
+    _check(
+        "top-level non-verbatim evidence span fires no_cited_span",
+        any(f["trigger"] == "no_cited_span" for f in fired),
+        f"fired={fired!r}",
+    )
+
+    fired = pag.check_triggers(
+        "principal-invariant-owner-restraint",
+        {
+            "semantic_grade": "pass",
+            "semantic_grade_evidence_span": "the reducer owns the mutation",
+            "assertions": [],
+        },
+        text,
+    )
+    _check(
+        "top-level verbatim span stays silent (restraint)",
+        not any(f["trigger"] in ("grader_uncertain", "no_cited_span") for f in fired),
+        f"fired={fired!r}",
+    )
+
+
 def main() -> int:
+    _top_level_triggers()
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         flag = "principal-invariant-owner-flag"

@@ -316,7 +316,28 @@ same trap the sweep agent caught itself in on `_g37` and `_ruleset_epoch`. That 
 death, stream-flood deadlock, shlex round-trip, trust pin, four distinct failure exit codes,
 home-isolation proof. A deliberate hunt for an uncovered branch came up empty.
 
-**Covered so far — 38 of 72; 10 proven vacuous, 9 fixed, 1 open, 1 withdrawn as a dead mutation:**
+**Batch 7 (last ratio-ranked three + gate guards on a polarity prior) — 6 tested, 4 findings, all
+fixed.** Group A produced one each:
+
+- **`paired_arm_grade.py`** fires `grader_uncertain` / `no_cited_span` twice over — once on the
+  grade object's own `semantic_grade`, once per assertion. Only the per-assertion pair was covered,
+  so the **top-level block could be deleted outright** with the suite green: a grader returning
+  `uncertain` overall, or citing a span absent from the candidate text, went unflagged. Closed with
+  three direct assertions including a restraint case.
+- **`audit_metric_trend.py`** documents that only the *latest* transition may alarm, but every
+  fixture was exactly two loops long, making "last two points" indistinguishable from "any
+  consecutive pair". Closed with a three-loop fixture whose old regression has since recovered.
+- **`audit_cochange.py`**'s noise-commit filter and >8-file mass-change cap both had zero coverage:
+  no fixture had a noise-worded subject or a bulk commit. Closed with pairs that co-change *only*
+  inside filtered commits and must therefore stay unreported.
+
+**Group B was a genuine negative, and that is the useful part.** The prior was fixture *polarity* —
+a gate guard with only RED cases cannot catch an always-fire mutation, one with only GREEN cannot
+catch a never-fire mutation. G5, G39 and G43 were each mutated **both** ways and all six mutations
+died. The polarity gap is not the failure mode for the gate guards; the hollow-fixture-set shape
+found in modules does not transfer to them.
+
+**Covered so far — 44 of 72; 14 proven vacuous, 13 fixed, 1 open, 1 withdrawn as a dead mutation:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |

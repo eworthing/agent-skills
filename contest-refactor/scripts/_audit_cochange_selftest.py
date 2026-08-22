@@ -120,12 +120,60 @@ def _static_dep_case(
             failures.append(f"{label}: static_dependency expected {expected_dep!r}, got {dep!r}")
 
 
+def _noise_and_mass_filters(base: Path) -> list[str]:
+    """Both discard filters were unproven: no fixture had a noise-worded subject,
+    and none touched more than 8 files. Disabling either survived the suite.
+
+    A pair that co-changes ONLY inside filtered commits must not be reported --
+    that is the whole point of the filters. A bulk reformat touching the world,
+    or a `merge branch` commit, is not evidence two files share a seam.
+    """
+    out: list[str] = []
+    far_a, far_b = "src/alpha/one.py", "src/omega/two.py"
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _init(root)
+        _write_and_commit(root, {"src/seed.py": "x = 0\n"}, "feat: seed")
+        for i in range(6):
+            _write_and_commit(
+                root,
+                {far_a: f"a = {i}\n", far_b: f"b = {i}\n"},
+                f"chore: run prettier + rustfmt across the tree ({i})",
+            )
+        proc = _run(root)
+        if "alpha" in proc.stdout and "omega" in proc.stdout:
+            out.append(
+                "pair reported though every co-change was a noise commit; "
+                "_is_noise_commit is not filtering"
+            )
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _init(root)
+        _write_and_commit(root, {"src/seed.py": "x = 0\n"}, "feat: seed")
+        for i in range(6):
+            bulk = {f"src/pad/f{n}.py": f"v = {i}{n}\n" for n in range(12)}
+            bulk[far_a] = f"a = {i}\n"
+            bulk[far_b] = f"b = {i}\n"
+            _write_and_commit(root, bulk, f"feat: sweeping change {i}")
+        proc = _run(root)
+        if "alpha" in proc.stdout and "omega" in proc.stdout:
+            out.append(
+                "pair reported though every co-change was in a >8-file commit; "
+                "the mass-change cap is not applied"
+            )
+    return out
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit_cochange.py missing: {AUDIT}")
         return 1
 
     failures: list[str] = []
+    with tempfile.TemporaryDirectory() as _fb:
+        failures.extend(_noise_and_mass_filters(Path(_fb)))
 
     # ------------------------------------------------------------------ #
     # Case 1: co-changing distant pair flagged as a candidate             #
