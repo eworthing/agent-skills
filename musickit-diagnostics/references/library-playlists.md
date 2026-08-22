@@ -16,7 +16,7 @@ failure modes that recur there.
 ## Contents
 
 - [API choice (iOS 16+)](#api-choice-ios-16)
-- [The Song-only rule](#the-song-only-rule)
+- [The catalog-identifier rule](#the-catalog-identifier-rule)
 - [Failure walkthrough: empty identifier set + -7013](#failure-walkthrough-empty-identifier-set---7013)
 - [Pre-call checklist](#pre-call-checklist)
 - [Post-success handoff](#post-success-handoff)
@@ -57,38 +57,61 @@ appears in the Music app's Library → Playlists. That is normal — the API
 returns success once the create call commits server-side, but the Music
 app's local cache refreshes asynchronously.
 
-## The Song-only rule
+## The catalog-identifier rule
 
-`MusicLibrary.shared.add(_:to:)` accepts any `MusicPlaylistAddable` —
-`Song`, `Track`, and `Album` all conform (verified against the iOS 27 SDK
-`MusicKit.swiftinterface`). Conformance is **not** the issue; a populated
-identifier set is. In practice, **only pass items that came back from
-`MusicCatalogSearchRequest`** — a catalog-fetched `Song` is the reliable
-choice:
+`MusicLibrary.shared.add(_:to:)` accepts any `MusicPlaylistAddable` — per
+Apple's own conformance list that's `Album`, `MusicVideo`, `Playlist`,
+`Playlist.Entry`, `Song`, **and `Track`**. Conformance is **not** the issue;
+a populated identifier set is. The rule is about *provenance*, not the
+Swift type: pass items that trace back to a catalog fetch. That includes a
+`Song` from `MusicCatalogSearchRequest` **and** a `Track` obtained via a
+catalog `Album`'s `.tracks` relationship — both carry a populated
+`MPIdentifierSet` because both originate from the catalog. There is no need
+to unwrap a `Track` into a `Song` before adding it; `Track` is a first-class,
+directly-addable item, not a lesser stand-in for `Song`.
+
+Passing the **bare `Album` container itself** (or any hand-built item)
+instead of its resolved contents is what fails in the field-observed
+incident this section is sourced from. Apple's own docs don't document
+*why* — `Album` is a listed `MusicPlaylistAddable` conformer, so this isn't
+a conformance gap, and the exact mechanism behind the empty-identifier-set
+log is not publicly documented. Treat it as an observed, not documented,
+failure mode and prefer resolved items:
 
 ```swift
-// CORRECT: Song from catalog search
+// CORRECT — Song from a direct catalog search:
 var request = MusicCatalogSearchRequest(term: query, types: [Song.self])
 let response = try await request.response()
 for song in response.songs {
     try await MusicLibrary.shared.add(song, to: playlist)
 }
 
-// WRONG: an item with an empty identifier set — not a conformance error.
-// e.g. an Album (or any item) not fetched from a catalog request, or one
-// constructed from display strings (title/artist). There is no valid
-// catalog/library ID, so the add silently does nothing.
-let album: Album = ...   // compiles (Album conforms); fails at runtime if unpopulated
+// ALSO CORRECT — Track from a catalog Album's tracks relationship.
+// No need to unwrap to Song first; Track conforms to MusicPlaylistAddable
+// and carries its own populated identifier set here because `album` itself
+// came from the catalog.
+let detailedAlbum = try await album.with(.tracks)
+guard let tracks = detailedAlbum.tracks else { return }
+for track in tracks {
+    try await MusicLibrary.shared.add(track, to: playlist)
+}
+
+// WRONG (observed, not documented): passing the Album container itself.
+// Album does conform to MusicPlaylistAddable, so this isn't a compile-time
+// error — but in field testing it silently no-op'd with an empty
+// MPIdentifierSet log. Apple doesn't document why; prefer the resolved
+// Song/Track items above instead of relying on this working.
 try await MusicLibrary.shared.add(album, to: playlist)
 ```
 
 **Why.** A library playlist entry needs a valid catalog or library
-identifier. `Song` instances returned from `MusicCatalogSearchRequest`
-carry a populated `MPIdentifierSet`. Items **not** fetched from a catalog
-request — hand-constructed from `title`/`artistName` display strings, or an
-`Album` that was never fetched from the catalog — have an empty identifier
-set, even when their fields look fine to a human reader. The framework will
-log
+identifier. `Song` and `Track` instances that trace back to a catalog
+fetch (a direct search, or a relationship fetch off a catalog-sourced
+parent) carry a populated `MPIdentifierSet`. Items **not** fetched from a
+catalog request — hand-constructed from `title`/`artistName` display
+strings, or the `Album` container passed directly instead of its resolved
+tracks — have an empty identifier set, even when their fields look fine to
+a human reader. The framework will log
 
 ```
 No catalogID, libraryID, or deviceLocalID was found from underlying
@@ -107,10 +130,12 @@ Two error signatures appear together when this fails:
 
 Three root causes, ranked by frequency:
 
-**1. Wrong item type (most common).** Code is passing `Album` or a
-hand-built item where it should be passing a catalog-derived `Song`.
-Fix: switch the search to `types: [Song.self]`, iterate
-`response.songs`, and add each song individually.
+**1. Passing the bare container (most common).** Code is passing an
+`Album` (or a hand-built item) directly instead of its resolved contents.
+Fix: either search with `types: [Song.self]` and iterate `response.songs`,
+or fetch `album.with(.tracks)` and iterate its `tracks` — add each `Song`
+or `Track` individually. Both are catalog-sourced and equally valid; there
+is no need to convert a `Track` into a `Song`.
 
 **2. Simulator.** Library playlist creation and account-store touches do
 not work reliably on the iOS Simulator regardless of code correctness.
@@ -132,7 +157,7 @@ still succeeded; only the immediately-following playback failed.
 Run through these in order before suspecting an SDK bug:
 
 1. **Authorization** — `MusicAuthorization.request()` returned `.authorized` and the result is stored in a view-model flag (e.g. `isAuthorized`) gating the save button.
-2. **Source items are `Song` instances from `MusicCatalogSearchRequest(types: [Song.self])`.** Not `Album`. Not constructed from display strings. Not from `MusicLibraryRequest` either (those are library items; they have a `libraryID` but no `catalogID` — the API can usually still add them, but mixing sources is a frequent source of empty-identifier-set logs).
+2. **Source items are catalog-sourced `Song` or `Track` instances** — either from `MusicCatalogSearchRequest(types: [Song.self])` directly, or from a catalog `Album`'s resolved `.tracks` relationship. Not the bare `Album` container itself. Not constructed from display strings. Not from `MusicLibraryRequest` either (those are library items; they have a `libraryID` but no `catalogID` — the API can usually still add them, but mixing sources is a frequent source of empty-identifier-set logs).
 3. **Real device, not Simulator.**
 4. **Bundle ID registered with MusicKit capability** (`bundle-id-setup.md`).
 5. **Device signed into Apple Music** with an active subscription. Confirm in Settings → Music.

@@ -5,13 +5,13 @@
       "id": 0,
       "name": "library-add-album-silent-failure",
       "prompt": "In my SwiftUI app, I fetch an Album from MusicCatalogSearchRequest and let the user tap 'Save to Library'. The handler does `try await MusicLibrary.shared.add(album, to: playlist)`. The call doesn't throw, but when the user opens the Music app afterward, the playlist is empty — no songs got added, no error shown anywhere. What's going on and how do I fix it?",
-      "expected_output": "Diagnoses the root cause as passing an Album (or any non-Song catalog item) into add(_:to:) — the call silently produces an empty identifier set rather than throwing. States the Song-only rule: only catalog-fetched Song items should be passed to library-add APIs. Fix fetches/extracts the Album's Songs (e.g. via album.with(.tracks) or a tracks relationship) and adds those Song objects instead of the Album. Does NOT attribute the failure to authorization, network, or a generic 'add error handling' fix without naming the type mismatch.",
+      "expected_output": "Diagnoses the root cause as passing the bare Album container into add(_:to:) instead of its resolved contents — the call silently produces an empty identifier set rather than throwing. States the catalog-identifier rule: items must trace back to a catalog fetch. Fix fetches/extracts the Album's contents (e.g. via album.with(.tracks)) and adds those items individually — either as Song (from a direct catalog search) or as Track (from the album's tracks relationship); Track does NOT need to be unwrapped into Song, since Track conforms to MusicPlaylistAddable directly per Apple's own docs and carries its own populated identifier set when catalog-sourced. Does NOT attribute the failure to authorization, network, or a generic 'add error handling' fix without naming the container-vs-contents mismatch.",
       "files": [],
       "expectations": [
-        "Identifies that passing a non-Song item (Album) to add(_:to:) is the actual root cause, not authorization/network/missing error handling",
+        "Identifies that passing the bare Album container (rather than its resolved Song/Track contents) to add(_:to:) is the actual root cause, not authorization/network/missing error handling",
         "Names the mechanism as an empty identifier set / silent no-op, not a thrown error",
-        "The proposed fix adds Song objects (from the album's tracks), not the Album itself",
-        "Does not propose a generic try/catch or null-check as the primary fix"
+        "The proposed fix adds individual catalog-sourced items (Song from search, or Track from the album's tracks relationship) instead of the bare Album",
+        "Does not propose a generic try/catch or null-check as the primary fix, and does NOT falsely require unwrapping Track into Song (Track is directly addable)"
       ]
     },
     {
