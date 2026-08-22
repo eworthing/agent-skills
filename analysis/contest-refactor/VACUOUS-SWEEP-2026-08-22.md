@@ -290,7 +290,25 @@ the same day when the reviewer profile moved to `provider-adapters-reviewer.md`;
 content (codex `--sandbox read-only`, opencode `edit: deny`) is still caught through the two-file
 read. The relocation did not blind the guard.
 
-**Final coverage — 68 of 72; 23 proven vacuous, 21 fixed, 3 recorded, 1 withdrawn.** The four
+**Tail closed 2026-08-22.** The three findings recorded rather than fixed during the sweep were
+closed afterwards, so nothing is left open:
+
+- **`render_report.py`** — the residual/disposition rendering could be deleted entirely with the
+  suite green, even though the fixture carries `"deinit carve-out"` / `"accepted"`. A scorecard that
+  silently drops an accepted carve-out reads as an **unqualified** score, which is the direction
+  that matters. Now asserted in the output.
+- **`_g19_skill_rev_selftest.py`** — the isolation comparison excluded issues by the substring
+  `"skill_rev"`, fragile in the dangerous direction: a genuine provider/model coupling bug whose
+  message merely *mentioned* skill_rev would have been filtered out and the isolation would have
+  looked intact. Rewritten as **positive selection** on the `provider=` prefix that check owns, plus
+  an assertion that the filter matched something — a filter that selects nothing makes the
+  comparison below it vacuous.
+- **G46's epoch locality gap** — left as recorded, deliberately. The mutation *is* caught by
+  `_ruleset_epoch_selftest.py`, so the system is guarded; duplicating the case into G46's own file
+  buys coverage bookkeeping, not safety. Recorded so a future reader knows the guard lives next
+  door rather than assuming it is missing.
+
+**Final coverage — 68 of 72; 23 proven vacuous, 22 fixed, 1 recorded-by-design, 1 withdrawn.** The four
 untested are two written and mutation-tested the same day (`_audit_suppressions`,
 `_audit_public_compat`) and two that are repo-root dependent and mislead in a copied tree
 (`_coverage_ledger`, `_reviewer_baseline`).

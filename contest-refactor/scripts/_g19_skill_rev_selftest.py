@@ -78,13 +78,20 @@ def main() -> int:
     broken = {"provider": "unknown", "spawn_isolation": "subagent"}  # a real G19 violation
     baselines = set()
     for rev in (None, "2b81c10", ""):
-        others = tuple(
-            sorted(
-                i.message
-                for i in va.check_g19_provider_model(_base(skill_rev=rev, **broken))
-                if "skill_rev" not in i.message
+        # Select the provider/model issues POSITIVELY, by the prefix that check
+        # owns, rather than excluding anything whose text happens to contain
+        # "skill_rev". The exclusion form was fragile in the dangerous direction:
+        # a genuine provider/model coupling bug whose message merely mentioned
+        # skill_rev would have been filtered out of the comparison and the
+        # isolation would have looked intact. Every provider/model message starts
+        # `provider=`; every skill_rev message starts `skill_rev=`.
+        issues = va.check_g19_provider_model(_base(skill_rev=rev, **broken))
+        others = tuple(sorted(i.message for i in issues if i.message.startswith("provider=")))
+        if not others:
+            failures.append(
+                f"skill_rev={rev!r}: no provider/model issues selected -- the filter matched "
+                "nothing, so the isolation comparison below is vacuous"
             )
-        )
         baselines.add(others)
     if len(baselines) != 1:
         failures.append("skill_rev changed the provider/model verdict; the checks must be disjoint")

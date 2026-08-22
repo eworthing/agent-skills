@@ -130,6 +130,17 @@ def main() -> int:
                 failures.append(
                     "html: expected an inline <svg> sparkline (<polyline>) for the trend"
                 )
+            # The fixture carries a residual + disposition, and nothing asserted
+            # they reach the output: the whole residual/disposition rendering
+            # could be deleted and this file stayed green. A scorecard that
+            # silently drops an accepted carve-out reads as an unqualified score.
+            if "deinit carve-out" not in html:
+                failures.append(
+                    "html: residual_blocking_10 text missing from the scorecard -- an "
+                    "accepted carve-out would render as an unqualified score"
+                )
+            if "accepted" not in html:
+                failures.append("html: residual_disposition missing from the scorecard")
             if "Reducer mutates shared state" not in html:
                 failures.append("html: finding not rendered")
             # raw angle brackets from the strength text must be escaped, not injected
