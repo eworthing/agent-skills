@@ -276,6 +276,24 @@ def _cases():
             False,
         )
     )
+    # Isolates the distinct-id-count comparison itself. Both existing dedup cases
+    # above pass, and the RED ones below trip a DIFFERENT check first (per-member
+    # "finding_stable_id not in findings[]", or the {1,2} cap), so deleting the
+    # `len(stable_ids) != findings_count` comparison left the whole suite green.
+    # Here every other leg holds -- STABLE_A is present in findings[], and
+    # findings_count 2 is inside the {1,2} cap -- so only the count mismatch fires.
+    cases.append(
+        (
+            "two members dedup to one stable_id but findings has 2 entries: fails",
+            _nonterminal_review(
+                "CONTINUE",
+                None,
+                _challenge(outcome="broke", panel=dedup_panel),
+                findings=[{"stable_id": STABLE_A}, {"stable_id": "F-999"}],
+            ),
+            True,
+        )
+    )
     distinct_panel = [
         _member(1),
         _member(

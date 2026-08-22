@@ -177,13 +177,29 @@ mutation is safe, and restore between mutations. Prioritise by stakes — a vacu
 gate or on redaction matters more than one on a reporting helper. Finding nothing is a good result;
 an honest empty report beats a padded one.
 
-**Covered so far — 3 of 72, all sound:**
+**Batch 1 (serial, 2026-08-21) — 5 tested, 1 proven vacuous.** A second real one, in the panel
+half of rule #6 exception (d): `_artifact_panel.py:652`'s
+`if stable_ids and findings_count in (1, 2) and len(stable_ids) != findings_count:` could be deleted
+outright (`if False:`) and **no test in the entire 72-file suite noticed**. The two fixtures the
+coupling selftest's own docstring cites as pinning that rule each trip a *different* check first —
+one the per-member `finding_stable_id not in findings[]` check, the other the separate `{1,2}` cap —
+so the distinct-id comparison itself was never isolated. Closed by one fixture where every other leg
+holds (`STABLE_A` present in `findings[]`, `findings_count` 2 inside the cap) so only the count
+mismatch can fire; verified to kill the mutation.
+
+Worth noting *how* it hid: not a drifted threshold like the first one, but **two neighbouring checks
+that shadow the third**. Every fixture aimed at the rule was absorbed by a cheaper check upstream.
+That is a distinct failure mode and a harder one to spot by reading.
+
+**Covered so far — 8 of 72; 2 proven vacuous, both now fixed:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
 | `_g44_selftest.py` (credential quarantine) | `hits.append` → no-op; `_CREDENTIAL_PATTERNS` → empty | both **killed** |
 | `_redaction_dispatch_selftest.py` | redaction rule inverted (`never the value` → `always the value`) | **killed** |
-| `_token_budget_selftest.py` | — | the one **proven vacuous**; fixed in §8 |
+| `_token_budget_selftest.py` | — | **proven vacuous**; fixed in §8 |
+| `_tool_runner_selftest.py`, `_g47`, `_g48`, `_g32_panel` | two each (batch 1) | all **killed** |
+| `_g32_panel_coupling_selftest.py` | dedup-count comparison → `if False:` | **SURVIVED** — fixed by an isolating fixture |
 
 One near-miss worth recording so it is not re-raised: renaming method.md's *"Credential redaction."*
 heading **survives** `_redaction_dispatch_selftest.py`. That is **not** a vacuous assertion — the
