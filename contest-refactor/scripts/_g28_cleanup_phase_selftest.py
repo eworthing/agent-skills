@@ -57,11 +57,12 @@ VALID_CLEANUP = {
 }
 
 
-def _run(loop_state: dict) -> list[str]:
+def _run(loop_state: dict, current_review: dict | None = None) -> list[str]:
     with tempfile.TemporaryDirectory() as td:
         artifact_dir = Path(td)
         (artifact_dir / "LOOP_STATE.json").write_text(json.dumps(loop_state))
-        issues = check_g28_loop_state_freshness(artifact_dir, copy.deepcopy(CURRENT_REVIEW))
+        review = copy.deepcopy(current_review if current_review is not None else CURRENT_REVIEW)
+        issues = check_g28_loop_state_freshness(artifact_dir, review)
         return [f"{i.rule}: {i.message}" for i in issues]
 
 
@@ -71,6 +72,24 @@ def main() -> int:
     # --- valid checkpoint: silent ---
     if _run(VALID_CLEANUP):
         failures.append(f"valid checkpoint fired: {_run(VALID_CLEANUP)}")
+
+    # --- schema_version floor (validation.md:91, "schema_version >= 3") ---
+    # Every other case in this file reuses the CURRENT_REVIEW constant, pinned at
+    # schema_version 4, so the floor for the whole G28 rule was never exercised:
+    # deleting the check passed. A v2 artifact must be silent even when the
+    # checkpoint is malformed enough to fire at v4.
+    broken = copy.deepcopy(VALID_CLEANUP)
+    broken.pop("cleanup_state")
+    if not _run(broken, {"schema_version": 4, "loop": 3}):
+        failures.append(
+            "schema_version 4 with cleanup_state removed did NOT fire; floor case is inert"
+        )
+    for below in (1, 2):
+        fired = _run(broken, {"schema_version": below, "loop": 3})
+        if fired:
+            failures.append(
+                f"G28 fired at schema_version {below}, below its documented >= 3 floor: {fired}"
+            )
 
     # --- each cleanup_state field missing/malformed: fires ---
     cases = {

@@ -110,6 +110,24 @@ def main() -> int:
     on_disk = {p.name for p in FIXTURES.iterdir() if p.is_dir()} if FIXTURES.is_dir() else set()
 
     # 1) no silent exclusion, both directions
+    # An empty corpus is not a clean corpus. Every check below lives inside a loop
+    # over `on_disk & registered` or is gated on a named fixture, so with both the
+    # manifest list and the fixture dir emptied this file printed
+    # "OK: priority-replay selftest -- 0 fixture(s)" and exited 0 -- announcing the
+    # zero in its own success line. Same guard `_exec_replay_selftest.py` already
+    # carries, and the same `absent != clean` rule `tool_runner.py` applies to a
+    # tool that never ran.
+    if not registered:
+        failures.append(
+            "manifest registers no fixtures (need >= 1) -- an empty corpus makes "
+            "every check below vacuous"
+        )
+    if not on_disk:
+        failures.append(
+            "no fixture dirs under evals/priority-fixtures/ (need >= 1) -- an empty "
+            "corpus makes every check below vacuous"
+        )
+
     for name in sorted(on_disk - set(registered)):
         failures.append(
             f"fixture {name!r} on disk but not registered in priority_replay_baseline.json"

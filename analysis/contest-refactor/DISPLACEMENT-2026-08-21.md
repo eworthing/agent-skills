@@ -337,7 +337,42 @@ catch a never-fire mutation. G5, G39 and G43 were each mutated **both** ways and
 died. The polarity gap is not the failure mode for the gate guards; the hollow-fixture-set shape
 found in modules does not transfer to them.
 
-**Covered so far — 44 of 72; 14 proven vacuous, 13 fixed, 1 open, 1 withdrawn as a dead mutation:**
+**Batch 8 (gate preconditions + replay harnesses) — 6 tested, 4 findings.** The stopping condition
+set before this batch was *"if the gate guards come back clean, call the sweep done"*. They did not.
+
+- **`_priority_replay_selftest.py` reported `OK` on a genuinely empty corpus** — and printed
+  *"0 fixture(s)"* in its own success line. Every check lives inside a loop over
+  `on_disk & registered` or is gated on a named fixture, so emptying both the manifest list and the
+  fixture directory left nothing to iterate and exit 0. This is `absent != clean` — the rule
+  `tool_runner.py` already applies to a tool that never ran — inside the test suite itself. Fixed
+  with the guard `_exec_replay_selftest.py` already carried; that file was verified sound on the
+  identical probe.
+- **G28's `schema_version >= 3` floor was never exercised**: all 18 cases reuse one module constant
+  pinned at 4. Fixed with v1/v2 silence cases plus a v4 control.
+- **G46** covers its schema floor and `drift_notes` coupling well, but its helper hardcodes a valid
+  `skill_rev`, so epoch scoping is unproven *in that file*. The same mutation **is** caught by
+  `_ruleset_epoch_selftest.py`, so the system is guarded — recorded as a locality gap, not a hole.
+- **G19**'s isolation assertion filters with `"skill_rev" not in i.message`, a substring match on
+  freeform text, so a real coupling bug whose message happens to contain that word is silently
+  excluded. The isolation itself holds — a reworded control mutation is caught — only the filter is
+  fragile.
+
+### Harness defect found in my own verification, and it matters for every result above
+
+Verifying G28 produced a contradiction: the code plainly returns early below `schema_version` 3, yet
+the gate fired at v1. The cause was **stale `.pyc` files written by my own mutation runs**. `python3
+-B` prevents *writing* bytecode, not *reading* it, so a `__pycache__` entry compiled from a mutated
+source survived the restore and kept executing. Disassembly settled it: the loaded function compared
+against `0`, the constant from the mutation, while the file on disk read `3`.
+
+Every mutation verdict in this sweep taken immediately after a restore was therefore suspect. All
+seven shipped fixes were **re-verified with `__pycache__` cleared before and after each mutation**,
+and all seven mutations still die — the fixes are sound and only that one reading was corrupted. But
+the general lesson is the sweep's own subject turned on itself: *a verification harness can report a
+result that has nothing to do with the code under test*, which is exactly what a vacuous assertion
+does. Clear the bytecode cache around every mutation.
+
+**Covered so far — 50 of 72; 18 proven vacuous, 15 fixed, 3 recorded, 1 withdrawn:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
