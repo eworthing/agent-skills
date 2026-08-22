@@ -47,6 +47,35 @@ def _run(root: Path) -> tuple[str, str, int]:
     return proc.stdout, proc.stderr, proc.returncode
 
 
+# --- (h) exactly ONE outside-home site -> below the >= 2 threshold, silent -----
+# Both flag fixtures use exactly 2 sites, so the threshold itself had no negative
+# case: lowering it from `count >= 2` to `count >= 1` passed. A single outside-home
+# interpretation is the common, benign shape -- one consumer switching on a shared
+# enum -- and flagging it would make this audit noise on every real codebase.
+def case_h_single_site_below_threshold(base: Path) -> str | None:
+    root = base / "h"
+    _write(
+        root,
+        {
+            "Package/Sources/ModuleA/Kind.swift": (
+                "public enum Kind {\n    case one\n    case two\n}\n"
+            ),
+            "Package/Sources/ModuleB/Consumer.swift": (
+                "func f(k: Kind) -> Bool {\n    if k == Kind.one { return true }\n    return false\n}\n"
+            ),
+        },
+    )
+    out, err, rc = _run(root)
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    if "| Kind |" in out:
+        return (
+            "a single outside-home site was flagged; the >= 2 threshold is not "
+            f"enforced\n--- stdout ---\n{out}"
+        )
+    return None
+
+
 # --- (a) qualified Enum.case at 2 outside-home sites -> Tier 1 row ----------
 def case_a_qualified_outside_home(base: Path) -> str | None:
     root = base / "a"
@@ -243,6 +272,10 @@ def case_g_nested_module_layout(base: Path) -> str | None:
 
 
 CASES = [
+    (
+        "h: a single outside-home site stays below the >= 2 threshold",
+        case_h_single_site_below_threshold,
+    ),
     ("a: qualified Enum.case outside home -> Tier 1", case_a_qualified_outside_home),
     ("b: unqualified unique case outside home -> Tier 2", case_b_unqualified_unique_case),
     ("c: ambiguous case not attributed to either enum", case_c_ambiguous_case_not_attributed),

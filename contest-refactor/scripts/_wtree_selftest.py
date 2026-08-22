@@ -57,6 +57,40 @@ def main() -> int:
             failures.append("untracked source file must change the fingerprint")
         (repo / "src" / "new.txt").unlink()
 
+        # EVERY bookkeeping path, named LITERALLY. Only CURRENT_REVIEW.json was ever
+        # exercised individually, so shrinking BOOKKEEPING_PATHS passed. Note the
+        # first fix attempted here was itself vacuous: it looped over
+        # BOOKKEEPING_PATHS, so a mutation shrinking the constant shrank the loop
+        # too and still passed -- an oracle derived from the implementation it is
+        # meant to check. The expected set is therefore written out in full; the
+        # test must know what belongs there independently of the code.
+        expected_bookkeeping = {
+            "CURRENT_REVIEW.md",
+            "CURRENT_REVIEW.json",
+            "REVIEW_HISTORY.md",
+            "REVIEW_HISTORY.json",
+            "findings_registry.json",
+            "LOOP_STATE.json",
+        }
+        if set(BOOKKEEPING_PATHS) != expected_bookkeeping:
+            failures.append(
+                f"BOOKKEEPING_PATHS changed: {sorted(set(BOOKKEEPING_PATHS) ^ expected_bookkeeping)} "
+                "differ. Every entry is excluded from the source fingerprint, so dropping one makes "
+                "normal loop bookkeeping register as source drift; adding one hides real drift."
+            )
+        for name in sorted(expected_bookkeeping):
+            target = repo / name
+            existed = target.exists()
+            before = source_tree_fingerprint(repo)
+            target.write_text('{"bookkeeping": "churn"}\n')
+            if source_tree_fingerprint(repo) != before:
+                failures.append(
+                    f"bookkeeping path {name!r} changed the source fingerprint; it must be "
+                    "excluded like every other entry in BOOKKEEPING_PATHS"
+                )
+            if not existed:
+                target.unlink()
+
         # Bookkeeping churn does not.
         for name in sorted(BOOKKEEPING_PATHS):
             (repo / name).write_text('{"churn": true}\n')
