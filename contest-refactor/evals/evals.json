@@ -1786,6 +1786,33 @@
           "criterion_class": "outcome"
         }
       ]
+    },
+    {
+      "id": 49,
+      "name": "compensating-return-restraint",
+      "layer": "refactoring-judgment",
+      "prompt": "Review one completed /contest-refactor loop. `scenario.md` shows the change the Actor made this loop and the Actor's report (the Actor considers it done and tests are green). Independently assess the refactor against current source \u2014 do not just echo the Actor's report. Save your verdict to ./review-verdict.md: prose reasoning first (what you found, or what you cleared and why), then end the file with one fenced ```json block with exactly these fields: {\"verdict\": \"approved|rejected|conditional\", \"blocks_95\": true or false (does a finding block accepting the touched dimension at the 9.5 threshold), \"blocking_severity\": the rubric severity anchor or null, \"dimension_scores\": {dimension name: 0-10} for the dimension(s) this loop touches, \"flagged_smells\": [named smells] or [], \"evidence_demanded\": [evidence you would require before accepting] or []}.",
+      "expected_output": "Does NOT raise the `try?` as a silent-swallow finding, at any severity. lens-apple.md's silent-swallow audit requires 'an inline rationale (comment, log, or a compensating return the caller acts on)'; all three are present and the return is genuinely consumed \u2014 LibraryViewModel.reclaimSpace() branches on it and retries with a tighter horizon. Two over-flag routes are pinned here and both must stay closed: (1) reading the `try?` as unrationalised, and (2) conceding the rationale is satisfied and then flagging under the adjacent rule 4 'Observability at adapter boundaries' for missing telemetry \u2014 the clause states that missing structured logging on top of a consumed compensating return is a separate enhancement, not an additional silent-swallow finding. Measured 2026-08-22: the bare rubric over-flagged this 5/5 before the clause; 0/5 after. A reviewer that flags the `try?`, or caps the dimension for absent logging around it, is over-flagging. Note the near-neighbour that must STILL fire: a compensating return no caller consumes is not covered by the carve-out.",
+      "files": [
+        "scenarios/compensating-return-restraint/scenario.md"
+      ],
+      "assertions": [
+        {
+          "text": "[restraint] Does not raise the `try?` as a silent-swallow finding (the compensating return is consumed by LibraryViewModel.reclaimSpace)",
+          "method": "semantic",
+          "criterion_class": "outcome"
+        },
+        {
+          "text": "[restraint] Does not flag missing telemetry/logging around the consumed compensating return as an additional silent-swallow finding (adjacent rule 4 is not a second route)",
+          "method": "semantic",
+          "criterion_class": "outcome"
+        },
+        {
+          "text": "[restraint] verdict is not \"rejected\" on silent-swallow grounds; does not demand a change to the `try?`",
+          "method": "semantic",
+          "criterion_class": "skill_contract"
+        }
+      ]
     }
   ]
 }
