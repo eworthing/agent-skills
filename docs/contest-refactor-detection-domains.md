@@ -293,6 +293,17 @@ that has nothing to do with the domain in question. What did pay in this cycle w
 *except* the lens additions — two shipped detectors at zero loop-path cost, 4,251 tok/loop returned
 by a load-path split, and 22 vacuous assertions closed in the skill's own test suite.
 
+**A by-product worth more than it cost: 15 reps, zero false positives.** Every one of the three
+runs carried a deliberately clean change alongside the seeded defect — a `NumberFormatter` cache, a
+receipts formatter, a session cache — and across **15 independent reps not one rep flagged any of
+them**, each clearing them with correct reasoning rather than silence. That was collected free, as
+control-arm hygiene, and it bears directly on **DD-13**: the register calls restraint *"the one axis
+where added prose has measurably paid"*, but the bare rubric's restraint on clean code is already
+15-for-15. The evidence is suggestive rather than decisive — a clean *surrounding* change is an
+easier near-miss than a pattern that genuinely resembles the defect — so DD-13's experiment still
+has to use real near-misses. But the same control-first logic applies: **if the control does not
+over-flag, added restraint prose has no false positives to remove.**
+
 **Reading the "next unmet criterion" column** (recounted after the 2026-08-21 adjudication pass).
 Of fourteen candidates, **nine** now have the expensive measurement run as their genuine next step:
 DD-02, DD-03, DD-05, DD-08, DD-10, DD-11, plus DD-12 and DD-14 which reached it by clearing a
