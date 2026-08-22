@@ -191,7 +191,24 @@ Worth noting *how* it hid: not a drifted threshold like the first one, but **two
 that shadow the third**. Every fixture aimed at the rule was absorbed by a cheaper check upstream.
 That is a distinct failure mode and a harder one to spot by reading.
 
-**Covered so far — 8 of 72; 2 proven vacuous, both now fixed:**
+**Batch 2 (drift guards) — 6 tested, 0 findings.** `_retired_prose`, `_ref_tree_lint`, `_canon`,
+`_flag_effect`, `_schema_compat`, `_transition_table` all killed both mutations. `_retired_prose`
+turned out to be self-guarding against the failure predicted for it: renaming its target file fires
+*"a rename would silently blind this check"* rather than going quiet. Two judgment calls were made
+correctly and are recorded so they are not re-raised as findings: a **paraphrased** (non-verbatim)
+reintroduction does slip past `_retired_prose`, but its contract is a literal substring from a named
+commit — the same shape as the method.md-heading non-finding above; and `_transition_table`'s
+legality check, when disabled, fails five assertions at once, which is the opposite of the shadowing
+problem.
+
+**A latent version of the class, worth knowing about.** `_schema_compat_selftest.py` reads a dogfood
+artifact at `REPO_ROOT/CURRENT_REVIEW.json` — one level *above* the skill dir. It exists today, so
+the test exercises its real path. If it were ever removed the test would fall to its skip branch and
+still exit 0. It does announce the skip in its output (*"dogfood artifact absent; retroactive check
+skipped"*), which is the repo's own `absent != clean` discipline honoured — but a runner that reads
+only exit codes would see full coverage. Not a defect today; a thing to not be surprised by.
+
+**Covered so far — 14 of 72; 2 proven vacuous, both fixed:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
