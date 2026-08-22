@@ -59,12 +59,38 @@ def _init_repo(root: Path) -> None:
     )
 
 
+def _unknown_provider_warning() -> list[str]:
+    """Pin the `--provider unknown` warning.
+
+    It exists because of a documented production incident: an inline self-vet
+    reached HALT_SUCCESS off a stale detection rule with no subagent spawn. The
+    warning was the fix, and it had zero test coverage -- deleting it outright
+    passed this suite. A guard installed after a real incident is exactly the one
+    that must not be able to vanish quietly.
+    """
+    import subprocess
+    import sys as _sys
+
+    p = subprocess.run(
+        [_sys.executable, str(PREFLIGHT), str(PREFLIGHT.parent), "--provider", "unknown"],
+        capture_output=True,
+        text=True,
+    )
+    blob = (p.stdout + p.stderr).lower()
+    if "unknown" not in blob:
+        return ["--provider unknown: no warning emitted; the post-incident guard is silent"]
+    if "halt_success" not in blob:
+        return ["--provider unknown: warning does not name the HALT_SUCCESS risk it exists for"]
+    return []
+
+
 def main() -> int:
     if not PREFLIGHT.is_file():
         print(f"FAIL: preflight script missing: {PREFLIGHT}")
         return 1
 
     failures: list[str] = []
+    failures.extend(_unknown_provider_warning())
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
         scope = base / "src"

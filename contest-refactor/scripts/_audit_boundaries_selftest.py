@@ -122,12 +122,44 @@ FIXTURES: dict[str, tuple[dict[str, str], bool]] = {
 }
 
 
+def _filters_independently() -> list[str]:
+    """Pin `_is_test_file` and `IGNORE_DIRS` SEPARATELY.
+
+    They mask each other through the combined walk: a test file usually also sits
+    under a `tests/` directory, so disabling `_is_test_file` entirely still passed
+    (IGNORE_DIRS caught the files), and emptying IGNORE_DIRS also passed (the
+    filename check caught them back). Each filter was therefore unproven while the
+    pair looked covered. These assertions call each filter directly, so neither can
+    hide behind the other. `repo_map.py` and `audit_suppressions.py` both import
+    these as a single source of truth, so a hole here is a hole in three tools.
+    """
+    import audit_boundaries as ab
+
+    out: list[str] = []
+    for name, expected in (
+        ("test_thing.py", True),
+        ("thing_test.py", True),
+        ("thing.py", False),
+        ("contest_helper.py", False),  # substring 'test' must not match
+        ("latest_test.py", True),
+    ):
+        if ab._is_test_file(name) is not expected:
+            out.append(f"_is_test_file({name!r}) != {expected}")
+    for d in ("__pycache__", ".git", "node_modules", ".venv"):
+        if d not in ab.IGNORE_DIRS:
+            out.append(f"IGNORE_DIRS lost {d!r}")
+    if not ab.IGNORE_DIRS:
+        out.append("IGNORE_DIRS is empty -- the directory filter excludes nothing")
+    return out
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit script missing: {AUDIT}")
         return 1
 
     failures: list[str] = []
+    failures.extend(_filters_independently())
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
         for name, (files, expect_cycle) in FIXTURES.items():

@@ -273,7 +273,43 @@ The common thread across all four is not a code smell but a *fixture-design* fai
 the mechanism was fine and the coverage claim was hollow. Reading the tests suggested coverage in
 all four.
 
-**Covered so far — 32 of 72; 4 proven vacuous, all fixed:**
+**Batch 6 (ranked by logic-per-test) — 6 tested, 9 findings across 5 files.** By far the
+highest-yield batch, and the prior is why: after four findings the common thread was a **hollow
+fixture set**, not a code smell, so the batch was picked by how large each module is relative to its
+selftest rather than by topic or code pattern.
+
+**Fixed this pass (the three with the widest blast radius):**
+
+- **`audit_boundaries.py` — the two filters masked each other.** Disabling `_is_test_file` entirely
+  passed, because `IGNORE_DIRS`' `tests` entry caught the files anyway; separately emptying
+  `IGNORE_DIRS` also passed, because the filename check caught them back. Each filter was unproven
+  while the pair looked covered — the batch-1 shadowing shape again, now between two *filters*
+  rather than two checks. This one has **three consumers**: `repo_map.py` and `audit_suppressions.py`
+  both import these as a single source of truth. Closed by asserting each filter directly.
+- **`preflight.py` — the `--provider unknown` warning had zero coverage** and could be deleted
+  outright. It exists because of a documented production incident (an inline self-vet reaching
+  HALT_SUCCESS off a stale detection rule with no subagent spawn). A guard installed after a real
+  incident is precisely the one that must not be able to vanish quietly. Closed by asserting the
+  warning fires and names the HALT_SUCCESS risk.
+
+**Confirmed and reproduced, not yet fixed** — each verified by me, mutation recorded:
+
+| Site | Mutation that survived |
+| --- | --- |
+| `audit_clones.py` | `_MIN_LINES = 8` → `0` (size floor removed); the whole Python function extractor returning `[]` — all four fixtures are Swift-only, so Python clone support is untested end to end |
+| `repo_map.py` | `auto_engage` threshold pushed out by 100k — the `>300 files` True branch that `method.md` relies on for auto-engage is never exercised |
+| `render_report.py` | residual/disposition rendering and the markdown findings section can both be emptied — fixture data contains them, nothing asserts they reach the output |
+
+**One correction to my own verification.** My `_public_names` mutation inserted a bare `pass` at the
+top of the function, which changes nothing — a dead mutation that proves nothing either way, the
+same trap the sweep agent caught itself in on `_g37` and `_ruleset_epoch`. That finding is
+**unverified**, not confirmed, and is excluded from the table above.
+
+**`_attested_run_selftest.py` is the most rigorously tested file found in the sweep** — signal
+death, stream-flood deadlock, shlex round-trip, trust pin, four distinct failure exit codes,
+home-isolation proof. A deliberate hunt for an uncovered branch came up empty.
+
+**Covered so far — 38 of 72; 10 proven vacuous, 6 fixed, 3 open, 1 withdrawn as a dead mutation:**
 
 | Selftest | Mutation applied | Result |
 | --- | --- | --- |
