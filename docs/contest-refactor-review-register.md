@@ -221,6 +221,67 @@ Owner-directed, arising from the provider-detection work the same day.
 - Cost: `provider-adapters-reviewer.md` is in the per-loop set, so +43 tokens per loop;
   `provider-adapters.md` is Step -1 main-only. `budget-guard: OK`, no ceiling bump.
 
+## Instrumented run #6 — 2026-08-23 (codex; first run with working provider detection)
+
+Terminal `HALT_SUCCESS_candidate` at loop 6 of a cap of 10. **The first run in this project's
+telemetry where provider detection ever fired**: `provider: "codex"`, `spawn_isolation:
+"subagent"`, `loop_model`/`reviewer_model` `gpt-5.6-luna` from `default`, `skill_rev 871a1d5`.
+
+### Measured
+
+- **M2 — partial FAIL, narrowly.** Loops 2–6 carry one identical conformant
+  `run-2026-08-23-0f376c5995434c319cd03de4302b95cc`; loop 1 carries null. Format and cross-loop
+  stability both pass; only the first loop misses. Fixed below.
+- **M3 — FAIL, six for six.** No `attested_run.py` invocation, no attestation ledger,
+  `execution_evidence` null on every loop, `--targeted` executing rather than the pinned
+  `--quick`. Root cause found and fixed below.
+- **M4 — first live emission.** `findings_carried_from_prior_loops: ["F-018 resolved in loop 6"]`.
+- **Certification did not happen.** `halt_success_challenge` is null at
+  `HALT_SUCCESS_candidate` — the run reached the pre-challenge state and stopped there, so the
+  independent challenger that detection finally made available was never spawned. Unadjudicated;
+  it is the obvious next thing to look at now that the transport works.
+- **Run-kit gap: `cost_accounting.py` cannot see codex runs.** It reads opencode's session store,
+  so M6 returned only the dead opencode session from earlier that day. Codex sessions live under
+  `$CODEX_HOME/sessions/` (default `~/.codex/sessions/`). M6 is unmeasurable for codex runs until
+  the tool learns that store.
+
+### Fixed
+
+1. **Test-command precedence — the M3 root cause.** Three sources could supply a test command
+   (Step 0 Discovery's own inspection, `.contest-refactor.toml` `defaults.test_command`, the
+   human-pinned verify-trust store) and no document stated their order. `project-config.md
+   § Resolution order` owns precedence and did not mention the store at all; its authority was
+   asserted only at its point of use, at the tail of SKILL.md sub-step 3 — where it lost to a
+   value Discovery had already committed. The store is now tier 0 in the resolution order, Step 0
+   reads it **before** detecting anything, and sub-step 3 simply runs `discovery.test_command`.
+   Command and pin now match by construction, which retires the near-miss trap rather than
+   warning about it. Also resolved a contradiction in the same file: `test_command`'s inline
+   comment called it a fallback while § Resolution order made it an override.
+2. **The mint moved to where the artifact is written.** `run_id` is now minted at **Step 1
+   sub-step 5**, in the same pass that writes `CURRENT_REVIEW.json`, instead of Step 3 sub-step 3.
+   No artifact can be written without an id, so the first-loop miss is gone by construction
+   rather than by a louder instruction. Field spec at `output-format-json.md:192` moved with it.
+   Note what this supersedes: the 2026-08-21 prose lift that made the mint *unconditional* was
+   correct and still did not fix loop 1 — the defect was write-ordering, not reachability.
+3. **G48 can now see a missing mint.** Its FORMAT check was guarded by `rid is not None` and its
+   STABILITY check only fired on a non-null predecessor, so a run where the mint never happened
+   was invisible until G32 caught it at `HALT_SUCCESS_candidate` — and invisible forever on a run
+   that never got there. A malformed id fired; a missing one did not. New third sub-check: a
+   v4+ history entry appended with a null/empty `run_id` prints a diagnostic. **Verified against
+   the real BenchHype artifact**, where it now reports loop 1. Selftest case 7 was narrowed
+   rather than deleted — its genuine guard is that a mid-run mint must not trip the *stability*
+   check, and asserting plain silence would have re-hidden exactly this failure.
+
+### Pattern across runs #5 and #6
+
+Four defects in two days share one shape: **a rule stated only at its point of use, losing to a
+value already committed elsewhere.** The verify-trust pin (Step 3, beaten by Discovery), the
+detection predicates (two files, the stale one read), the reasoning effort (stated nowhere,
+inherited from the operator's chat config), and the mint (correct and unconditional, beaten by
+write order). In every case the prose was right. What held each time was a selftest guard, not a
+better sentence — which is why fix 3 above matters more than fixes 1 and 2: without it, neither
+of them is measurable on the next run.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.

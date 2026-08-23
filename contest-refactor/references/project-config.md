@@ -26,7 +26,7 @@ ignore = [
 [defaults]
 lens = "apple"             # apple | generic — default lens for Step 0; CLI --force-lens overrides
 loop_cap = 10              # default loop count; CLI --cap overrides
-test_command = "<shell>"   # discovery hint when Step 0 cannot detect a test runner
+test_command = "<shell>"   # overrides Step 0 detection; the verify-trust pin still outranks it
 
 [[accepted_residuals]]
 id = "<unique-string>"     # human-readable stable id
@@ -50,6 +50,7 @@ Top-level keys:
 
 When the loop reads CLI flags + config:
 
+0. The verify-trust store (`$CONTEST_REFACTOR_HOME/verify-trust.json`) for `test_command` only. A human pinned that command, and human authority is the top of this chain — it outranks config and Step 0 detection alike. Step 0 reads it before detecting anything.
 1. Hard-coded skill defaults (`loop_cap: 10`, lens detection per `lenses.md`).
 2. `.contest-refactor.toml` at the repo root (when present).
 3. CLI flags (`--force-lens`, `--cap`, `--test-filter`, etc.) override config.

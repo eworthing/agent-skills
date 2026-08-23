@@ -88,6 +88,15 @@ def main() -> int:
     if diags:
         failures.append(f"null-run_id must be silent, got {diags!r}")
 
+    # 4c. Restraint: a fully-minted history stays silent.
+    hist_ok = [
+        {"loop": 1, "run_id": GOOD, "schema_version": 4},
+        {"loop": 2, "run_id": GOOD, "schema_version": 4},
+    ]
+    diags = case("history-all-minted", _review(GOOD), loops=hist_ok)
+    if diags:
+        failures.append(f"a fully-minted history must be silent, got {diags!r}")
+
     # 5. Bad format at schema_version 3: silent (run_id is a v4+ field).
     diags = case("schema-3", _review(BAD, schema=3))
     if diags:
@@ -119,8 +128,18 @@ def main() -> int:
         {"schema_version": 4, "loop": 2, "run_id": GOOD},
     ]
     diags = case("mid-run-mint", _review(GOOD), loops=loops)
-    if diags:
-        failures.append(f"null->non-null minting must be silent, got {diags!r}")
+    # This case guards the STABILITY check specifically: a null predecessor is not an id
+    # *change*, so stability must stay quiet. It is not a claim that the null itself is fine.
+    # Since 2026-08-23 the mint happens at Step 1 sub-step 5, in the same pass that writes the
+    # artifact, so a history entry can no longer legitimately be null and the missing-mint
+    # sub-check SHOULD fire here. Asserting plain silence would have re-hidden the exact
+    # failure that ran live on BenchHype (loop 1 null, loops 2-6 conformant, G48 silent).
+    if "changed within a run" in diags:
+        failures.append(f"a mid-run mint must not trip the stability check, got {diags!r}")
+    if "did not fire" not in diags:
+        failures.append(
+            f"a history entry with a null run_id must print the missing-mint diagnostic, got {diags!r}"
+        )
 
     # 8. Post-reset stalled numbering (1,2,1,2), different id per segment: run boundary,
     #    not a violation (reset restarts numbering at 1 -> no consecutive pair spans it).

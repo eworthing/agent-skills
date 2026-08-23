@@ -87,6 +87,25 @@ def check_g48_run_identity(current_review, review_history) -> list[Issue]:
                     f"{rb!r} (consecutive numbering = same run; the id names the run, not the loop)"
                 )
 
+        # MISSING MINT: a loop that reached the history append without an id. The two checks
+        # above are both blind to it -- FORMAT skips null via `rid is not None`, and STABILITY
+        # only fires on a non-null predecessor, since null -> non-null is the legal mid-run
+        # mint. Together they meant a run where the mint never fired was invisible here until
+        # G32 caught it at HALT_SUCCESS_candidate, and invisible forever on a run that never
+        # reached it. Observed live 2026-08-23: loop 1 appended with run_id None while loops
+        # 2-6 carried one conformant id, and G48 printed nothing.
+        for e in entries:
+            if (
+                isinstance(e.get("schema_version"), int)
+                and e["schema_version"] >= 4
+                and not e.get("run_id")
+            ):
+                fired.append(
+                    f"loop {e.get('loop')!r} was appended to REVIEW_HISTORY with run_id="
+                    f"{e.get('run_id')!r} — the mint (SKILL.md Step 1 sub-step 5) did not fire "
+                    f"before the history append"
+                )
+
     for msg in fired:
         print(f"[g48-run-id loop={loop} {msg}]")
     return []  # REPORT_ONLY: diagnostics only, never an Issue — see the promotion bar above
