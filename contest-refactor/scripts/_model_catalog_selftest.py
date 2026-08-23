@@ -6,11 +6,13 @@ standalone check guards the model catalog in references/provider-adapters.md aga
 drift. Model IDs are mutable facts, so this is the "dated source" record for T1.1:
 the STALE / REQUIRED sets below were verified on 2026-06-24 against the session model
 catalog (Claude Code: claude-opus-4-8 current top Opus, claude-fable-5 the Fable 5
-tier above Opus) and the Codex CLI model list (gpt-5.5 current flagship).
+tier above Opus) and the Codex CLI model list (gpt-5.6-sol current flagship; the gpt-5.6 family --
+gpt-5.6, -luna, -pro, -sol, -terra -- verified against codex-cli 0.149.0's own strings
+on 2026-08-23).
 
 DEFAULTS_PRESENT tracks the tuned per-provider defaults and guards against an
 accidental default change (claude_code moved to claude-sonnet-5 on 2026-07-13 when
-the host `sonnet` tier rolled; gpt-5.4-mini / deepseek-v4-flash stay put). Update
+the host `sonnet` tier rolled; gpt-5.6-luna / deepseek-v4-flash stay put). Update
 this tuple in the SAME commit as provider-adapters.md + validate-artifact.py
 _PROVIDER_DEFAULTS — three copies of one fact.
 
@@ -26,9 +28,9 @@ from pathlib import Path
 # Verified 2026-06-24. Strings that must NOT appear (superseded upgrade targets).
 STALE = ("claude-opus-4-7",)
 # Strings that MUST appear after the refresh (current upgrade targets + fable tier).
-REQUIRED = ("claude-opus-4-8", "gpt-5.5", "claude-fable-5")
+REQUIRED = ("claude-opus-4-8", "gpt-5.6-sol", "claude-fable-5")
 # Tuned per-provider defaults that must stay put (no accidental default bump).
-DEFAULTS_PRESENT = ("claude-sonnet-5", "gpt-5.4-mini", "deepseek-v4-flash")
+DEFAULTS_PRESENT = ("claude-sonnet-5", "gpt-5.6-luna", "deepseek-v4-flash")
 
 
 def main() -> int:

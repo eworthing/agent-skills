@@ -63,11 +63,12 @@ Agent({
 Spawn via subprocess:
 
 ```
-codex exec --model gpt-5.4-mini --sandbox workspace-write --json '<prompt>'
-# resume: codex exec --continue --model gpt-5.4-mini --sandbox workspace-write --json '<prompt>'
+codex exec --model gpt-5.6-luna -c model_reasoning_effort=high --sandbox workspace-write --json '<prompt>'
+# resume: codex exec --continue --model gpt-5.6-luna -c model_reasoning_effort=high --sandbox workspace-write --json '<prompt>'
 ```
 
-- **Default model**: `gpt-5.4-mini`
+- **Default model**: `gpt-5.6-luna`
+- **Reasoning effort**: `high`, pinned on the command line — see [Reasoning effort](#reasoning-effort)
 - **Permissions**: `--sandbox workspace-write` — write, shell, and test execution all allowed
 - **Resume**: `--continue` flag picks up the most recent session
 - **Nested-spawn caveat**: a running codex session may not be able to spawn a child `codex exec` subprocess (host process model varies; sandboxes commonly block recursive CLI invocation). If the spawn returns nonzero, the binary is not on PATH for the subprocess, or the session has no shell tool available, **fall back to inline mode**: set `spawn_isolation: "inline"`, document at top of `CURRENT_REVIEW.md` "codex subprocess spawn unavailable; running inline", and rely on Continuation Discipline + G20 (per [SKILL.md § Continuation Discipline](../SKILL.md#continuation-discipline) and [validation.md § G20](validation.md)) to keep the run autonomous across loops. Do **not** silently emit a user-facing close-out after loop 1 — that's the failure mode G20 catches.
@@ -143,9 +144,28 @@ therefore emits v4, and the machinery is live while the capability is not.
 
 The loop subagent MAY spawn ≤2–3 read-only helper sub-agents for bounded analysis (interpret an `audit_*` output, grep public surface, summarize churn). Unlike the reviewer and challenger, a helper emits **no verdict** — it returns candidate evidence the loop subagent re-derives and synthesizes, and the Critic/reviewer do the real judgment — so nothing the loop commits is gated on a helper. That makes the helper the one role where the **cheapest** model is the right default.
 
-- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.4-mini`; opencode `opencode-go/deepseek-v4-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
+- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.6-luna` at `-c model_reasoning_effort=medium`; opencode `opencode-go/deepseek-v4-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
 - **Evidence (2026-06-27):** on bounded read-only analysis, `claude-haiku-4-5` matched `claude-sonnet-4-6` exactly — same real concerns surfaced, same look-alikes dismissed, zero misleading output (3/3 tasks). See [evals/reviewer-model-experiment.md § Helpers](../evals/reviewer-model-experiment.md). This is the inverse of the reviewer result: haiku's weakness is open-ended *judgment* (where it over-rejects), and a helper makes no judgment call.
 - **Not recorded** in `CURRENT_REVIEW.json` — helpers are ephemeral and off the audit/gate path, so there is no `helper_model` field or gate (deliberate low scope; nothing consumes it).
+
+## Reasoning effort
+
+Pinned per role on the spawn command line, never inherited. An unpinned spawn silently adopts the
+operator's interactive `model_reasoning_effort` from `~/.codex/config.toml`, which is set for
+chat sessions rather than autonomous loops — so the same artifact could be produced by a `low`
+Critic on one machine and an `xhigh` Critic on another, with nothing in `CURRENT_REVIEW.json`
+recording the difference. Pinning makes the run reproducible across machines.
+
+| role | effort | why |
+|---|---|---|
+| loop subagent (Actor + Critic) | `high` | writes the scorecard and judges Meta-Rule-4 risk boundaries — the judgment every commit is gated on |
+| implementation reviewer | `xhigh` | verdict-emitting; its rejection is the only thing standing between a bad loop and a commit |
+| HALT_SUCCESS challenger | `xhigh` | verdict-emitting, and the last control before terminal success |
+| helper sidecars | `medium` | emits no verdict; returns candidate evidence the Critic re-derives |
+
+Codex syntax is `-c model_reasoning_effort=<level>`, levels `none|minimal|low|medium|high|xhigh`.
+Owner-set 2026-08-23; the loop tier is a deliberate compromise between cost and the Critic's
+judgment load, not a measured optimum — no effort-tier experiment has been run.
 
 ## Model overrides
 
@@ -176,12 +196,12 @@ If a resolved `loop_model` is premium and the invocation is not dry-run, the mai
 
 ## When to upgrade the model
 
-The default per-provider models (Sonnet on Claude Code, gpt-5.4-mini on Codex, opencode-go/deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
+The default per-provider models (Sonnet on Claude Code, gpt-5.6-luna on Codex, opencode-go/deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
 
 **Prefer the default; upgrading is a precaution, not a measured win (evidence, 2026-06-27).** The default-tier (Sonnet) Critic caught **5/5** cross-module / forces-dependent defects in the `principal_baseline` benchmark, and a focused re-check found Sonnet catches the **3 hardest** principal flags (consistency-boundary, abstraction-seam, process-owner) decisively. So upgrading the Critic to Opus shows **no measured recall benefit** on the tested corpus — there is nothing in it Sonnet misses for Opus to catch. Treat the upgrade as an *unmeasured precaution* for codebases beyond what that corpus exercises (very large >100K LOC, dense concurrency, large state machines), or when a run visibly stalls — not as a default reflex on "this feels complex." Reflexively upgrading to Opus burns tokens for a benefit that is, so far, unmeasured. (Full method + result: [evals/reviewer-model-experiment.md § Critic tier](../evals/reviewer-model-experiment.md).) If you do upgrade:
 
 - Claude Code: `--loop-model claude-opus-4-8`
-- Codex: `--loop-model gpt-5.5` (full flagship, not mini)
+- Codex: `--loop-model gpt-5.6-sol` (full flagship, not the luna tier)
 - OpenCode: `--loop-model deepseek-v4`
 
 For the hardest critic runs on Claude Code — very large or architecturally dense codebases where even Opus leaves residual uncertainty — there is one tier above Opus: **Claude Fable 5** (`claude-fable-5`). It is the most capable option and the most expensive; reserve it for runs where an Opus critic has visibly struggled, not as a default. First use it through `--premium-dry-run-model claude-fable-5`; a full premium loop requires `--loop-model claude-fable-5 --allow-premium-loop --cap 1`. (No Fable-equivalent top tier is wired for Codex/OpenCode; their flagship upgrade targets above are the ceiling.)

@@ -45,10 +45,10 @@ Agent({
 ### codex (verified 2026-08-19)
 
 ```
-codex exec --model gpt-5.4-mini --sandbox read-only --json '<prompt>'
+codex exec --model gpt-5.6-luna -c model_reasoning_effort=xhigh --sandbox read-only --json '<prompt>'
 ```
 
-- **Default model**: `gpt-5.4-mini`
+- **Default model**: `gpt-5.6-luna` at `-c model_reasoning_effort=xhigh` (verdict-emitting role; the HALT_SUCCESS challenger reuses this profile and therefore this effort)
 - **Enforcement**: `--sandbox read-only` (values `read-only|workspace-write|danger-full-access`) is a real gate — stronger than the prompt-only contract other providers fall back to.
 - **Reviewer-permitted tools**: shell commands from the read-only allow-list above (other shell commands → reviewer rejects)
 

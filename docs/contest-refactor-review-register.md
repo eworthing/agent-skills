@@ -191,6 +191,36 @@ time was a terminal `HALT_SUCCESS` resting on a challenge the Critic administere
   `unknown`, and that is equally explained by the stale-file bug fixed here. Next opencode run
   must capture `env | grep -i opencode` as its first action before any claim is made.
 
+## Codex model + per-role reasoning effort — 2026-08-23
+
+Owner-directed, arising from the provider-detection work the same day.
+
+- **Reasoning effort was floating, and that was a silent cost and correctness leak.** No spawn
+  passed an effort flag, so every codex subagent inherited `model_reasoning_effort` from the
+  operator's `~/.codex/config.toml` — set to `xhigh` there for interactive chat, not for
+  autonomous loops. Two machines could produce the same artifact from a `low` Critic and an
+  `xhigh` Critic with nothing recording the difference: `CURRENT_REVIEW.json` has `loop_model`
+  and `loop_model_source` but **no effort field at all**. Effort is now pinned per role on the
+  command line.
+- **Per-role tiers (owner-set, not measured)**: loop subagent (Actor + Critic) `high`;
+  implementation reviewer `xhigh`; HALT_SUCCESS challenger `xhigh` (inherits the reviewer
+  profile); helper sidecars `medium`. The loop tier is an explicit compromise — the owner chose
+  `high` over `medium` because the Critic writes the scorecard and judges Meta-Rule-4 risk
+  boundaries. **No effort-tier experiment has ever been run**; this is a judgment call recorded
+  as one, and it is the obvious candidate for the next paired-arm study.
+- **Codex model refreshed**: default `gpt-5.4-mini` → `gpt-5.6-luna`; flagship upgrade target
+  `gpt-5.5` → `gpt-5.6-sol`. The `gpt-5.6` family (`gpt-5.6`, `-luna`, `-pro`, `-sol`, `-terra`)
+  was verified against **codex-cli 0.149.0's own strings**, not taken on trust — peer-plan-review's
+  model list (dated 2026-07-14) predates `luna` and would have rejected it. Updated in lockstep:
+  both spawn profiles, the helper tier, the prose defaults, `_artifact_core.py`, and
+  `_model_catalog_selftest.py`'s REQUIRED/DEFAULTS_PRESENT tuples.
+- **Guard 5 in `_provider_detection_selftest.py`, RED-tested before landing**: every `codex exec`
+  line in either adapter file must carry `model_reasoning_effort=`. This is the same failure
+  shape as the verify-trust pin and the dead detection predicate — an invisible environment
+  dependency the loop does not know it has — so it gets a guard rather than a note.
+- Cost: `provider-adapters-reviewer.md` is in the per-loop set, so +43 tokens per loop;
+  `provider-adapters.md` is Step -1 main-only. `budget-guard: OK`, no ceiling bump.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.

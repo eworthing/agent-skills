@@ -142,6 +142,23 @@ def main() -> int:
                 f"the spawn fails and the run silently degrades to inline with no independent "
                 f"challenger"
             )
+    # Guard 5 (found live 2026-08-23): every codex spawn must PIN its reasoning effort.
+    # An unpinned `codex exec` inherits model_reasoning_effort from the operator's
+    # ~/.codex/config.toml -- a value set for interactive chat, not autonomous loops. The
+    # same artifact could come from a `low` Critic on one machine and an `xhigh` Critic on
+    # another, and CURRENT_REVIEW.json has no effort field to record which. Pinning is what
+    # makes a run reproducible across machines.
+    codex_cmds = [ln for ln in adapters.splitlines() if ln.strip().startswith("codex exec")]
+    if not codex_cmds:
+        failures.append("no `codex exec` spawn command found in the provider adapters")
+    for cmd in codex_cmds:
+        if "model_reasoning_effort=" not in cmd:
+            failures.append(
+                f"a codex spawn command does not pin reasoning effort: {cmd.strip()!r} -- it "
+                f"would inherit the operator's interactive config, so the Critic's tier becomes "
+                f"machine-dependent and is recorded nowhere"
+            )
+
     if "--sandbox read-only" not in adapters:
         failures.append(
             "the codex reviewer profile no longer uses --sandbox read-only -- that is a REAL "
