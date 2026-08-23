@@ -230,7 +230,10 @@ to `CONTINUE` at loop 6. **The skill prose was therefore edited mid-run** — th
 run-kit exists to prevent. Loops 1–6 completed before those edits and their measurements below
 stand; anything the run produced afterwards read a different skill than loops 1–6 did and is not
 comparable. Recorded here rather than quietly fixed, because a preregistered run whose instrument
-changed mid-flight is exactly the thing a register has to say out loud.
+changed mid-flight is exactly the thing a register has to say out loud. The `HALT_SUCCESS_candidate`
+→ `CONTINUE` reversion was **not** caused by that interference, as first suspected — it was the
+challenger breaking the candidate, which is the system working. Killed by the operator at loop 7
+after 10 commits across loops 1–6.
 
 Observed at loop 6 of a cap of 10. **The first run in this project's
 telemetry where provider detection ever fired**: `provider: "codex"`, `spawn_isolation:
@@ -245,10 +248,22 @@ telemetry where provider detection ever fired**: `provider: "codex"`, `spawn_iso
   `execution_evidence` null on every loop, `--targeted` executing rather than the pinned
   `--quick`. Root cause found and fixed below.
 - **M4 — first live emission.** `findings_carried_from_prior_loops: ["F-018 resolved in loop 6"]`.
-- **Certification did not happen.** `halt_success_challenge` is null at
-  `HALT_SUCCESS_candidate` — the run reached the pre-challenge state and stopped there, so the
-  independent challenger that detection finally made available was never spawned. Unadjudicated;
-  it is the obvious next thing to look at now that the transport works.
+- **The challenger ran, and it worked — three times.** An earlier entry in this section claimed
+  it never spawned. That was wrong, read off a null `halt_success_challenge` without checking the
+  commit log. The target repo's history shows `loop N: record challenger break` at **loops 4, 5
+  and 6**: each time the loop emitted `HALT_SUCCESS_candidate`, the independent challenger broke
+  it, and the loop correctly demoted to `CONTINUE` and opened a finding — F-017 (an Apple Music
+  bulk selection re-routable into a library import via stale progress state), F-018 (an accepted
+  test-strategy residual that ignored the untested bulk route), F-019 (a library route test
+  accepting an unrelated snapshot as proof of session start). The field reads null because a
+  demoted candidate clears it; the break is recorded in the commit and the resulting finding.
+  This is the first run with a genuinely independent challenger, and it stopped three 9.5+
+  success claims that would otherwise have stood.
+- **F-019 is a live Tier-1 blind case.** "Test accepts an unrelated snapshot as proof" is exactly
+  test-oracle trust — Tier-1 item 1 in
+  [`contest-refactor-detection-domains.md`](contest-refactor-detection-domains.md). Found by the
+  challenger rather than the lens, which is itself the argument that the lens is blind to it.
+  Worth banking as criterion-1 evidence for that candidate.
 - **Run-kit gap: `cost_accounting.py` cannot see codex runs.** It reads opencode's session store,
   so M6 returned only the dead opencode session from earlier that day. Codex sessions live under
   `$CODEX_HOME/sessions/` (default `~/.codex/sessions/`). M6 is unmeasurable for codex runs until
