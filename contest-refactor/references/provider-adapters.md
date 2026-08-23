@@ -19,15 +19,17 @@ Each section is dated `verified <YYYY-MM-DD>` so staleness is visible. When a pr
 
 ## Detection (read by SKILL.md Step -1 step 0.5)
 
-The main agent detects the active provider from environment variables. Binary presence on PATH is **not** consulted (multiple binaries can be installed; only one runtime is active).
+The main agent detects the active provider from environment variables. **This table is the single source of truth for the predicates** — no other file restates them. Detection reads **session-scoped** variables, the ones a live run sets per session. A config or path override (`CODEX_HOME`) never detects: it is unset on a default install and stays set when the tool is merely installed. Binary presence on PATH is **not** consulted (multiple binaries can be installed; only one runtime is active).
 
 | signal | provider |
 |---|---|
 | `CLAUDECODE=1` | `claude_code` |
-| `CODEX_HOME` non-empty AND `CLAUDECODE` unset | `codex` |
-| any `OPENCODE_*` var non-empty (e.g. `OPENCODE_PID`) AND `CLAUDECODE` unset AND `CODEX_HOME` unset | `opencode` |
-| 2+ provider env vars set simultaneously | error — require explicit `--provider <name>` flag from user |
+| `CODEX_SESSION_ID` or `CODEX_THREAD_ID` non-empty AND `CLAUDECODE` unset | `codex` |
+| any `OPENCODE_*` var non-empty (e.g. `OPENCODE_PID`) AND `CLAUDECODE` unset AND both codex session vars unset | `opencode` |
+| 2+ of the trigger variables above set simultaneously | error — require explicit `--provider <name>` flag from user |
 | none of the above | `unknown` (fall back to inline mode; no Loop Isolation) |
+
+`CLAUDECODE` matches **exactly `1`**, never a `CLAUDE_CODE_*` prefix. A live codex session was observed carrying `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `GEMINI_CLI_IDE_*` (2026-08-23): provider variables leak across sessions, so a prefix match on this family misdetects. Only the trigger variables named above count toward the 2+ error row.
 
 User flag `--provider <name>` overrides detection unconditionally.
 

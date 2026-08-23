@@ -152,6 +152,45 @@ detection quality. It did produce one real defect and one confirmed measurement.
   are carried forward as **provisional** (recorded in `exec_replay_baseline.json`
   `measurement_notes`).
 
+## Provider detection was dead on both providers — 2026-08-23
+
+Surfaced by the codex operator mid-run, one turn after the run-#5 pin fix. Detection had
+**never** successfully fired on either provider we have telemetry for, and the consequence each
+time was a terminal `HALT_SUCCESS` resting on a challenge the Critic administered to itself.
+
+- **Root cause is duplication, not a bad predicate.** The rules lived in two files.
+  `provider-adapters.md` got the 2026-08-19 `OPENCODE_SESSION` fix; `resume-detection.md` kept
+  the dead copy — and Step 0.5 reads `resume-detection.md`, so the stale copy is the one that
+  ran. `_provider_detection_selftest.py` read only `provider-adapters.md`, so it could not see
+  the disagreement it existed to prevent. Step 0.5 is now a pointer; the table is the single
+  source of truth.
+- **Codex predicate keyed on a path override.** `CODEX_HOME` overrides `~/.codex` (peer-plan-review
+  `references/codex.md:73`) and is unset on a default install — verified unset in a plain shell.
+  A live codex session exports `CODEX_SESSION_ID` / `CODEX_THREAD_ID` instead (operator-captured
+  env, 2026-08-23). Detection now reads those; `CODEX_HOME` survives only in `$SKILL_DIR`
+  resolution. Principle recorded in the doc: **detection reads session-scoped variables; config
+  and path overrides never detect.**
+- **Provider variables leak across sessions** — the live codex env carried
+  `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and `GEMINI_CLI_IDE_*`. `CLAUDECODE` therefore stays an
+  exact `=1` match and must never be loosened to a `CLAUDE_CODE_*` prefix; the rationale is now
+  in the file so a future edit cannot make that mistake innocently. Negative control run in a
+  Claude Code session: no `CODEX_*` / `OPENCODE_*` variables present (only `PATH` matched, which
+  is exactly the binary-presence ambiguity the rule already refuses to consult).
+- **Two new selftest guards, both RED-tested before landing**: (3) `resume-detection.md` may not
+  name `CLAUDECODE` / `CODEX_` / `OPENCODE_` at all — pointer only; (4) the Detection **table
+  rows** may not key on `CODEX_HOME` and must name a session-scoped codex variable. Guard 4
+  scans rows rather than prose for the reason the `--read-only` guard already documents: the
+  corrected section names `CODEX_HOME` in the negative, and a substring test cannot tell a
+  rationale from a trigger.
+- **Cost**: both edited files are Step -1 main-only (the per-loop half was split into
+  `provider-adapters-reviewer.md` on 2026-08-21), so this is ×1 per invocation, not per loop.
+  Per-loop ceilings unmoved; `budget-guard: OK`.
+- **Still unvalidated — do not treat as fixed**: the opencode predicate. `OPENCODE_*` prefix was
+  chosen in 2026-08-19 from a scan of strings *referenced in the binary*, which is not the same
+  as variables *exported to the tool environment*. Last run's opencode session still resolved to
+  `unknown`, and that is equally explained by the stale-file bug fixed here. Next opencode run
+  must capture `env | grep -i opencode` as its first action before any claim is made.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.

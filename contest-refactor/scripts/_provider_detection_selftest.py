@@ -43,6 +43,7 @@ ADAPTERS = SKILL_ROOT / "references" / "provider-adapters.md"
 ADAPTERS_REVIEWER = SKILL_ROOT / "references" / "provider-adapters-reviewer.md"
 STARTUP = SKILL_ROOT / "references" / "startup.md"
 PREFLIGHT = SKILL_ROOT / "scripts" / "preflight.py"
+RESUME = SKILL_ROOT / "references" / "resume-detection.md"
 
 
 def main() -> int:
@@ -59,6 +60,42 @@ def main() -> int:
         failures.append(
             "the opencode detection rule is no longer prefix-based; a single-variable rule is "
             "what went stale last time (section dated 'verified 2026-05-09')"
+        )
+
+    # Guard 3 (found live 2026-08-23, codex): the predicates must live in EXACTLY ONE file.
+    # resume-detection.md carried a second copy, and Step 0.5 reads THAT file -- so when the
+    # 2026-08-19 OPENCODE_SESSION fix landed in provider-adapters.md, the stale copy is the
+    # one that actually ran. Two runs (opencode 2026-08-23, codex 2026-08-23) fell through to
+    # provider=unknown and lost their independent challenger to this drift.
+    resume = RESUME.read_text(encoding="utf-8")
+    for token in ("CLAUDECODE", "CODEX_", "OPENCODE_"):
+        if token in resume:
+            failures.append(
+                f"resume-detection.md names {token!r} again -- Step 0.5 must POINT at "
+                f"provider-adapters.md's table, never restate it; the restated copy is what "
+                f"drifted and cost two runs their independent challenger"
+            )
+
+    # Guard 4 (same incident): detection must trigger on a session-scoped variable. CODEX_HOME
+    # is a path override for ~/.codex (unset on a default install, and set whenever the tool is
+    # merely installed), so a rule keyed on it can never fire for a real codex run. Scoped to
+    # the Detection section -- CODEX_HOME is legitimate in $SKILL_DIR resolution further down.
+    det = adapters.split("## Detection", 1)[-1].split("\n## ", 1)[0]
+    # Check the TABLE ROWS, not the prose: the corrected section names CODEX_HOME in the
+    # negative ("a path override never detects"), and a naive substring test cannot tell a
+    # rationale from a trigger -- the same trap the --read-only guard above documents.
+    det_rows = "\n".join(ln for ln in det.splitlines() if ln.strip().startswith("|"))
+    if "CODEX_HOME" in det_rows:
+        failures.append(
+            "the codex detection rule keys on CODEX_HOME again -- that is a path override, "
+            "unset on a default install, so the rule never fires and every codex run degrades "
+            "to provider=unknown with an inline self-vetted challenger"
+        )
+    if not ("CODEX_SESSION_ID" in det_rows or "CODEX_THREAD_ID" in det_rows):
+        failures.append(
+            "the codex detection rule no longer names a session-scoped variable "
+            "(CODEX_SESSION_ID / CODEX_THREAD_ID) -- those are what a live codex run actually "
+            "exports, verified 2026-08-23"
         )
 
     # The reviewer is contractually read-only. Under opencode its documented

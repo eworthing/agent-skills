@@ -59,13 +59,11 @@ Set `$SKILL_DIR` once at first action of every invocation (per SKILL.md Step -1 
 
 ## Step 0.5 — Provider detection
 
-Detect provider from environment variables per [provider-adapters.md § Detection](provider-adapters.md):
+Detect the provider by reading the signal table in [provider-adapters.md § Detection](provider-adapters.md) and applying it. That table owns the predicates; this file states only what to do with the result, so the two can never disagree — a restated copy here drifted once and cost two runs their independent challenger.
 
-- `provider: "claude_code"` iff `CLAUDECODE=1`.
-- `provider: "codex"` iff `CODEX_HOME` non-empty AND `CLAUDECODE` unset.
-- `provider: "opencode"` iff `OPENCODE_SESSION` non-empty AND `CLAUDECODE` unset AND `CODEX_HOME` unset.
-- 2+ provider env vars set → error, require `--provider <name>` flag.
-- Otherwise → `provider: "unknown"`. Set `spawn_isolation: "inline"` (Loop Isolation skipped).
+- Record the detected value as `provider`.
+- `provider: "unknown"` → set `spawn_isolation: "inline"` (Loop Isolation skipped).
+- 2+ trigger variables set → error; require the `--provider <name>` flag.
 - User flag `--provider <name>` overrides detection unconditionally.
 
 Resolve `loop_model` and `reviewer_model` from provider-adapters.md per-provider table:
