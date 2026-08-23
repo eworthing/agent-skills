@@ -103,7 +103,7 @@ scale: opencode's `tool.execute.after` metadata is `{output, exit, truncated}`
    delta vs the 2026-08-21 baseline: 302/1313 files, BenchHypeKit 24%).
 3. M3/M4 from the terminal artifact + ledger; M5 from the reviewer transcript.
 4. Human adjudication of every G17 line and blind line; ledger entries in
-   `docs/behavioral-validation-ledger.md`.
+   `docs/contest-refactor-review-register.md` (the standalone ledger was retired 2026-08-20).
 5. Remove the observer plugin; record removal.
 
 ## Non-claims
@@ -112,3 +112,15 @@ scale: opencode's `tool.execute.after` metadata is `{output, exit, truncated}`
 - No adoption-rate claim from M3's n=1.
 - Sweep percentages are unique-load proxies where they touch token counts —
   no billed-savings bound in either direction (register, audit round 4).
+
+---
+
+## Post-run note — 2026-08-23 (appended; predeclared text above untouched)
+
+Run launched and died on the weekly usage cap at 4m12s, before Step 1 emitted. **M8 PASS**
+(`{output, exit, truncated}`, exit present, string-typed). **M3 FAIL** — the loop ran an
+unpinned variant of the gate command (`--targeted` vs the pinned `--quick`) and never invoked
+`attested_run.py`; root cause was that sub-step 3 never told the loop to read the trust store,
+now fixed. **M1, M2, M4, M5, M7 unmeasured** — no loop artifact was written. **M6**: $0.19 / 29
+msgs / 2.23M resident. Full write-up in the review register's run-#5 section. The next run
+re-tests M2/M3/M4/M7 unchanged; M8 needs no re-run.

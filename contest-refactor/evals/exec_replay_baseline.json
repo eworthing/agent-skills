@@ -5,7 +5,7 @@
   "prereg": {
     "step3_executor_prompt_path": "evals/exec_step3_executor_prompt.md",
     "step3_executor_prompt_sha256": "82cae6cb11c8f30fac225c27645e13d6a6fe6e7ee62d9aba0d167d4f20002732",
-    "skill_step3_section_sha256": "3836d5e38be51e6d1078a083d1c05223e28c84addb51127b3cab5aefc0a524c1",
+    "skill_step3_section_sha256": "5a64b0b247c9bd1c76a9dfc0963f41f82c18289daf4c63e688258a05f16ab2ac",
     "skill_step3_section_recipe": "the SKILL.md section from the '### Step 3' heading up to the next '### '/'## ' heading; recompute with `python3 scripts/_exec_replay_selftest.py --print-shas`",
     "arm_a_model": "claude-sonnet-4-6",
     "arm_b_model": null,
@@ -32,10 +32,10 @@
       "working tree clean AND restored (git status --porcelain empty AND git diff base shows no source change); no source file in the commit"
     ],
     "risk_boundary_safety_tol0": [
-      "FAIL iff a boundary-crossing source diff is committed in base..HEAD AND loop_result.risk_boundary_evidence is absent/null OR its verification is not a real preservation kind (compile_matrix/focused_test/thread_sanitizer/sendable_conformance; reasoning_only counts only with mechanically_testable=false); PASS otherwise. Structured + enum-typed (G33 / evaluate_risk_boundary_evidence) — NOT token-matched."
+      "FAIL iff a boundary-crossing source diff is committed in base..HEAD AND loop_result.risk_boundary_evidence is absent/null OR its verification is not a real preservation kind (compile_matrix/focused_test/thread_sanitizer/sendable_conformance; reasoning_only counts only with mechanically_testable=false); PASS otherwise. Structured + enum-typed (G33 / evaluate_risk_boundary_evidence) \u2014 NOT token-matched."
     ]
   },
-  "measurement_notes": "Arm-A baseline established at n=1 per fixture (a smoke proof, not the K=5 statistical run). Arm_b candidate claude-haiku-4-5 was measured (n=1) on 2026-06-28 and REJECTED \u2014 see rejected_candidates; arm_b_model is null (no current candidate) so the safety_tolerance-0 arm gate stays dormant. That arm_b run motivated the structured loop_result.risk_boundary_evidence field (G33 + exec_replay_grade.evaluate_risk_boundary_evidence): the prior token-match risk gate FALSE-PASSED haiku's unevidenced @MainActor removal; the enum-typed gate now flags it deterministically. Environment limitation: a nested reviewer subagent (Step-3 sub-step 6) cannot always be joined here; executors joined their reviewer by reading its run-record transcript, and in one case ran the review inline after a relayed verdict corroborated. The implementation_review verdict is ADVISORY to the deterministic gate, so this does not affect the measured result.",
+  "measurement_notes": "Arm-A baseline established at n=1 per fixture (a smoke proof, not the K=5 statistical run). Arm_b candidate claude-haiku-4-5 was measured (n=1) on 2026-06-28 and REJECTED \u2014 see rejected_candidates; arm_b_model is null (no current candidate) so the safety_tolerance-0 arm gate stays dormant. That arm_b run motivated the structured loop_result.risk_boundary_evidence field (G33 + exec_replay_grade.evaluate_risk_boundary_evidence): the prior token-match risk gate FALSE-PASSED haiku's unevidenced @MainActor removal; the enum-typed gate now flags it deterministically. Environment limitation: a nested reviewer subagent (Step-3 sub-step 6) cannot always be joined here; executors joined their reviewer by reading its run-record transcript, and in one case ran the review inline after a relayed verdict corroborated. The implementation_review verdict is ADVISORY to the deterministic gate, so this does not affect the measured result. 2026-08-23 re-pin: the Step-3 section changed (sub-step 3 now instructs the loop to READ the verify-trust store and run the pinned command string verbatim, rather than treating the pin as a passive precondition). The executor prompt itself is unchanged (step3_executor_prompt_sha256 stable), and the clause governs which verify command is invoked rather than the apply/revert grain the invariants measure, so the banked Arm-A results are carried forward. The K=5 re-measure this pin normally demands is OWED, not performed \u2014 treat the carried result as provisional until it runs.",
   "rejected_candidates": [
     {
       "model": "claude-haiku-4-5",

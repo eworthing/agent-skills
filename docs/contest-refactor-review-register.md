@@ -114,6 +114,44 @@ exploration pass + an independent plan-agent breakage pass). Landed `0667642`:
   prose). D2's disposition is load-bearing: adopting FP blocks promotion until a
   code-file-in-changed_paths trigger refinement (costed in the packet, owner decision).
 
+## Instrumented run #5 — 2026-08-23 (spend-limit death at loop 1)
+
+Launched under opencode (`opencode-go/minimax-m3`) on BenchHype, `--reset --scope BenchHypeKit`,
+with the pin, observer, and clean tree all verified live beforehand. The weekly usage cap killed
+it 4m12s in (13:08:30 → 13:12:42Z), before Step 1 ever emitted — **no `CURRENT_REVIEW.json` was
+written**. Per the house rule, spend-limit death is not a MISS: this run says nothing about
+detection quality. It did produce one real defect and one confirmed measurement.
+
+- **[P1] The verify-trust pin is unreachable by the loop — FIXED this commit.** The operator
+  pinned `./scripts/run_local_gate.sh --quick`; the loop ran `--targeted`, invoked
+  `attested_run.py` **zero** times, and created no attestation ledger. Observer events 18–20 show
+  the mechanism: the loop read `scripts/run_local_gate.sh`, grepped `TARGETED|QUICK|FULL`, and
+  *chose a verify command by inspection*, then passed `--targeted` to `preflight.py` and ran it
+  bare. Root cause is prose, not code: SKILL.md sub-step 3 gated the wrapper on the command
+  "being pinned" without ever instructing the loop to **read** the store and learn which command
+  that is, so Discovery's own choice silently won. The store matches on exact string + sha256, so
+  a same-script-different-flag near-miss fails closed and unnoticed. Fix: sub-step 3 now reads the
+  store and runs the pinned string verbatim in place of Discovery's choice, and names the
+  near-miss trap. +60 tokens, `budget-guard: OK`, no ceiling bump.
+- **M8 — CONFIRMED at run scale.** opencode's `tool.execute.after` metadata is
+  `{output, exit, truncated}` and the raw exit code is present on all 20 bash after-hooks. The
+  item-14 uncertain cell is now observed on a live run rather than the scratch test. Detail for
+  any consumer: `exit` arrives as a **string** (`"0"`), and the `read` tool carries no exit at all.
+- **M3 — FAILED**, as a direct consequence of the P1 above; G47's three attestation flags still
+  have no live exercise. **M2, M4, M7, M1, M5 — unmeasured** (no loop artifact was ever written).
+- **M6 — $0.19, 29 messages, 2.23M resident tokens** (baseline for the series: Aug-19's $9.30 /
+  500 msgs / 92.6M). The command mismatch cost twice: no attestation, and `--targeted` (app build
+  + change-mapped UI tests) instead of the cheap pinned `--quick`, still running when the cap hit.
+- **Behavior worth an owner call, not yet adjudicated**: at event 4 — ~30s in, inside Step 0,
+  before any plan existed — the loop ran `git add skills-lock.json && git commit` against the
+  target repo (BenchHype `5d85cc14`). It tidied a dirty file on its own initiative. Whether
+  preflight housekeeping may commit outside the refactor mandate is undecided.
+- **Owed**: the Layer-5 K=5 execution-grain re-measure that the Step-3 sha re-pin normally
+  demands. The executor prompt sha is unchanged and the clause governs *which* verify command is
+  invoked rather than the apply/revert grain the invariants measure, so the banked Arm-A results
+  are carried forward as **provisional** (recorded in `exec_replay_baseline.json`
+  `measurement_notes`).
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
