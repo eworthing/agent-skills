@@ -223,7 +223,16 @@ Owner-directed, arising from the provider-detection work the same day.
 
 ## Instrumented run #6 — 2026-08-23 (codex; first run with working provider detection)
 
-Terminal `HALT_SUCCESS_candidate` at loop 6 of a cap of 10. **The first run in this project's
+**Correction, same day:** this run was NOT terminal when the fixes below were written. A `ps`
+pattern that matched `codex exec` but not the bare `codex` binary showed zero processes, and the
+artifact was read at `HALT_SUCCESS_candidate`; the run was in fact still live and later reverted
+to `CONTINUE` at loop 6. **The skill prose was therefore edited mid-run** — the contamination the
+run-kit exists to prevent. Loops 1–6 completed before those edits and their measurements below
+stand; anything the run produced afterwards read a different skill than loops 1–6 did and is not
+comparable. Recorded here rather than quietly fixed, because a preregistered run whose instrument
+changed mid-flight is exactly the thing a register has to say out loud.
+
+Observed at loop 6 of a cap of 10. **The first run in this project's
 telemetry where provider detection ever fired**: `provider: "codex"`, `spawn_isolation:
 "subagent"`, `loop_model`/`reviewer_model` `gpt-5.6-luna` from `default`, `skill_rev 871a1d5`.
 
