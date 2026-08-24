@@ -13,12 +13,13 @@ REVIEW_HISTORY.json.loops[] (schema_version >= 2 — see
 references/output-format-state-schemas.md § REVIEW_HISTORY.json schema). Each
 entry's `state` is the loop's FINAL persisted state (Step 3 wrap-up overrides,
 e.g. HALT_LOOP_CAP at loop == loop_cap, land in the same entry — there is no
-separate pre-override snapshot). G18 requires the last entry to equal
-CURRENT_REVIEW.json verbatim, so CURRENT_REVIEW.json never needs to be
-appended separately. Only PAIRS of entries with adjacent loop numbers
-(loop_b == loop_a + 1) are checked; a fixture that samples non-consecutive
-loop numbers (a minimal repro for an unrelated gate) is skipped rather than
-misread as a real transition.
+separate pre-override snapshot). G18 requires a same-loop HALT_SUCCESS promotion
+to replace its candidate snapshot, so cross-loop legality normalizes that final
+state back to HALT_SUCCESS_candidate; G21/G32 validate the promotion itself.
+CURRENT_REVIEW.json never needs to be appended separately. Only PAIRS of
+entries with adjacent loop numbers (loop_b == loop_a + 1) are checked; a
+fixture that samples non-consecutive loop numbers (a minimal repro for an
+unrelated gate) is skipped rather than misread as a real transition.
 
 --- Enforcement (backlog item [I1] item 2) ---------------------------------
 Was a global shadow-first flag (every illegal transition printed, the function
@@ -86,7 +87,8 @@ def observed_transitions(review_history: dict | None) -> list[tuple[int, str, in
                 continue
             if loop_b != loop_a + 1:
                 continue  # numbering gap (e.g. a minimal fixture) -- not a real pair
-            pairs.append((loop_a, state_a, loop_b, state_b))
+            transition_state_b = "HALT_SUCCESS_candidate" if state_b == "HALT_SUCCESS" else state_b
+            pairs.append((loop_a, state_a, loop_b, transition_state_b))
     return pairs
 
 

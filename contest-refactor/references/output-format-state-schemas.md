@@ -189,7 +189,7 @@ The pair `(step_started, step_completed)` is the recovery key:
 
 Per-step idempotency:
 - Step 6 (Implementation Review): reviewer is stateless. If `implementation_review` is non-null on resume, honor the existing verdict; do not re-spawn.
-- Step 9 (archive): `REVIEW_HISTORY.md` append checks for existing `--- Loop N (UTC <ts>) ---` divider before appending. `REVIEW_HISTORY.json.loops[]` append uses `(loop, schema_version)` as dedup key.
+- Step 9 (archive): `REVIEW_HISTORY.md` append checks for an existing current-run `--- Loop N (UTC <ts>) ---` divider before appending. For `REVIEW_HISTORY.json.loops[]`, replace the last entry when it has the same `(run_id, loop, schema_version)` as `CURRENT_REVIEW.json` (same-loop replay or promotion); otherwise append. When `run_id` is unavailable on a legacy artifact, only the last entry may match on `(loop, schema_version)` — never search and overwrite an earlier run.
 - Step 10 (registry write): each `registry_pending_writes[]` entry's `idempotency_key` is checked against `findings_registry.json.entries[].occurrences[].idempotency_key`; replay skips entries already present.
 - Step 11 (commit): `commit_attempted_sha` populated post-commit-pre-delete distinguishes Cases B and C in resume routing.
 
@@ -325,7 +325,7 @@ If 2+ entries match the candidate via M2 and 0 via M1 → emit `open_question_fo
 
 ## REVIEW_HISTORY.json schema
 
-Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_REVIEW.json is appended to the top-level `loops[]` array on Step 3 step 9.
+Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_REVIEW.json is appended to the top-level `loops[]` array on Step 3 step 9. `--reset` starts a new run at loop 1 and preserves earlier entries; a same-loop replay or `HALT_SUCCESS_candidate` promotion replaces only the last entry for that run and loop.
 
 ```jsonc
 {

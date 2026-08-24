@@ -221,6 +221,30 @@ def main() -> int:
             "HALT_SUCCESS -> HALT_SUCCESS_candidate within run-A must still fire"
         )
 
+    # G18 replaces a loop's candidate snapshot with its promoted final snapshot,
+    # so persisted history reads CONTINUE -> HALT_SUCCESS. For cross-loop legality,
+    # that final state represents the candidate edge; G21/G32 own promotion validity.
+    promoted_history = {
+        "loops": [
+            {"loop": 1, "run_id": "run-A", "state": "CONTINUE"},
+            {"loop": 2, "run_id": "run-A", "state": "HALT_SUCCESS"},
+        ]
+    }
+    promoted_observed = trans.observed_transitions(promoted_history)
+    if promoted_observed != [(1, "CONTINUE", 2, "HALT_SUCCESS_candidate")]:
+        failures.append(
+            "a promoted final snapshot must retain the candidate cross-loop edge: "
+            f"got {promoted_observed}"
+        )
+    promoted_issues, promoted_out = _run_check(
+        {"schema_version": 4, "skill_rev": "651ea50"}, promoted_history, canon
+    )
+    if promoted_issues or "transition-violation" in promoted_out:
+        failures.append(
+            "CONTINUE -> promoted HALT_SUCCESS must validate through its candidate edge: "
+            f"issues={promoted_issues}, output={promoted_out.strip()!r}"
+        )
+
     # --- deriving nothing is not passing -----------------------------------
     # Scoping by run is one edit away from muting the check, and the dangerous
     # version is not a deliberate edit -- it is data. `run_id` is specified

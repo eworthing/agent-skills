@@ -24,6 +24,7 @@ from _artifact_core import (
 # G28 lives in _artifact_snapshots.py (module-size split, register D6 note) —
 # re-exported here so existing imports (validate-artifact.py) are unaffected.
 from _artifact_snapshots import check_g28_loop_state_freshness  # noqa: F401
+from coverage_ledger import split_runs
 
 
 def _occurrences_for(registry: dict | None, stable_id: str) -> list[dict]:
@@ -266,7 +267,7 @@ def check_g31_fingerprint_integrity(registry: dict | None) -> list[Issue]:
 
 
 def check_g18_review_history_append(current_review: dict, history: dict | None) -> list[Issue]:
-    """G18: REVIEW_HISTORY.json must contain exactly N entries (N = current loop),
+    """G18: the active run must contain exactly N entries (N = current loop),
     and the most recent entry must equal CURRENT_REVIEW.json (parsed-dict equality).
     Per validation.md:82-83. Schema_version >= 2.
     """
@@ -284,13 +285,14 @@ def check_g18_review_history_append(current_review: dict, history: dict | None) 
             )
         )
         return issues
+    active_run = split_runs(history)[-1] if loops else []
     expected_n = current_review.get("loop")
-    if isinstance(expected_n, int) and len(loops) != expected_n:
+    if isinstance(expected_n, int) and len(active_run) != expected_n:
         issues.append(
             Issue(
                 "G18",
-                f"REVIEW_HISTORY.json has {len(loops)} loops[] entries; "
-                f"current_review.loop == {expected_n} requires exactly {expected_n} entries",
+                f"REVIEW_HISTORY.json active run has {len(active_run)} loops[] entries; "
+                f"current_review.loop == {expected_n} requires exactly {expected_n} active-run entries",
             )
         )
     if loops and loops[-1] != current_review:
