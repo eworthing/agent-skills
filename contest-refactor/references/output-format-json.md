@@ -221,7 +221,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
     "test_scope": "full",                       // (v3+) enum: full | incremental. "incremental" iff --test-filter <pattern> set.
     "test_filter": null,                        // (v3+) null | string. non-null iff test_scope == "incremental".
     "working_tree_dirty_paths": [],             // (v3+) always empty. `git status --porcelain` (filtered for the skill's own bookkeeping paths) must be empty at Step 0 or the loop aborts pre-Step-3, tracked or untracked, no overlap test — exclusive writership over source paths is an assumed precondition, not a detected property (startup.md § Step 0 sub-step 4b). Retained for schema compatibility only.
-    "hotspot_scan": {                           // Step 0 main-agent whitelist; payload evidence, never a finding
+    "hotspot_scan": {                           // Step 0 main-agent whitelist; required by G49 for skill_rev 651ea50+; payload evidence, never a finding
       "schema_version": 2,
       "status": "ok",                          // enum: ok | partial | absent | not_applicable
       "promotion_allowed": false,

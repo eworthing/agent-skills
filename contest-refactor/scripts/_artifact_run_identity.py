@@ -27,20 +27,16 @@ G48 flags exactly that shape as the identity-discipline defect itself:
 contiguous numbering says same-run, the id says new-run, and the contradiction
 is the violation.
 
-Why REPORT_ONLY and not epoch-scoped (item 30, measured 2026-08-21): the
-CURRENT epoch classifies on ``skill_rev`` presence alone, and the very run that
-motivated this gate already emitted ``skill_rev`` (``4fe8cdf``) — under an
-epoch-scoped Issue its committed terminal artifact fails retroactively even
-though the mint/format rule shipped AFTER that run. The binary LEGACY/CURRENT
-boundary is too coarse for a requirement this new. Promotion bar (report-only
-is permanent by default unless the bar is written down — the G17 lesson):
-graduate to an Issue only when BOTH (a) an epoch boundary exists that provably
-post-dates this gate's ship — e.g. a third ``EPOCHS`` entry classified by a
-skill-repo ancestor check on ``skill_rev``, or a marker only the post-G48 skill
-emits — so no artifact produced before 2026-08-21 can classify into it; and
-(b) M2 (run-kit PREDECLARATION) observes at least one instrumented run PASS
-under the lifted mint prose, with every diagnostic adjudicated and zero false
-positives.
+Why REPORT_ONLY (item 30, measured 2026-08-21): the motivating run already
+emitted ``skill_rev`` (``4fe8cdf``), so the original LEGACY/CURRENT boundary
+could not enforce this gate without failing that committed terminal artifact
+retroactively. HOTSPOT_V2 now supplies the required post-G48 Git-ancestry
+boundary, but the second promotion condition remains unmet. Promotion bar
+(report-only is permanent by default unless the bar is written down — the G17
+lesson): graduate to an Issue only when BOTH (a) an epoch boundary provably
+post-dates this gate's ship, and (b) M2 (run-kit PREDECLARATION) observes at
+least one instrumented run PASS under the lifted mint prose, with every
+diagnostic adjudicated and zero false positives.
 """
 
 from __future__ import annotations

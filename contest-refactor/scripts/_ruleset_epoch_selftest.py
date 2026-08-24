@@ -20,7 +20,10 @@ Run: python3 scripts/_ruleset_epoch_selftest.py   (exit 0 = pass, 1 = fail)
 from __future__ import annotations
 
 import copy
+import subprocess
 import sys
+import tempfile
+from pathlib import Path
 
 import _canon
 import _ruleset_epoch as epoch
@@ -68,6 +71,21 @@ def _classify_cases() -> list[tuple[str, dict, str]]:
             {"schema_version": 4, "skill_rev": "f94d802"},
             epoch.CURRENT,
         ),
+        (
+            "hotspot-v2 boundary revision",
+            {"schema_version": 4, "skill_rev": "651ea50"},
+            "hotspot_v2",
+        ),
+        (
+            "hotspot-v2 descendant revision",
+            {"schema_version": 4, "skill_rev": "27e0bdb"},
+            "hotspot_v2",
+        ),
+        (
+            "unresolved valid SHA cannot prove the newer epoch",
+            {"schema_version": 4, "skill_rev": "0000000"},
+            epoch.CURRENT,
+        ),
     ]
 
 
@@ -75,6 +93,88 @@ for label, artifact, expected in _classify_cases():
     got = epoch.classify(artifact)
     if got != expected:
         failures.append(f"classify: {label}: expected {expected!r}, got {got!r}")
+
+
+def _classify_at(root: Path, skill_rev: str) -> str:
+    original_root = epoch.SKILL_ROOT
+    try:
+        epoch.SKILL_ROOT = root
+        epoch._resolve_revision.cache_clear()
+        epoch._is_hotspot_v2_revision.cache_clear()
+        return epoch.classify({"schema_version": 4, "skill_rev": skill_rev})
+    finally:
+        epoch.SKILL_ROOT = original_root
+        epoch._resolve_revision.cache_clear()
+        epoch._is_hotspot_v2_revision.cache_clear()
+
+
+def _check_shallow_head_fallback() -> list[str]:
+    found: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="contest-epoch-") as tmp:
+        source = Path(tmp, "source")
+        shallow = Path(tmp, "shallow")
+        subprocess.run(["git", "init", "-q", str(source)], check=True)
+        source.joinpath("marker").write_text("current skill\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(source), "add", "marker"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(source),
+                "-c",
+                "user.name=contest-refactor",
+                "-c",
+                "user.email=contest-refactor.invalid",
+                "commit",
+                "-qm",
+                "shallow head",
+            ],
+            check=True,
+        )
+        source.joinpath("marker").write_text("new current skill\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(source), "add", "marker"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(source),
+                "-c",
+                "user.name=contest-refactor",
+                "-c",
+                "user.email=contest-refactor.invalid",
+                "commit",
+                "-qm",
+                "current head",
+            ],
+            check=True,
+        )
+        head = subprocess.run(
+            ["git", "-C", str(source), "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        regular = _classify_at(source, head)
+        if regular != epoch.CURRENT:
+            found.append(f"classify: regular unproven HEAD expected 'current', got {regular!r}")
+
+        subprocess.run(
+            ["git", "clone", "-q", "--depth", "1", f"file://{source}", str(shallow)],
+            check=True,
+        )
+        shallow_head = subprocess.run(
+            ["git", "-C", str(shallow), "rev-parse", "--short", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        got = _classify_at(shallow, shallow_head)
+        if got != "hotspot_v2":
+            found.append(f"classify: shallow current HEAD expected 'hotspot_v2', got {got!r}")
+    return found
+
+
+failures.extend(_check_shallow_head_fallback())
 
 # history is accepted but must never change the verdict (pure function of skill_rev today).
 if (
@@ -112,6 +212,13 @@ for name in ("G43_CONVERGENCE_PASS", "G46_REMEDIATION_FIELDS"):
 for name, value in epoch.REQUIREMENT_EPOCHS.items():
     if value not in epoch.EPOCHS:
         failures.append(f"REQUIREMENT_EPOCHS[{name!r}] = {value!r} is not a member of EPOCHS")
+
+if epoch.REQUIREMENT_EPOCHS.get("G49_HOTSPOT_SCAN") != "hotspot_v2":
+    failures.append("REQUIREMENT_EPOCHS['G49_HOTSPOT_SCAN'] must start at hotspot_v2")
+if epoch.applies("G49_HOTSPOT_SCAN", _CURRENT_ART):
+    failures.append("applies: G49 must not retroactively apply before hotspot_v2")
+if not epoch.applies("G49_HOTSPOT_SCAN", {"schema_version": 4, "skill_rev": "651ea50"}):
+    failures.append("applies: G49 must apply at the hotspot-v2 boundary")
 
 # [I1] items 1-4: the four requirement keys the new enforcement checkers read
 # (_artifact_independence.py, _artifact_transitions.py,
@@ -219,7 +326,7 @@ if failures:
     sys.exit(1)
 print(
     f"OK: _ruleset_epoch classifies {len(_classify_cases())} skill_rev shapes, the matrix "
-    f"scopes G43/G46 in both directions, and a marker-less artifact's evasion of both is "
-    f"pinned as the documented, intentional consequence"
+    f"scopes G43/G46/G49, preserves the shallow-HEAD fallback, and pins a marker-less "
+    f"artifact's intentional G43/G46 under-coverage"
 )
 sys.exit(0)

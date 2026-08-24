@@ -16,7 +16,7 @@ scoping mechanism, extracted once so every epoch-gated checker shares one
 definition instead of repeating an inline `if` (the mistake that created G43/G46's
 defect in the first place).
 
-## Why two epochs, not one per gate
+## Epoch boundaries
 
 `skill_rev` — "git -C $SKILL_DIR rev-parse --short HEAD", captured in Step -1,
 schema_version >= 4 — is the ONLY field naming which ruleset produced an artifact
@@ -25,40 +25,27 @@ schema_version >= 4 — is the ONLY field naming which ruleset produced an artif
 docstring (_artifact_history.py:307) already states the load-bearing fact this
 classifier is built on: a validator "cannot tell 'this version omitted it' from
 'this run predates the field', so presence is a Step -1 emit obligation, not a
-validation-time inference." That statement rules out reconstructing fine-grained
-epochs (e.g. "at-or-after 9346822 but before 9528774") from the field's content:
-a git short SHA carries no timestamp, and ordering two arbitrary SHAs requires a
-live git repository containing both commits — unavailable for a fixture's
-synthetic skill_rev, unavailable for an artifact from a different clone's history,
-and actively wrong to depend on inside a selftest that must run standalone.
+validation-time inference." That rules out guessing from an opaque or unresolved
+SHA. The original LEGACY/CURRENT boundary therefore remains shape-based.
 
-So the classifier draws exactly the one boundary the evidence supports: does this
-artifact carry proof it was emitted by a loop that already attested to its own
-ruleset, or not. `skill_rev` present and syntactically valid -> CURRENT.
-Anything else (null, absent, empty, malformed) -> LEGACY. Every requirement in
-REQUIREMENT_EPOCHS below currently keys to CURRENT because every one of them
-(G43, G46, and the future clients named in the [I1] task — independence/
-transitions/rounds/G29 version equality/G17) postdates skill_rev's own
-introduction. The table exists so the SET of epoch-gated requirements is one
-place to read and one place to extend, not so today's epoch space has more than
-two members; a genuinely later boundary (e.g. a v5-only requirement) gets a third
-EPOCHS entry when one is actually needed, per output-format-migrations.md's
-"epoch entry in the matrix" clause.
+G49 is the first requirement with a later, provable boundary: commit 651ea50
+introduced the hotspot-v2 handoff, so a live skill checkout can use Git ancestry
+to classify that commit and descendants as HOTSPOT_V2. A depth-1 clone falls back
+only when the artifact revision resolves to that checkout's current HEAD.
+Unresolved revisions and copied non-Git skills remain at the older epoch rather
+than being retroactively failed on a guess.
 
 ## Fail-closed direction
 
-This module backs RETROACTIVE requirements only — a rule whose fields were added
-after artifacts already existed on disk (G43, G46). For those, an artifact that
-cannot be PROVEN current is classified legacy, never the reverse: a marker-less
-artifact goes unchecked rather than a genuinely-legacy artifact being wrongly
-failed. That is an intentional, asymmetric trade — the cost lands as under-
-coverage on artifacts that omit `skill_rev` (including every fixture and selftest
-artifact in this corpus today; none carry one — see the [I1] report), not as a
-false failure on real committed history. Closing that gap is an EMITTER
-obligation (skill_rev capture is already mandatory at schema_version >= 4,
-startup.md Step -1), not something this validator-side classifier can compel:
-G19 checks skill_rev's TYPE when present, deliberately not its presence, for the
-same reason this module cannot infer presence from absence either.
+This module backs RETROACTIVE requirements only — rules whose fields were added
+after artifacts already existed on disk (G43, G46, G49). An artifact that cannot
+be PROVEN to meet an epoch boundary stays in an older epoch: a marker-less or
+unresolved artifact goes unchecked rather than a genuinely older artifact being
+wrongly failed. That intentional asymmetric trade puts the cost on under-
+coverage, not false failure of committed history. Closing the gap is an EMITTER
+obligation (skill_rev capture is mandatory at schema_version >= 4, startup.md
+Step -1), not a validator inference: G19 checks skill_rev's TYPE when present,
+deliberately not its presence.
 
 A GO-FORWARD requirement (one an emitter is newly obligated to satisfy, as
 opposed to a retroactive one judging artifacts already on disk) is a different
@@ -71,13 +58,19 @@ obligation, not something the classifier enforces going forward either.
 from __future__ import annotations
 
 import re
+import subprocess
+from functools import cache
+from pathlib import Path
 
 LEGACY = "legacy"
 CURRENT = "current"
+HOTSPOT_V2 = "hotspot_v2"
+HOTSPOT_V2_REV = "651ea50"
+SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 # Oldest -> newest. Index comparison in `applies()` is what lets a future third
 # epoch slot in without changing any call site.
-EPOCHS: tuple[str, ...] = (LEGACY, CURRENT)
+EPOCHS: tuple[str, ...] = (LEGACY, CURRENT, HOTSPOT_V2)
 
 # A short git SHA per `git rev-parse --short HEAD`: lowercase hex, default
 # abbrev 7, up to the full 40. Matches G19's own acceptance (_artifact_history.py
@@ -110,14 +103,78 @@ REQUIREMENT_EPOCHS: dict[str, str] = {
     "TRANSITIONS_REQUIRED_FIELDS": CURRENT,
     "ROUNDS_REQUIRED_FIELDS": CURRENT,
     "G29_VERSION_EQUALITY": CURRENT,
-    # G48 (run_id discipline) is deliberately NOT here: CURRENT is too coarse for it --
-    # the motivating run already emitted skill_rev, so a CURRENT-scoped Issue fails a
-    # committed artifact retroactively. Blocked on a third EPOCHS entry that provably
-    # post-dates the gate's ship; see _artifact_run_identity.py's promotion bar.
-    # "G48_RUN_ID_DISCIPLINE": <post-G48 epoch>,
+    # G49: audit_hotspots.py schema v2 became a required Step-0 handoff.
+    # Landed 2026-08-24, commit 651ea50.
+    "G49_HOTSPOT_SCAN": HOTSPOT_V2,
+    # G48 (run_id discipline) is deliberately NOT lifted here. HOTSPOT_V2 satisfies
+    # its post-ship epoch condition, but its separate instrumented-pass promotion
+    # condition remains; see _artifact_run_identity.py's promotion bar.
     # Slot for a future client, still unclaimed.
     # "G17_COVERAGE_CITATION": CURRENT,
 }
+
+
+@cache
+def _resolve_revision(revision: str) -> str | None:
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(SKILL_ROOT),
+                "rev-parse",
+                "--verify",
+                f"{revision}^{{commit}}",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+@cache
+def _is_hotspot_v2_revision(skill_rev: str) -> bool:
+    resolved = _resolve_revision(skill_rev)
+    if resolved is None:
+        return False
+
+    boundary = _resolve_revision(HOTSPOT_V2_REV)
+    if boundary is not None:
+        try:
+            ancestry = subprocess.run(
+                ["git", "-C", str(SKILL_ROOT), "merge-base", "--is-ancestor", boundary, resolved],
+                check=False,
+                capture_output=True,
+                timeout=5,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        if ancestry.returncode in (0, 1):
+            return ancestry.returncode == 0
+        return False
+
+    # A depth-1 clone cannot resolve the boundary, but a fresh artifact names
+    # the checkout that is executing this validator. Equality proves that case
+    # without guessing about any older unresolved revision.
+    try:
+        shallow = subprocess.run(
+            ["git", "-C", str(SKILL_ROOT), "rev-parse", "--is-shallow-repository"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return (
+        shallow.returncode == 0
+        and shallow.stdout.strip() == "true"
+        and resolved == _resolve_revision("HEAD")
+    )
 
 
 def classify(current_review: dict, history: dict | None = None) -> str:
@@ -126,12 +183,13 @@ def classify(current_review: dict, history: dict | None = None) -> str:
     `history` (REVIEW_HISTORY.json, when available) is accepted for interface
     symmetry with the checkers this feeds (G43 already threads history through)
     and for a future signal — e.g. cross-loop skill_rev consistency — but is not
-    read today: classification is a pure function of `current_review["skill_rev"]`.
-    See the module docstring for why a coarser, two-epoch boundary is what the
-    evidence supports rather than a per-commit ordering.
+    read today. Classification uses the artifact's `skill_rev` plus only Git facts
+    the local skill checkout can prove; unresolved revisions never move forward.
     """
     skill_rev = current_review.get("skill_rev")
     if isinstance(skill_rev, str) and _SKILL_REV_RE.match(skill_rev):
+        if _is_hotspot_v2_revision(skill_rev):
+            return HOTSPOT_V2
         return CURRENT
     return LEGACY
 

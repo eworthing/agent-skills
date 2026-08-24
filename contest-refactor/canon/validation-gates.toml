@@ -192,4 +192,8 @@ title = "Execution-evidence linkage — ledger record resolves, command human-pi
 
 [[validation_gates]]
 id = "G48"
-title = "run_id identity discipline — non-null run_id matches run-<UTC yyyy-mm-dd>-<uuid4().hex> and never changes across consecutive loops of one run (REPORT-ONLY: diagnostics print on detection, Issue withheld until a post-G48 epoch boundary exists — promotion bar in _artifact_run_identity.py)"
+title = "run_id identity discipline — non-null run_id matches run-<UTC yyyy-mm-dd>-<uuid4().hex> and never changes across consecutive loops of one run (REPORT-ONLY: post-G48 epoch exists; Issue withheld until the instrumented-pass promotion condition is met — promotion bar in _artifact_run_identity.py)"
+
+[[validation_gates]]
+id = "G49"
+title = "Persisted implementation-hotspot evidence — sanitized schema-v2 coverage/candidates required for hotspot-v2 rulesets"

@@ -40,43 +40,32 @@ CURRENT epoch; the dogfood artifact now passes strict with zero issues. See "Rul
 
 `scripts/_ruleset_epoch.py` is the one classifier every epoch-scoped checker calls, so option 2
 above is an import, not a repeated inline `if`. It reads `current_review["skill_rev"]` — the only
-field naming *which ruleset* produced an artifact (G19) — and returns one of two epochs:
+field naming *which ruleset* produced an artifact (G19) — and returns one of three epochs:
 
-- **`current`** — `skill_rev` is present and looks like a real git short SHA (`[0-9a-f]{4,40}`).
 - **`legacy`** — anything else: absent, `null`, empty, non-string, or malformed.
+- **`current`** — a valid `skill_rev` that cannot be proven at or after the hotspot-v2 boundary.
+- **`hotspot_v2`** — commit `651ea50` or a Git-proven descendant. In a depth-1 clone where the
+  boundary is unavailable, equality with the executing skill checkout's current HEAD is the only
+  fallback; the lookup is cached per revision.
 
-Only two epochs, not one per commit that ever adds a requirement. `skill_rev` carries no
-timestamp, and ordering two arbitrary short SHAs against each other requires a live git repository
-containing both commits — unavailable for a fixture's synthetic `skill_rev`, unavailable for an
-artifact from a different clone's history, and wrong to depend on inside a selftest that must run
-standalone. The evidence only supports one boundary: does this artifact carry proof it was emitted
-by a loop that already attested to its own ruleset, or not. A finer boundary (e.g. "at-or-after
-G43 but before G46") gets a third `EPOCHS` entry the day a requirement actually needs one — not
-before.
+Do not create an epoch per commit. The original shape boundary remains the only classification
+available for unresolved or synthetic revisions. A later boundary is justified only when a hard
+gate would otherwise invalidate artifacts that predate its required field and the validator can
+prove ancestry from the introducing commit.
 
 `REQUIREMENT_EPOCHS` is the compatibility matrix: a plain dict mapping a requirement name to the
 epoch it is owed at. G43 (`G43_CONVERGENCE_PASS`) and G46 (`G46_REMEDIATION_FIELDS`) are both
-`current`; a requirement absent from the table is not epoch-gated at all (unconditional at its own
+`current`; G49 (`G49_HOTSPOT_SCAN`) starts at `hotspot_v2`. A requirement absent from the table is not epoch-gated at all (unconditional at its own
 `schema_version` floor — e.g. G19's own type check, which stays TYPE-only per option 3, never
 presence). Add new requirements as table entries — independence/reviewer isolation fields,
 transitions, rounds, G29 version equality, and G17 are the named future clients — never as a new
 epoch `if` scattered into the checker.
 
-**Fail-closed direction.** This classifier backs *retroactive* requirements only (a field added
-after artifacts already existed, judged against artifacts already on disk). An artifact that
-cannot be *proven* current is legacy, never the reverse: a marker-less artifact goes unchecked
-rather than a genuinely-legacy artifact being wrongly failed. The cost is symmetric under-coverage,
-not false failure — and it lands broadly today, because no fixture or checker selftest in this
-corpus carries a `skill_rev` yet. `_g43_selftest.py` and the G46 remediation-fields selftest go
-fully silent on their "must fire" cases under this scoping (they assert directly against the
-checker functions with marker-less synthetic artifacts); `evals/fixtures/g43-clean-streak-restated`,
-`g43-clean-streak-reworded-note`, `g43-convergence-pass-missing`, and
-`g46-remediation-drift-notes-empty` flip from failing to passing for the same reason.
-**The fix for each is to add a valid `skill_rev` to the fixture/case, not to exempt it** — see
-`evals/fixtures/g46-current-epoch-fields-missing` for a fixture proving the shape still fails once
-the marker is present. Closing the gap for good is an **emitter** obligation: `skill_rev` capture
-is already mandatory at `schema_version >= 4` (startup.md Step -1); this validator-side classifier
-cannot compel presence any more than G19 can, for the identical reason.
+**Fail-closed direction.** A marker-less artifact remains `legacy`, and a valid but unresolved
+revision remains `current`; neither can be proven to owe hotspot-v2 fields. This intentionally
+prefers under-coverage over falsely invalidating committed history. Closing that gap is an emitter
+obligation: `skill_rev` capture is mandatory at schema version 4+, but a copied non-Git skill may
+still emit `null`, which no validator can safely order.
 
 ## Schema version 4 → 5
 
