@@ -113,6 +113,8 @@ class ToolSpec:
     globs: tuple[str, ...] = ()
     # Hit shape, when the tool does not emit the `path:line:col: CODE ` default.
     hit_pattern: str | None = None
+    # Installation command or instructions for when the binary is not found on PATH.
+    install_instruction: str | None = None
 
 
 @dataclass
@@ -183,7 +185,10 @@ def run_tool(spec: ToolSpec, cwd: Path) -> ToolResult:
         return ToolResult(spec.name, "not_applicable", f"no files matching {'/'.join(spec.globs)}")
 
     if shutil.which(spec.argv[0]) is None and not Path(spec.argv[0]).is_file():
-        return ToolResult(spec.name, "absent", f"{spec.argv[0]} not on PATH")
+        msg = f"{spec.argv[0]} not on PATH"
+        if spec.install_instruction:
+            msg += f" (install: {spec.install_instruction})"
+        return ToolResult(spec.name, "absent", msg)
 
     if spec.version_argv and spec.min_version:
         try:
@@ -244,6 +249,7 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         min_version=(0, 15, 0),
         timeout_s=120,
         globs=("*.py",),
+        install_instruction="pip install ruff",
     ),
     ToolSpec(
         name="swiftlint",
@@ -262,6 +268,40 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         # would capture. The prose between them is matched and dropped, never
         # captured, so nothing but file and rule id survives.
         hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+\w+:.*\((?P<code>[a-z_]+)\)\s*$",
+        install_instruction="brew install swiftlint",
+    ),
+    ToolSpec(
+        name="biome",
+        argv=("biome", "check", "--reporter=compact"),
+        findings_exit_codes=(0, 1),
+        version_argv=("biome", "--version"),
+        min_version=(1, 0, 0),
+        timeout_s=120,
+        globs=("*.ts", "*.tsx", "*.js", "*.jsx"),
+        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+\s+(?P<code>lint/[a-zA-Z0-9_/]+|[a-zA-Z0-9_\-]+)",
+        install_instruction="npm install -g @biomejs/biome",
+    ),
+    ToolSpec(
+        name="golangci-lint",
+        argv=("golangci-lint", "run", "--out-format=line-number"),
+        findings_exit_codes=(0, 1),
+        version_argv=("golangci-lint", "--version"),
+        min_version=(1, 50, 0),
+        timeout_s=180,
+        globs=("*.go",),
+        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+.*?\((?P<code>[a-zA-Z0-9_\-]+)\)\s*$",
+        install_instruction="brew install golangci-lint",
+    ),
+    ToolSpec(
+        name="clippy",
+        argv=("cargo", "clippy", "--message-format=short"),
+        findings_exit_codes=(0, 101),
+        version_argv=("cargo", "clippy", "--version"),
+        min_version=(0, 1, 0),
+        timeout_s=240,
+        globs=("*.rs",),
+        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+(?P<code>(?:warning|error)(?:\[[A-Za-z0-9_]+\])?):\s+",
+        install_instruction="rustup component add clippy",
     ),
 )
 

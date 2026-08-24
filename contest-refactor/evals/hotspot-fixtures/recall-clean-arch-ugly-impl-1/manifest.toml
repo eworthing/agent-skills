@@ -1,0 +1,26 @@
+# Implementation-Hotspot Eval Fixture — RECALL arm
+# Layer: Implementation hotspot candidate selection (Method.md Step 6)
+
+id = "recall-clean-arch-ugly-impl-1"
+arm = "recall"
+
+description = """
+Clean hexagonal architecture codebase where architectural boundaries (ports, adapters, domain)
+are immaculate, but the core business service method (FeeSettlementService.settle_account_fees)
+is an entangled 85-line implementation with 14 decisions, 4 nesting levels, 6 mutable variables
+across a 50-line mutation span, and 3 single-use private helpers.
+"""
+
+planted_hotspot = "FeeSettlementService.settle_account_fees"
+hotspot_file = "src/services/fee_settlement_service.py"
+planted_queues = ["control", "mutation", "navigation"]
+
+[notes]
+measurement_protocol = """
+1. Run: python3 scripts/audit_hotspots.py evals/hotspot-fixtures/recall-clean-arch-ugly-impl-1/codebase/ --json
+2. Arm A (control): run Critic on codebase/ without hotspot candidate evidence.
+3. Arm B (treatment): run Critic on codebase/ with hotspot candidate evidence.
+4. Grade: Arm B confirms simplicity finding; Arm A misses it due to clean top-level architecture.
+"""
+expected_find_without_scanner = false
+expected_find_with_scanner = true

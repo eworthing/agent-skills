@@ -1,0 +1,17 @@
+# Implementation-Hotspot Eval Fixture — RESTRAINT arm
+# Layer: Implementation hotspot candidate selection (Method.md Step 6)
+
+id = "restraint-clean-domain-1"
+arm = "restraint"
+
+description = """
+Clean, well-factored domain codebase with clean functions, immutable data structures,
+and pure transformations. Scanner should find zero candidate implementation hotspots.
+"""
+
+[notes]
+measurement_protocol = """
+1. Run: python3 scripts/audit_hotspots.py evals/hotspot-fixtures/restraint-clean-domain-1/codebase/ --json
+2. Verify: scanner outputs 0 candidates.
+"""
+expected_candidates_count = 0

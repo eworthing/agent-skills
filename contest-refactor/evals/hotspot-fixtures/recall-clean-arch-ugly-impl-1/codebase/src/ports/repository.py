@@ -1,0 +1,9 @@
+from typing import Protocol
+from src.domain.models import Account, Transaction
+
+class AccountRepository(Protocol):
+    def get_account(self, account_id: str) -> Account | None: ...
+    def save_account(self, account: Account) -> None: ...
+
+class TransactionRepository(Protocol):
+    def get_transactions_for_account(self, account_id: str) -> list[Transaction]: ...

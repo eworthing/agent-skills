@@ -238,6 +238,38 @@ def main() -> int:
             f"the message must be dropped whole, never captured: {r.hits}",
         )
 
+        # Biome compact output
+        biome_line = "src/index.ts:10:5 lint/style/useConst This variable is never reassigned.\n"
+        b_spec = next(x for x in tr.DEFAULT_REGISTRY if x.name == "biome")
+        r = tr.run_tool(_spec("fake-biome", _emit(biome_line), hit_pattern=b_spec.hit_pattern), cwd)
+        check(r.counts.get("findings") == 1, f"biome shape should yield 1 hit, got {r.counts}")
+        check(
+            r.hits and r.hits[0]["code"] == "lint/style/useConst",
+            f"biome code must be rule path: {r.hits}",
+        )
+
+        # Golangci-lint line-number output
+        go_line = "pkg/auth.go:42:15: should use single case statement (gosimple)\n"
+        g_spec = next(x for x in tr.DEFAULT_REGISTRY if x.name == "golangci-lint")
+        r = tr.run_tool(_spec("fake-go", _emit(go_line), hit_pattern=g_spec.hit_pattern), cwd)
+        check(
+            r.counts.get("findings") == 1, f"golangci-lint shape should yield 1 hit, got {r.counts}"
+        )
+        check(
+            r.hits and r.hits[0]["code"] == "gosimple",
+            f"golangci-lint code must be trailing rule: {r.hits}",
+        )
+
+        # Cargo clippy short output
+        rs_line = "src/main.rs:12:9: warning: variable does not need to be mutable\n"
+        c_spec = next(x for x in tr.DEFAULT_REGISTRY if x.name == "clippy")
+        r = tr.run_tool(_spec("fake-clippy", _emit(rs_line), hit_pattern=c_spec.hit_pattern), cwd)
+        check(r.counts.get("findings") == 1, f"clippy shape should yield 1 hit, got {r.counts}")
+        check(
+            r.hits and r.hits[0]["code"] == "warning",
+            f"clippy code must be severity/code: {r.hits}",
+        )
+
         # --- 12. every registry tool declares what it can read -------------
         for spec in tr.DEFAULT_REGISTRY:
             check(

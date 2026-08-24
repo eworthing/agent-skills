@@ -5,6 +5,7 @@ target-version = "py311"
 extend-exclude = [
   ".claude/skills/skill-evaluator-1.0.0",           # third-party bundled skill
   "contest-refactor/evals/**/repo-map-fixtures/**",  # synthetic malformed fixtures
+  "contest-refactor/evals/**/hotspot-fixtures/**",   # synthetic hotspot eval fixtures
 ]
 # refs/, temp/, .agents/ are already skipped via .gitignore (Ruff respects it).
 # Vendored **/scripts/_common/ is intentionally NOT excluded: it must stay
