@@ -3,9 +3,12 @@
 Paired fixtures for the implementation-hotspot advisory candidate-evidence detector
 (`scripts/audit_hotspots.py`, Method.md Step 6).
 
-These fixtures gate the **model-behavior track** of candidate selection — proving that
-providing symbol-level candidate focus allows the Critic to detect severe implementation
-complexity hidden behind clean architecture boundaries (Experiment 1).
+The tracked manifests serve two distinct checks:
+
+- `_audit_hotspots_selftest.py` enforces deterministic scanner recall and restraint from the
+  committed codebases and TOML expectations.
+- The K≥5 paired-Critic experiment below remains a manual model-behavior measurement; CI does
+  not claim to grade model judgment.
 
 ## Arms
 
@@ -18,7 +21,7 @@ complexity hidden behind clean architecture boundaries (Experiment 1).
 
 1. **Generate Candidate Evidence:**
    ```bash
-   python3 scripts/audit_hotspots.py evals/hotspot-fixtures/<fixture>/codebase/
+   python3 scripts/audit_hotspots.py evals/hotspot-fixtures/<fixture>/codebase/ --json
    ```
 
 2. **Arm A (Bare Critic Control):** Run Critic on `codebase/` with standard Method steps without scanner evidence.

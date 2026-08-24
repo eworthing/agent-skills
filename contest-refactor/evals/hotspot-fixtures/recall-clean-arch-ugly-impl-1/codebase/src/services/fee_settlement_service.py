@@ -13,7 +13,7 @@ class FeeSettlementService:
             return Decimal("0.00")
 
         transactions = self.tx_repo.get_transactions_for_account(account_id)
-        
+
         # State tracking across long mutation span
         total_fee = Decimal("0.00")
         waiver_applied = False

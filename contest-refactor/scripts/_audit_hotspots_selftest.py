@@ -22,9 +22,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 AUDIT = Path(__file__).with_name("audit_hotspots.py")
+SKILL_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _write(root: Path, files: dict[str, str]) -> None:
@@ -97,7 +99,7 @@ def mutate_across_lifecycle(items: list[int], mode: str) -> dict:
     state_flag = "INIT"
     total_accumulator = 0
     buffer = []
-    
+
     # Line span across 20+ lines with mutations inside branches
     for item in items:
         if item > 100:
@@ -117,7 +119,7 @@ def mutate_across_lifecycle(items: list[int], mode: str) -> dict:
 
     if total_accumulator > 500:
         state_flag = "FINALIZED"
-    
+
     return {"state": state_flag, "total": total_accumulator, "buffer": buffer}
 """
     _write(root, {"mutator.py": code})
@@ -349,6 +351,299 @@ def complex_fn(x: int) -> int:
     return None
 
 
+def test_python_ast_scope_and_expressions(base: Path) -> str | None:
+    root = base / "python_ast_scope"
+    code = """
+def _if_ready(value):
+    return bool(value)
+
+def _while_ready(value):
+    return bool(value)
+
+def _match_ready(value):
+    return bool(value)
+
+def _expr_ready(value):
+    return bool(value)
+
+def _item_ready(value):
+    return bool(value)
+
+def analyze(values):
+    if _if_ready(values):
+        pass
+    while _while_ready(values):
+        break
+    match values:
+        case list() if _match_ready(values):
+            pass
+    result = 1 if _expr_ready(values) else 0
+    filtered = [item for item in values if _item_ready(item)]
+    return result + len(filtered)
+
+def _hidden():
+    return True
+
+def parent():
+    def inner():
+        _hidden()
+    return 1
+
+class A:
+    def run(self):
+        self._validate()
+
+    def _validate(self):
+        return True
+
+class B:
+    def run(self):
+        self._validate()
+
+    def _validate(self):
+        return True
+"""
+    _write(root, {"ast_cases.py": code})
+    out, err, rc = _run(root, ["--json", "--top-k", "6"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    analyze = next((c for c in data["candidates"] if c["symbol"] == "analyze"), None)
+    if not analyze:
+        return f"expected analyze candidate, got {data['candidates']}"
+    if analyze["signals"]["decision_count"] != 6:
+        return f"expected six AST decisions, got {analyze['signals']['decision_count']}"
+    expected_helpers = {
+        "_if_ready",
+        "_while_ready",
+        "_match_ready",
+        "_expr_ready",
+        "_item_ready",
+    }
+    actual_helpers = set(analyze["neighborhood"]["direct_private_helpers"])
+    if actual_helpers != expected_helpers:
+        return f"expected condition/expression helpers {expected_helpers}, got {actual_helpers}"
+    if any(c["symbol"] == "parent" for c in data["candidates"]):
+        return "parent inherited its nested function's private call"
+    for symbol in ("A.run", "B.run"):
+        candidate = next((c for c in data["candidates"] if c["symbol"] == symbol), None)
+        if not candidate:
+            return f"expected scoped private-helper candidate {symbol}"
+        if candidate["signals"]["single_use_private_helper_count"] != 1:
+            return f"expected one scoped helper for {symbol}, got {candidate['signals']}"
+    return None
+
+
+def test_queue_membership_is_eligibility_not_only_roster(base: Path) -> str | None:
+    root = base / "queue_membership"
+    code = """
+def target(values):
+    state = 0
+    if values:
+        if len(values) > 1:
+            if values[0] > 0:
+                state += 1
+
+    state += 2
+    _only_helper()
+    return state
+
+def _only_helper():
+    return True
+
+def mutation_winner():
+    state = 0
+    state += 1
+    state += 2
+    state += 3
+    state += 4
+    state += 5
+    return state
+"""
+    _write(root, {"queues.py": code})
+    out, err, rc = _run(root, ["--json", "--top-k", "1"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    target = next((c for c in data["candidates"] if c["symbol"] == "target"), None)
+    if not target:
+        return f"expected target candidate, got {data['candidates']}"
+    if target["candidate_queues"] != ["control", "mutation", "navigation"]:
+        return f"expected all eligible queues, got {target['candidate_queues']}"
+    return None
+
+
+def test_swift_ast_boundaries_and_ts_arrow_names(base: Path) -> str | None:
+    if not (shutil.which("ast-grep") or shutil.which("sg")):
+        return None
+
+    root = base / "swift_ast"
+    swift_code = """
+final class SettlementCoordinator {
+    @MainActor
+    func executeSettlement(values: [Int]) -> Int {
+        let fake = "if while guard && hiddenCall("
+        // if while guard fakeCall(
+        var balance = 0
+        if !values.isEmpty {
+            for value in values {
+                guard value >= 0 else { break }
+                balance += value
+            }
+        }
+        recordSettlement(balance)
+
+        func nested() {
+            if balance > 1 {
+                if balance > 2 {
+                    if balance > 3 { print(fake) }
+                }
+            }
+        }
+        return balance
+    }
+
+    private func recordSettlement(_ value: Int) {
+        print(value)
+    }
+}
+
+struct Overloads {
+    func work(_ value: Int) -> Int {
+        if value > 0 {
+            if value > 1 {
+                if value > 2 { return value }
+            }
+        }
+        return 0
+    }
+
+    func work(_ value: String) -> Int {
+        if !value.isEmpty {
+            if value.count > 1 {
+                if value.count > 2 { return value.count }
+            }
+        }
+        return 0
+    }
+}
+"""
+    ts_code = """
+type Handler = (values: number[]) => Promise<number>;
+export const runWorkflow: Handler = async (values) => {
+    let total = 0;
+    if (values.length > 0) {
+        for (const value of values) {
+            if (value > 0) total += value;
+        }
+    }
+    return total;
+};
+"""
+    _write(root, {"Sources/Settlement.swift": swift_code, "src/workflow.ts": ts_code})
+    out, err, rc = _run(root, ["--json", "--top-k", "6"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    settlement = next(
+        (c for c in data["candidates"] if c["symbol"] == "SettlementCoordinator.executeSettlement"),
+        None,
+    )
+    if not settlement:
+        return f"expected attributed owner-qualified Swift method, got {data['candidates']}"
+    if settlement["signals"]["decision_count"] != 3:
+        return f"expected three structural Swift decisions, got {settlement['signals']['decision_count']}"
+    if settlement["neighborhood"]["direct_private_helpers"] != ["recordSettlement"]:
+        return f"expected declaration-private Swift helper, got {settlement['neighborhood']}"
+    overloads = [c for c in data["candidates"] if c["symbol"] == "Overloads.work"]
+    if len(overloads) != 2:
+        return f"expected two overload candidates with distinct ranges, got {overloads}"
+    if not any(c["symbol"] == "runWorkflow" for c in data["candidates"]):
+        return f"expected typed arrow name runWorkflow, got {data['candidates']}"
+    if any(c["symbol"] == "async" for c in data["candidates"]):
+        return "typed arrow was misnamed async"
+    return None
+
+
+def test_schema_v2_partial_coverage_and_top_k_validation(base: Path) -> str | None:
+    root = base / "coverage"
+    _write(
+        root,
+        {
+            "valid.py": "def simple():\n    return 1\n",
+            "broken.py": "def broken(:\n    pass\n",
+        },
+    )
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected report exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    if data.get("schema_version") != 2:
+        return f"expected schema_version 2, got {data.get('schema_version')}"
+    if data.get("status") != "partial":
+        return f"expected partial status for a parse failure, got {data.get('status')}"
+    if data.get("coverage", {}).get("python") != {"discovered": 2, "scanned": 1, "failed": 1}:
+        return f"unexpected Python coverage: {data.get('coverage')}"
+
+    _, _, invalid_rc = _run(root, ["--json", "--top-k", "0"])
+    if invalid_rc != 2:
+        return f"expected argparse exit 2 for --top-k 0, got {invalid_rc}"
+    return None
+
+
+def test_ast_grep_failure_is_partial_without_raw_output(base: Path) -> str | None:
+    root = base / "ast_grep_failure"
+    _write(root, {"App.swift": "func work() { if true { print(1) } }\n"})
+    fake_bin = root / "fake-bin"
+    fake_bin.mkdir()
+    fake_ast_grep = fake_bin / "ast-grep"
+    fake_ast_grep.write_text(
+        f"#!{sys.executable}\nimport sys\nsys.stderr.write('SECRET RAW DIAGNOSTIC')\nsys.exit(3)\n",
+        encoding="utf-8",
+    )
+    fake_ast_grep.chmod(0o755)
+    env = os.environ.copy()
+    env["PATH"] = str(fake_bin)
+    out, err, rc = _run(root, ["--json"], env=env)
+    if rc != 0:
+        return f"expected report exit 0, got {rc}: {err}"
+    if "SECRET RAW DIAGNOSTIC" in out:
+        return "raw ast-grep stderr reached the structured report"
+    data = json.loads(out)
+    if data["status"] != "partial":
+        return f"expected partial status, got {data['status']}"
+    expected = {"discovered": 1, "scanned": 0, "failed": 1, "outcome": "partial"}
+    if data["coverage"]["ast_grep"] != expected:
+        return f"unexpected ast-grep coverage: {data['coverage']['ast_grep']}"
+    return None
+
+
+def test_tracked_fixture_manifests(_: Path) -> str | None:
+    fixture_root = SKILL_ROOT / "evals" / "hotspot-fixtures"
+    for manifest_path in sorted(fixture_root.glob("*/manifest.toml")):
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        out, err, rc = _run(manifest_path.parent / "codebase", ["--json"])
+        if rc != 0:
+            return f"{manifest['id']} scanner exited {rc}: {err}"
+        candidates = json.loads(out)["candidates"]
+        if manifest["arm"] == "recall":
+            planted = next(
+                (c for c in candidates if c["symbol"] == manifest["planted_hotspot"]), None
+            )
+            if not planted:
+                return f"{manifest['id']} missed {manifest['planted_hotspot']}"
+            if not set(manifest["planted_queues"]).issubset(planted["candidate_queues"]):
+                return (
+                    f"{manifest['id']} expected queues {manifest['planted_queues']}, "
+                    f"got {planted['candidate_queues']}"
+                )
+        else:
+            expected = manifest["notes"]["expected_candidates_count"]
+            if len(candidates) != expected:
+                return f"{manifest['id']} expected {expected} candidates, got {len(candidates)}"
+    return None
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         base = Path(tmpdir)
@@ -360,6 +655,24 @@ def main() -> int:
             ("missing_tool_graceful_skip", test_missing_tool_graceful_skip),
             ("restraint_cases", test_restraint_cases),
             ("epistemic_contract", test_epistemic_contract),
+            ("python_ast_scope_and_expressions", test_python_ast_scope_and_expressions),
+            (
+                "queue_membership_is_eligibility_not_only_roster",
+                test_queue_membership_is_eligibility_not_only_roster,
+            ),
+            (
+                "swift_ast_boundaries_and_ts_arrow_names",
+                test_swift_ast_boundaries_and_ts_arrow_names,
+            ),
+            (
+                "schema_v2_partial_coverage_and_top_k_validation",
+                test_schema_v2_partial_coverage_and_top_k_validation,
+            ),
+            (
+                "ast_grep_failure_is_partial_without_raw_output",
+                test_ast_grep_failure_is_partial_without_raw_output,
+            ),
+            ("tracked_fixture_manifests", test_tracked_fixture_manifests),
         ]
         failed = False
         for name, fn in cases:
@@ -372,7 +685,7 @@ def main() -> int:
 
         if failed:
             return 1
-        print("OK: audit_hotspots — 7/7 selftest cases passing")
+        print(f"OK: audit_hotspots — {len(cases)}/{len(cases)} selftest cases passing")
         return 0
 
 

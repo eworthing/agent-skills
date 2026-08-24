@@ -21,7 +21,8 @@ EPISTEMIC CONTRACT (Meta-Rule 1):
 
 Supported stacks:
   - Python (via stdlib ast)
-  - Swift, TypeScript, JavaScript, Go, Rust, Kotlin, Java (via open-source ast-grep)
+  - Swift (function and signal nodes via open-source ast-grep)
+  - TypeScript, JavaScript, Go, Rust, Kotlin, Java (ast-grep boundaries + masked heuristics)
   If ast-grep is not installed on non-Python repositories, multi-language scanning
   is skipped gracefully with installation instructions.
 
@@ -29,7 +30,7 @@ Usage:
   scripts/audit_hotspots.py [<repo-root>] [--top-k N] [--json]
 
 Exit codes:
-  0 = ran (with or without candidates, or skipped-absent/clean)
+  0 = reported `ok`, `partial`, `absent`, or `not_applicable`
   2 = usage error (bad path or arguments)
 """
 
@@ -45,6 +46,8 @@ import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+
+from audit_clones import _mask as _mask_source
 
 # Directory names never scanned: VCS/build/cache/vendor + test + generated trees.
 IGNORE_DIRS = frozenset(
@@ -111,6 +114,12 @@ AST_GREP_KINDS: dict[str, list[str]] = {
     "java": ["method_declaration", "constructor_declaration"],
 }
 
+_SWIFT_NODE_SELECTOR = (
+    ":is(class_declaration, if_statement, guard_statement, for_statement, "
+    "while_statement, catch_block, switch_statement, switch_entry, assignment, "
+    "property_declaration, call_expression, conjunction_expression, disjunction_expression)"
+)
+
 INSTALL_INSTRUCTIONS = (
     "brew install ast-grep (macOS/Homebrew) | "
     "cargo install ast-grep-cli (Rust/Cargo) | "
@@ -151,7 +160,8 @@ def _is_test_file(name: str) -> bool:
 
 def _is_generated_file(path: Path) -> bool:
     try:
-        head = path.read_text(encoding="utf-8", errors="ignore")[:1024]
+        with path.open(encoding="utf-8", errors="ignore") as source:
+            head = source.read(1024)
         return any(marker.lower() in head.lower() for marker in _GENERATED_MARKERS)
     except OSError:
         return False
@@ -212,6 +222,15 @@ class CandidateSymbol:
             + self.signals.private_call_depth * 8
             + self.signals.direct_call_fanout
         )
+
+
+@dataclass
+class _ScannedFunction:
+    candidate: CandidateSymbol
+    owner: str
+    name: str
+    direct_calls: list[str]
+    is_private: bool
 
 
 class _PythonFunctionASTAnalyzer(ast.NodeVisitor):
@@ -277,7 +296,7 @@ class _PythonFunctionASTAnalyzer(ast.NodeVisitor):
             if node.orelse:
                 self._walk_body(node.orelse, depth + 1)
 
-        elif isinstance(node, ast.Try):
+        elif isinstance(node, (ast.Try, getattr(ast, "TryStar", ast.Try))):
             self._walk_body(node.body, depth + 1)
             for handler in node.handlers:
                 self.signals.decision_count += 1
@@ -322,6 +341,10 @@ class _PythonFunctionASTAnalyzer(ast.NodeVisitor):
             self.visit(node)
 
     def _analyze_condition(self, expr: ast.AST) -> None:
+        self._record_condition_complexity(expr)
+        self.visit(expr)
+
+    def _record_condition_complexity(self, expr: ast.AST) -> None:
         count = 1
         for sub in ast.walk(expr):
             if isinstance(sub, ast.BoolOp):
@@ -329,8 +352,6 @@ class _PythonFunctionASTAnalyzer(ast.NodeVisitor):
                 self.signals.decision_count += len(sub.values) - 1
             elif isinstance(sub, ast.Compare):
                 count += len(sub.ops) - 1
-            elif isinstance(sub, ast.IfExp):
-                self.signals.decision_count += 1
         if count > self.signals.condition_operand_max:
             self.signals.condition_operand_max = count
 
@@ -382,6 +403,30 @@ class _PythonFunctionASTAnalyzer(ast.NodeVisitor):
 
         self.generic_visit(node)
 
+    def visit_IfExp(self, node: ast.IfExp) -> None:
+        self.signals.decision_count += 1
+        self._record_condition_complexity(node.test)
+        self.generic_visit(node)
+
+    def _visit_comprehension(self, node: ast.AST) -> None:
+        generators = getattr(node, "generators", [])
+        self.signals.decision_count += sum(1 + len(generator.ifs) for generator in generators)
+        self.generic_visit(node)
+
+    visit_ListComp = _visit_comprehension
+    visit_SetComp = _visit_comprehension
+    visit_DictComp = _visit_comprehension
+    visit_GeneratorExp = _visit_comprehension
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        del node
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        del node
+
+    def visit_Lambda(self, node: ast.Lambda) -> None:
+        del node
+
     def _compute_mutation_signals(self) -> None:
         mutated_vars = {k: v for k, v in self.var_assignments.items() if len(v) >= 2}
         self.signals.mutable_local_count = len(mutated_vars)
@@ -406,20 +451,21 @@ class _PythonFunctionASTAnalyzer(ast.NodeVisitor):
         self.signals.mutation_span = max_span
 
 
-def scan_python_file(path: Path, repo_root: Path) -> list[CandidateSymbol]:
+def scan_python_file(path: Path, repo_root: Path) -> tuple[list[CandidateSymbol], bool]:
     """Scans a single Python file for function & method candidate symbols."""
     try:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(path))
     except (SyntaxError, OSError, UnicodeDecodeError):
-        return []
+        return [], False
 
     source_lines = source.splitlines()
     rel_path = str(path.relative_to(repo_root))
 
     candidates: list[CandidateSymbol] = []
-    helper_call_map: dict[str, set[str]] = defaultdict(set)
+    helper_call_map: dict[str, set[tuple[str, int]]] = defaultdict(set)
     private_helper_defs: dict[str, ast.FunctionDef | ast.AsyncFunctionDef] = {}
+    helper_keys_by_candidate: dict[tuple[str, int], list[str]] = {}
 
     def extract_from_scope(nodes: list[ast.stmt], prefix: str = "", is_class: bool = False) -> None:
         for node in nodes:
@@ -437,12 +483,18 @@ def scan_python_file(path: Path, repo_root: Path) -> list[CandidateSymbol]:
                     direct_private_helpers=sorted(analyzer.called_private_helpers),
                 )
                 candidates.append(candidate)
+                candidate_key = (symbol_name, node.lineno)
+                helper_keys = [
+                    f"{prefix}.{helper}" if is_class else helper
+                    for helper in analyzer.called_private_helpers
+                ]
+                helper_keys_by_candidate[candidate_key] = helper_keys
 
                 if node.name.startswith("_") and not node.name.startswith("__"):
-                    private_helper_defs[node.name] = node
+                    private_helper_defs[symbol_name] = node
 
-                for helper in analyzer.called_private_helpers:
-                    helper_call_map[helper].add(symbol_name)
+                for helper_key in helper_keys:
+                    helper_call_map[helper_key].add(candidate_key)
 
             elif isinstance(node, ast.ClassDef):
                 class_prefix = f"{prefix}.{node.name}" if prefix else node.name
@@ -455,12 +507,13 @@ def scan_python_file(path: Path, repo_root: Path) -> list[CandidateSymbol]:
         single_use_count = 0
         max_depth = 1 if cand.direct_private_helpers else 0
 
-        for helper in cand.direct_private_helpers:
-            callers = helper_call_map.get(helper, set())
+        candidate_key = (cand.symbol, cand.start_line)
+        for helper_key in helper_keys_by_candidate.get(candidate_key, []):
+            callers = helper_call_map.get(helper_key, set())
             if len(callers) == 1:
                 single_use_count += 1
 
-            helper_node = private_helper_defs.get(helper)
+            helper_node = private_helper_defs.get(helper_key)
             if helper_node:
                 helper_analyzer = _PythonFunctionASTAnalyzer(helper_node, source_lines)
                 helper_analyzer.analyze()
@@ -470,27 +523,28 @@ def scan_python_file(path: Path, repo_root: Path) -> list[CandidateSymbol]:
         cand.signals.single_use_private_helper_count = single_use_count
         cand.signals.private_call_depth = max_depth
 
-    return candidates
+    return candidates, True
 
 
-def _extract_symbol_name(lang: str, text: str) -> str:
+def _extract_symbol_name(lang: str, text: str, context: str = "") -> str:
     """Extracts function/method symbol name from declaration text."""
     first_line = text.strip().splitlines()[0] if text.strip() else ""
     if lang == "swift":
-        m = re.search(r"\bfunc\s+([A-Za-z0-9_]+)", first_line)
+        m = re.search(r"\bfunc\s+([A-Za-z0-9_]+)", text)
         return m.group(1) if m else "unknown"
     if lang in ("ts", "tsx", "js"):
+        context_line = context.strip().splitlines()[0] if context.strip() else first_line
         m = re.search(r"\bfunction\s+([A-Za-z0-9_]+)", first_line)
         if m:
             return m.group(1)
-        m = re.search(r"(?:const|let|var)\s+([A-Za-z0-9_]+)\s*=", first_line)
+        m = re.search(r"(?:const|let|var)\s+([A-Za-z0-9_]+)(?:\s*:[^=]+)?\s*=", context_line)
         if m:
             return m.group(1)
         m = re.search(
             r"(?:async\s+)?(?:static\s+|private\s+|public\s+|protected\s+)*([A-Za-z0-9_#]+)\s*\(",
             first_line,
         )
-        if m:
+        if m and m.group(1) not in {"async", "function"}:
             return m.group(1)
         return "unknown"
     if lang == "go":
@@ -541,7 +595,7 @@ def _analyze_text_function(
 ) -> tuple[FunctionSignals, list[str]]:
     """Analyzes a non-Python function body text for signals."""
     sig = FunctionSignals()
-    lines = text.splitlines()
+    lines = _mask_source(text).splitlines()
     sig.logical_lines = sum(
         1 for line in lines if line.strip() and not line.strip().startswith("//")
     )
@@ -561,12 +615,8 @@ def _analyze_text_function(
         if not stripped or stripped.startswith("//"):
             continue
 
-        # Strip string literals before counting braces to avoid template string / placeholder spikes
-        clean_line = re.sub(
-            r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`', '""', stripped
-        )
-        open_b = clean_line.count("{")
-        close_b = clean_line.count("}")
+        open_b = stripped.count("{")
+        close_b = stripped.count("}")
         current_nesting += open_b
         if current_nesting > max_nesting:
             max_nesting = current_nesting
@@ -658,91 +708,269 @@ def _analyze_text_function(
     return sig, sorted(all_calls)
 
 
-def scan_non_python_file(path: Path, lang: str, repo_root: Path) -> list[CandidateSymbol]:
+def _ast_grep_matches(
+    ast_grep_bin: str, path: Path, lang: str, selector: str
+) -> tuple[list[dict], bool]:
+    cmd = [
+        ast_grep_bin,
+        "run",
+        "--lang",
+        lang,
+        "--kind",
+        selector,
+        "--json=compact",
+        str(path),
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, OSError):
+        return [], False
+    if proc.returncode != 0:
+        return [], False
+    if not proc.stdout.strip():
+        return [], True
+    try:
+        matches = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return [], False
+    return (matches, True) if isinstance(matches, list) else ([], False)
+
+
+def _match_offsets(match: dict) -> tuple[int, int]:
+    offsets = match.get("range", {}).get("byteOffset", {})
+    return int(offsets.get("start", 0)), int(offsets.get("end", 0))
+
+
+def _match_lines(match: dict) -> tuple[int, int]:
+    match_range = match.get("range", {})
+    start = int(match_range.get("start", {}).get("line", 0)) + 1
+    end = int(match_range.get("end", {}).get("line", 0)) + 1
+    return start, end
+
+
+def _swift_type_name(text: str) -> str:
+    match = re.search(r"\b(?:class|struct|actor|enum|extension)\s+([A-Za-z_][A-Za-z0-9_]*)", text)
+    return match.group(1) if match else ""
+
+
+def _smallest_container(start: int, end: int, ranges: list[tuple[int, int, str]]) -> str:
+    containers = [item for item in ranges if item[0] <= start and end <= item[1]]
+    return min(containers, key=lambda item: item[1] - item[0])[2] if containers else ""
+
+
+def _swift_node_category(text: str) -> str:
+    stripped = _mask_source(text).lstrip()
+    header = stripped.split("{", 1)[0]
+    if re.search(r"\b(?:class|struct|actor|enum|extension)\s+[A-Za-z_]", header):
+        return "type"
+    if re.match(r"(?:if|guard|for|while|catch|case|default)\b", stripped):
+        return "decision"
+    if stripped.startswith("switch "):
+        return "nesting"
+    if "&&" in stripped or "||" in stripped:
+        return "logic"
+    if re.match(r"(?:var|let)\s+[A-Za-z_]", stripped) or re.search(
+        r"(?:\+=|-=|\*=|/=|%=|(?<![=!<>])=(?!=))", stripped
+    ):
+        return "mutation"
+    return "call"
+
+
+def _swift_assignment_name(text: str) -> str:
+    declaration = re.search(r"\b(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)", text)
+    if declaration:
+        return declaration.group(1)
+    assignment = re.match(
+        r"\s*([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?)\s*"
+        r"(?:\+=|-=|\*=|/=|%=|=)",
+        text,
+    )
+    return assignment.group(1) if assignment else ""
+
+
+def _call_name(text: str) -> str:
+    prefix = text.split("(", 1)[0]
+    identifiers = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", prefix)
+    return identifiers[-1] if identifiers else ""
+
+
+def _analyze_swift_function(
+    function_match: dict,
+    node_matches: list[dict],
+    function_ranges: list[tuple[int, int, str]],
+) -> tuple[FunctionSignals, list[str]]:
+    function_start, function_end = _match_offsets(function_match)
+    function_id = f"{function_start}:{function_end}"
+    owned_nodes: list[tuple[dict, int, int, str]] = []
+    for node in node_matches:
+        node_start, node_end = _match_offsets(node)
+        if _smallest_container(node_start, node_end, function_ranges) != function_id:
+            continue
+        category = _swift_node_category(str(node.get("text", "")))
+        if category != "type":
+            owned_nodes.append((node, node_start, node_end, category))
+
+    signals = FunctionSignals()
+    masked_lines = _mask_source(str(function_match.get("text", ""))).splitlines()
+    signals.logical_lines = sum(1 for line in masked_lines if line.strip())
+
+    decisions = [node for node in owned_nodes if node[3] == "decision"]
+    logic = [node for node in owned_nodes if node[3] == "logic"]
+    nesting = [node for node in owned_nodes if node[3] in {"decision", "nesting"}]
+    signals.decision_count = len(decisions) + len(logic)
+    signals.max_nesting = max(
+        (
+            1
+            + sum(
+                1
+                for other in nesting
+                if other is not node and other[1] <= node[1] and node[2] <= other[2]
+            )
+            for node in decisions
+        ),
+        default=0,
+    )
+    signals.condition_operand_max = max(
+        (
+            1
+            + sum(
+                1 for logic_node in logic if node[1] <= logic_node[1] and logic_node[2] <= node[2]
+            )
+            for node in decisions
+        ),
+        default=0,
+    )
+
+    assignments: dict[str, list[int]] = defaultdict(list)
+    for node, _, _, category in owned_nodes:
+        if category != "mutation":
+            continue
+        name = _swift_assignment_name(str(node.get("text", "")))
+        if name:
+            assignments[name].append(_match_lines(node)[0])
+    mutated = {name: lines for name, lines in assignments.items() if len(lines) >= 2}
+    signals.mutable_local_count = len(mutated)
+    signals.distinct_mutated_fields = len(assignments)
+    signals.mutation_sites = sum(len(lines) - 1 for lines in mutated.values())
+    signals.mutation_span = max((max(lines) - min(lines) for lines in mutated.values()), default=0)
+
+    calls = {
+        name
+        for node, _, _, category in owned_nodes
+        if category == "call"
+        if (name := _call_name(str(node.get("text", ""))))
+    }
+    signals.direct_call_fanout = len(calls)
+    return signals, sorted(calls)
+
+
+def _wire_private_helpers(records: list[_ScannedFunction]) -> None:
+    private_defs: dict[tuple[str, str], list[_ScannedFunction]] = defaultdict(list)
+    for record in records:
+        if record.is_private:
+            private_defs[(record.owner, record.name)].append(record)
+
+    resolved_calls: dict[int, list[tuple[str, str]]] = {}
+    callers: dict[tuple[str, str], set[tuple[str, int, int]]] = defaultdict(set)
+    for record in records:
+        keys = [
+            (record.owner, call)
+            for call in record.direct_calls
+            if len(private_defs.get((record.owner, call), [])) == 1
+        ]
+        resolved_calls[id(record)] = keys
+        identity = (
+            record.candidate.path,
+            record.candidate.start_line,
+            record.candidate.end_line,
+        )
+        for key in keys:
+            callers[key].add(identity)
+
+    for record in records:
+        keys = resolved_calls[id(record)]
+        record.candidate.direct_private_helpers = sorted({name for _, name in keys})
+        record.candidate.signals.private_helper_fanout = len(
+            record.candidate.direct_private_helpers
+        )
+        record.candidate.signals.single_use_private_helper_count = sum(
+            1 for key in keys if len(callers[key]) == 1
+        )
+        record.candidate.signals.private_call_depth = 1 if keys else 0
+        for key in keys:
+            helper = private_defs[key][0]
+            if resolved_calls.get(id(helper)):
+                record.candidate.signals.private_call_depth = 2
+                break
+
+
+def scan_non_python_file(
+    path: Path, lang: str, repo_root: Path
+) -> tuple[list[CandidateSymbol], bool]:
     """Scans a non-Python file using ast-grep for candidate symbols."""
     ast_grep_bin = shutil.which("ast-grep") or shutil.which("sg")
     if not ast_grep_bin:
-        return []
+        return [], False
 
-    kinds = AST_GREP_KINDS.get(lang, ["function_declaration"])
+    declarations: list[dict] = []
+    complete = True
+    for kind in AST_GREP_KINDS.get(lang, ["function_declaration"]):
+        matches, ok = _ast_grep_matches(ast_grep_bin, path, lang, kind)
+        declarations.extend(matches)
+        complete = complete and ok
+
+    swift_nodes: list[dict] = []
+    type_ranges: list[tuple[int, int, str]] = []
+    if lang == "swift":
+        swift_nodes, ok = _ast_grep_matches(ast_grep_bin, path, lang, _SWIFT_NODE_SELECTOR)
+        complete = complete and ok
+        for node in swift_nodes:
+            owner = _swift_type_name(str(node.get("text", "")))
+            if owner and _swift_node_category(str(node.get("text", ""))) == "type":
+                start, end = _match_offsets(node)
+                type_ranges.append((start, end, owner))
+
+    function_ranges = [
+        (*_match_offsets(match), f"{_match_offsets(match)[0]}:{_match_offsets(match)[1]}")
+        for match in declarations
+    ]
     rel_path = str(path.relative_to(repo_root))
-    candidates: list[CandidateSymbol] = []
-    helper_call_map: dict[str, set[str]] = defaultdict(set)
-    private_defs: dict[str, tuple[FunctionSignals, list[str]]] = {}
-
-    for kind in kinds:
-        cmd = [ast_grep_bin, "run", "--lang", lang, "--kind", kind, "--json=compact", str(path)]
-        try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        except (subprocess.TimeoutExpired, OSError):
+    records: list[_ScannedFunction] = []
+    for match in declarations:
+        text = str(match.get("text", ""))
+        context = str(match.get("lines", ""))
+        name = _extract_symbol_name(lang, text, context)
+        if name == "unknown" or len(text.strip()) < 10:
             continue
-
-        if proc.returncode != 0 or not proc.stdout.strip():
-            continue
-
-        try:
-            matches = json.loads(proc.stdout)
-        except json.JSONDecodeError:
-            continue
-
-        for m in matches:
-            text = m.get("text", "")
-            range_info = m.get("range", {})
-            start_line = range_info.get("start", {}).get("line", 0) + 1
-            end_line = range_info.get("end", {}).get("line", 0) + 1
-
-            symbol_name = _extract_symbol_name(lang, text)
-            if symbol_name == "unknown" or len(text.strip()) < 10:
-                continue
-
-            signals, direct_calls = _analyze_text_function(lang, symbol_name, text, start_line)
-            is_priv = _is_private_symbol(lang, symbol_name, text)
-
-            if is_priv:
-                private_defs[symbol_name] = (signals, direct_calls)
-
-            called_private = [
-                call
-                for call in direct_calls
-                if _is_private_symbol(lang, call, "") or call.startswith("_")
-            ]
-
-            candidate = CandidateSymbol(
-                path=rel_path,
-                symbol=symbol_name,
-                start_line=start_line,
-                end_line=end_line,
-                signals=signals,
-                direct_private_helpers=sorted(set(called_private)),
+        start_line, end_line = _match_lines(match)
+        start_offset, end_offset = _match_offsets(match)
+        owner = (
+            _smallest_container(start_offset, end_offset, type_ranges) if lang == "swift" else ""
+        )
+        symbol = f"{owner}.{name}" if owner else name
+        if lang == "swift":
+            signals, direct_calls = _analyze_swift_function(match, swift_nodes, function_ranges)
+        else:
+            signals, direct_calls = _analyze_text_function(lang, name, text, start_line)
+        candidate = CandidateSymbol(
+            path=rel_path,
+            symbol=symbol,
+            start_line=start_line,
+            end_line=end_line,
+            signals=signals,
+        )
+        records.append(
+            _ScannedFunction(
+                candidate=candidate,
+                owner=owner,
+                name=name,
+                direct_calls=direct_calls,
+                is_private=_is_private_symbol(lang, name, text),
             )
-            candidates.append(candidate)
+        )
 
-            for helper in called_private:
-                helper_call_map[helper].add(symbol_name)
-
-    # Post-process Queue C signals
-    for cand in candidates:
-        single_use = 0
-        max_depth = 1 if cand.direct_private_helpers else 0
-
-        for helper in cand.direct_private_helpers:
-            callers = helper_call_map.get(helper, set())
-            if len(callers) == 1:
-                single_use += 1
-
-            if helper in private_defs:
-                _, helper_calls = private_defs[helper]
-                nested_private = [
-                    c for c in helper_calls if _is_private_symbol(lang, c, "") or c.startswith("_")
-                ]
-                if nested_private and max_depth < 2:
-                    max_depth = 2
-
-        cand.signals.single_use_private_helper_count = single_use
-        cand.signals.private_call_depth = max_depth
-        cand.signals.private_helper_fanout = len(cand.direct_private_helpers)
-
-    return candidates
+    _wire_private_helpers(records)
+    return [record.candidate for record in records], complete
 
 
 def rank_and_select(
@@ -769,28 +997,23 @@ def rank_and_select(
     top_mutation = q_mutation[:top_k_per_queue]
     top_navigation = q_navigation[:top_k_per_queue]
 
-    selected_dict: dict[tuple[str, str], CandidateSymbol] = {}
+    eligibility: dict[tuple[str, int, int], list[str]] = defaultdict(list)
+    for queue, queue_candidates in (
+        ("control", q_control),
+        ("mutation", q_mutation),
+        ("navigation", q_navigation),
+    ):
+        for candidate in queue_candidates:
+            eligibility[(candidate.path, candidate.start_line, candidate.end_line)].append(queue)
 
-    for c in top_control:
-        key = (c.path, c.symbol)
-        if key not in selected_dict:
-            selected_dict[key] = c
-        if "control" not in selected_dict[key].candidate_queues:
-            selected_dict[key].candidate_queues.append("control")
+    selected_dict: dict[tuple[str, int, int], CandidateSymbol] = {}
 
-    for c in top_mutation:
-        key = (c.path, c.symbol)
-        if key not in selected_dict:
-            selected_dict[key] = c
-        if "mutation" not in selected_dict[key].candidate_queues:
-            selected_dict[key].candidate_queues.append("mutation")
+    for candidate in top_control + top_mutation + top_navigation:
+        key = (candidate.path, candidate.start_line, candidate.end_line)
+        selected_dict.setdefault(key, candidate)
 
-    for c in top_navigation:
-        key = (c.path, c.symbol)
-        if key not in selected_dict:
-            selected_dict[key] = c
-        if "navigation" not in selected_dict[key].candidate_queues:
-            selected_dict[key].candidate_queues.append("navigation")
+    for key, candidate in selected_dict.items():
+        candidate.candidate_queues = eligibility[key]
 
     for cand in selected_dict.values():
         scores = {
@@ -807,6 +1030,41 @@ def rank_and_select(
         "navigation": top_navigation,
     }
     return final_roster, queue_rosters
+
+
+def _json_document(
+    status: str,
+    coverage: dict[str, dict[str, int | str]],
+    roster: list[CandidateSymbol],
+    queue_rosters: dict[str, list[CandidateSymbol]],
+) -> dict:
+    return {
+        "schema_version": 2,
+        "status": status,
+        "coverage": coverage,
+        "doctrine": (
+            "Candidate evidence for Critic Method Step 6 (promotion_allowed: false). "
+            "Metrics support judgment; they never decide it. The Critic independently "
+            "validates candidate symbols against source."
+        ),
+        "promotion_allowed": False,
+        "candidates": [
+            {
+                "path": candidate.path,
+                "symbol": candidate.symbol,
+                "line_range": {"start": candidate.start_line, "end": candidate.end_line},
+                "candidate_queues": candidate.candidate_queues,
+                "primary_queue": candidate.primary_queue,
+                "signals": asdict(candidate.signals),
+                "neighborhood": {"direct_private_helpers": candidate.direct_private_helpers},
+            }
+            for candidate in roster
+        ],
+        "queue_counts": {
+            queue: len(queue_rosters.get(queue, []))
+            for queue in ("control", "mutation", "navigation")
+        },
+    }
 
 
 def main() -> int:
@@ -832,6 +1090,9 @@ def main() -> int:
         help="Emit structured JSON with promotion_allowed: false",
     )
     args = parser.parse_args()
+
+    if args.top_k < 1:
+        parser.error("--top-k must be at least 1")
 
     repo_dir = Path(args.repo_root).resolve()
     if not repo_dir.is_dir():
@@ -859,51 +1120,46 @@ def main() -> int:
     ast_grep_bin = shutil.which("ast-grep") or shutil.which("sg")
     ast_grep_missing = non_py_files and not ast_grep_bin
 
+    coverage: dict[str, dict[str, int | str]] = {
+        "python": {"discovered": len(py_files), "scanned": 0, "failed": 0},
+        "ast_grep": {
+            "discovered": len(non_py_files),
+            "scanned": 0,
+            "failed": 0,
+            "outcome": "not_applicable" if not non_py_files else "ok",
+        },
+    }
+
     if not py_files and not non_py_files:
         if args.json:
-            sys.stdout.write(
-                json.dumps(
-                    {
-                        "schema_version": 1,
-                        "status": "clean",
-                        "promotion_allowed": False,
-                        "candidates": [],
-                        "queue_counts": {"control": 0, "mutation": 0, "navigation": 0},
-                    },
-                    indent=2,
-                )
-                + "\n"
+            doc = _json_document(
+                "not_applicable",
+                coverage,
+                [],
+                {"control": [], "mutation": [], "navigation": []},
             )
+            sys.stdout.write(json.dumps(doc, indent=2) + "\n")
         else:
             sys.stderr.write("audit_hotspots: no supported source files identified.\n")
         return 0
 
     if not py_files and ast_grep_missing:
         # Only non-Python files exist, and ast-grep is absent: skip gracefully with install guidance
+        coverage["ast_grep"].update({"failed": len(non_py_files), "outcome": "absent"})
         if args.json:
-            sys.stdout.write(
-                json.dumps(
-                    {
-                        "schema_version": 1,
-                        "status": "absent",
-                        "tool": "ast-grep",
-                        "install_instructions": INSTALL_INSTRUCTIONS,
-                        "message": (
-                            f"ast-grep not found on PATH. Multi-language scanning skipped for "
-                            f"{len(non_py_files)} non-Python file(s)."
-                        ),
-                        "doctrine": (
-                            "Candidate evidence for Critic Method Step 6 (promotion_allowed: false). "
-                            "Metrics support judgment; they never decide it."
-                        ),
-                        "promotion_allowed": False,
-                        "candidates": [],
-                        "queue_counts": {"control": 0, "mutation": 0, "navigation": 0},
-                    },
-                    indent=2,
-                )
-                + "\n"
+            doc = _json_document(
+                "absent",
+                coverage,
+                [],
+                {"control": [], "mutation": [], "navigation": []},
             )
+            doc.update(
+                {
+                    "tool": "ast-grep",
+                    "install_instructions": INSTALL_INSTRUCTIONS,
+                }
+            )
+            sys.stdout.write(json.dumps(doc, indent=2) + "\n")
         else:
             sys.stderr.write(
                 f"audit_hotspots: 'ast-grep' not found on PATH. Multi-language scanning skipped for "
@@ -915,46 +1171,30 @@ def main() -> int:
     # Collect candidates
     candidates: list[CandidateSymbol] = []
     for p in py_files:
-        candidates.extend(scan_python_file(p, repo_dir))
+        file_candidates, complete = scan_python_file(p, repo_dir)
+        candidates.extend(file_candidates)
+        coverage["python"]["scanned" if complete else "failed"] += 1
 
     if not ast_grep_missing:
         for p, lang in non_py_files:
-            candidates.extend(scan_non_python_file(p, lang, repo_dir))
+            file_candidates, complete = scan_non_python_file(p, lang, repo_dir)
+            candidates.extend(file_candidates)
+            coverage["ast_grep"]["scanned" if complete else "failed"] += 1
+        if coverage["ast_grep"]["failed"]:
+            coverage["ast_grep"]["outcome"] = "partial"
     elif non_py_files:
+        coverage["ast_grep"].update({"failed": len(non_py_files), "outcome": "absent"})
         sys.stderr.write(
             f"audit_hotspots: 'ast-grep' not found on PATH. Skipped {len(non_py_files)} non-Python file(s). "
             f"To install: {INSTALL_INSTRUCTIONS}\n"
         )
 
     roster, queue_rosters = rank_and_select(candidates, top_k_per_queue=args.top_k)
+    incomplete = bool(coverage["python"]["failed"] or coverage["ast_grep"]["failed"])
+    status = "partial" if incomplete else "ok"
 
     if args.json:
-        doc = {
-            "schema_version": 1,
-            "doctrine": (
-                "Candidate evidence for Critic Method Step 6 (promotion_allowed: false). "
-                "Metrics support judgment; they never decide it. The Critic independently "
-                "validates candidate symbols against source."
-            ),
-            "promotion_allowed": False,
-            "candidates": [
-                {
-                    "path": c.path,
-                    "symbol": c.symbol,
-                    "line_range": {"start": c.start_line, "end": c.end_line},
-                    "candidate_queues": c.candidate_queues,
-                    "primary_queue": c.primary_queue,
-                    "signals": asdict(c.signals),
-                    "neighborhood": {"direct_private_helpers": c.direct_private_helpers},
-                }
-                for c in roster
-            ],
-            "queue_counts": {
-                "control": len(queue_rosters["control"]),
-                "mutation": len(queue_rosters["mutation"]),
-                "navigation": len(queue_rosters["navigation"]),
-            },
-        }
+        doc = _json_document(status, coverage, roster, queue_rosters)
         if ast_grep_missing:
             doc["tool_notice"] = {
                 "tool": "ast-grep",

@@ -220,7 +220,28 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
     "domain_terms": ["AppState", "InstanceID", "TileCueResolver"],
     "test_scope": "full",                       // (v3+) enum: full | incremental. "incremental" iff --test-filter <pattern> set.
     "test_filter": null,                        // (v3+) null | string. non-null iff test_scope == "incremental".
-    "working_tree_dirty_paths": []              // (v3+) always empty. `git status --porcelain` (filtered for the skill's own bookkeeping paths) must be empty at Step 0 or the loop aborts pre-Step-3, tracked or untracked, no overlap test — exclusive writership over source paths is an assumed precondition, not a detected property (startup.md § Step 0 sub-step 4b). Retained for schema compatibility only.
+    "working_tree_dirty_paths": [],             // (v3+) always empty. `git status --porcelain` (filtered for the skill's own bookkeeping paths) must be empty at Step 0 or the loop aborts pre-Step-3, tracked or untracked, no overlap test — exclusive writership over source paths is an assumed precondition, not a detected property (startup.md § Step 0 sub-step 4b). Retained for schema compatibility only.
+    "hotspot_scan": {                           // Step 0 main-agent whitelist; payload evidence, never a finding
+      "schema_version": 2,
+      "status": "ok",                          // enum: ok | partial | absent | not_applicable
+      "promotion_allowed": false,
+      "coverage": {
+        "python": {"discovered": 120, "scanned": 120, "failed": 0},
+        "ast_grep": {"discovered": 80, "scanned": 80, "failed": 0, "outcome": "ok"}
+      },
+      "candidates": [                           // max `--top-k` per queue; deduplicated by source range
+        {
+          "path": "Sources/SettlementCoordinator.swift",
+          "symbol": "SettlementCoordinator.executeSettlement",
+          "line_range": {"start": 42, "end": 96},
+          "candidate_queues": ["control", "mutation"],
+          "primary_queue": "control",
+          "signals": {"decision_count": 8, "mutation_span": 31},
+          "neighborhood": {"direct_private_helpers": ["recordSettlement"]}
+        }
+      ],
+      "queue_counts": {"control": 1, "mutation": 1, "navigation": 0}
+    }
   },
 
   // Verdict (required)

@@ -71,7 +71,7 @@ from _artifact_credentials import _scan_line  # noqa: E402
 
 # `path:line:col: CODE message` -- the shape ruff, mypy, swiftlint and most
 # linters share. Only `file` and `code` are kept; `message` is dropped whole.
-_HIT_RE = re.compile(r"^(?P<file>[^\s:]+):\d+:\d+:\s+(?P<code>[A-Za-z]+\d+)\b")
+_HIT_RE = re.compile(r"^(?P<file>.+?):\d+:\d+:\s+(?P<code>[A-Za-z]+\d+)\b")
 
 # Instruction-shaped text in analyzer output is payload under G14, never a
 # command. Counted so the coverage line can disclose it; never reproduced.
@@ -113,6 +113,9 @@ class ToolSpec:
     globs: tuple[str, ...] = ()
     # Hit shape, when the tool does not emit the `path:line:col: CODE ` default.
     hit_pattern: str | None = None
+    # Diagnostic channel to sanitize and parse. Some compiler-backed tools use
+    # stderr for normal diagnostics rather than failures.
+    output_stream: str = "stdout"
     # Installation command or instructions for when the binary is not found on PATH.
     install_instruction: str | None = None
 
@@ -165,10 +168,14 @@ def _sanitize(
     redactions: list[dict[str, str]] = []
     injections = 0
     for line in raw.splitlines():
-        for name, transform in _scan_line(line):
+        line_redactions = _scan_line(line)
+        for name, transform in line_redactions:
             redactions.append({"pattern": name, "transform": transform})
-        if _INJECTION_RE.search(line):
+        injected = bool(_INJECTION_RE.search(line))
+        if injected:
             injections += 1
+        if line_redactions or injected:
+            continue
         m = hit_re.match(line)
         if m:
             hits.append({"file": m.group("file"), "code": m.group("code")})
@@ -220,11 +227,25 @@ def run_tool(spec: ToolSpec, cwd: Path) -> ToolResult:
     except OSError as exc:
         return ToolResult(spec.name, "absent", f"could not execute: {exc}")
 
-    raw = proc.stdout or ""
+    streams = {
+        "stdout": proc.stdout or "",
+        "stderr": proc.stderr or "",
+        "both": "\n".join(part for part in (proc.stdout, proc.stderr) if part),
+    }
+    if spec.output_stream not in streams:
+        return ToolResult(spec.name, "partial", f"unknown output stream {spec.output_stream!r}")
+    raw = streams[spec.output_stream]
     hit_re = re.compile(spec.hit_pattern) if spec.hit_pattern else _HIT_RE
     hits, redactions, injections = _sanitize(raw, hit_re)
-    outcome = "ok" if proc.returncode in spec.findings_exit_codes else "partial"
-    detail = None if outcome == "ok" else f"undocumented exit {proc.returncode}"
+    accepted_exit = proc.returncode in spec.findings_exit_codes
+    parse_drift = proc.returncode != 0 and bool(raw.strip()) and not hits
+    outcome = "ok" if accepted_exit and not parse_drift else "partial"
+    if not accepted_exit:
+        detail = f"undocumented exit {proc.returncode}"
+    elif parse_drift:
+        detail = f"findings exit {proc.returncode} produced no parseable hits"
+    else:
+        detail = None
     return ToolResult(
         name=spec.name,
         outcome=outcome,
@@ -267,7 +288,7 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         # id is the trailing paren, not the severity word the default shape
         # would capture. The prose between them is matched and dropped, never
         # captured, so nothing but file and rule id survives.
-        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+\w+:.*\((?P<code>[a-z_]+)\)\s*$",
+        hit_pattern=r"^(?P<file>.+?):\d+:\d+:\s+\w+:.*\((?P<code>[a-z_]+)\)\s*$",
         install_instruction="brew install swiftlint",
     ),
     ToolSpec(
@@ -278,7 +299,7 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         min_version=(1, 0, 0),
         timeout_s=120,
         globs=("*.ts", "*.tsx", "*.js", "*.jsx"),
-        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+\s+(?P<code>lint/[a-zA-Z0-9_/]+|[a-zA-Z0-9_\-]+)",
+        hit_pattern=r"^(?P<file>.+?):\d+:\d+\s+(?P<code>lint/[a-zA-Z0-9_/]+|[a-zA-Z0-9_\-]+)",
         install_instruction="npm install -g @biomejs/biome",
     ),
     ToolSpec(
@@ -289,7 +310,7 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         min_version=(1, 50, 0),
         timeout_s=180,
         globs=("*.go",),
-        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+.*?\((?P<code>[a-zA-Z0-9_\-]+)\)\s*$",
+        hit_pattern=r"^(?P<file>.+?):\d+:\d+:\s+.*?\((?P<code>[a-zA-Z0-9_\-]+)\)\s*$",
         install_instruction="brew install golangci-lint",
     ),
     ToolSpec(
@@ -300,7 +321,8 @@ DEFAULT_REGISTRY: tuple[ToolSpec, ...] = (
         min_version=(0, 1, 0),
         timeout_s=240,
         globs=("*.rs",),
-        hit_pattern=r"^(?P<file>[^\s:]+):\d+:\d+:\s+(?P<code>(?:warning|error)(?:\[[A-Za-z0-9_]+\])?):\s+",
+        hit_pattern=r"^(?P<file>.+?):\d+:\d+:\s+(?P<code>(?:warning|error)(?:\[[A-Za-z0-9_]+\])?):\s+",
+        output_stream="stderr",
         install_instruction="rustup component add clippy",
     ),
 )
