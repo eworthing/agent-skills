@@ -27,6 +27,14 @@ from pathlib import Path
 
 AUDIT = Path(__file__).with_name("audit_hotspots.py")
 SKILL_ROOT = Path(__file__).resolve().parents[1]
+SCAN_KEYS = {
+    "schema_version",
+    "status",
+    "coverage",
+    "promotion_allowed",
+    "candidates",
+    "queue_counts",
+}
 
 
 def _write(root: Path, files: dict[str, str]) -> None:
@@ -278,10 +286,10 @@ def test_missing_tool_graceful_skip(base: Path) -> str | None:
     data = json.loads(out)
     if data.get("status") != "absent":
         return f"expected status: 'absent' when ast-grep missing, got {data.get('status')}"
-    if "install_instructions" not in data:
-        return f"expected 'install_instructions' in payload, got {data}"
-    if "brew install ast-grep" not in data["install_instructions"]:
-        return f"expected brew install command in instructions: {data['install_instructions']}"
+    if set(data) != SCAN_KEYS:
+        return f"expected canonical persisted keys, got {sorted(data)}"
+    if "brew install ast-grep" not in err:
+        return f"expected install guidance on stderr, got {err!r}"
     return None
 
 
@@ -346,8 +354,8 @@ def complex_fn(x: int) -> int:
     data = json.loads(out)
     if data.get("promotion_allowed") is not False:
         return f"expected promotion_allowed: False, got {data.get('promotion_allowed')}"
-    if "doctrine" not in data:
-        return "expected 'doctrine' in JSON payload"
+    if set(data) != SCAN_KEYS:
+        return f"expected exact G49-compatible keys, got {sorted(data)}"
     return None
 
 

@@ -147,25 +147,10 @@ def _candidate_error(candidate: Any) -> str | None:
     return None
 
 
-def check_g49_hotspot_scan(current_review: dict) -> list[Issue]:
-    """G49: post-651ea50 artifacts carry real sanitized hotspot evidence."""
-    if not _ruleset_epoch.applies("G49_HOTSPOT_SCAN", current_review):
-        return []
-
-    loop = current_review.get("loop")
-    context = f"discovery.hotspot_scan (loop {loop})"
-    discovery = current_review.get("discovery")
-    scan = discovery.get("hotspot_scan") if isinstance(discovery, dict) else None
+def validate_hotspot_scan(scan: Any) -> list[str]:
+    """Return schema errors for one persisted audit_hotspots.py record."""
     if not isinstance(scan, dict):
-        return [
-            Issue(
-                "G49",
-                "hotspot_scan must come from a real Step-0 audit_hotspots.py --json run; "
-                "rerun with --reset and never invent placeholder values",
-                context,
-            )
-        ]
-
+        return ["hotspot_scan must be a JSON object"]
     errors: list[str] = []
     if set(scan) != _SCAN_KEYS:
         errors.append("record contains missing or unrecognized fields")
@@ -220,4 +205,26 @@ def check_g49_hotspot_scan(current_review: dict) -> list[Issue]:
     ):
         errors.append("absent/not_applicable scans cannot retain candidates or queue counts")
 
-    return [Issue("G49", error, context) for error in errors]
+    return errors
+
+
+def check_g49_hotspot_scan(current_review: dict) -> list[Issue]:
+    """G49: post-651ea50 artifacts carry real sanitized hotspot evidence."""
+    if not _ruleset_epoch.applies("G49_HOTSPOT_SCAN", current_review):
+        return []
+
+    loop = current_review.get("loop")
+    context = f"discovery.hotspot_scan (loop {loop})"
+    discovery = current_review.get("discovery")
+    scan = discovery.get("hotspot_scan") if isinstance(discovery, dict) else None
+    if not isinstance(scan, dict):
+        return [
+            Issue(
+                "G49",
+                "hotspot_scan must come from a real Step-0 audit_hotspots.py --json run; "
+                "rerun with --reset and never invent placeholder values",
+                context,
+            )
+        ]
+
+    return [Issue("G49", error, context) for error in validate_hotspot_scan(scan)]

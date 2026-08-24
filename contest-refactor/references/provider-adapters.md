@@ -90,6 +90,8 @@ opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
 
 No subagent spawn available. Fall back to inline mode: the loop runs in the main agent's context. Loop Isolation is skipped; main agent absorbs the per-loop token cost. Document at top of `CURRENT_REVIEW.md`: "provider: unknown; running inline; Loop Isolation unavailable".
 
+Copilot CLI and Gemini Antigravity CLI (AGY) currently use this profile because neither has a dedicated contest-refactor adapter or provider enum.
+
 - **loop_model / reviewer_model recording**: when `provider == "unknown"`, record `loop_model: null` and `reviewer_model: null` in `CURRENT_REVIEW.json` (with `*_source: "default"`). Do not invent placeholder strings like `"inline-current-model"` or `"session-default"` — the model identity is genuinely unknown and the schema treats null as the canonical "no provider-introspectable model" value. G19 admits null only when `provider == "unknown"`; for known providers, null is a violation.
 
 ## Reviewer-spawn profile (Step 3 step 6)

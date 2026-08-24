@@ -44,12 +44,39 @@ ADAPTERS_REVIEWER = SKILL_ROOT / "references" / "provider-adapters-reviewer.md"
 STARTUP = SKILL_ROOT / "references" / "startup.md"
 PREFLIGHT = SKILL_ROOT / "scripts" / "preflight.py"
 RESUME = SKILL_ROOT / "references" / "resume-detection.md"
+SKILL = SKILL_ROOT / "SKILL.md"
+TRUST = SKILL_ROOT / "references" / "trust-model.md"
 
 
 def main() -> int:
     failures: list[str] = []
 
     adapters = ADAPTERS.read_text(encoding="utf-8") + ADAPTERS_REVIEWER.read_text(encoding="utf-8")
+    generic_dispatch_docs = {
+        "SKILL.md": SKILL.read_text(encoding="utf-8"),
+        "trust-model.md": TRUST.read_text(encoding="utf-8"),
+    }
+    for name, body in generic_dispatch_docs.items():
+        if "subagent_type: general-purpose" in body:
+            failures.append(
+                f"{name} hardcodes Claude's `general-purpose` agent type; generic loop "
+                "dispatch must route through provider-adapters.md"
+            )
+        if re.search(r"fresh `Agent` invocation", body):
+            failures.append(
+                f"{name} describes generic dispatch as a fresh `Agent` invocation; "
+                "that provider-specific term belongs only in provider-adapters.md"
+            )
+        if "provider-adapters.md" not in body:
+            failures.append(f"{name} no longer points generic dispatch at provider-adapters.md")
+    if 'subagent_type: "general-purpose"' not in adapters:
+        failures.append("the Claude-specific adapter lost its `general-purpose` agent type")
+    unknown_section = adapters.split("### unknown", 1)[-1].split("\n## ", 1)[0]
+    for host in ("Copilot CLI", "Gemini Antigravity CLI"):
+        if host not in unknown_section:
+            failures.append(
+                f"the unknown-provider fallback does not explicitly classify {host} as inline"
+            )
     if "OPENCODE_SESSION" in adapters:
         failures.append(
             "provider-adapters.md references OPENCODE_SESSION again -- that variable does not "

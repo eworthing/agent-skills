@@ -81,7 +81,7 @@ Treat as a checklist. If you cannot recall a referenced rule when applying it, r
 
 ## Loop Isolation
 
-Each loop after Step 0 runs in a fresh `Agent` subagent (`subagent_type: general-purpose`, same CWD). State flows via files (`CURRENT_REVIEW.md`, `CURRENT_REVIEW.json`, `REVIEW_HISTORY.md`), not conversation. Subagent returns ~300 tokens of routing JSON to main.
+Each loop after Step 0 uses the detected provider's [Loop-spawn profile](references/provider-adapters.md#loop-spawn-profile-step-0-onward), with the same CWD. Supported providers create a fresh isolated execution; the `unknown` profile runs inline. State flows via files (`CURRENT_REVIEW.md`, `CURRENT_REVIEW.json`, `REVIEW_HISTORY.md`), not conversation. The loop returns ~300 tokens of routing JSON to main.
 
 Step 0 always runs in main agent (durable handoff).
 

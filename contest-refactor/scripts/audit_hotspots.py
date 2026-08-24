@@ -1042,11 +1042,6 @@ def _json_document(
         "schema_version": 2,
         "status": status,
         "coverage": coverage,
-        "doctrine": (
-            "Candidate evidence for Critic Method Step 6 (promotion_allowed: false). "
-            "Metrics support judgment; they never decide it. The Critic independently "
-            "validates candidate symbols against source."
-        ),
         "promotion_allowed": False,
         "candidates": [
             {
@@ -1153,11 +1148,10 @@ def main() -> int:
                 [],
                 {"control": [], "mutation": [], "navigation": []},
             )
-            doc.update(
-                {
-                    "tool": "ast-grep",
-                    "install_instructions": INSTALL_INSTRUCTIONS,
-                }
+            sys.stderr.write(
+                f"audit_hotspots: 'ast-grep' not found on PATH. Multi-language scanning "
+                f"skipped for {len(non_py_files)} file(s).\n"
+                f"To install ast-grep: {INSTALL_INSTRUCTIONS}\n"
             )
             sys.stdout.write(json.dumps(doc, indent=2) + "\n")
         else:
@@ -1195,12 +1189,6 @@ def main() -> int:
 
     if args.json:
         doc = _json_document(status, coverage, roster, queue_rosters)
-        if ast_grep_missing:
-            doc["tool_notice"] = {
-                "tool": "ast-grep",
-                "status": "absent",
-                "install_instructions": INSTALL_INSTRUCTIONS,
-            }
         sys.stdout.write(json.dumps(doc, indent=2) + "\n")
         return 0
 
