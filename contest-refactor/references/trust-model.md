@@ -103,7 +103,7 @@ Main reads `review_artifact_path` for full detail when reporting HALT states or 
 
 ### Pre-dispatch precondition (fail-fast — prevention, not cure)
 
-Before the **first** subagent is dispatched, main runs Step 0's pre-dispatch gate (`scripts/preflight.py`): a knowably-bad input — a missing scope dir, a test command whose launcher does not resolve, a configured base ref that won't `git rev-parse`, or hotspot evidence that is invalid or differs from the scanner output — **aborts in main** with a clear message, so the run never starts inside a spawned agent. This is *prevention*. It is independent of the idle/no-artifact *cure* below (which handles a spawn that starts but stalls); neither replaces the other.
+Before the **first** subagent is dispatched, main runs Step 0's pre-dispatch gate (`scripts/preflight.py`): a knowably-bad input — a missing repo root or scope dir, a test command whose launcher does not resolve, a configured base ref that won't `git rev-parse`, hotspot evidence that is invalid or differs from the scanner output, `discovery.source_roots` that silently narrows the repo or isn't normalized, or a hotspot candidate path that doesn't resolve from the repo root — **aborts in main** with a clear message, so the run never starts inside a spawned agent. This is *prevention*. It is independent of the idle/no-artifact *cure* below (which handles a spawn that starts but stalls); neither replaces the other.
 
 ### HALT routing across the boundary
 

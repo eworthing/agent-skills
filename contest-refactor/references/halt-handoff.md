@@ -88,6 +88,21 @@ If it cannot run (no `REVIEW_HISTORY.json`, no git), say so and omit the figure.
 estimate it. The JSON is a working artifact, not a committed one — it is written for a
 human to read after the run, and is not added to the Step-3 commit file list.
 
+**Unscoped runs also break the figure down per declared root** — the symmetric mirror of
+the scoped-verdict honesty sentence ([startup.md § Step 0](startup.md#step-0--context-discovery-first-loop-only-runs-in-main-agent)):
+using the ledger's `per_root` object (included count) and `sets.cited` (filtered to paths
+under each root), append one line per root:
+
+```
+  <root>: <cited-under-root>/<per_root[root]>
+  ...
+```
+
+so a run that only ever touched one root of a multi-root repo can never read, at a
+glance, as a claim about the whole repository. **Scoped** runs (`--scope <dir>`) skip
+this breakdown — every declared root is already under `<dir>` by construction, and the
+Discovery-section narrowing sentence already carries the honesty.
+
 ---
 
 ## HALT_SUCCESS

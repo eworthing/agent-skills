@@ -12,11 +12,20 @@ base-ref case) and asserts on exit codes + stderr.
 
 Cases:
   - healthy (real dir + resolvable test cmd)   -> exit 0
-  - missing scope dir                          -> non-zero, names the scope dir
+  - missing repo root                          -> non-zero, names the repo root
   - unresolvable test command                  -> non-zero, names the test command
   - base ref: HEAD in a real repo -> exit 0;  bogus ref -> non-zero, names the ref
   - exact raw + persisted hotspot JSON          -> exit 0
   - truncated, malformed, or missing hotspot JSON -> non-zero before dispatch
+  - multi-root discovery.source_roots (avalanche plan Phase 2):
+      happy path (declared == enumerated)               -> exit 0
+      declared missing an enumerated root                -> non-zero, names it
+      declared has an extra undeclared root               -> non-zero, names it
+      trailing slash / unsorted / duplicate / absolute entries -> non-zero, normalization message
+      a source-root-relative hotspot candidate path       -> non-zero, repo-root message
+      --scope nonexistent                                 -> non-zero, names --scope
+      declared root outside --scope                       -> non-zero
+      scoped happy path (declared root under --scope)      -> exit 0
 
 Run: python3 scripts/_preflight_selftest.py   (exit 0 = pass, 1 = fail)
 """
@@ -106,12 +115,12 @@ def main() -> int:
         if p.returncode != 0:
             failures.append(f"healthy: expected exit 0, got {p.returncode}\n{p.stderr.rstrip()}")
 
-        # 2) missing scope dir.
+        # 2) missing repo root.
         p = _run([str(base / "nope")])
         if p.returncode == 0:
             failures.append("missing-dir: expected non-zero exit, got 0")
-        elif "scope" not in p.stderr.lower():
-            failures.append(f"missing-dir: message should name the scope dir\n{p.stderr.rstrip()}")
+        elif "repo root" not in p.stderr.lower():
+            failures.append(f"missing-dir: message should name the repo root\n{p.stderr.rstrip()}")
 
         # 3) unresolvable test command.
         p = _run([str(scope), "--test-cmd", "definitely-not-a-real-binary-xyz run"])
@@ -231,13 +240,123 @@ def main() -> int:
                 f"{p.stderr.rstrip()}"
             )
 
+        # 9) Multi-root discovery.source_roots checks (avalanche plan Phase 2). A
+        # two-root scratch repo (src/, tools/) so "declared narrows the repo" is
+        # observable. --current-review alone (no --hotspot-json) drives these --
+        # the equality check in case 5-8 above is a separate, independently-gated path.
+        multiroot = base / "multiroot"
+        (multiroot / "src").mkdir(parents=True)
+        (multiroot / "tools").mkdir()
+        (multiroot / "src" / "a.py").write_text("def f():\n    pass\n", encoding="utf-8")
+        (multiroot / "tools" / "b.py").write_text("def g():\n    pass\n", encoding="utf-8")
+        review = multiroot / "CURRENT_REVIEW.json"
+
+        def _write_review(source_roots: list[str] | None, candidate_path: str) -> None:
+            discovery: dict = {"hotspot_scan": {"candidates": [{"path": candidate_path}]}}
+            if source_roots is not None:
+                discovery["source_roots"] = source_roots
+            review.write_text(json.dumps({"discovery": discovery}), encoding="utf-8")
+
+        def _run_review(extra: list[str] | None = None):
+            args = [str(multiroot), "--current-review", str(review)]
+            if extra:
+                args.extend(extra)
+            return _run(args)
+
+        # Happy path: declared set matches the repo's enumerated universe exactly.
+        _write_review(["src", "tools"], "src/a.py")
+        p = _run_review()
+        if p.returncode != 0:
+            failures.append(
+                f"multiroot-happy: expected exit 0, got {p.returncode}\n{p.stderr.rstrip()}"
+            )
+
+        # Declared list missing an enumerated root -> FAIL naming it.
+        _write_review(["src"], "src/a.py")
+        p = _run_review()
+        if p.returncode == 0:
+            failures.append("multiroot-missing-root: expected non-zero exit, got 0")
+        elif "tools" not in p.stderr:
+            failures.append(
+                f"multiroot-missing-root: message should name the missing root\n{p.stderr.rstrip()}"
+            )
+
+        # Extra undeclared root in the list -> FAIL naming it.
+        _write_review(["src", "tools", "extra"], "src/a.py")
+        p = _run_review()
+        if p.returncode == 0:
+            failures.append("multiroot-extra-root: expected non-zero exit, got 0")
+        elif "extra" not in p.stderr:
+            failures.append(
+                f"multiroot-extra-root: message should name the extra root\n{p.stderr.rstrip()}"
+            )
+
+        # Trailing slash / unsorted / duplicate / absolute entries -> FAIL, each with
+        # the normalization message.
+        for label, bad_roots in (
+            ("trailing-slash", ["src/", "tools"]),
+            ("unsorted", ["tools", "src"]),
+            ("duplicate", ["src", "src", "tools"]),
+            ("absolute", ["/etc", "tools"]),
+        ):
+            _write_review(bad_roots, "src/a.py")
+            p = _run_review()
+            msg = p.stderr.lower()
+            if p.returncode == 0:
+                failures.append(f"multiroot-{label}: expected non-zero exit, got 0")
+            elif "source_roots" not in p.stderr or not ("normaliz" in msg or "malformed" in msg):
+                failures.append(
+                    f"multiroot-{label}: message should name the normalization problem\n"
+                    f"{p.stderr.rstrip()}"
+                )
+
+        # Coordinate tripwire: a source-root-relative candidate path -> FAIL with the
+        # repo-root message.
+        _write_review(["src", "tools"], "a.py")
+        p = _run_review()
+        if p.returncode == 0:
+            failures.append("multiroot-coordinate: expected non-zero exit, got 0")
+        elif "repo root" not in p.stderr.lower():
+            failures.append(
+                f"multiroot-coordinate: message should name the repo-root requirement\n"
+                f"{p.stderr.rstrip()}"
+            )
+
+        # --scope pointing at a nonexistent directory -> FAIL naming --scope.
+        p = _run_review(["--scope", str(multiroot / "nope")])
+        if p.returncode == 0:
+            failures.append("multiroot-scope-missing: expected non-zero exit, got 0")
+        elif "scope" not in p.stderr.lower():
+            failures.append(
+                f"multiroot-scope-missing: message should name --scope\n{p.stderr.rstrip()}"
+            )
+
+        # Declared root outside --scope -> FAIL (equality check is skipped when scoped).
+        _write_review(["tools"], "tools/b.py")
+        p = _run_review(["--scope", str(multiroot / "src")])
+        if p.returncode == 0:
+            failures.append("multiroot-scope-outside: expected non-zero exit, got 0")
+        elif "scope" not in p.stderr.lower():
+            failures.append(
+                f"multiroot-scope-outside: message should name --scope\n{p.stderr.rstrip()}"
+            )
+
+        # Scoped happy path: declared root falls under --scope.
+        _write_review(["src"], "src/a.py")
+        p = _run_review(["--scope", str(multiroot / "src")])
+        if p.returncode != 0:
+            failures.append(
+                f"multiroot-scope-happy: expected exit 0, got {p.returncode}\n{p.stderr.rstrip()}"
+            )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")
         return 1
     print(
-        "OK: preflight — healthy inputs pass; missing scope dir, unresolvable test "
-        "command, bogus base ref, and malformed hotspot persistence fail fast"
+        "OK: preflight — healthy inputs pass; missing repo root, unresolvable test "
+        "command, bogus base ref, malformed hotspot persistence, and multi-root "
+        "source_roots narrowing/normalization/coordinate defects fail fast"
     )
     return 0
 

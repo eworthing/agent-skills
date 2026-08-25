@@ -777,6 +777,41 @@ def test_lowercase_migrations_dir_excluded(base: Path) -> str | None:
     return None
 
 
+def test_scope_restricts_walk_but_paths_stay_repo_relative(base: Path) -> str | None:
+    # avalanche plan Phase 2B: --scope narrows the discovery WALK to a subtree, but
+    # emitted candidate paths stay relative to repo_root -- never source-root-relative
+    # (an output filter instead would fill top-k with out-of-scope candidates).
+    root = base / "scoped_walk"
+    hotspot_code = (
+        "def route(a, b, c):\n"
+        "    if a and b:\n"
+        "        if c:\n"
+        "            return 1\n"
+        "    elif a or b:\n"
+        "        return 2\n"
+        "    return 0\n"
+    )
+    _write(
+        root,
+        {
+            "src/hotspot.py": hotspot_code,
+            "tools/other_hotspot.py": hotspot_code,
+        },
+    )
+    out, err, rc = _run(root, ["--scope", "src", "--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    paths = {c["path"] for c in data["candidates"]}
+    if paths != {"src/hotspot.py"}:
+        return f"expected only the scoped subtree's candidate, repo-relative; got {paths}"
+    if data["coverage"]["python"]["discovered"] != 1:
+        return (
+            f"expected --scope to exclude tools/ from discovery, got {data['coverage']['python']}"
+        )
+    return None
+
+
 def test_tracked_fixture_manifests(_: Path) -> str | None:
     fixture_root = SKILL_ROOT / "evals" / "hotspot-fixtures"
     for manifest_path in sorted(fixture_root.glob("*/manifest.toml")):
@@ -848,6 +883,10 @@ def main() -> int:
                 test_capitalized_migrations_dir_is_discovered,
             ),
             ("lowercase_migrations_dir_excluded", test_lowercase_migrations_dir_excluded),
+            (
+                "scope_restricts_walk_but_paths_stay_repo_relative",
+                test_scope_restricts_walk_but_paths_stay_repo_relative,
+            ),
         ]
         failed = False
         for name, fn in cases:

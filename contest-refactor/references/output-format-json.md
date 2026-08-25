@@ -213,7 +213,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
   // loops, rewritten only when Step 0 genuinely re-ran). Pre-v4 this said "first loop only";
   // why that was wrong: validation.md Â§ G40.
   "discovery": {
-    "source_roots": ["BenchHypeKit/Sources/"],
+    "source_roots": ["App", "PkgKit/Sources", "tools"], // normalized: sorted, deduped, repo-relative, no trailing slash (preflight-enforced)
     "test_command": "cd BenchHypeKit && swift test",
     "build_command": "./build_install_launch.sh ios --skip-preflight",
     "lens": "Apple",                            // enum: Apple | Generic. The single resolved stack lens only -- the full loaded-lens-file list (stack lens + always-included security/efficiency lenses) is recorded in the CURRENT_REVIEW.md prose Discovery section (startup.md sub-step 6), not duplicated here.
@@ -232,7 +232,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
       },
       "candidates": [                           // max `--top-k` per queue; deduplicated by source range
         {
-          "path": "Sources/SettlementCoordinator.swift",
+          "path": "PkgKit/Sources/SettlementCoordinator.swift",
           "symbol": "SettlementCoordinator.executeSettlement",
           "line_range": {"start": 42, "end": 96},
           "candidate_queues": ["control", "mutation"],

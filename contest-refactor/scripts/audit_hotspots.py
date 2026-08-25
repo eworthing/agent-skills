@@ -27,7 +27,7 @@ Supported stacks:
   is skipped gracefully with installation instructions.
 
 Usage:
-  scripts/audit_hotspots.py [<repo-root>] [--top-k N] [--json]
+  scripts/audit_hotspots.py [<repo-root>] [--scope DIR] [--top-k N] [--json]
 
 Exit codes:
   0 = reported `ok`, `partial`, `absent`, or `not_applicable`
@@ -1050,6 +1050,12 @@ def main() -> int:
         help="Top candidates per queue to select (default: 2, max deduplicated: 6)",
     )
     parser.add_argument(
+        "--scope",
+        help="optional subdirectory of repo_root to restrict the discovery WALK to. "
+        "Candidate paths stay relative to repo_root regardless -- an output filter "
+        "instead would fill top-k with out-of-scope candidates.",
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Emit structured JSON with promotion_allowed: false",
@@ -1064,11 +1070,21 @@ def main() -> int:
         sys.stderr.write(f"error: '{repo_dir}' is not a directory\n")
         return 2
 
+    scope_dir = repo_dir
+    if args.scope:
+        scope_dir = (repo_dir / args.scope).resolve()
+        if not scope_dir.is_dir():
+            sys.stderr.write(f"error: --scope directory does not exist: {args.scope}\n")
+            return 2
+        if not scope_dir.is_relative_to(repo_dir):
+            sys.stderr.write(f"error: --scope must be a subdirectory of repo_root: {args.scope}\n")
+            return 2
+
     # Discover source files
     py_files: list[Path] = []
     non_py_files: list[tuple[Path, str]] = []
 
-    for p in sorted(repo_dir.rglob("*")):
+    for p in sorted(scope_dir.rglob("*")):
         if not p.is_file():
             continue
         # Relative to repo_dir, not absolute: an absolute-path check risks matching
