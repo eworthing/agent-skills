@@ -57,6 +57,12 @@ Agent({
 - **Default model**: `claude-sonnet-5` (full canonical ID; the host `sonnet` tier — was `claude-sonnet-4-6` until 2026-07-13)
 - **Permissions**: subagent inherits parent permissions (write + shell + test execution all allowed)
 - **Resume**: not supported by Agent tool; each loop is a fresh subagent invocation. State flows via files (`CURRENT_REVIEW.md`, `findings_registry.json`, etc.)
+- **Spawn precondition**: confirm no prior loop executor for this run is alive (single-writer lease, with `trust-model.md` HALT routing) before dispatching. If alive, fence first; never overlap.
+- **Async join and executor fencing (single home for all spawn points)**:
+  - **B1**: never end a turn waiting for a background-task completion notification because an in-process teammate is not re-woken. Poll with repeated short foreground checks, or run gates only where wake-on-completion is confirmed.
+  - **B2**: fence a replaced executor by killing its process tree first: PGID kill, then sweep for re-parented children, before incrementing `executor_generation`.
+  - **B3**: require a single-flight test-gate guard using a bracket-anchored process pattern such as `pgrep -f '[r]un_local_gate'`; a bare `pgrep -f` self-matches.
+  - **B4/item 13**: establish this section as the single home for async join and cross-reference it from the three spawn points. A completed subagent whose final message was not delivered as a tool result is not a failure and is not retried: wait for completion, read the final message from the run record/transcript, and route only on that verdict. Restate, do not re-review. Never route on an empty result.
 
 ### codex (verified 2026-08-19)
 
