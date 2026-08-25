@@ -112,11 +112,15 @@ agnostic, fire on the same boundary the design targets, and give exactly the two
 the staged tree and the drafted commit message. This is not speculative here: **this repository
 already runs them** (`.githooks/pre-commit`, `.githooks/commit-msg`, `core.hooksPath=.githooks`),
 enforcing vendor integrity (`sync_common`), module size, and ruff on every commit. The eval guard is
-the instructive case rather than a fourth enforced check: it runs **report-only at `pre-commit`,
+the instructive case rather than a fourth enforced check. It runs **report-only at `pre-commit`,
 always exiting 0** — git has not obtained the commit message at that stage, so it structurally cannot
-see a waiver trailer and must not block on its absence — and the real local gate is the separate
-`commit-msg` hook, with CI as the backstop (`common/README.md`, `common/scripts/eval_guard.py`). That
-split is precisely the staged-tree-then-drafted-message boundary Tier-3 needs, already solved here.
+see a waiver trailer and must not block on its absence. The separate `commit-msg` hook is the correct
+enforcement *stage* and CI the intended backstop, but **neither blocks today**: `REPORT_ONLY = True`
+(`common/scripts/eval_guard.py:72`, checked at line 359) makes every stage advisory until it is
+flipped (`common/README.md`). What the hooks actually enforce right now is vendor integrity, module
+size, and ruff. The point for Tier-3 stands regardless, and is about mechanism rather than this
+guard's current setting: the pre-commit/commit-msg split is precisely the
+staged-tree-then-drafted-message boundary the design needs, already wired here.
 One integration would cover all five harnesses instead of five separate ones. The accepted limitation
 is `--no-verify`, which bypasses them — acceptable under the stated threat model (automatic
 invocation, *not* tamper resistance) and no weaker than a harness hook the operator can disable.
@@ -170,7 +174,9 @@ follow and demonstrably did not.
 **Options:**
 - **Mechanical guard at the commit boundary** (the reviewed recommendation): reject a
   target-repository commit whose staged paths and G22 subject do not match an authorized loop
-  phase, read from `LOOP_STATE.json`.
+  phase, read from a durable, mechanically-bound commit-intent source **still to be selected** —
+  see the unresolved block below. `LOOP_STATE.json` covers only the two transitions it is alive
+  for (the Step-3 commit and out-of-plan cleanup) and cannot be the source for the rest.
   **The condition must be a phase-aware allowlist, not "a Step-2 plan exists and Step 3 is
   authorized."** That narrower rule was drafted first and it would break the loop: `SKILL.md`'s
   guardrail is **one commit per durable transition** (`SKILL.md:284`), and Step 1 Routing legitimately
@@ -258,8 +264,8 @@ supply it. The live choice is:
   measurement history that justifies it (restraint and calibration paid, recall did not) will keep
   just as well for a quarter.
 
-Whichever is chosen, the closure-hardening controls and the GREEN scoring rule below are settled
-separately and cost nothing.
+Of the two sub-decisions below, only the GREEN scoring rule is settleable now at no cost.
+Closure-hardening splits into a free policy decision and a later spend — see there.
 
 **The manifest validator is not yet the assurance this decision can lean on.** As of `e357a80`
 `contest-refactor/scripts/validate-gold-corpus.py` exists and covers negative-oracle presence,
@@ -270,13 +276,14 @@ Wiring it into an invoked repository gate and giving mutants executable oracles 
 pilot's acceptance criteria, not in the case for approving the spend.
 
 **Two smaller open decisions worth settling in the same pass:**
-- **Closure-hardening runs.** Run the bare-rubric control on the SwiftNIO #2486 pack and the Vapor
-  mini-packs — real-world-shaped fixtures for the parked DD-01/DD-03/DD-05 detection classes? The
-  parks are reversible by design; either outcome is publishable in the register. Note that under a
-  one-pack `#298` pilot both are out of scope by construction (SwiftNIO is pack 3, Vapor is pack
-  7), so this sub-decision only becomes live if the pilot funds a wider slice — and if either pack
-  is later built, the control must be preregistered, since it is the evidence capable of reopening
-  the parked rows.
+- **Closure-hardening runs — two decisions, not one.** The **policy** half is free and settleable
+  today: *if* the SwiftNIO #2486 or Vapor packs are ever built, the bare-rubric control must be
+  preregistered, because it is the evidence capable of reopening the parked DD-01/DD-03/DD-05 rows
+  and the parks are reversible by design. The **spend** half — actually dispatching those
+  model-graded control runs — is a separate, later approval and is not on today's menu: neither pack
+  exists, and both fall outside a one-pack `#298` slice by construction (SwiftNIO is pack 3, Vapor is
+  pack 7). Settling the policy now costs nothing and prevents the control being skipped or
+  retrofitted after the fact.
 - **Where GREEN anchors score.** Write down the rule before grading starts, aligned to the existing
   G5/G6/G37 semantics rather than invented for the corpus: **9.5** when the 9-anchor is met and a
   documented accepted residual remains; **10** only when no behavior-preserving, source-backed
