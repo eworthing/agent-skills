@@ -306,6 +306,129 @@ write order). In every case the prose was right. What held each time was a selft
 better sentence — which is why fix 3 above matters more than fixes 1 and 2: without it, neither
 of them is measurable on the next run.
 
+## Instrumented run #7 — 2026-08-24 (opencode; hotspot-v2 remediation audit)
+
+BenchHype was re-run with `--reset --scope BenchHypeKit` under opencode
+`opencode-go/minimax-m3`. The terminal artifact records skill revision `8156df3`, run id
+`run-2026-08-24-7f7088f7f7194dc2819c7d243631c1e9`, candidate commit `0e4f31cd`, and terminal
+commit `8c5bf1d7`. This section validates the operator's post-run issue report against those two
+commits, the opencode log (`run=b013c251`), and the current skill rather than adopting the
+report's causal explanations.
+
+### What the run proved
+
+- **Hotspot persistence works.** A fresh `audit_hotspots.py BenchHypeKit --json` document is
+  decoded-equal to terminal `discovery.hotspot_scan`, and the current preflight accepts the pair.
+  The record retained six Swift candidates with queue counts `2/2/2`; this closes the earlier
+  hand-reconstruction failure for the persisted payload itself.
+- **The reset-history repair holds.** `REVIEW_HISTORY.json` has the canonical top-level
+  `loops[]`, its tail equals `CURRENT_REVIEW.json`, the current run/loop appears once, and strict
+  validation accepts G18. `git show ee2b1292:REVIEW_HISTORY.json` proves the pre-run file already
+  had that shape.
+- **The independent challenge did useful work.** It corrected five factual claims: 11 concrete
+  executor types rather than protocols, eight `EditingState` slots, twelve `AppState` slices,
+  194 `inout AppState` matches across 32 files, and `.walkoutFromLive` as the fourth
+  `PendingCueBinding` case. The current source confirms each count/name.
+- **The architecture verdict was not broken.** None of the validated protocol defects below is
+  evidence of a new Serious-or-worse BenchHype architecture finding. This audit is about whether
+  the skill can substantiate that verdict reproducibly.
+
+### Claim-by-claim validation
+
+| Reported issue | Verdict | Evidence and disposition |
+|---|---|---|
+| Step-0 preflight/artifact circular dependency | **Observed friction; causal claim rejected** | The run invoked preflight before creating `CURRENT_REVIEW.json`, then retried twice. Current `startup.md:41-52` explicitly orders scanner → persist exact object → preflight. That is a two-phase write, not a cycle. Improve the missing-file diagnostic and provide one deterministic discovery-bootstrap command; do not weaken the equality gate. |
+| G40 lens list vs string | **Confirmed contract contradiction** | `startup.md:37` says to record the full loaded list; `output-format-json.md:214-224` and `_artifact_core.py:493-533` require `lens` to be one string. Keep `lens: "Apple"|"Generic"`; the always-loaded security/efficiency lenses are ruleset-derived and need no duplicate array today. |
+| G19 `loop_model_source` | **Confirmed attribution defect, different fix** | No `--loop-model` or `--reviewer-model` user flag selected minimax. The native opencode task records `model=undefined` and inherits the parent model, so `inherited` is the honest source, not `user_flag`. `provider-adapters.md:172-185` omits `inherited` while `_artifact_history.py:309-470` accepts it. Add an explicit source decision table and record the loop and challenger roles separately. |
+| Candidate fingerprint must be recomputed manually | **Confirmed helper gap; report overstates sensitivity** | `candidate_fingerprint.py:19-56` hashes only lens, source roots, selected scorecard fields, and findings; it does not hash every artifact field. Its direct CLI only runs a self-test (`:133-134`), forcing ad-hoc import snippets. Add `compute`, `verify`, and atomic `write` modes. |
+| G18 archive equality / legacy `runs[]` migration | **Execution mistake, not current data drift** | Before this run, commit `ee2b1292` already had top-level `loops[]`. The run itself invented `runs[].loops[]`, added `archived_at`, and wrote an order-unstable dedup script. `coverage_ledger.py:174-202` reads only top-level `loops[]`; it does not tolerate the alleged legacy shape. Replace model-authored archive mutation with one helper implementing `output-format-state-schemas.md:192,326-341`. |
+| G32 attempt target requires a bare dimension | **Confirmed docs/diagnostic sharp edge** | `_artifact_panel.py:44-71` uses exact membership in `{simplicity, domain_modeling}`. `halt-verifier.md:103-110` gives the correct exact example, but the surrounding schema calls target `<dimension|finding>`. State the enum at the field definition and tell the agent to put descriptive detail in `what_tried`. |
+| Challenger found factual miscounts | **Confirmed and corrected, but exposed a stronger binding defect** | Candidate `0e4f31cd` fingerprinted `fp-sha256-c61b...`; after the corrections, terminal `8c5bf1d7` fingerprints `fp-sha256-035e...`. G32 v4 checks the terminal fingerprint's internal validity but does not bind `halt_success_challenge` to the candidate fingerprint (`_artifact_panel.py:74-215`). The promoted artifact therefore is not the exact candidate that was challenged. |
+| `F-NEW` fails G42 / unclear id with no finding | **Real malformed commits; wrong gate and wrong proposed remedy** | Both new commits contain `stable_id F-NEW`. G42 governs backlog items and does nothing when the backlog is empty (`_artifact_core.py:591-657`); G22 owns commit subjects. Minting F-022 would fabricate a finding. G22 needs explicit no-finding candidate/promotion subject forms, and its commit check must not silently skip a repo-root artifact merely because `.contest-refactor.toml` is absent (`_artifact_history.py:473-540`). |
+| No terminal HALT_SUCCESS template | **Rejected** | The exact template already exists at `halt-handoff.md:93-134`. The run improvised because the main promotion transition did not reload/use it. Add a co-located anchor from the held-transition instruction; do not create another template. |
+| Inline mode is expensive | **Outcome confirmed; stated cause unproven** | Step 1 ran in the primary opencode session, but no `opencode run` subprocess attempt appears in the log. The artifact nevertheless says `spawn_isolation: "subagent"`, disabling the inline G20 path on false metadata. Cost is real; “subprocess unavailable” was never tested. |
+| Opencode provider adapter mismatch | **Confirmed** | The adapter documents only `opencode run` (`provider-adapters.md:76-87`), while the host exposed a native task type `general`. The run first tried invalid `general-purpose`, then used `general` for the challenger. Add the native task path and its exact role/model attribution; keep subprocess as the fallback. |
+| Hotspot scan `partial` with no failure list | **Confirmed symptom; root cause found** | Of 609 discovered Swift files, 201 were called failed. `ast-grep` returns exit 1 with valid JSON `[]` when a file contains no `function_declaration`; `_ast_grep_matches` treats every nonzero as failure (`audit_hotspots.py:711-736`). Also, case-sensitive `IGNORE_DIRS` skips `tests` but not SwiftPM `Tests` (`:52-80`), leaking 32 test files. The failures are not `.build` artifacts: `.build` is explicitly ignored. |
+| Two commits for one loop | **Expected design** | Candidate durability followed by independently challenged promotion intentionally makes two commits (`SKILL.md:140`). Rename “commit per loop” prose to “commit each durable transition”; do not collapse the commits. |
+
+### Additional defects the retrospective missed
+
+1. **G32 binds the wrong architecture payload.** The challenger reviewed candidate fingerprint
+   `c61b...`; main changed fingerprint-bearing residual fields and promoted fingerprint `035e...`.
+   Add `binding.candidate_fingerprint`, require equality with the live terminal fingerprint, and
+   route any fingerprint-changing correction to a new candidate plus a fresh challenge. Merely
+   recomputing the hash is not certification.
+2. **Hotspot triage was incomplete.** `method.md:85-86` requires every retained candidate to end
+   as `confirm`, `contextualize`, or `dismiss`; Builder Notes say “5 of 6 candidates inspected.”
+   G49 validates the scanner record, not its consumption. Persist a structured triage row keyed by
+   candidate path+symbol and block candidate emission until its key set equals the scanner roster.
+3. **Swift coverage status is false.** Exit-1/no-match is normal ast-grep behavior, so the run's
+   `partial` label overstates missing coverage by at least 201 files. Fix this before adding a
+   failure-path payload. For genuine failures, emit bounded stderr diagnostics (reason counts + a
+   small path sample); avoid expanding the six-field persisted object until a consumer needs it.
+4. **Isolation/model provenance is false.** The loop ran inline while the artifact says
+   `subagent`; the task inherited minimax while the artifact says `user_flag`. G19 validates
+   self-consistency, not runtime truth. The spawn adapter must return the metadata that the
+   artifact records rather than asking the model to infer it afterwards.
+5. **Both terminal-path commit subjects are invalid and the validator missed them.** G22's commit
+   sub-check runs only when project config is present. BenchHype has no `.contest-refactor.toml`,
+   so strict validation returned zero Issues while HEAD still contains `F-NEW`.
+
+### Ranked remediation work order
+
+#### P0 — verdict/provenance integrity
+
+1. **Bind G32 to the challenged fingerprint.** Add v4 `binding.candidate_fingerprint`; reject a
+   terminal fingerprint that differs. Factual corrections that touch the canonical payload emit a
+   corrected candidate and re-challenge. Add one selftest based on the `c61b... → 035e...` drift.
+2. **Ship the native opencode adapter.** Prefer host Task `general` when available, otherwise try
+   documented `opencode run`, then record an honest inline fallback. The adapter returns
+   `{model, model_source, isolation}` for loop/reviewer/challenger roles. Test that
+   `general-purpose` never appears in the opencode path and that inline execution records
+   `spawn_isolation: inline`.
+3. **Correct Swift scan accounting.** Treat ast-grep exit 1 plus decoded `[]` as successful
+   no-match, compare ignored directory names case-insensitively, and add fixtures for an enum-only
+   Swift file, a function-bearing Swift file, and `Tests/`. Acceptance on unchanged BenchHypeKit:
+   zero false failures and no test-tree discoveries.
+4. **Fix no-finding transition commits.** Extend G22 with explicit candidate/promotion forms that
+   carry no fake finding id, validate repo-root artifacts even without project config, and add
+   pre-commit subject validation so a malformed draft cannot land first and be diagnosed later.
+
+#### P1 — deterministic artifact operations
+
+5. **Mechanize complete hotspot consumption.** Add structured per-candidate triage and a gate whose
+   equality check fails the observed 5/6 case. Keep dispositions evidence-only; a `confirm` still
+   needs the canonical Finding Evidence Chain.
+6. **Replace hand-edited archive/fingerprint steps.** One stdlib archive helper owns append-vs-last
+   replacement and parsed-dict equality; extend the existing fingerprint script with artifact
+   CLI modes. These are separate narrow helpers, not an omnibus state machine.
+7. **Align small contracts.** Make `discovery.lens` explicitly scalar, document the four model
+   source values and selection rules, make G32 target enums exact at the schema site, and link the
+   held transition directly to the existing HALT_SUCCESS handoff template.
+
+#### P2 — diagnostics and wording
+
+8. Improve preflight's missing-artifact error to name the required scanner → persist → preflight
+   order. If the same ordering miss recurs after that, add a minimal discovery-bootstrap helper;
+   do not build the proposed all-in-one Step-0 helper pre-emptively.
+9. For genuine ast-grep errors, print failure reason counts and a bounded path sample to stderr.
+10. Replace “one commit per loop” with “one commit per durable transition” wherever the former
+    phrase appears.
+
+### Completion criteria
+
+- A replay of this exact run cannot promote after changing the candidate fingerprint.
+- The opencode loop uses native `general` or records an attempted subprocess/inline fallback; the
+  artifact's isolation and model-source fields match the observed path.
+- BenchHypeKit's Swift scan excludes `Tests/`, treats no-match files as scanned, persists the raw
+  scanner object unchanged, and requires six triage rows for six retained candidates.
+- Candidate and promotion commits with no finding pass the new G22 form without minting a registry
+  id; `F-NEW` fails before commit.
+- G18 history remains top-level `loops[]`, one current-run entry per loop, with tail parsed-dict
+  equal to `CURRENT_REVIEW.json` after candidate emission and promotion.
+- Focused selftests are red on the five observed failures before their fixes, then green; the full
+  `validate-repo.py`, validator selftests, fixture corpus, and Ruff gates remain green.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
