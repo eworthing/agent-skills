@@ -469,6 +469,55 @@ Found during remediation, disposition noted:
   multi-loop run whose G22 window reaches depth 3–4 will correctly flag them — the gate working
   on genuinely malformed history, not a false positive.
 
+### Run-2 follow-through — multi-root discovery + residual scheduling (2026-08-25)
+
+The first unscoped run (`0c6d65e1`→`9e09fd08`, HALT_SUCCESS) exposed two design defects the
+remediation waves could not have caught: **unscoped runs silently narrowed to one source root**
+(startup.md's own example named `BenchHypeKit/Sources/` — dogfooding contamination — and every
+mechanical evidence step took a single root; the run scanned only that subtree while presenting a
+repo-level verdict), and **9.5-accepted residual work was never scheduled** (the HALT_SUCCESS
+handoff said "won't be revisited unless you ask" and nothing downstream read it). A validated
+10-issue operator retrospective from the same run added five confirmed frictions. All fixed across
+five verified sonnet phases:
+
+- `e286f1e` — `_fs_filters.py` filter SSOT (+ hidden-dir rule; retro #2's ledger garbage traced to
+  three divergent filter copies). `audit_boundaries.py` deliberately left non-shim: its consumer
+  `audit_suppressions.py` reads its filters directly and a swap would silently change a
+  multi-language scan — documented in-file.
+- `c1c4d76` — ledger hardening (`missing_root` typed accounting, absolute-root typed rejection)
+  + the universe-derived `source_roots()` enumerator and `--list-source-roots` CLI. On BenchHype:
+  `BenchHype`, `BenchHypeKit/Sources`, `scripts`, `tools` — the app target the old contract never
+  saw.
+- `a95cbf8` — the behavior flip, one commit: scanners run at the **repo root** (repo-relative
+  candidate paths, fixing the coordinate split with the citation ledger), `--scope` filters the
+  discovery walk, and preflight gains three tripwires (source_roots normalization,
+  silent-narrowing vs the enumerator, candidate-path coordinates). Run-2's real artifact fires all
+  three retroactively — the exact defect class can no longer pass Step 0.
+- `f9ec65f` — residual work docket (owner decision: docket + forced next-run intake; the
+  `--attack-residuals` flag considered and not chosen). At promotion, main writes
+  `docs/audits/contest-refactor-residuals-<run_id>.md` (Tier-4 marker line, one row per accepted
+  residual, supersedes chain), riding the promotion commit; the next run's existing
+  prior-audit adopt-or-falsify machinery makes every row disqualifying-if-unexamined. Zero new
+  gates, zero schema change.
+- `b3e9fe9` — retro fixes: challenger prose now mandates the `new_finding` diversity-arm shape
+  up front (#1/#8, validator unchanged); `archive_history.py` owns the REVIEW_HISTORY.md divider
+  half and the promotion flow archives-before-validating (#3/#4, G18 flicker dead); G22
+  structurally validates `--- HALT_SUCCESS <verb> (UTC …) ---` dividers (all three real historic
+  variants pass; timestamp-less and capitalized forms fail); G48's missing-mint note is scoped to
+  the current run (#5); method.md pins Q9 humility re-derivation (#6).
+
+End-to-end at close: G22 on BenchHype's real archive = 0 issues; scanner at BenchHype repo root =
+606 discovered / 0 failed, all paths repo-relative; enumerator exact; battery green throughout
+(the two pre-existing frozen-hash failures byte-identical at every phase). Expected on the next
+unscoped run: four declared roots, per-root coverage disclosure in the handoff, and — if it ends
+HALT_SUCCESS with accepted residuals — the first committed residual docket, which the run after
+it must adjudicate row-by-row.
+
+Parked from this pass: `.sh` in the coverage SOURCE_EXTS (declined v1 — would shift every repo's
+denominator); a `per_root_cited` ledger field (handoff currently composes it from `sets.cited`);
+compound-test-dir helper leakage (`FooUITests/Support.swift`) tracked with the `spec.swift`
+false-positive; the frozen-hash re-pin pass still owed.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
