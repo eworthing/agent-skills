@@ -244,6 +244,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
       "queue_counts": {"control": 1, "mutation": 1, "navigation": 0}
     }
   },
+  "discovery_consumption": null,                // (hotspot-triage epoch+) object | null. Required non-null when discovery.hotspot_scan.candidates is non-empty AND state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}; null/absent otherwise. Shape: { "hotspot_triage": [{"path": "...", "symbol": "...", "disposition": "confirm" | "contextualize" | "dismiss"}] }. The (path, symbol) key set must equal discovery.hotspot_scan.candidates' roster exactly — missing, extra, or duplicate keys fail. Enforced by G50. Evidence-only: a "confirm" row does not itself create a Finding; the canonical Evidence Chain (method.md) still owns findings.
 
   // Verdict (required)
   "verdict": "Promising, but architecturally immature",
