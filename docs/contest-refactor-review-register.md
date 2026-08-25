@@ -578,6 +578,57 @@ references (one shell-script name hit in `run_sim_snapshots.sh`, not compiled co
 `--quick`-doesn't-build-the-app gap itself remains real and belongs in the handoff's coverage
 disclosure.
 
+### Remediation outcomes — nine-wave plan (2026-08-25)
+
+The two-cause diagnosis above (async-join stall, fencing-without-kill-tree) became a nine-wave
+plan (`/Users/pl/.claude/plans/lets-plan-the-fix-robust-avalanche.md`), executed by sequential
+Sonnet subagents with the main session verifying rather than editing. All nine waves landed.
+
+| Wave | Commit | Outcome |
+|---|---|---|
+| W1 | `e252a6a` | Re-pinned `skill_step3_section_sha256`; third carry-note. Healed a pre-existing RED. |
+| W2 | `6eabb7c` | Paired-arm provenance: new top-level `material_hashes_frozen_at` (`d4d203e…`) verifies a completed study against its freeze commit instead of live disk; `prereg_sha256` proven byte-stable before and after. Healed the second pre-existing RED. |
+| W3 | `5f74abc` | `validate-artifact.py --gates` selector (post-filter of `run_checks()` by `Issue.rule`; unknown id → exit 2). Known limit: G1/G2 are prose-only, so selecting them is vacuous. |
+| W4 | `3d36866` | claude_code adapter hardening: async-join recipe, spawn precondition/single-writer lease, kill-tree fencing with re-parent sweep, bracket-anchored single-flight guard; helper-count re-derivation rule. |
+| W5 | `259ecce` | Step-0 seed field set, `--reset` now deletes `CURRENT_REVIEW.md`, discovery dotted-path wording, pin-is-a-floor rule, `working_tree_dirty_paths` emission retired. |
+| W6 | `1609cd6` | Schema truth-ups + `execution_evidence_skip_reason` prose half; `CONTRACT_REJECTED` named on the rejected row. |
+| — | `083f6b3` | G47 two-branch clarification + the item-14 micro-test record in the behavioral ledger. |
+| W7 | `7b6498f` | Step-3 sub-step-0 clean-tree assertion, skip-reason tail, G47 ordering fixed in both SKILL.md and validation.md together, judge-provenance occurrence stamps; `skill_md` ceiling 12,500 → 13,000 (measured 12,514, margin 486); fourth exec-replay carry-note. |
+| W7.5 | `1bd372b` | Re-pinned `reviewer_prompt_sha256` after W6's prose edit; staleness recorded. |
+| W8 | `a6dc71d` | G47 null branch enforced, epoch-scoped: new ruleset epoch `attestation_skip` at rev `1609cd6` (the two-commit prose-then-gate shape). Plus an unconditional shape rule — a skip reason alongside non-null evidence is always an Issue. |
+
+**Item 14's diff-derived hard gate was measured and declined — restraint, not a gap.** The
+proposed Honesty-check cue for a null `risk_boundary_evidence` on isolation/visibility diffs was
+micro-tested against a no-guidance control: 20 `spawn_agent` calls, five reps per arm per fixture.
+The control already caught the risk-bearing case 5/5 (rejected at Regression); the treatment
+produced 5/5 non-approved but split routing in only 2/5, adding zero correctness lift, with zero
+false positives on the benign arm. Per the micro-test rule the cue was not shipped — the existing
+Regression risk-boundary check remains the single source for this family. Full record:
+`contest-refactor/docs/behavioral-validation-ledger.md`. This continues the project's established
+measured-restraint pattern; file it alongside the other levers that measured flat and were parked.
+
+**A generalizable process defect surfaced along the way.** W6 edited
+`references/implementation-reviewer.md` and shipped with `_reviewer_baseline_selftest.py` RED,
+because that wave's verification battery only ran the selftests it believed it had touched. The
+red sat on `main` until a later wave swept the whole `scripts/_*_selftest.py` set and found it.
+The rule this yields: frozen-hash selftests pin files by content hash, so a prose edit anywhere
+can break one that has nothing to do with the edited feature — every wave's verification battery
+must sweep *all* `_*_selftest.py` files, never a curated subset believed relevant.
+
+**Parked, with sharper reasons than when the plan was written:**
+
+- Item-14 hard gate (diff-derived G33) — no longer "awaiting a false-positive rate": measured,
+  zero lift over control.
+- A2 gate on `checkpoint_started_at` — report-only field shipped; a gate needs an epoch and buys
+  little until a wrong-order incident recurs with the witness present.
+- `--stage` presets — `--gates` covers every call site (YAGNI).
+- Exec-replay K=5 re-measure — now four carry-notes deep (W1 and W7 each added one), well past
+  the manifest's own two-carries trigger. This is the most overdue item on the board.
+- Registry cross-run judge gate — stamps only; no gate keys on them in v1.
+
+**End state.** Both previously-red frozen-hash selftests healed (W1, W2). A full independent
+sweep at `a6dc71d` verified 79 selftests, 102 fixtures, `validate-repo.py`, and `ruff` all green.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
