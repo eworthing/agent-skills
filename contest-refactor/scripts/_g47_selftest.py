@@ -64,8 +64,22 @@ def _event_id(proc: subprocess.CompletedProcess) -> str:
 
 
 def _artifact(
-    repo: Path, event_id: str, run_id: str = RUN_ID, status: str = "resolved", loop: int = 1
+    repo: Path,
+    event_id: str,
+    run_id: str = RUN_ID,
+    status: str = "resolved",
+    loop: int = 1,
+    skip_reason: str | None = None,
 ) -> None:
+    loop_result: dict = {
+        "targeted_finding_status": status,
+        "execution_evidence": {
+            "event_id": event_id,
+            "attestation_status": "consistency_check",
+        },
+    }
+    if skip_reason is not None:
+        loop_result["execution_evidence_skip_reason"] = skip_reason
     (repo / "CURRENT_REVIEW.json").write_text(
         json.dumps(
             {
@@ -73,18 +87,39 @@ def _artifact(
                 "loop": loop,
                 "run_id": run_id,
                 "state": "CONTINUE",
-                "loop_result": {
-                    "targeted_finding_status": status,
-                    "execution_evidence": {
-                        "event_id": event_id,
-                        "attestation_status": "consistency_check",
-                    },
-                },
+                "loop_result": loop_result,
             },
             indent=2,
         )
         + "\n"
     )
+
+
+def _artifact_null(
+    repo: Path,
+    skill_rev: str | None,
+    skip_reason: str | None = None,
+    status: str = "resolved",
+    run_id: str = RUN_ID,
+    loop: int = 1,
+) -> None:
+    """A CURRENT_REVIEW.json with a null execution_evidence -- for the epoch-scoped
+    W8 skip-reason cases, which never need a real ledger citation."""
+    body: dict = {
+        "schema_version": 4,
+        "loop": loop,
+        "run_id": run_id,
+        "state": "CONTINUE",
+        "loop_result": {
+            "targeted_finding_status": status,
+            "execution_evidence": None,
+        },
+    }
+    if skill_rev is not None:
+        body["skill_rev"] = skill_rev
+    if skip_reason is not None:
+        body["loop_result"]["execution_evidence_skip_reason"] = skip_reason
+    (repo / "CURRENT_REVIEW.json").write_text(json.dumps(body, indent=2) + "\n")
 
 
 def _g47_issues(home: Path, repo: Path, phase: str) -> list[str]:
@@ -232,6 +267,51 @@ def main() -> int:
         got = _g47_issues(home, repo, "pre-commit")
         if not any("invoked from" in m for m in got):
             failures.append(f"subdirectory invocation must fail the directory rule, got {got}")
+
+        # --- Item 14 / W8 -- execution_evidence_skip_reason (epoch-scoped) --------
+        # `home`/`repo` already carry a trust pin (echo tests-green, restored above).
+        POST_EPOCH_REV = "1609cd6"  # _ruleset_epoch.ATTESTATION_SKIP_REV
+        PRE_EPOCH_REV = "7ffd502"  # _ruleset_epoch.HOTSPOT_TRIAGE_REV (an ancestor)
+
+        # (1) post-epoch skill_rev, trust pin present, null evidence, no reason -> FAIL.
+        _artifact_null(repo, POST_EPOCH_REV)
+        got = _g47_issues(home, repo, "pre-commit")
+        if not any("execution_evidence_skip_reason" in m for m in got):
+            failures.append(f"post-epoch null evidence with no reason must fail, got {got}")
+
+        # (2) same + non-empty reason -> PASS.
+        _artifact_null(repo, POST_EPOCH_REV, skip_reason="test suite unrunnable in this env")
+        got = _g47_issues(home, repo, "pre-commit")
+        if got:
+            failures.append(f"post-epoch null evidence with a reason must pass, got {got}")
+
+        # (3) pre-epoch skill_rev -> PASS (run-8's already-committed artifacts stay green).
+        _artifact_null(repo, PRE_EPOCH_REV)
+        got = _g47_issues(home, repo, "pre-commit")
+        if got:
+            failures.append(f"pre-epoch skill_rev null evidence must stay green, got {got}")
+
+        # (4) no trust entry for the repo -> PASS.
+        (home / "verify-trust.json").unlink()
+        _artifact_null(repo, POST_EPOCH_REV)
+        got = _g47_issues(home, repo, "pre-commit")
+        if got:
+            failures.append(f"no trust pin must not fire the skip-reason check, got {got}")
+        _wrap(home, repo, "--trust", "--", "echo", "tests-green")  # restore
+
+        # (5) carried_forward + null + no reason -> PASS (the honest-revert exemption).
+        _artifact_null(repo, POST_EPOCH_REV, status="carried_forward")
+        got = _g47_issues(home, repo, "pre-commit")
+        if got:
+            failures.append(f"carried_forward null evidence must be exempt, got {got}")
+
+        # (6) non-empty reason alongside non-null evidence -> FAIL (unconditional shape rule).
+        r6 = _wrap(home, repo, "--run-id", RUN_ID, "--", "echo", "tests-green")
+        event6 = _event_id(r6)
+        _artifact(repo, event6, skip_reason="should never be set alongside real evidence")
+        got = _g47_issues(home, repo, "pre-commit")
+        if not any("legal only alongside a null" in m for m in got):
+            failures.append(f"skip_reason alongside non-null evidence must fail, got {got}")
 
     if failures:
         for f in failures:

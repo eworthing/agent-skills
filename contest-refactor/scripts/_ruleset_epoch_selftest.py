@@ -92,6 +92,11 @@ def _classify_cases() -> list[tuple[str, dict, str]]:
             epoch.HOTSPOT_TRIAGE,
         ),
         (
+            "attestation-skip boundary revision",
+            {"schema_version": 4, "skill_rev": "1609cd6"},
+            epoch.ATTESTATION_SKIP,
+        ),
+        (
             "unresolved valid SHA cannot prove the newer epoch",
             {"schema_version": 4, "skill_rev": "0000000"},
             epoch.CURRENT,
@@ -183,9 +188,9 @@ def _check_shallow_head_fallback() -> list[str]:
         # clone satisfies -- classify() tries newest-first, so it proves the
         # newest defined epoch, not specifically hotspot_v2. Update this
         # constant again the next time a newer provable epoch is added.
-        if got != epoch.HOTSPOT_TRIAGE:
+        if got != epoch.ATTESTATION_SKIP:
             found.append(
-                f"classify: shallow current HEAD expected {epoch.HOTSPOT_TRIAGE!r}, got {got!r}"
+                f"classify: shallow current HEAD expected {epoch.ATTESTATION_SKIP!r}, got {got!r}"
             )
     return found
 
@@ -261,6 +266,14 @@ if epoch.applies("G50_HOTSPOT_TRIAGE", _FP_BOUND_ART):
     )
 if not epoch.applies("G50_HOTSPOT_TRIAGE", _TRIAGE_ART):
     failures.append("applies: G50_HOTSPOT_TRIAGE must apply at the hotspot-triage boundary")
+
+_SKIP_REASON_ART = {"schema_version": 4, "skill_rev": "1609cd6"}
+if epoch.REQUIREMENT_EPOCHS.get("G47_SKIP_REASON") != epoch.ATTESTATION_SKIP:
+    failures.append("REQUIREMENT_EPOCHS['G47_SKIP_REASON'] must start at attestation_skip")
+if epoch.applies("G47_SKIP_REASON", _TRIAGE_ART):
+    failures.append("applies: G47_SKIP_REASON must not retroactively apply before attestation_skip")
+if not epoch.applies("G47_SKIP_REASON", _SKIP_REASON_ART):
+    failures.append("applies: G47_SKIP_REASON must apply at the attestation-skip boundary")
 
 # [I1] items 1-4: the four requirement keys the new enforcement checkers read
 # (_artifact_independence.py, _artifact_transitions.py,

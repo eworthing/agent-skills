@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """G47 — execution-evidence linkage (item 14, Tier 1).
 
-Opt-in and strict: fires only when ``loop_result.execution_evidence`` is non-null — a
-field no committed artifact has, so there is no retroactive-invalidation class and no
-epoch-matrix entry (a field-triggered check self-scopes). When it fires, the citation is
-checked against the wrapper's ledger record fail-closed.
+Opt-in and strict on the non-null path: when ``loop_result.execution_evidence`` is
+non-null, the citation is checked against the wrapper's ledger record fail-closed. A
+null ``execution_evidence`` is retroactively gated instead (REQUIREMENT_EPOCHS
+['G47_SKIP_REASON'], epoch ``attestation_skip`` — see _ruleset_epoch.py): from that
+epoch forward, a repo with a human-pinned command and the wrapper available must record
+``execution_evidence_skip_reason`` for a null citation, unless this loop is the
+honest-revert exemption (``targeted_finding_status == "carried_forward"``). And
+unconditionally, a non-empty ``execution_evidence_skip_reason`` alongside a *non-null*
+``execution_evidence`` is always an Issue — the field is legal only alongside a null.
 
 Normative check order (peer-reviewed): artifact-local checks first — shape, the
-carried-forward coupling, non-null run_id — so no environment access happens unless the
-artifact itself is coherent; then the environment-dependent checks — ledger resolution,
-repo binding, trust pin, run-id equality, invocation directory, record status, exit
-status, and phase-aware freshness.
+carried-forward coupling, non-null run_id, the skip-reason shape rule — so no
+environment access happens unless the artifact itself is coherent; then the
+environment-dependent checks — ledger resolution, repo binding, trust pin, run-id
+equality, invocation directory, record status, exit status, and phase-aware freshness.
 
 BLIND (``[g47-check-blind reason=… loop=…]``, no Issue) is reserved for genuine
 environmental inability only: ``git`` missing, the artifact dir not inside a git work
@@ -29,6 +34,7 @@ import json
 import subprocess
 from pathlib import Path
 
+import _ruleset_epoch
 from _artifact_core import Issue
 from _wtree import source_tree_fingerprint, source_tree_fingerprint_at
 from attested_run import command_sha256 as _command_sha256
@@ -95,6 +101,53 @@ def _resolve_loop_commit(toplevel: Path, artifact_file: Path) -> tuple[str | Non
     return matches[0], ""
 
 
+def _check_null_evidence_skip_reason(
+    current_review: dict,
+    loop_result: dict,
+    artifact_dir: Path,
+    trust_path: Path | None,
+    loop,
+) -> list[Issue]:
+    """G47 null branch (epoch-scoped, REQUIREMENT_EPOCHS['G47_SKIP_REASON']): a repo
+    with a human-pinned command and the wrapper available has no excuse for a silent
+    null execution_evidence, unless this loop is the honest-revert exemption
+    (targeted_finding_status == "carried_forward", where the mandated null IS the
+    correct value). Degrades the same way as the environment-dependent section below:
+    git missing or the artifact outside a work tree is BLIND, not a fail."""
+    if not _ruleset_epoch.applies("G47_SKIP_REASON", current_review):
+        return []
+    if not (Path(__file__).parent / "attested_run.py").is_file():
+        return []
+    if loop_result.get("targeted_finding_status") == "carried_forward":
+        return []
+    try:
+        toplevel = _toplevel(Path(artifact_dir))
+    except FileNotFoundError:
+        _blind("git-missing", loop)
+        return []
+    if toplevel is None:
+        _blind("not-a-git-work-tree", loop)
+        return []
+    tpath = Path(trust_path) if trust_path else _default_trust_path()
+    pin = None
+    if tpath.is_file():
+        try:
+            pin = json.loads(tpath.read_text(encoding="utf-8")).get(str(toplevel))
+        except (json.JSONDecodeError, PermissionError):
+            pin = None
+    if pin is None:
+        return []
+    skip_reason = loop_result.get("execution_evidence_skip_reason")
+    if isinstance(skip_reason, str) and skip_reason.strip():
+        return []
+    return [
+        _g47(
+            "null execution_evidence with a pinned command and wrapper present "
+            "requires execution_evidence_skip_reason (or a wrapped run)"
+        )
+    ]
+
+
 def check_g47_execution_evidence(
     current_review: dict,
     canon,
@@ -110,7 +163,9 @@ def check_g47_execution_evidence(
         return issues
     evidence = loop_result.get("execution_evidence")
     if evidence is None:
-        return issues
+        return _check_null_evidence_skip_reason(
+            current_review, loop_result, artifact_dir, trust_path, loop
+        )
 
     # --- (a) artifact-local checks: no environment access needed -------------------
     if not isinstance(evidence, dict):
@@ -145,6 +200,14 @@ def check_g47_execution_evidence(
     run_id = current_review.get("run_id")
     if not isinstance(run_id, str) or not run_id:
         issues.append(_g47("citing evidence requires a non-null top-level run_id"))
+    skip_reason = loop_result.get("execution_evidence_skip_reason")
+    if isinstance(skip_reason, str) and skip_reason.strip():
+        issues.append(
+            _g47(
+                "execution_evidence_skip_reason is legal only alongside a null "
+                "execution_evidence, not this non-null record"
+            )
+        )
     if issues:
         return issues
 
