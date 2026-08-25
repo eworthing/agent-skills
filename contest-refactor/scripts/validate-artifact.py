@@ -20,6 +20,15 @@ Usage:
     python3 scripts/validate-artifact.py <artifact-dir> [--mode {advisory,strict}]
                                                        [--json <out.json>]
                                                        [--quiet]
+                                                       [--gates G1,G2,...]
+
+--gates runs the full check battery unchanged, then reports only the issues
+whose rule matches a requested canonical gate id (see
+canon/validation-gates.toml). It exists because the full battery is only
+valid at pre-commit -- a mid-loop run structurally fails gates like G18
+(REVIEW_HISTORY.json not yet appended) that skill prose never asked to be
+checked at that point. --gates makes the prose-mandated targeted runs (e.g.
+G1+G2 at sub-step 5, G28 at checkpoint init/resume) actually executable.
 """
 
 from __future__ import annotations
@@ -133,6 +142,34 @@ def _load_project_config(artifact_dir: Path) -> dict | None:
     return None
 
 
+def _resolve_gates(raw: str) -> frozenset[str]:
+    """Parse --gates into a validated set of canonical gate ids.
+
+    Exits 2 (usage error) on an empty value or an unrecognized token -- the
+    same "cannot run" class as `not a directory` (see `_load_project_config`).
+    """
+    tokens = [t.strip() for t in raw.split(",")]
+    if not tokens or any(not t for t in tokens):
+        sys.stderr.write(
+            "error: --gates requires one or more non-empty, comma-separated gate ids\n"
+        )
+        raise SystemExit(2)
+    canon = _canon.load_canon(SKILL_ROOT)
+    unknown = [t for t in tokens if t not in canon.validation_gates]
+    if unknown:
+        sys.stderr.write(f"error: --gates: unknown gate id(s): {', '.join(unknown)}\n")
+        raise SystemExit(2)
+    return frozenset(tokens)
+
+
+def _gate_matches(rule: str, gates: frozenset[str]) -> bool:
+    """A fired issue's rule satisfies a requested gate when it equals the gate
+    id or is a sub-rule of it (e.g. `G21-scorecard` under `G21`) -- the same
+    predicate as validate-fixtures.py's `_gate_satisfies`.
+    """
+    return any(rule == gate or rule.startswith(f"{gate}-") for gate in gates)
+
+
 def run_checks(
     artifact_dir: Path,
     attestation_ledger: Path | None = None,
@@ -243,7 +280,17 @@ def main(argv: Iterable[str] | None = None) -> int:
         default="post-hoc",
         help="G47 freshness phase: pre-commit compares the working tree; post-hoc resolves the loop commit",
     )
+    parser.add_argument(
+        "--gates",
+        default=None,
+        metavar="G1,G2,...",
+        help="comma-separated canonical gate ids; report only issues matching these gates",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
+
+    selected_gates: frozenset[str] | None = None
+    if args.gates is not None:
+        selected_gates = _resolve_gates(args.gates)
 
     artifact_dir: Path = args.artifact_dir
     if not artifact_dir.is_dir():
@@ -255,6 +302,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         attestation_trust=args.attestation_trust,
         attestation_phase=args.attestation_phase,
     )
+    if selected_gates is not None:
+        issues = [i for i in issues if _gate_matches(i.rule, selected_gates)]
     label_prefix = "WARN" if args.mode == "advisory" else "FAIL"
     if issues:
         for issue in issues:
