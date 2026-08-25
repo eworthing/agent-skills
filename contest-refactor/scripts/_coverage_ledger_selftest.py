@@ -68,6 +68,17 @@ def _build_repo(root: Path) -> str:
     # A fixture corpus: deliberately-defective source that exists to be graded.
     (root / "src" / "fixtures").mkdir()
     (root / "src" / "fixtures" / "broken.py").write_text("def x(:\n", encoding="utf-8")
+    # BenchHype leak class: a hidden build/tooling tree and a Tests/ dir, both
+    # nested under the declared source root so they land in the scan and must be
+    # excluded by _fs_filters rather than merely never discovered.
+    (root / "src" / ".artifacts" / "DerivedData").mkdir(parents=True)
+    (root / "src" / ".artifacts" / "DerivedData" / "gen.swift").write_text(
+        "struct Gen {}\n", encoding="utf-8"
+    )
+    (root / "src" / "Tests" / "Support").mkdir(parents=True)
+    (root / "src" / "Tests" / "Support" / "Fixture.swift").write_text(
+        "struct Fixture {}\n", encoding="utf-8"
+    )
     _git(root, "init", "-q")
     _git(root, "config", "user.email", "t@example.com")
     _git(root, "config", "user.name", "t")
@@ -152,6 +163,24 @@ def main() -> int:
             "src/fixtures/broken.py" not in denom,
             "fixture-corpus source must not enter the denominator: it exists to be graded, "
             "not reviewed, and counting it inflates the miss",
+        )
+
+        # BenchHype leak class (contest-refactor avalanche plan, Phase 0): a hidden
+        # build tree and a Tests/ dir must both be excluded, with a non-empty typed
+        # count -- not silently dropped.
+        check(
+            "src/.artifacts/DerivedData/gen.swift" not in denom,
+            "a hidden build/tooling dir (.artifacts) must not enter the denominator",
+        )
+        check(
+            "src/Tests/Support/Fixture.swift" not in denom,
+            "a Tests/ dir must not enter the denominator even when the filename "
+            "doesn't match any test-suffix pattern",
+        )
+        check(
+            exc.get("vendor_or_build", 0) >= 2,
+            f"the hidden dir and the Tests/ dir must both be counted under a typed "
+            f"exclusion reason, got {exc}",
         )
 
         # 3. non-source citations do not inflate the numerator

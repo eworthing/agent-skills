@@ -49,9 +49,14 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-# Reuse the shipped first-party filters rather than mirroring them (the same
-# single-source-of-truth arrangement repo_map.py uses).
-from audit_boundaries import IGNORE_DIRS, _is_generated_file  # noqa: E402
+# Path/test filters come from the shared SSOT (_fs_filters.py), not audit_boundaries:
+# that module's own copies are narrower (Python-only test suffixes, fewer ignored
+# dirs) and audit_suppressions.py depends on that narrower behavior directly, so
+# they were left alone rather than folded in here. The generated-file check stays
+# on audit_boundaries: its `_pb2.py`/`_pb2_grpc.py` filename check has no equivalent
+# in _fs_filters, and this module never had a bug report about generated files.
+from _fs_filters import is_ignored_path, is_test_file  # noqa: E402
+from audit_boundaries import _is_generated_file  # noqa: E402
 
 # Language-agnostic source set. Deliberately excludes .md: documentation is not the
 # architecture under review, and mixing it into the denominator would make the ratio
@@ -106,10 +111,14 @@ FIXTURE_DIRS = frozenset(
 )
 
 
-def _is_test_name(name: str) -> bool:
-    """Language-agnostic test-file heuristic (audit_boundaries' rule generalised)."""
-    stem = name.rsplit(".", 1)[0]
-    return stem.startswith("test_") or stem.endswith(("_test", "Tests", "Test", "_spec"))
+# ponytail: aliased to the shared `_fs_filters.is_test_file` (extension-aware for
+# the languages audit_hotspots.py scans) rather than the generic stem-suffix
+# heuristic this used to be. A stem-suffix test file in an extension this module
+# scans but audit_hotspots doesn't (.rb, .m/.mm/.c/.cc/.cpp/.hpp, .cs, .php, .scala)
+# is no longer caught by filename alone. Upgrade: extend is_test_file with those
+# suffixes if a real miss surfaces. Name kept (not inlined) for
+# _artifact_coverage_citation.py's import surface and the call site below.
+_is_test_name = is_test_file
 
 
 def first_party_files(repo_root: Path, source_roots: list[str]) -> tuple[list[str], dict[str, int]]:
@@ -137,7 +146,7 @@ def first_party_files(repo_root: Path, source_roots: list[str]) -> tuple[list[st
             if not path.is_file() or path.suffix not in SOURCE_EXTS:
                 continue
             rel_parts = path.relative_to(base).parts
-            if any(part in IGNORE_DIRS for part in rel_parts[:-1]):
+            if is_ignored_path(rel_parts):
                 drop("vendor_or_build")
                 continue
             if any(part in FIXTURE_DIRS for part in rel_parts[:-1]):

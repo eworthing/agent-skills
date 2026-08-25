@@ -53,6 +53,20 @@ def _force_utf8_stdout() -> None:
             stream.reconfigure(encoding="utf-8")
 
 
+# NOT re-exported from _fs_filters.py (contest-refactor avalanche plan, Phase 0),
+# despite that module now being the SSOT for the two directory WALKERS
+# (audit_hotspots.py, coverage_ledger.py). audit_suppressions.py reads
+# IGNORE_DIRS/_is_test_file from THIS module directly, and each diverges in a way
+# that would change its (and this module's own) behavior if swapped: this
+# IGNORE_DIRS omits 7 non-Python build/vendor dirs _fs_filters adds (adding them
+# would newly skip a `vendor/` tree in Go-style layouts); _is_test_file below is
+# Python-only, and _fs_filters' version would newly exclude Swift/TS/Go/Rust/
+# Kotlin/Java test files from audit_suppressions.py's suppression scan;
+# _is_generated_file's `_pb2.py`/`_pb2_grpc.py` filename check has no _fs_filters
+# equivalent (swapping it breaks _audit_boundaries_selftest.py's
+# restraint-generated-backedge fixture). None of that is "trivially safe", so this
+# module keeps its own copies.
+#
 # Directory names never scanned: VCS/build/cache/vendor + test + generated trees.
 # `tests`/`test` are excluded so a back-edge that lives only in a test file does not
 # manufacture a production cycle (a documented restraint).

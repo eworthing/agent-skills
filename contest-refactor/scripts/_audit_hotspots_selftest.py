@@ -718,6 +718,26 @@ def test_deriveddata_dir_excluded(base: Path) -> str | None:
     return None
 
 
+def test_hidden_dir_excluded(base: Path) -> str | None:
+    # Hidden dirs (.artifacts, .swiftpm, ...) are tooling/build state by convention.
+    # Neither "artifacts" nor "swiftpm" is itself an IGNORE_DIRS/exact-case token --
+    # this isolates the NEW hidden-dot rule from the pre-existing named-dir checks
+    # (a fixture nested under "DerivedData" would pass for the wrong reason: that
+    # name is already case-insensitively ignored).
+    root = base / "hidden_dir"
+    code = "func work() { if true { print(1) } }\n"
+    _write(root, {".artifacts/App.swift": code, ".swiftpm/Plugin.swift": code})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    if data["coverage"]["ast_grep"]["discovered"] != 0:
+        return (
+            f"expected hidden-dir files excluded from discovery, got {data['coverage']['ast_grep']}"
+        )
+    return None
+
+
 def test_capitalized_migrations_dir_is_discovered(base: Path) -> str | None:
     # "migrations" (lowercase) is Django-style generated code; "Migrations"
     # (capitalized) is hand-written Swift/Kotlin persistence source and must
@@ -822,6 +842,7 @@ def main() -> int:
                 test_swift_tests_dir_extension_suffixed_file_excluded,
             ),
             ("deriveddata_dir_excluded", test_deriveddata_dir_excluded),
+            ("hidden_dir_excluded", test_hidden_dir_excluded),
             (
                 "capitalized_migrations_dir_is_discovered",
                 test_capitalized_migrations_dir_is_discovered,
