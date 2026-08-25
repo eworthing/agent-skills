@@ -140,7 +140,8 @@ v5 replaces this object with a panel — see [§ Schema version 5 changelog](#sc
   "binding": {
     "candidate_commit_sha": "abc1234",    // non-empty string; commit sha of the candidate artifact being challenged
     "run_id": "run-2026-06-21-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d",       // must equal top-level run_id
-    "source_rev": "def5678"               // must equal top-level source_rev
+    "source_rev": "def5678",              // must equal top-level source_rev
+    "candidate_fingerprint": "fp-sha256-…" // the exact fingerprint main handed the challenger to break; must equal top-level candidate_fingerprint. A fingerprint-changing correction discovered mid-challenge (e.g. the challenger's own factual corrections touching scorecard/findings) requires emitting a corrected candidate and running a fresh challenge against it — never recomputing the hash on the already-challenged payload and calling it certified.
   },
   "attempts": [                            // non-empty list; each attempt the challenger made
     {
