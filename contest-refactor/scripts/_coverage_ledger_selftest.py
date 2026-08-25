@@ -265,6 +265,139 @@ def main() -> int:
                 f"run 2 cited 2 in-denominator files, got {runs[1]['cited']}",
             )
 
+        # --- Phase 1: missing-root accounting (avalanche plan) ---------------
+        # A declared root that isn't a directory must be counted (not silently
+        # dropped -- the same survivor-metric hazard as any other exclusion) AND
+        # named, so a typo'd root is diagnosable from the JSON alone.
+        history_missing = {
+            "loops": [
+                {
+                    "loop": 1,
+                    "discovery": {"source_roots": ["src", "nope"]},
+                    "findings": [],
+                }
+            ]
+        }
+        led_missing = cl.compute_ledger(repo, history_missing, None, {})
+        check(
+            led_missing["denominator"]["excluded_by_reason"].get("missing_root") == 1,
+            f"a nonexistent declared root must be counted under 'missing_root', got "
+            f"{led_missing['denominator']['excluded_by_reason']}",
+        )
+        check(
+            led_missing["denominator"]["missing_roots"] == ["nope"],
+            f"the missing root must be named, got {led_missing['denominator'].get('missing_roots')}",
+        )
+
+        # --- Phase 1: per_root counts included files under each declared root -
+        per_root = led_missing["per_root"]
+        check(
+            per_root.get("src") == 4,
+            f"per_root must count included files under 'src', got {per_root}",
+        )
+        check(
+            per_root.get("nope") == 0,
+            f"a missing root contributes zero included files, got {per_root}",
+        )
+
+    # --- Phase 1: absolute / '..'-escaping roots -> typed error, exit 2 ------
+    # (via the CLI path -- main() is what catches InvalidSourceRoot and turns it
+    # into a clean exit 2 instead of an uncaught relative_to() ValueError.)
+    with tempfile.TemporaryDirectory() as td:
+        abs_repo = Path(td) / "abs_repo"
+        abs_repo.mkdir()
+        (abs_repo / "REVIEW_HISTORY.json").write_text(
+            json.dumps(
+                {"loops": [{"loop": 1, "discovery": {"source_roots": ["/etc"]}, "findings": []}]}
+            ),
+            encoding="utf-8",
+        )
+        p = subprocess.run(
+            [sys.executable, str(SKILL_ROOT / "scripts" / "coverage_ledger.py"), str(abs_repo)],
+            capture_output=True,
+            text=True,
+        )
+        check(
+            p.returncode == 2,
+            f"an absolute source root must exit 2 (plumbing), got {p.returncode}: {p.stderr[:200]}",
+        )
+        check(
+            "source_roots entries must be repo-relative" in p.stderr,
+            f"the absolute-root error must name the typed message, got {p.stderr!r}",
+        )
+        check(
+            "Traceback" not in p.stderr,
+            f"an invalid root must be a clean error, not a raw traceback: {p.stderr!r}",
+        )
+
+        escape_repo = Path(td) / "escape_repo"
+        escape_repo.mkdir()
+        (escape_repo / "REVIEW_HISTORY.json").write_text(
+            json.dumps(
+                {"loops": [{"loop": 1, "discovery": {"source_roots": ["../evil"]}, "findings": []}]}
+            ),
+            encoding="utf-8",
+        )
+        p = subprocess.run(
+            [sys.executable, str(SKILL_ROOT / "scripts" / "coverage_ledger.py"), str(escape_repo)],
+            capture_output=True,
+            text=True,
+        )
+        check(
+            p.returncode == 2,
+            f"a '..'-escaping source root must exit 2 (plumbing), got {p.returncode}",
+        )
+        check(
+            "source_roots entries must be repo-relative" in p.stderr,
+            f"the escaping-root error must name the typed message, got {p.stderr!r}",
+        )
+
+    # --- Phase 1: source_roots() enumerator + --list-source-roots ------------
+    with tempfile.TemporaryDirectory() as td:
+        scratch = Path(td) / "scratch"
+        for rel in ("PkgKit/Sources/a.swift", "App/b.swift", "tools/c.py"):
+            p = scratch / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("// x\n", encoding="utf-8")
+        (scratch / "Package.swift").write_text("// pkg\n", encoding="utf-8")
+        helper = scratch / "PkgKit" / "Tests" / "Helper.swift"
+        helper.parent.mkdir(parents=True, exist_ok=True)
+        helper.write_text("// helper\n", encoding="utf-8")
+
+        roots = cl.source_roots(scratch)
+        check(
+            roots == ["App", "PkgKit/Sources", "tools"],
+            f"enumerator must yield exactly the SwiftPM-refined top-level roots, got {roots}",
+        )
+
+        p = subprocess.run(
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts" / "coverage_ledger.py"),
+                str(scratch),
+                "--list-source-roots",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        check(
+            p.returncode == 0,
+            f"--list-source-roots must exit 0 with no REVIEW_HISTORY.json present, got "
+            f"{p.returncode}: {p.stderr[:200]}",
+        )
+        check(
+            p.stdout.splitlines() == roots,
+            f"--list-source-roots must print one root per line matching the enumerator, got "
+            f"{p.stdout.splitlines()!r}",
+        )
+
+        empty = Path(td) / "empty"
+        empty.mkdir()
+        check(
+            cl.source_roots(empty) == ["."],
+            f"an empty tree must enumerate to ['.'], got {cl.source_roots(empty)}",
+        )
+
     # --- slice B2: the handoff disclosure, and its honesty guard -------------
     handoff = (SKILL_ROOT / "references" / "halt-handoff.md").read_text(encoding="utf-8")
     if "## Coverage disclosure" not in handoff:

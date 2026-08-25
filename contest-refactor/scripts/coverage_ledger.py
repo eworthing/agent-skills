@@ -55,7 +55,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 # they were left alone rather than folded in here. The generated-file check stays
 # on audit_boundaries: its `_pb2.py`/`_pb2_grpc.py` filename check has no equivalent
 # in _fs_filters, and this module never had a bug report about generated files.
-from _fs_filters import is_ignored_path, is_test_file  # noqa: E402
+from _fs_filters import is_ignored_path, is_test_file, normalize_roots  # noqa: E402
 from audit_boundaries import _is_generated_file  # noqa: E402
 
 # Language-agnostic source set. Deliberately excludes .md: documentation is not the
@@ -121,15 +121,38 @@ FIXTURE_DIRS = frozenset(
 _is_test_name = is_test_file
 
 
-def first_party_files(repo_root: Path, source_roots: list[str]) -> tuple[list[str], dict[str, int]]:
-    """(included, excluded-by-typed-reason) for source files under the declared roots.
+class InvalidSourceRoot(ValueError):
+    """A declared source_roots entry is absolute or escapes the repo via '..'."""
+
+
+def _validate_source_root(root_rel: str) -> None:
+    """Reject absolute or '..'-escaping roots up front, before any filesystem walk.
+
+    `base / "/abs/path"` silently collapses to `/abs/path` in pathlib -- it does
+    NOT raise, it just rebases to the wrong path. An escaping `..` root resolves
+    outside `base` too, and later crashes `relative_to()` with an uncaught
+    ValueError once a file under it is found. Both are caught here instead, with
+    a message naming the offending root.
+    """
+    if Path(root_rel).is_absolute() or ".." in Path(root_rel).parts:
+        raise InvalidSourceRoot(f"source_roots entries must be repo-relative: {root_rel}")
+
+
+def first_party_files(
+    repo_root: Path, source_roots: list[str]
+) -> tuple[list[str], dict[str, int], list[str]]:
+    """(included, excluded-by-typed-reason, missing-roots) for source files under
+    the declared roots.
 
     Exclusions are COUNTED, never silently dropped: a denominator that shrinks without
     saying how is the survivor-metric hazard the trial-validity work named, and it
-    flatters the result in the same direction every time.
+    flatters the result in the same direction every time. A declared root that isn't
+    a directory is the same hazard under a different name, so it is both counted
+    (excluded["missing_root"]) and named (the third return value).
     """
     out: set[str] = set()
     excluded: dict[str, int] = {}
+    missing: list[str] = []
 
     def drop(reason: str) -> None:
         excluded[reason] = excluded.get(reason, 0) + 1
@@ -139,8 +162,11 @@ def first_party_files(repo_root: Path, source_roots: list[str]) -> tuple[list[st
     # relative_to() raise. Caught by the tmpdir selftest.
     base = repo_root.resolve()
     for root_rel in source_roots or ["."]:
+        _validate_source_root(root_rel)
         root = (base / root_rel).resolve()
         if not root.is_dir():
+            drop("missing_root")
+            missing.append(root_rel)
             continue
         for path in root.rglob("*"):
             if not path.is_file() or path.suffix not in SOURCE_EXTS:
@@ -159,7 +185,31 @@ def first_party_files(repo_root: Path, source_roots: list[str]) -> tuple[list[st
                 drop("generated")
                 continue
             out.add(path.relative_to(base).as_posix())
-    return sorted(out), excluded
+    return sorted(out), excluded, missing
+
+
+def source_roots(repo_root: Path) -> list[str]:
+    """Enumerate top-level source roots by walking the same universe the ledger
+    denominator uses (declared roots = ["."]) -- so the enumerator and the
+    denominator derive from one pass and cannot disagree with each other.
+
+    ponytail: the X -> X/Sources refinement assumes SwiftPM layout (a package
+    manifest at X/, sources under X/Sources/). Manifest parsing is the accurate
+    upgrade path; out of scope for v1.
+    """
+    included, _, _ = first_party_files(repo_root, ["."])
+    base = repo_root.resolve()
+    components: set[str] = set()
+    for rel in included:
+        parts = Path(rel).parts
+        if len(parts) < 2:
+            continue  # a loose top-level file contributes no root component
+        top = parts[0]
+        if top != "Sources" and (base / top / "Sources").is_dir():
+            components.add(f"{top}/Sources")
+        else:
+            components.add(top)
+    return normalize_roots(list(components)) if components else ["."]
 
 
 def cited_paths(history: dict) -> dict[str, int]:
@@ -232,7 +282,7 @@ def compute_ledger(
             if r not in source_roots:
                 source_roots.append(r)
 
-    denominator, excluded = first_party_files(repo_root, source_roots)
+    denominator, excluded, missing_roots = first_party_files(repo_root, source_roots)
     denom_set = set(denominator)
     first_cite = cited_paths(history)
 
@@ -317,6 +367,18 @@ def compute_ledger(
             }
         )
 
+    # Included denominator files under each declared root -- consumed by the halt
+    # handoff's per-root coverage disclosure. A missing root naturally counts 0
+    # (nothing was walked under it).
+    per_root: dict[str, int] = {}
+    for root in source_roots:
+        root_norm = root.rstrip("/")
+        if root_norm in ("", "."):
+            per_root[root] = len(denominator)
+        else:
+            prefix = root_norm + "/"
+            per_root[root] = sum(1 for f in denominator if f == root_norm or f.startswith(prefix))
+
     total = len(denominator)
     return {
         "schema": "coverage-ledger/1",
@@ -332,8 +394,10 @@ def compute_ledger(
             "files": denominator,
             # scanned == included + excluded, derived on every run (design note §5)
             "excluded_by_reason": excluded,
+            "missing_roots": missing_roots,
             "scanned": total + sum(excluded.values()),
         },
+        "per_root": per_root,
         "sets": {
             "cited": cited,
             "uncited": uncited,
@@ -387,11 +451,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("repo_root", type=Path)
     ap.add_argument("--json", type=Path, default=None)
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument(
+        "--list-source-roots",
+        action="store_true",
+        help="print the enumerated source roots (one per line) and exit; needs no history",
+    )
     args = ap.parse_args(argv)
 
     if not args.repo_root.is_dir():
         sys.stderr.write(f"error: not a directory: {args.repo_root}\n")
         return 2
+
+    if args.list_source_roots:
+        for root in source_roots(args.repo_root):
+            print(root)
+        return 0
 
     history = _load(args.repo_root / "REVIEW_HISTORY.json")
     if history is None:
@@ -399,7 +473,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     registry = _load(args.repo_root / "findings_registry.json")
 
-    led = compute_ledger(args.repo_root, history, registry, observation_shas(registry))
+    try:
+        led = compute_ledger(args.repo_root, history, registry, observation_shas(registry))
+    except InvalidSourceRoot as exc:
+        sys.stderr.write(f"error: {exc}\n")
+        return 2
     if args.json is not None:
         try:
             args.json.write_text(json.dumps(led, indent=2) + "\n", encoding="utf-8")
