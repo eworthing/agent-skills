@@ -209,6 +209,28 @@ def main() -> int:
         if p.returncode == 0:
             failures.append("hotspot-missing-json: expected pre-dispatch failure, got 0")
 
+        # 8) A missing/unreadable --current-review (the live Step-0 circular-dependency
+        # incident: preflight invoked before CURRENT_REVIEW.json existed) must name the
+        # required scanner -> persist -> preflight order, not just "cannot be read".
+        hotspot_json.write_text(scan.stdout, encoding="utf-8")
+        missing_review = base / "NOPE_REVIEW.json"
+        p = _run(
+            [
+                str(hotspot_scope),
+                "--hotspot-json",
+                str(hotspot_json),
+                "--current-review",
+                str(missing_review),
+            ]
+        )
+        if p.returncode == 0:
+            failures.append("missing-current-review: expected pre-dispatch failure, got 0")
+        elif "audit_hotspots.py" not in p.stderr:
+            failures.append(
+                f"missing-current-review: failure should name the required Step-0 order\n"
+                f"{p.stderr.rstrip()}"
+            )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

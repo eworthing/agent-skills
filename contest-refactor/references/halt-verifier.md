@@ -225,11 +225,13 @@ The challenger returns JSON mirroring `halt_success_challenge` in
     "candidate_fingerprint": "<fp>"
   },
   "attempts": [
-    { "arm": "new_finding", "target": "<dimension|finding>", "what_tried": "...", "why_failed": "..." }
+    { "arm": "new_finding", "target": "simplicity", "what_tried": "...", "why_failed": "..." }
   ],
   "reason": "<one sentence: why the candidate held, or what broke it>"
 }
 ```
+
+`target` is a bare token, never a token plus descriptive suffix — put descriptive detail in `what_tried` instead. For the mandatory diversity arm above (§ Arm diversity), `target` must be the exact string `simplicity` or `domain_modeling` (`_check_attempts_shape` checks exact membership); any other `new_finding`/`residual_refutation` arm's `target` is any other non-empty dimension name or finding id.
 
 `outcome: "broke"` carries the finding (or residual refutation) in `attempts[]`;
 main reads it to seed the next loop's Priority-1 work.

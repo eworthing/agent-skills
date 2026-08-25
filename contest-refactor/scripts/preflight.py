@@ -127,12 +127,17 @@ def _hotspot_failures(hotspot_json: str | None, current_review: str | None) -> l
     if not hotspot_json or not current_review:
         return []
 
+    order_hint = (
+        "required order: run audit_hotspots.py --json first, persist its object unchanged as "
+        "discovery.hotspot_scan when writing CURRENT_REVIEW.json, then run preflight"
+    )
+
     raw, error = _read_json(hotspot_json, "hotspot scanner output")
     if error:
-        return [error]
+        return [error, order_hint]
     artifact, error = _read_json(current_review, "current review")
     if error:
-        return [error]
+        return [error, order_hint]
 
     discovery = artifact.get("discovery") if isinstance(artifact, dict) else None
     persisted = discovery.get("hotspot_scan") if isinstance(discovery, dict) else None
@@ -140,6 +145,8 @@ def _hotspot_failures(hotspot_json: str | None, current_review: str | None) -> l
     failures.extend(f"persisted hotspot_scan: {msg}" for msg in validate_hotspot_scan(persisted))
     if raw != persisted:
         failures.append("persisted hotspot_scan does not match the hotspot scanner output")
+    if failures:
+        failures.append(order_hint)
     return failures
 
 

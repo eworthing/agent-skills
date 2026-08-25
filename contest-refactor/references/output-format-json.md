@@ -216,7 +216,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim â†
     "source_roots": ["BenchHypeKit/Sources/"],
     "test_command": "cd BenchHypeKit && swift test",
     "build_command": "./build_install_launch.sh ios --skip-preflight",
-    "lens": "Apple",                            // enum: Apple | Generic
+    "lens": "Apple",                            // enum: Apple | Generic. The single resolved stack lens only -- the full loaded-lens-file list (stack lens + always-included security/efficiency lenses) is recorded in the CURRENT_REVIEW.md prose Discovery section (startup.md sub-step 6), not duplicated here.
     "adrs": ["ADR-0001: reject transport parity tests"],
     "domain_terms": ["AppState", "InstanceID", "TileCueResolver"],
     "test_scope": "full",                       // (v3+) enum: full | incremental. "incremental" iff --test-filter <pattern> set.

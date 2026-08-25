@@ -325,7 +325,7 @@ If 2+ entries match the candidate via M2 and 0 via M1 → emit `open_question_fo
 
 ## REVIEW_HISTORY.json schema
 
-Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_REVIEW.json is appended to the top-level `loops[]` array on Step 3 step 9. `--reset` starts a new run at loop 1 and preserves earlier entries; a same-loop replay or `HALT_SUCCESS_candidate` promotion replaces only the last entry for that run and loop.
+Mirrors REVIEW_HISTORY.md as a structured archive. Each loop's complete CURRENT_REVIEW.json is appended to the top-level `loops[]` array on Step 3 step 9. `--reset` starts a new run at loop 1 and preserves earlier entries; a same-loop replay or `HALT_SUCCESS_candidate` promotion replaces only the last entry for that run and loop. `scripts/archive_history.py write` owns this append-vs-replace-last mechanics (SKILL.md § Step 3 step 9) — never hand-edit the file; it produces no shape but this one (never a `runs[].loops[]` variant).
 
 ```jsonc
 {
