@@ -117,6 +117,7 @@ A single failure here blocks the loop. Revise the review, re-run all hard gates.
   - `halt_success_challenge.binding.run_id` equals top-level `run_id`.
   - `halt_success_challenge.binding.source_rev` equals top-level `source_rev`.
   - `halt_success_challenge.binding.candidate_commit_sha` non-empty string.
+  - *At the fingerprint-binding epoch or later* (`_ruleset_epoch.FINGERPRINT_BOUND`, boundary commit `44b4c03` — artifacts from before this epoch are unaffected, never retroactively failed): `halt_success_challenge.binding.candidate_fingerprint` must be non-empty AND equal top-level `candidate_fingerprint`. This closes the gap the instrumented-run #7 audit found: a factual correction discovered mid-challenge that touches fingerprint-bearing fields (scorecard/findings) must produce a corrected candidate and a fresh challenge — recomputing the hash on the already-challenged payload and promoting it is not certification.
 
   When `state == "HALT_SUCCESS_candidate"` and `schema_version >= 4`:
   - `halt_success_challenge` must be `null` (candidate has not been challenged yet).

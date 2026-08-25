@@ -28,17 +28,23 @@ classifier is built on: a validator "cannot tell 'this version omitted it' from
 validation-time inference." That rules out guessing from an opaque or unresolved
 SHA. The original LEGACY/CURRENT boundary therefore remains shape-based.
 
-G49 is the first requirement with a later, provable boundary: commit 651ea50
+G49 was the first requirement with a later, provable boundary: commit 651ea50
 introduced the hotspot-v2 handoff, so a live skill checkout can use Git ancestry
-to classify that commit and descendants as HOTSPOT_V2. A depth-1 clone falls back
-only when the artifact revision resolves to that checkout's current HEAD.
+to classify that commit and descendants as HOTSPOT_V2. G32's fingerprint-binding
+requirement (commit 44b4c03) is the second, same mechanism: `_is_at_or_after`
+generalizes the ancestry + shallow-clone-fallback check, and `classify()` walks
+`_PROVABLE_EPOCHS` newest-first so a new boundary slots in without touching the
+older ones. A depth-1 clone falls back only when the artifact revision resolves
+to that checkout's current HEAD — which proves at least the newest defined
+epoch, since the fallback cannot tell which boundary it actually satisfied.
 Unresolved revisions and copied non-Git skills remain at the older epoch rather
 than being retroactively failed on a guess.
 
 ## Fail-closed direction
 
 This module backs RETROACTIVE requirements only — rules whose fields were added
-after artifacts already existed on disk (G43, G46, G49). An artifact that cannot
+after artifacts already existed on disk (G43, G46, G49, G32's fingerprint
+binding). An artifact that cannot
 be PROVEN to meet an epoch boundary stays in an older epoch: a marker-less or
 unresolved artifact goes unchecked rather than a genuinely older artifact being
 wrongly failed. That intentional asymmetric trade puts the cost on under-
@@ -66,11 +72,23 @@ LEGACY = "legacy"
 CURRENT = "current"
 HOTSPOT_V2 = "hotspot_v2"
 HOTSPOT_V2_REV = "651ea50"
+FINGERPRINT_BOUND = "fingerprint_bound"
+FINGERPRINT_BOUND_REV = "44b4c03"
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 
-# Oldest -> newest. Index comparison in `applies()` is what lets a future third
-# epoch slot in without changing any call site.
-EPOCHS: tuple[str, ...] = (LEGACY, CURRENT, HOTSPOT_V2)
+# Oldest -> newest. Index comparison in `applies()` is what lets a future
+# epoch slot in without changing any call site. classify() below checks
+# newest-first so a later boundary always wins over an earlier one an
+# artifact also satisfies.
+EPOCHS: tuple[str, ...] = (LEGACY, CURRENT, HOTSPOT_V2, FINGERPRINT_BOUND)
+
+# Newest -> oldest, paired with each epoch's boundary revision. Extending this
+# (and EPOCHS above) is the whole job of adding a future git-ancestry-provable
+# epoch; classify() and _is_at_or_after() need no changes.
+_PROVABLE_EPOCHS: tuple[tuple[str, str], ...] = (
+    (FINGERPRINT_BOUND, FINGERPRINT_BOUND_REV),
+    (HOTSPOT_V2, HOTSPOT_V2_REV),
+)
 
 # A short git SHA per `git rev-parse --short HEAD`: lowercase hex, default
 # abbrev 7, up to the full 40. Matches G19's own acceptance (_artifact_history.py
@@ -109,6 +127,13 @@ REQUIREMENT_EPOCHS: dict[str, str] = {
     # G48 (run_id discipline) is deliberately NOT lifted here. HOTSPOT_V2 satisfies
     # its post-ship epoch condition, but its separate instrumented-pass promotion
     # condition remains; see _artifact_run_identity.py's promotion bar.
+    # G32 v4: halt_success_challenge.binding.candidate_fingerprint, required
+    # non-empty and equal to the top-level candidate_fingerprint. Landed
+    # 2026-08-24, commit 44b4c03 (the prose-only commit that first documents the
+    # field; this checker enforcement follows in the same wave, per
+    # output-format-migrations.md's two-commit shape for a retroactive field --
+    # see _artifact_panel.py's check_g32_halt_success_challenge).
+    "G32_FINGERPRINT_BINDING": FINGERPRINT_BOUND,
     # Slot for a future client, still unclaimed.
     # "G17_COVERAGE_CITATION": CURRENT,
 }
@@ -137,12 +162,18 @@ def _resolve_revision(revision: str) -> str | None:
 
 
 @cache
-def _is_hotspot_v2_revision(skill_rev: str) -> bool:
+def _is_at_or_after(skill_rev: str, boundary_rev: str) -> bool:
+    """True when `skill_rev` resolves to `boundary_rev` or a descendant of it.
+
+    Generalized from the original hotspot_v2-only check so a later provable
+    epoch (FINGERPRINT_BOUND) reuses the identical ancestry + shallow-clone
+    fallback logic instead of a copy-pasted variant.
+    """
     resolved = _resolve_revision(skill_rev)
     if resolved is None:
         return False
 
-    boundary = _resolve_revision(HOTSPOT_V2_REV)
+    boundary = _resolve_revision(boundary_rev)
     if boundary is not None:
         try:
             ancestry = subprocess.run(
@@ -185,13 +216,19 @@ def classify(current_review: dict, history: dict | None = None) -> str:
     and for a future signal — e.g. cross-loop skill_rev consistency — but is not
     read today. Classification uses the artifact's `skill_rev` plus only Git facts
     the local skill checkout can prove; unresolved revisions never move forward.
+
+    Checks `_PROVABLE_EPOCHS` newest-first so a skill_rev satisfying more than
+    one boundary lands at the newest (a shallow clone's HEAD-equality fallback
+    in `_is_at_or_after` cannot tell which boundary it satisfied, so it always
+    proves at least the first — newest — one tried).
     """
     skill_rev = current_review.get("skill_rev")
-    if isinstance(skill_rev, str) and _SKILL_REV_RE.match(skill_rev):
-        if _is_hotspot_v2_revision(skill_rev):
-            return HOTSPOT_V2
-        return CURRENT
-    return LEGACY
+    if not (isinstance(skill_rev, str) and _SKILL_REV_RE.match(skill_rev)):
+        return LEGACY
+    for provable_epoch, boundary_rev in _PROVABLE_EPOCHS:
+        if _is_at_or_after(skill_rev, boundary_rev):
+            return provable_epoch
+    return CURRENT
 
 
 def applies(requirement: str, current_review: dict, history: dict | None = None) -> bool:

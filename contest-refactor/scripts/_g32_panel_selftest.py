@@ -88,6 +88,74 @@ def _cases():
         ("v4 single-challenger shape is not a valid panel at schema_version=5", v4_review(5), True)
     )
 
+    # --- v4 binding.candidate_fingerprint, epoch-scoped (register P0 #1) ---
+    # Real repo SHAs, per the pattern _ruleset_epoch_selftest.py already uses for
+    # HOTSPOT_V2 (651ea50/27e0bdb): FINGERPRINT_BOUND_SKILL_REV is the prose-only
+    # commit that first documents this binding field; PRE_EPOCH_SKILL_REV
+    # (651ea50) is real and resolvable but strictly precedes that boundary, so it
+    # proves old artifacts are never retroactively failed.
+    FINGERPRINT_BOUND_SKILL_REV = "44b4c03"
+    PRE_EPOCH_SKILL_REV = "651ea50"
+
+    def v4_review_at(skill_rev, binding_fingerprint="__match__"):
+        binding = {"candidate_commit_sha": COMMIT_SHA, "run_id": RUN_ID, "source_rev": SOURCE_REV}
+        if binding_fingerprint == "__match__":
+            binding["candidate_fingerprint"] = FP
+        elif binding_fingerprint is not None:
+            binding["candidate_fingerprint"] = binding_fingerprint
+        # else: field omitted entirely
+        return {
+            "schema_version": 4,
+            "state": "HALT_SUCCESS",
+            "skill_rev": skill_rev,
+            "run_id": RUN_ID,
+            "source_rev": SOURCE_REV,
+            "candidate_fingerprint": FP,
+            "scorecard": {},
+            "findings": [],
+            "halt_success_challenge": {
+                "outcome": "held",
+                "challenger_model": "opus",
+                "attempts": _attempts(),
+                "reason": "no residual found",
+                "binding": binding,
+            },
+        }
+
+    cases.append(
+        (
+            "v4 at the fingerprint-binding epoch, binding.candidate_fingerprint matches top-level: passes",
+            v4_review_at(FINGERPRINT_BOUND_SKILL_REV),
+            False,
+        )
+    )
+    cases.append(
+        (
+            "v4 at the fingerprint-binding epoch, binding.candidate_fingerprint drifted "
+            "(challenged c61b... vs promoted top-level fingerprint) fails",
+            v4_review_at(
+                FINGERPRINT_BOUND_SKILL_REV,
+                binding_fingerprint="fp-sha256-c61b2211b21ec9ecae983064e6423ce1",
+            ),
+            True,
+        )
+    )
+    cases.append(
+        (
+            "v4 at the fingerprint-binding epoch, binding.candidate_fingerprint missing entirely: fails",
+            v4_review_at(FINGERPRINT_BOUND_SKILL_REV, binding_fingerprint=None),
+            True,
+        )
+    )
+    cases.append(
+        (
+            "v4 pre-epoch (resolvable skill_rev, before the fingerprint-binding boundary), "
+            "binding.candidate_fingerprint missing entirely: still passes",
+            v4_review_at(PRE_EPOCH_SKILL_REV, binding_fingerprint=None),
+            False,
+        )
+    )
+
     # --- required_panel_size ---
     cases.append(
         ("required_panel_size != 3 fails", _success_review(_challenge(required_panel_size=2)), True)

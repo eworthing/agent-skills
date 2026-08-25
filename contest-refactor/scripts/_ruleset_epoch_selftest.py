@@ -82,6 +82,11 @@ def _classify_cases() -> list[tuple[str, dict, str]]:
             "hotspot_v2",
         ),
         (
+            "fingerprint-binding boundary revision",
+            {"schema_version": 4, "skill_rev": "44b4c03"},
+            epoch.FINGERPRINT_BOUND,
+        ),
+        (
             "unresolved valid SHA cannot prove the newer epoch",
             {"schema_version": 4, "skill_rev": "0000000"},
             epoch.CURRENT,
@@ -100,12 +105,12 @@ def _classify_at(root: Path, skill_rev: str) -> str:
     try:
         epoch.SKILL_ROOT = root
         epoch._resolve_revision.cache_clear()
-        epoch._is_hotspot_v2_revision.cache_clear()
+        epoch._is_at_or_after.cache_clear()
         return epoch.classify({"schema_version": 4, "skill_rev": skill_rev})
     finally:
         epoch.SKILL_ROOT = original_root
         epoch._resolve_revision.cache_clear()
-        epoch._is_hotspot_v2_revision.cache_clear()
+        epoch._is_at_or_after.cache_clear()
 
 
 def _check_shallow_head_fallback() -> list[str]:
@@ -169,8 +174,14 @@ def _check_shallow_head_fallback() -> list[str]:
             text=True,
         ).stdout.strip()
         got = _classify_at(shallow, shallow_head)
-        if got != "hotspot_v2":
-            found.append(f"classify: shallow current HEAD expected 'hotspot_v2', got {got!r}")
+        # The fallback cannot tell WHICH boundary an unresolvable-history shallow
+        # clone satisfies -- classify() tries newest-first, so it proves the
+        # newest defined epoch, not specifically hotspot_v2. Update this
+        # constant again the next time a newer provable epoch is added.
+        if got != epoch.FINGERPRINT_BOUND:
+            found.append(
+                f"classify: shallow current HEAD expected {epoch.FINGERPRINT_BOUND!r}, got {got!r}"
+            )
     return found
 
 
@@ -219,6 +230,22 @@ if epoch.applies("G49_HOTSPOT_SCAN", _CURRENT_ART):
     failures.append("applies: G49 must not retroactively apply before hotspot_v2")
 if not epoch.applies("G49_HOTSPOT_SCAN", {"schema_version": 4, "skill_rev": "651ea50"}):
     failures.append("applies: G49 must apply at the hotspot-v2 boundary")
+
+_FP_BOUND_ART = {"schema_version": 4, "skill_rev": "44b4c03"}
+if epoch.REQUIREMENT_EPOCHS.get("G32_FINGERPRINT_BINDING") != epoch.FINGERPRINT_BOUND:
+    failures.append("REQUIREMENT_EPOCHS['G32_FINGERPRINT_BINDING'] must start at fingerprint_bound")
+if epoch.applies("G32_FINGERPRINT_BINDING", _CURRENT_ART):
+    failures.append(
+        "applies: G32_FINGERPRINT_BINDING must not retroactively apply before fingerprint_bound"
+    )
+if epoch.applies("G32_FINGERPRINT_BINDING", {"schema_version": 4, "skill_rev": "651ea50"}):
+    failures.append(
+        "applies: G32_FINGERPRINT_BINDING must not apply at the older hotspot-v2 boundary"
+    )
+if not epoch.applies("G32_FINGERPRINT_BINDING", _FP_BOUND_ART):
+    failures.append(
+        "applies: G32_FINGERPRINT_BINDING must apply at the fingerprint-binding boundary"
+    )
 
 # [I1] items 1-4: the four requirement keys the new enforcement checkers read
 # (_artifact_independence.py, _artifact_transitions.py,

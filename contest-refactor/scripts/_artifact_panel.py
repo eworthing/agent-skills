@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 
+import _ruleset_epoch
 from _artifact_core import Issue
 from candidate_fingerprint import candidate_fingerprint
 
@@ -77,7 +78,11 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
     schema_version == 4 (unchanged, single-challenger contract): on HALT_SUCCESS,
     halt_success_challenge is non-null with outcome=='held', a non-empty
     challenger_model, diverse attempts[], a non-empty reason, and binding.run_id /
-    .source_rev matching the top-level fields. On HALT_SUCCESS_candidate the
+    .source_rev matching the top-level fields. At the fingerprint-binding epoch
+    (_ruleset_epoch.FINGERPRINT_BOUND) binding.candidate_fingerprint is also
+    required non-empty and equal to the top-level candidate_fingerprint -- a
+    fingerprint-changing correction after the challenge needs a fresh candidate
+    and a fresh challenge, not a recomputed hash. On HALT_SUCCESS_candidate the
     challenge is null and run_id/source_rev/candidate_fingerprint are non-null. For
     either state candidate_fingerprint must equal the canonical digest.
 
@@ -211,6 +216,21 @@ def check_g32_halt_success_challenge(current_review: dict) -> list[Issue]:
                     f"binding.source_rev={binding_source_rev!r} != top-level source_rev={top_source_rev!r}"
                 )
             )
+        if _ruleset_epoch.applies("G32_FINGERPRINT_BINDING", current_review):
+            binding_fingerprint = binding.get("candidate_fingerprint")
+            if not isinstance(binding_fingerprint, str) or not binding_fingerprint.strip():
+                issues.append(
+                    _g32("halt_success_challenge.binding.candidate_fingerprint must be non-empty")
+                )
+            elif binding_fingerprint != top_fingerprint:
+                issues.append(
+                    _g32(
+                        f"binding.candidate_fingerprint={binding_fingerprint!r} != top-level "
+                        f"candidate_fingerprint={top_fingerprint!r} -- a fingerprint-changing "
+                        "correction requires a fresh candidate and a fresh challenge, not a "
+                        "recomputed hash"
+                    )
+                )
 
     return issues
 
