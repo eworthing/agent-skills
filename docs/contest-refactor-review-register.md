@@ -518,6 +518,66 @@ denominator); a `per_root_cited` ledger field (handoff currently composes it fro
 compound-test-dir helper leakage (`FooUITests/Support.swift`) tracked with the `spec.swift`
 false-positive; the frozen-hash re-pin pass still owed.
 
+## Live run #8 — 2026-08-25 (claude_code; multi-root first light + two live incidents)
+
+First unscoped run on the d13bba4 skill, under Claude Code (`spawn_isolation: subagent`,
+loop_model `claude-opus-5` via `user_flag`, run id `run-2026-08-25-4a5d0312…`). The multi-root
+fix worked on first contact: four declared roots (`BenchHype`, `BenchHypeKit/Sources`, `scripts`,
+`tools`), repo-root scan 606 discovered / 0 failed, a `scripts/uitest_lanes.py` candidate in the
+top six, and loop 3's cluster sweep re-graded F-024 from Cosmetic to Noticeable (unjustified
+`public` at 7 sites across 4 modules — a finding structurally invisible to every prior
+single-root run). The `run_id: None` first-write anomaly self-resolved on a later emit pass.
+Section written mid-run; all fixes below are PENDING and held until the run terminates.
+
+### Incident 1 — loop-2 ordering fusion (edit before emit, checkpoint skipped)
+
+Loop 2 edited source before the Step-1 emit and never wrote `LOOP_STATE.json` (confessed in
+`adadd935` after the operator's mid-loop correction; the validated commit `52873259` was kept
+rather than re-derived byte-identically). Root cause: **backlog-seeded certainty** — loop 2's
+finding was literally loop 1's backlog item, so the agent treated Steps 1–2 as already done and
+batched artifact writes at commit time. Loop 1 (no backlog, real discovery) ordered correctly;
+loop 3 (post-correction) also complied — emit 08:38 before edits 08:40, checkpoint with all 8
+`pre_step3_blob_shas` matching the dirty set 1:1. Detection gap: **ordering evidence is
+self-erasing** — every gate validates committed state, wrong-order and right-order loops commit
+byte-identical output, and `LOOP_STATE.json` is deleted at sub-step 11.f on success, so no
+post-hoc witness exists. Items: (a) persist a minimal checkpoint witness into the artifact or
+history entry a gate can check; (b) Step-1 prose: a backlog entry is not a completed Step 1 —
+emit before touching code even when the fix is known; (c) the mid-gap tripwire (source modified
+while the artifact still reads loop N−1) stays a candidate, checkable only at next-validate.
+
+### Incident 2 — executor stall cascade (three stalls, root-caused, fixed in-run)
+
+All three stalls clustered at the test-gate boundary and had one mechanism, proven from the
+subagent transcripts. **Cause A:** executors end their turn to "wait for a completion
+notification" from a backgrounded watcher of the multi-minute gate — in-process teammate
+subagents are never re-woken by background-task completion, so waiting equals permanent idle
+(`contest-loop-3` 08:47: backgrounded `pgrep` watcher, "I'll wait…", dead; `contest-loop-3b`
+08:54: foreground wait auto-backgrounded at the 120 s Bash ceiling, same death; loop 2's
+late-report was the quiet variant). Same class as the PPR 2-minute-ceiling lesson. **Cause B:**
+fencing a stalled executor never killed its process tree, so gate runs piled up — three
+concurrent `run_local_gate.sh` trees (a 15 m 51 s orphaned `--targeted` still driving
+`xcodebuild`, a fenced `--quick` chain, and the live inline gate) contending for `.build`/
+DerivedData, slowing every successive gate and poisoning its evidence. In-run remediation by the
+operator session: all three trees killed (one needed a second pass — the group kill re-parented
+`run_local_gate.sh` into a new PGID, the exact kill-tree failure PPR hardening documented), its
+own contaminated gate deliberately discarded, single-flight re-run inline; working tree survived
+byte-for-byte per the checkpoint. Fixes owed to `provider-adapters.md` claude_code guidance:
+(a) an executor must never end its turn awaiting a background notification — poll with repeated
+short foreground checks, or run gates where wake-on-completion works (inline/main); (b) fencing
+rule — kill the replaced executor's process tree (PGID + re-parent sweep) before spawning the
+successor; (c) single-flight gate guard — check for a running gate before starting one, using a
+bracket-anchored pattern (`pgrep -f '[r]un_local_gate'`): a bare `pgrep -f` matches the checking
+shell's own command line and self-reports a false positive (BenchHype `cli-corrections.md`
+Rule 7 documents that exact trap).
+
+### Cleared during the run
+
+The app-target coverage risk on loop 3's visibility narrowing was checked empirically: all 8
+narrowed declaration names grepped against `BenchHype/`, `tools/`, `scripts/` — zero Swift
+references (one shell-script name hit in `run_sim_snapshots.sh`, not compiled code). The
+`--quick`-doesn't-build-the-app gap itself remains real and belongs in the handoff's coverage
+disclosure.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
