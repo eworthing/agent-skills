@@ -432,6 +432,43 @@ report's causal explanations.
 - Focused selftests are red on the five observed failures before their fixes, then green; the full
   `validate-repo.py`, validator selftests, fixture corpus, and Ruff gates remain green.
 
+### Remediation landed — 2026-08-25
+
+All ten work-order items shipped across five sequential sonnet waves, each independently verified
+before the next dispatched. Commits: `152d8a3` (fingerprint CLI compute/verify/write), `44b4c03` +
+`32dce1c` (G32 `binding.candidate_fingerprint`, epoch `G32_FINGERPRINT_BINDING` keyed to the
+prose commit — the two-commit epoch shape G49 established), `c2d095f` + `c0de3e3` (scan
+accounting + case-insensitive ignore dirs), `57878a1` (opencode three-tier adapter + four-value
+model-source table, prose-guarded by selftest), `982620c` (G22 no-finding subject forms,
+repo-root skip-bug fix, `check_commit_subject.py` pre-commit checker), `7ffd502` + `41bca16`
+(G50 hotspot-triage completeness, epoch `HOTSPOT_TRIAGE`), `d8963d6` (`archive_history.py`
+helper, lens-scalar/G32-target/HALT-template alignments, preflight ordering diagnostic).
+
+Completion criteria were replayed against the **real** terminal artifact (`8c5bf1d7` payload,
+skill_rev bumped to the remediated revision): the c61b→035e drift and a missing binding
+fingerprint each fire G32, a matching binding passes; the observed 5-of-6 triage case and a
+missing triage block each fire G50, 6-of-6 passes. BenchHypeKit rescans `577/577/0, ok` with
+`Sources/BenchHypePersistence/Migrations/` restored to coverage and zero `Tests/` leakage; the
+widened G22 run against BenchHype's actual log now emits the Issue it originally missed;
+`check_commit_subject.py` rejects the literal F-NEW subject and accepts the no-finding form.
+
+Found during remediation, disposition noted:
+- **Fixed (`c0de3e3`):** the prescribed case-insensitive ignore-dir comparison initially
+  swallowed Swift's hand-written `Sources/**/Migrations/` via the Django-oriented `migrations`
+  entry — one real production file lost from coverage. `migrations` is now exact-lowercase-only,
+  fixture-guarded both directions.
+- **Parked (pre-existing, one file):** `_is_test_file`'s `spec.swift` suffix heuristic
+  false-positives real domain types — BenchHypeKit's `Sources/BenchHypeDomain/Values/PlaybackSpec.swift`
+  is invisible to the hotspot scanner. Not introduced by this work; fix would trade against
+  Quick/Nimble spec exclusion outside `Tests/` trees.
+- **Parked (pre-existing):** `_exec_replay_selftest.py` and `_paired_arm_selftest.py` were
+  already red before the waves (frozen SKILL.md/method.md prose hashes drifted under earlier
+  edits). Every wave verified their failure output byte-identical before/after. They need one
+  deliberate re-pin pass once prose settles.
+- **Accepted residual:** BenchHype's two historic F-NEW commits remain in its log; a future
+  multi-loop run whose G22 window reaches depth 3–4 will correctly flag them — the gate working
+  on genuinely malformed history, not a false positive.
+
 ## Coverage
 
 The entire 1,348-file skill directory was in scope: `SKILL.md`, 26 reference documents, 111 top-level Python scripts, 6 top-level shell scripts, 21 canon TOMLs, 91 fixture directories, 20 reviewer cases, 37 scenarios, and the remaining plans, assets, eval outputs, and metadata. The review used the repository knowledge graph for structural discovery and call-path tracing, then inspected the relevant source and prose contracts directly. Corpus-sized fixture/output trees were validated mechanically; execution, rollback, terminal-validation, migration, and fixture-harness paths received manual source review.
