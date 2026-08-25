@@ -26,9 +26,11 @@ metadata about the eval suite's own design, not a vocabulary validated against c
 output or shared machinery read by multiple unrelated scripts (contrast canon/trial-validity.toml,
 whose thresholds are consumed by both this suite and, eventually, exec_replay_grade.py).
 `criterion_class()` below is the reader; absence is `"unclassified"`, never a default to
-either class (D6 -- see the module docstring note on the existing corpus, and
-`evals/README.md`'s "Criterion classification" section for why the 165 assertions already in
-evals.json are, today, all unclassified rather than retroactively guessed at).
+either class (D6 -- see `evals/README.md`'s "Criterion classification" section). The
+"all unclassified" state described there was the situation at introduction only: the
+corpus has since been classified (commit `de02426` -- all 165 assertions carry a class,
+151 `outcome` and 14 `skill_contract`, none `unclassified`); the `unclassified` default
+remains the safety net for assertions authored without a class, never a steady state).
 
 D4 -- the seam with item 21: a manipulation-check failure (the with-skill arm never invoked
 the skill, or the without-skill arm did) is graded as an ordinary counted, FAILING outcome
