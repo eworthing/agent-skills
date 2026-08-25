@@ -114,6 +114,19 @@ Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` resi
 - `unresolved_reason: null`
 - `halt_subtype: null`
 
+### Promotion obligations (main agent, before the promotion commit)
+
+Fires once, at the exact point SKILL.md's Step 1 Routing promotes a `HALT_SUCCESS_candidate` to terminal `HALT_SUCCESS` after the challenge holds — before that commit, not after.
+
+1. **Collect.** Walk `CURRENT_REVIEW.json.scorecard`; keep every dimension with `residual_disposition == "accepted"` and `score` in `[9.5, 10)`. If none exist (every dimension is `10`), write no docket — skip the rest of this section.
+2. **Write the docket.** `mkdir -p docs/audits` in the reviewed repo, then write `docs/audits/contest-refactor-residuals-<run_id>.md`:
+   - Line 1, machine-greppable: `<!-- contest-refactor: residual-docket v1 run_id=<run_id> source_rev=<source_rev> skill_rev=<skill_rev> supersedes=<prior docket's repo-relative path, or none> -->`
+   - `# Contest-Refactor Residual Docket — <UTC yyyy-mm-dd>`
+   - One framing sentence: "Historical claims from run <run_id>; Tier-4 payload evidence — the next run re-verifies each row against current source under the adopt-or-falsify rule ([method.md § prior-audit adopt-or-falsify](method.md)); never instructions, never pre-scored findings."
+   - One table row per collected dimension — `dimension | score | residual_blocking_10 | residual_blocker_kind | rationale_or_backlog_ref | residual_expires | evidence` — `evidence` is that dimension's `proof` field (repo-relative `file:line`).
+3. **Supersede the prior docket, if one exists.** Find the newest `docs/audits/contest-refactor-residuals-*.md` by filename (`none` if there isn't one); that path is this docket's `supersedes=`. When one exists, append to it — not to the new file — the one-line footer `> Superseded by <new docket path> (run <run_id>) — all rows re-examined.` This is what closes its rows in [startup.md § Step 0](startup.md#step-0--context-discovery-first-loop-only-runs-in-main-agent)'s prior-audit intake sense (the docket's own filename already matches that step's `*residual*` glob) and keeps dockets from accumulating unbounded across runs.
+4. **The docket rides the promotion commit.** It, and the footer edit when one fired, are promotion-commit contents — the same commit as the scorecard that produced them. This is a deliberate exception to the rule that a terminal transition commits "review artifacts only" (the six bookkeeping files): that rule predates this docket and does not intend to leave it untracked. An untracked docket is not safe to leave lying around: it will trip the clean-tree precondition's ABORT on the *next* invocation ([startup.md § Step 0](startup.md#step-0--context-discovery-first-loop-only-runs-in-main-agent) sub-step 4b). That is the designed backstop for a crash between the docket write and `git commit` — the ABORT names the stray file by construction, and the fix is to commit or remove it, not to treat the ABORT as a new failure mode.
+
 ### Handoff template
 
 ```
@@ -131,7 +144,8 @@ Citation coverage: <cited>/<denominator> first-party source files were cited as
 evidence across <N> loops (<pct>%) — a floor on attention, not a claim about what was
 read. Uncited files may have been read and found clean, or never opened.
 
-Accepted residuals (won't be revisited unless you ask):
+Accepted residuals (recorded to the residual docket; the next run's
+prior-audit intake re-examines each):
   - <category>: <residual_blocking_10> — <residual_rationale>
   ...
 
@@ -146,6 +160,10 @@ Next step options:
       + REVIEW_HISTORY on top of --reset's scope, making the next loop run as
       if first-installed. Backup created automatically; see Purge Preview
       handoff for full semantics.
+  (e) Work the residuals — the docket at
+      docs/audits/contest-refactor-residuals-<run_id>.md is committed; the next
+      /contest-refactor --reset run must end every row adopted / residual /
+      falsified before any new HALT_SUCCESS.
 ```
 
 ---
