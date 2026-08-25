@@ -240,7 +240,9 @@ def check_subset_invariant(per_scenario: dict) -> list[str]:
 
 
 def validate_preregistered(record: dict) -> list[str]:
-    issues = validate_prereg(record.get("prereg"))
+    issues = validate_prereg(
+        record.get("prereg"), frozen_at=record.get("material_hashes_frozen_at")
+    )
     issues += check_prereg_self_hash(record)
     if record.get("attempts") != []:
         issues.append("[record_state=preregistered] attempts must be empty ([])")
@@ -250,7 +252,9 @@ def validate_preregistered(record: dict) -> list[str]:
 
 
 def validate_in_progress(record: dict, canon: _canon.Canon) -> list[str]:
-    issues = validate_prereg(record.get("prereg"))
+    issues = validate_prereg(
+        record.get("prereg"), frozen_at=record.get("material_hashes_frozen_at")
+    )
     issues += check_prereg_self_hash(record)
     attempts = record.get("attempts")
     if not isinstance(attempts, list):
@@ -261,7 +265,9 @@ def validate_in_progress(record: dict, canon: _canon.Canon) -> list[str]:
 
 
 def validate_graded(record: dict, canon: _canon.Canon) -> list[str]:
-    issues = validate_prereg(record.get("prereg"))
+    issues = validate_prereg(
+        record.get("prereg"), frozen_at=record.get("material_hashes_frozen_at")
+    )
     issues += check_prereg_self_hash(record)
     attempts = record.get("attempts")
     if not isinstance(attempts, list) or not attempts:

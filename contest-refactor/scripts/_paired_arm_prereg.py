@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -202,11 +203,37 @@ def check_decision_rules(prereg: dict) -> list[str]:
     return issues
 
 
-def _check_hash_map(hashes: Any, tag: str, required_paths: set[str], *, exact: bool) -> list[str]:
+def _git_show_bytes(sha: str, rel_path: str) -> bytes | None:
+    """`git show <sha>:./<rel_path>`, resolved relative to SKILL_ROOT as cwd (the leading `./`
+    is what makes a bare relative path work as a git pathspec). None on any failure -- unknown
+    commit, path didn't exist at that commit, not a git repo -- callers treat that as fail-closed,
+    not as "no drift"."""
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(SKILL_ROOT), "show", f"{sha}:./{rel_path}"],
+            capture_output=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, OSError):
+        return None
+    return proc.stdout
+
+
+def _check_hash_map(
+    hashes: Any, tag: str, required_paths: set[str], *, exact: bool, frozen_at: str | None = None
+) -> list[str]:
     """Shared sha256-hex-map checker for `material_hashes` and `historical_file_hashes`: every
-    value is a 64-hex digest, every path resolves under SKILL_ROOT, and the recorded hash
-    matches the file's content RIGHT NOW -- a live re-verification, not a one-time assertion, so
-    drift in a supposedly-frozen file is caught on every run (D3, for the historical pair)."""
+    value is a 64-hex digest, every path resolves, and the recorded hash matches the file's
+    content -- a live re-verification, not a one-time assertion, so drift in a supposedly-frozen
+    file is caught on every run (D3, for the historical pair).
+
+    `frozen_at`, when set, is the record's `material_hashes_frozen_at` commit: the content check
+    runs against `git show <frozen_at>:./<rel_path>` instead of the live working tree. This is
+    for a `record_state=="complete"` record whose materials legitimately changed on disk AFTER
+    the study finished -- the record is checked against what it was frozen against, not against
+    disk drift the record never claimed to track. An unresolvable commit or missing blob is a
+    provenance failure, not weaker than drift, so it is reported the same way (fail-closed).
+    """
     if not isinstance(hashes, dict) or (not exact and not hashes):
         return [f"[{tag}] missing or empty"]
     issues: list[str] = []
@@ -220,6 +247,19 @@ def _check_hash_map(hashes: Any, tag: str, required_paths: set[str], *, exact: b
         if not _is_hex64(want):
             issues.append(f"[{tag}] {rel_path}: value is not a sha256 hex digest")
             continue
+        if frozen_at is not None:
+            blob = _git_show_bytes(frozen_at, rel_path)
+            if blob is None:
+                issues.append(
+                    f"[{tag}] {rel_path}: cannot resolve git show "
+                    f"material_hashes_frozen_at={frozen_at!r}:./{rel_path}"
+                )
+            elif hashlib.sha256(blob).hexdigest() != want:
+                issues.append(
+                    f"[{tag}] {rel_path}: recorded hash does not match "
+                    f"git show {frozen_at}:./{rel_path}"
+                )
+            continue
         full = SKILL_ROOT / rel_path
         if not full.is_file():
             issues.append(f"[{tag}] {rel_path}: file does not exist at {full}")
@@ -230,22 +270,28 @@ def _check_hash_map(hashes: Any, tag: str, required_paths: set[str], *, exact: b
     return issues
 
 
-def check_material_hashes(prereg: dict) -> list[str]:
+def check_material_hashes(prereg: dict, *, frozen_at: str | None = None) -> list[str]:
     required = {
         "references/architecture-rubric.md",
         "references/method.md",
         "evals/paired_arm_task_with_skill.md",
         "evals/paired_arm_task_without_skill.md",
     } | {f"evals/scenarios/{sid}/scenario.md" for sid in STUDY_SCENARIOS}
-    return _check_hash_map(prereg.get("material_hashes"), "material_hashes", required, exact=False)
+    return _check_hash_map(
+        prereg.get("material_hashes"), "material_hashes", required, exact=False, frozen_at=frozen_at
+    )
 
 
-def check_historical_file_hashes(prereg: dict) -> list[str]:
+def check_historical_file_hashes(prereg: dict, *, frozen_at: str | None = None) -> list[str]:
     """D3: the two historical baseline files must stay byte-identical to their preregistered
     hashes for the life of this study."""
     required = {"evals/principal_baseline.json", "evals/principal_baseline_replication.json"}
     return _check_hash_map(
-        prereg.get("historical_file_hashes"), "historical_file_hashes", required, exact=True
+        prereg.get("historical_file_hashes"),
+        "historical_file_hashes",
+        required,
+        exact=True,
+        frozen_at=frozen_at,
     )
 
 
@@ -646,7 +692,7 @@ def check_arms(prereg: dict) -> list[str]:
     return issues
 
 
-def validate_prereg(prereg: Any) -> list[str]:
+def validate_prereg(prereg: Any, *, frozen_at: str | None = None) -> list[str]:
     if not isinstance(prereg, dict):
         return ["[prereg] missing or not an object"]
     issues: list[str] = []
@@ -658,8 +704,8 @@ def validate_prereg(prereg: Any) -> list[str]:
     issues += check_dispatch_envelope(prereg)
     issues += check_execution_ladder(prereg)
     issues += check_grading_tiering(prereg)
-    issues += check_material_hashes(prereg)
-    issues += check_historical_file_hashes(prereg)
+    issues += check_material_hashes(prereg, frozen_at=frozen_at)
+    issues += check_historical_file_hashes(prereg, frozen_at=frozen_at)
     issues += check_frozen_order(prereg)
     issues += check_terminal_selection_predicate(prereg)
     issues += check_expected_baseline(prereg)

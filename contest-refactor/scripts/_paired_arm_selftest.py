@@ -43,6 +43,11 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 VALIDATOR = SKILL_ROOT / "scripts" / "validate-paired-arm.py"
 REAL_RECORD_PATH = SKILL_ROOT / "evals" / "paired_arm_replication.json"
 
+# The commit the real record's `material_hashes_frozen_at` pins to: the commit that set
+# record_state=="complete" (d4d203e), verified against a throwaway script to be the one where
+# every prereg.material_hashes/historical_file_hashes entry matches `git show <sha>:./<path>`.
+GOOD_FROZEN_SHA = "d4d203e98f060abff711c8ebd750a4579f3cd77c"
+
 FAILURES: list[str] = []
 
 
@@ -181,10 +186,15 @@ def wrap(
     attempts: list[dict],
     per_scenario: dict | None = None,
 ) -> dict:
+    # `prereg`/`prereg_sha256` here are always the real record's own (unmodified), so its
+    # material_hashes are exactly what GOOD_FROZEN_SHA was verified against -- stamping it here
+    # keeps every synthetic in_progress/graded/complete fixture off live-disk drift the same way
+    # the real record itself now is.
     return {
         "schema_version": 1,
         "record_state": record_state,
         "prereg_sha256": prereg_sha256,
+        "material_hashes_frozen_at": GOOD_FROZEN_SHA,
         "prereg": prereg,
         "captured_at": None,
         "per_scenario": per_scenario or {},
@@ -275,6 +285,26 @@ def main() -> int:
         rc, _, err = _run(tmpdir, "historical_drift.json", bad)
         _check("tampered historical hash -> exit 1", rc == 1, f"got {rc}")
         _check("names historical_file_hashes", "historical_file_hashes" in err, err[:200])
+
+        print("== RED: material_hashes_frozen_at (verify against the freeze commit, not disk) ==")
+        bad = copy.deepcopy(real)
+        bad["material_hashes_frozen_at"] = "0" * 40
+        rc, _, err = _run(tmpdir, "frozen_at_unresolvable.json", bad)
+        _check("unresolvable frozen_at commit -> exit 1", rc == 1, f"got {rc}")
+        _check("names material_hashes_frozen_at", "material_hashes_frozen_at" in err, err[:300])
+
+        bad = copy.deepcopy(real)
+        bad["material_hashes_frozen_at"] = GOOD_FROZEN_SHA
+        bad["prereg"]["material_hashes"]["references/method.md"] = "0" * 64
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "frozen_at_tampered.json", bad)
+        _check("tampered material hash under frozen_at -> exit 1", rc == 1, f"got {rc}")
+        _check("names the mismatch", "does not match" in err, err[:300])
+
+        good = copy.deepcopy(real)
+        good["material_hashes_frozen_at"] = GOOD_FROZEN_SHA
+        rc, out, err = _run(tmpdir, "frozen_at_healed.json", good)
+        _check("real record + frozen_at at the pin -> exit 0", rc == 0, f"got {rc}: {err[:300]}")
 
         print("== RED: frozen_order malformed ==")
         bad = copy.deepcopy(real)
