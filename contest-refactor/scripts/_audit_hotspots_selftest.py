@@ -718,6 +718,45 @@ def test_deriveddata_dir_excluded(base: Path) -> str | None:
     return None
 
 
+def test_capitalized_migrations_dir_is_discovered(base: Path) -> str | None:
+    # "migrations" (lowercase) is Django-style generated code; "Migrations"
+    # (capitalized) is hand-written Swift/Kotlin persistence source and must
+    # NOT be swept up by the same case-insensitive ignore rule.
+    root = base / "swift_migrations"
+    code = """
+struct SchemaV1toV2 {
+    func migrate(_ value: Int) -> Int {
+        if value > 0 {
+            return value + 1
+        }
+        return value
+    }
+}
+"""
+    _write(root, {"Sources/App/Migrations/SchemaV1toV2.swift": code})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    if data["coverage"]["ast_grep"]["discovered"] != 1:
+        return (
+            f"expected capitalized Migrations/ file discovered, got {data['coverage']['ast_grep']}"
+        )
+    return None
+
+
+def test_lowercase_migrations_dir_excluded(base: Path) -> str | None:
+    root = base / "django_migrations"
+    _write(root, {"migrations/0001_initial.py": "def upgrade():\n    pass\n"})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    if data["coverage"]["python"]["discovered"] != 0:
+        return f"expected lowercase migrations/ excluded, got {data['coverage']['python']}"
+    return None
+
+
 def test_tracked_fixture_manifests(_: Path) -> str | None:
     fixture_root = SKILL_ROOT / "evals" / "hotspot-fixtures"
     for manifest_path in sorted(fixture_root.glob("*/manifest.toml")):
@@ -783,6 +822,11 @@ def main() -> int:
                 test_swift_tests_dir_extension_suffixed_file_excluded,
             ),
             ("deriveddata_dir_excluded", test_deriveddata_dir_excluded),
+            (
+                "capitalized_migrations_dir_is_discovered",
+                test_capitalized_migrations_dir_is_discovered,
+            ),
+            ("lowercase_migrations_dir_excluded", test_lowercase_migrations_dir_excluded),
         ]
         failed = False
         for name, fn in cases:

@@ -50,6 +50,7 @@ from pathlib import Path
 from audit_clones import _mask as _mask_source
 
 # Directory names never scanned: VCS/build/cache/vendor + test + generated trees.
+# Matched case-insensitively, EXCEPT _EXACT_CASE_IGNORE_DIRS below.
 IGNORE_DIRS = frozenset(
     {
         ".git",
@@ -65,7 +66,6 @@ IGNORE_DIRS = frozenset(
         ".mypy_cache",
         ".pytest_cache",
         "site-packages",
-        "migrations",
         "tests",
         "test",
         ".eggs",
@@ -78,6 +78,12 @@ IGNORE_DIRS = frozenset(
         "vendor",
     }
 )
+
+# Matched exact-case only: Django-style generated migration trees are always
+# lowercase `migrations/` by convention, but capitalized `Migrations/` in
+# Swift/Kotlin persistence code is hand-written source, not generated (observed
+# casualty: BenchHypeKit Sources/BenchHypePersistence/Migrations/LocalURLMigrationV1.swift).
+_EXACT_CASE_IGNORE_DIRS = frozenset({"migrations"})
 
 _GENERATED_MARKERS = (
     "@generated",
@@ -1134,7 +1140,7 @@ def main() -> int:
     for p in sorted(repo_dir.rglob("*")):
         if not p.is_file():
             continue
-        if any(part.lower() in IGNORE_DIRS for part in p.parts):
+        if any(part.lower() in IGNORE_DIRS or part in _EXACT_CASE_IGNORE_DIRS for part in p.parts):
             continue
         if _is_test_file(p.name) or _is_generated_file(p):
             continue
