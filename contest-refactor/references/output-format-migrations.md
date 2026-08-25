@@ -99,7 +99,7 @@ reinterpreted as a v4 success.
 | `dry_run` (top-level CURRENT_REVIEW.json) | `false` |
 | `discovery.test_scope` | `"full"` |
 | `discovery.test_filter` | `null` |
-| `discovery.working_tree_dirty_paths` | `[]` |
+| `discovery.working_tree_dirty_paths` | `[]` (read-path only; emission retired) |
 | `implementation_review.retry_count` | `1` |
 | `implementation_review.retry_cause` | `null` |
 | `implementation_review.retry_attempts` | `[{"attempt": 1, "outcome": "ok", "error": null, "duration_ms": null}]` |
@@ -109,7 +109,7 @@ reinterpreted as a v4 success.
 
 - New halt state `HALT_DRY_RUN` (state enum extended); `halt_subtype: null`.
 - New top-level field `dry_run` (boolean, audit only — re-invocation reads the user's CLI flag, not this field).
-- New discovery fields `test_scope`, `test_filter`, `working_tree_dirty_paths`.
+- New discovery fields `test_scope`, `test_filter`, `working_tree_dirty_paths` (read-path only; emission retired).
 - New `implementation_review` fields `retry_count`, `retry_cause`, `retry_attempts[]` (transient retry metadata; substantive verdict stays in `reason`).
 - New `loop_result.changed_paths[]` (paths the loop touched; narrow-revert targets classified as tracked/untracked by `LOOP_STATE.pre_step3_blob_shas`).
 - New `LOOP_STATE.json` artifact for mid-Step-3 checkpointing.

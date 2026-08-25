@@ -128,7 +128,6 @@ Did the diff pass Simplify Pressure Test on the actual code (not the plan)? Answ
   ([architecture-rubric.md § Smells](architecture-rubric.md#vocabulary--smells-use-only-in-this-exact-sense))
   — reject. A style/tooling suppression (`// swiftlint:disable line_length`,
   formatter ignore) is not by itself a reject.
-
 If any honesty failure → reject (or conditional if the fix is small and obvious;
 see Conditional below).
 
@@ -207,7 +206,7 @@ Rules:
 
 The reviewer is **strictly read-only** (see [provider-adapters-reviewer.md § Reviewer read-only shell allow-list](provider-adapters-reviewer.md#reviewer-read-only-shell-allow-list-uniform-across-providers) — codex denies writes, opencode runs `--read-only`), so the verdict **cannot** be written to a file by the reviewer. It travels only as the reviewer's **final message**, which the loop subagent reads as the spawn's synchronous result.
 
-**Robustness for async / background-spawn harnesses** (where a completed subagent's final message is NOT delivered back to the parent as a tool result): the parent must **join** — await reviewer completion and read its last message from the runtime's run record / transcript — *before* routing. A missing tool-result from a reviewer that actually ran to completion is **not** a reviewer failure: do not treat it as a transient timeout/spawn-error (that would burn a retry and then revert good code as "reviewer unavailable"). Only the retry envelope below applies when the reviewer genuinely produced no verdict. **Never route on an empty result** — an unread verdict is not an approval and not a rejection.
+**Robustness for async / background-spawn harnesses** (where a completed subagent's final message is NOT delivered back to the parent as a tool result): the parent must **join** — await reviewer completion and read its last message from the runtime's run record / transcript — *before* routing. A missing tool-result from a reviewer that actually ran to completion is **not** a reviewer failure: do not treat it as a transient timeout/spawn-error (that would burn a retry and then revert good code as "reviewer unavailable"). Only the retry envelope below applies when the reviewer genuinely produced no verdict. **Never route on an empty result** — an unread verdict is not an approval and not a rejection. (claude_code mechanics: provider-adapters.md § claude_code async-join)
 
 ## Routing (loop subagent applies after reviewer returns)
 
@@ -215,7 +214,7 @@ The reviewer is **strictly read-only** (see [provider-adapters-reviewer.md § Re
 |---|---|
 | `approved` | Proceed to Step 3 step 7; the canonical sequence archives at step 9 and commits at step 11. |
 | `conditional` (1st pass) | Apply each item in `conditions[]` to the diff. Re-spawn reviewer. If 2nd pass also `conditional` or `rejected`, treat as rejected. |
-| `rejected` | **Narrow revert (schema_version >= 3)**: for each path in `loop_result.changed_paths[]`, look up its entry in `LOOP_STATE.pre_step3_blob_shas`. A non-null entry means the path was tracked before Step 3: restore it via `git restore --source=HEAD --staged --worktree -- <path>` (HEAD cannot advance before the step 11 commit). For a `null` entry, run `git rm --cached --ignore-unmatch -- <path>` and delete the loop-created working-tree file. Update `loop_result`: `targeted_finding_status: "carried_forward"`, `unintended_regression: "<reviewer.reason>"`. Append reviewer's `regressions[]` and `reason` as a new section `## Loop N Implementation Review` in `CURRENT_REVIEW.md`. Commit ONLY the review artifacts (no code). Continue to next loop with the same finding promoted to Priority 1 + reviewer reason as added context. |
+| `rejected` | **Narrow revert (schema_version >= 3)**: for each path in `loop_result.changed_paths[]`, look up its entry in `LOOP_STATE.pre_step3_blob_shas`. A non-null entry means the path was tracked before Step 3: restore it via `git restore --source=HEAD --staged --worktree -- <path>` (HEAD cannot advance before the step 11 commit). For a `null` entry, run `git rm --cached --ignore-unmatch -- <path>` and delete the loop-created working-tree file. Update `loop_result`: `targeted_finding_status: "carried_forward"`, `unintended_regression: "<reviewer.reason>"`, and `repair_revalidation.outcome: "CONTRACT_REJECTED"` exactly (canon/remediation-fields.toml). Append reviewer's `regressions[]` and `reason` as a new section `## Loop N Implementation Review` in `CURRENT_REVIEW.md`. Commit ONLY the review artifacts (no code). Continue to next loop; the next Step-1 emit re-derives priority order with this finding as Priority 1. |
 
 ## Budget
 

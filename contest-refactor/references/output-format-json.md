@@ -221,7 +221,10 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
     "domain_terms": ["AppState", "InstanceID", "TileCueResolver"],
     "test_scope": "full",                       // (v3+) enum: full | incremental. "incremental" iff --test-filter <pattern> set.
     "test_filter": null,                        // (v3+) null | string. non-null iff test_scope == "incremental".
-    "working_tree_dirty_paths": [],             // (v3+) always empty. `git status --porcelain` (filtered for the skill's own bookkeeping paths) must be empty at Step 0 or the loop aborts pre-Step-3, tracked or untracked, no overlap test — exclusive writership over source paths is an assumed precondition, not a detected property (startup.md § Step 0 sub-step 4b). Retained for schema compatibility only.
+    // working_tree_dirty_paths: retired (v3 artifacts may carry []; absent-ok)
+    "churn_top20": [],                          // optional; startup.md sub-step 6b.
+    "prior_audit_docs": [],                     // optional; startup.md sub-step 5.
+    "tool_sweep": [],                           // optional; startup.md sub-step 6c.
     "hotspot_scan": {                           // Step 0 main-agent whitelist; required by G49 for skill_rev 651ea50+; payload evidence, never a finding
       "schema_version": 2,
       "status": "ok",                          // enum: ok | partial | absent | not_applicable
@@ -365,6 +368,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
   "backlog": [
     {
       "priority": 1,                                                                   // required int, 1-based
+      // as-of this loop's emit only; Step 3 never renumbers; the next Step-1 emit re-derives order.
       "stable_id": "F-007",                                                            // required (v4+); "F-NNN", the id of the Finding this item is derived from (G42)
       "title": "Collapse navigation duplicate authority",                              // required
       "kind": "structural",                                                            // enum: structural | simplification | polish
@@ -432,6 +436,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
 
   // Loop N Result (required after Step 3 finishes; absent during HALT loops and before refactor)
   ,"loop_result": {
+    "checkpoint_started_at": "<UTC ISO-8601>",                        // (v4+, optional) copied verbatim from LOOP_STATE.started_at at sub-step 4 — post-hoc ordering witness; a loop that never ran the checkpoint discipline cannot backfill it honestly.
     "what_changed": "Consolidated save*Draft helpers into saveLibraryEntityDraft<Element>.",
     "evidence_change_is_honest": "swift test 1439 passed; lint clean",
     "risk_boundary_evidence": null,                                   // (v3+) object | null. null/absent ⇒ no Meta-Rule-4 risk boundary crossed this loop. When a COMMITTED change crosses one, REQUIRED: { "boundary_kind": <canon risk_boundary_kinds: isolation|sendable|conditional_compilation|cross_file_visibility|lock_ordering>, "verification": <canon risk_evidence_verifications: compile_matrix|focused_test|thread_sanitizer|sendable_conformance|reasoning_only|carried_forward>, "detail": "<non-empty: what was actually built/run>", "mechanically_testable": <bool> }. A green SINGLE-config compile is NOT evidence — there is deliberately no single-config verification value. `reasoning_only` is legal ONLY when mechanically_testable=false (invariant genuinely not mechanically testable; record why in detail). `carried_forward` = the crossing was not committed. Shape-gated by G33; the Layer-5 grader (exec_replay_grade.py) fails a committed boundary diff whose verification is not real.
@@ -440,6 +445,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
     "changed_paths": ["BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift"],  // (v3+) source paths touched: the union of `git diff --name-only HEAD` (tracked) and `git ls-files --others --exclude-standard` (untracked), excluding the skill's own bookkeeping paths (never enters this list — Step 0's clean-tree precondition owns that carve-out). LOOP_STATE.pre_step3_blob_shas classifies each narrow-revert target as tracked or loop-created for paths the Step 2 plan predicted; a path here that is NOT a pre_step3_blob_shas key is out-of-plan and routes to the out_of_plan_cleanup halt instead of the ordinary reviewer/revert path (SKILL.md § Step 3 sub-step 6; output-format-state-schemas.md § Out-of-plan cleanup phase).
 
     "execution_evidence": null,                                       // (item 14, opt-in) object | null. null/absent ⇒ no ledger claim — the pre-field behavior, G4 alone governs. When the test command ran through scripts/attested_run.py, cite it: { "event_id": "<the wrapper's printed event>", "attestation_status": "consistency_check" } — consistency_check is the ONLY legal citation value (canon/attestation-statuses.toml; a record degraded to "unavailable" is uncitable). REQUIRES non-null top-level run_id (minted at Step 3 sub-step 3 when null; carried unchanged across loops — the id names the run, not the loop). Legal only for the loop's final committed state: the reviewer-rejected narrow-revert branch clears THIS field to null (the rest of loop_result survives as carried_forward); out-of-plan cleanup clears all of loop_result; a `conditions` verdict whose fixes touch source needs a fresh wrapped run or null. G47 enforces the linkage fail-closed. The `## Loop N Result` sentence MUST carry the non-claim wording: "build verified via consistency-check ledger (event <id>); this control does not defend against a model that forges a matching record."
+    "execution_evidence_skip_reason": null,                           // optional string. REQUIRED non-empty when this repo has a verify-trust pin, execution_evidence is null, and targeted_finding_status != "carried_forward"; legal only alongside null execution_evidence. Narrow-revert's mandated null is not a skip.
 
     // General remediation fields (v4+, item 28). Required whenever loop_result is present (rule #8); G46 enforces shape + drift_notes coupling.
     "finding_family": "simplification",                                // enum, canon/remediation-fields.toml finding_families (9). Family-conditional fields (fix_kind here, disposition) DEFERRED.
