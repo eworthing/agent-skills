@@ -223,7 +223,9 @@ External file at repo root. Created on first loop or via Step -1 step 0.6 bootst
             "claim_consequence_hash": "sha256:abcd...",
             "evidence_paths_hash": "sha256:1234..."
           },
-          "attempted_remedy_hash": "sha256:beef..."
+          "attempted_remedy_hash": "sha256:beef...",
+          "provider": "claude_code",           // optional, from 2026-08 — see § Judge-provenance occurrence fields
+          "loop_model": "claude-sonnet-5"       // optional, from 2026-08
         },
         {
           "loop": 3,
@@ -271,6 +273,10 @@ External file at repo root. Created on first loop or via Step -1 step 0.6 bootst
 ```
 
 Occurrence `status` enum: `open` (still in backlog) | `resolved` (loop's reviewer approved a fix) | `fixed_by_user` (user resolved between loops) | `rejected_attempt` (reviewer rejected the loop's attempted fix; do not drop, the audit chain needs it) | `withdrawn` (the Critic audited the finding and reclassified it as not-a-finding — no code change, no fix landed; distinct from `resolved`, which records a landed fix. Use when re-verification shows the prior finding was a false positive, e.g. all flagged sites are a framework-constrained carve-out. Terminal like `resolved`: dropped from the backlog, not eligible for Priority-1 selection, and not required in `halt_handoff.remaining_serious_findings_disposition[]`) | `unresolvable` (per-finding retirement per [method.md § Step 1.6](method.md); the finding is mechanically stuck via Branch A 3-way hash equality or Branch B 2-way hash equality + intervening `resolved`. Skipped for Priority-1 selection while the latest occurrence matches the retiring basis).
+
+### Judge-provenance occurrence fields (optional, from 2026-08)
+
+Any occurrence MAY additionally carry `provider` and `loop_model` (same values as `CURRENT_REVIEW.json`'s top-level fields), stamped at [SKILL.md § Step 3](../SKILL.md#step-3--execution-phase-refactor) sub-step 10 from Step 0.5, recording which judge produced that loop's verdict. Absent on occurrences written before 2026-08; validators tolerate absence and ignore unknown keys (G16 keys on `stable_id`, G31 on the named hash fields).
 
 ### Fingerprint + retirement occurrence fields (PR 1)
 

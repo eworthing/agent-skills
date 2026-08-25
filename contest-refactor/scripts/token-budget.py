@@ -343,7 +343,12 @@ CEILINGS = {
     # ~500-margin convention. Measured at 11,973, margin 427.
     # Bumped 12,400 -> 12,500 (2026-08-21) for the run_id mint-clause hoist (SKILL.md-
     # resident prose). Same proactive ~500-margin convention. Measured at 11,998, margin 502.
-    "skill_md": 12_500,  # SKILL.md trigger read (measured 11,998, margin 502)
+    # Bumped 12,500 -> 13,000 (2026-08-25) for the W7 register wave: Step-3 sub-step 0's
+    # clean-tree assertion, sub-step 3's execution_evidence_skip_reason cross-ref, the G47
+    # ordering fix (mechanical run deferred to after sub-step 10), and sub-step 10's
+    # judge-provenance occurrence stamp. Same proactive ~500-margin convention. Measured
+    # at 12,514, margin 486.
+    "skill_md": 13_000,  # SKILL.md trigger read (measured 12,514, margin 486)
 }
 
 # Soft margin, paired with the 2026-08-20 bump. A generous ceiling only works if the
