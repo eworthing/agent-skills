@@ -153,6 +153,18 @@ def main() -> int:
     if diags:
         failures.append(f"post-reset segments must be silent, got {diags!r}")
 
+    # 9. Historic pre-mint loop from an OLD, already-closed run must stay silent -- only
+    #    entries in the CURRENT run are diagnosed (retro #5). Both entries carry `loop: 1`
+    #    because a `--reset` restarts numbering; the LAST such entry marks the current run's
+    #    start, so the old run's null run_id (before it) must not resurface on every validate.
+    loops = [
+        {"schema_version": 4, "loop": 1, "run_id": None},  # OLD run: pre-mint, already closed
+        {"schema_version": 4, "loop": 1, "run_id": GOOD2},  # reset boundary -> new run starts clean
+    ]
+    diags = case("historic-null-old-run", _review(GOOD2, loop=1), loops=loops)
+    if diags:
+        failures.append(f"a null run_id from a closed prior run must stay silent, got {diags!r}")
+
     # REPORT_ONLY guard: across every case above, no G48 Issue may ever have surfaced.
     if issue_leaks:
         failures.append(f"REPORT_ONLY violated — G48 Issues surfaced: {issue_leaks}")

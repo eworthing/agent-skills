@@ -102,13 +102,17 @@ Produce ONE of these, or report the verdict held:
   acceptance premise by naming a concrete subtractive fix that passes the Simplify
   Pressure Test (the residual was mis-accepted; its dimension cannot sit at 9.5+).
 
-**Arm diversity (mandatory):** across `attempts[]`, at least one arm must attack a
-**non-correctness dimension** — `simplicity` or `domain_modeling` — via a
-duplication/interpretation sweep: `rg` for repeated formatting/interpretation logic
-across leaf files (time/timecode formatting, display-name fallbacks,
-switch/`== .case` dispatch over domain enums outside the enum's home) and
-byte-similar function bodies in sibling view/leaf modules. Record it as
-`{"arm": "new_finding", "target": "simplicity", ...}`. A challenge whose every
+**Arm diversity (mandatory):** your `attempts[]` MUST include one
+**`new_finding`** arm targeting a **non-correctness dimension** — `simplicity`
+or `domain_modeling` — via a duplication/interpretation sweep, with any
+`residual_refutation` or other arms added after it: `rg` for repeated
+formatting/interpretation logic across leaf files (time/timecode formatting,
+display-name fallbacks, switch/`== .case` dispatch over domain enums outside the
+enum's home) and byte-similar function bodies in sibling view/leaf modules. A
+`residual_refutation` attempt on `simplicity` or `domain_modeling` does **not**
+satisfy this — the diversity arm exists to force a **fresh sweep for new
+structure defects**, not to re-litigate an already-accepted residual. Record it
+as `{"arm": "new_finding", "target": "simplicity", ...}`. A challenge whose every
 attempt targets correctness/security has not challenged the verdict — the
 candidate claims 9.5 on nine dimensions, not three.
 

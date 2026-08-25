@@ -90,7 +90,19 @@ def check_g48_run_identity(current_review, review_history) -> list[Issue]:
         # G32 caught it at HALT_SUCCESS_candidate, and invisible forever on a run that never
         # reached it. Observed live 2026-08-23: loop 1 appended with run_id None while loops
         # 2-6 carried one conformant id, and G48 printed nothing.
-        for e in entries:
+        #
+        # Scoped to the CURRENT run only (retro #5, observed 2026-08-24): unscoped, this fired
+        # for every null-run_id entry in the whole history, so a long-closed run's pre-mint
+        # loops (from before a later `--reset`) resurfaced on every validate, indistinguishable
+        # from a live defect. `--reset` restarts loop numbering at 1 (see STABILITY above), so
+        # the last entry with `loop == 1` marks the start of the current run; entries before it
+        # belong to a closed run and stay silent. No `loop == 1` found (malformed/legacy
+        # history) -> fail open and scan everything, same as before this fix.
+        run_start = 0
+        for i, e in enumerate(entries):
+            if e.get("loop") == 1:
+                run_start = i
+        for e in entries[run_start:]:
             if (
                 isinstance(e.get("schema_version"), int)
                 and e["schema_version"] >= 4

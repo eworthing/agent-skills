@@ -112,6 +112,65 @@ def main() -> int:
         if p.returncode != 0:
             failures.append(f"CLI verify (should match): exit {p.returncode}\n{p.stderr}")
 
+        # CLI --md: both artifacts move in lockstep from one `write` invocation.
+        review_history_md = base / "REVIEW_HISTORY.md"
+        p = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "write",
+                str(current_review),
+                str(review_history),
+                "--md",
+                str(review_history_md),
+                "--md-divider",
+                "loop",
+                "--md-ts",
+                "2026-08-24T23:00:00Z",
+                "--md-body",
+                "-",
+            ],
+            input="Loop 1 body.\n",
+            capture_output=True,
+            text=True,
+        )
+        if p.returncode != 0:
+            failures.append(f"CLI write --md (loop divider): exit {p.returncode}\n{p.stderr}")
+        md_text = review_history_md.read_text(encoding="utf-8")
+        if (
+            "--- Loop 1 (UTC 2026-08-24T23:00:00Z) ---" not in md_text
+            or "Loop 1 body." not in md_text
+        ):
+            failures.append(f"CLI write --md (loop divider): expected content missing: {md_text!r}")
+
+        p = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "write",
+                str(current_review),
+                str(review_history),
+                "--md",
+                str(review_history_md),
+                "--md-divider",
+                "promotion",
+                "--md-verb",
+                "promotion",
+                "--md-ts",
+                "2026-08-25T02:32:00Z",
+                "--md-body",
+                "-",
+            ],
+            input="## HALT_SUCCESS Challenge Outcome\n",
+            capture_output=True,
+            text=True,
+        )
+        if p.returncode != 0:
+            failures.append(f"CLI write --md (promotion divider): exit {p.returncode}\n{p.stderr}")
+        md_text = review_history_md.read_text(encoding="utf-8")
+        if "--- HALT_SUCCESS promotion (UTC 2026-08-25T02:32:00Z) ---" not in md_text:
+            failures.append(f"CLI write --md (promotion divider): divider missing: {md_text!r}")
+
         # A same-run same-loop rewrite must replace, not double-append.
         review["narrative"] = "revised"
         current_review.write_text(json.dumps(review), encoding="utf-8")
@@ -162,11 +221,58 @@ def main() -> int:
         if "runs" not in untouched:
             failures.append("CLI write: refusal must leave the bad file untouched")
 
+    # --- markdown half: divider formatting + append-if-absent (retro #3/#4) --------
+
+    if ah.loop_divider(3, "2026-08-24T23:48:09Z") != "--- Loop 3 (UTC 2026-08-24T23:48:09Z) ---":
+        failures.append("loop_divider: unexpected format")
+    if ah.promotion_divider("promotion", "2026-08-25T02:32:00Z") != (
+        "--- HALT_SUCCESS promotion (UTC 2026-08-25T02:32:00Z) ---"
+    ):
+        failures.append("promotion_divider: unexpected format")
+
+    with tempfile.TemporaryDirectory(prefix="contest-archive-md-") as tmp:
+        md_path = Path(tmp) / "REVIEW_HISTORY.md"
+
+        divider1 = ah.loop_divider(1, "2026-08-24T23:00:00Z")
+        wrote = ah.append_divider_block(md_path, divider1, "Loop 1 body.\n")
+        if not wrote or not md_path.exists():
+            failures.append("append_divider_block: first write on a missing file must write")
+        first_text = md_path.read_text(encoding="utf-8")
+        if divider1 not in first_text or "Loop 1 body." not in first_text:
+            failures.append(f"append_divider_block: divider+body missing from {first_text!r}")
+
+        # Idempotent re-append: identical divider+body is a no-op, never a duplicate.
+        wrote_again = ah.append_divider_block(md_path, divider1, "Loop 1 body.\n")
+        if wrote_again:
+            failures.append("append_divider_block: identical re-append must be a no-op")
+        if md_path.read_text(encoding="utf-8") != first_text:
+            failures.append("append_divider_block: no-op re-append must not change file content")
+
+        # A genuinely new loop divider appends, preserving prior content.
+        divider2 = ah.loop_divider(2, "2026-08-24T23:10:00Z")
+        wrote2 = ah.append_divider_block(md_path, divider2, "Loop 2 body.\n")
+        text2 = md_path.read_text(encoding="utf-8")
+        if not wrote2 or divider1 not in text2 or divider2 not in text2:
+            failures.append(
+                f"append_divider_block: second divider must append, not replace: {text2!r}"
+            )
+
+        # The canonical promotion divider appends after existing loop content.
+        promo = ah.promotion_divider("promotion", "2026-08-25T02:32:00Z")
+        wrote3 = ah.append_divider_block(md_path, promo, "## HALT_SUCCESS Challenge Outcome\n")
+        text3 = md_path.read_text(encoding="utf-8")
+        if not wrote3 or promo not in text3 or divider2 not in text3:
+            failures.append(
+                f"append_divider_block: promotion divider must append, not replace: {text3!r}"
+            )
+
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}")
         return 1
-    print("OK: archive_history — append, same-key/legacy replace, verify, and refusal all pass")
+    print(
+        "OK: archive_history — append, same-key/legacy replace, verify, refusal, and the md-divider half all pass"
+    )
     return 0
 
 

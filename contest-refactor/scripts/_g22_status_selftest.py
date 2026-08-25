@@ -177,6 +177,32 @@ def main() -> int:
             f"check, got: {[i.message for i in fixture_issues]}"
         )
 
+    # --- check_g22_archive_divider: HALT_SUCCESS divider validation (retro #3/#4) ---
+    # BenchHype's REVIEW_HISTORY.md carries three hand-written variants; all three
+    # must keep passing (verified live against that file before this regex was pinned).
+    real_variants = (
+        "--- HALT_SUCCESS promoted (UTC 2026-08-24T23:48:09Z) ---",
+        "--- HALT_SUCCESS reset by user (UTC 2026-08-25T02:27:35Z) ---",
+        "--- HALT_SUCCESS promotion (UTC 2026-08-25T02:32:00Z) ---",
+    )
+    for line in real_variants:
+        with tempfile.TemporaryDirectory(prefix="g22-selftest-") as td:
+            (Path(td) / "REVIEW_HISTORY.md").write_text(line + "\n", encoding="utf-8")
+            issues = va.check_g22_archive_divider(Path(td), {"schema_version": 4, "loop": 1})
+            if any(i.rule == "G22" for i in issues):
+                failures.append(f"real BenchHype divider rejected: {line!r} -> {issues}")
+
+    malformed_variants = (
+        "--- HALT_SUCCESS promotion ---",  # no timestamp
+        "--- HALT_SUCCESS Promotion (UTC 2026-08-25T02:32:00Z) ---",  # capitalized verb
+    )
+    for line in malformed_variants:
+        with tempfile.TemporaryDirectory(prefix="g22-selftest-") as td:
+            (Path(td) / "REVIEW_HISTORY.md").write_text(line + "\n", encoding="utf-8")
+            issues = va.check_g22_archive_divider(Path(td), {"schema_version": 4, "loop": 1})
+            if not any(i.rule == "G22" for i in issues):
+                failures.append(f"malformed HALT_SUCCESS divider accepted: {line!r}")
+
     # --- pre-commit CLI (check_commit_subject.py): reuses these same regexes ---
     valid_finding = (
         "loop 4: audit F-010; finding F4 (stable_id F-010) resolved "

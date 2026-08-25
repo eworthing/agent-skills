@@ -10,6 +10,7 @@ from _artifact_core import (
     _G22_COMMIT_SUBJECT_RE,
     _G22_COMMIT_SUBJECT_V1_RE,
     _G22_DIVIDER_RE,
+    _G22_HALT_DIVIDER_RE,
     _G27_CANONICAL_FAILED_PHRASE,
     _G27_FORBIDDEN_REASON_VOCAB,
     _G27_RETRY_CAUSES,
@@ -515,6 +516,15 @@ def check_g22_archive_divider(
                         "G22",
                         f"REVIEW_HISTORY.md line {lineno}: archive divider does not match "
                         f"`--- Loop <N> (UTC <ISO-8601 timestamp>) ---`",
+                        context=line[:120],
+                    )
+                )
+            elif line.startswith("--- HALT_SUCCESS") and not _G22_HALT_DIVIDER_RE.match(line):
+                issues.append(
+                    Issue(
+                        "G22",
+                        f"REVIEW_HISTORY.md line {lineno}: HALT_SUCCESS divider does not match "
+                        f"`--- HALT_SUCCESS <lowercase verb phrase> (UTC <ISO-8601 timestamp>) ---`",
                         context=line[:120],
                     )
                 )

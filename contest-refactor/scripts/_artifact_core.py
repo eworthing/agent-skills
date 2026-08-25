@@ -68,10 +68,20 @@ _G27_RETRY_CAUSES = {"timeout", "spawn_error", "malformed_json"}
 # § 9.5+ Threshold ("Strictness presets") and output-format-json.md.
 _STRICTNESS_LEVELS = {"standard", "aggressive"}
 
+# G22: shared ISO-8601 UTC timestamp fragment for archive dividers (both forms below).
+_G22_DIVIDER_TS = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?(?:\+\d{2}:?\d{2})?"
+
 # G22: archive divider regex for REVIEW_HISTORY.md per output-format-markdown.md.
 # Format: `--- Loop <N> (UTC <ISO-8601 timestamp>) ---`
-_G22_DIVIDER_RE = re.compile(
-    r"^--- Loop \d+ \(UTC \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z?(?:\+\d{2}:?\d{2})?\) ---$"
+_G22_DIVIDER_RE = re.compile(rf"^--- Loop \d+ \(UTC {_G22_DIVIDER_TS}\) ---$")
+
+# G22: HALT_SUCCESS divider regex (retro #3/#4) -- a hand-written promotion/reset
+# divider previously passed G22 by accident because nothing validated it. Additive,
+# structure-pinning only: a lowercase verb phrase + the same UTC timestamp, NOT one
+# specific verb -- verified against BenchHype's three live variants ("promoted",
+# "reset by user", "promotion").
+_G22_HALT_DIVIDER_RE = re.compile(
+    rf"^--- HALT_SUCCESS [a-z]+(?: [a-z]+)* \(UTC {_G22_DIVIDER_TS}\) ---$"
 )
 
 # G28: orphan threshold per validation.md:115 (24 hours).
