@@ -70,7 +70,7 @@ IGNORE_DIRS = frozenset(
         "test",
         ".eggs",
         ".build",
-        "DerivedData",
+        "deriveddata",
         "target",
         ".gradle",
         "bin",
@@ -708,9 +708,17 @@ def _analyze_text_function(
     return sig, sorted(all_calls)
 
 
+#: (reason, path) for genuine ast-grep failures, drained to a bounded stderr
+#: diagnostic at the end of a run. Not part of the persisted JSON document.
+_AST_GREP_FAILURES: list[tuple[str, str]] = []
+
+
 def _ast_grep_matches(
     ast_grep_bin: str, path: Path, lang: str, selector: str
 ) -> tuple[list[dict], bool]:
+    # ast-grep exits 1 (not 0) with valid JSON "[]" when a file has no matches for
+    # the given kind — that is a successful scan, not a failure. Only a launch
+    # error, timeout, or stdout that isn't decodable JSON is a genuine failure.
     cmd = [
         ast_grep_bin,
         "run",
@@ -723,17 +731,27 @@ def _ast_grep_matches(
     ]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    except (subprocess.TimeoutExpired, OSError):
+    except subprocess.TimeoutExpired:
+        _AST_GREP_FAILURES.append(("timeout", str(path)))
         return [], False
-    if proc.returncode != 0:
+    except OSError:
+        _AST_GREP_FAILURES.append(("launch-error", str(path)))
         return [], False
-    if not proc.stdout.strip():
-        return [], True
+    stdout = proc.stdout.strip()
+    if not stdout:
+        if proc.returncode == 0:
+            return [], True
+        _AST_GREP_FAILURES.append(("undecodable-output", str(path)))
+        return [], False
     try:
-        matches = json.loads(proc.stdout)
+        matches = json.loads(stdout)
     except json.JSONDecodeError:
+        _AST_GREP_FAILURES.append(("undecodable-output", str(path)))
         return [], False
-    return (matches, True) if isinstance(matches, list) else ([], False)
+    if not isinstance(matches, list):
+        _AST_GREP_FAILURES.append(("undecodable-output", str(path)))
+        return [], False
+    return matches, True
 
 
 def _match_offsets(match: dict) -> tuple[int, int]:
@@ -1062,8 +1080,23 @@ def _json_document(
     }
 
 
+def _report_ast_grep_failures() -> None:
+    """Bounded stderr diagnostic for genuine ast-grep failures (stdout stays pure JSON)."""
+    if not _AST_GREP_FAILURES:
+        return
+    reason_counts: dict[str, int] = defaultdict(int)
+    for reason, _path in _AST_GREP_FAILURES:
+        reason_counts[reason] += 1
+    sample = sorted({path for _reason, path in _AST_GREP_FAILURES})[:5]
+    counts_str = ", ".join(f"{reason}={count}" for reason, count in sorted(reason_counts.items()))
+    sys.stderr.write(
+        f"audit_hotspots: ast-grep scan failures — {counts_str}; sample: {', '.join(sample)}\n"
+    )
+
+
 def main() -> int:
     _force_utf8_stdout()
+    _AST_GREP_FAILURES.clear()
     parser = argparse.ArgumentParser(
         description="audit_hotspots.py — implementation-hotspot candidate scanner."
     )
@@ -1101,7 +1134,7 @@ def main() -> int:
     for p in sorted(repo_dir.rglob("*")):
         if not p.is_file():
             continue
-        if any(part in IGNORE_DIRS for part in p.parts):
+        if any(part.lower() in IGNORE_DIRS for part in p.parts):
             continue
         if _is_test_file(p.name) or _is_generated_file(p):
             continue
@@ -1176,6 +1209,7 @@ def main() -> int:
             coverage["ast_grep"]["scanned" if complete else "failed"] += 1
         if coverage["ast_grep"]["failed"]:
             coverage["ast_grep"]["outcome"] = "partial"
+        _report_ast_grep_failures()
     elif non_py_files:
         coverage["ast_grep"].update({"failed": len(non_py_files), "outcome": "absent"})
         sys.stderr.write(

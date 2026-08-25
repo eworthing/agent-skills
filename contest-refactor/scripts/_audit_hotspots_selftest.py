@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# WAIVER: module-size — one flat case-per-scenario selftest mirroring the single-file
+#   scanner it exercises (audit_hotspots.py carries the same waiver); splitting would
+#   scatter fixtures away from the scanner behavior they pin down.
 """Self-test: audit_hotspots.py candidate selection and restraint across multi-language stacks.
 
 Tests that:
@@ -626,6 +629,95 @@ def test_ast_grep_failure_is_partial_without_raw_output(base: Path) -> str | Non
     return None
 
 
+# --- Test: ast-grep exit-1-no-match is a successful scan, not a failure -----
+def test_swift_enum_only_counts_as_scanned(base: Path) -> str | None:
+    if not (shutil.which("ast-grep") or shutil.which("sg")):
+        return None
+    root = base / "swift_enum_only"
+    enum_code = """
+enum Direction {
+    case north
+    case south
+    case east
+    case west
+}
+"""
+    _write(root, {"Sources/Direction.swift": enum_code})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    expected = {"discovered": 1, "scanned": 1, "failed": 0, "outcome": "ok"}
+    if data["coverage"]["ast_grep"] != expected:
+        return f"expected enum-only file scanned not failed, got {data['coverage']['ast_grep']}"
+    if data["status"] != "ok":
+        return f"expected status ok for enum-only Swift file, got {data['status']}"
+    return None
+
+
+def test_swift_function_bearing_file_scans_normally(base: Path) -> str | None:
+    if not (shutil.which("ast-grep") or shutil.which("sg")):
+        return None
+    root = base / "swift_function_bearing"
+    swift_code = """
+struct Greeter {
+    func greet(_ name: String) -> String {
+        return "Hello, \\(name)"
+    }
+}
+"""
+    _write(root, {"Sources/Greeter.swift": swift_code})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    expected = {"discovered": 1, "scanned": 1, "failed": 0, "outcome": "ok"}
+    if data["coverage"]["ast_grep"] != expected:
+        return f"expected function-bearing file scanned cleanly, got {data['coverage']['ast_grep']}"
+    if data["status"] != "ok":
+        return f"expected status ok, got {data['status']}"
+    return None
+
+
+def test_swift_tests_dir_extension_suffixed_file_excluded(base: Path) -> str | None:
+    root = base / "swift_tests_dir"
+    # Extension-suffixed filename deliberately dodges the separate _is_test_file
+    # filename filter (which only catches suffix-named files like FooTests.swift);
+    # this must be excluded via the Tests/ directory check instead.
+    code = """
+extension PlaybackReducerTests {
+    func admissionStatusHelper() -> Bool {
+        return true
+    }
+}
+"""
+    _write(root, {"Tests/PlaybackReducerTests+AdmissionStatus.swift": code})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    if data["coverage"]["ast_grep"]["discovered"] != 0:
+        return f"expected Tests/ file excluded from discovery, got {data['coverage']['ast_grep']}"
+    if data["status"] != "not_applicable":
+        return f"expected not_applicable status with nothing discovered, got {data['status']}"
+    return None
+
+
+def test_deriveddata_dir_excluded(base: Path) -> str | None:
+    # IGNORE_DIRS carried "DerivedData" (mixed case) alongside lowercase entries;
+    # a naive part.lower()-only fix would silently stop excluding it.
+    root = base / "deriveddata"
+    code = "func work() { if true { print(1) } }\n"
+    _write(root, {"DerivedData/Intermediates/App.swift": code})
+    out, err, rc = _run(root, ["--json"])
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    data = json.loads(out)
+    if data["coverage"]["ast_grep"]["discovered"] != 0:
+        return f"expected DerivedData/ file excluded from discovery, got {data['coverage']['ast_grep']}"
+    return None
+
+
 def test_tracked_fixture_manifests(_: Path) -> str | None:
     fixture_root = SKILL_ROOT / "evals" / "hotspot-fixtures"
     for manifest_path in sorted(fixture_root.glob("*/manifest.toml")):
@@ -681,6 +773,16 @@ def main() -> int:
                 test_ast_grep_failure_is_partial_without_raw_output,
             ),
             ("tracked_fixture_manifests", test_tracked_fixture_manifests),
+            ("swift_enum_only_counts_as_scanned", test_swift_enum_only_counts_as_scanned),
+            (
+                "swift_function_bearing_file_scans_normally",
+                test_swift_function_bearing_file_scans_normally,
+            ),
+            (
+                "swift_tests_dir_extension_suffixed_file_excluded",
+                test_swift_tests_dir_extension_suffixed_file_excluded,
+            ),
+            ("deriveddata_dir_excluded", test_deriveddata_dir_excluded),
         ]
         failed = False
         for name, fn in cases:
