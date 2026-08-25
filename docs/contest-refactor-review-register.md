@@ -596,12 +596,20 @@ Per-item token-cost estimates and the recommended sequence are in *Token-cost es
 - **P2 — CLOSED at validator level (`d46360b`):** illegal terminal transitions are report-only.
 - **P2 — OPEN:** the loop is instructed to run hard gates but never to run the module
   implementing 27 of them; measured 0/2 in production.
-- **P2 (inherited, [I1]):** G43/G46 required fields with no version bump retroactively invalidate committed artifacts — the repo's own loop-15 artifact fails strict with 10 issues, and this blocks wiring the validator into the loop.
+- **P2 (inherited, [I1]) — CLOSED (`60e1294`):** G43/G46 required fields with no version bump
+  retroactively invalidated committed artifacts — the repo's own loop-15 artifact failed strict with
+  10 issues, blocking the validator's wiring into the loop. The ruleset-epoch classifier shipped, so
+  old artifacts are judged by their own rules.
 - **Inherited, smaller ([I2]–[I4]):** `rounds` specified but read by nothing; `source_rev` ambiguous mid-loop and `findings_carried_from_prior_loops` specified nowhere; paired-arm grading spend unrecorded (majority of sweep #3's cost unmeasured).
 - **Test gap — RESOLVED (`acd0bfd`):** `_canon.py` is the enum single-source-of-truth for every
   validator; its 16 `sys.exit(2)` paths were unreachable from the selftest suite (62 selftests at
   review time, now 79) because all 29 call sites pass the real canon. `_canon_selftest.py` now
   covers all 16 sites.
-- **Simplification (behaviour-preserving):** `load_canon` repeats one idiom 20× with ten double-spelled paths (−91 lines, proven equivalent); `_load_validator` is copy-pasted into 14 files; the G39–G42 selftest driver is duplicated and its vacuity guards are already 3-of-4; `_check_replication` is duplicated across two baseline selftests and has diverged by four checks.
+- **Simplification (behaviour-preserving) — half shipped:** `load_canon`'s twenty-times-repeated
+  idiom with ten double-spelled paths is **CLOSED ([D1], `4fee1c1`, −91 lines, proven equivalent)**
+  and `_load_validator`'s 14 copies are **CLOSED ([D2], `ac839c5`)**. Still **OPEN**: the G39–G42
+  selftest driver is duplicated and its vacuity guards are already 3-of-4 ([D3]);
+  `_check_replication` is duplicated across two baseline selftests and has diverged by four checks
+  ([D4]).
 
 No source changes were made as part of any of these passes. After the merges, both `docs/` source documents (the deep-dive and the ledger) and 40 of the 44 `analysis/contest-refactor/` files were **deleted at the owner's direction** — their still-open content lives in this document and in `analysis/contest-refactor/GAP-REGISTER.md`, and every retired file remains in git history. Citations to the retired paths from shipped scripts and prose are provenance pointers and resolve via `git show`. The D1 equivalence and mutation harnesses were session-scratchpad scripts and are **not committed**; they are lost when that session ends. Their 11 seed cases are the only code that has ever executed *any* of `_canon.py`'s 16 error paths — they cover the failure categories, while the five site-specific cases needed for full per-site coverage have never been written by anyone. Re-creating and completing them as `scripts/_canon_selftest.py` is **D5** — worth doing on its own merits even if D1 is declined, and cheapest to do before the harness is gone. **Resolved: D5 shipped 2026-08-20 (`acd0bfd`) while the scratchpad harness still existed; the per-site coverage now lives in the committed selftest and this paragraph is historical.**
