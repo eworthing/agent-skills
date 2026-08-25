@@ -195,7 +195,7 @@ Read `LOOP_STATE.step_started`, `step_completed`, `commit_attempted_sha`. Branch
 
 ### Case A — `step_completed == 11 AND LOOP_STATE.json still present`
 
-Step 11.f (delete) was interrupted. Verify HEAD subject matches G22 pattern (`loop <N>: ...; finding F<n> (stable_id F-<NNN>) <status> [registry: ...]`):
+Step 11.f (delete) was interrupted. Verify HEAD subject matches a G22 pattern (`loop <N>: ...; finding F<n> (stable_id F-<NNN>) <status> [registry: ...]`, or the no-finding form `loop <N>: ...; no findings [registry: +0 findings]`):
 - Match → delete `LOOP_STATE.json` and proceed to loop N+1 dispatch (Continuation Discipline).
 - No match → anomaly: emit `--reset` recommendation handoff.
 

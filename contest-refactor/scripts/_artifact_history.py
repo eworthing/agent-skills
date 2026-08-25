@@ -5,6 +5,8 @@ from pathlib import Path
 import _canon
 import _fingerprint
 from _artifact_core import (
+    _G22_COMMIT_SUBJECT_NO_FINDING_RE,
+    _G22_COMMIT_SUBJECT_NO_FINDING_V1_RE,
     _G22_COMMIT_SUBJECT_RE,
     _G22_COMMIT_SUBJECT_V1_RE,
     _G22_DIVIDER_RE,
@@ -12,6 +14,7 @@ from _artifact_core import (
     _G27_FORBIDDEN_REASON_VOCAB,
     _G27_RETRY_CAUSES,
     _PROVIDER_DEFAULTS,
+    _SKILLS_REPO_ROOT,
     DISPOSITION_SIDECARS,
     ELIGIBLE_BACKLOG_STATUSES,
     SERIOUS_OR_WORSE,
@@ -475,12 +478,25 @@ def check_g22_archive_divider(
 ) -> list[Issue]:
     """G22 (both halves): REVIEW_HISTORY.md `--- Loop ` dividers must match
     output-format-markdown.md format; recent commit subjects must match the
-    pattern from validation.md:92. Schema_version >= 2.
+    pattern from validation.md:92 (or the no-finding form). Schema_version >= 2.
 
-    The commit-subject sub-check runs only when project_config is non-None
-    (i.e., a .contest-refactor.toml is findable in the artifact ancestor
-    chain — signal that we're in a loop-managed repo). Fixture dirs nested
-    inside the skills repo skip the git shell-out silently.
+    The commit-subject sub-check runs whenever the artifact dir sits inside a
+    real git repo. `project_config` is accepted for call-site compatibility
+    but is no longer consulted for the skip: gating the skip on "no findable
+    .contest-refactor.toml" meant any real loop-managed repo that simply had
+    none also skipped silently, which is exactly how two malformed BenchHype
+    commits (`stable_id F-NEW`) passed strict validation with zero Issues
+    (register "Instrumented run #7" additional defect #5). The only skip now
+    is a git root equal to `_SKILLS_REPO_ROOT` -- this skill's own dev
+    checkout, whose nested `evals/fixtures/` dirs would otherwise trip the
+    git shell-out on every fixture run.
+
+    Accepted residual: BenchHype's two historic malformed commits (candidate
+    `0e4f31cd`, promotion `8c5bf1d7`, both `stable_id F-NEW`) remain in its
+    git log. A future multi-loop run against that repo whose `-n loop_n`
+    window reaches back to them will correctly fire G22 -- that is the gate
+    doing its job on genuinely malformed history, not a false positive to
+    engineer around.
     """
     issues: list[Issue] = []
     if (current_review.get("schema_version") or 1) < 2:
@@ -502,11 +518,10 @@ def check_g22_archive_divider(
                         context=line[:120],
                     )
                 )
-    # Commit-subject sub-check (requires git + loop-managed repo).
-    if project_config is None:
-        return issues
+    # Commit-subject sub-check (requires a real git repo; see docstring for the
+    # one skip -- this skill's own dev checkout, for nested fixture dirs).
     git_root = _find_git_root(artifact_dir)
-    if git_root is None:
+    if git_root is None or git_root == _SKILLS_REPO_ROOT:
         return issues
     loop_n = current_review.get("loop")
     if not isinstance(loop_n, int) or loop_n < 1:
@@ -516,9 +531,13 @@ def check_g22_archive_divider(
         return issues
     subjects = [s for s in out.splitlines() if s.strip()]
     for subject in subjects:
-        if _G22_COMMIT_SUBJECT_RE.match(subject):
+        if _G22_COMMIT_SUBJECT_RE.match(subject) or _G22_COMMIT_SUBJECT_NO_FINDING_RE.match(
+            subject
+        ):
             continue
-        if _G22_COMMIT_SUBJECT_V1_RE.match(subject):
+        if _G22_COMMIT_SUBJECT_V1_RE.match(subject) or _G22_COMMIT_SUBJECT_NO_FINDING_V1_RE.match(
+            subject
+        ):
             issues.append(
                 Issue(
                     "G22",
@@ -533,7 +552,9 @@ def check_g22_archive_divider(
                     "G22",
                     "commit subject does not match loop-N pattern "
                     "`loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) "
-                    "<status> [registry: +<n> findings(, ~<n> occurrences)?]`",
+                    "<status> [registry: +<n> findings(, ~<n> occurrences)?]` "
+                    "or the no-finding form `loop <N>: <verb-phrase>; no findings "
+                    "[registry: +0 findings]`",
                     context=subject[:120],
                 )
             )

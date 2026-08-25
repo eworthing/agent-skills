@@ -80,7 +80,8 @@ _G28_ORPHAN_SECONDS = 24 * 3600
 # G22: commit subject regex per validation.md:92 (PR 1 origin).
 # Format: `loop <N>: <verb-phrase>; finding F<n> (stable_id F-<NNN>) <status>
 # [registry: +<n> findings(, ~<n> occurrences)?]`. The `[registry: ...]` suffix
-# is required at schema_version >= 2.
+# is required at schema_version >= 2. See also the no-finding pair below for a
+# loop with an empty backlog.
 _G22_COMMIT_SUBJECT_RE = re.compile(
     r"^loop \d+: .+?; finding F\d+ \(stable_id F-\d+\) "
     r"(resolved|carried_forward|fixed_by_user|rejected_attempt|withdrawn)"
@@ -91,6 +92,23 @@ _G22_COMMIT_SUBJECT_V1_RE = re.compile(
     r"^loop \d+: .+?; finding F\d+ \(stable_id F-\d+\) "
     r"(resolved|carried_forward|fixed_by_user|rejected_attempt|withdrawn)$"
 )
+
+# G22: no-finding subject form. A loop with an EMPTY backlog has no finding to
+# fill `finding F<n> (stable_id F-<NNN>) <status>` with; before this form
+# existed, the only escape was to fabricate a finding id -- observed in
+# production as `stable_id F-NEW` on two BenchHype commits (register
+# "Instrumented run #7" additional defect #5), which neither G42 (validates
+# real backlog items, not commit prose) nor this check (the skip-guard bug
+# fixed alongside this form) caught. Never carries a stable_id; unambiguous
+# against the finding-bearing regex above (no `finding F` token). Format:
+# `loop <N>: <verb-phrase>; no findings [registry: +0 findings]`.
+_G22_COMMIT_SUBJECT_NO_FINDING_RE = re.compile(
+    r"^loop \d+: .+?; no findings \[registry: \+0 findings\]$"
+)
+# G22: legacy v1 no-finding subject (no registry suffix) — mirrors
+# _G22_COMMIT_SUBJECT_V1_RE so a no-finding subject missing the suffix gets
+# the same specific diagnostic instead of the generic "does not match" one.
+_G22_COMMIT_SUBJECT_NO_FINDING_V1_RE = re.compile(r"^loop \d+: .+?; no findings$")
 
 
 class Issue:
@@ -155,6 +173,16 @@ def _find_git_root(start: Path) -> Path | None:
         if (ancestor / ".git").exists():
             return ancestor
     return None
+
+
+# The dev checkout of the agent-skills repo itself (this file lives at
+# <repo>/contest-refactor/scripts/_artifact_core.py). Fixture dirs under
+# contest-refactor/evals/fixtures/ are nested inside this checkout with no
+# git repo of their own, so their git root resolves here too --
+# check_g22_archive_divider uses that identity to skip the git shell-out for
+# fixtures while still validating a real loop-managed repo that merely lacks
+# a .contest-refactor.toml (see that function's docstring).
+_SKILLS_REPO_ROOT = _find_git_root(SCRIPT_DIR)
 
 
 def _git_command(repo_root: Path, *args: str) -> tuple[int | None, str]:

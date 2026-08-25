@@ -62,6 +62,8 @@ from _artifact_halt import (  # noqa: E402
     check_halt_success_gating,
 )
 from _artifact_history import (  # noqa: E402
+    _G22_COMMIT_SUBJECT_NO_FINDING_RE,
+    _G22_COMMIT_SUBJECT_NO_FINDING_V1_RE,
     _G22_COMMIT_SUBJECT_RE,
     _G22_COMMIT_SUBJECT_V1_RE,
     ELIGIBLE_BACKLOG_STATUSES,
@@ -96,6 +98,8 @@ SKILL_ROOT = SCRIPT_DIR.parent
 __all__ = (
     "ELIGIBLE_BACKLOG_STATUSES",
     "SERIOUS_OR_WORSE",
+    "_G22_COMMIT_SUBJECT_NO_FINDING_RE",
+    "_G22_COMMIT_SUBJECT_NO_FINDING_V1_RE",
     "_G22_COMMIT_SUBJECT_RE",
     "_G22_COMMIT_SUBJECT_V1_RE",
 )

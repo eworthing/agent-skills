@@ -229,7 +229,13 @@ Pre-condition: Step 2 emitted an execution plan AND the dry-run gate (Step 2 sub
     - `loop 3: revert collapse attempt — reviewer rejected; finding F3 (stable_id F-007) carried_forward [registry: +0 findings, ~1 occurrences]`
     </example>
 
-    **Forbidden subject prefixes**: `contest loop`, project name, Conventional-Commits style (`refactor:`, `chore:`). The `[registry: ...]` summary is required at `schema_version >= 2`. Run G22 at this step before invoking `git commit`.
+    **No-finding form**: when this commit's loop carries no finding at all (empty backlog — e.g. a `HALT_SUCCESS_candidate`/`HALT_SUCCESS` transition with nothing to report), use `loop <N>: <verb-phrase>; no findings [registry: +0 findings]` instead of inventing a finding id. Do not write `stable_id F-NEW` or any other placeholder — that is not a real registry id and both G22 and G42 will fail to catch it later.
+
+    <example>
+    - `loop 5: emit HALT_SUCCESS_candidate — architecture verdict holds; no findings [registry: +0 findings]`
+    </example>
+
+    **Forbidden subject prefixes**: `contest loop`, project name, Conventional-Commits style (`refactor:`, `chore:`). The `[registry: ...]` summary is required at `schema_version >= 2`. **Before invoking `git commit`**, validate the drafted subject with `python3 scripts/check_commit_subject.py --subject '<drafted subject>'` (exit 0 = valid) — a nonzero exit means fix the subject now; never commit first and diagnose from git log afterward. Run G22 at this step too.
 
     **Sub-step 11 commit detail (schema_version >= 3 checkpoint discipline)**:
     - 11.a. Write commit message draft to `LOOP_STATE.commit_message_draft`. fsync.
@@ -275,7 +281,7 @@ Stagnation is not failure when honestly emitted with a subtype — it's the loop
 - **No destructive git ops** without user confirmation (no `reset --hard`, no force-push, no branch deletion).
 - **Destructive resets are gated**: `--purge` (deep-reset of `findings_registry.json` + `REVIEW_HISTORY.{md,json}`) requires two steps — `--purge` previews the file list + backup path, `--purge --confirm` executes. Both flags are required before any state is deleted; a backup is written first.
 - **No dependency bumps or framework swaps** as part of refactor loop; separate task.
-- **Commit per loop**: stage and commit code + review artifacts. No squash across loops — loop history is the audit trail.
+- **One commit per durable transition**: stage and commit code + review artifacts at each durable transition (a loop's own commit, or — for a HALT_SUCCESS claim — the candidate commit and, after the independent challenge holds, a separate promotion commit; two commits for one loop is expected there, not a squash target). No squash across loops or transitions — the history is the audit trail.
 - **Stop on ambiguity**: Top Structural Finding requires product/ownership decision code cannot resolve → Step 1 emits `[STATE: HALT_STAGNATION]` with open question, hand back to user.
 - **Exclusive writership over source paths is an assumed precondition, not a detected property**: a clean tracked-and-untracked tree is required before Step 3 starts ([startup.md § Step 0](references/startup.md#step-0--context-discovery-first-loop-only-runs-in-main-agent) sub-step 4b), so every post-Step-3 delta is loop-owned by construction — see [Step 3](#step-3--execution-phase-refactor) sub-step 6.
 - **Current-source findings only**: carry a finding forward only if current code still shows it.
