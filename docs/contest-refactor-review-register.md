@@ -48,11 +48,16 @@ false positives among adjudicated datapoints.
 **Options and costs:**
 - Adjudicate FALSE POSITIVE → refine the trigger: add one condition to
   `contest-refactor/scripts/_artifact_coverage_citation.py` requiring at least one `changed_paths`
-  entry that classifies as source. Specify that as a **positive** extension set (reuse the
-  repository's canonical source-extension list), not as "anything that is not markdown" — a
-  blacklist makes JSON, asset, and configuration rewrites the next false positives. Plus a
-  RED/restraint fixture pair and selftest cases, including a mixed source+docs case and a
-  non-source-file restraint case. Validator-side only, zero loop-token cost.
+  entry that classifies as source. Specify that as a **positive** extension set — reuse
+  `coverage_ledger.SOURCE_EXTS` (`contest-refactor/scripts/coverage_ledger.py:64`), the closest
+  thing to a shared classifier in the tree, and document its extension ceiling rather than treating
+  it as exhaustive. Do **not** define it as "anything that is not markdown": a blacklist makes
+  JSON, asset, and configuration rewrites the next false positives. Plus a RED/restraint fixture
+  pair and selftest cases, including a mixed source+docs case and restraint cases for
+  representative included and excluded file types. Validator-side only, zero loop-token cost.
+  **Timing is separable from the disposition:** the adjudication can be recorded now and the
+  trigger change deferred until the next G17 measurement run is actually scheduled, since nothing
+  consumes the refined trigger until then.
 - Adjudicate true-but-trivial → no code change; the trigger stays as-is, at the cost of counting a
   docs-only rewrite as a violation.
 
@@ -95,17 +100,33 @@ the existing `--gates`/G47 phase facilities is a prerequisite to any credible to
 
 **Caveat:** only claude_code's interception point was demonstrated, and that demonstration was a
 substring-matching stub. The other four harnesses are documented, not demonstrated. Opencode — the
-actual production runner on both instrumented runs — is named to demonstrate first once the build
-starts. Whether that demonstration is a precondition to commissioning or the first funded phase is
-itself part of this decision.
+runner on the two production runs behind the 0/2 measurement — is named to demonstrate first once
+the build starts. (Opencode is not the runner on *every* instrumented run: the log has #5 opencode,
+**#6 codex**, #7 opencode.) Whether that demonstration is a precondition to commissioning or the
+first funded phase is itself part of this decision.
+
+**A cheaper boundary exists and the feasibility gate never evaluated it: native Git hooks.** The
+whole design assumes a *harness-specific* interception point, one integration per runner, none of
+which is demonstrated except a claude_code stub. But `pre-commit` and `commit-msg` are runner-
+agnostic, fire on the same boundary the design targets, and give exactly the two things it needs —
+the staged tree and the drafted commit message. This is not speculative here: **this repository
+already runs them** (`.githooks/pre-commit`, `.githooks/commit-msg`, `core.hooksPath=.githooks`),
+enforcing `sync_common`, `check_module_size`, ruff, and the eval guard on every commit. One
+integration would cover all five harnesses instead of five separate ones. The accepted limitation
+is `--no-verify`, which bypasses them — acceptable under the stated threat model (automatic
+invocation, *not* tamper resistance) and no weaker than a harness hook the operator can disable.
+This decision should not be settled before that comparison is on paper: coverage, installation into
+a target repo the loop does not own, rollback, and the `--no-verify` gap, against the
+harness-specific alternative.
 
 **A bounded first phase exists as a third option**, between "commission the full five-phase build"
-and "defer": (1) demonstrate opencode `tool.execute.before` in a production-shaped repo — shell
-variants of `git commit`, drafted-subject capture, fail-closed behavior, staged-tree preservation,
-install health and rollback; (2) refresh the phase-to-gate matrix; (3) price a pre-commit MVP that
-runs the final-artifact gate subset automatically and accepts the G22 draft from the hook, with
-decision 3's early-commit incident as an acceptance case; (4) add earlier and post-commit phases
-only where the refreshed matrix shows value unavailable at pre-commit.
+and "defer": (1) **compare native Git hooks against harness-specific interception** and either
+adopt them or rule them out with evidence; (2) refresh the phase-to-gate matrix against G1–G50 and
+the existing `--gates`/G47 facilities; (3) price a pre-commit MVP that runs the final-artifact gate
+subset automatically and accepts the G22 draft from the hook, with decision 3's early-commit
+incident as a rejection case; (4) add earlier and post-commit phases only where the refreshed
+matrix shows value unavailable at pre-commit. Only the demonstration for whichever boundary wins
+step 1 needs building — if Git hooks carry it, the per-harness demonstrations may never be needed.
 
 ### 3. Preflight auto-commit — what enforcement does an already-violated rule get?
 
@@ -131,12 +152,20 @@ follow and demonstrably did not.
 
 **Options:**
 - **Mechanical guard at the commit boundary** (the reviewed recommendation): reject a
-  target-repository commit unless a Step-2 plan exists and `LOOP_STATE.json` proves either an
-  authorized Step-3 commit or the specifically defined artifact-only cleanup commit — checking
-  staged paths and the G22 subject before allowing it. This is the same host-boundary mechanism
-  decision 2 would build, so it is best sequenced as an acceptance case of that MVP rather than
-  funded separately. Cost accepted: legitimate housekeeping needs a separate operator action and a
-  re-invoke.
+  target-repository commit whose staged paths and G22 subject do not match an authorized loop
+  phase, read from `LOOP_STATE.json`.
+  **The condition must be a phase-aware allowlist, not "a Step-2 plan exists and Step 3 is
+  authorized."** That narrower rule was drafted first and it would break the loop: `SKILL.md`'s
+  guardrail is **one commit per durable transition** (`SKILL.md:284`), and Step 1 Routing legitimately
+  commits well outside Step 3 — the `HALT_SUCCESS_candidate` archive commit, the separate promotion
+  commit after the challenge holds, the CONTINUE-transition commit when a challenger *breaks* a
+  candidate, `HALT_STAGNATION` (including the `verification_blocked` fail-closed commit),
+  `HALT_LOOP_CAP`, and the out-of-plan cleanup commit. The allowlist must enumerate every durable
+  transition, carry a positive acceptance case for each, and carry the preflight auto-commit as its
+  rejection case.
+  This is the same host-boundary mechanism decision 2 would build, so it is best sequenced as an
+  acceptance case of that MVP rather than funded separately. Cost accepted: legitimate housekeeping
+  needs a separate operator action and a re-invoke.
 - **Prose-only restatement** — cheapest, and the option the 0/6 measurement in decision 2 argues
   against for exactly this class of instruction.
 - **Explicit scoped exception:** allow pre-mutation housekeeping only under an operator
@@ -168,8 +197,24 @@ that grade against them.
 **A one-pack pilot is a live third option.** `#298` is the cheapest of the three because it reuses
 the existing `#13`/`#15` synthetic pair — which also makes it the only *matched* experiment
 available: the real-world minimized fixture against its synthetic twin, measuring whether
-real-world shape adds discrimination rather than assuming it does. Fund `#688` next only if it
-does. Order-of-magnitude: one pack, not three.
+real-world shape adds discrimination rather than assuming it does. Order-of-magnitude: one pack,
+not three.
+
+**Naming the pilot is not the same as bounding it — the following must be written down before it
+is approvable**, and none of it exists today:
+- **Construction priced apart from dispatch.** Building the `#298` pack and running the graded
+  comparison are two budgets with two go/no-go points; a single blended figure hides which half
+  overran.
+- **The experiment, preregistered.** Arms (real `#298` vs its synthetic `#13`/`#15` twin), grading
+  model, repetitions, a token ceiling, and how an invalid trial is handled. The source document
+  mentions a five-repetition two-arm shape but the packet neither allocates its cost nor commits to
+  it.
+- **The metric and its threshold.** "Out-discriminates its twin" is not yet a number. What
+  separation, on what measure, over how many repetitions, counts as a pass — decided *before* the
+  run, not read off the result.
+- **What earns `#688`, and what ends the programme.** A stop rule and an escalation rule. Zero
+  incremental signal, detected leakage, or high grader variance should end it; nothing currently
+  says so in terms anyone could apply.
 
 **The manifest validator is not yet the assurance this decision can lean on.** As of `e357a80`
 `contest-refactor/scripts/validate-gold-corpus.py` exists and covers negative-oracle presence,
