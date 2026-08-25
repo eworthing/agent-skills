@@ -291,6 +291,36 @@ pilot's acceptance criteria, not in the case for approving the spend.
   blocker stands. Expert acceptance (TCA, SwiftNIO #2959) is provenance, not an automatic score.
   Left unwritten, graders will invent the rule per case.
 
+### Independent review of this packet — 2026-08-25
+
+The packet above deliberately states options without recommending one. This subsection records what
+an outside reviewer recommended when asked, kept separate so the packet's neutral framing stays
+intact. **These are one reviewer's opinions, not decisions and not this register's position.**
+
+Reviewer: codex `gpt-5.6-sol` at high effort, read-only against this repository, four rounds
+(`12722b5` → `4048670` → `f47b1e8` → `a2914b4`). Round 4 found no blocking defect in the packet. The
+review substantially improved it: it caught that decision 3's posture was already settled by
+`3906fb2`, that a first draft of the mechanical guard would have rejected legitimate loop commits,
+that `LOOP_STATE.json` cannot be its authority source, and that native Git hooks were never
+evaluated as a cheaper boundary. Every finding was verified against the tree before adoption.
+
+Its recommendations, stable across the last two rounds:
+
+1. **G17 D2 — FALSE POSITIVE.** A docs-only rewrite deepens no executable interface, so counting it
+   even as trivial corrupts the gate's meaning. Adjudicate all four records now; defer the trigger
+   change until another G17 measurement run is actually scheduled.
+2. **Tier-3 — fund only a capped discovery phase**, evaluating native Git hooks before
+   harness-specific interception. Do not commission the unpriced full build.
+3. **Preflight auto-commit — mechanical enforcement**, sequenced through decision 2, with the
+   commit-intent authority resolved during that discovery phase.
+4. **Gold corpus — defer.** It blocks nothing, so even its design-and-pricing phase lacks urgency.
+   Adopt the GREEN scoring rule now; preregister closure controls only if those packs are funded.
+
+Its cross-cutting ordering: settle decision 3's posture and adjudicate G17 immediately (both near
+zero cost), resolve the commit-authority design and cap the boundary comparison together, then price
+the MVP. The corpus stays independent and lowest priority. Its stated reason: *"the known production
+enforcement failure outranks speculative eval expansion."*
+
 ## Coverage — 2026-08-20 snapshot
 
 **Current, 2026-08-25 (`a6dc71d`):** 102 fixtures, 79/79 selftests passing — see the run log's
