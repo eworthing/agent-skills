@@ -1,8 +1,9 @@
 # docs/
 
-Cross-skill findings and improvement plans. Analysis scoped to a single skill's competitive
-landscape lives in [`analysis/contest-refactor/`](../analysis/contest-refactor/); this directory is
-for work that spans `contest-refactor`, `peer-plan-review`, and `quorum-review` together.
+Living registers and durable records, regardless of how many skills a given record touches.
+Point-in-time analysis and measurement artifacts scoped to `contest-refactor` specifically live in
+[`analysis/contest-refactor/`](../analysis/contest-refactor/) instead — see that directory's own
+README for its scope and retirement rule.
 
 **Split of the two `contest-refactor` registers:** the *review* register owns the skill's own correctness (artifact discipline, gates, certification, cost); the *detection-domain* register owns the skill's reach (which defect classes it can find at all). Seam items are cross-referenced, never dual-listed.
 
@@ -17,10 +18,17 @@ for work that spans `contest-refactor`, `peer-plan-review`, and `quorum-review` 
 **Retired 2026-08-20** (merged into the review register, full text in git history):
 `review-skill-deep-dive-2026-08-17.md` (four-pass landscape deep dive + 35-row backlog) and
 `behavioral-validation-ledger.md` (LLM behavioral sweeps #1–#4, the paired-arm study, and
-promotion bars). Citations to those paths from shipped scripts and prose are provenance
-pointers; resolve them with `git log --follow` / `git show`.
+promotion bars). Citations to that bare `docs/behavioral-validation-ledger.md` path from shipped
+scripts (`contest-refactor/scripts/_ingress_envelope_selftest.py:10`,
+`contest-refactor/scripts/_artifact_coverage_citation.py:19`) and prose are provenance pointers to
+this retired file; resolve them with `git log --follow` / `git show`. **A separate, live file with
+the same base name** now exists at
+[`contest-refactor/docs/behavioral-validation-ledger.md`](../contest-refactor/docs/behavioral-validation-ledger.md)
+(created 2026-08-25, holding DD-13's micro-test record) — it is a current skill-local ledger, not a
+continuation of the retired `docs/`-level file, and the script citations above do not refer to it.
 
 ## Related
 
+- [`analysis/contest-refactor/README.md`](../analysis/contest-refactor/README.md) — scope and an index of that directory's files.
 - [`analysis/contest-refactor/GAP-REGISTER.md`](../analysis/contest-refactor/GAP-REGISTER.md) — the consolidated competitive-analysis register (44 files → 5, with per-doc dispositions).
 - [`refs/competitors/README.md`](../refs/competitors/README.md) — the clone corpus itself (gitignored), bucketed by the skill each competitor targets.

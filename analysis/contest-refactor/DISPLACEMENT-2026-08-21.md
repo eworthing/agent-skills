@@ -169,4 +169,5 @@ permanently and the 2,634 tokens are simply the cost of a live feature.
 §8's third finding (a probe that had silently stopped testing anything) turned out to be a class,
 not a one-off. The sweep it triggered grew past what belongs in a displacement note and now has its
 own record: [`VACUOUS-SWEEP-2026-08-22.md`](VACUOUS-SWEEP-2026-08-22.md). Headline: **68 of 72
-selftests mutation-tested, 23 proven vacuous, 21 fixed.**
+selftests mutation-tested, 23 proven vacuous, 22 fixed** — see that document for the full tally
+(1 recorded-by-design, 1 withdrawn).

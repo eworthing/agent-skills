@@ -504,10 +504,11 @@ detection reach:
 
 - **[P1] G17 hard gate cannot block an untested deepening refactor** — the gate's subject (interface
   test coverage of a deepening change) is a detection property, and it is the nearest existing gate
-  to Tier-1 item 1. Its promotion bar (≥5 applicable runs, ≥1 violation, ≥2 restraint, **≥2
-  languages**, zero blind lines, zero false positives, human-adjudicated) and the live adjudication
-  packet at [`analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md`](../analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md)
-  are register/packet business.
+  to Tier-1 item 1. Its promotion bar is defined in
+  [`contest-refactor-review-register.md`](contest-refactor-review-register.md)'s G17 finding; the
+  live adjudication packet at
+  [`analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md`](../analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md)
+  is register/packet business.
 - **Backlog rows 6 and 8** (confidence two-stage experiment; strictness as deterministic
   post-filter) — finding-precision mechanisms, register-owned; see the corroboration table above for
   the competitor designs that bear on row 6.

@@ -60,8 +60,9 @@ Banked findings from validating the kit (reports committed under `run-kit/report
 - **G17 historical datapoints (Swift, adjudication pending)**: 3 applicable loop-events, all
   violations (no citation), 0 restraint, 1 expected-blind (v2-era `changed_paths` absent). The
   ≥2-languages promotion bar cannot close on the next run (Swift again).
-- **Item-24 justification data**: coverage is heavily uneven — 302/1313 files ever cited across
-  all runs; `BenchHypeKit` 24%, `compliance/` and `tools/` 0%.
+- **Item-24 justification data**: coverage is heavily uneven across all runs — see
+  [`contest-refactor-detection-domains.md`](contest-refactor-detection-domains.md) row 24 for the
+  figure and interpretation.
 - **Cost baseline (M6)**: Aug-19 run = $9.30, 500 assistant messages, 92.6M resident tokens
   (parent + 2 loop executors + 2 challengers, `opencode-go/minimax-m3`).
 - **Item-14 uncertain cell resolved by observation**: opencode `tool.execute.after` metadata is

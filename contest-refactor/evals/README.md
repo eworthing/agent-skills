@@ -5,6 +5,14 @@ different things — keep them distinct when reasoning about coverage. Layer 1 i
 deterministic (mechanical, no model); Layers 2–6 are host-dispatched and model-graded,
 and share the trial-validity rules below.
 
+## Gold corpus (validated proposal, not yet built)
+
+A validated proposal for a `contest-refactor` eval gold corpus lives at
+[`docs/contest-refactor-gold-corpus-2026-08-25.md`](../../docs/contest-refactor-gold-corpus-2026-08-25.md) —
+real expert-reviewed Swift refactoring PRs with RED/GREEN/NEAR-MISS/MUTANT sibling derivation,
+executable hidden oracles, and a `must_not_find` negative oracle. It proposes fixtures under
+`evals/gold-corpus/`. **Nothing has been built yet** — that directory does not exist on disk.
+
 ## Trial validity (backlog item 21 — applies to every host-dispatched layer, 2–6)
 
 Every layer past Layer 1 host-dispatches a model and grades what comes back. A trial can fail
