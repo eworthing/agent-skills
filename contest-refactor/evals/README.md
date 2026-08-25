@@ -1,7 +1,9 @@
 # contest-refactor evals
 
 This directory holds the test material for the skill. It has **six layers** that test
-different things — keep them distinct when reasoning about coverage.
+different things — keep them distinct when reasoning about coverage. Layer 1 is
+deterministic (mechanical, no model); Layers 2–6 are host-dispatched and model-graded,
+and share the trial-validity rules below.
 
 ## Trial validity (backlog item 21 — applies to every host-dispatched layer, 2–6)
 

@@ -9,11 +9,15 @@ themselves — every PR, repo, and benchmark named in the feedback was checked a
 primary source on 2026-08-25. A **second review round** (ChatGPT, same day) audited this
 document; its corrections — one material (#814 causality reversed), the schema's
 gold-as-provenance reframe, leakage controls, and per-pack executable-oracle upgrades —
-are folded in and marked where they changed the plan. The proposal is **adopted as a
-plan, adapted in one load-bearing way**: it is framed as *fixture and calibration
-material for the axes that have measurably paid* (restraint, calibration, execution,
-scanner controls), **not** as a reopening of the detection-prose programme closed
-2026-08-22 — see
+are folded in and marked where they changed the plan. A **third round** (same day)
+settled the two decisions round two left open — canonical schema vocabulary with the
+first-round names demoted to rejected aliases, and `provenance_labeled` as a batch
+contamination assay rather than a per-pack arm — and sharpened #814's framing to
+*longitudinal resolution evidence*, naming the #837 chain it belongs to. The proposal
+is **adopted as a plan, adapted in one load-bearing way**: it is framed as *fixture
+and calibration material for the axes that have measurably paid* (restraint,
+calibration, execution, scanner controls), **not** as a reopening of the
+detection-prose programme closed 2026-08-22 — see
 [Relationship to the closed detection programme](#relationship-to-the-closed-detection-programme--read-before-building)
 before building anything.
 
@@ -79,12 +83,21 @@ error**:
    intermittent response loss) was opened 2018-08-28 — six months *before* #814 merged —
    and its closing comment (2019-03-07) reads: "This issue has been fixed per
    apple/swift-nio#600 through apple/swift-nio#837 and apple/swift-nio#814." The parser
-   restructure was the **fix** (with #837), not the cause. The second review flagged the
+   restructure was part of the **fix**, not the cause. The second review flagged the
    citation as not proving causation; fetching the issue's comments proved the stronger
-   correction. #814's role in the corpus survives and sharpens: the parser complexity
-   was *load-bearing* — it resolved a real downstream correctness bug — so a Critic that
-   flags "parser states should be flattened" is arguing against the fix, with the
-   downstream evidence on record.
+   correction. **#814 did not close it alone**, and the third round drew the line:
+   it *participates in a resolution chain*. #837 ("B2MD: Don't deliver data after
+   error", merged 2019-02-25 — verified upstream) introduced the error state that stops
+   `ByteToMessageDecoder` calling decode functions after a user-thrown error; #814 moved
+   the HTTP decoder onto that machinery. Fixture and grading prose says *participates in
+   the resolution chain*, never *#814 fixed it*. #814's role in the corpus survives and
+   sharpens: the parser complexity is *load-bearing*, carrying **longitudinal resolution
+   evidence** — so a Critic that flags "parser states should be flattened" is not merely
+   over-refactoring, it is arguing against complexity with downstream behavioral
+   validation on record. **Naming rule:** call this *longitudinal resolution evidence* or
+   *downstream behavioral validation*. The phrase "longitudinal defect story" is banned
+   in this corpus's vocabulary — it still reads as "the merged change caused a later
+   bug," which is the exact error this fact corrects.
 3. **The feedback's two sharpest restraint cases are external-provenance upgrades of
    pairs the suite already runs.** Swift Collections #298 (`canImport(Darwin)` near-miss)
    is the same defect class as `crossplat-flag`/`crossplat-restraint` (#13/#15 —
@@ -147,8 +160,8 @@ Three additions this repo's own measurement history imposes on that design:
   fixture text. This matches the existing suite's scenario-authoring discipline
   ("must not encode the defect as the visible diff delta; must not hand over the audit
   legwork").
-- **The negative oracle is the point.** The feedback's `must_not_claim` field (now
-  `must_not_find` in the schema — see the vocabulary note
+- **The negative oracle is the point.** The feedback's `must_not_claim` field (canonical
+  name `must_not_find`; the first-round spelling is a rejected alias — see
   [below](#corpus-structure-and-provenance-schema)) is the
   single best idea in the review and matches this repo's measured history: the detection
   programme's one shipped prose change (DD-13) was restraint, not recall, and the
@@ -176,7 +189,7 @@ this suite's actual axes (see [layer mapping](#mapping-to-the-existing-eval-laye
 | 5 | pointfreeco/swift-composable-architecture #3460 + #3845 | Merged 2025-03-27 / 2026-02-18 | Accepted major architecture refactor whose `DefaultIsolation` actor was never referenced and removed 11 months later | Residual-accounting + 9.5-vs-10 + loop-replay staging |
 | 6 | apple/swift-nio #1801 | Merged 2021-04-23 | "Instead of manual shifting / masking we can write the whole registration ID code normally in Swift" — representation over bit-twiddling; spawned #1807 (generic bit packing) | Representation/idiom pair (Layer 2) |
 | 7 | apple/swift-async-algorithms #185 | Merged 2022-10-10 | Genuine concurrent state machine (one task + child tasks, demand signalling, cancellation, continuations); removes a `Sendable` constraint and per-demand `Task` creation | Scanner/Critic restraint control |
-| 8 | apple/swift-nio #814 | Merged 2019-03-06 (2.0.0); **downstream fix story** — Kitura-NIO#81 closed as fixed through #837 + #814 | HTTP decoder becomes a real `ByteToMessageDecoder`; parser states and branches *are the domain* — and were load-bearing (resolved a six-month-old downstream correctness bug) | Scanner/Critic restraint control + load-bearing-complexity evidence |
+| 8 | apple/swift-nio #814 | Merged 2019-03-06 (2.0.0); **longitudinal resolution evidence** — Kitura-NIO#81 closed as fixed through the #837 + #814 chain, #814 participating rather than fixing alone | HTTP decoder becomes a real `ByteToMessageDecoder`; parser states and branches *are the domain* — and were load-bearing (part of the chain that closed a six-month-old downstream failure) | Scanner/Critic restraint control + load-bearing-complexity evidence |
 | 9 | apple/swift-collections #488 | Merged 2025-10-02 (1.4.0) | `_Chunk` ditches `String` backing for a CoW UTF-8 managed buffer — locally more complex, globally better (stable chunk identity, diff precision, benchmark attached) | Representation restraint twin (false-positive control) |
 | 10 | vapor/vapor `AuthenticationTests.swift` | Verified at `main` | Rich observable auth contracts incl. **concurrent login race** (1000-iteration task-group test), empty-password-is-valid, error-detail preservation, chained authenticators, session semantics | Security/error/concurrency mutants (Layer 2) |
 | 11 | swift-org/swift regression-test methodology | Not independently fetched (see [below](#items-not-independently-verified)); consistent with known practice | Focused regression tests at the nearest abstraction level, cross-platform correctness | Fixture-authoring rule (already adopted in this doc) |
@@ -393,16 +406,21 @@ per-demand `Task` creation; reviewer thread includes the lock-across-continuatio
 safety debate. **#814 verified facts.** HTTP decoder becomes a real `ByteToMessageDecoder`
 once re-entrancy protection existed; semver-major; allocation limits were *raised* to
 merge it (a disclosed, measured trade); and the six-month-old Kitura-NIO#81 downstream
-failure was closed as **fixed** through #837 and #814 — the restructure was the
-resolution, not the cause (see [Validation verdict](#validation-verdict), fact 2).
+failure was closed as **fixed** through the #837 + #814 chain — the restructure was
+part of the resolution, not the cause (see [Validation verdict](#validation-verdict),
+fact 2). #837 ("B2MD: Don't deliver data after error", merged 2019-02-25) supplied the
+error state that stops `ByteToMessageDecoder` calling decode after a user-thrown error;
+#814 put the HTTP decoder on it. Grading prose says *participates in the resolution
+chain* — never *#814 fixed it*, and never "longitudinal defect story," which inverts the
+causality this pack exists to record.
 
 **Role:** deliberately nasty code that must **not** trigger a simplification spree.
 Scanner (`audit_hotspots.py`, G49/G50 triage) nominates; Critic inspects; the finding is
 "not automatically reduce state/nesting" — the scanner-doctrine distinction the
 hotspot pipeline already encodes (method.md Step 6: triage `confirm`/`contextualize`/
 `dismiss`; "nesting mirroring genuine case structure is not a finding"). A parser's
-states and branches are the domain — and in #814's case they were load-bearing enough
-to fix a real downstream bug. If the hotspot pipeline turns either fixture into an
+states and branches are the domain — and in #814's case load-bearing enough to be part
+of a real downstream fix. If the hotspot pipeline turns either fixture into an
 automatic complexity finding, scanner/Critic integration has failed — this pack is
 the regression test for that failure mode. #814's raised-allocations detail is a free
 efficiency-lens restraint case (a disclosed, benchmarked trade is not structural waste).
@@ -418,19 +436,30 @@ oracle, not through findings the reviewer must produce:
     "parser states should be flattened for readability"
   ],
   "must_find_if_present": [
-    "missing cancellation transition",
-    "unbounded buffering",
-    "unreachable state",
-    "state transition duplicated with inconsistent side effect"
+    {
+      "evidence_id": "missing-error-state-transition",
+      "applies_to_variants": ["mutant-missing-error-state"],
+      "required_finding": "decoder must enter an error state and suppress later decode callbacks",
+      "not_required_in": ["green", "complexity-restraint"]
+    },
+    {
+      "evidence_id": "missing-cancellation-transition",
+      "applies_to_variants": ["mutant-dropped-cancellation"],
+      "required_finding": "cancellation must resume every pending continuation exactly once",
+      "not_required_in": ["green", "complexity-restraint"]
+    }
   ]
 }
 ```
 
-`must_find_if_present` is deliberately conditional — the real #185 and #814 code does
-not contain those defects, so the pack does not demand findings; it demands restraint,
-and separately verifies the reviewer would still notice a real state-machine bug if one
-were there (that half is graded on synthetic injected variants, not on the pristine
-fixtures).
+`must_find_if_present` is deliberately conditional, and **structured at schema level**
+(third round) rather than left as a bare list of strings: each entry names the variants
+it applies to and the variants it explicitly does not. That shape is what stops the
+grader from either over-requiring the finding on GREEN — where the real #185 and #814
+code contains no such defect — or treating a seeded mutant as optional fog. The pristine
+fixtures demand restraint; the injected variants (`mutant-missing-error-state` is the
+#837 error state deleted back out, `mutant-dropped-cancellation` its #185 analogue)
+demand the finding. Same pack, two contracts, no ambiguity about which applies where.
 
 ### 8. BigString #488 — local simplicity lost, global quality won
 
@@ -641,6 +670,14 @@ is *what was accepted*, never *what is true*):
   "must_not_find": [],
   "allowed_findings": [],
   "residual_findings": [],
+  "must_find_if_present": [
+    {
+      "evidence_id": "…",
+      "applies_to_variants": ["…"],
+      "required_finding": "…",
+      "not_required_in": ["…"]
+    }
+  ],
   "hidden_oracles": [
     {
       "name": "duplicate_diagnostic_preserved",
@@ -676,20 +713,40 @@ Field semantics the fixtures rely on:
   | `provenance_hidden` | minimized, renamed fixture only | Measures actual judgment |
   | `provenance_labeled` | source repo/PR context allowed | Measures how much public context helps |
 
-  A pack run hidden-only measures reasoning; the labeled arm, run later on the same
-  packs, separates recognition success from reasoning success. Hidden is the default
-  and the only mode the first eight packs require.
+  **Run-mode policy (settled, third round).** `provenance_hidden` is the primary build
+  *and* run mode: every pack is built hidden and its hidden baseline is taken first.
+  `provenance_labeled` is a **contamination-sensitivity assay**, not the main eval — it
+  answers "do provenance leaks change behavior," and it runs **once, as a batch
+  calibration pass over the finished packs**, promoted to per-pack routine only if that
+  batch shows a meaningful and stable difference. Running it per-pack across builds 1–8
+  would double cost before any hidden baseline exists and muddy the question the packs
+  are built to ask, while the fixtures are still being hardened. One exception: a pack
+  whose whole purpose *is* provenance reasoning ("recognize an imperfect accepted patch
+  from longitudinal history") may treat labeled mode as a first-class variant — none of
+  the first eight qualify.
 - **`must_not_find` is mandatory on every case** — the negative oracle is the point.
-  (Vocabulary note: the first-round proposal called these `must_notice` /
-  `must_not_claim`; the second round renamed them `must_find` / `must_not_find`. The
-  machine schema uses the second-round names throughout; grading specs written against
-  the old names must translate.)
+  **Vocabulary (settled, third round):** `must_find`, `must_not_find`,
+  `allowed_findings`, `residual_findings` are canonical. The first-round names
+  `must_notice` / `must_not_claim` survive only as **rejected legacy aliases** — the
+  manifest validator fails on them with migration text (`Use must_find, not
+  must_notice.` / `Use must_not_find, not must_not_claim.`) rather than quietly
+  accepting either spelling. Grading specs written against the old names must translate.
+- **`must_find_if_present`** is the conditional half of the same contract, and the one
+  field with structure instead of strings: `evidence_id`, `applies_to_variants`,
+  `required_finding`, `not_required_in`. It exists for scanner-restraint packs (#185,
+  #814) where the pristine fixture must produce *no* finding while a seeded mutant
+  sibling must produce a specific one. Schema-level so neither half can drift into the
+  other's variants.
 
 **Manifest validator (Layer-1 territory — deterministic, no model):** a small script
 the corpus ships with, which fails the build when:
 
 - any pack lacks at least one RED and one GREEN-or-accepted variant;
 - any NEAR-MISS lacks at least one `must_not_find` entry;
+- any pack uses the rejected legacy aliases `must_notice` / `must_not_claim` (the
+  validator emits the migration text, never an accepted synonym);
+- any `must_find_if_present` entry names a variant directory that does not exist, or
+  lists the same variant in both `applies_to_variants` and `not_required_in`;
 - any MUTANT lacks a hidden test or static oracle that demonstrably fails the mutant;
 - any `provenance.json` is candidate-visible unless the pack explicitly declares
   `prompt_exposure: "provenance_labeled"`;
@@ -731,20 +788,24 @@ simplicity (#298), know what behavior must survive (#2486)* — they upgrade exi
 pairs (cheapest integration), and pack 2 is nearly free given #13/#15 exist as the
 template. Every pack after that justifies itself against those three.
 
+**Then, once — not per pack.** After the hidden baselines exist for the packs that got
+built, the `provenance_labeled` batch calibration pass runs as its own step (see the
+[run-mode policy](#corpus-structure-and-provenance-schema)). It is a step in this plan,
+not a second arm bolted onto every pack, and it earns per-pack promotion only by showing
+a meaningful, stable difference in that batch.
+
 ## Open owner decisions
+
+Two that stood open after round two are **settled** and now live where they are
+enforced, not here: the `provenance_labeled` arm's timing (hidden is the primary run
+mode; labeled is one batch assay afterwards) and the schema vocabulary (`must_find` /
+`must_not_find` canonical, first-round names rejected as aliases) — both in
+[Corpus structure and provenance schema](#corpus-structure-and-provenance-schema). What
+remains open:
 
 - **Spend.** ~500k tokens per pack-order-of-magnitude; first three packs ≈ 1.5M.
   Same approval shape as a detection-programme measurement run, but aimed at fixture
   construction + control runs rather than prose lift.
-- **The `provenance_labeled` arm.** Hidden mode is the default and the only mode packs
-  1–8 require; the labeled arm (same packs, source context visible) is what separates
-  recognition from reasoning, but it roughly doubles run cost. Decide whether it runs
-  per-pack after hidden baselines exist, or once as a batch calibration over the
-  finished corpus.
-- **Schema vocabulary.** First-round names (`must_notice`/`must_not_claim`) vs
-  second-round (`must_find`/`must_not_find` + `allowed_findings`/`residual_findings`).
-  This document normalizes to the second-round names; confirm before the manifest
-  validator is written, since it enforces whichever set is canonical.
 - **Closure-hardening runs (packs 3 and the Vapor mini-packs).** Run the bare-rubric
   control on the real-world fixtures for the parked DD-01/DD-03/DD-05 classes? The
   parks are reversible by design; this is the cheapest possible way to stress them,
