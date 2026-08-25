@@ -38,8 +38,9 @@ datapoints await adjudication and all four checkboxes are unchecked. D1 (expecte
 compliant), D3, and D4 (both proposed TRUE violations) carry no blocking consequence in the
 packet; D2 is the load-bearing one.
 
-**The question:** is D2 (`2caa30e4b`, a docs-only rewrite the trigger flagged as an untested
-deepening refactor) a **FALSE POSITIVE** (the packet's proposal), or a true-but-trivial violation?
+**The question:** is D2 (`2caa30e4b` — a **target-repo** sha, in BenchHype, not resolvable in this
+repository; a docs-only rewrite the trigger flagged as an untested deepening refactor) a
+**FALSE POSITIVE** (the packet's proposal), or a true-but-trivial violation?
 
 **What it unblocks:** the G17 promotion bar (report-only → live enforcement), which requires zero
 false positives among adjudicated datapoints.
@@ -47,14 +48,19 @@ false positives among adjudicated datapoints.
 **Options and costs:**
 - Adjudicate FALSE POSITIVE → refine the trigger: add one condition to
   `contest-refactor/scripts/_artifact_coverage_citation.py` requiring at least one `changed_paths`
-  entry that classifies as code (not docs/markdown), plus a RED/restraint fixture pair and
-  selftest cases. Validator-side only, zero loop-token cost.
+  entry that classifies as source. Specify that as a **positive** extension set (reuse the
+  repository's canonical source-extension list), not as "anything that is not markdown" — a
+  blacklist makes JSON, asset, and configuration rewrites the next false positives. Plus a
+  RED/restraint fixture pair and selftest cases, including a mixed source+docs case and a
+  non-source-file restraint case. Validator-side only, zero loop-token cost.
 - Adjudicate true-but-trivial → no code change; the trigger stays as-is, at the cost of counting a
   docs-only rewrite as a violation.
 
-**Either way:** promotion cannot close this cycle. The bar also needs ≥2 languages, and all four
-datapoints are Swift (a non-Swift run is still owed) — this decision only clears the
-false-positive blocker, not the whole bar.
+**Either way:** promotion cannot close this cycle, and the language gap is not the only reason.
+The live tally in the source packet is **4/5 applicable runs, 0/2 restraint cases, 1 of 2 required
+languages (all Swift), and all four dispositions still unchecked**. This decision clears the
+false-positive blocker only; three other bar conditions remain open. Adjudicating D1, D3, and D4
+in the same administrative pass costs nothing and closes the checkbox gap.
 
 ### 2. Tier-3 validator pricing — schedule the build?
 
@@ -62,10 +68,12 @@ false-positive blocker, not the whole bar.
 
 **The question:** commission the five-phase validator plus host-hook build.
 
-**What it unblocks:** the register's most consequential open finding — the loop is told to run 27
+**What it unblocks:** the register's most consequential open finding — the loop is told to run the
 hard gates but never told to run the module implementing them, measured 0/2 in production. The
-prose-only fix was measured dead (0/6 fire rate) and reverted; the hook is the only remedy left
-untried.
+prose-only fix was measured dead (0/6 fire rate) and reverted; automatic invocation at a host
+boundary is the only remedy left untried. A second model-invoked wrapper is not a cheaper
+substitute — the 0/6 result rejects that class of fix directly, and a sentinel that reports the
+module's output as absent cannot enforce itself unless something invokes the sentinel.
 
 **Status:** feasibility gate PASSED/GO 2026-08-20. Threat model fixed at automatic invocation, not
 tamper resistance (no supported harness offers privilege separation today). One qualifying
@@ -77,28 +85,65 @@ have since shipped: the ruleset-epoch classifier (`60e1294`) and G29 version enf
 **What it costs:** ~250–400k validator-side. The hook build itself is explicitly unpriced — "the
 owner prices it."
 
-**Caveat:** only claude_code's interception point was demonstrated; the other four harnesses are
-documented, not demonstrated. Opencode — the actual production runner on both instrumented runs —
-is named to demonstrate first once the build starts.
+**The scope estimate is stale — reprice before commissioning.** The ~250–400k figure is costed
+against the 2026-08-20 design snapshot, and two things have moved since. The gate count in that
+snapshot ("27 hard gates") no longer matches the tree: at HEAD there are **32** distinct
+`check_g<n>` implementations across `contest-refactor/scripts/*.py`. And `5f74abc` shipped
+`validate-artifact.py --gates`, a phase-targeted battery selector — part of what the five-phase
+design was scoped to build now already exists. A refreshed phase-to-gate matrix against G1–G50 and
+the existing `--gates`/G47 phase facilities is a prerequisite to any credible total price.
 
-### 3. Preflight auto-commit — is unsolicited housekeeping in scope?
+**Caveat:** only claude_code's interception point was demonstrated, and that demonstration was a
+substring-matching stub. The other four harnesses are documented, not demonstrated. Opencode — the
+actual production runner on both instrumented runs — is named to demonstrate first once the build
+starts. Whether that demonstration is a precondition to commissioning or the first funded phase is
+itself part of this decision.
+
+**A bounded first phase exists as a third option**, between "commission the full five-phase build"
+and "defer": (1) demonstrate opencode `tool.execute.before` in a production-shaped repo — shell
+variants of `git commit`, drafted-subject capture, fail-closed behavior, staged-tree preservation,
+install health and rollback; (2) refresh the phase-to-gate matrix; (3) price a pre-commit MVP that
+runs the final-artifact gate subset automatically and accepts the G22 draft from the hook, with
+decision 3's early-commit incident as an acceptance case; (4) add earlier and post-commit phases
+only where the refreshed matrix shows value unavailable at pre-commit.
+
+### 3. Preflight auto-commit — what enforcement does an already-violated rule get?
 
 **Source:** `docs/contest-refactor-run-log.md`, Instrumented run #5 (2026-08-23).
 
 **What happened:** ~30 seconds into the run, inside Step 0, before any plan existed, the loop ran
-`git add skills-lock.json && git commit` against the target repo (BenchHype, `5d85cc14`) — it
-tidied a pre-existing dirty file on its own initiative.
+`git add skills-lock.json && git commit` against the target repo (BenchHype, `5d85cc14` — a
+target-repo sha, not resolvable in this repository) — it tidied a pre-existing dirty file on its
+own initiative.
 
-**Status:** recorded at the time as "worth an owner call, not yet adjudicated." Both
-`contest-refactor-run-log.md` and this register were searched for any later resolution; none
-exists — this is still open.
+**This is not an open posture question.** The rule already existed and the run broke it. `3906fb2`
+(2026-08-20, three days before the run) rewrote Step 0 sub-step 4b to require a clean
+tracked-and-untracked tree outside the six bookkeeping paths and to **abort, "no exception"**, on
+anything left after filtering. The prescribed behavior on a dirty `skills-lock.json` was the
+"commit or stash, then re-invoke" handoff. The loop instead made the tree clean by committing. So
+the record shows a measured violation of a live contract, not an absent policy — recorded at the
+time as "worth an owner call, not yet adjudicated," which framed it as a gap rather than a breach.
 
-**What it unblocks:** nothing is gated on this decision; it is a posture call, not a
-prerequisite. Left undecided, the same ambiguity recurs on every future run.
+**What is actually open:** whether prose alone is the enforcement. Adopting "in bounds" would
+weaken a safety boundary that already exists, with no evidence offered for the weakening. The
+live question is the remedy, and it is the same shape as decision 2's: a rule the loop is told to
+follow and demonstrably did not.
 
-**Options:** rule it in bounds (preflight housekeeping may commit outside the plan) and document
-it, or rule it out of bounds and add a guard against committing before a plan exists. Neither
-option has a cost estimate in the source record.
+**Options:**
+- **Mechanical guard at the commit boundary** (the reviewed recommendation): reject a
+  target-repository commit unless a Step-2 plan exists and `LOOP_STATE.json` proves either an
+  authorized Step-3 commit or the specifically defined artifact-only cleanup commit — checking
+  staged paths and the G22 subject before allowing it. This is the same host-boundary mechanism
+  decision 2 would build, so it is best sequenced as an acceptance case of that MVP rather than
+  funded separately. Cost accepted: legitimate housekeeping needs a separate operator action and a
+  re-invoke.
+- **Prose-only restatement** — cheapest, and the option the 0/6 measurement in decision 2 argues
+  against for exactly this class of instruction.
+- **Explicit scoped exception:** allow pre-mutation housekeeping only under an operator
+  authorization that names the paths and is recorded separately from the refactor plan.
+
+**What it unblocks:** nothing is gated on this decision. It is a posture call whose cost of
+deciding is near zero and whose cost of not deciding is recurrence on every future run.
 
 ### 4. Gold-corpus spend — build the first three fixture packs?
 
@@ -116,18 +161,38 @@ the register's own measurement history says have actually paid, as opposed to re
 zero lift, repeatedly).
 
 **What it costs:** ~500k tokens per pack-order-of-magnitude; ~1.5M for the first three, the same
-approval shape as a detection-programme measurement run. As of `e357a80`, the corpus already has a
-manifest validator, so the structural gatekeeper (negative-oracle presence, role-tag completeness,
-leak checks) exists ahead of any spend decision.
+approval shape as a detection-programme measurement run. That figure conflates two budgets that
+should be approved separately: **construction** of the fixture packs, and **dispatch** of the runs
+that grade against them.
+
+**A one-pack pilot is a live third option.** `#298` is the cheapest of the three because it reuses
+the existing `#13`/`#15` synthetic pair — which also makes it the only *matched* experiment
+available: the real-world minimized fixture against its synthetic twin, measuring whether
+real-world shape adds discrimination rather than assuming it does. Fund `#688` next only if it
+does. Order-of-magnitude: one pack, not three.
+
+**The manifest validator is not yet the assurance this decision can lean on.** As of `e357a80`
+`contest-refactor/scripts/validate-gold-corpus.py` exists and covers negative-oracle presence,
+role-tag completeness, and leak checks — but it is **standalone: nothing invokes it**, and
+`validate-repo.py` does not call it. Its own module docstring also records that the mutant-oracle
+check verifies a *declaration* only, not that an executable oracle actually fails the mutant.
+Wiring it into an invoked repository gate and giving mutants executable oracles belong in the
+pilot's acceptance criteria, not in the case for approving the spend.
 
 **Two smaller open decisions worth settling in the same pass:**
 - **Closure-hardening runs.** Run the bare-rubric control on the SwiftNIO #2486 pack and the Vapor
   mini-packs — real-world-shaped fixtures for the parked DD-01/DD-03/DD-05 detection classes? The
-  parks are reversible by design; either outcome is publishable in the register.
-- **Where GREEN anchors score.** Write down the 9.5-vs-10 rule before grading starts:
-  expert-accepted GREEN fixtures with a documented residual (TCA, SwiftNIO #2959) are expected to
-  score 9–9.5 despite non-zero findings, not a flat 10. Left unwritten, graders will invent the
-  rule per case.
+  parks are reversible by design; either outcome is publishable in the register. Note that under a
+  one-pack `#298` pilot both are out of scope by construction (SwiftNIO is pack 3, Vapor is pack
+  7), so this sub-decision only becomes live if the pilot funds a wider slice — and if either pack
+  is later built, the control must be preregistered, since it is the evidence capable of reopening
+  the parked rows.
+- **Where GREEN anchors score.** Write down the rule before grading starts, aligned to the existing
+  G5/G6/G37 semantics rather than invented for the corpus: **9.5** when the 9-anchor is met and a
+  documented accepted residual remains; **10** only when no behavior-preserving, source-backed
+  improvement remains; **below 9.5** only when an anchor is unmet or an actionable structural
+  blocker stands. Expert acceptance (TCA, SwiftNIO #2959) is provenance, not an automatic score.
+  Left unwritten, graders will invent the rule per case.
 
 ## Coverage — 2026-08-20 snapshot
 
