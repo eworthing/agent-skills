@@ -111,15 +111,20 @@ which is demonstrated except a claude_code stub. But `pre-commit` and `commit-ms
 agnostic, fire on the same boundary the design targets, and give exactly the two things it needs —
 the staged tree and the drafted commit message. This is not speculative here: **this repository
 already runs them** (`.githooks/pre-commit`, `.githooks/commit-msg`, `core.hooksPath=.githooks`),
-enforcing `sync_common`, `check_module_size`, ruff, and the eval guard on every commit. One
-integration would cover all five harnesses instead of five separate ones. The accepted limitation
+enforcing vendor integrity (`sync_common`), module size, and ruff on every commit. The eval guard is
+the instructive case rather than a fourth enforced check: it runs **report-only at `pre-commit`,
+always exiting 0** — git has not obtained the commit message at that stage, so it structurally cannot
+see a waiver trailer and must not block on its absence — and the real local gate is the separate
+`commit-msg` hook, with CI as the backstop (`common/README.md`, `common/scripts/eval_guard.py`). That
+split is precisely the staged-tree-then-drafted-message boundary Tier-3 needs, already solved here.
+One integration would cover all five harnesses instead of five separate ones. The accepted limitation
 is `--no-verify`, which bypasses them — acceptable under the stated threat model (automatic
 invocation, *not* tamper resistance) and no weaker than a harness hook the operator can disable.
 This decision should not be settled before that comparison is on paper: coverage, installation into
 a target repo the loop does not own, rollback, and the `--no-verify` gap, against the
 harness-specific alternative.
 
-**A bounded first phase exists as a third option**, between "commission the full five-phase build"
+**A bounded first phase exists as a third shape**, between "commission the full five-phase build"
 and "defer": (1) **compare native Git hooks against harness-specific interception** and either
 adopt them or rule them out with evidence; (2) refresh the phase-to-gate matrix against G1–G50 and
 the existing `--gates`/G47 facilities; (3) price a pre-commit MVP that runs the final-artifact gate
@@ -127,6 +132,18 @@ subset automatically and accepts the G22 draft from the hook, with decision 3's 
 incident as a rejection case; (4) add earlier and post-commit phases only where the refreshed
 matrix shows value unavailable at pre-commit. Only the demonstration for whichever boundary wins
 step 1 needs building — if Git hooks carry it, the per-harness demonstrations may never be needed.
+
+**What is actually fundable today, stated plainly.** Steps 1–2 above are *discovery*: they have no
+token cap and no price, so they are a scoping proposal, not a line item an owner can approve as
+written. Steps 3–4 are *build* and cannot be priced until steps 1–2 finish. So the live choice this
+week is narrower than it looks:
+- **Fund a capped discovery phase** — the Git-hook-vs-harness comparison plus the phase-to-gate
+  refresh, under a token ceiling the owner sets now, delivering a priced MVP proposal as its output.
+  This is the only option here that can be approved today.
+- **Defer** — accept a continued enforcement gap, mitigated by pausing unattended production runs or
+  having the operator invoke validation manually.
+- **Commission the full build** — available, but priced against a snapshot the packet has already
+  shown to be stale; approving it means accepting an unknown total.
 
 ### 3. Preflight auto-commit — what enforcement does an already-violated rule get?
 
@@ -163,6 +180,21 @@ follow and demonstrably did not.
   `HALT_LOOP_CAP`, and the out-of-plan cleanup commit. The allowlist must enumerate every durable
   transition, carry a positive acceptance case for each, and carry the preflight auto-commit as its
   rejection case.
+  **Unresolved, and it must be resolved before this option can be built: what the allowlist reads.**
+  `LOOP_STATE.json` cannot be the authority for most of those transitions. It is defined as a
+  *mid-Step-3* checkpoint — "created at Step 3 sub-step 0 … deleted at Step 3 sub-step 11.f after
+  the loop's commit lands" (`references/output-format-state-schemas.md:16`). It therefore exists at
+  the Step-3 commit and the out-of-plan cleanup commit, and **does not exist** at any Step-1 commit:
+  candidate archive, promotion, challenger-broke CONTINUE, or terminal halt. The v5 panel checkpoint
+  does not cover the gap either, since no profile is v5-authorized today. Each transition needs a
+  durable, mechanically-bound commit-intent source. The obvious candidate is `CURRENT_REVIEW.json` —
+  it carries `state`/`system_flag`, `run_id`, `source_rev`, `candidate_fingerprint`, and
+  `halt_success_challenge`, and it is itself staged in exactly these commits, so a hook could read it
+  from the staged tree — but that is a **hypothesis, not a verified design**: it has not been checked
+  for staleness across a crash, for the CONTINUE-transition case, or for whether the staged copy is
+  reliably the authoritative one. Scoping this is part of the work, not a precondition already met.
+  Whatever source is chosen must be tested for absence, staleness, crash recovery, and every positive
+  transition.
   This is the same host-boundary mechanism decision 2 would build, so it is best sequenced as an
   acceptance case of that MVP rather than funded separately. Cost accepted: legitimate housekeeping
   needs a separate operator action and a re-invoke.
@@ -171,8 +203,8 @@ follow and demonstrably did not.
 - **Explicit scoped exception:** allow pre-mutation housekeeping only under an operator
   authorization that names the paths and is recorded separately from the refactor plan.
 
-**What it unblocks:** nothing is gated on this decision. It is a posture call whose cost of
-deciding is near zero and whose cost of not deciding is recurrence on every future run.
+**What it unblocks:** nothing is gated on this decision. It is an enforcement-remedy call whose cost
+of deciding is near zero and whose cost of not deciding is recurrence on every future run.
 
 ### 4. Gold-corpus spend — build the first three fixture packs?
 
@@ -194,11 +226,11 @@ approval shape as a detection-programme measurement run. That figure conflates t
 should be approved separately: **construction** of the fixture packs, and **dispatch** of the runs
 that grade against them.
 
-**A one-pack pilot is a live third option.** `#298` is the cheapest of the three because it reuses
-the existing `#13`/`#15` synthetic pair — which also makes it the only *matched* experiment
-available: the real-world minimized fixture against its synthetic twin, measuring whether
-real-world shape adds discrimination rather than assuming it does. Order-of-magnitude: one pack,
-not three.
+**A one-pack pilot is the most defensible shape** — but see the next paragraph: it is not fundable
+today either. `#298` is the cheapest of the three because it reuses the existing `#13`/`#15`
+synthetic pair — which also makes it the only *matched* experiment available: the real-world
+minimized fixture against its synthetic twin, measuring whether real-world shape adds discrimination
+rather than assuming it does. Order-of-magnitude: one pack, not three.
 
 **Naming the pilot is not the same as bounding it — the following must be written down before it
 is approvable**, and none of it exists today:
@@ -215,6 +247,19 @@ is approvable**, and none of it exists today:
 - **What earns `#688`, and what ends the programme.** A stop rule and an escalation rule. Zero
   incremental signal, detected leakage, or high grader variance should end it; nothing currently
   says so in terms anyone could apply.
+
+**So "fund a smaller slice" is not on today's menu.** Until the four items above exist, the `#298`
+pilot cannot be approved any more than the three-pack spend can — listing what is missing does not
+supply it. The live choice is:
+- **Fund a capped design-and-pricing phase** — produce the split budgets, the preregistration, the
+  threshold, and the stop rules, under a ceiling the owner sets now, delivering a fundable pilot
+  proposal as its output. This is the only option here that can be approved today.
+- **Defer the corpus entirely.** It is independent of decisions 1–3 and blocks nothing; the
+  measurement history that justifies it (restraint and calibration paid, recall did not) will keep
+  just as well for a quarter.
+
+Whichever is chosen, the closure-hardening controls and the GREEN scoring rule below are settled
+separately and cost nothing.
 
 **The manifest validator is not yet the assurance this decision can lean on.** As of `e357a80`
 `contest-refactor/scripts/validate-gold-corpus.py` exists and covers negative-oracle presence,
