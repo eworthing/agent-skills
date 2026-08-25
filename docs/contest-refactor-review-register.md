@@ -26,6 +26,109 @@ RED/GREEN/NEAR-MISS/MUTANT derivation, executable hidden oracles — lives at
 proposes fixtures under `evals/gold-corpus/` (not yet built) and belongs to the eval architecture
 this register owns.
 
+## Pending owner decisions
+
+Four items are blocked on an owner call rather than on work, scattered across four documents.
+Collected here for a single read; each entry names its source rather than re-arguing it.
+
+### 1. G17 D2 disposition — false positive or true-but-trivial?
+
+**Source:** `analysis/contest-refactor/run-kit/G17-ADJUDICATION-2026-08-21.md`. Four historical
+datapoints await adjudication and all four checkboxes are unchecked. D1 (expected-blind, loop
+compliant), D3, and D4 (both proposed TRUE violations) carry no blocking consequence in the
+packet; D2 is the load-bearing one.
+
+**The question:** is D2 (`2caa30e4b`, a docs-only rewrite the trigger flagged as an untested
+deepening refactor) a **FALSE POSITIVE** (the packet's proposal), or a true-but-trivial violation?
+
+**What it unblocks:** the G17 promotion bar (report-only → live enforcement), which requires zero
+false positives among adjudicated datapoints.
+
+**Options and costs:**
+- Adjudicate FALSE POSITIVE → refine the trigger: add one condition to
+  `contest-refactor/scripts/_artifact_coverage_citation.py` requiring at least one `changed_paths`
+  entry that classifies as code (not docs/markdown), plus a RED/restraint fixture pair and
+  selftest cases. Validator-side only, zero loop-token cost.
+- Adjudicate true-but-trivial → no code change; the trigger stays as-is, at the cost of counting a
+  docs-only rewrite as a violation.
+
+**Either way:** promotion cannot close this cycle. The bar also needs ≥2 languages, and all four
+datapoints are Swift (a non-Swift run is still owed) — this decision only clears the
+false-positive blocker, not the whole bar.
+
+### 2. Tier-3 validator pricing — schedule the build?
+
+**Source:** `analysis/contest-refactor/TIER3-FEASIBILITY-GATE-2026-08-20.md`.
+
+**The question:** commission the five-phase validator plus host-hook build.
+
+**What it unblocks:** the register's most consequential open finding — the loop is told to run 27
+hard gates but never told to run the module implementing them, measured 0/2 in production. The
+prose-only fix was measured dead (0/6 fire rate) and reverted; the hook is the only remedy left
+untried.
+
+**Status:** feasibility gate PASSED/GO 2026-08-20. Threat model fixed at automatic invocation, not
+tamper resistance (no supported harness offers privilege separation today). One qualifying
+interception point was demonstrated — claude_code `PreToolUse`, in an isolated scratch repo,
+firing with zero model cooperation and blocking a commit fail-closed. Both stated prerequisites
+have since shipped: the ruleset-epoch classifier (`60e1294`) and G29 version enforcement
+(`d46360b`). Nothing upstream blocks starting.
+
+**What it costs:** ~250–400k validator-side. The hook build itself is explicitly unpriced — "the
+owner prices it."
+
+**Caveat:** only claude_code's interception point was demonstrated; the other four harnesses are
+documented, not demonstrated. Opencode — the actual production runner on both instrumented runs —
+is named to demonstrate first once the build starts.
+
+### 3. Preflight auto-commit — is unsolicited housekeeping in scope?
+
+**Source:** `docs/contest-refactor-run-log.md`, Instrumented run #5 (2026-08-23).
+
+**What happened:** ~30 seconds into the run, inside Step 0, before any plan existed, the loop ran
+`git add skills-lock.json && git commit` against the target repo (BenchHype, `5d85cc14`) — it
+tidied a pre-existing dirty file on its own initiative.
+
+**Status:** recorded at the time as "worth an owner call, not yet adjudicated." Both
+`contest-refactor-run-log.md` and this register were searched for any later resolution; none
+exists — this is still open.
+
+**What it unblocks:** nothing is gated on this decision; it is a posture call, not a
+prerequisite. Left undecided, the same ambiguity recurs on every future run.
+
+**Options:** rule it in bounds (preflight housekeeping may commit outside the plan) and document
+it, or rule it out of bounds and add a guard against committing before a plan exists. Neither
+option has a cost estimate in the source record.
+
+### 4. Gold-corpus spend — build the first three fixture packs?
+
+**Source:** `docs/contest-refactor-gold-corpus-2026-08-25.md`, "Open owner decisions". Two of that
+section's sub-decisions are already settled and are not reopened here: `provenance_labeled`
+timing (hidden mode is the primary build and run mode; labeled runs once as a batch calibration
+pass) and schema vocabulary (`must_find`/`must_not_find` canonical, first-round names rejected as
+aliases).
+
+**The question:** commission the first three real-PR fixture packs (Swift Collections #688, #298,
+SwiftNIO #2486).
+
+**What it unblocks:** eval-corpus material for restraint, calibration, and execution — the axes
+the register's own measurement history says have actually paid, as opposed to recall (measured
+zero lift, repeatedly).
+
+**What it costs:** ~500k tokens per pack-order-of-magnitude; ~1.5M for the first three, the same
+approval shape as a detection-programme measurement run. As of `e357a80`, the corpus already has a
+manifest validator, so the structural gatekeeper (negative-oracle presence, role-tag completeness,
+leak checks) exists ahead of any spend decision.
+
+**Two smaller open decisions worth settling in the same pass:**
+- **Closure-hardening runs.** Run the bare-rubric control on the SwiftNIO #2486 pack and the Vapor
+  mini-packs — real-world-shaped fixtures for the parked DD-01/DD-03/DD-05 detection classes? The
+  parks are reversible by design; either outcome is publishable in the register.
+- **Where GREEN anchors score.** Write down the 9.5-vs-10 rule before grading starts:
+  expert-accepted GREEN fixtures with a documented residual (TCA, SwiftNIO #2959) are expected to
+  score 9–9.5 despite non-zero findings, not a flat 10. Left unwritten, graders will invent the
+  rule per case.
+
 ## Coverage — 2026-08-20 snapshot
 
 **Current, 2026-08-25 (`a6dc71d`):** 102 fixtures, 79/79 selftests passing — see the run log's
