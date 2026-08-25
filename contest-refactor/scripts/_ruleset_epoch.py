@@ -31,7 +31,8 @@ SHA. The original LEGACY/CURRENT boundary therefore remains shape-based.
 G49 was the first requirement with a later, provable boundary: commit 651ea50
 introduced the hotspot-v2 handoff, so a live skill checkout can use Git ancestry
 to classify that commit and descendants as HOTSPOT_V2. G32's fingerprint-binding
-requirement (commit 44b4c03) is the second, same mechanism: `_is_at_or_after`
+requirement (commit 44b4c03) is the second, same mechanism, and G50's hotspot-
+triage requirement (commit 7ffd502) is the third: `_is_at_or_after`
 generalizes the ancestry + shallow-clone-fallback check, and `classify()` walks
 `_PROVABLE_EPOCHS` newest-first so a new boundary slots in without touching the
 older ones. A depth-1 clone falls back only when the artifact revision resolves
@@ -44,7 +45,7 @@ than being retroactively failed on a guess.
 
 This module backs RETROACTIVE requirements only — rules whose fields were added
 after artifacts already existed on disk (G43, G46, G49, G32's fingerprint
-binding). An artifact that cannot
+binding, G50). An artifact that cannot
 be PROVEN to meet an epoch boundary stays in an older epoch: a marker-less or
 unresolved artifact goes unchecked rather than a genuinely older artifact being
 wrongly failed. That intentional asymmetric trade puts the cost on under-
@@ -74,18 +75,21 @@ HOTSPOT_V2 = "hotspot_v2"
 HOTSPOT_V2_REV = "651ea50"
 FINGERPRINT_BOUND = "fingerprint_bound"
 FINGERPRINT_BOUND_REV = "44b4c03"
+HOTSPOT_TRIAGE = "hotspot_triage"
+HOTSPOT_TRIAGE_REV = "7ffd502"
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 # Oldest -> newest. Index comparison in `applies()` is what lets a future
 # epoch slot in without changing any call site. classify() below checks
 # newest-first so a later boundary always wins over an earlier one an
 # artifact also satisfies.
-EPOCHS: tuple[str, ...] = (LEGACY, CURRENT, HOTSPOT_V2, FINGERPRINT_BOUND)
+EPOCHS: tuple[str, ...] = (LEGACY, CURRENT, HOTSPOT_V2, FINGERPRINT_BOUND, HOTSPOT_TRIAGE)
 
 # Newest -> oldest, paired with each epoch's boundary revision. Extending this
 # (and EPOCHS above) is the whole job of adding a future git-ancestry-provable
 # epoch; classify() and _is_at_or_after() need no changes.
 _PROVABLE_EPOCHS: tuple[tuple[str, str], ...] = (
+    (HOTSPOT_TRIAGE, HOTSPOT_TRIAGE_REV),
     (FINGERPRINT_BOUND, FINGERPRINT_BOUND_REV),
     (HOTSPOT_V2, HOTSPOT_V2_REV),
 )
@@ -134,6 +138,14 @@ REQUIREMENT_EPOCHS: dict[str, str] = {
     # output-format-migrations.md's two-commit shape for a retroactive field --
     # see _artifact_panel.py's check_g32_halt_success_challenge).
     "G32_FINGERPRINT_BINDING": FINGERPRINT_BOUND,
+    # G50: discovery_consumption.hotspot_triage becomes a required, roster-equal
+    # Step-0 handoff for HALT_SUCCESS_candidate/HALT_SUCCESS artifacts with
+    # non-empty discovery.hotspot_scan.candidates. Landed 2026-08-24, commit
+    # 7ffd502 (the prose-only commit that first documents the field; this
+    # checker enforcement follows in the same wave, per
+    # output-format-migrations.md's two-commit shape for a retroactive field --
+    # see _artifact_discovery.py's check_g50_hotspot_triage).
+    "G50_HOTSPOT_TRIAGE": HOTSPOT_TRIAGE,
     # Slot for a future client, still unclaimed.
     # "G17_COVERAGE_CITATION": CURRENT,
 }

@@ -87,6 +87,11 @@ def _classify_cases() -> list[tuple[str, dict, str]]:
             epoch.FINGERPRINT_BOUND,
         ),
         (
+            "hotspot-triage boundary revision",
+            {"schema_version": 4, "skill_rev": "7ffd502"},
+            epoch.HOTSPOT_TRIAGE,
+        ),
+        (
             "unresolved valid SHA cannot prove the newer epoch",
             {"schema_version": 4, "skill_rev": "0000000"},
             epoch.CURRENT,
@@ -178,9 +183,9 @@ def _check_shallow_head_fallback() -> list[str]:
         # clone satisfies -- classify() tries newest-first, so it proves the
         # newest defined epoch, not specifically hotspot_v2. Update this
         # constant again the next time a newer provable epoch is added.
-        if got != epoch.FINGERPRINT_BOUND:
+        if got != epoch.HOTSPOT_TRIAGE:
             found.append(
-                f"classify: shallow current HEAD expected {epoch.FINGERPRINT_BOUND!r}, got {got!r}"
+                f"classify: shallow current HEAD expected {epoch.HOTSPOT_TRIAGE!r}, got {got!r}"
             )
     return found
 
@@ -246,6 +251,16 @@ if not epoch.applies("G32_FINGERPRINT_BINDING", _FP_BOUND_ART):
     failures.append(
         "applies: G32_FINGERPRINT_BINDING must apply at the fingerprint-binding boundary"
     )
+
+_TRIAGE_ART = {"schema_version": 4, "skill_rev": "7ffd502"}
+if epoch.REQUIREMENT_EPOCHS.get("G50_HOTSPOT_TRIAGE") != epoch.HOTSPOT_TRIAGE:
+    failures.append("REQUIREMENT_EPOCHS['G50_HOTSPOT_TRIAGE'] must start at hotspot_triage")
+if epoch.applies("G50_HOTSPOT_TRIAGE", _FP_BOUND_ART):
+    failures.append(
+        "applies: G50_HOTSPOT_TRIAGE must not retroactively apply before hotspot_triage"
+    )
+if not epoch.applies("G50_HOTSPOT_TRIAGE", _TRIAGE_ART):
+    failures.append("applies: G50_HOTSPOT_TRIAGE must apply at the hotspot-triage boundary")
 
 # [I1] items 1-4: the four requirement keys the new enforcement checkers read
 # (_artifact_independence.py, _artifact_transitions.py,
@@ -353,7 +368,7 @@ if failures:
     sys.exit(1)
 print(
     f"OK: _ruleset_epoch classifies {len(_classify_cases())} skill_rev shapes, the matrix "
-    f"scopes G43/G46/G49, preserves the shallow-HEAD fallback, and pins a marker-less "
+    f"scopes G43/G46/G49/G32/G50, preserves the shallow-HEAD fallback, and pins a marker-less "
     f"artifact's intentional G43/G46 under-coverage"
 )
 sys.exit(0)

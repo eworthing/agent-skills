@@ -25,6 +25,10 @@ _CANDIDATE_KEYS = {
     "signals",
     "neighborhood",
 }
+_TRIAGE_ROW_KEYS = {"path", "symbol", "disposition"}
+# Inline, not canon-registered: a single G50-local enum, same precedent as
+# _artifact_panel.py's {"simplicity", "domain_modeling"} target check.
+_DISPOSITIONS = {"confirm", "contextualize", "dismiss"}
 _SIGNAL_KEYS = {
     "decision_count",
     "max_nesting",
@@ -228,3 +232,82 @@ def check_g49_hotspot_scan(current_review: dict) -> list[Issue]:
         ]
 
     return [Issue("G49", error, context) for error in validate_hotspot_scan(scan)]
+
+
+def _candidate_key(candidate: Any) -> tuple[str, str] | None:
+    if not isinstance(candidate, dict):
+        return None
+    path, symbol = candidate.get("path"), candidate.get("symbol")
+    if isinstance(path, str) and path.strip() and isinstance(symbol, str) and symbol.strip():
+        return path, symbol
+    return None
+
+
+def check_g50_hotspot_triage(current_review: dict) -> list[Issue]:
+    """G50: every retained hotspot candidate must be triaged confirm|contextualize|dismiss.
+
+    Scoped to candidate emission and promotion (state in {HALT_SUCCESS_candidate,
+    HALT_SUCCESS}) per the register: CONTINUE loops are prose-governed, not gated
+    here. Dispositions are evidence-only -- a "confirm" row never creates a
+    Finding by itself; the canonical Evidence Chain (method.md) still owns
+    findings.
+    """
+    if not _ruleset_epoch.applies("G50_HOTSPOT_TRIAGE", current_review):
+        return []
+    if current_review.get("state") not in {"HALT_SUCCESS_candidate", "HALT_SUCCESS"}:
+        return []
+
+    discovery = current_review.get("discovery")
+    scan = discovery.get("hotspot_scan") if isinstance(discovery, dict) else None
+    candidates = scan.get("candidates") if isinstance(scan, dict) else None
+    if not isinstance(candidates, list) or not candidates:
+        return []
+
+    loop = current_review.get("loop")
+    context = f"discovery_consumption.hotspot_triage (loop {loop})"
+    roster = {key for candidate in candidates if (key := _candidate_key(candidate)) is not None}
+
+    consumption = current_review.get("discovery_consumption")
+    triage = consumption.get("hotspot_triage") if isinstance(consumption, dict) else None
+    if not isinstance(triage, list):
+        return [
+            Issue(
+                "G50",
+                "discovery_consumption.hotspot_triage must list a {path, symbol, disposition} "
+                "row for every retained candidate — triage every candidate before emitting a "
+                "HALT_SUCCESS candidate or promoting to terminal",
+                context,
+            )
+        ]
+
+    errors: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    triaged: set[tuple[str, str]] = set()
+    for index, row in enumerate(triage):
+        if not isinstance(row, dict) or set(row) != _TRIAGE_ROW_KEYS:
+            errors.append(f"hotspot_triage[{index}]: row has missing or unrecognized fields")
+            continue
+        path, symbol, disposition = row["path"], row["symbol"], row["disposition"]
+        if not (
+            isinstance(path, str) and path.strip() and isinstance(symbol, str) and symbol.strip()
+        ):
+            errors.append(f"hotspot_triage[{index}]: path and symbol must be non-empty strings")
+            continue
+        if disposition not in _DISPOSITIONS:
+            errors.append(
+                f"hotspot_triage[{index}]: disposition must be one of {sorted(_DISPOSITIONS)}"
+            )
+        key = (path, symbol)
+        if key in seen:
+            errors.append(f"hotspot_triage[{index}]: duplicate triage row for {key!r}")
+        seen.add(key)
+        triaged.add(key)
+
+    missing = roster - triaged
+    extra = triaged - roster
+    if missing:
+        errors.append(f"hotspot_triage is missing candidates: {sorted(missing)}")
+    if extra:
+        errors.append(f"hotspot_triage has candidates outside the scanner roster: {sorted(extra)}")
+
+    return [Issue("G50", error, context) for error in errors]

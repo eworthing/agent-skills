@@ -197,3 +197,7 @@ title = "run_id identity discipline — non-null run_id matches run-<UTC yyyy-mm
 [[validation_gates]]
 id = "G49"
 title = "Persisted implementation-hotspot evidence — sanitized schema-v2 coverage/candidates required for hotspot-v2 rulesets"
+
+[[validation_gates]]
+id = "G50"
+title = "Hotspot triage completeness — discovery_consumption.hotspot_triage key set must equal the scanner roster exactly (pre-emit, hotspot-triage epoch)"

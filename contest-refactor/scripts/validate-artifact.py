@@ -50,7 +50,7 @@ from _artifact_core import (  # noqa: E402
 )
 from _artifact_coverage_citation import check_g17_coverage_citation  # noqa: E402
 from _artifact_credentials import check_g44_credential_quarantine  # noqa: E402
-from _artifact_discovery import check_g49_hotspot_scan  # noqa: E402
+from _artifact_discovery import check_g49_hotspot_scan, check_g50_hotspot_triage  # noqa: E402
 from _artifact_halt import (  # noqa: E402
     check_g21_scorecard,
     check_g33_risk_boundary_evidence,
@@ -192,6 +192,7 @@ def run_checks(
     issues.extend(check_g39_backlog_score_impact(current_review, canon))
     issues.extend(check_g40_discovery_persistence(current_review))
     issues.extend(check_g49_hotspot_scan(current_review))
+    issues.extend(check_g50_hotspot_triage(current_review))
     issues.extend(check_g41_cap_loop_executed(current_review))
     issues.extend(check_g42_backlog_stable_id(current_review))
     issues.extend(check_g43_convergence_pass(current_review, history, canon))
