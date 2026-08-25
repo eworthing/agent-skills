@@ -73,9 +73,13 @@ codex exec --model gpt-5.6-luna -c model_reasoning_effort=high --sandbox workspa
 - **Resume**: `--continue` flag picks up the most recent session
 - **Nested-spawn caveat**: a running codex session may not be able to spawn a child `codex exec` subprocess (host process model varies; sandboxes commonly block recursive CLI invocation). If the spawn returns nonzero, the binary is not on PATH for the subprocess, or the session has no shell tool available, **fall back to inline mode**: set `spawn_isolation: "inline"`, document at top of `CURRENT_REVIEW.md` "codex subprocess spawn unavailable; running inline", and rely on Continuation Discipline + G20 (per [SKILL.md § Continuation Discipline](../SKILL.md#continuation-discipline) and [validation.md § G20](validation.md)) to keep the run autonomous across loops. Do **not** silently emit a user-facing close-out after loop 1 — that's the failure mode G20 catches.
 
-### opencode (verified 2026-08-19)
+### opencode (verified 2026-08-24)
 
-Spawn via subprocess:
+Three-tier spawn preference, tried in order. **The tier actually used determines the recorded `{model, model_source, isolation}` triple for that role** — the artifact records what the spawn did, never what the agent infers afterwards. Loop, reviewer, and challenger roles each record their own attribution independently; a challenger spawned via one tier does not inherit another role's recorded values.
+
+**Tier 1 — native host task**, preferred when the session exposes a task/subagent tool. The task type is exactly `general`. The hyphenated claude_code task-type name from [claude_code § Loop-spawn profile](#claude_code-verified-2026-05-09) above **does not exist on opencode** — a run that tries that name gets an invalid-type error and must fall back to the correct bare `general` type, not retry the invalid one. Native tasks are created with `model=undefined` and inherit the parent session's model — there is no way to pin a different model for the child task at this tier. Record `spawn_isolation: "subagent"`, `loop_model` = the parent session's model identity (not the provider-adapters default), and `loop_model_source: "inherited"`.
+
+**Tier 2 — subprocess**, when no native task tool is available:
 
 ```
 opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
@@ -85,6 +89,9 @@ opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
 - **Default model**: `opencode-go/deepseek-v4-flash` — `--model` takes `provider/model`; a bare id is invalid
 - **Permissions**: default mode (write allowed)
 - **Resume**: `--session <id>` flag
+- Record `spawn_isolation: "subagent"`, `loop_model` = the `--model` value passed, and `loop_model_source` per [Model overrides](#model-overrides) (`user_flag` / `env_override` / `default`).
+
+**Tier 3 — inline fallback**, when neither tier works. MUST record `spawn_isolation: "inline"` and document at top of `CURRENT_REVIEW.md`, mirroring the codex nested-spawn caveat above. An inline claim that the subprocess was tested and found unavailable is only legitimate if `opencode run` was actually invoked and failed — asserting "subprocess unavailable" without attempting it is a fabricated cause, not an honest fallback. `loop_model` = whatever model the primary session is actually running under, if introspectable, else `null`; `loop_model_source: "inherited"`.
 
 ### unknown
 
@@ -182,7 +189,16 @@ Two override paths, applied in this precedence (higher wins):
    - `CONTEST_REFACTOR_LOOP_MODEL=<id>` overrides loop-spawn default
    - `CONTEST_REFACTOR_REVIEWER_MODEL=<id>` overrides reviewer-spawn default
 
-Recorded in `CURRENT_REVIEW.json` as `loop_model_source` and `reviewer_model_source` ∈ {`default`, `env_override`, `user_flag`}.
+Recorded in `CURRENT_REVIEW.json` as `loop_model_source` and `reviewer_model_source`, one of four values:
+
+| value | meaning | set by |
+|---|---|---|
+| `user_flag` | a `--loop-model` / `--reviewer-model` / `--premium-dry-run-model` flag on the invocation chose the model | the operator, per-invocation |
+| `env_override` | a `CONTEST_REFACTOR_*` environment variable chose the model | the operator's environment |
+| `default` | no flag or env var was set; the adapter's documented per-provider default (this file's per-provider tables) was used | provider-adapters.md |
+| `inherited` | the spawn mechanism adopted the parent/session model without an explicit choice — e.g., an opencode native host task, or an inline fallback with no model argument | the spawn mechanism itself |
+
+Precedence when resolving a model **before** spawn: `user_flag` > `env_override` > `default`. `inherited` is not a rung on that ladder — it is not chosen among competing sources, it records that the spawn mechanism made no explicit choice at all (native opencode tasks always inherit; there is nothing to override to a different value at that tier). See [opencode § Loop-spawn profile](#opencode-verified-2026-08-24) for the concrete case.
 
 ### Premium model budget policy
 

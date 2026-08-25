@@ -73,7 +73,7 @@ Resolve `loop_model` and `reviewer_model` from provider-adapters.md per-provider
 - Else resolve the normal loop model with precedence `--loop-model` user flag > `CONTEST_REFACTOR_LOOP_MODEL` env > provider default, and set `premium_dry_run: null`.
 - Resolve `reviewer_model` independently with precedence `--reviewer-model` user flag > `CONTEST_REFACTOR_REVIEWER_MODEL` env > provider default.
 
-Record `*_source` ∈ {`default`, `env_override`, `user_flag`} for each. `premium_loop_override` is `true` only when `--allow-premium-loop` is present and the invocation is not dry-run; if the flag appears with `--dry-run` or a dedicated premium dry-run control, warn and record `premium_loop_override: false`.
+Record `*_source` ∈ {`default`, `env_override`, `user_flag`} from this precedence resolution. If the provider's spawn mechanism overrides the resolved model without an explicit choice (e.g. an opencode native host task, which always inherits the parent session's model), the spawn adapter's actual `{model, model_source}` wins over this pre-dispatch resolution and `*_source` becomes `inherited` — see [provider-adapters.md § Model overrides](provider-adapters.md#model-overrides) for the full four-value table. `premium_loop_override` is `true` only when `--allow-premium-loop` is present and the invocation is not dry-run; if the flag appears with `--dry-run` or a dedicated premium dry-run control, warn and record `premium_loop_override: false`.
 
 Before dispatching a loop subagent, apply the premium model budget guard using `canon/premium-models.toml`: if resolved `loop_model` is premium, invocation `dry_run` is false, and `--allow-premium-loop` is absent, stop before spawning. Print the safer commands:
 

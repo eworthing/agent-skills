@@ -277,6 +277,30 @@ def main() -> int:
                     "opencode's --model requires provider/model and rejects a bare id"
                 )
 
+    # --- opencode native-task adapter (Instrumented run #7, 2026-08-24) ---------
+    # opencode has no `general-purpose` task type -- a run that tried it before
+    # falling back to the real type `general` proves the mistake is one prompt
+    # away from recurring. And the honest inline fallback (no subprocess, no
+    # native task) must say so in the recorded metadata, not be inferred later.
+    opencode_section = adapters.split("### opencode", 1)[-1].split("\n### ", 1)[0]
+    if "general-purpose" in opencode_section:
+        failures.append(
+            "the opencode section names `general-purpose` -- that task type does not exist "
+            "on opencode (claude-code vocabulary); the native task type is `general`"
+        )
+    if 'spawn_isolation: "inline"' not in opencode_section:
+        failures.append(
+            "the opencode section lost its honest inline-fallback recording "
+            '(`spawn_isolation: "inline"`) -- without it a failed native-task/subprocess '
+            "spawn has nowhere honest to record what actually ran"
+        )
+    if "inherited" not in adapters.split("## Model overrides", 1)[-1].split("\n## ", 1)[0]:
+        failures.append(
+            "the Model overrides section's source enumeration lost `inherited` -- the G19 "
+            "gate (_artifact_history.py) accepts it, so omitting it here is a doc/gate split "
+            "that reintroduces the run-2026-08-24 attribution defect"
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")
