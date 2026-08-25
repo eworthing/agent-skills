@@ -242,4 +242,5 @@ through the existing Step-1.6 oscillation handling instead of re-invoking the
 challenger. The same fingerprint against a changed source revision is a fresh
 candidate and must be challenged again. `candidate_commit_sha` is **not** part of
 the recurrence key — artifact-only recommits change it without changing the
-analyzed source.
+analyzed source. Use `candidate_fingerprint.py compute|verify <artifact.json>`
+(never an ad-hoc import) to check whether two artifacts share a fingerprint.

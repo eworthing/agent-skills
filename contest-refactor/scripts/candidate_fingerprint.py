@@ -7,13 +7,24 @@ artifact-only recommits remain equivalent. candidate_commit_sha is the separate
 G32 freshness binding and changes on every recommit.
 
 Owned here; referenced by references/output-format-json.md and halt-verifier.md.
-Run directly to execute the stability self-test:  python3 scripts/candidate_fingerprint.py
+
+CLI:
+  python3 scripts/candidate_fingerprint.py                    # stability self-test
+  python3 scripts/candidate_fingerprint.py compute <artifact>  # print canonical fingerprint
+  python3 scripts/candidate_fingerprint.py verify <artifact>   # exit 0 iff recorded == canonical
+  python3 scripts/candidate_fingerprint.py write <artifact>    # recompute + atomic in-place write
+
+These replace the ad-hoc "import and call candidate_fingerprint() by hand" snippet
+the register's instrumented-run audit found operators reaching for.
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
+import sys
+from pathlib import Path
 
 
 def _architecture_payload(review: dict) -> dict:
@@ -129,6 +140,80 @@ def _selftest() -> None:
     )
     print("candidate_fingerprint self-test: OK (7 assertions passed)")
 
+    # --- CLI modes: minimal coverage against a scratch artifact file ---
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        artifact_path = Path(tmp, "CURRENT_REVIEW.json")
+        artifact_path.write_text(json.dumps(base), encoding="utf-8")
+
+        assert _cmd_compute(artifact_path) == 0
+        assert _cmd_verify(artifact_path) != 0, "no candidate_fingerprint recorded yet -> mismatch"
+
+        assert _cmd_write(artifact_path) == 0
+        written = json.loads(artifact_path.read_text(encoding="utf-8"))
+        assert written["candidate_fingerprint"] == candidate_fingerprint(base)
+        assert _cmd_verify(artifact_path) == 0, "write must leave the artifact self-consistent"
+
+        artifact_path.write_text(
+            json.dumps({**base, "candidate_fingerprint": "stale"}), encoding="utf-8"
+        )
+        assert _cmd_verify(artifact_path) != 0, "a stale recorded fingerprint must fail verify"
+    print("candidate_fingerprint CLI self-test: OK (compute/verify/write)")
+
+
+def _load_review(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _cmd_compute(path: Path) -> int:
+    print(candidate_fingerprint(_load_review(path)))
+    return 0
+
+
+def _cmd_verify(path: Path) -> int:
+    review = _load_review(path)
+    recorded = review.get("candidate_fingerprint")
+    expected = candidate_fingerprint(review)
+    if recorded == expected:
+        print(f"OK: candidate_fingerprint matches ({expected})")
+        return 0
+    sys.stderr.write(f"MISMATCH: recorded={recorded!r} canonical={expected!r}\n")
+    return 1
+
+
+def _cmd_write(path: Path) -> int:
+    review = _load_review(path)
+    review["candidate_fingerprint"] = candidate_fingerprint(review)
+    tmp_path = path.parent / f"{path.name}.tmp"
+    tmp_path.write_text(json.dumps(review, indent=2) + "\n", encoding="utf-8")
+    tmp_path.replace(path)
+    print(f"wrote candidate_fingerprint={review['candidate_fingerprint']} to {path}")
+    return 0
+
+
+def _main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if not argv:
+        _selftest()
+        return 0
+    parser = argparse.ArgumentParser(description="candidate_fingerprint artifact CLI")
+    sub = parser.add_subparsers(dest="command", required=True)
+    for name, fn, help_text in (
+        ("compute", _cmd_compute, "print the canonical fingerprint"),
+        ("verify", _cmd_verify, "exit 0 iff the recorded fingerprint matches canonical"),
+        ("write", _cmd_write, "recompute and atomically write the fingerprint in place"),
+    ):
+        p = sub.add_parser(name, help=help_text)
+        p.add_argument("artifact", type=Path, help="path to a CURRENT_REVIEW.json-shaped artifact")
+        p.set_defaults(func=fn)
+    args = parser.parse_args(argv)
+    try:
+        return args.func(args.artifact)
+    except (OSError, json.JSONDecodeError) as exc:
+        sys.stderr.write(f"error: {exc}\n")
+        return 2
+
 
 if __name__ == "__main__":
-    _selftest()
+    raise SystemExit(_main())
