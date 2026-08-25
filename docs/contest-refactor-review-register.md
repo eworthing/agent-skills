@@ -426,6 +426,16 @@ Still open, carried here:
 
 ## Token-cost estimates and work order
 
+**Board status, 2026-08-25: nothing agent-executable remains.** Tier 1 (10/10 rows) and Tier 2
+(8/10 rows) below shipped in the 2026-08-20 fleet run; `docs/contest-refactor-run-log.md:32` says
+so directly — *"Fleet complete. Everything agent-executable from the work order is landed or
+dispositioned."* Rows are marked `SHIPPED`/`CLOSED`/decided in place rather than deleted, because
+the cost estimates are the tables' remaining value as a record of what the work actually cost.
+What's left is gated on an owner decision (Tier-3 validator pricing, the G17 D2 disposition,
+Backlog 8's axis call), on a production run (the run-gated tier, the G17 promotion bar, the
+`--scope` probe), or is `[D3]`, which is deliberately deferred until a fifth gate selftest exists
+— do not pick it up thinking it's a cheap win.
+
 **Added 2026-08-20 at the owner's request**, so the open items can be sequenced by cost against the
 standing budget rule (significant improvements, or improvements that cost very little). **Method.**
 "Session tokens" prices the full read–implement–validate–commit cycle, calibrated against observed
@@ -461,31 +471,34 @@ branches sequence differently:
 [I1] needs the panel **decision** (it fixes the go-forward version topology, v4-only versus
 v4/v5) but not the removal's execution; either branch may start [I1] as soon as the call is made.
 
-### Tier 1 — cheap and real (~330–350k with this session's scratchpad; ~400–420k without)
+### Tier 1 — cheap and real — SHIPPED 2026-08-20 (cost: ~330–350k with that session's scratchpad;
+~400–420k without)
 
-Recommended order within the tier. Everything here is independently shippable and closes something
-named in this review. Two prices where they differ: D5 and D1's lower price assumes this session's
-scratchpad artifacts (the higher is what a fresh engineer pays after they are gone), and the
-residual repair's lower price assumes the panel removal has been executed first (the tier range's
-ends are retain-branch high / remove-branch low).
+The table lists items in the order they shipped. Each was independently shippable and closed
+something named in this review. Two prices differed for a reason: D5 and D1's lower price assumed
+this session's scratchpad artifacts (the higher figure is what a fresh engineer would have paid
+after they were gone), and the residual repair's lower price assumed the panel removal had been
+executed first — the panel decision came down RETAIN (Decision gate above), so the realized cost
+was the higher retain-branch figure, ~70k, not the remove-branch figure.
 
 | # | Item | Est. | Why this price |
 | --- | --- | --- | --- |
-| 1 | **D5** — `scripts/_canon_selftest.py` | **~25k now, ~75k later** | `_canon_new.py` and the loader driver still exist in this session's scratchpad, and the 11 mutation cases are enumerated above; once the scratchpad is gone the harness is rebuilt from prose. The only item with an expiring discount. Acceptance: one case per each of the **16** `sys.exit(2)` sites (the 11 are the seed), each asserting the diagnostic *names the offending file* — not just exit code 2 — plus the committed 21-field golden snapshot. |
-| 2 | Ponytail 3 — dead-code deletion | ~5k | 14 lines; zero callers already proven twice. |
-| 3 | **P1 ×2** — loop ownership, preferred clean-tree branch | ~60k | Moved up from Tier 2: first among the substantive fixes — only the expiring D5 discount and the ~5k dead-code triviality precede it — because nothing justifies deferring the two highest-severity findings (data loss). Covers the clean-tree precondition, by-construction ownership, the `HALT_STAGNATION`/`user_decision` persistent halt defined in the finding, and the replay matrix including halt-and-resume. Loop-path prose, so it owes a keyed probe in the next behavioral sweep. Dirty-tree support stays deferred and unpriced. |
-| 4 | **D1** — `load_canon` refactor | ~40k now, ~60k later | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Rebuilt from scratch it costs what it cost the first time (~60k). Acceptance: the one-time old/new comparison passes **and the committed golden snapshot is unchanged**. Do D5 first — its golden is D1's regression net. |
-| 5 | **P1** — 9.5-residual enforcement | ~70k retain-branch, ~50k after removal executes | Pure validator change + one negative fixture — but the repair bill is **seven** fixtures, not one (see the finding above); five are `panel-*` and are deleted only when ponytail 1 has actually run, not by the decision itself. Touches no loop-path prose, so no behavioral probe is owed. Still the cheapest P1 on the board. |
-| 6 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. Write the v5 clause to match the panel decision. The enforcement half inherits [I1] and is priced in Tier 2. |
-| 7 | **I3** — `source_rev` + `findings_carried_from_prior_loops` spec | ~20k | One definition decision plus two spec paragraphs. |
-| 8 | Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. Moved out of the run-gated tier — it has no production-run dependency. |
-| 9 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit. If the panel decision leaves removal open, put the shared loader in a neutral `scripts/_selftest_lib.py` rather than extending the panel-named testkit. |
-| 10 | **D4 step 0–1** — adjudicate the four asymmetric checks, then cross-apply | ~50k | Adjudicate each asymmetry against the two study contracts first (shared versus study-specific — baselines cannot answer intent), then add each *shared* check with one synthetic positive and one synthetic negative case, because the advisory side's `_check_replication` is dormant (zero replication blocks) and passes cross-applied checks vacuously. The adjudication record is the deliverable, no unification. |
+| 1 | **D5** — `scripts/_canon_selftest.py` | **~25k now, ~75k later** | `_canon_new.py` and the loader driver still exist in this session's scratchpad, and the 11 mutation cases are enumerated above; once the scratchpad is gone the harness is rebuilt from prose. The only item with an expiring discount. Acceptance: one case per each of the **16** `sys.exit(2)` sites (the 11 are the seed), each asserting the diagnostic *names the offending file* — not just exit code 2 — plus the committed 21-field golden snapshot. **Status: SHIPPED 2026-08-20 (`acd0bfd`).** |
+| 2 | Ponytail 3 — dead-code deletion | ~5k | 14 lines; zero callers already proven twice. **Status: SHIPPED 2026-08-20 (`831f901`).** |
+| 3 | **P1 ×2** — loop ownership, preferred clean-tree branch | ~60k | Moved up from Tier 2: first among the substantive fixes — only the expiring D5 discount and the ~5k dead-code triviality precede it — because nothing justifies deferring the two highest-severity findings (data loss). Covers the clean-tree precondition, by-construction ownership, the `HALT_STAGNATION`/`user_decision` persistent halt defined in the finding, and the replay matrix including halt-and-resume. Dirty-tree support stays deferred and unpriced. **Status: SHIPPED 2026-08-20 (`3906fb2`)** — the keyed probe it owed also ran and PASSED in sweep #5 (2026-08-20), see the keyed-probe log above. |
+| 4 | **D1** — `load_canon` refactor | ~40k now, ~60k later | The rewritten module exists and already passed 21-field equivalence + 11/11 mutations; remaining work is port, re-prove, commit. Rebuilt from scratch it costs what it cost the first time (~60k). Acceptance: the one-time old/new comparison passes **and the committed golden snapshot is unchanged**. Do D5 first — its golden is D1's regression net. **Status: SHIPPED 2026-08-20 (`4fee1c1`).** |
+| 5 | **P1** — 9.5-residual enforcement | ~70k retain-branch, ~50k after removal executes | Pure validator change + one negative fixture — but the repair bill is **seven** fixtures, not one (see the finding above); five are `panel-*` and are deleted only when ponytail 1 has actually run, not by the decision itself. Touches no loop-path prose, so no behavioral probe is owed. Still the cheapest P1 on the board. **Status: SHIPPED 2026-08-20 (`ab44c63`)** — realized at the retain-branch price (~70k); the removal-branch alternate never applied, since ponytail 1 was decided RETAIN. |
+| 6 | G29 prose correction | ~15k | The cheap half of the emission-version P2: align G29's text to the v4/v5 rule. Write the v5 clause to match the panel decision. The enforcement half inherits [I1] and is priced in Tier 2. **Status: SHIPPED 2026-08-20 (`62d5a71`).** |
+| 7 | **I3** — `source_rev` + `findings_carried_from_prior_loops` spec | ~20k | One definition decision plus two spec paragraphs. **Status: CLOSED 2026-08-20 (`62d5a71`)** — same commit as row 6. |
+| 8 | Audit rev-3 re-review | ~30k | One codex round; closes the only unreviewed revision. Moved out of the run-gated tier — it has no production-run dependency. **Status: DONE 2026-08-20** (no sha — a review round, not a commit) — round-4 codex REVISE, five findings (B1–B3, N1–N2), all confirmed and recorded in "Carried from the runtime-cost audit" above. |
+| 9 | **D2** — `_load_validator` testkit | ~35k | 14-file mechanical edit. If the panel decision leaves removal open, put the shared loader in a neutral `scripts/_selftest_lib.py` rather than extending the panel-named testkit. **Status: SHIPPED 2026-08-20 (`ac839c5`)** — landed as the neutral `_selftest_lib.py` loader. |
+| 10 | **D4 step 0–1** — adjudicate the four asymmetric checks, then cross-apply | ~50k | Adjudicate each asymmetry against the two study contracts first (shared versus study-specific — baselines cannot answer intent), then add each *shared* check with one synthetic positive and one synthetic negative case, because the advisory side's `_check_replication` is dormant (zero replication blocks) and passes cross-applied checks vacuously. The adjudication record is the deliverable, no unification. **Status: SHIPPED 2026-08-20 (`7d6f4b8`)** — step 0–1 only; step 2 (factoring) remains deliberately unstarted, see the adjudication record above. |
 
 [I2] left this tier: the spec already fixes the `rounds` value set, and required-value enforcement
 retro-invalidates the null-emitting production artifacts — it is now priced after [I1] in Tier 2.
 
-### Tier 2 — medium engineering (80k–300k)
+### Tier 2 — medium engineering — 8 of 10 rows SHIPPED 2026-08-20 (that work cost ~80k–300k);
+Backlog 8 (NO-GO) and D3 (deferred by design) remain open
 
 A caveat that applies to every validator flip below (independence, transitions, G29): each
 enforces in `validate-artifact.py`, which this register measures the production loop **never
@@ -495,16 +508,16 @@ validator flip alone.
 
 | Item | Est. | Notes |
 | --- | --- | --- |
-| **[I1]** — version/ruleset scoping fix | **~120k** | The highest-leverage single item on the board: it unblocks the independence flip, the transitions flip, [I2], G29 enforcement, and is prerequisite #1 of the loop-path hook. Its named deliverable is **one authoritative ruleset-epoch classifier plus compatibility matrix** that all of those consume — G43/G46 scoping is the first client, not the product, and the G17 flip is a client too (its requirement must scope to current emits). The design pattern already exists in-repo (v2→v3 bumped *and* default-filled); the work is the decision, the migration table, and the classifier. |
-| P1 — independence enforcement (validator side) | ~50k after I1 | Small once scoping exists; blocked until then. The P1 itself closes only when the **live promotion route** refuses a terminal candidate with missing or inline reviewer/challenger isolation — that half is Tier-3-gated. |
-| P2 — transitions `REPORT_ONLY` flip | ~20k after I1 | Plus one decision: the disposition of the dogfood artifact's real `HALT_LOOP_CAP→CONTINUE` at loop 10→11. |
-| [I2] — `rounds` membership check | ~15k after I1 | Required exact-int `{1, 2}` on current-ruleset emits (`bool` excluded), null only on scoped older artifacts; the conditional-coupling clause stays an open residual. Waits on scoping because both production artifacts emitted `null`. |
-| P2 — G29 emission-version enforcement | ~20k after I1 | The other half of the Tier-1 prose fix; without it the P2 stays half-closed. Acceptance: a new emit's declared version must **equal** the capability-derived current version — every stale version (v1/v2/v3), missing, and null all fail strict; scoped older history stays readable. The alternative closure — stop calling G29 a hard gate — is a decision, not code; pick one. |
-| P2 — aspirational-fixture repair | ~100k | Sub-rule label normalization first, then per-fixture completion; fiddly rather than hard. |
-| Ponytail 2 — fixture-history materialization | ~70k | Harness change is small; the rewrite is scriptable across 63 histories (remove branch) or 83 (retain branch — the −9,400-line figure is the remove branch's). Sequenced after the panel branch is executed. |
-| Ponytail 1 — panel-stack removal | ~80k, **owner call first** | Executing the deletion is mechanical; the decision to reverse a shipped-then-parked feature is not a reviewer's to make. |
-| Backlog 8 — strictness post-filter | ~80k | RFC exists; implementation unstarted. |
-| **D3** — gate-driver factoring | ~30k, deferred by design | Priced for when the next gate is written; doing it now designs against a guessed caller. |
+| **[I1]** — version/ruleset scoping fix | **~120k** | The highest-leverage single item on the board: it unblocks the independence flip, the transitions flip, [I2], G29 enforcement, and is prerequisite #1 of the loop-path hook. Its named deliverable is **one authoritative ruleset-epoch classifier plus compatibility matrix** that all of those consume — G43/G46 scoping is the first client, not the product, and the G17 flip is a client too (its requirement must scope to current emits). The design pattern already exists in-repo (v2→v3 bumped *and* default-filled); the work is the decision, the migration table, and the classifier. **Status: SHIPPED 2026-08-20 (`60e1294`).** |
+| P1 — independence enforcement (validator side) | ~50k after I1 | Small once scoping exists; blocked until then. The P1 itself closes only when the **live promotion route** refuses a terminal candidate with missing or inline reviewer/challenger isolation — that half is Tier-3-gated. **Status: CLOSED at validator level 2026-08-20 (`d46360b`)** — live-promotion half remains open, Tier-3-gated. |
+| P2 — transitions `REPORT_ONLY` flip | ~20k after I1 | Plus one decision: the disposition of the dogfood artifact's real `HALT_LOOP_CAP→CONTINUE` at loop 10→11. **Status: CLOSED at validator level 2026-08-20 (`d46360b`)** — the dogfood artifact's transition is legacy-epoch and stays print-only by design; that is its recorded disposition. |
+| [I2] — `rounds` membership check | ~15k after I1 | Required exact-int `{1, 2}` on current-ruleset emits (`bool` excluded), null only on scoped older artifacts; the conditional-coupling clause stays an open residual. Waits on scoping because both production artifacts emitted `null`. **Status: CLOSED at validator level 2026-08-20 (`d46360b`)** — the conditional-coupling clause stays an open residual as noted. |
+| P2 — G29 emission-version enforcement | ~20k after I1 | The other half of the Tier-1 prose fix; without it the P2 stays half-closed. Acceptance: a new emit's declared version must **equal** the capability-derived current version — every stale version (v1/v2/v3), missing, and null all fail strict; scoped older history stays readable. The alternative closure — stop calling G29 a hard gate — is a decision, not code; pick one. **Status: CLOSED 2026-08-20 (`d46360b`)** — the keyed probe for this enforcement also ran and PASSED in sweep #5 (2026-08-20), see the keyed-probe log above. |
+| P2 — aspirational-fixture repair | ~100k | Sub-rule label normalization first, then per-fixture completion; fiddly rather than hard. **Status: CLOSED 2026-08-20 (`13c947c`)** — see "[P2] Eight aspirational fixtures can pass for an unrelated failure" above for the full disposition and follow-ups flagged. |
+| Ponytail 2 — fixture-history materialization | ~70k | Harness change is small; the rewrite is scriptable across 63 histories (remove branch) or 83 (retain branch — the −9,400-line figure is the remove branch's). Sequenced after the panel branch is executed. **Status: SHIPPED 2026-08-20 (`4d4f6ae`)** — materialized on the retain branch (83 histories). |
+| Ponytail 1 — panel-stack removal | ~80k, **owner call first** | Executing the deletion is mechanical; the decision to reverse a shipped-then-parked feature is not a reviewer's to make. **Status: DECIDED RETAIN 2026-08-20** (owner call, recorded at the Decision gate above) — this is a decision against removal, not pending work; the ~80k removal cost was never spent. |
+| Backlog 8 — strictness post-filter | ~80k | RFC exists; implementation unstarted. **Status: NO-GO 2026-08-20 (`bceff1b`)** — blocked on item 6 (the confidence-axis experiment, unrun) and on an incompatibility with current `--strictness` semantics; see the "Carried from the ledger" entry for item 8 above. Still open, but not a pickup: it needs the owner axis decision plus the unrun experiment first. |
+| **D3** — gate-driver factoring | ~30k, deferred by design | Priced for when the next gate is written; doing it now designs against a guessed caller. **Still open — do not pick up as a quick win.** Deliberately deferred until a fifth gate selftest exists to design the driver against a real caller instead of a guessed one. |
 
 ### Tier 3 — the big build
 
@@ -563,15 +576,17 @@ deliberate project, not something to pick up alongside other work.
 
 ### Reading of the board
 
-The panel decision costs nothing and re-sequences four items — take it first, remembering that
-the cheaper branch prices require the removal to be executed, not merely chosen. Tier 1 in order:
-~330–350k (scratchpad-assisted; ~400–420k without) closes **three P1s outright** — the two
-data-loss ownership findings and the 9.5-residual hole — plus the canon test gap, the dead code,
-two spec ambiguities, and the audit's last unreviewed revision, and banks the already-proven D1 — the densest value on the list, led by the one item whose price triples when
-the session ends. The single most leveraged spend after that is **[I1] at ~120k**, which unblocks
-four immediate items — the independence flip (~50k), the transitions flip (~20k), the [I2]
-membership check (~15k), and G29 enforcement (~20k) — ~105k of Tier-1-grade work, plus the G17
-flip once its run bar is met. The loop-path P2 — this review's
+The panel decision cost nothing and re-sequenced four items; it came down RETAIN, executed
+2026-08-20 (Decision gate above). Tier 1 shipped in full 2026-08-20 for ~330–350k
+(scratchpad-assisted; ~400–420k without), closing **three P1s outright** — the two data-loss
+ownership findings and the 9.5-residual hole — plus the canon test gap, the dead code, two spec
+ambiguities, and the audit's last unreviewed revision, and banking the already-proven D1 — the
+densest value on the list, led by the one item whose price would have tripled had the session
+ended first. The single most leveraged spend after that, **[I1] at ~120k**, also shipped
+(`60e1294`) the same day, and unblocked four items that landed alongside it in one commit
+(`d46360b`) — the independence flip (~50k), the transitions flip (~20k), the [I2] membership check
+(~15k), and G29 enforcement (~20k), ~105k of Tier-1-grade work — plus the G17 flip once its run bar
+is met (still unmet). The loop-path P2 — this review's
 most consequential finding — cannot be bought for less than the Tier-3 project, and no cheaper
 route remains untried; its validator side is estimated at ~250–400k while **total closure cost
 stays unknown until the hook go/no-go passes**. Treat it as its own funded effort, starting with
