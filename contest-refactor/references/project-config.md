@@ -56,6 +56,8 @@ When the loop reads CLI flags + config:
 3. CLI flags (`--force-lens`, `--cap`, `--test-filter`, etc.) override config.
 4. Per-invocation flags (`--dry-run`) are invocation-scoped and not persisted.
 
+(a stricter project-instruction command may extend, never replace, the pinned floor — see startup.md sub-step 3)
+
 The config never raises a residual to `HALT_SUCCESS` unless the residual's `expires` date is in the future at loop start.
 
 ## Accepted residuals — semantics + expiry rule

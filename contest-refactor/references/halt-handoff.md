@@ -384,8 +384,10 @@ Next step options:
       flag is invocation-scoped; absence of the flag means execute. No --reset
       needed.
   (b) Re-plan with a different target — edit the Improvement Backlog in
-      CURRENT_REVIEW.md to promote a different finding to Priority 1, then
-      re-invoke "/contest-refactor --dry-run" to see the new plan.
+      CURRENT_REVIEW.md to promote a different finding to Priority 1. After
+      reordering items, the next Step-1 emit re-derives priority numbers; no
+      manual renumbering is needed. Then re-invoke "/contest-refactor --dry-run"
+      to see the new plan.
   (c) Abort — leave the dry-run state on disk; nothing was changed.
 ```
 
@@ -608,9 +610,9 @@ category to 10 or 9.5+ with accepted residuals.
 When user invokes `/contest-refactor --reset` or selects a reset option from a halt menu, main agent performs the reset and emits this confirmation:
 
 ```
-Reset complete. Archived prior CURRENT_REVIEW.md to REVIEW_HISTORY.md with
-divider "--- HALT_<state> reset by user (UTC <timestamp>) ---". Cleared
-CURRENT_REVIEW.json. <if LOOP_STATE.json was present: Deleted LOOP_STATE.json
+Reset complete. Archived prior CURRENT_REVIEW.md to REVIEW_HISTORY.md and
+deleted it, with divider "--- HALT_<state> reset by user (UTC <timestamp>) ---".
+Cleared CURRENT_REVIEW.json. <if LOOP_STATE.json was present: Deleted LOOP_STATE.json
 (orphaned mid-Step-3 checkpoint discarded).> Loop counter reset to 1.
 Removed any <!-- loop_cap: N --> directive.
 
