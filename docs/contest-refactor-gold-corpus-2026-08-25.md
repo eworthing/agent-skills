@@ -635,14 +635,17 @@ shape:
 evals/gold-corpus/
   swift-collections-688/
     provenance.json
-    red/  gold/  near-miss-direct-replace/  alternate-gold-exchange/
+    red/ (red)  gold/ (green)  near-miss-direct-replace/ (near_miss)  alternate-gold-exchange/ (alternate_green)
     grading.md
   swiftnio-2486/
     provenance.json
-    wrong-contract/  fixed/  oracle-trap/  regression-mutant/
+    wrong-contract/ (red)  fixed/ (green)  oracle-trap/ (near_miss)  regression-mutant/ (mutant)
     grading.md
   …
 ```
+
+(role tags in parens are illustrative — the real value lives in each pack's `variant_roles`,
+below; the two examples deliberately use unrelated directory names for the same roles.)
 
 `provenance.json`, per case — second-round schema, which demotes "gold" from a crown to
 a provenance tag (`accepted_*` + `gold_confidence` instead of `gold_sha`; merged code
@@ -663,6 +666,12 @@ is *what was accepted*, never *what is true*):
   },
   "prompt_exposure": "provenance_hidden",
   "fixture_role": "semantic_duplication",
+  "variant_roles": {
+    "red": "red",
+    "gold": "green",
+    "near-miss-direct-replace": "near_miss",
+    "alternate-gold-exchange": "alternate_green"
+  },
   "expected_judgment": "…",
   "candidate_visible_files": [],
   "grader_only_files": ["provenance.json"],
@@ -731,6 +740,13 @@ Field semantics the fixtures rely on:
   manifest validator fails on them with migration text (`Use must_find, not
   must_notice.` / `Use must_not_find, not must_not_claim.`) rather than quietly
   accepting either spelling. Grading specs written against the old names must translate.
+- **`variant_roles`** is a required map from each variant directory name to its role —
+  `red`, `green`, `alternate_green`, `near_miss`, or `mutant`, the closed set the
+  role-dependent manifest checks below (RED/GREEN/NEAR-MISS/MUTANT) key off. Directory
+  naming is per-case, not a convention: the two worked examples above use entirely
+  different names for the same five roles, so the checks need an explicit tag rather
+  than a naming guess. The manifest validator requires this field and fails a pack that
+  omits it.
 - **`must_find_if_present`** is the conditional half of the same contract, and the one
   field with structure instead of strings: `evidence_id`, `applies_to_variants`,
   `required_finding`, `not_required_in`. It exists for scanner-restraint packs (#185,
