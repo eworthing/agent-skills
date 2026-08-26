@@ -1,0 +1,119 @@
+{
+  "source_repo": "apple/swift-nio",
+  "source_pr": 1801,
+  "base_sha": "06ce11fb82af329181d480adb0c9ac237865177d",
+  "accepted_sha": "e2990d9672782a76bbebad50f82fbdd952d32b9d",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "generic_bit_helper_vs_domain_type_representation",
+  "provenance_note": "The real PR replaced manual, per-use-site shifting and masking of a packed registration-ID word with named Swift types plus one boundary conversion, in the author's own words: 'Instead of manual shifting / masking we can write the whole registration ID code normally in Swift ... Result: Nicer code.' This pack's near-miss is not drawn from any single real alternative PR; it is built to embody a genuinely tempting failure mode that the same PR's own review history warns against in spirit -- a sibling PR mid-review factored out a generic integer bit-packing utility, which is a legitimate tool in general but, applied here as the whole fix, would have deduplicated the shifting without ever introducing the named domain concepts the real PR was actually for. The near-miss makes that alternative concrete and checkable.",
+  "variant_roles": {
+    "inline-shift-mask-per-site": "red",
+    "typed-fields-single-conversion": "green",
+    "near-miss-generic-bit-packing-helper": "near_miss",
+    "mutant-narrow-lane-mask": "mutant"
+  },
+  "expected_judgment": "inline-shift-mask-per-site should be accepted as a correct, if ugly, starting state -- it is not itself a defect: a ticket number, a belt lane, and a handling tier are packed into one 64-bit word by hand at every use site, and every round trip is correct. The problem is not incorrectness, it is that the bit layout is duplicated across four separate functions, each of which has to change if the layout ever changes, and none of which gives a caller any protection against passing a ticket where a lane was meant or vice versa -- every field is a bare UInt64. near-miss-generic-bit-packing-helper should be refused, and refused for the specific structural reason a genuinely tempting simplification earns: it introduces PackingKit, a small generic bit-range packer, and every one of the four outward functions shrinks to a one-line call into it. This is a real deduplication -- the shift-and-mask arithmetic itself now lives in exactly one place -- and it produces a shorter file than either the starting point or the accepted answer, which is exactly what makes it a trap for a reviewer optimizing for diff size or duplication count. It is wrong because deduplicating the mechanism is not the same thing as introducing the domain concepts: every call site still passes and receives bare UInt64 values, still names bit offsets and widths as raw integer literals, and the compiler still cannot stop a caller from transposing a ticket and a lane, because both are the same type. typed-fields-single-conversion should be ACCEPTED outright: TicketID, BeltLane, and HandlingTier are distinct named types, so a caller cannot pass one where another is expected -- oracles.py's distinct_field_types_not_interchangeable demonstrates this directly, by compiling a snippet that swaps a ticket and a lane argument and confirming it fails to type-check. Bit shifting and masking exist in exactly one place, ConveyorCommandWord, which exists only because the conveyor controller's wire protocol demands a single 64-bit word; everywhere else in the file talks about tickets, lanes, and tiers, never about bits. This variant is longer than the near-miss -- three small types plus one boundary type is more code than one generic helper -- and that length is exactly the point: it is spent on making a whole category of mistake impossible to write, not on saving lines. mutant-narrow-lane-mask is a hard, unmissable Layer-5 case: it keeps typed-fields-single-conversion's shape exactly -- same three types, same ConveyorCommandWord, same boundary-only shifting -- but the belt-lane field's unpack mask is one bit too narrow (0x7FFF instead of 0xFFFF), silently dropping the lane value's top bit whenever it is set. Nothing traps, nothing throws, and every ordinary lane value (anything below 32768) round-trips perfectly, including in the mutant's own bundled test suite, which never exercises a lane value anywhere near its maximum. Only a round-trip check specifically at or near the lane field's maximum -- oracles.py's roundtrip_preserved_at_field_maxima -- catches it.",
+  "candidate_visible_files": [
+    "inline-shift-mask-per-site/command_word.swift",
+    "inline-shift-mask-per-site/main.swift",
+    "typed-fields-single-conversion/command_word.swift",
+    "typed-fields-single-conversion/main.swift",
+    "near-miss-generic-bit-packing-helper/command_word.swift",
+    "near-miss-generic-bit-packing-helper/main.swift",
+    "mutant-narrow-lane-mask/command_word.swift",
+    "mutant-narrow-lane-mask/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift",
+    "inline-shift-mask-per-site/probe_adapter.swift",
+    "typed-fields-single-conversion/probe_adapter.swift",
+    "near-miss-generic-bit-packing-helper/probe_adapter.swift",
+    "mutant-narrow-lane-mask/probe_adapter.swift"
+  ],
+  "must_find": [
+    "near-miss-generic-bit-packing-helper's motivation is genuine and reasonable on its face -- PackingKit removes real, visible duplication, and the resulting file is shorter than both inline-shift-mask-per-site and typed-fields-single-conversion. That the motivation is reasonable, and the diff is smaller, does not make the change correct.",
+    "near-miss-generic-bit-packing-helper never introduces named domain types: every function's parameters and return values are bare UInt64, and every call site names a raw bit offset and width as a plain integer literal (oracles.py's packing_confined_to_one_site counts these call sites directly, distinguishing 'one generic helper' from 'many call sites still reasoning in bit ranges').",
+    "near-miss-generic-bit-packing-helper gives the compiler no way to catch a caller who transposes a ticket and a lane, because both remain plain UInt64 throughout -- checkable directly via oracles.py's distinct_field_types_not_interchangeable, which compiles a snippet swapping the two arguments and confirms it type-checks anyway.",
+    "typed-fields-single-conversion is not merely a stylistic alternative to near-miss-generic-bit-packing-helper -- it is the correct answer, and the reason is structural, not aesthetic: it makes an entire class of mistake (confusing two same-shaped integer fields) unrepresentable, where the near-miss's deduplication, however real, leaves that mistake fully possible.",
+    "mutant-narrow-lane-mask's one-bit-too-narrow lane mask only shows up on a lane value whose top bit is set (at or near the field's maximum); an ordinary lane value round-trips correctly, including in this variant's own bundled main.swift, which is why full credit for this variant does not depend on a static read catching it."
+  ],
+  "must_not_find": [
+    "Accepting near-miss-generic-bit-packing-helper because it is the shortest of the four variants or because it removes visible duplication -- shortness and deduplication are real properties, not evidence of correctness.",
+    "Refusing near-miss-generic-bit-packing-helper only on a generic 'raw integers are risky' instinct, without naming that it specifically leaves every field a bare, interchangeable UInt64 with no compiler-enforced distinction between a ticket, a lane, and a tier.",
+    "Treating near-miss-generic-bit-packing-helper as an acceptable intermediate step on the way to typed-fields-single-conversion, or as 'basically the same idea, just less polished' -- the near-miss's PackingKit generalizes the mechanism, the accepted answer introduces vocabulary the mechanism has no notion of; one is not a rougher draft of the other.",
+    "Crediting near-miss-generic-bit-packing-helper for reducing duplication as though that were the pack's central judgment -- the central judgment is whether the domain concepts became visible and type-checked, not whether the shifting arithmetic was deduplicated.",
+    "Treating mutant-narrow-lane-mask's passing bundled test suite as evidence its packing is correct -- the bug is real and deterministic, it simply requires a lane value near the field's maximum to observe."
+  ],
+  "allowed_findings": [
+    "TicketID, BeltLane, and HandlingTier could each conform to a shared small protocol (e.g. a common `rawValue`-bearing protocol) instead of being three unrelated structs, independent of this pack's central judgment.",
+    "Noting that typed-fields-single-conversion's ConveyorCommandWord is now the only place in the file with a `<<` or `>>` operator is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "distinct_field_types_not_interchangeable",
+      "variant_expected_to_fail": "inline-shift-mask-per-site"
+    },
+    {
+      "name": "distinct_field_types_not_interchangeable",
+      "variant_expected_to_fail": "near-miss-generic-bit-packing-helper"
+    },
+    {
+      "name": "packing_confined_to_one_site",
+      "variant_expected_to_fail": "inline-shift-mask-per-site"
+    },
+    {
+      "name": "packing_confined_to_one_site",
+      "variant_expected_to_fail": "near-miss-generic-bit-packing-helper"
+    },
+    {
+      "name": "roundtrip_preserved_at_field_maxima",
+      "variant_expected_to_fail": "mutant-narrow-lane-mask"
+    },
+    {
+      "name": "ordinary_value_midrange_roundtrips",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A ticket number, belt lane, and handling tier packed into a command word and immediately unpacked must recover exactly the values that were packed, for every representable value of every field, not merely for typical mid-range values.",
+    "Whether a variant's bit-packing mechanism is deduplicated into a shared, generic helper is independent of whether the domain concepts it packs are represented as distinct types -- a variant can achieve one without the other, and achieving only the mechanism-level deduplication is not sufficient.",
+    "A construction call that transposes two same-shaped fields (a ticket and a lane) should be rejected by the compiler if the representation is doing its job; a representation that leaves both fields as the same underlying primitive type cannot reject such a call no matter how the packing arithmetic itself is organized.",
+    "A variant's own bundled test suite passing is not evidence its packing is correct at every value; a bug confined to values near one field's maximum is invisible to a suite that only exercises ordinary values."
+  ],
+  "restraint_reason": "near-miss-generic-bit-packing-helper is built to be genuinely persuasive: PackingKit is a real, working generalization, it removes real duplication, and the resulting file is shorter than either sibling -- exactly the properties a reviewer optimizing for a small, clean diff is trained to reward. A reviewer who stops at 'the duplication is gone, and the file got shorter' has rewarded the near-miss for solving a problem adjacent to the one that mattered. The real PR's own stated goal was not brevity or deduplication -- it was replacing manual shifting and masking with domain vocabulary a compiler can check ('we can write the whole registration ID code normally in Swift'). PackingKit achieves the former without touching the latter: every field is still a bare UInt64 after the near-miss's change, exactly as before it, so the specific mistake the real PR's own types exist to prevent -- confusing two integer-shaped fields that happen to share a type -- remains fully possible. Restraint here is recognizing that a smaller diff and less duplicated code are not proxies for the judgment this pack is actually about, and that the correct answer is willing to be longer than the trap sitting right next to it because the extra length is spent on type safety, not decoration.",
+  "applicable_domains": [
+    "swift",
+    "bit-packing",
+    "domain-modeling",
+    "type-safety",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-nio PR #1801 (accepted, merged 2021-04-23) and its author's own PR-body description of replacing manual bit shifting/masking with named Swift types plus one boundary conversion function; no swift-nio source is included, copied, or paraphrased -- TicketID, BeltLane, HandlingTier, RoutingAssignment, ConveyorCommandWord, PackingKit, and every identifier here are original to this fixture, and the field widths and bit offsets are this fixture's own invention, not the real word's layout."
+  },
+  "contamination": {
+    "renamed": [
+      "SelectorRegistrationID",
+      "EPollUserData",
+      "NIO",
+      "NIOCore",
+      "swift-nio",
+      "epoll",
+      "kqueue",
+      "Selector",
+      "weissi",
+      "registrationID"
+    ],
+    "constants_changed": "This fixture never carried upstream's real bit layout to begin with: the real word's field widths and shift offsets were not looked up or reproduced when this pack was built, precisely to avoid the 'same 32/32 split under a new name' failure mode the build brief warned about. The 40-bit ticket / 16-bit lane / 8-bit tier split, and the shift offsets (24, 8, 0), are this fixture's own invention, chosen only to be arithmetically convenient (they sum to exactly 64) and to give the lane field a clean power-of-two maximum (65535) for the mutant's truncation bug to land on. The one literal that matters for grading -- the mutant's narrowed lane mask, 0x7FFF instead of 0xFFFF -- is this fixture's own injected defect, not derived from any upstream value.",
+    "minimized_from": "apple/swift-nio's registration-ID bit-packing refactor (PR #1801, merged 2021-04-23, base sha 06ce11fb82af329181d480adb0c9ac237865177d), which replaced manual shift/mask code across 15 files with named Swift types and a single conversion boundary",
+    "why": "The real change touches swift-nio's own Selector and epoll/kqueue event-registration machinery across 15 files, none of which can be reproduced as a minimal fixture without pulling in platform-specific event-loop internals this environment cannot compile uniformly; a renamed, minimized, single-file-per-variant Swift analogue (command_word.swift, with a warehouse conveyor's routing ticket standing in for the registration ID) preserves the one judgment-relevant property this pack tests -- that deduplicating a packing mechanism and representing its domain concepts as distinct, type-checked values are two different achievements, and a change can accomplish the first while conspicuously failing the second -- as fully deterministic, single-machine-compilable Swift, without exposing any upstream symbol name, PR number, commit SHA, or line of swift-nio source, and with its own field widths rather than the real word's."
+  }
+}
