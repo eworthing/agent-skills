@@ -676,3 +676,14 @@ against. Schedule it when an arm_b candidate actually exists.
 **One environment improvement over 2026-06-28.** The nested implementation reviewer (sub-step 6) was
 spawned and joined successfully on all three runs. The banked measurement carried an explicit
 limitation that it could not always be joined; that no longer applies.
+
+**Cost, measured after the fact — and the pre-run estimate was badly low.** The run was approved
+against an estimate of *"~50k per run, ~150k for three"*. Actual fresh spend
+(`input + cache_creation + output`, deduped by `message.id`, `cache_read` excluded as context
+re-reads) was **553,080** — apply 218,314, revert 147,603, risk 187,163. **That is 3.7× the
+estimate the approval rested on.** Recorded because this project prices work in tokens and approves
+spend explicitly: an estimate that wrong is a defect in the approval, not a footnote. The lesson is
+narrow and reusable — a Step-3 executor dispatch loads SKILL.md plus its Step-3 reference tree,
+does real git and build work, and spawns a nested reviewer that carries its own context, so
+per-loop budget figures are a poor proxy for what one dispatch actually costs. Price future
+executor dispatches off this measurement, not off the token-budget guard.

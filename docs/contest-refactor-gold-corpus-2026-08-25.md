@@ -651,19 +651,45 @@ original PR numbers, SHAs, or upstream symbol names. `GET_ITER`,
 `codegen_comprehension_iter`, `_python_apply_plot` and `select_dtypes` are exactly the
 needles check 7 hunts, so every Python pack needs renaming before it goes candidate-visible.
 
-### Cost
+### Cost — measured, 2026-08-25
 
-At this document's ~500k-per-pack anchor, nine Python packs is **~4.5M** — three times the
-Swift tranche, and a second corpus rather than a second language. Two things should pull
-the real figure down, and both are assumptions until measured:
+The plan was to build P1 and price the rest off its actuals rather than off the estimate.
+Four packs are now built, and the estimate was wrong in the expected direction but by far
+less than it looked.
 
-- Python oracles are pure-Python asserts. No Swift toolchain, no SDK/platform matrix, no
-  fixture-regeneration branch — the largest per-pack cost on the Swift side.
-- P1–P4 come from two repos with one build story each.
+**Measured builder spend, per pack.** Fresh tokens (`input + cache_creation + output`),
+deduped by `message.id` — Claude Code repeats a message's usage across chunked transcript
+records, which inflates a naive sum, and `cache_read` is context re-reads rather than new
+tokens so it is excluded:
 
-**Build P1 and price the rest off its actuals.** If P1 lands materially under 500k the
-track is cheaper than the Swift tranche despite having more packs; if it does not, cut to
-P1–P4 and re-decide.
+| Pack | Fresh tokens |
+| --- | --- |
+| P1 `cpython-genexpr-iterability` | 237,654 |
+| P2 `pandas-groupby-plot-imperfect-gold` | 258,315 |
+| P3 `pandas-get-dummies-select-dtypes` | 171,921 |
+| P4 `pandas-select-dtypes-predicates` | 256,283 |
+| **Total / mean** | **924,173 / ~231k** |
+
+**So the honest correction is roughly 2×, not an order of magnitude.** ~231k against a
+~500k anchor. Anyone reading an early draft of this section that claimed a 10× overestimate
+should discard that number: it was asserted before measurement and it was too optimistic.
+
+**That figure is the build agent only.** It excludes writing each pack's spec and the
+orchestrator's verification round — and verification is not optional overhead here: it
+caught a defect in every single pack (P1 empty provenance SHAs and a substring-landmine
+leak needle, P2 a green variant narrating its own residual, P3+P4 the role-leak that became
+[check 8](#schema-and-validator)). Budget the all-in figure nearer **~300k per pack**.
+
+**Projected for the remaining five: ~1.2M builder, ~1.5M all-in.** Nine packs all-in lands
+near **~2.7M** rather than the ~4.5M this section previously carried — cheaper, still not
+cheap, and now a measured number rather than an anchor inherited from Swift packs that
+needed toolchain and SDK matrices this track does not.
+
+**Re-measure rather than extrapolate if the pack shape changes.** P6 (pytest, +298/−173)
+and P8 (pydantic, +452/−268) are far larger upstream diffs than P1–P4, whose production
+changes were 1 to 64 lines. There is no evidence yet that a bigger upstream diff costs more
+to *minimize* — it may cost less, since more of it gets discarded — but the four measured
+packs cannot answer that.
 
 ### What this track does *not* buy
 
@@ -977,9 +1003,10 @@ remains open:
   Same approval shape as a detection-programme measurement run, but aimed at fixture
   construction + control runs rather than prose lift. **The cost objection itself is
   settled (owner, 2026-08-25): 1.5M is small against a production run at ~20M+ resident
-  context, so spend is not the binding constraint.** What remains open is the Python
-  track's ~4.5M at the same anchor — decided by measuring P1 and pricing the rest off its
-  actuals, not by estimate; see [Cost](#cost).
+  context, so spend is not the binding constraint.** The Python track's cost is **no longer
+  an estimate**: four packs are built and measured at ~231k builder / ~300k all-in each,
+  putting nine packs near ~2.7M rather than the ~4.5M first projected. See
+  [Cost — measured](#cost--measured-2026-08-25).
 - **Bare-rubric control — settled for Python, still open for Swift.** The control is
   **required** on the Python track, because a thin shared `lens-generic.md` (85 lines
   across seven languages) versus a deep `lens-apple.md` (252 lines) means an unattributed
