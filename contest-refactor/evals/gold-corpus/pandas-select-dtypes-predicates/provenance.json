@@ -1,0 +1,103 @@
+{
+  "source_repo": "pandas-dev/pandas",
+  "source_pr": 66112,
+  "base_sha": "5c849b5a6e30c0f6fbccb1ac80400251c352ebe0",
+  "accepted_sha": "4f7304eaee4091482f4171cf550423a9ecfcc589",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "disclosed_forward_indirection",
+  "variant_roles": {
+    "frozenset-predicate": "red",
+    "per-type-callables": "green",
+    "near-miss-recollapsed": "near_miss",
+    "mutant-any-to-all": "mutant"
+  },
+  "expected_judgment": "frozenset-predicate should be accepted as a correct, if tangled, starting state -- it is not itself a defect, just the pre-refactor shape the pack is built around. per-type-callables should be ACCEPTED, and accepted without a speculative-generality or unnecessary-abstraction flag: it turns each requested/excluded type name into its own predicate callable and combines the results with any(), it is behaviorally identical to frozenset-predicate for every include/exclude combination (verify this, don't assume it), and its own CHANGES.md discloses a concrete, forward-looking reason for the added indirection -- readying the matching logic for a planned follow-up change to how individual types are matched. A Critic that flags the extra indirection as speculative generality, unneeded abstraction, or 'longer than what it replaced' is over-flagging: the benefit is disclosed and real, even though it is not exercised anywhere in this diff. near-miss-recollapsed should be refused: it looks like a further simplification -- collapsing the per-type predicates back into a single frozenset-membership test reads shorter and cleaner -- but it silently drops the one rule that distinguished a 'flag' column (a count-kind column marked flag=True) from an ordinary count column, so a bare 'flag' request now matches nothing and a bare 'count' request wrongly sweeps flag columns back in. mutant-any-to-all is primarily a Layer-5 execution case: it combines the same per-type predicates with all() instead of any(), which is invisible for a single-type include (a one-element all() and any() agree) but means a multi-type include can never be satisfied by any column, since a column can only match one type's predicate at a time -- multi-type includes silently return nothing.",
+  "candidate_visible_files": [
+    "frozenset-predicate/coltable.py",
+    "frozenset-predicate/test_coltable.py",
+    "per-type-callables/coltable.py",
+    "per-type-callables/test_coltable.py",
+    "per-type-callables/CHANGES.md",
+    "near-miss-recollapsed/coltable.py",
+    "near-miss-recollapsed/test_coltable.py",
+    "mutant-any-to-all/coltable.py",
+    "mutant-any-to-all/test_coltable.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "per-type-callables selects exactly the same columns as frozenset-predicate for every include/exclude combination -- this is a real, verifiable equivalence claim, not one to wave through or doubt without checking.",
+    "per-type-callables' added indirection (one predicate callable per requested type, combined with any()) is disclosed, concrete groundwork for a stated future change (see CHANGES.md: 'ahead of an upcoming change to how individual column types get matched'), not unexplained complexity -- a correct review recognizes this rather than treating the extra layer as unneeded abstraction just because its payoff is not visible in this diff.",
+    "near-miss-recollapsed drops the flag/count special case: a bare 'flag' request now matches no column (it was never a real kind, only a count-kind column with flag=True), and a bare 'count' request wrongly re-includes flag columns. It reads shorter and cleaner than per-type-callables, and that is exactly what makes it a plausible, wrong simplification.",
+    "mutant-any-to-all forwards every requested type as its own predicate, same as per-type-callables, but requires a column to satisfy all of them at once rather than any one of them -- since a column can only ever match one type's predicate, any multi-type include silently returns nothing, while single-type includes look unaffected."
+  ],
+  "must_not_find": [
+    "Flagging per-type-callables as speculative generality, unnecessary abstraction, or 'indirection for no benefit' -- the added indirection is disclosed and has a stated, concrete future purpose, and this is the over-flagging reflex this pack is built to catch.",
+    "A claim that combining per-type predicates with any() produces different results than frozenset-predicate's single membership test, without having checked an include list naming two or more types.",
+    "Crediting near-miss-recollapsed for being simpler, cleaner, or more idiomatic than per-type-callables without checking whether it still honors the flag/count distinction the per-type version encodes.",
+    "Treating near-miss-recollapsed's shorter diff as evidence it is a safe simplification rather than as the more dangerous case precisely because it looks like an improvement."
+  ],
+  "allowed_findings": [
+    "_type_predicate could be rewritten as a dict/registry keyed by type name instead of an if/elif chain, independent of this pack's central judgment.",
+    "Column could validate that `values` is non-empty or reject unknown kwargs, independent of this pack's central judgment.",
+    "A reviewer observing that per-type-callables' groundwork payoff (the planned future per-type matching change) is not visible anywhere in this diff is making a fair, accurate observation, not a defect claim."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "selection_matches_baseline",
+      "variant_expected_to_fail": "near-miss-recollapsed"
+    },
+    {
+      "name": "selection_matches_baseline",
+      "variant_expected_to_fail": "mutant-any-to-all"
+    },
+    {
+      "name": "multi_type_include_nonempty",
+      "variant_expected_to_fail": "mutant-any-to-all"
+    },
+    {
+      "name": "special_case_type_matches",
+      "variant_expected_to_fail": "near-miss-recollapsed"
+    },
+    {
+      "name": "exclude_still_honored",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "Requesting a single type must return every column whose declared type is exactly that type, honoring the count/flag distinction: a flag column's kind is stored as 'count', so a bare 'count' request must exclude it and a bare 'flag' request must select only it.",
+    "An include list naming two or more types must return the union of columns matching any of those types, never the intersection, and never empty solely because more than one type was named.",
+    "Exclude semantics apply after include filtering and must be honored for a plain type exclude regardless of how the include side is implemented.",
+    "Combining per-type predicates with any() must select exactly the same columns as a single frozenset-membership predicate encoding the same rules, for every include/exclude combination."
+  ],
+  "restraint_reason": "When reviewing per-type-callables, a Critic that treats the extra indirection (one predicate callable per type, combined with any(), where a single frozenset test used to suffice) as speculative generality or unnecessary abstraction is over-flagging. The refactor is longer than what it replaced, and that fact alone is not a finding: CHANGES.md discloses a concrete, forward-looking reason (readying per-type matching for a planned follow-up change), the payoff just isn't exercised in this diff. Restraint here means recognizing a disclosed, purposeful indirection instead of reflexively treating any added layer without an immediate visible caller as YAGNI.",
+  "applicable_domains": [
+    "python",
+    "type-filtering",
+    "predicate-composition",
+    "api-consistency",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pandas-dev/pandas PR #66112 (accepted, merged); no pandas source is included, copied, or paraphrased -- Coltable, Column, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "select_dtypes",
+      "dtype_predicate",
+      "to_callable",
+      "DataFrame",
+      "ArrowDtype"
+    ],
+    "minimized_from": "pandas-dev/pandas's DataFrame.select_dtypes internals (PR #66112)",
+    "why": "The real change lives inside pandas' dtype-matching internals and depends on pandas' own dtype system (numpy dtypes, ArrowDtype, extension dtypes), which cannot be reproduced faithfully or safely as a minimal pure-Python fixture; a renamed, minimized, pure-Python analogue (Coltable/Column, with a count/flag kind distinction standing in for the int/bool dtype relationship) preserves every judgment-relevant property (a real per-type special case, a verifiable behavioral-equivalence claim, a disclosed forward-looking justification for added indirection, a plausible-but-regressive near-miss simplification, and a quiet any-to-all mutant) without exposing any upstream symbol name, PR number, or line of pandas source."
+  }
+}

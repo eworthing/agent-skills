@@ -1,0 +1,117 @@
+{
+  "source_repo": "pandas-dev/pandas",
+  "source_pr": 66091,
+  "related_history": [
+    {
+      "kind": "prerequisite_for",
+      "pr": 65366,
+      "note": "PR body: 'Behavior-preserving refactor split off from GH-65366 to keep that PR small.' A prerequisite for a planned change where the selector stops unwrapping a packed/extension dtype to its underlying primitive, which would otherwise silently stop an alias-list caller from catching packed-backed columns."
+    },
+    {
+      "kind": "original_issue",
+      "issue": 56273,
+      "note": "The internal ArrowDtype-to-numpy-dtype unwrap inside select_dtypes that get_dummies had been depending on without declaring the dependency."
+    }
+  ],
+  "base_sha": "d5b8449f20b65255327a90d2c5451eaf6c7ee3ca",
+  "accepted_sha": "4e2a5026360145b1344bb90f4644315d970536a4",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "undeclared_selector_coupling",
+  "variant_roles": {
+    "alias-list-coupling": "red",
+    "local-predicate": "green",
+    "near-miss-widened-aliases": "near_miss",
+    "mutant-drops-wrapped": "mutant"
+  },
+  "expected_judgment": "alias-list-coupling should be flagged: it determines which columns to encode by calling column_subset with a fixed list of type aliases, and gets the right set only because column_subset's own internal unwrap of a Packed kind happens to also catch packed/extension text and choice columns -- an undeclared dependency on a different function's implementation detail, not a designed behavior. local-predicate should be accepted, and its equivalence to alias-list-coupling verified rather than assumed: should_encode expresses the same 'text, masked-text, or choice, plain or packed' set directly, produces an identical encodable set on every column kind tested, and no longer calls column_subset at all. Unlike pack pandas-groupby-plot-imperfect-gold's dedicated-path-incomplete, this equivalence claim is actually true -- a Critic must check that, not assume either way just because the direction of the change looks right. near-miss-widened-aliases should be refused: it still calls column_subset and still depends on its internal unwrap to catch packed columns, and its 'simpler' widening additionally starts encoding a numeric column that must never be one-hot encoded -- it over-matches. mutant-drops-wrapped fails the hidden oracle: its local predicate checks a column's kind directly without unwrapping a Packed kind, so packed/extension text and choice columns are silently dropped from encoding -- a quieter defect than a crash, since nothing raises, values just go missing from the encoded set.",
+  "candidate_visible_files": [
+    "alias-list-coupling/columnstore.py",
+    "alias-list-coupling/test_columnstore.py",
+    "local-predicate/columnstore.py",
+    "local-predicate/test_columnstore.py",
+    "local-predicate/CHANGES.md",
+    "near-miss-widened-aliases/columnstore.py",
+    "near-miss-widened-aliases/test_columnstore.py",
+    "mutant-drops-wrapped/columnstore.py",
+    "mutant-drops-wrapped/test_columnstore.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "alias-list-coupling calls column_subset with a hardcoded list of type aliases and gets the right answer only because column_subset's internal unwrap of a Packed kind happens to catch packed/extension text and choice columns too -- an undeclared dependency on another function's internal behavior, not a deliberate design choice.",
+    "local-predicate is the correct fix: should_encode expresses 'text, masked-text, or choice, whether plain or packed' directly, so encode_categoricals no longer depends on column_subset's internal unwrap at all. Its produced encodable set is identical to alias-list-coupling's on every column kind -- a reviewer should verify this equivalence, not just assume it because the refactor's direction looks right.",
+    "near-miss-widened-aliases looks like a simpler fix (just add more alias strings to the existing call) but still routes through column_subset's internal unwrap for the packed columns, and it additionally starts encoding a numeric column that must never be encoded.",
+    "mutant-drops-wrapped's local predicate checks a column's kind directly without unwrapping a Packed kind, so packed/extension text and choice columns are silently excluded from encoding -- a behavior change from alias-list-coupling, which caught them (by accident) via column_subset's unwrap."
+  ],
+  "must_not_find": [
+    "Flagging local-predicate for 'duplicating logic column_subset already has' -- the local predicate exists specifically to stop depending on column_subset's particular unwrap behavior, not to reuse it.",
+    "Approving near-miss-widened-aliases as an equally valid, simpler alternative to local-predicate because it also reads as less code and still picks up packed columns -- it still depends on column_subset's internal unwrap and it also starts encoding a column kind that must never be encoded.",
+    "Treating alias-list-coupling's own bundled test suite passing as evidence that its column selection is intentional or correct, rather than as a byproduct of column_subset's implementation that was never directly tested."
+  ],
+  "allowed_findings": [
+    "Column, Table, and Packed could use dataclasses or more consistent __slots__ usage, independent of this pack's central judgment.",
+    "column_subset remaining unchanged and still used elsewhere in the library for general-purpose column selection is fine -- it never needed to change.",
+    "should_encode could be exposed as a public, documented predicate rather than a module-level helper, without changing this pack's verdicts."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "encodable_set_matches_baseline",
+      "variant_expected_to_fail": "near-miss-widened-aliases"
+    },
+    {
+      "name": "encodable_set_matches_baseline",
+      "variant_expected_to_fail": "mutant-drops-wrapped"
+    },
+    {
+      "name": "wrapped_extension_columns_encoded",
+      "variant_expected_to_fail": "mutant-drops-wrapped"
+    },
+    {
+      "name": "numeric_never_encoded",
+      "variant_expected_to_fail": "near-miss-widened-aliases"
+    },
+    {
+      "name": "no_dependency_on_selector_internals",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A column of kind text, masked-text, or choice -- whether stored as a plain primitive or packed into a memory-efficient extension format -- must be selected for one-hot encoding.",
+    "A column of numeric kind must never be selected for one-hot encoding, regardless of how the selection is implemented.",
+    "The set of columns selected for encoding must not depend on which alias strings happen to satisfy a general-purpose selector's internal unwrap rules."
+  ],
+  "restraint_reason": "A Critic that flags local-predicate for re-implementing logic column_subset already has -- unwrapping a Packed kind to its primitive -- is over-flagging: expressing the intended, encodable column set directly and independently of column_subset's specific unwrap behavior is the entire point of the fix, not an avoidable duplication. The pack's own must_not_find names this exact over-flag.",
+  "applicable_domains": [
+    "python",
+    "type-dispatch",
+    "api-consistency",
+    "implicit-coupling",
+    "refactoring-verification"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pandas-dev/pandas PR #66091 (accepted, merged); no pandas source is included, copied, or paraphrased -- Table, Column, Packed, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "get_dummies",
+      "select_dtypes",
+      "ArrowDtype",
+      "numpy_dtype",
+      "BlockManager",
+      "_get_data_subset",
+      "_is_encodable",
+      "DataFrame",
+      "pandas"
+    ],
+    "minimized_from": "pandas-dev/pandas's get_dummies column-selection logic (PR #66091)",
+    "why": "The real defect is an undeclared dependency between two functions inside pandas' C-accelerated dtype system (get_dummies and select_dtypes' ArrowDtype-to-numpy-dtype unwrap), which cannot be reproduced faithfully or safely as a minimal pure-Python fixture without pandas' own extension-array machinery; a renamed, minimized, pure-Python analogue (Table/Column/Packed) preserves every judgment-relevant property (an undeclared coupling to a different function's internal unwrap, a genuinely behavior-preserving local-predicate fix, a plausible-but-over-matching near-miss, and a quieter under-matching mutant) without exposing any upstream symbol name, PR number, or line of pandas source."
+  }
+}
