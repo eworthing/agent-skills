@@ -1,7 +1,7 @@
-// The trap: the parser's state enum is collapsed into a couple of Bool
-// flags plus a length counter. It sits on the same shared buffering
-// protocol as the accepted answer -- only the parsing-state shape is
-// different here -- and it is genuinely shorter and reads more simply.
+// Parsing state is held as two Bool flags plus a length counter, on top
+// of the shared buffering protocol below. Between them they say where
+// the parser is: whether it has failed, whether an unbounded frame is
+// open, and how many body lines a counted frame still owes.
 //
 // The protocol this decodes: a stream of newline-terminated lines forms a
 // sequence of frames. A frame starts with a header line, one of:
@@ -11,17 +11,8 @@
 //            verbatim, until a line that is exactly "." appears (not
 //            itself part of the body).
 //
-// The bug: `remaining == 0` is used as a stand-in for "not currently mid
-// a frame body, so the next line might be a header." That reads 0 both
-// when the decoder is genuinely idle AND for the entire body of an
-// unbounded frame, because an unbounded frame never touches `remaining`
-// at all. A body line of an open unbounded frame that happens to look
-// like a header ("#0", "#3", ...) is therefore misread as starting a
-// brand-new frame instead of being taken as this frame's own content --
-// the two states the real enum kept apart ("awaiting the start of a new
-// message" and "awaiting a continuation line of the current one")
-// collapse into the same observable flag value. See oracles.py's
-// distinct_states_not_collapsible for the exact input this misparses.
+// `remaining == 0` doubles as "not currently owing body lines, so the
+// next line may be a header", which keeps the header check in one place.
 
 enum FrameKind: String {
     case counted

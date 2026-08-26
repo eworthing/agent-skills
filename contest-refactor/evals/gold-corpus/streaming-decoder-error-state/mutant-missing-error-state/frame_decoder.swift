@@ -1,10 +1,7 @@
-// The accepted answer with one thing removed: the shared buffering
-// protocol move landed, and the parser keeps its full multi-state
-// machine -- but the error-latch state never made it into this state
-// enum. After the consumer throws for a delivered frame, this decoder
-// keeps calling it for every frame that follows instead of latching into
-// silence. Nothing crashes; the only symptom is that decoding continues
-// to be delivered after a failure.
+// Buffering and re-entrancy guarding are factored out into a small
+// shared protocol (below); the parser keeps its own multi-state machine.
+// A consumer that throws for one frame does not stop the stream: the
+// decoder carries on with the lines that follow.
 //
 // The protocol this decodes: a stream of newline-terminated lines forms a
 // sequence of frames. A frame starts with a header line, one of:

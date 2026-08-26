@@ -21,10 +21,7 @@ RECORDS = [
 
 
 def test_plot_legend_labels_are_present() -> None:
-    """Weak by construction: only checks a label was produced, never that
-    it is the right one. That gap is exactly why this variant's own suite
-    passes despite every legend label being wrong (see oracles.py's
-    legend_labels_correct)."""
+    """Plotting a lane set produces one legend label per lane."""
     lanes = Clustered(RECORDS, key=lambda r: r["team"]).lanes("x")
     labels = plot_legend_labels(lanes)
     assert all(label is not None for label in labels), labels

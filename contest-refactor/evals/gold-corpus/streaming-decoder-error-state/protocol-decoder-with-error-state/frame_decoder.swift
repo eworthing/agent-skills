@@ -1,9 +1,7 @@
-// The accepted answer: buffering and re-entrancy guarding are factored
-// out into a small shared protocol (below), and the parser itself keeps
-// its full, multi-state machine plus an explicit error-latch state. The
-// state count is not incidental complexity -- each case is a real,
-// distinguishable protocol condition; see grading.md for the pack this
-// file belongs to.
+// Buffering and re-entrancy guarding are factored out into a small
+// shared protocol (below); the parser keeps its own multi-state machine
+// plus an explicit error-latch state. Each case is a protocol condition
+// the decoder has to tell apart from the others.
 //
 // The protocol this decodes: a stream of newline-terminated lines forms a
 // sequence of frames. A frame starts with a header line, one of:
@@ -133,9 +131,8 @@ final class FrameDecoder: IncrementalLineDecoder {
                 }
             }
             // Anything else while awaiting a header is not a recognized
-            // frame start; this fixture has no oracle exercising that
-            // path, so it is a silent no-op rather than a designed error
-            // path.
+            // frame start, so the decoder stays where it is and
+            // waits for the next line.
         case .awaitingCountedContinuation(let remaining):
             body.append(line)
             let left = remaining - 1

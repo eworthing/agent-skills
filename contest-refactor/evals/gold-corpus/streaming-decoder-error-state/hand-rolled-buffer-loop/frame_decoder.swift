@@ -92,9 +92,8 @@ final class FrameDecoder {
                 }
             }
             // Anything else while awaiting a header is not a recognized
-            // frame start; this fixture has no oracle exercising that
-            // path, so it is a silent no-op rather than a designed error
-            // path.
+            // frame start, so the decoder stays where it is and
+            // waits for the next line.
         case .awaitingCountedContinuation(let remaining):
             body.append(line)
             let left = remaining - 1

@@ -28,8 +28,7 @@ def test_lanes_split_by_key() -> None:
 
 def test_plot_legend_labels_for_lanes() -> None:
     """Regression coverage carried over from the refactor: Lane legends
-    still show the right key. (No equivalent Panel-legend test exists in
-    this variant -- see CHANGES.md and grading.md.)"""
+    still show the right key."""
     lanes = Clustered(RECORDS, key=lambda r: r["team"]).lanes("x")
     labels = plot_legend_labels(lanes)
     assert labels == ["north", "south"], labels
