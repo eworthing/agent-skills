@@ -626,6 +626,40 @@ restores that property and sharpens it, because RED and GREEN are the same edit:
   (`g.gi_frame.f_locals['.0'] = range(20); list(g)`) must stay fixed. Naive guard removal
   **segfaults**: a hard, unmissable oracle no grader can argue with.
 
+### P9's four mini-packs, designed against verified source
+
+P9 is the only Python entry not drawn from a single PR, so its four contracts were picked
+by reading `django/contrib/auth` at `main` (`0b40210`) rather than by reading a diff. The
+Vapor mini-pack rule governs: **one fixture proves one behavioral distinction**, and one of
+the four is a pure restraint pack where the correct reviewer finds nothing, so the restraint
+result cannot be averaged away inside a broader fixture.
+
+| Mini-pack | Contract | Near-miss shape |
+| --- | --- | --- |
+| `auth-unusable-password-policy` | An account created through external auth is represented by a sentinel in the credential column and can never authenticate by password | none — pure restraint; the graded behavior is *not* inventing a vulnerability finding about the sentinel |
+| `auth-identity-probe-equalization` | An unknown identity must perform the same verification work as a known one, so the two are indistinguishable from outside | delete the work on the unknown-identity branch and return early — strictly cleaner-looking, silently restores user enumeration |
+| `auth-session-carryover` | Logging in over a session belonging to a *different* principal discards the old session's data; logging in over an anonymous session keeps it and only re-keys | always re-key, never discard — one operation instead of two, and the previous principal's data survives into the new session |
+| `auth-login-redirect-target` | The post-login return target is relative when the login endpoint is same-origin and absolute only when it is not | always absolute — symmetrical, simpler, and an open-redirect vector |
+
+Two upstream details make these unusually good fixture material, and both were read
+first-hand rather than assumed:
+
+- The equalization step is **not** incidental code any more. Upstream extracted it into a
+  named function whose docstring states the attack it prevents and cites the ticket. So the
+  near-miss is not "reviewer misses subtle code" — it is "reviewer deletes work that the
+  surrounding source explains is deliberate." That is a restraint failure, not a recall one,
+  which is the property this project measures well.
+- The session contract is genuinely **two** operations chosen by a condition, not one. The
+  re-key path preserves session data and the discard path does not, so collapsing them looks
+  like a simplification and is actually a cross-principal data leak. The condition guarding
+  them also uses a constant-time comparison, giving the pack a second, independent axis.
+
+**Deliberately not built:** the backend's active-flag check reads its attribute with a
+default of *allow*, so custom principal types that never declare the flag still
+authenticate — and the docstring says so. Flipping that default to *deny* is a good silent
+near-miss, but it is a fifth contract and the mini-pack rule caps this entry at four. It is
+recorded here rather than dropped silently; it is the first candidate if P9 is ever widened.
+
 ### Schema and validator
 
 `contest-refactor/scripts/validate-gold-corpus.py` (shipped `e357a80`) is
