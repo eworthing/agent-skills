@@ -12,8 +12,8 @@ from __future__ import annotations
 import secrets
 import string
 
-NO_LOCAL_CREDENTIAL_PREFIX = "!"
-NO_LOCAL_CREDENTIAL_SUFFIX_LENGTH = 40
+NO_LOCAL_CREDENTIAL_PREFIX = "~"
+NO_LOCAL_CREDENTIAL_SUFFIX_LENGTH = 26
 
 _SUFFIX_ALPHABET = string.ascii_letters + string.digits
 

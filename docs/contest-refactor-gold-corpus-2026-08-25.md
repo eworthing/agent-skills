@@ -1107,6 +1107,37 @@ Field semantics the fixtures rely on:
 
   Deciding which kind you have takes reading the oracle, not counting nulls. A sweep that
   treats all four alike would delete P1's two best oracles.
+- **Rename the VALUES, not just the identifiers — check 7 structurally cannot catch this.**
+  Found by audit on 2026-08-26, after thirteen packs had shipped, and the honest summary is that
+  the corpus had a systematic hole in exactly the property `provenance_hidden` exists to provide.
+
+  Check 7 greps candidate-visible files for PR numbers, SHAs, and the symbol names a pack lists in
+  `contamination.renamed`. It has no way to know that a *literal* is distinctive upstream, so a
+  pack can rename every identifier, pass all eight checks, and still hand a trained model an
+  instant fingerprint. Two confirmed instances, both fixed:
+
+  - `swift-collections-platform-guard-scope` renamed the four platforms but kept the version
+    thresholds **`12, 15, 8, 15`** — upstream's exact tuple, in the same order. Replaced with
+    `7, 4, 3, 9`.
+  - `auth-unusable-password-policy` renamed the constant but kept **`"!"` and `40`** — the real
+    framework's sentinel character and suffix length. Replaced with `"~"` and `26`.
+
+  A third, `pydantic-typing-extra`, keeps a regex whose *shape* is upstream's exactly
+  (`((\w+\.)?X\[)?(\w+\.)?Y\[`) with only the two symbol names substituted. Left as-is: that
+  nesting is close to the natural way to express the pattern, so the fingerprint is weak and the
+  alternative would distort the fixture. Recorded so the judgment is visible rather than implied.
+
+  **Why this matters more for the restraint packs than the others.** A model that recognises the
+  source may recall the verdict — "the sentinel is deliberate, do not flag it" — without doing the
+  reasoning. Restraint is precisely what this corpus measures, so recognition-without-reasoning
+  does not merely inflate a score, it invalidates the measurement.
+
+  **The rule:** any literal that is distinctive to the upstream codebase — version tuples, magic
+  characters, buffer sizes, retry counts, diagnostic message text, format strings — must be
+  replaced, and the replacement recorded in `contamination.constants_changed`. That field is a
+  discipline artifact, not a validated one; no checker can decide whether a number is meaningful
+  upstream, so this stays an authoring rule enforced by review. Build briefs should state it
+  explicitly, because two of the first thirteen packs got it wrong without anyone noticing.
 - **`prompt_exposure`** implements the leakage split — renaming symbols is not enough
   when the source PRs may live rent-free in model weights:
 

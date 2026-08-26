@@ -13,11 +13,11 @@ func check(_ condition: Bool, _ message: String) {
 }
 
 check(
-    isPotentiallyAffected(platform: .anchor, version: Version(major: 10, minor: 0)),
+    isPotentiallyAffected(platform: .anchor, version: Version(major: 6, minor: 0)),
     "an old anchor runtime should still report affected"
 )
 check(
-    !isPotentiallyAffected(platform: .anchor, version: Version(major: 12, minor: 0)),
+    !isPotentiallyAffected(platform: .anchor, version: Version(major: 7, minor: 0)),
     "an anchor runtime at the threshold should report unaffected"
 )
 check(

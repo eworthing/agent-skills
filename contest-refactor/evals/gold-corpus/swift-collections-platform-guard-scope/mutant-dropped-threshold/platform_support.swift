@@ -22,9 +22,9 @@ struct Version: Comparable {
 }
 
 private let versionThresholds: [Platform: Version] = [
-    .anchor: Version(major: 12, minor: 0),
-    .companion: Version(major: 15, minor: 0),
-    .parlor: Version(major: 15, minor: 0),
+    .anchor: Version(major: 7, minor: 0),
+    .companion: Version(major: 4, minor: 0),
+    .parlor: Version(major: 9, minor: 0),
 ]
 
 /// True once `platform` is new enough that the underlying bug no longer

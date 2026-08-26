@@ -93,10 +93,10 @@ LEGACY_FOUR = {"anchor", "companion", "wrist", "parlor"}
 # name -> (old_major, old_minor, new_major, new_minor); "old" is below the
 # real threshold, "new" is exactly at it.
 LEGACY_VERSIONS = {
-    "anchor": (10, 0, 12, 0),
-    "companion": (14, 0, 15, 0),
-    "wrist": (6, 0, 8, 0),
-    "parlor": (14, 0, 15, 0),
+    "anchor": (6, 0, 7, 0),
+    "companion": (3, 0, 4, 0),
+    "wrist": (2, 0, 3, 0),
+    "parlor": (8, 0, 9, 0),
 }
 
 EXCLUDED_PLATFORMS = ["overlay", "openfield"]
@@ -173,9 +173,7 @@ def guard_removal_is_behaviorally_neutral(binaries: dict[str, Path]) -> dict[str
 
 
 def old_affected_version_still_reported_affected(binaries: dict[str, Path]) -> dict[str, bool]:
-    return {
-        variant: probe_affected(binary, "anchor", 10, 0) for variant, binary in binaries.items()
-    }
+    return {variant: probe_affected(binary, "anchor", 6, 0) for variant, binary in binaries.items()}
 
 
 def main() -> int:
