@@ -1,0 +1,146 @@
+{
+  "source_repo": "apple/swift-nio",
+  "source_pr": 2959,
+  "related_history": [
+    {
+      "kind": "subsequent_revert_attempt",
+      "pr": 2980,
+      "outcome": "closed_unmerged_draft",
+      "note": "Titled 'Revert the @preconcurrency Sendable changes on main from #2959, #2955, and #2953.' +377/-917 across the same surface. Opened by the same author as #2959, about three weeks after #2959 merged, and closed unmerged as a draft. This does not disprove #2959 -- a closed, unmerged draft revert is not a finding of wrongness -- but it does mean the accepted state should be treated as contested by its own author within weeks, not as settled, pristine gold."
+    }
+  ],
+  "base_sha": "e25bf7ecfe76c6c097fe901c3147c959bc03b27e",
+  "accepted_sha": "37b31b95c2741f7f7220852d503adacc3e995e92",
+  "accepted_state": "merged",
+  "gold_confidence": "contested",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "concurrency_fake_fix_archetype_calibration",
+  "provenance_note": "The real PR's production-side change was compatibility annotations (@preconcurrency, Sendable conformances) completing strict-concurrency coverage for a core module; its moves to real synchronization primitives (atomics, lock boxes) were confined to its own test files, not production code. This pack's accepted variant (guarded-value-container) generalizes that lesson -- a real synchronization primitive making a read-modify-write indivisible is the correct shape of a real fix -- without claiming the original PR's production code was itself rewritten around a locked-value box; it was not. Three weeks after #2959 merged, its own author opened a large, unmerged draft revert of it and two sibling PRs, later closed. This pack treats the accepted state as contested, not proven-bad and not pristine: a reviewer who notices the real annotations carry a cost, or that the approach was contested from inside the project, has made a fair, accurate observation, not found a defect in this pack's judgment.",
+  "variant_roles": {
+    "unsynchronized-shared-state": "red",
+    "guarded-value-container": "green",
+    "near-miss-blanket-global-isolation": "near_miss",
+    "near-miss-unsafe-optout-with-claimed-invariant": "near_miss",
+    "mutant-unchecked-marker": "mutant"
+  },
+  "expected_judgment": "unsynchronized-shared-state should be accepted as a correct, if unsafe, starting state -- it is not itself a defect: every operation that is actually exercised, in the ordinary sequential order this variant's own test uses, works and reports the right count. The hazard is what happens under real concurrent access, which nothing here has been checked to survive: `count` is a plain, unprotected stored property reachable from two call sites, and oracles.py's scripted_interleaving_preserves_update demonstrates a genuine lost update by driving the two call sites' read-modify-write out of order. guarded-value-container should be ACCEPTED outright: `count` is private, reachable only through increment(), which performs its entire read-modify-write under a single lock acquisition -- there is no way to split its read from its write from outside this file at all, which is exactly why the same adversarial interleaving that breaks unsynchronized-shared-state cannot even be expressed against it (scripted_interleaving_preserves_update passes). near-miss-blanket-global-isolation should be refused, and refused for a specific reason that is NOT the lost update: isolating HitCounter to a dedicated global actor genuinely removes the race (scripted_interleaving_preserves_update also passes here, honestly, because the fix is real) -- a reviewer who checks only 'is the race gone' will accept this variant. The correct refusal names the topology cost instead: statusLine(), which has nothing to do with concurrent access to `count`, got swept into the same actor isolation because the annotation was applied to the whole type, and a call site that stayed synchronously callable against guarded-value-container now requires being on that actor -- oracles.py's unrelated_call_site_stays_callable demonstrates this directly as a compile-time fact, not a style preference. near-miss-unsafe-optout-with-claimed-invariant should be refused, and refused for a third, different reason again: it opts `count` out of Sendable checking on a specific, checkable claim -- a comment stating it is 'only mutated during setup, before either call site can reach it.' That claim is false in this fixture: increment(), called by both recordPageView and recordAPIHit, reaches `count` just as freely after setup as before, which oracles.py's claimed_invariant_actually_holds demonstrates by driving exactly that second path and observing the state change. This variant also fails scripted_interleaving_preserves_update, for the same structural reason mutant-unchecked-marker does -- `count` is plain and directly reachable, and the update is genuinely lost, honestly. That overlap with the mutant is not what distinguishes this variant's role in the pack: what makes it a near-miss rather than a second mutant is that it claims an invariant which, if true, would make the unsafe opt-out legitimate, and checking whether that specific claim holds is the required reasoning -- not merely noting it is racy like the mutant. mutant-unchecked-marker is a hard, unmissable Layer-5 case, not a reviewer-judgment one: it is unsynchronized-shared-state with `@unchecked Sendable` added and nothing else -- no lock, no actor, no invariant claim of any kind -- so the compiler's diagnostics are silenced while the exact same lost update remains fully present, confirmed by the same scripted_interleaving_preserves_update oracle that catches unsynchronized-shared-state and, for a different underlying reason, the invariant near-miss.",
+  "candidate_visible_files": [
+    "unsynchronized-shared-state/hit_counter.swift",
+    "unsynchronized-shared-state/main.swift",
+    "guarded-value-container/hit_counter.swift",
+    "guarded-value-container/main.swift",
+    "near-miss-blanket-global-isolation/hit_counter.swift",
+    "near-miss-blanket-global-isolation/main.swift",
+    "near-miss-unsafe-optout-with-claimed-invariant/hit_counter.swift",
+    "near-miss-unsafe-optout-with-claimed-invariant/main.swift",
+    "mutant-unchecked-marker/hit_counter.swift",
+    "mutant-unchecked-marker/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift",
+    "unsynchronized-shared-state/probe_adapter.swift",
+    "guarded-value-container/probe_adapter.swift",
+    "near-miss-blanket-global-isolation/probe_adapter.swift",
+    "near-miss-unsafe-optout-with-claimed-invariant/probe_adapter.swift",
+    "mutant-unchecked-marker/probe_adapter.swift"
+  ],
+  "must_find": [
+    "unsynchronized-shared-state's `count` is a plain, unprotected stored property reachable from two call sites (recordPageView, recordAPIHit) with no synchronization at all -- confirmed as a genuine lost update, not a hypothetical one, by oracles.py's scripted_interleaving_preserves_update.",
+    "guarded-value-container's increment() performs its entire read-modify-write under one lock acquisition, and `count` is private -- there is no way to read or mutate it from outside the file at all, which is why the exact adversarial interleaving that breaks unsynchronized-shared-state cannot even be constructed against it.",
+    "near-miss-blanket-global-isolation genuinely removes the lost update -- that is not the reason to refuse it. The reason is that isolating the whole type to a global actor cascaded isolation to statusLine(), an API with nothing to do with concurrent access to `count`, making a previously synchronous call site now require actor isolation (oracles.py's unrelated_call_site_stays_callable).",
+    "near-miss-unsafe-optout-with-claimed-invariant's comment claims `count` is 'only ever mutated during setup(), before anything else can reach it.' That claim is false: increment(), called by both recordPageView and recordAPIHit, reaches it after setup exactly as it did before (oracles.py's claimed_invariant_actually_holds drives this directly).",
+    "near-miss-unsafe-optout-with-claimed-invariant also fails scripted_interleaving_preserves_update, for the same structural reason mutant-unchecked-marker does -- `count` is plain and directly reachable, and nonisolated(unsafe) provides no actual serialization. That overlap with the mutant is not the finding: what distinguishes this variant is that it claims a specific, checkable invariant, and the required reasoning is verifying that claim (via claimed_invariant_actually_holds), not treating the two variants as the same failure because both lose an update.",
+    "mutant-unchecked-marker is unsynchronized-shared-state with `@unchecked Sendable` added and nothing else protecting `count` -- no lock, no actor, no invariant of any kind -- so the compiler's data-race diagnostics are silenced while the underlying lost update is fully, unmissably present."
+  ],
+  "must_not_find": [
+    "Accepting near-miss-blanket-global-isolation because the race is gone -- the race being gone is real and is not the defect; the defect is the isolation cascading to an unrelated API.",
+    "Accepting near-miss-unsafe-optout-with-claimed-invariant because it states an invariant, without checking whether that invariant actually holds in this fixture.",
+    "Treating mutant-unchecked-marker's `@unchecked Sendable` conformance as acceptable because the code compiles cleanly and reports no diagnostics -- a silenced diagnostic is not evidence of safety.",
+    "Recommending a global actor (or any blanket type-level isolation) as the general remedy for shared mutable state, rather than as one option with a real topology cost that must be weighed against the API surface it will isolate.",
+    "Treating near-miss-blanket-global-isolation and near-miss-unsafe-optout-with-claimed-invariant as the same failure because both are labeled a 'near miss' -- one genuinely fixes the race and fails on topology, the other never fixes anything and fails on a false invariant claim; collapsing that distinction is failing the pack in a different way than missing either individually.",
+    "Treating near-miss-unsafe-optout-with-claimed-invariant as indistinguishable from mutant-unchecked-marker because both fail scripted_interleaving_preserves_update -- the near-miss's distinguishing defect is a specific, checkable, false invariant claim, tested by a different oracle, not the shared lost-update result."
+  ],
+  "allowed_findings": [
+    "Noting that guarded-value-container's compatibility annotations (Sendable, nonisolated(unsafe)) carry a real, ongoing maintenance cost even when correctly justified, independent of this pack's central judgment.",
+    "Noting that the real-world approach this pack is drawn from was contested from inside the project within weeks of merging is a fair, accurate reading of the historical record, not a defect in this pack's judgment.",
+    "HitCounter's lock-based and actor-based variants could be written as a struct wrapping a class-based lock box instead of a class owning the lock directly, independent of this pack's central judgment."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [
+    {
+      "finding": "mutant-unchecked-marker's `@unchecked Sendable` conformance sits on a class with literally no synchronization mechanism anywhere in the file -- no lock, no actor, no queue, and no invariant claim of any kind -- which is the purest form of diagnostic silencing this pack models, distinct from near-miss-unsafe-optout-with-claimed-invariant's narrower, falsely-justified opt-out.",
+      "applies_to_variants": ["mutant-unchecked-marker"],
+      "not_required_in": [
+        "unsynchronized-shared-state",
+        "guarded-value-container",
+        "near-miss-blanket-global-isolation",
+        "near-miss-unsafe-optout-with-claimed-invariant"
+      ]
+    }
+  ],
+  "hidden_oracles": [
+    {
+      "name": "scripted_interleaving_preserves_update",
+      "variant_expected_to_fail": "unsynchronized-shared-state"
+    },
+    {
+      "name": "scripted_interleaving_preserves_update",
+      "variant_expected_to_fail": "mutant-unchecked-marker"
+    },
+    {
+      "name": "scripted_interleaving_preserves_update",
+      "variant_expected_to_fail": "near-miss-unsafe-optout-with-claimed-invariant"
+    },
+    {
+      "name": "unrelated_call_site_stays_callable",
+      "variant_expected_to_fail": "near-miss-blanket-global-isolation"
+    },
+    {
+      "name": "claimed_invariant_actually_holds",
+      "variant_expected_to_fail": "near-miss-unsafe-optout-with-claimed-invariant"
+    },
+    {
+      "name": "ordinary_sequential_calls_are_recorded",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A read-modify-write on state reachable from more than one call site must be indivisible -- no interleaving of its own read and write steps with another caller's may be observable -- regardless of how the surrounding type's diagnostics are silenced.",
+    "Removing a lost update and introducing no new cost are two different claims; a fix that genuinely removes a race can still be the wrong fix if the mechanism it uses forces unrelated APIs into the same isolation domain.",
+    "A comment asserting an invariant is not evidence the invariant holds; where a fixture makes such a claim checkable by driving the code paths the claim excludes, doing so is required, not optional.",
+    "A synchronization primitive's job is to make a compound operation appear atomic to every caller, not merely to appear atomic when called once in isolation -- an operation that only looks safe because a test harness cannot express its worst case is not thereby safe."
+  ],
+  "restraint_reason": "This pack asks a reviewer to apply the same rejection ('this doesn't really fix it') for two different reasons to two different near-misses, and to resist collapsing either into the simpler, more familiar failure mode of the mutant. near-miss-blanket-global-isolation is the harder of the two specifically because it is not lying: the race is genuinely gone, confirmed by the same oracle that catches the red and the mutant, and a reviewer trained to check 'does this fix the race' will stop there and accept it. The correct refusal requires noticing a cost that is invisible to that check entirely -- a topology change reaching an API that never needed protection -- which means restraint here is not about resisting a plausible-sounding excuse, it is about not treating 'the race is gone' as the only question worth asking. near-miss-unsafe-optout-with-claimed-invariant runs a different risk: it fails the same lost-update oracle the mutant fails, for the same underlying reason (plain, directly reachable state), and a reviewer who has correctly refused the mutant might refuse this variant identically and move on, missing that it is not merely a second mutant -- it states a specific, checkable invariant that would, if true, make its unsafe opt-out legitimate. The actual work is checking whether that specific, named invariant is true, not whether an invariant was named at all, and not settling for 'it's racy, same as the mutant' once the lost-update oracle alone would already justify a rejection. A reviewer who refuses this variant only for the shared lost update, without naming the false invariant specifically, has reached the right verdict by the wrong, incomplete route.",
+  "applicable_domains": [
+    "swift",
+    "concurrency",
+    "sendable",
+    "data-race-safety",
+    "diagnostic-silencing",
+    "refactoring-restraint",
+    "contested-gold"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-nio PR #2959 (accepted, merged 2024-10-31) and its own author's later, unmerged, closed draft revert attempt PR #2980 (closed 2024-11-21); no swift-nio source is included, copied, or paraphrased -- HitCounter, HitCounterIsolation, and every identifier here are original to this fixture. Swift's own concurrency language features (Sendable, actor, nonisolated, @globalActor) are used as the language features they are, not as upstream symbols."
+  },
+  "contamination": {
+    "renamed": [
+      "NIO",
+      "NIOCore",
+      "swift-nio",
+      "NIOLock",
+      "NIOLockedValueBox",
+      "ManagedAtomic",
+      "ByteBuffer",
+      "ChannelOption",
+      "Lukasa"
+    ],
+    "constants_changed": "This fixture never carried any upstream literal to begin with: the real PR's judgment-relevant properties -- an unsafe Sendable opt-out over mutable state, a global actor cascading isolation, an unsafe opt-out backed by a false invariant, and a real synchronization primitive making a read-modify-write indivisible -- do not depend on any specific value from the original PR's own diff. The two-call-site hit-counter domain, its field name, and its two access-point function names are this fixture's own invention.",
+    "minimized_from": "apple/swift-nio's strict-concurrency completion pass for NIOCore (PR #2959, merged 2024-10-31), and its own author's later unmerged revert attempt of it and two sibling PRs (PR #2980, closed 2024-11-21)",
+    "why": "The real PR's changes span 11 files of a large, actively-scheduled event-loop framework, and depend on real Sendable conformances across types this environment cannot meaningfully isolate as a minimal fixture without pulling in the framework's own event-loop and channel machinery; a renamed, minimized, single-file-per-variant Swift analogue (hit_counter.swift, with a small shared counter standing in for the real module's shared mutable state) preserves every judgment-relevant property -- an unchecked Sendable escape hatch with no mechanism behind it, a real lock making a compound operation genuinely indivisible, a global actor that removes a race but cascades isolation to an unrelated API, and a scoped unsafe opt-out backed by a checkable but false invariant -- as fully deterministic, synchronous, single-machine-compilable Swift with no real concurrency (no Task, no threads, no timing), without exposing any upstream symbol name, PR number, commit SHA, or author handle. The real PR's own production-side change was compatibility annotations; its moves to real synchronization primitives were confined to its own test files. This fixture's accepted variant generalizes that lesson as a real primitive protecting production state, and does not claim the original PR's production code was itself migrated to a locked-value box -- it was not."
+  }
+}
