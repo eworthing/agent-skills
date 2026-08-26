@@ -1,0 +1,140 @@
+{
+  "source_repo": "pointfreeco/swift-composable-architecture",
+  "source_pr": 3460,
+  "related_history": [
+    {
+      "kind": "subsequent_dead_code_removal",
+      "pr": 3845,
+      "outcome": "merged",
+      "note": "Titled 'Remove unused DefaultIsolation actor from RootCore.' +0/-1 across 1 file. The actor had sat declared and unreferenced since #3460 merged; #3845's author is not #3460's author -- an outside contributor found and deleted it eleven months later, in a single line, with no other change needed anywhere in the codebase."
+    }
+  ],
+  "base_sha": "7b2e742bf4b3e001c4487755a33285a7bacbbdf6",
+  "accepted_sha": "d4d1df8102da01bd8b16c1e0f2ace8e8e7aa6e86",
+  "accepted_state": "merged",
+  "gold_confidence": "longitudinally_corrected",
+  "subsequent_correction": {
+    "pr": 3845,
+    "sha": "618891f0e05b1d61e491055cef2f434da515eede",
+    "kind": "dead_code_removal"
+  },
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "protocol_composition_residual_judge_calibration",
+  "provenance_note": "The real PR replaced a type-erased state container and its unsafe-ish key-path handling with generic-preserving protocol composition, for safer key-path handling and a marginal benchmark win. It also introduced an actor that was never referenced anywhere in the codebase. That actor sat unreferenced for eleven months before an outside contributor -- not the architecture's own author -- deleted it in a single-line PR. This pack's judgment does not turn on any one PR's diff; it turns on that longitudinal fact: a strong, correct, accepted architecture shipped with one dead residual that its own author and reviewers did not catch, and no one caught for nearly a year.",
+  "variant_roles": {
+    "type-erased-root": "red",
+    "core-composition-with-dead-isolation": "green",
+    "core-composition-clean": "alternate_green",
+    "near-miss-collapse-back-to-erasure": "near_miss",
+    "mutant-scoped-writes-lost": "mutant"
+  },
+  "expected_judgment": "type-erased-root should be accepted as a correct, if unsafe, starting state -- it is not itself a defect: Workspace boxes its state as Any, and read/write/child all take their root type as a free generic parameter inferred from whatever key path is passed. Every operation that is actually exercised works. The problem is what the compiler cannot catch: nothing here ties a key path's root type to what a given workspace instance actually boxes, so a caller can pass a key path rooted in a completely unrelated type and it still compiles, deferring the mistake to a runtime force-cast trap. core-composition-with-dead-isolation should be ACCEPTED, and the acceptance must come with a named residual -- this is the pack's centerpiece and its correct score is 9.5, not 10. The architecture itself is right: Workspace<Node: Panel> pins child(_:at:)'s key path root to Node.State, so the exact mistake type-erased-root allows is now a compile error (oracles.py's key_path_root_type_checked confirms this directly). But the file also declares an actor, reserved in its own comment for a future default execution context, that nothing anywhere references -- oracles.py's dead_declaration_unreferenced confirms this as an observed fact from a source scan, not a suspicion. A review that accepts the architecture and stops there has scored core-composition-clean's work and claimed it for core-composition-with-dead-isolation. core-composition-clean is the same architecture with that one residual removed -- accept it without reservation, and do not invent a second residual that is not there; a reviewer who has learned 'there is always a dead thing' and reports one anyway against this specific variant has failed the pack in the opposite direction. near-miss-collapse-back-to-erasure should be refused, and refused on the specific structural grounds the pack is built to test: it reverts to a non-generic, type-erased Workspace on the reasonable-sounding motivation that the Panel protocol and its two conforming marker types are ceremony the file's own tests never exercise, and it is genuinely shorter, with fewer declarations, than either composed variant. Protocol count and declaration count are not findings against it, and a review that refuses this variant for 'too many types' has matched its own stated (wrong) motivation rather than testing it. The real defect is structural: collapsing back to Any gives back exactly the unsafe key-path handling the composition exists to remove -- oracles.py's key_path_root_type_checked shows the identical unrelated-type key path that core-composition-clean rejects at compile time now compiling again here, silently. mutant-scoped-writes-lost is a hard, unmissable Layer-5 case, not a reviewer-judgment one: it keeps the composed architecture's exact shape -- same Panel protocol, same Workspace<Node>, same pinned key path root, the same unrelated-type key path is still correctly rejected at compile time -- but child(_:at:) captures the child's state into a local variable at scoping time and routes writes there instead of back through the key path into the parent. A write through the scoped child is never rejected and never lost with an error; it simply never reaches the root. Nothing in this variant's own bundled test catches it, because that test only checks the child's own state after the write, which the local cache correctly reflects -- only checking the parent afterward, which oracles.py's scoped_write_reaches_parent does, reveals the loss.",
+  "candidate_visible_files": [
+    "type-erased-root/workspace.swift",
+    "type-erased-root/main.swift",
+    "core-composition-with-dead-isolation/workspace.swift",
+    "core-composition-with-dead-isolation/main.swift",
+    "core-composition-clean/workspace.swift",
+    "core-composition-clean/main.swift",
+    "near-miss-collapse-back-to-erasure/workspace.swift",
+    "near-miss-collapse-back-to-erasure/main.swift",
+    "mutant-scoped-writes-lost/workspace.swift",
+    "mutant-scoped-writes-lost/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift",
+    "type-erased-root/probe_adapter.swift",
+    "core-composition-with-dead-isolation/probe_adapter.swift",
+    "core-composition-clean/probe_adapter.swift",
+    "near-miss-collapse-back-to-erasure/probe_adapter.swift",
+    "mutant-scoped-writes-lost/probe_adapter.swift"
+  ],
+  "must_find": [
+    "type-erased-root's child(at:)/read/write infer their root type purely from whatever key path a caller passes, with nothing tying that root to the type this specific workspace instance actually boxes -- a key path rooted in an unrelated type still compiles, deferring the mistake to a runtime force-cast trap instead of a compile error.",
+    "core-composition-with-dead-isolation's architecture is correct and should be accepted: Workspace<Node: Panel> pins child(_:at:)'s key path root to Node.State, so the exact unrelated-type key path type-erased-root accepts is now rejected at compile time (oracles.py's key_path_root_type_checked).",
+    "core-composition-with-dead-isolation nonetheless carries a real, current residual: an actor declared and never referenced anywhere in the file, confirmed by a source scan (oracles.py's dead_declaration_unreferenced), not merely suspected. Accepting the architecture and naming this residual are not in tension -- full credit requires both.",
+    "core-composition-clean is the same architecture with that residual removed -- accept it without reservation, and do not report a residual against it that dead_declaration_unreferenced does not confirm; a reviewer who has learned 'there is always a dead thing' from the previous variant and repeats that finding here has hallucinated a defect.",
+    "near-miss-collapse-back-to-erasure's motivation (the Panel protocol and its two marker types are ceremony for no benefit this file's own tests exercise) is reasonable on its face and the resulting file is genuinely shorter, with fewer declarations, than either composed variant. That does not make the change correct: collapsing back to a type-erased Workspace reintroduces the exact unsafe key-path handling the composition exists to remove -- the identical unrelated-type key path that core-composition-clean rejects at compile time compiles again here, silently.",
+    "mutant-scoped-writes-lost keeps the composed architecture's exact shape, including its correct compile-time rejection of an unrelated-type key path -- its defect is purely behavioral: child(_:at:) captures the child's state into a local variable at scoping time, so a write through the scoped child never reaches the root, silently, with no error and no rejected write."
+  ],
+  "must_not_find": [
+    "Refusing core-composition-with-dead-isolation or core-composition-clean for having more protocols, types, or declarations than type-erased-root or near-miss-collapse-back-to-erasure -- protocol count and declaration count are not findings against either composed variant.",
+    "Treating core-composition-with-dead-isolation's extra declarations (relative to near-miss-collapse-back-to-erasure) as complexity to pay down, rather than recognizing the architecture as the correct direction.",
+    "Scoring core-composition-with-dead-isolation a flawless or perfect verdict -- this pack's central point is that the accepted, merged state still carries a real, nameable residual.",
+    "Reporting a dead-declaration residual against core-composition-clean, near-miss-collapse-back-to-erasure, type-erased-root, or mutant-scoped-writes-lost -- dead_declaration_unreferenced confirms the isolation marker exists in exactly one variant; inventing one elsewhere is not caution, it is a hallucinated finding.",
+    "Accepting near-miss-collapse-back-to-erasure because it has fewer types and a shorter diff than the composed variants, or refusing it only on a vague 'too many types' instinct without naming that it specifically reintroduces unchecked, unrelated-type key paths.",
+    "Crediting mutant-scoped-writes-lost's passing bundled test suite as evidence its scoping is correct -- that suite only checks the scoped child's own state after a write, never the parent, which is exactly the gap the bug lives in."
+  ],
+  "allowed_findings": [
+    "EditorState and InspectorState could be organized behind a shared small protocol instead of being two unrelated structs, independent of this pack's central judgment.",
+    "Workspace's private getState/setState closure pair could be replaced with an enum-based storage representation instead of a pair of captured closures, independent of this pack's central judgment.",
+    "Noting that core-composition-clean's child(_:at:) is now the only place a key path's root type is checked against the container itself is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [
+    "core-composition-with-dead-isolation declares an actor, reserved in its own comment for a future default execution context, that nothing anywhere in the file or the accepted architecture ever references -- oracles.py's dead_declaration_unreferenced confirms this as an observed fact from a source scan, not a suspicion. The change is correctly directed -- it replaces a type-erased, unsafe-key-path container with a generic-preserving Panel composition that catches a whole class of key-path mistakes at compile time -- and it is the accepted, merged state, but the residual is real and current. In the real-world case this pack is drawn from, the equivalent actor sat unreferenced for eleven months before a contributor who was not the architecture's original author deleted it in a single-line pull request, with no other change needed anywhere in the codebase."
+  ],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "key_path_root_type_checked",
+      "variant_expected_to_fail": "type-erased-root"
+    },
+    {
+      "name": "key_path_root_type_checked",
+      "variant_expected_to_fail": "near-miss-collapse-back-to-erasure"
+    },
+    {
+      "name": "dead_declaration_unreferenced",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "scoped_write_reaches_parent",
+      "variant_expected_to_fail": "mutant-scoped-writes-lost"
+    },
+    {
+      "name": "scoped_child_initial_matches_parent",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A key path passed to a scoping operation must be rejected at compile time if its root type does not match the container's own state type, wherever the container's design makes that type statically known; a container that cannot know its own state type at compile time cannot offer this guarantee no matter how the rest of its API is organized.",
+    "A value written through a scoped child must be observable through the parent afterward; a write that is never rejected and never reported as failed, yet never reaches the parent, is a defect regardless of what the scoped child itself reports about its own state.",
+    "Whether a codebase contains an unreferenced declaration is a fact checkable by scanning for its uses, not a suspicion to apply uniformly to every variant regardless of what that scan shows.",
+    "An architecture being the correct, accepted direction and that same accepted state carrying a real, current residual are not mutually exclusive claims; a review that treats them as mutually exclusive will either over-reward or under-reward the accepted state."
+  ],
+  "restraint_reason": "This pack asks a reviewer to hold three separate judgments apart and get all three right, not just the easiest one. Architecture recognition is the easy third: preferring the composed, generic-preserving Workspace over the type-erased one, despite it having strictly more declarations, is the kind of judgment most competent reviewers make correctly. Restraint is the harder third it sits next to: near-miss-collapse-back-to-erasure's motivation for reverting -- fewer types, less ceremony, nothing in the file's own tests exercises the protocol -- is reasonable-sounding and its diff is genuinely smaller, which is exactly what makes 'prefer fewer declarations' a bad heuristic on its own; the correct refusal names the specific unsafe key-path handling it reintroduces, not a vague preference for the composed shape. Residual discovery is the third this pack is centrally built around: core-composition-with-dead-isolation is the accepted, merged, architecturally-correct state, and it still carries one dead declaration that its own author and reviewers did not catch for eleven months in the real-world case this pack is drawn from. A reviewer who accepts the architecture and stops has done half the job and claimed full credit for it -- exactly the 'no-fake-clean-reward' failure this pack exists to catch. The failure runs in both directions, though: a reviewer who has learned 'there is always a dead thing' from this variant and then reports one against core-composition-clean, which has none, has traded a real miss for a hallucinated one, and that failure is graded just as seriously as missing the real residual in the first place.",
+  "applicable_domains": [
+    "swift",
+    "generics",
+    "protocol-composition",
+    "dead-code-discovery",
+    "refactoring-restraint",
+    "longitudinal-verification"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pointfreeco/swift-composable-architecture PR #3460 (accepted, merged 2025-03-27) and PR #3845 (its later dead-code removal, merged 2026-02-18, authored by a different contributor than #3460); no swift-composable-architecture source is included, copied, or paraphrased -- Panel, Workspace, EditorState, InspectorState, EditorPanel, InspectorPanel, QuietQueue, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "ComposableArchitecture",
+      "TCA",
+      "RootStore",
+      "ToState",
+      "Core",
+      "RootCore",
+      "DefaultIsolation",
+      "Reducer",
+      "Store",
+      "stephencelis",
+      "zekexros",
+      "pointfreeco"
+    ],
+    "constants_changed": "This fixture never carried any upstream literal to begin with: the real refactor's judgment-relevant properties -- a type-erased container with unsafe-ish key-path handling, a generic-preserving protocol composition that fixes it, and one unreferenced actor left behind in the fix -- do not depend on any specific constant, benchmark number, or configuration value from the original PRs, so none was looked up or reproduced. The two state shapes (EditorState/InspectorState), their fields, and the isolation marker's name (QuietQueue) are this fixture's own invention.",
+    "minimized_from": "pointfreeco/swift-composable-architecture's Store-internals refactor from type-erased storage to protocol-composed, generic-preserving storage (PR #3460, merged 2025-03-27), and the later removal of an actor that refactor introduced but never wired in anywhere (PR #3845, merged 2026-02-18)",
+    "why": "The real change touches the framework's own Store/reducer runtime, its action-sending and effect machinery, and depends on a genuine concurrency-isolation actor across 24 files, none of which can be reproduced as a minimal fixture without pulling in real Swift concurrency and a large surrounding framework; a renamed, minimized, single-file-per-variant Swift analogue (workspace.swift, with a plain state-scoping container standing in for the real Store, and Panel standing in for the real protocol-composition scheme) preserves every judgment-relevant property -- unsafe key-path handling fixed by pinning a key path's root to a compile-time-known state type, a plausible-looking reversion that reintroduces exactly that unsafety, a real behavioral write-back defect that keeps the fixed architecture's shape, and one declaration left dead by the fix itself -- as fully deterministic, synchronous, single-machine-compilable Swift, without exposing any upstream symbol name, PR number, commit SHA, or contributor handle, and modeling the isolation marker only as a declaration whose reachability is the graded fact, never as real actor concurrency."
+  }
+}
