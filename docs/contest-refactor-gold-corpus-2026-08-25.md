@@ -736,7 +736,9 @@ tokens so it is excluded:
 | **Total / mean (12 Python packs)** | **3,149,264 / ~262k** |
 | **Swift** `swift-collections-platform-guard-scope` (#298) | **962,603** |
 | **Swift** `swiftnio-write-before-active` (#2486) | **861,392** |
-| **Swift subtotal / mean (2 packs)** | **1,823,995 / ~912k — 3.5× the Python mean** |
+| **Swift** `swift-collections-ordered-replace-primitive` (#688) | **1,219,549** |
+| **Swift subtotal / mean (3 packs)** | **3,043,544 / ~1.01M — 3.9× the Python mean** |
+| **Corpus total (15 packs)** | **6,192,808** |
 
 The P9 mini-packs are the first entries built two-to-an-agent, so those last two rows are pair
 figures. They also happen to price a rework round, because one pair needed none and the other
@@ -804,6 +806,25 @@ against is the measurement, not an extrapolation from it.** What can be said: no
 far suggests Swift packs get cheaper with practice. **The remaining ~11 Swift sources at the
 observed mean are ~10M** — roughly three times what the entire Python track cost — and that is
 the figure an owner should weigh, not the hope that the third pack finally comes down.
+
+##### The third Swift pack was the dearest of all
+
+`swift-collections-ordered-replace-primitive` measured **1,219,549** — above both earlier Swift
+packs, and the most expensive single pack in the corpus. Three Swift packs now read
+**962,603 / 861,392 / 1,219,549**, mean **~1.01M, 3.9× the twelve-pack Python mean**, with no
+downward trend across three attempts by two different agents, both handed the conventions rather
+than inventing them.
+
+For once this section gets to record a prediction it did **not** get wrong: the previous entry
+declined to assume the third pack would come down, and it did not. The cost of a Swift pack looks
+like a property of the language track. Treat **~1M per Swift pack** as the planning figure until
+something measured contradicts it.
+
+**What that means concretely.** The corpus stands at **6,192,808 tokens for 15 packs**. The
+remaining **~10 Swift sources at ~1.01M are ~10.1M** — more than three times what the entire
+twelve-pack Python track cost, and more than the whole corpus has cost to date. Building out the
+rest of the Swift register is not a continuation of the current effort; it is a larger project
+than everything in this document put together, and should be scheduled as one.
 
 **So the honest correction is under 2×, not an order of magnitude.** ~268k against a
 ~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate

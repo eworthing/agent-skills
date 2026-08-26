@@ -33,11 +33,13 @@ Validate with `python3 ../scripts/validate-gold-corpus.py gold-corpus` (8 checks
 Each pack's `oracles.py` is grader-only and runnable directly; it prints the observed
 variant × oracle matrix and exits non-zero if it diverges from `provenance.json`.
 
-**Swift track — 1 of ~13 built:**
+**Swift track — 3 of ~13 built:**
 
 | Pack | Source | Tests |
 | --- | --- | --- |
 | `swift-collections-platform-guard-scope` | swift-collections #298 (**rejected**) | the corpus's only near-miss authored by a real external contributor and rejected by a real maintainer |
+| `swiftnio-write-before-active` | swift-nio #2486 | the suite certified the defect — a passing test asserts the wrong behavior |
+| `swift-collections-ordered-replace-primitive` | swift-collections #688 | "just call the public method" — wrong in three ways the author documented in advance |
 
 Swift variants are a `platform_support.swift` module plus a `main.swift` test, built with
 `swiftc platform_support.swift main.swift -o /tmp/<name> && /tmp/<name>` (exit 0 pass, 1 fail).
@@ -47,8 +49,8 @@ b.swift` errors unless the entry file is named `main.swift`, and `swift a.swift 
 out to `swiftc`. Toolchain used: Swift 6.4 / Xcode 27. Never write build output into a pack
 directory.
 
-The remaining ~12 Swift sources are designed but unbuilt — see the register in the design doc,
-and read the cost note there first: the first Swift pack cost 3.7× the Python per-pack mean.
+The remaining ~10 Swift sources are designed but unbuilt — see the register in the design doc,
+and read the cost note there first: Swift packs measure ~1.01M each, 3.9x the Python per-pack mean, with no downward trend across three.
 
 **These are fixtures, not production evidence.** They do not count toward the G17 promotion bar,
 which requires adjudicated datapoints from live runs against real target repos.

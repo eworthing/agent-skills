@@ -1,0 +1,110 @@
+{
+  "source_repo": "apple/swift-collections",
+  "source_pr": 688,
+  "base_sha": "899809d3f83cabe30a59a6f00223a0981270be52",
+  "accepted_sha": "2875152465cb5e7b82b4352f9f74e75a7b0f97b5",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "shared_move_primitive_diagnostic_specificity",
+  "variant_roles": {
+    "duplicated-inline-move": "red",
+    "shared-move-primitive": "green",
+    "near-miss-delegates-to-roster-replace": "near_miss",
+    "mutant-reordered-move-primitive": "mutant"
+  },
+  "expected_judgment": "duplicated-inline-move should be accepted as a correct, if duplicated, starting state -- it is not itself a defect: Roster's own checked replace and Ledger's own checked replaceLabel each perform the identical three-step move (append the new member, swap it into the old member's slot, remove the old member from the end) inline, with their own duplicate/not-found checks and their own diagnostic wording. Noting the duplication and wanting it factored out is fair, motivating context; it is not a required finding, since that is exactly what shared-move-primitive then does. shared-move-primitive should be ACCEPTED outright: the three-step move is factored into one generic moveIntoPlace primitive taking an already-resolved position, used by both Roster.replace and Ledger.replaceLabel, while each caller keeps its own checks and its own diagnostic wording, and Ledger resolves the label's position once and reuses it for both its labels move and its values move. near-miss-delegates-to-roster-replace should be refused, and refused for the specific structural reason a genuinely reasonable simplification earns: Ledger.replaceLabel simply calls Roster's own public replace method instead of doing its own checks and calling the shared primitive directly. This reads as an even cleaner deduplication than the accepted change -- one call covers everything -- and it is wrong in three concrete, checkable ways. First, both of Ledger's own diagnostics silently change to Roster's wording: a duplicate label now traps with 'member already present' instead of \"label already in use: '<label>'\", and a missing label now traps with 'position outside roster' instead of 'no entry at that position' -- neither of these differences crashes anything, and no success-path test will ever see them. Second, the label position Roster.replace resolves internally is not returned to the caller, so Ledger still needs a position for its own values-array move and has to look it up a second time -- a real, measurable, doubled cost invisible except by counting lookups directly, which oracles.py's lookup_work_count does. Third, delegating to the wrong layer's public method erases the fact that Ledger and Roster are meant to report failures in their own vocabulary; a caller reading only Ledger's diagnostics can no longer tell that a failure came from Ledger's own contract rather than Roster's. mutant-reordered-move-primitive is a hard, unmissable Layer-5 case: it keeps shared-move-primitive's shape exactly -- same checks, same diagnostics, same single lookup -- but moveIntoPlace performs its three steps out of order (append, remove, then swap, instead of append, swap, then remove), so the newly appended member is discarded before it is ever swapped into place and an unrelated member is corrupted into the old member's slot instead. Nothing raises; a check that only asks whether the call reported success will not catch it, only a check on the resulting contents will.",
+  "candidate_visible_files": [
+    "duplicated-inline-move/ordered_replace.swift",
+    "duplicated-inline-move/main.swift",
+    "shared-move-primitive/ordered_replace.swift",
+    "shared-move-primitive/main.swift",
+    "near-miss-delegates-to-roster-replace/ordered_replace.swift",
+    "near-miss-delegates-to-roster-replace/main.swift",
+    "mutant-reordered-move-primitive/ordered_replace.swift",
+    "mutant-reordered-move-primitive/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "near-miss-delegates-to-roster-replace's motivation is genuine and reasonable on its face -- Roster's public replace already covers duplicate checking, not-found checking, and the move together, so calling it directly from Ledger looks like an even cleaner deduplication than factoring out just the three-step move. That the motivation is reasonable does not make the change correct.",
+    "near-miss-delegates-to-roster-replace silently changes both of Ledger's own diagnostics: a duplicate label traps with Roster's 'member already present' instead of Ledger's own \"label already in use: '<label>'\", and a missing label traps with Roster's 'position outside roster' instead of Ledger's own 'no entry at that position'. This is checkable directly (see oracles.py's diagnostic_wording_preserved) and is invisible to any test that only checks whether a call trapped, not what it said.",
+    "near-miss-delegates-to-roster-replace resolves the label's position twice per successful replace, not once: once inside Roster.replace's own internal lookup, and again by Ledger itself afterward, because delegating to Roster's public method does not hand the already-resolved position back to the caller, and Ledger still needs a position for its own values-array move. This is a real, measurable difference (oracles.py's lookup_work_count: 2 versus shared-move-primitive's 1), not a stylistic one.",
+    "shared-move-primitive's moveIntoPlace is a deliberate extraction of only the mechanical three-step move; each container keeps its own duplicate/not-found checks and its own diagnostic wording, and that split is the correct one, not a leftover to be collapsed further by having one container call the other's public method.",
+    "mutant-reordered-move-primitive's dropped-then-corrupted step only shows up by checking the resulting contents after a successful replace; the call still reports success, so a check that only asks 'did this succeed' will not catch it."
+  ],
+  "must_not_find": [
+    "Accepting near-miss-delegates-to-roster-replace because it looks like the more thorough deduplication -- one call covering checks and the move together, rather than two containers each still doing their own checks.",
+    "Refusing near-miss-delegates-to-roster-replace only on the grounds that 'calling into a different type's method feels risky' as a generic instinct, without naming that it specifically changes Ledger's own diagnostic wording and doubles the lookup work.",
+    "Crediting near-miss-delegates-to-roster-replace as harmless because every success-path test still reports success -- the diagnostic wording and the doubled lookup are both real defects independent of whether the call succeeds or fails.",
+    "Treating shared-move-primitive's per-container checks and diagnostics as duplication that near-miss-delegates-to-roster-replace correctly removes -- the checks are duplicated in name only; the wording each container reports is a deliberate part of that container's own contract.",
+    "Accepting mutant-reordered-move-primitive because it reports success on an ordinary replace -- the corruption is in the resulting contents, not the return value."
+  ],
+  "allowed_findings": [
+    "moveIntoPlace could be written as a method on a shared protocol both Roster and Ledger conform to, instead of a free generic function, independent of this pack's central judgment.",
+    "Roster and Ledger storing their elements as plain arrays rather than a more specialized backing structure is a fixture simplification, independent of this pack's central judgment.",
+    "Noting that shared-move-primitive's Roster.replace and Ledger.replaceLabel are now both short, symmetric functions is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "diagnostic_wording_preserved",
+      "variant_expected_to_fail": "near-miss-delegates-to-roster-replace"
+    },
+    {
+      "name": "lookup_work_count",
+      "variant_expected_to_fail": "near-miss-delegates-to-roster-replace"
+    },
+    {
+      "name": "replace_semantics_preserved",
+      "variant_expected_to_fail": "mutant-reordered-move-primitive"
+    },
+    {
+      "name": "ordinary_replace_matches_across_non_mutant_variants",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "Ledger.replaceLabel must report its own diagnostic wording on failure -- \"label already in use: '<label>'\" for a label already present elsewhere, 'no entry at that position' for a label that isn't present -- regardless of what internal mechanism performs the check.",
+    "An ordinary successful replaceLabel call must resolve the label's position exactly once; resolving it more than once for the same call is a measurable regression even when every visible output still looks correct.",
+    "After a successful replace, both the affected container's own storage and (for Ledger) its paired values must reflect the new member at the old member's former position, with every other member's position unchanged.",
+    "A container's public checked entry point returning a success or failure verdict is not sufficient evidence that a replace worked correctly; the resulting contents must be checked directly, since a broken move primitive can still report success."
+  ],
+  "restraint_reason": "near-miss-delegates-to-roster-replace is built to be genuinely persuasive: Roster's own public replace already bundles duplicate checking, not-found checking, and the move into one call, so having Ledger simply call it looks like a cleaner deduplication than shared-move-primitive's approach of factoring out only the three-step move while leaving each container's own checks in place. A reviewer who stops at 'the two containers' checks look duplicated, so let one call the other' has matched the near-miss's own reasoning rather than testing it. The correct refusal names two independent, concrete costs: Ledger's own diagnostic wording -- part of its contract with its own callers -- silently changes to Roster's wording on failure, and the label position Roster.replace resolves internally is lost to the caller, forcing a second, redundant lookup for the values-array move that shared-move-primitive's design avoids by resolving the position once and passing it through. Restraint here is recognizing that two containers performing structurally identical checks are not thereby interchangeable in what they report or how much work they redundantly repeat, and that the correct level to share code at is the mechanical move itself, not the higher-level checked operation that wraps it.",
+  "applicable_domains": [
+    "swift",
+    "ordered-collections",
+    "shared-primitive-extraction",
+    "diagnostic-preservation",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-collections PR #688 (accepted, merged, 1.7.0) and the author's own documented comparison of the shipped approach against calling the sibling container's public method directly; no swift-collections source is included, copied, or paraphrased -- Roster, Ledger, ReplaceOutcome, moveIntoPlace, and every identifier here are original to this fixture. The near-miss variant's accompanying code comment restates the author's own documented reasoning for avoiding this exact alternative -- reworded, not quoted -- as a plausible motivation for the change, without reproducing the author's comparison table itself, which lives only in this file and grading.md."
+  },
+  "contamination": {
+    "constants_changed": "All four diagnostic strings were replaced during review. The pack originally shipped the upstream pull request's own wording verbatim -- 'Duplicate element' and 'Index out of bounds' for the set-like layer, 'Duplicate key: <key>' and 'Index out of range' for the dictionary-like layer -- because those four strings appear in the PR body's comparison table and the table was quoted in the build brief. They are now 'member already present', 'position outside roster', 'label already in use: <label>' and 'no entry at that position'. This pack is the one most exposed to the rename-the-values rule, because its central oracle IS diagnostic-message preservation: the message text is the load-bearing content, so shipping upstream's text would have handed a model that has seen this repository the answer for free. The judgment structure is untouched -- two layers with distinguishable wording, where the near-miss silently substitutes one layer's wording for the other's -- since it depends on the messages differing, never on what they say. No other upstream literal is carried: the container contents and the lookup counts are the fixture's own.",
+    "renamed": [
+      "swift-collections",
+      "Collections",
+      "OrderedDictionary",
+      "OrderedSet",
+      "replaceElement",
+      "_replaceNew",
+      "_appendNew",
+      "_removeExistingMember",
+      "_find",
+      "_Bucket",
+      "_keys",
+      "inju2403",
+      "lorentey"
+    ],
+    "minimized_from": "apple/swift-collections's shared internal three-step replace primitive extracted from OrderedSet and OrderedDictionary (PR #688, merged 1.7.0), and the author's own documented comparison against calling the sibling container's public replace method directly",
+    "why": "The real change lives inside swift-collections' own OrderedSet/OrderedDictionary storage and hashing internals, which cannot be reproduced faithfully as a minimal Swift fixture without the real hash-table machinery; a renamed, minimized Swift analogue (Roster/Ledger/moveIntoPlace) preserves every judgment-relevant property -- a plausible-looking delegation that changes diagnostic wording and repeats resolved work, and a shared primitive extracted at the correct (mechanical) level rather than the checked-operation level -- as fully deterministic, compilable Swift with no real hashing, without exposing any upstream symbol name, PR number, or line of swift-collections source. `Array.swapAt` and `Array.removeLast` are kept as-is: they are the ordinary Swift standard library Array methods this fixture's move primitive is built from, not swift-collections-specific symbols, so they are not treated as names to rename away from -- see the accompanying build report for why they were dropped from this list despite being named in the original build brief."
+  }
+}
