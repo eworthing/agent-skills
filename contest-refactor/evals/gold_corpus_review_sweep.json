@@ -1,0 +1,989 @@
+{
+  "schema_version": 1,
+  "description": "Blind-review sweep of every gold-corpus pack's accepted variant, 2026-08-26. Three independent sonnet reviewers per pack, each given only the skill's own review protocol (method.md Simplify Pressure Test + Meta-Rules, architecture-rubric.md severity anchors, lens-generic.md) and the candidate-visible files in a scratch directory -- no provenance.json, no sibling variants, no knowledge that a grading contract exists. Purpose: replace guessed allowed_findings with measured ones. A finding counts as replicated when independent reviewers raise it without having seen what the pack expects.",
+  "reviewers": 3,
+  "model": "claude-sonnet-4-6",
+  "packs": {
+    "auth-challenge-preservation": {
+      "reps": {
+        "A": [],
+        "B": [],
+        "C": []
+      }
+    },
+    "auth-concurrent-login-storage": {
+      "reps": {
+        "A": [
+          {
+            "claim": "LoginRegistry's shared mutable entries dictionary has no concurrency protection at all, despite the module's own naming and doc comment presenting it as safe for concurrent login storage.",
+            "severity": "Serious",
+            "source": "login_registry.swift:19-28 -- `final class LoginRegistry` holds `private var entries: [LoginKind: String]` and mutates it directly in commitStore (`entries[pending.kind] = pending.value`) with no actor isolation, lock, or serial queue; the file header (lines 1-7) frames the write as needing to be 'a single, indivisible write', which only holds true for single-threaded callers -- concurrent commitStore calls race on the Dictionary's internal storage (undefined behavior / possible crash or corrupted login state).",
+            "remedy": "Make LoginRegistry an actor (or serialize entries behind a lock/queue) so commitStore and retrieve are actually safe to call from concurrent login flows; add a concurrent-access test once fixed."
+          },
+          {
+            "claim": "The beginStore/PendingStore split presents a transactional-looking two-step API but performs no reservation, staleness check, or locking, so it is ceremony over a single dictionary write.",
+            "severity": "Moderate",
+            "source": "login_registry.swift:22-28 -- beginStore only constructs a PendingStore(kind:value:) value with no side effect; commitStore does the entire write in one call; nothing between the two calls validates or reserves the slot, so the begin/commit naming implies a guarantee the code never provides.",
+            "remedy": "Collapse beginStore/commitStore/PendingStore into a single store(kind:value:) method unless a genuine reservation step (e.g. an optimistic version check) is added."
+          }
+        ],
+        "B": [
+          {
+            "claim": "LoginRegistry's beginStore/commitStore split and its 'single, indivisible write' framing imply concurrency-safe/transactional storage, but the shared `entries` dictionary is mutated with no synchronization at all, so concurrent commits from multiple threads/tasks (the exact usage this module's own name and doc comment describe) are a data race, and the two-phase API itself adds nothing over a single synchronous write.",
+            "severity": "Serious",
+            "source": "login_registry.swift:1-7 doc comment claims a 'single, indivisible write'; login_registry.swift:19-28 `final class LoginRegistry` (not an actor) holds `private var entries: [LoginKind: String]` and mutates it via plain `entries[pending.kind] = pending.value` in `commitStore` with no lock, queue, or actor isolation anywhere in the type. `beginStore` (login_registry.swift:22-24) only bundles `kind`/`value` into `PendingStore` -- it reserves nothing and checks nothing -- so deleting `PendingStore`/`beginStore` and replacing `commitStore(pending)` call sites with a direct `store(kind:value:)` call (main.swift:16,20) reproduces identical behavior, per the Deletion Test.",
+            "why_weakens_submission": "Swift's native Dictionary is not thread-safe for concurrent mutation; without an actor or lock, concurrent `commitStore` calls (the scenario the directory name 'auth-concurrent-login-storage' and the docstring's 'indivisible write' language both invite) risk corruption or a crash, not just a stale value. The begin/commit shape reads as if it solved that problem when it structurally cannot -- a fake-clean 'transactional' costume over an unsynchronized write, which will mislead a future maintainer into trusting a guarantee that isn't there.",
+            "remedy": "If concurrent access across kinds/tasks is a real requirement (as the name suggests), make `LoginRegistry` an `actor` (or add a serial queue/lock) and collapse `PendingStore`/`beginStore`/`commitStore` into one `store(kind:value:)` method, since the two-phase split provides no actual reservation or conflict detection to preserve. If only single-threaded use is ever expected, drop the 'indivisible write' / concurrency framing from the doc comment so the API doesn't overclaim a property it doesn't have."
+          }
+        ],
+        "C": [
+          {
+            "claim": "LoginRegistry.commitStore mutates a plain unsynchronized dictionary, so the doc comment's claim that storage is a 'single, indivisible write' does not extend to concurrent callers, despite the module being framed around concurrent logins.",
+            "severity": "Serious",
+            "source": "login_registry.swift:19-28 -- `final class LoginRegistry` holds `private var entries: [LoginKind: String]`; `commitStore` does `entries[pending.kind] = pending.value` with no actor isolation, lock, or serial queue. The header comment (lines 1-7) frames the whole module around an account being 'logged in through more than one kind at once' and calls the write 'indivisible' without qualifying that guarantee to a single call site only.",
+            "remedy": "Convert LoginRegistry to an actor (or serialize entries access behind a lock/serial queue) so commitStore calls are mutually exclusive across concurrent callers; if concurrent access is genuinely out of scope, reword the comment so 'indivisible' doesn't read as a thread-safety guarantee it doesn't provide."
+          },
+          {
+            "claim": "beginStore is a pass-through wrapper that adds no behavior over constructing PendingStore directly.",
+            "severity": "Cosmetic",
+            "source": "login_registry.swift:22-24 -- `func beginStore(kind:value:) -> PendingStore { PendingStore(kind: kind, value: value) }`. PendingStore's memberwise initializer is already accessible to any caller in the same module, so beginStore performs no validation, defaulting, or reservation.",
+            "remedy": "Delete beginStore and have callers construct PendingStore directly, or drop PendingStore and pass kind/value straight into commitStore if nothing else needs the intermediate value."
+          }
+        ]
+      }
+    },
+    "auth-error-detail-preservation": {
+      "reps": {
+        "A": [
+          {
+            "claim": "withErrorMiddleware's catch-and-rethrow of AuthFailure is a no-op costume layer: Swift already implicitly rethrows any error a do/catch block doesn't handle from a throws function, so catching AuthFailure only to rethrow the identical value changes nothing versus omitting the do/catch entirely.",
+            "severity": "Moderate",
+            "source": "error_detail.swift:44-50 -- `func withErrorMiddleware(...) throws -> String { do { return try operation() } catch let failure as AuthFailure { throw failure } }`; the catch clause rethrows the exact same value it caught, and any non-AuthFailure error already propagates automatically since the function is declared throws.",
+            "remedy": "Delete withErrorMiddleware and call operation() directly at its call sites, or give the catch clause real behavior (logging, wrapping, breadcrumb) if middleware logic is actually intended."
+          }
+        ],
+        "B": [
+          {
+            "claim": "RethrownDetail is a single-conformer protocol that turns AuthFailure's always-present, non-optional fields into Optional accessors for no benefit, failing both the Two-Adapter rule and the Unified Seam Policy's single-Adapter carve-outs.",
+            "severity": "Serious",
+            "source": "error_detail.swift:27-35 defines `RethrownDetail` with a doc comment claiming 'conformers report whichever of the four pieces they actually carry, nil for anything they don't' -- but error_detail.swift:37-42 shows the only conformer, `AuthFailure`, always carries all four (its own stored properties at error_detail.swift:10-15 are non-optional) and just wraps each in `Optional` to satisfy the protocol. No second, partial-data conformer exists anywhere in the module or its test. The one call site (main.swift:27) could instead `catch let failure as AuthFailure` directly and read `.reason`/`.challenge`/`.identifier`/`.source` as concrete non-optional values -- deleting the protocol removes no complexity from any caller.",
+            "why_weakens_submission": "This is the canonical 'extract a protocol behind one implementation' anti-pattern (protocol soup / repository-theater style): it doesn't isolate policy, failure, or platform, doesn't pass the Two-Adapter rule (one conformer, zero behavior-faithful fakes exercising a heterogeneous case), and actively weakens type safety by making guaranteed data Optional. The doc comment's claim about partial conformers is aspirational and untested -- doc-vs-code drift that will mislead a reader into thinking this seam is justified.",
+            "remedy": "Delete `RethrownDetail`; have callers catch and use `AuthFailure` directly (concrete, non-optional fields). If a genuinely heterogeneous second error type that carries only some of these fields is added later, reintroduce the protocol then, backed by that real second conformer."
+          },
+          {
+            "claim": "withErrorMiddleware's catch-and-rethrow of AuthFailure is a pure pass-through: removing the do/catch entirely and just returning `try operation()` produces identical behavior for AuthFailure and for every other error type, since Swift already propagates unmatched errors out of a throwing function automatically.",
+            "severity": "Noticeable",
+            "source": "error_detail.swift:44-50: the only catch clause matches `AuthFailure` and immediately `throw`s it back unchanged; there is no transformation, logging, wrapping, or handling of any other error type, and Swift does not require exhaustive catch clauses inside a `throws` function -- an unmatched error already propagates on its own.",
+            "why_weakens_submission": "A function documented as 'middleware' (error_detail.swift:1-2) that performs no observable work beyond what the language does for free is ceremony that suggests an error-handling seam exists here when it doesn't -- Deletion Test #1 (pass-through). Combined with the RethrownDetail finding, this module has two layers of indirection around AuthFailure that contribute nothing measurable to detail preservation, which the tests only pass because the underlying value is never actually touched.",
+            "remedy": "Either delete `withErrorMiddleware` and call `operation()` directly at the one call site, or give it real middleware behavior (e.g. logging/breadcrumbs on the failure path) that justifies the wrapper existing."
+          }
+        ],
+        "C": []
+      }
+    },
+    "auth-identity-probe-equalization": {
+      "reps": {
+        "A": [
+          {
+            "claim": "Account.verify compares the hashed credential with Python's == operator, which is not constant-time, so the module reopens the exact timing side-channel its own docstring says it closes, even though it correctly equalizes the number of hash operations between the unknown-identity and wrong-credential cases.",
+            "severity": "Critical",
+            "source": "identity_verification.py:37-38 -- `def verify(self, supplied): return _hash_work(supplied) == self.credential`; CPython string equality short-circuits on the first mismatching byte, leaking timing information correlated with how many leading characters match, independent of the one-hash-op equalization done in verify_with_equalized_work (lines 41-52).",
+            "remedy": "Compare credentials with hmac.compare_digest (encoded to bytes) instead of == in Account.verify."
+          },
+          {
+            "claim": "The bundled test suite never exercises the unknown-identity branch that is the entire reason this module exists, so a regression that deleted the equalizing _hash_work(supplied) call in verify_with_equalized_work would pass every test.",
+            "severity": "Serious",
+            "source": "test_identity_verification.py:17-41 -- _directory() only ever contains \"known-identity\", and all four tests call sign_in/reverify_for_sensitive_action with that same identity; reset_work_counter() and work_performed() (identity_verification.py:13-18) are defined for exactly this purpose but are never called anywhere in the bundled test file.",
+            "remedy": "Add a test that verifies against an identity absent from the directory and asserts work_performed() matches the known-identity case (after reset_work_counter())."
+          }
+        ],
+        "B": [
+          {
+            "claim": "The bundled test suite never calls sign_in or reverify_for_sensitive_action with an identity that fails to resolve to an account, so the None-branch of verify_with_equalized_work -- the entire reason this module exists -- is completely untested, and the module's own reset_work_counter/work_performed hooks built to verify equalized work are never invoked by any test.",
+            "severity": "Serious",
+            "source": "test_identity_verification.py:17-20 `_directory()` only ever contains `\"known-identity\"`; all four tests (test_identity_verification.py:23-40) call `sign_in`/`reverify_for_sensitive_action` with that same known identity, exercising only the `account is not None` branch of `verify_with_equalized_work` (identity_verification.py:52). No test exercises identity_verification.py:49-51 (the `account is None` branch), and `reset_work_counter`/`work_performed` (identity_verification.py:13-18) are defined but never called from test_identity_verification.py.",
+            "why_weakens_submission": "This is the module's whole purpose: equalizing timing for a claimed identity that doesn't exist, per its own docstring (identity_verification.py:1-6). A one-line mutation -- deleting the `_hash_work(supplied)` call at identity_verification.py:50 so the None branch returns `False` immediately -- reintroduces exactly the timing oracle the module claims to prevent, and every current test would still pass. Per the mutation-test standard, an untested defect on the module's own primary/central behavior (not an off-path helper) is a real regression-resistance gap, not a stylistic nit.",
+            "remedy": "Add at least one test that supplies an unknown identity (not in the directory) to sign_in/reverify_for_sensitive_action, asserts it returns False, and -- using reset_work_counter/work_performed -- asserts the work count matches the known-identity-wrong-credential case, so a future edit that special-cases the None branch is caught."
+          },
+          {
+            "claim": "Account.verify compares the computed hash to the stored credential with plain string equality (`==`) rather than a constant-time comparison, leaving a secondary timing channel on the credential-correctness path even though the identity-existence channel is correctly equalized.",
+            "severity": "Noticeable",
+            "source": "identity_verification.py:37-38: `return _hash_work(supplied) == self.credential` uses CPython's short-circuiting string `==`, which returns as soon as it finds a length or character mismatch, rather than a constant-time comparison such as `hmac.compare_digest`.",
+            "why_weakens_submission": "This is scope-limited: `_hash_work` is explicitly a stand-in for a real one-way hash, and with a genuine cryptographic hash's avalanche property an attacker can't incrementally guess byte-by-byte from comparison timing the way they could against a raw secret, so the practical exploitability here is low. It's still a real defense-in-depth gap directly adjacent to the property this module is built to protect, and worth naming so it isn't carried into a production hash implementation unexamined.",
+            "remedy": "Use a constant-time comparison (e.g. `hmac.compare_digest`) in `Account.verify` instead of `==`, so credential comparison doesn't reopen a smaller version of the timing channel the rest of the module was built to close."
+          },
+          {
+            "claim": "sign_in and reverify_for_sensitive_action have byte-for-byte identical bodies.",
+            "severity": "Cosmetic",
+            "source": "identity_verification.py:55-57 and identity_verification.py:60-64: both look up `directory.get(identity)` and return `verify_with_equalized_work(account, supplied)`, with no differing logic.",
+            "why_weakens_submission": "Only two sites share this shape (below the three-site bar for a structural duplication finding), and there's a plausible reason for two distinct entry points -- initial sign-in vs. step-up reverification for a sensitive action -- to diverge later (e.g. added rate limiting or freshness checks on reverification). Worth a note, not a structural fix.",
+            "remedy": "Either collapse to one function until the call sites actually need different behavior, or add a short comment on `reverify_for_sensitive_action` explaining why it's currently identical to `sign_in` and what would make it diverge, so the duplication doesn't read as an oversight."
+          }
+        ],
+        "C": [
+          {
+            "claim": "The bundled test suite never exercises the account-not-found path, so the module's entire reason for existing -- equalizing verification work between a real and a nonexistent identity to block user enumeration -- is unverified by any test, and deleting the equalization logic would pass silently.",
+            "severity": "Critical",
+            "source": "test_identity_verification.py:17-20 -- `_directory()` only ever contains 'known-identity', and all four tests call sign_in/reverify_for_sensitive_action against that same identity. No test calls either function with an identity absent from the directory, and neither reset_work_counter() nor work_performed() (identity_verification.py:13-18, defined specifically to make the equalization property assertable) is referenced anywhere in the test file. Concretely: deleting the `_hash_work(supplied)` call in verify_with_equalized_work's `account is None` branch (identity_verification.py:49-52) -- which reopens the timing/enumeration side channel on every real login and reverify call against an unknown identity -- would still pass the current suite.",
+            "remedy": "Add tests that call sign_in and reverify_for_sensitive_action with an identity not present in the directory, assert the result is False, and use reset_work_counter()/work_performed() to assert the work performed equals the work performed for a known-identity/wrong-credential attempt -- the exact property the module claims to guarantee."
+          },
+          {
+            "claim": "sign_in and reverify_for_sensitive_action have byte-for-byte identical bodies.",
+            "severity": "Cosmetic",
+            "source": "identity_verification.py:55-64 -- both functions are `account = directory.get(identity); return verify_with_equalized_work(account, supplied)`.",
+            "remedy": "Have reverify_for_sensitive_action call sign_in directly (or extract the shared two lines into one helper) instead of duplicating the body, so the two call sites can't silently diverge."
+          }
+        ]
+      }
+    },
+    "auth-login-redirect-target": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The computed redirect target is interpolated into the sign-in URL's query string without URL-encoding, so any request with more than one query parameter (or a path/query containing '&', '#', or '?') corrupts the round trip and can inject sibling parameters into the sign-in endpoint's own query namespace.",
+            "severity": "Serious",
+            "source": "gate.py:29 `return f\"{target_entry_url}?{target_param}={target}\"` builds the redirect with plain string interpolation; `target` comes from `request.current_path_and_query()` / `request.current_absolute_url()` (request.py:27-31), which pass through the request's raw, unescaped query string verbatim. Example: path='/private/report', query='year=2026&sort=desc' produces '/sign-in/?next=/private/report?year=2026&sort=desc' -- the '&sort=desc' segment becomes a separate top-level parameter of /sign-in/ instead of part of `next`, silently dropping it from the post-login redirect and letting a crafted query smuggle extra parameters into the sign-in page's own query string. Not covered by test_redirect_target.py: every test case uses zero or exactly one query parameter (test_redirect_target.py:19-34), so the corruption path is never exercised.",
+            "remedy": "URL-encode `target` with `urllib.parse.quote(target, safe='')` before interpolating it into the query string in gate.py, and add a test case with a multi-parameter query string to catch regressions."
+          },
+          {
+            "claim": "gate_scan.py's two functions -- the entire startup-time scan surface described in its own module docstring -- have zero test coverage, so the reflective attribute contract between gate.py (writer) and gate_scan.py (reader) can silently break.",
+            "severity": "Moderate",
+            "source": "gate_scan.py:10-15 defines `entry_endpoint_for`/`return_param_name_for`, which read `view.entry_url` / `view.return_param_name` via `getattr`; gate.py:35-36 is the only writer of those attribute names. test_redirect_target.py imports only `require_sign_in`, `redirect_target_for`, and `Request` (lines 14-16) -- neither gate_scan function is ever imported or called. A rename or typo in either attribute name on either side would break the startup scan with no test failure to catch it.",
+            "remedy": "Add a test that runs a `require_sign_in`-wrapped view through `entry_endpoint_for`/`return_param_name_for` and asserts the round trip, so the two modules' implicit attribute-name contract is exercised."
+          },
+          {
+            "claim": "Request.forwarded_host is stored but never read anywhere in the module, leaving an unused, explicitly-flagged-as-untrusted field sitting on the request object.",
+            "severity": "Cosmetic",
+            "source": "request.py:17 stores `forwarded_host` (constructor param, docstring calls it \"a raw, unvalidated value\"); no file in this module ever reads `.forwarded_host` -- `current_absolute_url()` (request.py:26-28) uses only `self.host`.",
+            "remedy": "Either wire `forwarded_host` into an explicit, validated trusted-proxy check before it's ever used for redirect-target construction, or drop the field until that need actually exists."
+          },
+          {
+            "claim": "The same-origin check for downgrading to a relative redirect target compares scheme/host case-sensitively, so an entry_url differing only in case from the current host falls through to the absolute-URL branch unnecessarily.",
+            "severity": "Cosmetic",
+            "source": "redirect_target.py:20-22 compares `entry_scheme == current_scheme` and `entry_netloc == current_netloc` with plain string equality; scheme and host are case-insensitive per RFC 3986.",
+            "remedy": "Lowercase both sides before comparing scheme/netloc. Fails safe today (produces an unnecessary absolute URL, not a security gap), so this is a correctness nit rather than a hazard."
+          }
+        ],
+        "B": [
+          {
+            "claim": "The sign-in redirect builds its `next` query parameter by raw string interpolation instead of URL-encoding the return target, so a gated request whose own query string contains `&`, `=`, or `#` corrupts the redirect and can inject extra top-level parameters into the sign-in endpoint's URL.",
+            "severity": "Serious",
+            "source": "gate.py:29 `return f\"{target_entry_url}?{target_param}={target}\"`, where `target` comes from `redirect_target_for()` -> `request.current_path_and_query()` (request.py:30-31), which concatenates `self.path`/`self.query` verbatim; no test in test_redirect_target.py exercises a query string containing `&`.",
+            "remedy": "Percent-encode `target` (e.g. `urllib.parse.quote(target, safe=\"\")`) before interpolating it into the redirect URL, or build the URL with `urlencode`; add a test with a multi-param query string asserting the round trip survives encoding."
+          },
+          {
+            "claim": "`Request.forwarded_host` is accepted and stored on every request but is never read anywhere in this module.",
+            "severity": "Minor",
+            "source": "request.py:17,23 assigns `self.forwarded_host`; no other file in this directory (gate.py, gate_scan.py, redirect_target.py) references `forwarded_host`.",
+            "remedy": "Remove the unused parameter/attribute until something actually consumes it, or if forwarded-host-aware redirect targeting is a real near-term need, wire it into `redirect_target_for` behind explicit trusted-proxy validation (never used unchecked, per the docstring's own warning)."
+          }
+        ],
+        "C": [
+          {
+            "claim": "gate.py builds the sign-in redirect Location by interpolating the unescaped return target directly into the query string, so any current request whose query string contains an '&' gets its return target silently truncated and part of the original query leaked as a spurious top-level parameter.",
+            "severity": "Serious",
+            "source": "gate.py: `return f\"{target_entry_url}?{target_param}={target}\"` where `target` comes from redirect_target_for() (itself built from request.current_path_and_query()/current_absolute_url(), which pass the raw query string through unescaped). Reproduced: Request(path='/private/report', query='year=2026&mode=x') through the @require_sign_in()-wrapped view yields '/sign-in/?next=/private/report?year=2026&mode=x', which parse_qs() reads as next='/private/report?year=2026' and a stray mode='x' — the module's stated purpose (CHANGES.md: carry 'the full absolute URL... including the query string') breaks for any multi-param query. No test in test_redirect_target.py uses a query string with more than one parameter, so this is unguarded.",
+            "remedy": "Percent-encode the target before interpolating, e.g. `urllib.parse.quote(target, safe=\"\")`, or build the URL with urlencode/urlsplit+urlunsplit instead of an f-string."
+          },
+          {
+            "claim": "gate_scan.py is a shallow, near-zero-depth module whose only two functions are one-line getattr proxies onto attribute names ('entry_url', 'return_param_name') set as a side effect inside gate.py's decorator, with no shared constant tying the two files together and no direct test.",
+            "severity": "Moderate",
+            "source": "gate_scan.py: `return getattr(view, \"entry_url\", None)` / `return getattr(view, \"return_param_name\", None)`. gate.py sets these via `wrapper.entry_url = ...` / `wrapper.return_param_name = ...` using the same string literals, with only a comment (not a shared constant) documenting the contract. If either file's literal drifts, getattr's default silently returns None instead of raising. No test exists for gate_scan.py's two functions.",
+            "remedy": "Either inline the getattr calls at gate_scan.py's call sites (outside this bundle) if they're only used once, or share the attribute names as constants imported by both gate.py and gate_scan.py, plus a small direct test."
+          },
+          {
+            "claim": "Request.forwarded_host is stored but never read anywhere in this module.",
+            "severity": "Minor",
+            "source": "request.py: `self.forwarded_host = forwarded_host` is written in __init__ but gate.py and redirect_target.py only ever read `request.host`/`request.scheme`/`request.path`/`request.query` — forwarded_host has no read site in this bundle.",
+            "remedy": "If it's genuinely unused here, drop it; if it's meant for another consumer not included in this bundle, say so in the docstring so the write-only field doesn't read as dead state."
+          }
+        ]
+      }
+    },
+    "auth-session-carryover": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The stamp-mismatch check that is supposed to discard a session when the signed-in principal's credential stamp changes is skipped whenever the *new* stamp is falsy, so a same-principal sign-in with an empty/None credential_stamp never invalidates a session established under a different, non-empty stamp.",
+            "severity": "Serious",
+            "source": "sign_in.py:22-26: `if session.principal_id != principal.id or (stamp and not hmac.compare_digest(session.credential_stamp or \"\", stamp)): session.discard()`. When `stamp` (the incoming `principal.credential_stamp`) is falsy, `stamp and ...` short-circuits to falsy regardless of what `session.credential_stamp` was, so the discard branch is never taken purely because the new stamp is empty -- even though the module's own docstring (sign_in.py:6-8) says a session \"whose stored credential stamp no longer matches the incoming principal's ... is discarded outright.\" No test exercises a falsy incoming stamp; all stamps in test_sign_in.py (lines 18-19, 56) are non-empty strings.",
+            "remedy": "Compare stamps for inequality rather than gating on the truthiness of the new value, e.g. `if session.principal_id != principal.id or not hmac.compare_digest(session.credential_stamp or \"\", stamp or \"\"): session.discard()`, so a transition to an empty/None stamp is treated as a mismatch like any other stamp change."
+          }
+        ],
+        "B": [
+          {
+            "claim": "`sign_in()`'s discard-on-stamp-change guard is unconditionally bypassed whenever the incoming principal's `credential_stamp` is falsy, so a same-id re-sign-in carrying an empty/None stamp keeps the prior session's data and old stamp instead of being discarded.",
+            "severity": "Serious",
+            "source": "sign_in.py:22-26 `if session.principal_id != principal.id or (stamp and not hmac.compare_digest(session.credential_stamp or \"\", stamp)):` -- the `stamp and` short-circuit makes the mismatch check `False` whenever `stamp` is falsy, regardless of what `session.credential_stamp` holds; test_sign_in.py never constructs a `Principal` with an empty/None `credential_stamp`, so this branch is untested.",
+            "remedy": "Compare stamps whenever the two differ under a consistent None/empty normalization (e.g. `session.credential_stamp != stamp`) rather than skipping the check outright when the new stamp is falsy; add a test that re-signs-in the same principal id with a falsy `credential_stamp` after a truthy one and asserts the session is discarded."
+          }
+        ],
+        "C": [
+          {
+            "claim": "Session tokens are generated from a monotonically increasing in-process counter rather than a cryptographically random value, so the token rotate_token()'s own docstring says exists to 'defeat session fixation' is trivially predictable/enumerable, undermining that exact guarantee.",
+            "severity": "Critical",
+            "source": "session.py: `_next_token = itertools.count(1)` at module scope; both `rotate_token()` and `discard()` set `self.token = next(_next_token)`. Reproduced: successive tokens are 1, 2, 3, 4, 5 — small sequential integers, restarting at 1 every process restart. rotate_token()'s docstring: 'defeats session fixation... without losing whatever the caller already stored.' A fixation/hijacking attacker doesn't need to observe or fix a prior token if valid tokens are sequential integers; they can guess or enumerate them directly. Reachable on every sign-in (first-time and reauth paths both call one of rotate_token()/discard()). test_first_sign_in_rotates_the_token only asserts the token is not None, never that it's unpredictable.",
+            "remedy": "Generate tokens with a CSPRNG, e.g. `secrets.token_urlsafe()` or `secrets.token_hex()`, instead of an incrementing counter."
+          },
+          {
+            "claim": "sign_in()'s discard-on-mismatch check silently no-ops whenever the incoming principal's credential_stamp is falsy (empty string or None), even for the same principal_id already in the session — contradicting the module's own stated contract that a stamp 'no longer matching the one on file' causes a discard — and in that case it also clobbers the session's previously-good stored stamp with the falsy value.",
+            "severity": "Serious",
+            "source": "sign_in.py: the discard condition is `session.principal_id != principal.id or (stamp and not hmac.compare_digest(session.credential_stamp or \"\", stamp))` — the mismatch branch is only evaluated `if stamp` is truthy. Reproduced: session signed in as ALICE (stamp 'stamp-alice-1', session.data['cart']=['item']), then sign_in(session, Principal('alice', '')) — an empty-stamp principal with the same id — leaves `session.data` at `{'cart': ['item']}` (not discarded) and sets `session.credential_stamp` to `''`, overwriting the previously valid stamp. CHANGES.md/module docstring state 'the same principal whose credential stamp no longer matches the one on file' is discarded outright, with no stated exception for an empty incoming stamp.",
+            "remedy": "Compare unconditionally regardless of whether the incoming stamp is falsy (e.g. `not hmac.compare_digest(session.credential_stamp or \"\", stamp or \"\")`), and explicitly decide/document whether an empty incoming stamp should force a discard rather than silently pass through."
+          }
+        ]
+      }
+    },
+    "auth-unusable-password-policy": {
+      "reps": {
+        "A": [
+          {
+            "claim": "Credentials are not hashed at all -- set_credential 'encodes' the raw credential by simply reversing the string and prefixing a static tag, which is trivially and instantly invertible by anyone who reads the stored value.",
+            "severity": "Critical",
+            "source": "credential_policy.py:47 `return \"$enc$\" + raw[::-1]` is the entire storage transform: no hash function, no salt, no work factor. Any stored value ('$enc$' + reversed credential) is recovered to the original credential by stripping the prefix and reversing again -- O(1), no computation required. This is the sole credential-storage mechanism the module provides (`verify_credential`, credential_policy.py:50-56, re-derives via the same reversible transform).",
+            "remedy": "Store credentials through a real, slow, salted KDF (argon2id, bcrypt, or scrypt via a vetted library) and verify by re-hashing the supplied value and comparing digests -- never by reconstructing or reversing the stored value."
+          },
+          {
+            "claim": "Credential verification compares the encoded values with plain string equality instead of a constant-time comparison, unlike the sibling session module which correctly uses hmac.compare_digest for the analogous check.",
+            "severity": "Serious",
+            "source": "credential_policy.py:58 `return set_credential(supplied) == stored` -- Python string `==` short-circuits on the first mismatching character, giving a timing side-channel on credential verification.",
+            "remedy": "Use `hmac.compare_digest(set_credential(supplied), stored)` in place of `==`."
+          },
+          {
+            "claim": "No test directly asserts that a no-local-credential marker is treated as unusable / always fails verification -- the marker's core safety property is only implied by naming, not exercised.",
+            "severity": "Minor",
+            "source": "test_credential_policy.py:27-29 `test_no_local_credential_marker_exists` only checks the marker `isinstance(marker, str)`; nothing calls `is_credential_usable(marker)` or `verify_credential(marker, ...)` to confirm the marker actually blocks verification.",
+            "remedy": "Add assertions that `is_credential_usable(mark_no_local_credential())` is False and `verify_credential(mark_no_local_credential(), anything)` is False."
+          }
+        ],
+        "B": [
+          {
+            "claim": "`set_credential` 'encodes' a raw credential by reversing the string and tagging it with a fixed prefix, a trivially invertible transform rather than a one-way cryptographic hash, so anyone who reads a stored value can recover the original credential.",
+            "severity": "Critical",
+            "source": "credential_policy.py:40-47 `def set_credential(raw): return \"$enc$\" + raw[::-1]`; `verify_credential` (lines 50-58) compares against this same reversible encoding.",
+            "remedy": "Replace `set_credential`/`verify_credential` with a real password hashing scheme (bcrypt, scrypt, or argon2 via a vetted library, or at minimum `hashlib.pbkdf2_hmac`), storing a salted hash instead of a reversible transform of the plaintext."
+          },
+          {
+            "claim": "`verify_credential` compares the encoded supplied value against the stored value with Python's `==` operator instead of a constant-time comparison, leaking timing information about how much of the encoded value matches.",
+            "severity": "Serious",
+            "source": "credential_policy.py:58 `return set_credential(supplied) == stored`.",
+            "remedy": "Compare with `hmac.compare_digest(set_credential(supplied), stored)` instead of `==`."
+          }
+        ],
+        "C": [
+          {
+            "claim": "set_credential() 'encodes' a raw credential by reversing the string and prefixing a fixed tag, which is trivially invertible — functionally equivalent to storing the credential in the clear rather than a one-way hash.",
+            "severity": "Critical",
+            "source": "credential_policy.py: `def set_credential(raw: str) -> str: return \"$enc$\" + raw[::-1]`. Anyone who reads a stored value recovers the original credential immediately by stripping the fixed prefix and reversing the remainder — no salting, no one-way transform. verify_credential() relies on this same function for comparison, so the whole module's storage guarantee reduces to obfuscation, not confidentiality.",
+            "remedy": "Replace with a vetted slow one-way KDF (bcrypt, scrypt, or argon2, or at minimum salted PBKDF2) so a leaked `stored` value cannot be reversed to the original credential."
+          },
+          {
+            "claim": "verify_credential() compares the encoded candidate to the stored value with plain string equality instead of a constant-time comparison, opening a timing side channel on credential verification.",
+            "severity": "Serious",
+            "source": "credential_policy.py: `return set_credential(supplied) == stored` — Python's `==` on strings short-circuits at the first differing character, so comparison time leaks how many leading characters of the encoded value match.",
+            "remedy": "Use `hmac.compare_digest(set_credential(supplied), stored)` (or equivalent constant-time comparison) instead of `==`."
+          },
+          {
+            "claim": "The bundled test suite never exercises the module's central guarantee — that an account marked with mark_no_local_credential() can never verify — leaving that behavior unguarded against regression.",
+            "severity": "Serious",
+            "source": "test_credential_policy.py's `test_no_local_credential_marker_exists` only asserts `isinstance(marker, str)`. No test asserts `is_credential_usable(mark_no_local_credential())` is False, nor that `verify_credential(mark_no_local_credential(), <anything>)` is False — the exact property the module (and its docstrings' careful ordering rationale) is built around.",
+            "remedy": "Add assertions that `is_credential_usable(mark_no_local_credential())` is False and that `verify_credential(mark_no_local_credential(), \"anything\")` is False."
+          }
+        ]
+      }
+    },
+    "cpython-genexpr-iterability": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The constructor's `source: Iterable[Any]` type hint is now inaccurate: construction deliberately accepts non-iterables (validated by the module's own test), so the annotation misrepresents what the class actually allows post-change.",
+            "severity": "Minor",
+            "source": "lazyselect.py:26 annotates `source: Iterable[Any]`, but test_lazyselect.py:32-38 constructs `LazySelect(6)` (an int) and asserts this succeeds -- a type checker run against the module's own test suite would flag that call as a type error.",
+            "remedy": "Loosen the annotation (e.g. `object`, or a comment noting the constructor intentionally accepts anything and defers validation to iteration) so the type hint matches the documented lazy-validation contract."
+          },
+          {
+            "claim": "`__iter__` manually reimplements the iterator protocol (explicit `iter()` + `next()` + `try/except StopIteration`) where a native `for` loop is behaviorally identical, including preserving the same lazy-construction semantics, making the extra code pure ceremony.",
+            "severity": "Minor",
+            "source": "lazyselect.py:33-40: `it = iter(self._source); ... while True: try: item = next(it) except StopIteration: return; if predicate is None or predicate(item): yield item`. Because `__iter__` is a generator function, a plain `for item in it:` (or folding the `iter()` call into the for-statement) defers execution identically until the first `next()` call on the resulting generator, so laziness is unaffected by the simplification.",
+            "remedy": "Replace the manual loop with `for item in self._source: if predicate is None or predicate(item): yield item`."
+          },
+          {
+            "claim": "The class docstring's claim that a LazySelect can be iterated more than once as long as `source` supports it is untested -- no test iterates the same instance twice, so a plausible-looking refactor (e.g. caching `iter(self._source)` once) would silently break re-iterability without failing any current test.",
+            "severity": "Cosmetic",
+            "source": "lazyselect.py:6-7 and 18-19 state the re-iteration contract; test_lazyselect.py's three tests (lines 17-38) each construct a fresh instance and iterate it exactly once via `list(...)`. LazySelect is a generic helper/off-path utility, not central runtime state, so this gap is cosmetic for contest per the off-path-utility carve-out.",
+            "remedy": "Add a test that constructs one LazySelect over a reusable source (e.g. a list) and asserts `list(obj) == list(obj)` on two separate iterations."
+          }
+        ],
+        "B": [
+          {
+            "claim": "`LazySelect.__init__`'s `source` parameter is type-hinted `Iterable[Any]`, but the class's whole point is to accept a non-iterable value at construction time and only fail on first iteration, so the annotation contradicts the tested behavior.",
+            "severity": "Minor",
+            "source": "lazyselect.py:26 `source: Iterable[Any]`; test_lazyselect.py:32 constructs `LazySelect(6)` -- an `int`, which is not `Iterable[Any]` -- and asserts it succeeds.",
+            "remedy": "Loosen the annotation to `object` (or `Any`) for `source`, since validity is deliberately unchecked until iteration."
+          },
+          {
+            "claim": "`__iter__`'s manual `while True: try: next(it) except StopIteration: return` loop reimplements exactly what a plain `for item in it:` loop already does, with no behavioral difference.",
+            "severity": "Cosmetic",
+            "source": "lazyselect.py:35-39.",
+            "remedy": "Replace the manual next()/StopIteration loop with `for item in it:` guarding the same `yield`."
+          }
+        ],
+        "C": []
+      }
+    },
+    "cpython-wasm-platform-predicate": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The refactor's own correctness claim (\"No test's skip/run outcome changes on any platform\") is not verified by the bundled suite for the two platforms the change actually touches.",
+            "severity": "Moderate",
+            "source": "test_platform_guards.py main() only asserts collect_skips(MAINLAND, ALL_TESTS) == {}; there is no assertion pinning collect_skips(GEARSHIFT, ALL_TESTS) or collect_skips(TIDELINE, ALL_TESTS) to the expected skip-name/reason dict, so nothing in the suite would catch a future edit to is_driftplane (platsupport.py) or the three consolidated guards silently changing which tests skip, or with what reason, on either sandboxed platform.",
+            "remedy": "Add explicit expected-dict assertions for collect_skips(GEARSHIFT, ALL_TESTS) and collect_skips(TIDELINE, ALL_TESTS) in main() (or a dedicated test), covering both the is_driftplane-guarded tests and the still-separate single-platform guards."
+          }
+        ],
+        "B": [
+          {
+            "claim": "The merged is_driftplane guard behavior is only ever checked against MAINLAND, so the refactor's own claim that no test's skip outcome changes on gearshift or tideline is unverified by the bundled self-check.",
+            "severity": "Serious",
+            "source": "test_platform_guards.py main(): the only collect_skips call is `collect_skips(MAINLAND, ALL_TESTS)`; there is no `collect_skips(GEARSHIFT, ...)` or `collect_skips(TIDELINE, ...)` anywhere in the file. platsupport.py:23-25 defines `is_driftplane(platform) = is_gearshift(platform) or is_tideline(platform)`, now used by three guards (test_shared_temp_writable, test_process_fork, test_large_page_alloc).",
+            "remedy": "Add assertions exercising `collect_skips(GEARSHIFT, ALL_TESTS)` and `collect_skips(TIDELINE, ALL_TESTS)`, asserting the expected {test_name: reason} maps for both the merged is_driftplane guards and the single-platform guards. Since every test body is an empty stub, this coverage gap is invisible without an explicit skip-map assertion."
+          }
+        ],
+        "C": [
+          {
+            "claim": "The self-test never exercises collect_skips against GEARSHIFT or TIDELINE, so the refactored is_driftplane predicate (and every other guard) has zero direct verification of the skip outcomes it actually produces on the platforms where those guards fire.",
+            "severity": "Moderate",
+            "source": "test_platform_guards.py main() (lines 74-81) calls collect_skips(MAINLAND, ALL_TESTS) exactly once and asserts it is empty, then runs every test since none skip on MAINLAND (is_driftplane, is_gearshift, is_tideline are all False there). No call anywhere passes GEARSHIFT or TIDELINE to collect_skips, so the {test_name: reason} mapping this refactor changed (is_driftplane replacing an inline two-platform check) is never asserted against.",
+            "remedy": "Add assertions like collect_skips(GEARSHIFT, ALL_TESTS) and collect_skips(TIDELINE, ALL_TESTS) checked against the expected skip sets/reasons, so a future edit to is_driftplane (e.g. swapping `or` for `and`) would fail the suite instead of passing silently."
+          }
+        ]
+      }
+    },
+    "demand-signalling-state-machine": {
+      "reps": {
+        "A": [
+          {
+            "claim": "A consumer request made after the last buffered value drains can hang forever if all sources already finished while that value was buffered, because the drain transition forgets the allFinished fact.",
+            "severity": "Critical",
+            "source": "signal_relay.swift: `.holding(let buffered, var sources), .sourceFinished` sets sources.finished but stays in `.holding` without checking `sources.allFinished` (unlike the parallel `.awaitingRequest + .sourceFinished` arm, which does check and jumps straight to `.finished`). When the buffer later empties via `.holding + .demandArrived`, the code unconditionally goes to `.quiescent(sources: sources)` — losing the already-true allFinished fact. A subsequent `.demandArrived` in `.quiescent` unconditionally moves to `.awaitingRequest`, which now has no live source left to ever resume it (`sourceFinished`/`valueProduced` for that source already fired). Trace: sourceCount=1 -> demand(1) -> value(A) resolves 1, phase=quiescent -> value(B) while quiescent -> phase=holding([B]) -> sourceFinished(.first) (all finished, but stays holding) -> demand(2) drains B, phase becomes quiescent (should be finished) -> demand(3) -> phase=awaitingRequest([3]) with zero live sources -> request 3 is never resumed.",
+            "remedy": "In the `.holding + .demandArrived` transition, when buffered becomes empty, check sources.allFinished and transition to `.finished` (returning nothing further, matching the terminal contract) instead of unconditionally going to `.quiescent`."
+          },
+          {
+            "claim": "Relay's public init(sourceCount:) accepts any Int, but SourceID only has two cases, so any sourceCount greater than 2 silently under-counts real sources and the machine can never legitimately reach .finished.",
+            "severity": "Serious",
+            "source": "signal_relay.swift: `enum SourceID: Int, Hashable { case first = 0; case second = 1 }` and `func allSources(_ count: Int) -> Set<SourceID> { Set((0..<count).compactMap { SourceID(rawValue: $0) }) }` — for count >= 3, `SourceID(rawValue: 2)` etc. return nil and are dropped by compactMap, so allSources(3) still yields only {.first, .second}. SourceBookkeeping(total: 3).allFinished requires finished.count >= 3, which can never be reached since at most 2 SourceIDs can ever be marked finished. No precondition/assertion in `init(sourceCount:)` documents or enforces the 2-source ceiling, and no test exercises sourceCount > 2.",
+            "remedy": "Either add a precondition/fatalError in init(sourceCount:) rejecting counts above SourceID's case count, or make SourceID's cardinality match the documented supported range (e.g. derive it from `total` instead of a fixed 2-case enum)."
+          },
+          {
+            "claim": "A source event (valueProduced/sourceFinished) arriving before the first demand is silently dropped with no assertion, relying on an unenforced invariant that sources never act before being started.",
+            "severity": "Minor",
+            "source": "signal_relay.swift: the `.awaitingFirstDemand` phase only has explicit cases for `.demandArrived` and `.cancelled`; a `.valueProduced` or `.sourceFinished` event in that phase falls through to the generic `default: return []` at the bottom of `step`, indistinguishable from the other, genuinely-harmless no-ops handled by that same default (e.g. late events in `.finished`).",
+            "remedy": "Give `.awaitingFirstDemand` its own default-like arm for valueProduced/sourceFinished with an assertionFailure or comment naming the invariant it relies on, so a caller bug that starts emitting before startSourceWork is issued doesn't disappear silently."
+          }
+        ],
+        "B": [
+          {
+            "claim": "Relay.init(sourceCount:) accepts an arbitrary Int, but SourceID only defines two concrete cases, so for sourceCount >= 3 (or == 0) the relay can never reach .finished and any outstanding demand hangs forever.",
+            "severity": "Serious",
+            "source": "signal_relay.swift: `enum SourceID: Int, Hashable { case first = 0; case second = 1 }` is a fixed 2-case domain. `func allSources(_ count: Int) -> Set<SourceID> { Set((0..<count).compactMap { SourceID(rawValue: $0) }) }` silently drops any index without a matching case. `init(sourceCount: Int) { phase = .awaitingFirstDemand(sources: SourceBookkeeping(total: sourceCount)) }` stores the raw, unvalidated count as `total`, and `var allFinished: Bool { finished.count >= total }` compares against that raw count. For sourceCount 3+, at most 2 sources can ever start/finish, so `finished.count` maxes out below `total` and allFinished never becomes true. For sourceCount 0, allFinished is trivially satisfiable but is only re-checked reactively on a `.sourceFinished` event, which never arrives with zero sources -- so a demand there also hangs forever. Only sourceCount 1 and 2 are exercised in main.swift.",
+            "remedy": "Either add a precondition documenting the real ceiling (e.g. `precondition((1...2).contains(sourceCount))`), or derive `total` from `allSources(sourceCount).count` instead of the raw `sourceCount` so `allFinished`'s denominator matches what can actually be tracked."
+          }
+        ],
+        "C": [
+          {
+            "claim": "A demand that arrives after all sources have finished can hang forever (never resumed) when 'all sources finished' is reached through the buffered/holding path rather than through the awaitingRequest path, because the holding phase's demandArrived handler drops to .quiescent instead of .finished even when sources.allFinished is already true.",
+            "severity": "Critical",
+            "source": "signal_relay.swift lines 85-88: `case (.holding(var buffered, let sources), .demandArrived(let request))` sets `phase = buffered.isEmpty ? .quiescent(sources: sources) : .holding(...)` with no check of `sources.allFinished`. Contrast with the .quiescent phase's own sourceFinished handler (lines 137-140) which does check `sources.allFinished ? .finished : .quiescent`. Once phase becomes .quiescent while allFinished is secretly already true, the only fast-path for late demands lives on `.finished`/`.cancelled` (lines 146-147); `.quiescent + .demandArrived` (lines 129-131) unconditionally moves to `.awaitingRequest`, and since no source will ever emit `.sourceFinished` or `.valueProduced` again, that request is stuck permanently. Reachable with a single source: two values produced before any second demand (quiescent+valueProduced -> holding, buffered=[v]), source finishes (holding+sourceFinished, lines 90-93, stays holding, ignoring allFinished), one demand drains the buffer (-> quiescent per the bug), a further demand hangs. main.swift's onLateDemand test only covers the other route to 'finished' (awaitingRequest -> sourceFinished -> .finished) and does not catch this.",
+            "remedy": "In the .holding + .demandArrived case, when buffered.isEmpty, transition to .finished if sources.allFinished else .quiescent (mirroring the check already done in the .quiescent sourceFinished handler). Add a regression test: sourceCount 1, two valueProduced events before a second demand, then sourceFinished, then drain the buffer with one demand, then issue one more demand and assert it resolves with resumeWithFinish rather than hanging."
+          },
+          {
+            "claim": "Relay.init(sourceCount:) accepts an arbitrary Int but only two source identities (SourceID.first, .second) can ever exist, so a mismatched count silently makes the .finished terminal state unreachable.",
+            "severity": "Moderate",
+            "source": "signal_relay.swift: SourceID (lines 19-22) has exactly two cases; allSources(_:) (lines 24-26) uses `compactMap { SourceID(rawValue: $0) }`, silently dropping any index >= 2; Relay.init (lines 68-70) stores `total: sourceCount` verbatim into SourceBookkeeping without validating it against the number of representable source identities. If sourceCount is ever 3+, `sources.finished.count` can never reach `total`, so `allFinished` is permanently false and no demand after real sources finish can ever resolve.",
+            "remedy": "Validate sourceCount against SourceID's cardinality in init (e.g. precondition(sourceCount <= 2)), or derive total from allSources(sourceCount).count instead of the raw parameter so the invariant can't drift apart."
+          }
+        ]
+      }
+    },
+    "pandas-get-dummies-select-dtypes": {
+      "reps": {
+        "A": [
+          {
+            "claim": "\"masked_text\" — one of the three kinds should_encode is supposed to pick up — is never exercised by the test suite, either as a plain column or Packed, so the refactor's core claim (\"every column kind that used to be picked up ... is still picked up\") is unverified for a third of the encode-eligible kinds.",
+            "severity": "Moderate",
+            "source": "columnstore.py: `should_encode` returns True for kind in {\"text\", \"masked_text\", \"choice\"}. test_columnstore.py's `_table()` fixture only includes \"text\", \"number\", \"choice\", Packed(\"text\"), and Packed(\"choice\") columns — no \"masked_text\" or Packed(\"masked_text\") column anywhere, so no assertion would fail if a future edit dropped masked_text from the set or broke its Packed-unwrapping.",
+            "remedy": "Add a \"masked_text\" and a Packed(\"masked_text\") column to the test fixture and assert both are included in encode_categoricals' output."
+          },
+          {
+            "claim": "The \"unwrap Packed to its primitive\" logic is duplicated verbatim between column_subset and should_encode instead of factored into one shared helper, despite CHANGES.md's own correctness claim resting on the two staying in sync.",
+            "severity": "Minor",
+            "source": "columnstore.py: column_subset has `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`; should_encode independently repeats `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`. CHANGES.md explicitly relies on this staying identical (\"should_encode unwraps a Packed kind to its primitive the same way column_subset does\"), but nothing enforces that beyond both authors remembering to update both sites.",
+            "remedy": "Extract a small `_primitive_kind(col) -> str` helper and have both column_subset and should_encode call it."
+          }
+        ],
+        "B": [
+          {
+            "claim": "should_encode's \"masked_text\" case is never exercised by any test, so the refactor's stated guarantee that every column kind previously picked up by column_subset is still picked up is unverified for that kind.",
+            "severity": "Moderate",
+            "source": "columnstore.py should_encode: `return kind in {\"text\", \"masked_text\", \"choice\"}`. test_columnstore.py `_table()` only builds columns with kind \"text\", \"number\", \"choice\", Packed(\"text\"), Packed(\"choice\") -- no plain or Packed \"masked_text\" column appears anywhere in the test file.",
+            "remedy": "Add a masked_text and Packed(\"masked_text\") column to _table() (or a dedicated test) asserting both are included in encode_categoricals's output, so a future typo or omission of that kind is caught."
+          },
+          {
+            "claim": "column_subset lost its only caller in this bundle when encode_categoricals switched to should_encode, and no test in this bundle calls column_subset directly, so within this snapshot it now has zero test coverage even though its docstring still describes it as the general-purpose way to pick columns elsewhere in the library.",
+            "severity": "Minor",
+            "source": "columnstore.py column_subset definition; test_columnstore.py's import line `from columnstore import Column, Packed, Table, encode_categoricals, should_encode` never imports or calls column_subset. Scope-limited: this may still be tested by other files elsewhere in the library that are outside this review's four directories.",
+            "remedy": "If column_subset is genuinely exercised elsewhere in the library, no action needed here. If this bundle is the function's only test surface, add a direct test for column_subset to replace the indirect coverage the refactor removed."
+          }
+        ],
+        "C": [
+          {
+            "claim": "The Packed-unwrap one-liner (`col.kind.primitive if isinstance(col.kind, Packed) else col.kind`) is now duplicated verbatim between column_subset and should_encode.",
+            "severity": "Cosmetic",
+            "source": "columnstore.py line 53 (column_subset) and line 63 (should_encode) contain the identical expression.",
+            "remedy": "Factor a small `_kind_of(col)` helper and call it from both functions, so the unwrap rule has one home if a third kind representation is ever added."
+          }
+        ]
+      }
+    },
+    "pandas-groupby-plot-imperfect-gold": {
+      "reps": {
+        "A": [
+          {
+            "claim": "Plotting a multi-column Panel now always renders a None legend label, a live regression introduced by this exact refactor and contradicted by CHANGES.md's \"No user-visible change\" claim.",
+            "severity": "Critical",
+            "source": "clustered.py: `apply_plot` only forwards the group's key when `isinstance(group, Lane)` — `results.append(fn(group, key=group.key))` in that branch vs. `results.append(fn(group))` (no key) for everything else, i.e. Panel. `scatter(group, key=None, legend=True)` falls back to `getattr(group, \"label\", None)` whenever key is None. Panel objects are never given a `.label` attribute anymore, because that was previously a side effect of `apply_general` (which unconditionally does `group.label = group.key` for any group type) — and CHANGES.md states plotting no longer goes through apply_general. So `plot_legend_labels` on any list of Panels (Clustered(...).panels(...)) will always return a list of None, silently, for every entry. test_clustered.py only exercises plot_legend_labels with Lane groups; no test covers Panel-based plotting at all.",
+            "remedy": "Drop the isinstance(group, Lane) branch in apply_plot and forward key=group.key unconditionally — both Lane and Panel carry a .key attribute, so there is no reason to special-case Lane. Add a test asserting plot_legend_labels(panel_list) returns the panels' keys, not None."
+          }
+        ],
+        "B": [
+          {
+            "claim": "apply_plot only forwards a group's key to the callback for Lane instances; for Panel instances the key is silently dropped, so every Panel-based legend lookup returns None instead of the panel's key, contradicting CHANGES.md's \"no user-visible change\" claim.",
+            "severity": "Critical",
+            "source": "clustered.py apply_plot: `if isinstance(group, Lane): results.append(fn(group, key=group.key)) else: results.append(fn(group))` -- the else branch (which is what every Panel takes, since Panel is the only other group type in the module) never passes key. plot_legend_labels's lambda is `lambda g, key=None: scatter(g, key=key, legend=legend)`, so key defaults to None for a Panel, and scatter falls through to `return getattr(group, \"label\", None)`. Nothing in the plotting path sets `.label` on a group anymore -- that was apply_general's job, and CHANGES.md/apply_plot's own docstring say plotting was deliberately decoupled from that side effect. Panel.__init__ never sets .label. test_clustered.py has only test_plot_legend_labels_for_lanes; there is no Panel-legend test, so this is undetected by the bundled suite.",
+            "remedy": "In apply_plot, forward key=group.key unconditionally for every group (both Lane and Panel define .key) instead of branching on isinstance(group, Lane). Add a test_plot_legend_labels_for_panels regression test asserting panel legends show the right key."
+          }
+        ],
+        "C": [
+          {
+            "claim": "plot_legend_labels silently returns None for every Panel group's legend label (even with legend=True), a functional regression from the pre-refactor apply_general path, contradicting CHANGES.md's claim of 'no user-visible change'.",
+            "severity": "Critical",
+            "source": "clustered.py apply_plot (lines 66-75) forwards `key=group.key` only when `isinstance(group, Lane)`; for any other group kind (Panel) it calls `fn(group)` with no key. The lambda built in plot_legend_labels (line 90) defaults that missing key to None, so scatter (lines 78-85) falls through to `getattr(group, 'label', None)`. Panel.__init__ (lines 26-28) never sets `.label`, and apply_general -- the only code that ever set `.label` as a side effect -- is documented as 'unrelated to plotting now' (line 57) and is no longer in the plotting call path. Net effect: every Panel's legend label is None, while Lane legends still work. test_clustered.py's only legend test, test_plot_legend_labels_for_lanes (lines 29-34), exercises Lane exclusively and does not catch this; there is no Panel-legend test at all.",
+            "remedy": "In apply_plot, forward `key=group.key` for every group (both Lane and Panel expose `.key`), not just Lane instances -- drop the isinstance branch entirely. Add a test that builds Panels via Clustered.panels(...), calls plot_legend_labels on them, and asserts the labels equal the group keys."
+          }
+        ]
+      }
+    },
+    "pandas-select-dtypes-predicates": {
+      "reps": {
+        "A": [
+          {
+            "claim": "An unrecognized type name passed to select() silently matches zero columns instead of raising, so a caller typo produces a wrong-but-plausible empty result rather than an error.",
+            "severity": "Moderate",
+            "source": "coltable.py: _type_predicate()'s generic fallback `return lambda column: column.kind == type_name` is never validated against KNOWN_KINDS (validated only inside Column.__post_init__, not against caller-supplied type names in select()); e.g. select(include=[\"reel\"]) (typo for \"real\") returns [] with no exception.",
+            "remedy": "In _type_predicate (or at the top of select()), validate type_name against KNOWN_KINDS | {\"flag\"} and raise ValueError for anything else, so a typo fails loudly instead of silently returning an empty/wrong selection."
+          },
+          {
+            "claim": "select()'s directly supported combination of passing include and exclude together is never exercised by the bundled test suite, leaving the precedence rule between them unverified.",
+            "severity": "Moderate",
+            "source": "coltable.py: `def select(self, include=..., exclude=...)` accepts both parameters simultaneously and its `matches()` closure gives exclude precedence over include; test_coltable.py's five tests each pass only one of include or exclude, never both in the same call.",
+            "remedy": "Add a test such as select(include=[\"count\"], exclude=[\"flag\"]) (or an overlapping-type case) to pin the intended precedence when both filters are supplied together."
+          }
+        ],
+        "B": [
+          {
+            "claim": "An unrecognized type name passed to `include`/`exclude` silently matches zero columns instead of surfacing an error.",
+            "source": "coltable.py:32-43 `_type_predicate`: any `type_name` not equal to \"flag\"/\"count\" falls through to `lambda column: column.kind == type_name`; since `Column.__post_init__` (coltable.py:26-27) guarantees `kind` is always one of KNOWN_KINDS, a typo like `include=[\"cuont\"]` produces a predicate that can never match any column, and `select()` returns an empty list with no exception or warning.",
+            "remedy": "In `_type_predicate`, validate `type_name` against the known vocabulary (\"count\", \"flag\", \"real\", \"text\") up front and raise `ValueError` on an unrecognized name, so a typo fails loudly instead of silently returning an empty selection."
+          },
+          {
+            "claim": "`select()`'s behavior when `include` and `exclude` are supplied together is completely untested, and a concrete implementation bug in that combination would pass the full suite undetected.",
+            "source": "coltable.py:64-67 `matches()` applies the include check first (short-circuit return False) then falls through to the exclude check; test_coltable.py's five tests each pass only `include` or only `exclude`, never both. A mutation that returns early on the include branch without ever consulting `exclude_checks` (e.g. `if include_checks is not None: return any(...)`) is invisible to every existing test: include-only tests never populate `exclude_checks` (defaults to `[]`, already a no-op), and exclude-only tests never populate `include_checks` (so the mutated branch is never entered).",
+            "remedy": "Add a test that calls `select(include=[...], exclude=[...])` with overlapping and non-overlapping type sets and asserts the intersection semantics (kept iff matches an include type AND matches no exclude type)."
+          }
+        ],
+        "C": [
+          {
+            "claim": "An unrecognized type name passed to include/exclude silently matches zero columns instead of raising, so a caller's typo (e.g. 'flg' for 'flag') produces a silently empty or unexpectedly narrow result instead of surfacing the mistake.",
+            "severity": "Minor",
+            "source": "coltable.py's _type_predicate() falls through to `lambda column: column.kind == type_name` for any name other than \"flag\"/\"count\" (coltable.py, _type_predicate); since Column.kind is always one of KNOWN_KINDS, an unrecognized type_name can never match any column, and select() has no step validating include/exclude names against the known vocabulary before building predicates.",
+            "remedy": "Validate each include/exclude name against KNOWN_KINDS | {\"flag\"} (in select() or _type_predicate) and raise ValueError on an unrecognized name."
+          }
+        ]
+      }
+    },
+    "pydantic-typing-extra": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The regex branch that recognizes a Tagged[...]-wrapped Derived marker inside an unresolved forward reference is never exercised by any test, so a regression there (e.g. dropping the Tagged[ alternative from the pattern) would go undetected.",
+            "severity": "Moderate",
+            "source": "fieldspec.py: `_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")` — its optional `Tagged[` group is only reachable via the `_Unresolved` fallback in `is_derived_annotation`. test_fieldspec.py's only Tagged case, `test_tagged_wrapped_derived_field_is_excluded`, uses `'Tagged[Derived[int], \"cache\"]'`, which `eval`s successfully (no NameError) and is instead caught by the `_TaggedAlias` / `is_derived_marker` branch — never touching the regex's Tagged group.",
+            "remedy": "Add a test combining both documented features, e.g. `stored_field_names({\"total\": \"int\", \"cached_total\": 'Tagged[Derived[Missing], \"cache\"]'}, NAMESPACE)`, to prove the fallback regex correctly recognizes a Tagged-wrapped unresolved forward reference."
+          }
+        ],
+        "B": [
+          {
+            "claim": "`_resolve` only degrades to the unresolved-forward-ref fallback on `NameError`; any other annotation-evaluation failure propagates as an unhandled exception instead of being treated as unresolved.",
+            "source": "fieldspec.py:78-82 `_resolve` catches only `except NameError`. A qualified reference whose base name exists but whose attribute doesn't (e.g. an annotation string `\"somemodule.Typo\"` where `somemodule` is present in `namespace` but `Typo` isn't) raises `AttributeError`, not `NameError`, and is not caught -- `stored_field_names` (fieldspec.py:85-93) would crash on that field instead of falling back to the documented `_Unresolved` + regex path the module is designed around.",
+            "remedy": "Broaden the fallback to catch the class of exceptions that indicate 'could not evaluate this annotation in this namespace' (at minimum `NameError` and `AttributeError`), or wrap `eval` in a narrower `except Exception` scoped specifically to annotation resolution with a comment naming which errors are expected."
+          },
+          {
+            "claim": "The unresolved-forward-ref fallback regex only recognizes a Derived marker that is bare or wrapped in `Tagged[...]`; a Derived marker wrapped in any other generic and left unresolved is silently miscategorized as a stored field.",
+            "source": "fieldspec.py:24 `_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")` is applied via `.match()` (fieldspec.py:75), which anchors at string position 0. For source text like `\"Optional[Derived[int]]\"` or `\"list[Derived[int]]\"`, the string doesn't begin with `Tagged[` or `Derived[`, so the match fails and `is_derived_annotation` returns False -- an unresolved, wrapped Derived field is treated as stored rather than excluded. This case is not covered by test_fieldspec.py and is not among the one documented gap in CHANGES.md (the alias case).",
+            "remedy": "Either broaden the fallback pattern to search anywhere in the source text (not anchor-match) for a `Derived[` occurrence not itself the payload of some other unrelated identifier, or document this as an additional known limitation alongside the aliasing gap already called out in CHANGES.md."
+          },
+          {
+            "claim": "`_resolve` mutates the caller-supplied `namespace` dict as an undocumented side effect of what is meant to be a read-only annotation lookup.",
+            "source": "fieldspec.py:78-82 calls `eval(source, namespace)` with a single dict used as both globals and locals. Per Python's `eval` semantics, if that dict has no `__builtins__` key, one is inserted into it in place. `stored_field_names`'s own test fixture, `NAMESPACE = {\"int\": int, \"Derived\": NativeDerived, \"Legacy\": LegacyDerived, \"Tagged\": Tagged}` (test_fieldspec.py:19), has no `__builtins__` key, so the very first call in test_fieldspec.py silently adds one to that shared dict. If a real caller passes something like a class's own `__dict__` as `namespace`, this would mutate a live object.",
+            "remedy": "Evaluate against a copy, e.g. `eval(source, dict(namespace))`, so the caller's namespace object is never mutated."
+          }
+        ],
+        "C": [
+          {
+            "claim": "When a field's annotation uses a locally aliased Derived import (e.g. `from markers_legacy import Derived as LocalDerived`) and the annotation is also an unresolvable forward reference, is_derived_annotation silently classifies the field as stored instead of Derived, because eval-based resolution fails (falling back to _Unresolved) and the regex fallback only recognizes the literal spelling `Derived[` / `Tagged[...Derived[`, not an arbitrary alias name -- a data-modeling correctness gap the module's own CHANGES.md names but leaves unresolved.",
+            "severity": "Serious",
+            "source": "fieldspec.py: `_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")` cannot match an aliased spelling like \"LocalDerived[\"; is_derived_annotation()'s only fallback for an _Unresolved annotation is `_DERIVED_PATTERN.match(tp.source)`. CHANGES.md explicitly names this exact scenario as unhandled: \"a field locally aliased to a registry's Derived object ... whose annotation is also an unresolvable forward reference.\"",
+            "remedy": "Resolve markers by walking the alias to its underlying registered object at scan time (e.g. via the record module's import table) instead of literal-text matching, or, failing that, raise on an unresolved annotation instead of silently defaulting it to \"stored\"."
+          },
+          {
+            "claim": "No test exercises a Derived marker that is both inside a Tagged[...] wrapper and an unresolved forward reference, so the outer optional `((\\w+\\.)?Tagged\\[)?` group of _DERIVED_PATTERN is never verified and a mutation deleting that group would go undetected.",
+            "severity": "Moderate",
+            "source": "test_fieldspec.py's forward-ref case (test_bare_forward_ref_derived_field_is_excluded) uses bare \"Derived[Missing]\"; its Tagged-wrapped case (test_tagged_wrapped_derived_field_is_excluded) uses a fully-resolvable annotation and so never reaches the _DERIVED_PATTERN fallback at all.",
+            "remedy": "Add a test asserting stored_field_names excludes a field annotated e.g. 'Tagged[Derived[Missing], \"cache\"]' where Missing is absent from the namespace."
+          },
+          {
+            "claim": "The multi-module marker registry (_MARKER_MODULES, _get_markers_named, _is_registered_marker) exists only to reconcile two independently-instantiated Derived singleton objects that are otherwise semantically identical; markers_legacy could instead re-export markers_native's Derived, collapsing the whole registry/cache/identity-union machinery to a single identity check with no loss of current behavior.",
+            "severity": "Moderate",
+            "source": "markers_legacy.py creates a brand-new `_MarkerForm(\"Derived\")` instance rather than importing the existing one; fieldspec.py's _get_markers_named/_is_registered_marker/_MARKER_MODULES exist solely to treat these two independently-created objects as equivalent via an `is`-identity union over an n-module list, though the list has exactly one marker in real use (\"Derived\") today.",
+            "remedy": "Either re-export the existing marker (`from markers_native import Derived`) in markers_legacy.py and delete the multi-module registry in favor of a single `is` check, or, if native/legacy vocabularies are genuinely expected to diverge, document the concrete divergence plan that justifies keeping them independent."
+          }
+        ]
+      }
+    },
+    "pytest-scope-enum-public-compat": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The test for next_up() only checks that the result differs from the starting span, not that it equals the specific correct successor, so an off-by-one bug (e.g. skipping a span) would pass undetected.",
+            "severity": "Moderate",
+            "source": "lifespan.py: `next_up()` returns `SPANS[idx + 1]`, one of the two core operations the module's docstring says \"everything else needs\"; test_lifespan.py's `test_next_up_moves_forward` only asserts `next_up(first) != first`, which is also true for e.g. a mutated `SPANS[idx + 2]`.",
+            "remedy": "Assert the exact expected successor across the whole sequence, e.g. `for i in range(len(SPANS) - 1): assert next_up(SPANS[i]) == SPANS[i + 1]`."
+          }
+        ],
+        "B": [
+          {
+            "claim": "`Handle` exposes a private `_span: Span` (enum) alongside a public `span` property of the same base name but a different type (`str`), creating a silent-failure trap for any future comparison against the enum or ordering by the exposed string.",
+            "source": "lifespan.py:66-72: `self._span = span` stores the `Span` member; `span` (the property) returns `self._span.value`, a plain string. `handle.span == Span.Step` would silently evaluate to `False` for every handle (str vs Enum comparison, no exception). Worse, since strings compare lexicographically, ordering by the exposed `.span` strings directly (e.g. `sorted(handles, key=lambda h: h.span)`) would silently produce alphabetical order (\"batch\" < \"file\" < \"run\" < \"step\" < \"suite\") rather than the declared lifecycle order the `Span` enum exists to encode (Step < Suite < File < Batch < Run). CHANGES.md itself flags the type mismatch as a source of possible confusion but the code has no guard against it.",
+            "remedy": "Rename the compatibility string accessor to something distinct from the enum-typed field it shadows (e.g. keep `_span`/`span_value` for the string, and expose the `Span` member itself under an unambiguous name like `span_enum` for callers that need ordering)."
+          },
+          {
+            "claim": "`next_up`'s test coverage skips the one transition where an off-by-one clamp bug would actually surface, so that class of bug can ship undetected.",
+            "source": "lifespan.py:52-55 `next_up` clamps at the top via `idx == len(SPANS) - 1`. test_lifespan.py only exercises the very top (`test_next_up_clamps_at_the_top`, SPANS[-1]) and the very bottom (`test_next_up_moves_forward`, SPANS[0]). A mutation of the boundary to `len(SPANS) - 2` would make `next_up` prematurely clamp at `Batch` (returning `Batch` instead of advancing to `Run`) -- and neither existing test would catch it, since neither exercises the second-to-top span.",
+            "remedy": "Add a test asserting `next_up(Span.Batch) == Span.Run` (or more generally, that every non-top span advances to its immediate successor, not just the endpoints)."
+          },
+          {
+            "claim": "`Span.__lt__` recomputes `list(self.__class__)` on every comparison instead of reusing the already-computed module-level `SPANS` list.",
+            "source": "lifespan.py:29-33 `__lt__` does `order = list(self.__class__); order.index(self) < order.index(other)` on every call, while `SPANS = list(Span)` (lifespan.py:36) already holds this exact list and is reused correctly by `next_up` (lifespan.py:54).",
+            "remedy": "Have `__lt__` use the module-level `SPANS` list (or an index built once at class-definition time) instead of rebuilding it per comparison."
+          }
+        ],
+        "C": [
+          {
+            "claim": "Span.__lt__ rebuilds `list(self.__class__)` on every comparison instead of reusing the already-computed module-level SPANS constant (or a precomputed index map), so every ordering comparison -- including the ones total_ordering derives (__le__, __gt__, __ge__) and every call to higher() -- redundantly reallocates the same 5-element list.",
+            "severity": "Cosmetic",
+            "source": "lifespan.py's Span.__lt__: `order = list(self.__class__); return order.index(self) < order.index(other)`, versus the identical `SPANS = list(Span)` already defined at module scope just below the class.",
+            "remedy": "Precompute an index mapping once (e.g. a class-level dict from member to position, or reuse SPANS) instead of rebuilding the list on every comparison."
+          },
+          {
+            "claim": "No test checks that a Span compares as not-less-than itself (e.g. Span.Step < Span.Step is False), so a classic boundary-flip mutation in __lt__'s comparison operator (`<` to `<=`) would go undetected even though ordering is this module's central behavior and feeds higher().",
+            "severity": "Moderate",
+            "source": "test_lifespan.py's test_ordering_matches_declared_low_to_high only iterates strictly-earlier/strictly-later pairs (`for hi in spans[i + 1 :]`), never comparing a span against itself; Span.__lt__ is `order.index(self) < order.index(other)`.",
+            "remedy": "Add an assertion that `not (span < span)` for every Span member."
+          }
+        ]
+      }
+    },
+    "rope-chunk-stable-identity": {
+      "reps": {
+        "A": [
+          {
+            "claim": "Drift hazard: identity generation relies on an unsynchronized static mutable counter, so concurrent construction of SegmentStorage from more than one thread could race and hand out duplicate identity tokens to genuinely different chunks -- exactly the failure this identity scheme exists to prevent (a diff would then treat a changed chunk as \"already seen\" and skip re-reading it). Nothing in this file rules out or guards against concurrent use.",
+            "severity": "Moderate",
+            "source": "text_spool.swift: `private final class SegmentStorage { ...; private static var nextIdentity = 0; init(text: String) { ...; SegmentStorage.nextIdentity += 1; self.identity = SegmentStorage.nextIdentity } }` -- no lock, atomic, or actor isolation around the increment.",
+            "remedy": "Serialize identity issuance (an atomic counter such as ManagedAtomic<Int>/OSAllocatedUnfairLock, or confine SegmentStorage creation to a single actor/queue), or explicitly document and enforce single-threaded construction if that is the real constraint."
+          },
+          {
+            "claim": "SegmentStorage.text is declared as a mutable var even though nothing in this file ever mutates an existing storage's text in place; the module's own stated invariant (\"only replacing a chunk's content allocates fresh storage with a fresh token\") is therefore enforced only by discipline in replaceChunk, not by the type system, so a future in-place edit for e.g. a perf optimization could silently defeat identity-based diffing.",
+            "severity": "Moderate",
+            "source": "text_spool.swift: `class SegmentStorage { var text: String; let identity: Int ... }`; `Spool.replaceChunk` always does `segments[index] = Segment(text: newText)` (fresh Segment/SegmentStorage), never `segments[index].storage.text = newText`.",
+            "remedy": "Change `var text: String` to `let text: String` so any future in-place mutation of an existing chunk's text becomes a compile error, making the identity invariant enforced by the type system rather than by convention."
+          },
+          {
+            "claim": "The bundled test for diffSpools only checks that the changed index is present and that comparedUnits is non-negative -- it never checks that the unchanged indices are excluded from changedIndices, so a mutation that reports every chunk as changed (silently defeating the entire stable-identity optimization the module exists to provide) would still pass.",
+            "severity": "Serious",
+            "source": "main.swift: `check(report.comparedUnits >= 0, ...)` and `check(report.changedIndices.contains(2), ...)` -- both hold trivially even if diffSpools returned changedIndices == [0, 1, 2, 3] for every chunk.",
+            "remedy": "Assert the exact expected result, e.g. `report.changedIndices == [2]` and `report.comparedUnits == \"zzzzzzzz\".count`, so a mutation that over- or under-reports changes fails the test."
+          }
+        ],
+        "B": [
+          {
+            "claim": "`SegmentStorage`'s identity counter is a shared mutable static incremented with a plain, unsynchronized read-modify-write, so concurrent chunk construction can hand out duplicate identity tokens and silently break the diffing algorithm's sole correctness invariant.",
+            "source": "text_spool.swift:14-24: `private static var nextIdentity = 0` is mutated via `SegmentStorage.nextIdentity += 1` inside `init`, with no lock, atomic, or actor isolation. The file's own header comment states the entire diff strategy rests on token uniqueness: \"a diff can therefore tell 'this chunk is the same one I last saw' by comparing tokens alone.\" If two `Segment`/`Spool` instances are ever constructed from different threads (plausible for a rope/text-spool backing store used for background diffing or multi-document loading), the increment races and two unrelated chunks can receive the same identity, causing `diffSpools` (text_spool.swift:54-68) to treat a genuinely changed chunk as unchanged and skip it.",
+            "remedy": "Derive identity from the storage instance itself (e.g. `ObjectIdentifier(self)`), which is unique by construction and needs no shared mutable counter or synchronization, instead of hand-rolling a global counter."
+          },
+          {
+            "claim": "`SegmentStorage.text` is declared mutable (`var`) even though nothing in the current code ever mutates it after construction, leaving a compiler-unguarded path to silently violate both the identity invariant and the struct's value-semantics independence.",
+            "source": "text_spool.swift:15 `var text: String`; `replaceChunk` (text_spool.swift:46-48) always allocates a brand-new `Segment`/`SegmentStorage` rather than mutating in place. Because `Segment`/`Spool` are structs that share a `SegmentStorage` class instance by reference with no copy-on-write guard, an in-place mutation of `.text` (nothing in the type prevents `segments[i].storage.text = newText`) would change content visible through every other struct value still sharing that storage -- exactly the kind of aliasing the test's own `before`/`after0`/`after` snapshot chain (main.swift:23-25) relies on staying independent -- while leaving `identity` unchanged, corrupting the very guarantee the module exists to provide.",
+            "remedy": "Change `SegmentStorage.text` to `let`, enforcing write-once at compile time for zero behavior change today; if in-place mutation is ever needed, require a copy-on-write check (`isKnownUniquelyReferenced`) plus a freshly minted identity."
+          },
+          {
+            "claim": "`Spool.init`'s `chunkSize` parameter is accepted but never read or stored, so the Interface implies size-based chunking behavior the Implementation doesn't provide.",
+            "source": "text_spool.swift:38-40: `init(chunkSize: Int, chunks: [String]) { segments = chunks.map { Segment(text: $0) } }` -- `chunkSize` does not appear anywhere else in the file.",
+            "remedy": "Either use `chunkSize` (e.g. validate or split `chunks` against it) or remove the parameter so the constructor's signature doesn't promise behavior it doesn't have."
+          },
+          {
+            "claim": "The bundled test for `diffSpools` never asserts that untouched chunks are excluded from `changedIndices`, so a mutation that treats every chunk as changed would pass undetected -- leaving the module's central claimed property completely unverified.",
+            "source": "main.swift:26-29 only checks `report.changedIndices.contains(2)` (the intentionally-replaced index) after calling `replaceChunk(at: 2, ...)`. It never checks that indices 0, 1, 3 are absent from `changedIndices`. Deleting the skip-guard in `diffSpools` (text_spool.swift:61-63, `if oldIdentitySet.contains(newIdentities[i]) { continue }`) so that every chunk is unconditionally appended to `changed` would still satisfy `changedIndices.contains(2)` and pass the suite, even though it defeats the entire point of the identity scheme (\"only has to read the chunks whose tokens don't turn up in the old set\", text_spool.swift:6-7).",
+            "remedy": "Assert the full expected set, e.g. `check(report.changedIndices == [2], ...)`, so an unchanged index being wrongly flagged (or a changed one being missed) is caught."
+          },
+          {
+            "claim": "The `comparedUnits >= 0` assertion in the test is tautologically true and verifies nothing about correctness.",
+            "source": "main.swift:28 `check(report.comparedUnits >= 0, \"a diff should never report a negative amount of work\")`. `comparedUnits` is built by summing `String.count` (text_spool.swift:65), which can never be negative, so this assertion cannot fail regardless of whether `diffSpools`'s cost-tracking logic is correct.",
+            "remedy": "Assert the exact expected value for the scenario, e.g. `check(report.comparedUnits == \"zzzzzzzz\".count, ...)`."
+          }
+        ],
+        "C": [
+          {
+            "claim": "Spool.init(chunkSize:chunks:) accepts a chunkSize parameter that is never stored, read, or used anywhere in the type, so passing an inconsistent or wrong chunkSize has zero effect and the type provides no chunk-size enforcement despite its name and signature implying one.",
+            "severity": "Moderate",
+            "source": "text_spool.swift: `init(chunkSize: Int, chunks: [String]) { segments = chunks.map { Segment(text: $0) } }` -- chunkSize is not referenced again anywhere in Spool or the file.",
+            "remedy": "Either use chunkSize to validate/enforce each chunk's length (or split incoming text into fixed-size chunks), or remove the parameter from the initializer."
+          },
+          {
+            "claim": "The bundled test only checks that changedIndices contains 2 (not that it equals exactly [2]) and that comparedUnits is >= 0 (not that it equals the expected char count), so a diffSpools regression that also flags untouched indices as changed, or computes the wrong magnitude for comparedUnits, would pass the suite undetected.",
+            "severity": "Moderate",
+            "source": "main.swift: `check(report.changedIndices.contains(2), ...)` and `check(report.comparedUnits >= 0, ...)` after `after.replaceChunk(at: 2, with: \"zzzzzzzz\")`, where the only-correct values are exactly [2] and 8.",
+            "remedy": "Assert `report.changedIndices == [2]` and `report.comparedUnits == \"zzzzzzzz\".count`."
+          },
+          {
+            "claim": "SegmentStorage's identity token comes from a static var counter mutated with an unsynchronized `+= 1`, so if Segment/SegmentStorage construction is ever reached from more than one thread (plausible for a rope backing live text editing plus background diffing), a race can hand out duplicate identity tokens and silently defeat the module's entire stable-identity guarantee -- diffSpools would treat two genuinely different chunks as \"the same one already seen\" with no error or crash.",
+            "severity": "Moderate",
+            "source": "text_spool.swift's SegmentStorage.init: `SegmentStorage.nextIdentity += 1; self.identity = SegmentStorage.nextIdentity` -- no lock, actor isolation, or atomic operation guards the shared static counter.",
+            "remedy": "Isolate the counter behind an actor or a lock, or derive identity without shared mutable state (e.g. ObjectIdentifier(self) or a UUID)."
+          },
+          {
+            "claim": "SegmentStorage.text is declared `var` even though the type's own invariant (a chunk's stored text never changes in place; only a replacement allocates fresh storage) requires it to be immutable after construction, and nothing in the current file mutates it post-init -- so the invariant holds only by convention, not by the type system.",
+            "severity": "Cosmetic",
+            "source": "text_spool.swift: `private final class SegmentStorage { var text: String; let identity: Int ... }` -- text has no in-place mutation site anywhere in the file after init.",
+            "remedy": "Declare text as `let` so the immutability the design relies on is enforced by the compiler."
+          }
+        ]
+      }
+    },
+    "store-core-composition-residual": {
+      "reps": {
+        "A": [
+          {
+            "claim": "An unused actor is left in the module with a comment admitting it isn't wired into any code path.",
+            "severity": "Cosmetic",
+            "source": "workspace.swift:57-58, `// Reserved for a future default execution context; not wired into any scoping path yet.` followed by `actor QuietQueue {}`, which no type or function in either file references.",
+            "remedy": "Delete `QuietQueue` until an actual concurrency requirement exists for `Workspace`; add it back when a real caller needs it."
+          }
+        ],
+        "B": [
+          {
+            "claim": "The bundled test only verifies write-propagation from a scoped child back up to the parent; it never verifies that a direct write to the parent's state is visible when read back through an already-created child, so a regression that cached the child's initial value instead of always re-deriving it from the parent would go undetected.",
+            "severity": "Moderate",
+            "source": "workspace.swift:49-54 child(_:at:) builds fresh get/set closures over `self.state[keyPath: path]` on every access; main.swift only exercises inspector-writes-then-root-reads (lines 21-22) and never asserts a root-write is visible through an existing child.",
+            "remedy": "After creating `inspector`, add a check that writes `root.state.inspector.zoom = ...` and asserts `inspector.state.zoom` reflects it, proving getState re-derives from the parent rather than a cached snapshot."
+          },
+          {
+            "claim": "The Panel marker protocol (associatedtype State only) and its `Sub.Type` witness argument on child() add ceremony without buying any compile-time safety beyond what parameterizing Workspace directly over State would already provide — the header comment credits Panel with catching wrongly-rooted key paths at compile time, but that guarantee comes entirely from the WritableKeyPath<Node.State, Sub.State> generic constraint.",
+            "severity": "Moderate",
+            "source": "workspace.swift:8-10 (protocol Panel { associatedtype State }), :21-27 (EditorPanel/InspectorPanel carry nothing but a typealias), :49-54 (child's `sub: Sub.Type` parameter exists only to name Sub since it can't be inferred from the key path alone).",
+            "remedy": "Delete Panel, EditorPanel, and InspectorPanel; make Workspace<State> generic directly over the state type with `child<ChildState>(at: WritableKeyPath<State, ChildState>) -> Workspace<ChildState>`, inferring ChildState from the key path. Same compile-time guarantee, two fewer types, no type-witness argument at call sites."
+          },
+          {
+            "claim": "QuietQueue is an empty actor that is never referenced by Workspace, child(), or any test — it exists solely as a placeholder for a concurrency feature that doesn't exist yet.",
+            "severity": "Minor",
+            "source": "workspace.swift:57-59, comment: 'Reserved for a future default execution context; not wired into any scoping path yet.'",
+            "remedy": "Delete QuietQueue now; add it back when an actual scoping path needs a default execution context."
+          }
+        ],
+        "C": [
+          {
+            "claim": "workspace.swift declares an unused `QuietQueue` actor that is never referenced by the scoping path, `Workspace`, or the test suite — speculative code for a need that doesn't exist yet.",
+            "severity": "Minor",
+            "source": "workspace.swift:57-59, `actor QuietQueue {}` with the comment 'Reserved for a future default execution context; not wired into any scoping path yet'; no other reference to `QuietQueue` exists in workspace.swift or main.swift.",
+            "remedy": "Delete `QuietQueue` until a concrete caller needs a default execution context; add it back when that need is real."
+          }
+        ]
+      }
+    },
+    "strict-concurrency-fake-fixes": {
+      "reps": {
+        "A": [],
+        "B": [
+          {
+            "claim": "HitCounter's entire reason for existing is safe concurrent access from two call sites, but the bundled test only calls recordPageView/recordAPIHit sequentially on one thread, so it can never detect a regression that removes or narrows the NSLock guarding `count` — the exact invariant the `nonisolated(unsafe)` annotation is trusting to hold.",
+            "severity": "Serious",
+            "source": "hit_counter.swift:8 (`private nonisolated(unsafe) var count = 0`), guarded only by the lock/unlock pairs at :11-13 (increment) and :17-19 (currentCount); main.swift:16-18 calls both recording functions synchronously from a single thread and never exercises concurrent access.",
+            "remedy": "Add a concurrent stress test (spawn several Tasks/threads calling increment() in parallel and assert currentCount equals the expected total) so a dropped lock or weakened synchronization fails a test instead of silently compiling under the nonisolated(unsafe) promise."
+          }
+        ],
+        "C": [
+          {
+            "claim": "The bundled test only drives `HitCounter` sequentially on one thread, so it cannot detect a regression that removes or bypasses the `NSLock` guarding `count` — the lock discipline is the entire reason `count` is safely marked `nonisolated(unsafe)`, and that discipline itself is unverified.",
+            "severity": "Serious",
+            "source": "hit_counter.swift:6-25 wraps every access to `count` in `lock.lock()`/`unlock()` (correctly, on current inspection); main.swift:15-19 calls `recordPageView`/`recordAPIHit`/`currentCount` only from the single main thread, never concurrently, so removing the lock entirely would still pass this suite.",
+            "remedy": "Add a concurrent test (e.g. a `DispatchQueue.concurrentPerform` loop or a `TaskGroup` firing many `increment()` calls) that asserts the final `currentCount` matches the exact expected total, so a dropped lock produces a detectable (flaky or wrong) failure."
+          }
+        ]
+      }
+    },
+    "swift-collections-ordered-replace-primitive": {
+      "reps": {
+        "A": [
+          {
+            "claim": "Ledger's two parallel collections (`roster.items` and `values`) are kept in sync only by the convention of routing every mutation through `replaceLabel`, not by any encapsulation, so a caller mutating either field directly desyncs their lengths and the next `replaceLabel` call then either crashes or silently drops the write.",
+            "severity": "Serious",
+            "source": "ordered_replace.swift:48-65 — `struct Ledger { var roster = Roster(); var values: [Int] = [] ... }` exposes both fields as plain internal `var`s with no invariant guard; `replaceLabel` computes `pos` once against `roster` (line 59) and reuses it verbatim for `moveIntoPlace(&values, ...)` (line 63). `moveIntoPlace` (lines 16-20) does `storage.append(new); storage.swapAt(position, storage.count - 1); storage.removeLast()` with no bounds check against the incoming `position` — if `values.count` is one less than `roster.items.count` at that point, the append/swap/removeLast sequence silently no-ops instead of writing the new value; if it's more than one short, `swapAt` traps with an out-of-range index.",
+            "remedy": "Replace the two parallel arrays with a single ordered keyed collection that owns label and value together (e.g. `OrderedDictionary<String, Int>` from swift-collections, or at minimum an array of a `{label, value}` struct) so one `moveIntoPlace`-style operation updates both atomically at the same slot and desync becomes structurally impossible."
+          },
+          {
+            "claim": "`Roster.lookupCount` is incremented on every call to `position(of:)` but is never read by any test or by application logic — it only reaches an equally-unread pass-through, `Ledger.lookupCount`.",
+            "severity": "Minor",
+            "source": "ordered_replace.swift:24, 30-33 — `var lookupCount = 0` and `mutating func position(of tag: String) -> Int? { lookupCount += 1; ... }`; `Ledger.lookupCount` (line 52) forwards it but nothing in ordered_replace.swift or main.swift ever reads either property.",
+            "remedy": "Delete `lookupCount` (and its pass-through on `Ledger`) unless a real caller needs the metric; if it's meant for diagnostics, add a read site (log line, assertion, or test) that proves it's consumed."
+          }
+        ],
+        "B": [
+          {
+            "claim": "Ledger keeps roster.items and values aligned by index only through the coordinated pair of moveIntoPlace calls inside replaceLabel, but Roster.items, Ledger.roster, and Ledger.values are all plain (non-private) vars, so any external caller can mutate one array without the other — reintroducing a duplicate tag or desynchronizing the two arrays' lengths/order in a way replaceLabel's own duplicate/position checks can no longer protect against.",
+            "severity": "Serious",
+            "source": "ordered_replace.swift:23 (`var items: [String] = []` in Roster, no access control), :49-50 (`var roster = Roster()`, `var values: [Int] = []` in Ledger, no access control); replaceLabel (:54-65) is the only place the invariant is actively maintained.",
+            "remedy": "Make `items` in Roster and `roster`/`values` in Ledger private(set) (or fully private with read-only accessors) so replace/replaceLabel are the only way to mutate them, and the duplicate-check/positional-alignment invariant can't be bypassed by direct array mutation."
+          },
+          {
+            "claim": "lookupCount is incremented on every call to position(of:) but is never read by any test or by Roster/Ledger's own logic — it's write-only instrumentation with no consumer.",
+            "severity": "Minor",
+            "source": "ordered_replace.swift:24 (`var lookupCount = 0`), :30-33 (incremented in position(of:)), :52 (Ledger.lookupCount forwards it); main.swift never references lookupCount.",
+            "remedy": "Either delete lookupCount if it isn't meant to be consumer-facing, or add a test/consumer that reads it — as written it's dead state."
+          }
+        ],
+        "C": [
+          {
+            "claim": "`Ledger.roster` and `Ledger.values` are both externally-mutable stored properties that must stay positionally aligned for `moveIntoPlace`'s parity assumption to hold, but nothing encapsulates or enforces that pairing, so an external write to either collection alone can desynchronize them, causing `replaceLabel` to silently misalign entries or crash on an out-of-bounds `swapAt`.",
+            "severity": "Serious",
+            "source": "ordered_replace.swift:48-65 — `struct Ledger { var roster = Roster(); var values: [Int] = [] }` has no access restriction, while `replaceLabel` resolves one `pos` via `roster.position(of:)` and reuses it to index into both `roster.items` and `values` through `moveIntoPlace`.",
+            "remedy": "Make `roster` and `values` `private(set)` (or fully private with read-only accessors) so the only way to mutate them is through `Ledger`'s own methods, which can then maintain the length/alignment invariant."
+          },
+          {
+            "claim": "`lookupCount` exists specifically to prove the file's stated design intent — that `replaceLabel` resolves a tag's position once and reuses it for both arrays rather than re-deriving it — but no test in the bundle ever reads `lookupCount`, so a regression that re-looks-up the position (or drops the increment) would go undetected.",
+            "severity": "Moderate",
+            "source": "ordered_replace.swift:1-7 header comment states the reuse rationale; ordered_replace.swift:24,30-33 increments `lookupCount` inside `position(of:)`; ordered_replace.swift:52 exposes `Ledger.lookupCount`; main.swift never references `lookupCount` on either `Roster` or `Ledger`.",
+            "remedy": "Add an assertion such as `ledger.lookupCount == 1` after a successful `replaceLabel` (and the `Roster` equivalent) so the single-lookup invariant is actually verified by the test suite."
+          }
+        ]
+      }
+    },
+    "swift-collections-platform-guard-scope": {
+      "reps": {
+        "A": [
+          {
+            "claim": "`guardAdmits` is never called by `isPotentiallyAffected` or anything else, yet its name and doc comment claim responsibility for scoping which platforms the workaround check applies to — a maintainer reading it could believe that scoping exists and is live when it is dead code that always returns `true`.",
+            "severity": "Minor",
+            "source": "platform_support.swift:41-45 — `/// Every platform reaches the check below directly; nothing scopes which platforms this applies to.\\nfunc guardAdmits(_ platform: Platform) -> Bool { true }`; `isPotentiallyAffected` (lines 47-49) calls only `isNewEnoughToSkipWorkaround`, never `guardAdmits`. The actual platform scoping is already handled correctly elsewhere, by `versionThresholds`'s guard-else in `isNewEnoughToSkipWorkaround` (lines 34-39), which treats any platform absent from the dictionary as unaffected — confirmed by the `.openfield` test case passing without `guardAdmits` in the call graph at all.",
+            "remedy": "Delete `guardAdmits` — the dictionary lookup already provides correct per-platform scoping. If a separate explicit allowlist is genuinely wanted (independent of \"has a recorded version threshold\"), wire it into `isPotentiallyAffected` and add a test that would fail without it."
+          }
+        ],
+        "B": [
+          {
+            "claim": "guardAdmits is dead code: it always returns true and is never called by isPotentiallyAffected or anything else, yet its doc comment frames it as the (missing) scoping mechanism for which platforms the workaround check applies to — a future reader could mistake its presence for real scoping that was actually never wired in.",
+            "severity": "Minor",
+            "source": "platform_support.swift:41-45 (`func guardAdmits(_ platform: Platform) -> Bool { true }`, comment: 'Every platform reaches the check below directly; nothing scopes which platforms this applies to.'); isPotentiallyAffected (:47-49) calls only isNewEnoughToSkipWorkaround, never guardAdmits.",
+            "remedy": "Delete guardAdmits — it's an unused stub. If platform scoping is genuinely needed, wire a real allow-list into isPotentiallyAffected and cover it with a test; don't leave a vacuous placeholder that admits everything."
+          }
+        ],
+        "C": [
+          {
+            "claim": "`guardAdmits(_:)` is declared, always returns `true`, and is never called by `isPotentiallyAffected`, `isNewEnoughToSkipWorkaround`, or anywhere else — dead code whose own comment ('nothing scopes which platforms this applies to') documents an unresolved gap rather than working behavior.",
+            "severity": "Minor",
+            "source": "platform_support.swift:41-45, `func guardAdmits(_ platform: Platform) -> Bool { true }`; no call site exists in platform_support.swift or main.swift.",
+            "remedy": "Delete `guardAdmits` unless it is actually wired in as the scoping gate its comment describes (see the paired `versionThresholds` coverage finding)."
+          },
+          {
+            "claim": "`versionThresholds` is a plain dictionary not required to cover every `Platform` case — two of six cases (`overlay`, `openfield`) are already absent — and `isNewEnoughToSkipWorkaround` silently treats any platform missing from the dictionary as unaffected, so a future `Platform` case that actually needs the stdlib-bug workaround will silently skip it unless someone remembers to add a threshold entry, with no compiler check or test tying `Platform.allCases` to `versionThresholds.keys`.",
+            "severity": "Serious",
+            "source": "platform_support.swift:6-13 `Platform` has 6 cases; platform_support.swift:24-29 `versionThresholds` has 4 entries; platform_support.swift:34-39 `guard let threshold = versionThresholds[platform] else { return true }` defaults an unlisted platform to 'new enough' (unaffected).",
+            "remedy": "Replace the dictionary lookup with an exhaustive `switch` over `Platform` (so a new case without a threshold fails to compile), or add a test asserting every `Platform.allCases` member either has a `versionThresholds` entry or is explicitly documented as never-affected."
+          }
+        ]
+      }
+    },
+    "swiftnio-registration-id-representation": {
+      "reps": {
+        "A": [
+          {
+            "claim": "TicketID's failable-initializer boundary and its invalid-value rejection path are never exercised, so a boundary-flip regression (e.g. weakening `<=` to `<`) or a mismatch between the validation mask and the packing/unpacking mask width would go undetected.",
+            "severity": "Cosmetic",
+            "source": "command_word.swift:16-19 `init?(rawValue: UInt64) { guard rawValue <= 0xFF_FFFF_FFFF else { return nil }; self.rawValue = rawValue }` is only ever called (directly and via RoutingAssignment/ConveyorCommandWord) with rawValue: 1000 in main.swift:15-28; no test uses a value at or beyond the 0xFF_FFFF_FFFF boundary, and none exercises the nil path.",
+            "remedy": "Add a test asserting TicketID(rawValue: 0xFF_FFFF_FFFF) succeeds and TicketID(rawValue: 0x100_0000_0000) returns nil, pinning the validation boundary to the 40-bit width the packed word actually allocates to it."
+          }
+        ],
+        "B": [
+          {
+            "claim": "TicketID's failable initializer never has its out-of-range (nil-returning) branch or its exact boundary value exercised by a test, so a regression in the 40-bit range check that keeps the packed word's bit layout non-overlapping would ship silently.",
+            "severity": "Moderate",
+            "source": "command_word.swift:16-19 (`init?(rawValue:)` guards `rawValue <= 0xFF_FFFF_FFFF`); main.swift only ever constructs `TicketID(rawValue: 1000)!`, never a value above the 40-bit boundary or exactly at it, so both the `return nil` path and the boundary value `0xFF_FFFF_FFFF` itself are unasserted.",
+            "remedy": "Add a test asserting `TicketID(rawValue: 0x100_0000_0000) == nil` and one asserting `TicketID(rawValue: 0xFF_FFFF_FFFF) != nil` -- this guard is exactly what keeps the force-unwrap in `ConveyorCommandWord.assignment` (line 65) total."
+          }
+        ],
+        "C": [
+          {
+            "claim": "TicketID's failable-initializer boundary (rawValue <= 0xFF_FFFF_FFFF) is never tested at the boundary, so an off-by-one in the guard (e.g. `<` instead of `<=`) would silently reject the maximum valid 40-bit ticket number, or accept an over-limit one, and go undetected.",
+            "severity": "Moderate",
+            "source": "command_word.swift:17 `guard rawValue <= 0xFF_FFFF_FFFF else { return nil }`; main.swift:15-28 only exercises `TicketID(rawValue: 1000)!` — never the boundary value 0xFF_FFFF_FFFF or an over-limit value that must return nil.",
+            "remedy": "Add two boundary tests: TicketID(rawValue: 0xFF_FFFF_FFFF) must succeed, TicketID(rawValue: 0x1_00_0000_0000) must return nil."
+          },
+          {
+            "claim": "The bundled tests only prove the encode/decode pair is internally self-consistent (encode then decode returns the original value); no test pins the packed layout against a fixed literal word, so a symmetric bug present in both `init(_:)` and `assignment` (e.g. swapped lane/tier bit positions applied identically on both sides) would round-trip perfectly and pass every test while producing a word the real conveyor controller cannot read.",
+            "severity": "Moderate",
+            "source": "main.swift:15-28 exercises only round-trip via `ConveyorCommandWord(assignment).assignment` and the three decode accessor functions applied to the freshly-packed `packed.rawValue` — never a hardcoded literal UInt64 decoded to an independently-known expected (ticket, lane, tier).",
+            "remedy": "Add at least one test that decodes a hand-computed literal (e.g. ConveyorCommandWord(rawValue: 0x00_0F_A0_2A_05).assignment) and asserts the exact expected ticket/lane/tier, pinning the bit layout to the documented wire format rather than only to the module's own inverse function."
+          },
+          {
+            "claim": "The `& 0xFF_FFFF_FFFF` mask on the ticket field's decode is dead: since rawValue is 64 bits and the shift is by 24, the result is already bounded to 40 bits with nothing above to strip — unlike the lane and tier masks on the next two lines, which are load-bearing (they remove contaminating higher bits before the narrowing UInt16/UInt8 init, which would otherwise trap).",
+            "severity": "Cosmetic",
+            "source": "command_word.swift:65-67 — line 65's mask is provably redundant given the ticket field occupies the top 40 bits of the 64-bit word with nothing above it; lines 66-67's masks are not redundant for the same reason.",
+            "remedy": "Optional: drop the mask on line 65, or leave it as intentional belt-and-suspenders symmetry with the two lines below — either is fine, just don't read it as evidence lane/tier need the same treatment for the same structural reason."
+          }
+        ]
+      }
+    },
+    "swiftnio-write-before-active": {
+      "reps": {
+        "A": [
+          {
+            "claim": "The `guard isLive else { return }` in flush() is the entire contract this module exists to implement (nothing emits before activation), but it is never exercised as a live guard by any bundled test — every test path only reaches flush() after isLive is already true, so deleting the guard would not fail a single assertion.",
+            "severity": "Serious",
+            "source": "pipe_support.swift:20-24, guard at line 21: `func flush() { guard isLive else { return }; emitted.append(contentsOf: buffered); buffered.removeAll() }`. activate() (pipe_support.swift:26-29) sets `isLive = true` one line before calling flush(), so every flush triggered via activate() (main.swift:18, 22, 31) already has isLive == true. The one direct call, `ready.flush()` at main.swift:24, is also issued after `ready.activate()` at main.swift:22. No test ever calls .flush() while isLive is still false.",
+            "remedy": "Add a test that calls .flush() directly on a fresh (unactivated) Pipe and asserts .emitted stays empty, proving the guard actually rejects a premature flush rather than merely never being exercised."
+          }
+        ],
+        "B": [
+          {
+            "claim": "The invariant that this whole class exists to provide -- flush() refusing to emit before activate() -- is never exercised directly: every current test only reaches flush() through activate(), where isLive is already true, so deleting the `guard isLive else { return }` on line 21 would not fail any existing test.",
+            "severity": "Moderate",
+            "source": "pipe_support.swift:20-24 (`flush()`'s `guard isLive else { return }`); main.swift never calls `.flush()` on a Pipe while inactive -- the closest check (line 17, `early.emitted.isEmpty`) verifies state right after `write`, before any `flush()` call occurs at all.",
+            "remedy": "Add a test that calls `pipe.flush()` directly while `isLive == false` and asserts `emitted` stays empty, independent of `activate()`."
+          },
+          {
+            "claim": "write(_:) returns a `Bool` that is always `true` (per the file's own doc comment, a write is never rejected), so the `@discardableResult` return value carries no information and misleadingly suggests writes can fail.",
+            "severity": "Cosmetic",
+            "source": "pipe_support.swift:14-18 (`func write(_ value: Int) -> Bool { buffered.append(value); return true }`); every call site in main.swift (lines 16, 23) wraps the call in `check(...)`, treating the constant `true` as a meaningful assertion.",
+            "remedy": "Change the signature to `func write(_ value: Int)` returning `Void`, unless a real rejection path is actually planned."
+          }
+        ],
+        "C": [
+          {
+            "claim": "No test isolates whether write(_:) on an already-live pipe emits the value immediately or requires an explicit subsequent flush() — a mutation that makes write() call flush() itself whenever isLive is true would pass all three tests unchanged.",
+            "severity": "Moderate",
+            "source": "main.swift:21-25 (the `ready` case): `ready.activate()` runs first, then `ready.write(2)`, then an explicit `ready.flush()`, then `check(ready.emitted == [2], ...)` — nothing is asserted between the write and the flush, so an auto-flush-on-live write() produces the identical final `emitted` state and the test cannot distinguish the two implementations.",
+            "remedy": "In the `ready` case, assert ready.emitted.isEmpty immediately after ready.write(2) and before calling flush(), to pin down that writes on an already-live pipe still wait for an explicit flush."
+          },
+          {
+            "claim": "Pipe (pipe_support.swift) shares its exact name with Foundation's Pipe, a real IPC primitive, and main.swift imports Foundation — a reader skimming either file could momentarily mistake this small write-buffering type for the standard library's pipe.",
+            "severity": "Cosmetic",
+            "source": "pipe_support.swift:9 `final class Pipe`; main.swift:6 `import Foundation`.",
+            "remedy": "Rename to something more specific to its purpose, e.g. DeferredWritePipe or BufferedOutbox, especially if this type ever lands in a larger codebase alongside real Foundation usage."
+          },
+          {
+            "claim": "write(_:) always returns true — the Bool result never varies, so it currently carries no information a caller could act on.",
+            "severity": "Cosmetic",
+            "source": "pipe_support.swift:14-18: `@discardableResult func write(_ value: Int) -> Bool { buffered.append(value); return true }` — every path returns true unconditionally.",
+            "remedy": "Either return Void until a real rejection case exists, or leave a one-line comment noting the Bool is reserved for future backpressure/rejection so a reader doesn't wonder why a constant is being returned."
+          }
+        ]
+      }
+    },
+    "werkzeug-socket-lifecycle": {
+      "reps": {
+        "A": [
+          {
+            "claim": "terminate() is built as an overridable seam specifically so a test can observe the startup-conflict path, but no bundled test ever triggers EndpointInUseError or overrides terminate, leaving the entire conflict/process-termination branch of Service.__init__ with zero coverage.",
+            "severity": "Serious",
+            "source": "service_listener.py:81-87, terminate()'s own docstring: 'A thin, overridable wrapper around the real exit call so a test can observe that this path was taken without actually ending the process.' Its only call site is service_listener.py:111-116, the `except EndpointInUseError` branch of Service.__init__. test_service_listener.py never binds two Services to the same endpoint and never references or monkeypatches `terminate`.",
+            "remedy": "Add a test that starts two Services on the same endpoint, monkeypatches terminate to record its call instead of exiting, and asserts it was invoked with code 1."
+          },
+          {
+            "claim": "test_start_with_handoff_returns_an_int only asserts the handoff descriptor is an int, not that it is a valid (non-negative) descriptor, so a regression that closed the listener before reading descriptor_id would silently hand a successor a -1 (already-closed) descriptor and the test would still pass.",
+            "severity": "Serious",
+            "source": "service_listener.py:143-153, start_with_handoff() captures `descriptor_id = listener.descriptor_id` (line 151) before `listener.close()` (line 152); descriptor_id returns -1 once closed (service_listener.py:42-49). test_service_listener.py:33-35 only asserts `isinstance(descriptor_id, int)`, which -1 also satisfies.",
+            "remedy": "Change the assertion to `assert descriptor_id >= 0`, matching the check already used in the other lifecycle tests (e.g. test_listener_starts_open_and_closes_cleanly)."
+          },
+          {
+            "claim": "_OPEN_DESCRIPTORS is written on every Listener creation and close but never read anywhere in the module or its tests, despite the class docstring's claim that it makes a leaked instance 'observable from outside' — a write-only ledger with no application or test authority.",
+            "severity": "Noticeable",
+            "source": "service_listener.py:19 `_OPEN_DESCRIPTORS: set[int] = set()`; written at line 40 (Listener.__init__) and line 70 (Listener.close); the class docstring's claim is at service_listener.py:28-32. No read, membership check, iteration, or accessor exists anywhere in service_listener.py or test_service_listener.py.",
+            "remedy": "Either add a real reader (e.g. an open_descriptor_count() accessor that tests call to assert no leaks after each lifecycle test) or delete the ledger and the docstring claim describing it."
+          },
+          {
+            "claim": "Service.__init__'s bind=False branch allocates a full Listener (consuming an id and briefly entering _OPEN_DESCRIPTORS) purely to close it immediately, because start_service's adopt path then overwrites service.listener from outside the class instead of passing the adopted listener into the constructor.",
+            "severity": "Cosmetic",
+            "source": "service_listener.py:103-107 `self.listener = Listener(); if not bind: self.listener.close(); return`; service_listener.py:130-133 `service = Service(endpoint, bind=False); service.listener = adopt`.",
+            "remedy": "Add an optional `listener: Listener | None` parameter to Service.__init__ so start_service can pass `adopt` straight through, removing the allocate-then-close placeholder and the external attribute patch."
+          }
+        ],
+        "B": [
+          {
+            "claim": "Service.__init__ calls clear_stale(endpoint) unconditionally immediately before bind(endpoint), which wipes the exact _BOUND_ENDPOINTS entry that bind()'s conflict check reads -- so EndpointInUseError can never fire through any public entry point, silently defeating the 'friendly message on conflict' behavior CHANGES.md claims is preserved unchanged, and letting two Services double-bind the same endpoint.",
+            "severity": "Critical",
+            "source": "service_listener.py:108 (`clear_stale(endpoint)`) runs immediately before line 112 (`self.listener.bind(endpoint)`) inside the same `__init__`; `clear_stale` (lines 76-78) unconditionally does `_BOUND_ENDPOINTS.discard(endpoint)`; `Listener.bind` (lines 57-61) raises `EndpointInUseError` only `if endpoint in _BOUND_ENDPOINTS`, which is guaranteed False right after the discard that just ran. The module's own docstring (lines 1-9) frames clear_stale as clearing only 'stale' registrations, but the code never distinguishes stale from live -- it clears every existing registration for the endpoint, live or not. No test in test_service_listener.py calls start_service/provision_listener twice on the same endpoint, so this dead branch (lines 111-116, including terminate()) went unexercised.",
+            "remedy": "Stop calling clear_stale() unconditionally on every construction. Gate it to the genuinely-stale case (e.g. only in the warm-restart/handoff path, or track a generation/owner marker so clear_stale only removes entries that don't belong to a still-open Listener), so a same-process rebind attempt on an endpoint that is actually still open still raises EndpointInUseError."
+          },
+          {
+            "claim": "The fd-leak bug CHANGES.md documents fixing (a placeholder Listener left open when bind=False) has no regression test: nothing inspects the descriptor/endpoint ledgers before and after the adopt path, so if `self.listener.close()` were ever removed from the bind=False branch, no test would fail.",
+            "severity": "Moderate",
+            "source": "service_listener.py:105-107 (`if not bind: self.listener.close(); return`) is the fix; test_adopting_a_listener_keeps_it_usable (test_service_listener.py:38-44) only asserts `service.listener is prepared` and `descriptor_id >= 0`, never checking that the discarded placeholder's id left `_OPEN_DESCRIPTORS`.",
+            "remedy": "Add an assertion (in that test or a new one) that the placeholder's descriptor_id is no longer tracked as open after the adopt path runs, e.g. by comparing a small open-descriptor count before/after."
+          },
+          {
+            "claim": "Listener.activate(backlog) stores `self.backlog` but nothing in the module ever reads it back -- a write with no reader, i.e. state with no authority.",
+            "severity": "Moderate",
+            "source": "service_listener.py:63-64 (`def activate(self, backlog: int) -> None: self.backlog = backlog`); no property, method, or test in service_listener.py or test_service_listener.py reads `.backlog` after it is set.",
+            "remedy": "Either drop the stored attribute (activate() becomes a no-op unless something reads it) or give it a real reader/consequence -- e.g. an assertable property -- if a caller is meant to inspect the configured backlog."
+          },
+          {
+            "claim": "CHANGES.md advertises that `reuse_by_default` and `backlog` being class attributes lets 'a subclass override either without copying the whole provisioning sequence,' but no test constructs a Service subclass to confirm the override actually takes effect end-to-end.",
+            "severity": "Minor",
+            "source": "CHANGES.md:14-16; service_listener.py:100-101 (`reuse_by_default = True`, `backlog = DEFAULT_BACKLOG` as class attributes) and line 109 (`self.listener.set_reuse(self.reuse_by_default)`); test_service_listener.py has no subclassing test.",
+            "remedy": "Add a small test subclassing Service with `reuse_by_default = False` and asserting the resulting Listener's `reuse_enabled` is False, to back the documented extensibility claim."
+          }
+        ],
+        "C": [
+          {
+            "claim": "Service.__init__'s unconditional call to clear_stale(endpoint) immediately before Listener.bind(endpoint) wipes the very _BOUND_ENDPOINTS entry that bind()'s own conflict check is about to test, making EndpointInUseError unreachable through the only two production call sites (Service.__init__ / start_service) — two live Services constructed for the same endpoint will both silently succeed instead of the second raising the documented conflict error.",
+            "severity": "Critical",
+            "source": "service_listener.py:76-78 (clear_stale unconditionally does _BOUND_ENDPOINTS.discard(endpoint) with no liveness/staleness check at all); service_listener.py:108 (clear_stale(endpoint) called unconditionally in Service.__init__, immediately before self.listener.bind(endpoint) on line 112); service_listener.py:57-61 (bind()'s only conflict check: `if endpoint in _BOUND_ENDPOINTS: raise EndpointInUseError` then add). Tracing two Service((\"x\",1)) constructions back to back: the first bind() adds (\"x\",1) to _BOUND_ENDPOINTS; the second construction's clear_stale discards that same entry before its own bind() runs the check, so the check always sees an empty slot and never raises, regardless of whether the first listener is still open. test_service_listener.py never imports or exercises EndpointInUseError, Listener.bind, or clear_stale directly, and terminate()'s own docstring (\"so a test can observe that this path was taken\") confirms a seam exists for exactly this scenario that is never used.",
+            "remedy": "Make clear_stale conditional on the existing registration actually being stale (no live Listener behind it) rather than unconditionally discarding any registration -- e.g. only call it when recovering after a prior process's exit (the warm-restart case), and let bind()'s existing check be the sole conflict authority for in-process construction. Add a test that constructs two Services for the same endpoint without closing the first and asserts the second hits the EndpointInUseError/terminate(1) path (monkeypatching terminate per its own docstring)."
+          },
+          {
+            "claim": "CHANGES.md states promoting reuse_by_default and backlog to class attributes lets 'a subclass override either without copying the whole provisioning sequence' -- but no test subclasses Service to override either attribute, and no test even reads Listener.backlog after a successful bind to confirm the value was passed through at all.",
+            "severity": "Moderate",
+            "source": "service_listener.py:100-101 (reuse_by_default = True, backlog = DEFAULT_BACKLOG class attributes) and :117 (self.listener.activate(self.backlog)); test_service_listener.py's five tests only construct plain Service / use the module-level helpers with default endpoints, and test_provisioned_listener_has_reuse_and_inheritance_enabled (lines 47-51) checks reuse_enabled/inheritable but never checks .backlog.",
+            "remedy": "Add a test that subclasses Service overriding backlog (and/or reuse_by_default), constructs it, and asserts the resulting Listener actually received the overridden value -- the capability CHANGES.md names as the point of the refactor is otherwise unverified."
+          },
+          {
+            "claim": "reuse_enabled and inheritable are stored on Listener and inspected by a test, but no runtime logic -- in particular bind() -- ever branches on either value; they model real socket options (SO_REUSEADDR, descriptor inheritance) purely as inert data in this simulation.",
+            "severity": "Cosmetic",
+            "source": "service_listener.py:51-55 (set_reuse, set_inheritable only assign) and :57-61 (bind() decides solely on _BOUND_ENDPOINTS membership, never on self.reuse_enabled).",
+            "remedy": "No action needed if the module intentionally stops at recording these flags for inspection; if bind() is ever meant to behave differently under reuse (e.g. permit binding over a stale-but-still-registered entry when reuse_enabled is true), that behavior belongs in bind()/clear_stale, not left implicit."
+          }
+        ]
+      }
+    }
+  },
+  "total_findings": 127,
+  "packs_measured": 23
+}

@@ -42,7 +42,10 @@
   "allowed_findings": [
     "_hash_work being a simple reversed-string stand-in rather than a real one-way cryptographic hash is accurate but out of scope -- this pack tests whether verification cost is equalized across paths, not the strength of the hash itself.",
     "Account, reset_work_counter, and work_performed could be organized differently (a dataclass, a context manager for the counter) independent of this pack's central judgment.",
-    "Noting that a directory lookup itself (directory.get(identity)) is not timing-equalized against a real key-value store's lookup cost is a fair, additional observation about the fixture's own abstraction, not a required finding about the equalization property being tested."
+    "Noting that a directory lookup itself (directory.get(identity)) is not timing-equalized against a real key-value store's lookup cost is a fair, additional observation about the fixture's own abstraction, not a required finding about the equalization property being tested.",
+    "unified-equalized-verification's own bundled test suite never exercises the unknown-identity path -- _directory() contains only one known identity, all four tests use it, and reset_work_counter/work_performed are never called -- so a regression that deleted the equalizing hash call in verify_with_equalized_work's None branch would pass every existing test. This is a test-coverage observation about the accepted variant's own suite, independent of this pack's central judgment about equalization and call-site routing.",
+    "Account.verify comparing the computed hash to the stored credential with Python's `==` rather than a constant-time comparison (e.g. hmac.compare_digest) leaves a secondary, credential-correctness timing channel -- independent of this pack's central judgment, which tests whether verification work is equalized between an unknown identity and a known identity with a wrong credential, not whether the credential comparison itself is constant-time.",
+    "sign_in and reverify_for_sensitive_action having identical bodies (both look up the account and call verify_with_equalized_work) is a fair structural observation, independent of this pack's central judgment about equalization and call-site routing."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

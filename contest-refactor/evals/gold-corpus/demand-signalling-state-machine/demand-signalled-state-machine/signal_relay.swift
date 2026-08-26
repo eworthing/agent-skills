@@ -84,7 +84,15 @@ final class Relay {
 
         case (.holding(var buffered, let sources), .demandArrived(let request)):
             let value = buffered.removeFirst()
-            phase = buffered.isEmpty ? .quiescent(sources: sources) : .holding(buffered: buffered, sources: sources)
+            // Draining the last buffered value has to re-check whether every
+            // source is already done: sources can finish while a value is still
+            // buffered, and that value is still owed. Without this the relay
+            // lands in .quiescent with nothing left to produce, and the next
+            // demand waits for a value that can never arrive.
+            phase =
+                buffered.isEmpty
+                ? (sources.allFinished ? .finished : .quiescent(sources: sources))
+                : .holding(buffered: buffered, sources: sources)
             return [.resumeWithValue(request: request, value: value)]
 
         case (.holding(let buffered, var sources), .sourceFinished(let source)):

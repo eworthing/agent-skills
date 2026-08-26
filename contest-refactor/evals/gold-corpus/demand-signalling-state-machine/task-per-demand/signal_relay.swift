@@ -66,7 +66,14 @@ final class Relay: ConcurrencySafe {
                 }
                 if !buffered.isEmpty {
                     let value = buffered.removeFirst()
-                    phase = .running(buffered: buffered, requests: requests, finishedSources: finishedSources)
+                    // Sources can finish while a value is still buffered, and that
+                    // value is still owed. Once it has been handed over there is
+                    // nothing further coming, so re-check here rather than only
+                    // when a source reports finishing.
+                    phase =
+                        finishedSources.count >= total && buffered.isEmpty
+                        ? .finished
+                        : .running(buffered: buffered, requests: requests, finishedSources: finishedSources)
                     return [.resumeWithValue(request: request, value: value)] + restart
                 }
                 requests.append(request)

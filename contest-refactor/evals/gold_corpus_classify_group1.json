@@ -1,0 +1,68 @@
+{
+  "packs": [
+    {
+      "pack": "auth-concurrent-login-storage",
+      "findings": [
+        {
+          "summary": "LoginRegistry is a plain (non-actor) class mutating a shared Dictionary in commitStore with no lock/queue/actor isolation -- a real data race under genuine concurrent thread/Task access, distinct from the scripted-interleaving lost-update property the pack tests.",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against login_registry.swift:19-28: `final class LoginRegistry` with `private var entries: [LoginKind: String]`, mutated via plain subscript assignment, no actor/lock/queue anywhere. This is factually correct and does not match any must_not_find entry (all four of which concern the near-miss/red/mutant variants, not the accepted one). The pack's own provenance_note explains the fixture deliberately models the race as a scripted, deterministic interleaving of explicit steps rather than real concurrency ('no tasks, no timing, no stress loop'); the reviewers' claim is about real Swift-concurrency thread-safety of the type itself, a genuinely separate axis from whether the atomic single-step commit avoids the specific scripted lost-update. All 3 reviewers raised it (repA/repB/repC), all as Serious.",
+          "proposed_allowed_finding": "LoginRegistry being a plain class rather than an actor, with entries mutated via unsynchronized dictionary subscript assignment, means genuine concurrent access from real threads or Tasks would be a data race -- independent of this pack's central judgment, which tests the atomic-commit design's immunity to a specific scripted, deterministic interleaving of explicit steps, not Swift's actor-isolation or thread-safety guarantees under real concurrent invocation."
+        },
+        {
+          "summary": "beginStore/PendingStore is ceremony that adds nothing beyond bundling arguments; could be collapsed into a single store(kind:value:) call.",
+          "reps": 3,
+          "classification": "COVERED",
+          "note": "Matches allowed_findings entry 3 verbatim in substance ('Observing that atomic-commit-per-login's beginStore does nothing beyond bundling its arguments is a fair, accurate reading of why it needs no snapshot, not a defect'). repA and repC raise it as a standalone finding; repB folds the same observation into its concurrency finding's supporting evidence ('the two-phase API itself adds nothing over a single synchronous write'). Reviewers frame it with a suggested refactor (moderate/cosmetic severity) rather than the contract's 'not a defect' framing, but it is the same underlying code fact about the same lines (login_registry.swift:22-24).",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "auth-error-detail-preservation",
+      "findings": [
+        {
+          "summary": "withErrorMiddleware's catch-and-rethrow of AuthFailure is a no-op / pure pass-through -- removing the do/catch and calling operation() directly would behave identically, since Swift already propagates unmatched errors automatically.",
+          "reps": 2,
+          "classification": "COVERED",
+          "note": "Verified against error_detail.swift:44-50: the only catch clause matches AuthFailure and rethrows it unchanged; Swift does not require exhaustive catch in a throws function, so this is technically accurate (a true Deletion Test pass-through). Matches allowed_findings entry 3 ('Noting that middleware-forwards-original-failure's withErrorMiddleware is a short, single-purpose function is a fair, accurate reading, not a defect') -- same code characteristic at the same lines, described from the opposite spin (reviewers treat it as a moderate/noticeable simplification opportunity rather than a non-defect). repA and repB both raised it; repC's review had zero findings.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "RethrownDetail is a single-conformer protocol wrapping AuthFailure's always-non-optional fields in Optional for no benefit -- no second, partial-data conformer exists in the file or its test.",
+          "reps": 1,
+          "classification": "COVERED",
+          "note": "Matches allowed_findings entry 1 ('AuthFailure and its sibling rethrown types ... being separate concrete types conforming to a shared RethrownDetail protocol, rather than one type with optional fields, is a fixture simplification independent of this pack's central judgment'). The reviewer, seeing only the accepted variant's file (not the sibling variants' own concrete types, e.g. the ones presumably used by the other 3 variants), correctly observes AuthFailure is the sole conformer visible here -- exactly the critique the provenance entry pre-empts. Singleton: only repB raised this; repA and repC did not (repC had no findings at all).",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "auth-identity-probe-equalization",
+      "findings": [
+        {
+          "summary": "The bundled test suite only ever exercises the known-identity path (test_identity_verification.py's _directory() has one entry, all 4 tests use it), never the unknown-identity/None branch, and never calls reset_work_counter/work_performed -- a mutation deleting the equalizing _hash_work(supplied) call in the None branch would pass every existing test.",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against test_identity_verification.py: _directory() returns only {'known-identity': account}; all four test functions call sign_in/reverify_for_sensitive_action with that same identity; reset_work_counter/work_performed are never referenced. Accurate. This is a test-coverage-gap finding about the accepted variant's own bundled suite, orthogonal to the pack's central judgment (distinguishing dual-entry inconsistency / call-site-defeat / unconditional-bypass across variants) and does not match any must_not_find entry. Raised by all 3 reviewers (repA Serious, repB Serious, repC Critical).",
+          "proposed_allowed_finding": "unified-equalized-verification's own bundled test suite never exercises the unknown-identity path -- _directory() contains only one known identity, all four tests use it, and reset_work_counter/work_performed are never called -- so a regression that deleted the equalizing hash call in verify_with_equalized_work's None branch would pass every existing test. This is a test-coverage observation about the accepted variant's own suite, independent of this pack's central judgment about equalization and call-site routing."
+        },
+        {
+          "summary": "Account.verify compares the computed hash to the stored credential with plain `==` rather than a constant-time comparison (e.g. hmac.compare_digest), leaving a secondary, credential-correctness timing channel distinct from the identity-existence channel this pack equalizes.",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified against identity_verification.py:37-38: `return _hash_work(supplied) == self.credential`, plain string equality. Technically accurate that CPython string `==` is not constant-time. This targets a different property (constant-time credential comparison) than the pack's central judgment (equalizing work-count between an unknown identity and a wrong-credential known identity to prevent enumeration) and doesn't match any must_not_find entry. Related in spirit to allowed_findings entry 1 (_hash_work being a non-cryptographic stand-in) but a distinct claim about the comparison operator, not the hash function -- both reviewers who raised it (repB explicitly) noted it's scope-limited given _hash_work is a fixture stand-in. Raised by repA (Critical) and repB (Noticeable); repC did not raise it.",
+          "proposed_allowed_finding": "Account.verify comparing the computed hash to the stored credential with Python's `==` rather than a constant-time comparison (e.g. hmac.compare_digest) leaves a secondary, credential-correctness timing channel -- independent of this pack's central judgment, which tests whether verification work is equalized between an unknown identity and a known identity with a wrong credential, not whether the credential comparison itself is constant-time."
+        },
+        {
+          "summary": "sign_in and reverify_for_sensitive_action have byte-for-byte identical bodies (both do directory.get(identity) then verify_with_equalized_work).",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified against identity_verification.py:55-64 -- both functions are identical two-line bodies. A plain structural/duplication observation, independent of the pack's equalization/call-site-defeat judgment, and not covered by allowed_findings entry 2 (which is about Account/reset_work_counter/work_performed organization, not sign_in/reverify duplication). Raised by repB and repC, both as Cosmetic, both noting a plausible reason the duplication might be intentional (future divergence between sign-in and step-up reverification).",
+          "proposed_allowed_finding": "sign_in and reverify_for_sensitive_action having identical bodies (both look up the account and call verify_with_equalized_work) is a fair structural observation, independent of this pack's central judgment about equalization and call-site routing."
+        }
+      ]
+    }
+  ]
+}

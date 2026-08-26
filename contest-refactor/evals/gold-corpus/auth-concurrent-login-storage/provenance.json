@@ -44,7 +44,8 @@
   "allowed_findings": [
     "Noting that per-kind-lock-shared-map-race's Lock type is a minimal, fixture-specific stand-in rather than a real platform mutex is accurate but out of scope -- this pack tests synchronization granularity, not the lock primitive's own implementation.",
     "PendingStore could be made a private, variant-internal type rather than part of LoginRegistry's public surface, independent of this pack's central judgment.",
-    "Observing that atomic-commit-per-login's beginStore does nothing beyond bundling its arguments is a fair, accurate reading of why it needs no snapshot, not a defect."
+    "Observing that atomic-commit-per-login's beginStore does nothing beyond bundling its arguments is a fair, accurate reading of why it needs no snapshot, not a defect.",
+    "LoginRegistry being a plain class rather than an actor, with entries mutated via unsynchronized dictionary subscript assignment, means genuine concurrent access from real threads or Tasks would be a data race -- independent of this pack's central judgment, which tests the atomic-commit design's immunity to a specific scripted, deterministic interleaving of explicit steps, not Swift's actor-isolation or thread-safety guarantees under real concurrent invocation."
   ],
   "residual_findings": [],
   "must_find_if_present": [

@@ -17,7 +17,7 @@ which prints one line of actions per event (see oracle_probe.swift's own
 header for the event/action token grammar), letting this harness observe
 `Relay.step` uniformly across variants whose internals differ completely.
 
-Runs four checks:
+Runs five checks:
 
     every_continuation_resumed_exactly_once_under_cancellation -- across a
                                      battery of scripted cancellation
@@ -66,6 +66,29 @@ Runs four checks:
                                      because each starts a source's work
                                      exactly once, the first time any demand
                                      ever arrives.
+    buffered_value_survives_source_completion -- a value produced while no
+                                     demand is outstanding is buffered, and
+                                     its source then finishes while that
+                                     value is still owed. The buffered value
+                                     must still be delivered, and only the
+                                     demand after it may be told the relay is
+                                     finished. Added after a blind review
+                                     sweep: two of three independent
+                                     reviewers found that the accepted
+                                     variant hung here, and they were right --
+                                     draining the last buffered value fell
+                                     through to a non-terminal phase without
+                                     re-checking whether every source had
+                                     already finished, so the next demand
+                                     waited for a value that could never
+                                     arrive. task-per-demand had the same
+                                     gap. Both are fixed; this check is what
+                                     stops either regressing. Fails for
+                                     collapsed-suspension-flag, which drops
+                                     the buffered value outright and reports
+                                     finished a demand early -- a second,
+                                     independent consequence of its single-
+                                     slot representation.
     control_simple_demand_then_yield -- CONTROL: a single source, one
                                      demand, one produced value, that
                                      source finishing, and one further
@@ -211,6 +234,21 @@ def control_simple_demand_then_yield(binaries: dict[str, Path]) -> dict[str, boo
     }
 
 
+BUFFERED_SOURCE_COUNT = 1
+#: A value produced while no demand is outstanding buffers; the source then
+#: finishes while that value is still owed. The buffered value must still be
+#: delivered, and only the demand after it may be told the relay is finished.
+BUFFERED_EVENTS = ["demand:1", "produce:0:7", "produce:0:8", "finish:0", "demand:2", "demand:3"]
+BUFFERED_EXPECTED = [["start:0"], ["resume:1:7"], [], [], ["resume:2:8"], ["finish:3"]]
+
+
+def buffered_value_survives_source_completion(binaries: dict[str, Path]) -> dict[str, bool]:
+    return {
+        variant: run_probe(binary, BUFFERED_SOURCE_COUNT, BUFFERED_EVENTS) == BUFFERED_EXPECTED
+        for variant, binary in binaries.items()
+    }
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="signal-relay-oracles-") as tmp:
         scratch_dir = Path(tmp)
@@ -219,6 +257,7 @@ def main() -> int:
         cancellation_results = every_continuation_resumed_exactly_once_under_cancellation(binaries)
         distinct_results = distinct_states_not_collapsible(binaries)
         task_creation_results = no_per_demand_task_creation(binaries)
+        buffered_results = buffered_value_survives_source_completion(binaries)
         control_results = control_simple_demand_then_yield(binaries)
 
         print("=== every_continuation_resumed_exactly_once_under_cancellation ===")
@@ -232,6 +271,9 @@ def main() -> int:
         print("=== no_per_demand_task_creation ===")
         for name, counts in task_creation_results.items():
             print(f"  {name}: {counts}")
+        print("=== buffered_value_survives_source_completion ===")
+        for name, ok in buffered_results.items():
+            print(f"  {name}: {'delivered then finished' if ok else 'BUFFERED VALUE LOST OR HUNG'}")
         print("=== control_simple_demand_then_yield (control) ===")
         for name, ok in control_results.items():
             print(f"  {name}: {'matches expected sequence' if ok else 'DIVERGES FROM EXPECTED'}")
@@ -264,6 +306,14 @@ def main() -> int:
                 failures.append(
                     f"{name}: expected no_per_demand_task_creation counts {expected}, "
                     f"got {task_creation_results.get(name)}"
+                )
+
+        expected_buffered = {RED: True, GREEN: True, NEAR_MISS: False, MUTANT: True}
+        for name, expected in expected_buffered.items():
+            if buffered_results.get(name) != expected:
+                failures.append(
+                    f"{name}: expected buffered_value_survives_source_completion={expected}, "
+                    f"got {buffered_results.get(name)}"
                 )
 
         for name in VARIANTS:
