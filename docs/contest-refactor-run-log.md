@@ -738,3 +738,79 @@ recorded as a methodological one: do not price a pack from its diff, and do not 
 n=2 in a planning document. The related casualty is the framing — "cheaper than the Swift tranche"
 was projected at four packs and did not survive; at completion the Python track cost about what
 the Swift tranche was *estimated* to cost, not a fraction of it.
+
+## Gold corpus: first execution against a reviewer — 2026-08-26
+
+The corpus had 25 packs and had never been run. Every check on it to that point
+was internal consistency: oracles fire, contamination is clean, roles are
+honest. `validate-gold-corpus.py` and its selftest were the only code that had
+ever touched `evals/gold-corpus/`. No pack had been presented to a reviewer.
+
+**Method.** Two GREEN restraint cells, three sonnet reps each, six reviews
+total. Each reviewer read `references/method.md` (Simplify Pressure Test,
+Meta-Rules), `references/architecture-rubric.md` (architectural tests, Severity
+Anchors) and `references/lens-generic.md`, then reviewed candidate-visible files
+staged in a scratch directory — deliberately isolated so no reviewer could reach
+`provenance.json`, `grading.md` or `oracles.py`. Output was a findings list with
+severities. Cells: `auth-empty-password-policy-restraint`
+(invented-vulnerability failure mode) and `streaming-decoder-error-state`
+(complexity-chasing failure mode).
+
+**Restraint result: 1 miss in 6.** The decoder cell was 3/3 clean — no reviewer
+proposed flattening the state machine, and one argued against collapsing a
+branch. The empty-password cell missed 1/3: one reviewer called the behaviour
+"a silent auth bypass" at Serious, which `must_not_find` #2 bans. That cell's
+own justification ("deliberately provisioned") had been edited out of the
+candidate-visible code hours earlier during a leak sweep, and the reviewer named
+the resulting gap explicitly — so it is not a clean skill result. The remedy it
+proposed was not the banned blanket rejection but modelling passwordless as its
+own case, which is close to an existing `allowed_findings` entry. The failure
+was vocabulary and severity, not the wrong fix.
+
+**The corpus classified ~1 of ~24 findings.** Six reviews produced roughly
+twenty-four findings. Exactly one was named by any pack's `must_find`,
+`must_not_find` or `allowed_findings`. Everything else fell outside the
+contract. Scored as written, these packs would mark competent reviewers as
+noisy. Four items replicated 3/3 and are now recorded as `allowed_findings` in
+the two measured packs, with the measured rate noted in each entry.
+
+**The skill's own rule says revert the accepted answer.** One reviewer applied
+the Two-Adapter Rule from `architecture-rubric.md` to the decoder pack's GREEN,
+found the shared `IncrementalLineDecoder` protocol has exactly one conformer and
+no second adapter, and recommended deleting it. That protocol move is what the
+upstream PR did. The rule was applied correctly; the fixture is at fault, because
+minimising the case to one file removed the second parser that justified the seam
+upstream. The pack's `must_not_find` covers flattening the state machine and says
+nothing about deleting the protocol, so this went unscored. **Open item:** either
+give minimised packs a second conformer where the upstream justification depended
+on one, or state in the pack that the seam's justification lives outside the
+fixture.
+
+**Seven answer leaks, found by running rather than validating.** A reviewer
+quoted a fixture comment back inside a finding. Pulling that thread surfaced a
+near-miss opening "The trap:", a paragraph headed "The bug:" spelling out the
+exact input it misparses, and a comment naming the very oracle that catches it;
+a GREEN opening "The accepted answer:" and pointing at `grading.md`; a mutant
+describing its own removal; and a pandas test docstring stating it "passes
+despite every legend label being wrong". Fixed in `0b9682d`. The pandas one
+predates this session, so the class has been in the corpus since the earliest
+packs. Neither check 7 (upstream provenance) nor check 8 (literal role words)
+can see it — a comment naming the grader contains neither.
+
+**Open items this run produced.**
+1. Expand `allowed_findings` across all 25 packs, driven by measurement rather
+   than guesswork. Two packs done; twenty-three unmeasured.
+2. Add a validator check for grader vocabulary and role labelling in
+   candidate-visible files (`oracles.py`, `grading.md`, `fixture`, `the trap`,
+   `the accepted answer`, `this variant`). It would have caught all seven leaks.
+3. Decide the minimised-seam question above.
+4. `(this variant)` boilerplate remains in ~80 candidate-visible files across
+   the corpus. It is role-neutral, so it cannot leak which variant a reader
+   holds — only that they hold a fixture. Two packs were swept; the rest were
+   left deliberately, pending a decision on whether it is worth a corpus-wide
+   change.
+5. Harness note: three of six reviews returned JSON this run could not have
+   parsed mechanically — code fences, a split object with no `claim`, and one
+   wrapped in zero-width unicode. Any real runner needs schema validation at
+   that boundary, or should pin a verdict enum the way `reviewer-cases` does
+   instead of parsing prose.

@@ -36,7 +36,11 @@
   "allowed_findings": [
     "Observing that storedPasswords is a bare dictionary literal rather than a more structured account-directory type is a fixture simplification, independent of this pack's central judgment.",
     "Noting that Authenticator could expose which accounts are provisioned with an empty password as its own queryable fact, rather than leaving it implicit in the stored-password map, is a reasonable API observation, not a required finding.",
-    "Observing that authenticator-owned-empty-acceptance's authenticate function is a short, single-purpose function is a fair, accurate reading, not a defect."
+    "Observing that authenticator-owned-empty-acceptance's authenticate function is a short, single-purpose function is a fair, accurate reading, not a defect.",
+    "Observing that stored passwords are held and compared in plaintext, with no hashing and an ordinary non-constant-time String comparison, is a correct real-world observation about deliberately simplified fixture code. It is independent of this pack's central judgment and must not be scored against a reviewer. Measured 3/3 across the first review reps run against this pack.",
+    "Observing that SuppliedCredential duplicates Optional<Credential> under Optional's own case names, adding no invariant, is a fair, accurate reading independent of this pack's central judgment. Measured 3/3 across the first review reps.",
+    "Observing that no bundled test supplies a username absent from the stored-password map, leaving the unknown-username guard uncovered, is a correct coverage observation independent of this pack's central judgment. Measured 3/3 across the first review reps.",
+    "Observing that an unknown username returns before any password comparison while a known username with a wrong password performs one, giving a username-enumeration timing difference, is a correct observation independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

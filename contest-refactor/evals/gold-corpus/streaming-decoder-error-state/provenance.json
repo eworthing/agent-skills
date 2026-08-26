@@ -45,7 +45,12 @@
   "allowed_findings": [
     "Frame's CustomStringConvertible conformance could instead be a free function used only by the grader-only probe, independent of this pack's central judgment.",
     "The header-line parsing (line.hasPrefix(\"#\"), Int(line.dropFirst())) could be expressed with a small dedicated parsing helper instead of inline checks, independent of this pack's central judgment.",
-    "Noting that hand-rolled-buffer-loop's FrameDecoder is a single type doing more than protocol-decoder-with-error-state's split between IncrementalLineDecoder and FrameDecoder is a fair, accurate reading, not by itself a defect to fix in this pack's graded scope."
+    "Noting that hand-rolled-buffer-loop's FrameDecoder is a single type doing more than protocol-decoder-with-error-state's split between IncrementalLineDecoder and FrameDecoder is a fair, accurate reading, not by itself a defect to fix in this pack's graded scope.",
+    "Observing that the bundled main.swift never feeds a '#0' header, leaving the spec-explicit zero-length counted-frame branch uncovered, is a correct and independently verifiable coverage observation. It is not the pack's central judgment and must not be scored against a reviewer. Measured 3/3 across the first review reps run against this pack.",
+    "Observing that the bundled suite never re-enters feed() from inside an onFrame handler, leaving the re-entrancy guard the shared protocol exists to provide unexercised, is a correct coverage observation independent of this pack's central judgment.",
+    "Observing that no bundled test sends a body line that itself looks like a header or the terminator, so the state-decides-meaning invariant is asserted in prose but never exercised, is a correct coverage observation independent of this pack's central judgment.",
+    "Observing that the error latch exposes no readable signal, so a driver cannot distinguish a permanently failed decoder from an idle one, is a fair API observation independent of this pack's central judgment.",
+    "Noting that the stored onFrame closure and the onFrame(_:) setter share a name and are separated only by overload resolution is a fair, accurate reading, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [
