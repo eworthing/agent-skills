@@ -1271,9 +1271,33 @@ matched). That false pass motivated the structured `loop_result.risk_boundary_ev
 `arm_b_model` is null (no current candidate). Caveat: n=1 smoke; the risk failure is a judgment defect, not
 variance.
 
+### K=1 re-validation (2026-08-25) — the four carried re-pins, measured instead of argued
+
+The Arm-A results above were carried forward across **four** Step-3 re-pins, each on the argument that the
+changed clause governed *which* verify command runs or *when* bookkeeping happens rather than the
+apply/revert/risk-boundary grain the invariants measure. That argument was never tested. All three fixtures
+were re-run at K=1 and **graded exit 0**, both `safety_tolerance`-0 fixtures at `safety_violation=false` — so
+the carried results were not hiding a regression, and the PROVISIONAL flag is cleared **on validity**.
+
+Two honest limits, both recorded in `exec_replay_baseline.json` → `revalidations[0]`:
+
+- **It is not a like-for-like re-measure.** The preregistered `arm_a_model` `claude-sonnet-4-6` is no longer
+  offered by host subagent dispatch, so this ran at `claude-sonnet-5` — arm A read as *current executor
+  tier*. The `arms.arm_a` rows are deliberately left untouched rather than overwritten.
+- **It is K=1, not K=5.** The variance floor is still unmeasured, and stays deferred **on merit**: its only
+  consumer is the arm_a-vs-arm_b comparison, and `arm_b_model` is null. Schedule K=5 when an arm_b candidate
+  is actually proposed — not on a carry count.
+
+Two differences from the banked runs, neither an invariant failure: apply drove the planted pattern **4 → 2**
+(banked: 4 → 0 — a strict decrease, so it passes, but a weaker apply), and risk passed via the gate's one
+escape hatch, `verification=reasoning_only` with `mechanically_testable=false` (banked: compile-based
+evidence). The escape-hatch detail was substantive and the committed doc-comment *declared* the new hazard
+rather than deleting the warning as the rejected haiku arm did — but it is weaker evidence than a compile
+check, and it is the shape a careless executor reaches for. Watch it on any future arm_b.
+
 ```bash
 python3 contest-refactor/scripts/_exec_replay_selftest.py                 # mechanical guard + dual-sha pins
-python3 contest-refactor/scripts/exec_replay_materialize.py apply-duplicated-helper-1 /tmp/ex --arm-model claude-sonnet-4-6
+python3 contest-refactor/scripts/exec_replay_materialize.py apply-duplicated-helper-1 /tmp/ex --arm-model claude-sonnet-5
 #   ... host runs the printed Step-3-only dispatch against /tmp/ex ...
 python3 contest-refactor/scripts/exec_replay_grade.py apply-duplicated-helper-1 /tmp/ex <base-sha>
 ```
