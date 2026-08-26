@@ -718,7 +718,13 @@ tokens so it is excluded:
 | P6 `pytest-scope-enum-public-compat` | 167,823 |
 | P7 `werkzeug-socket-lifecycle` | 289,359 |
 | P8 `pydantic-typing-extra` | 567,802 |
-| **Total / mean (8 packs)** | **2,144,357 / ~268k** |
+| P9a+P9b `auth-unusable-password-policy` + `auth-identity-probe-equalization` (one builder, both packs) | 411,692 |
+| **Total / mean (10 packs)** | **2,556,049 / ~256k** |
+
+The P9 mini-packs are the first entries built two-to-an-agent, so 411,692 is a pair figure:
+**~206k per mini-pack**, against the ~268k full-pack mean it replaced. That is inside the
+150k–270k range projected for them below, and it is the first projection in this section that
+has survived contact with a measurement.
 
 **So the honest correction is under 2×, not an order of magnitude.** ~268k against a
 ~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate
@@ -941,7 +947,7 @@ is *what was accepted*, never *what is true*):
   "source_pr": 688,
   "base_sha": "…",
   "accepted_sha": "…",
-  "accepted_state": "merged | rejected | reverted | contested | superseded",
+  "accepted_state": "merged | rejected | reverted | contested | superseded | present_in_main",
   "gold_confidence": "high | contested | longitudinally_corrected",
   "subsequent_correction": {
     "pr": 3845,
@@ -998,6 +1004,16 @@ Field semantics the fixtures rely on:
   data: #2959 is `merged` + `contested` (its revert draft exists, unmerged); TCA #3460
   is `merged` + a `subsequent_correction` pointing at #3845 (`residual_cleanup`);
   #298 is `rejected` — its *rejection* is the fixture.
+- **Non-PR sources use `present_in_main`, and omit the fields that would be fiction.**
+  Added for P9, whose contracts are read from a project's current tree rather than from a
+  single proposed change. Such a pack carries `accepted_sha` (the pinned tree) and
+  **omits `source_pr` and `base_sha` entirely** — there is no pull request and no "before"
+  state, and inventing either would be a fabricated citation sitting in a provenance file.
+  The validator permits this: `source_pr` and both SHA fields are consulted only when
+  generating check-7 leak needles, so omitting a field that does not exist costs no
+  protection, because there is no corresponding string that could leak. Do not substitute
+  `merged` for a non-PR source — none of the other five values describes "this is simply
+  what the project ships," and a wrong-but-enumerated value is worse than a new one.
 - **`prompt_exposure`** implements the leakage split — renaming symbols is not enough
   when the source PRs may live rent-free in model weights:
 

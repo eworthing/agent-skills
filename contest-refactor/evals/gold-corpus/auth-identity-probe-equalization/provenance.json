@@ -1,0 +1,101 @@
+{
+  "source_repo": "django/django",
+  "accepted_sha": "0b40210e4808937a7c0922e8b7502bff4752faa3",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "identity_probe_timing_equalization_call_site_defeat",
+  "variant_roles": {
+    "dual-entry-inconsistent-equalization": "red",
+    "unified-equalized-verification": "green",
+    "near-miss-guard-skips-equalization": "near_miss",
+    "mutant-unknown-identity-verifies": "mutant"
+  },
+  "expected_judgment": "dual-entry-inconsistent-equalization should be flagged: sign_in and reverify_for_sensitive_action each verify inline, and while sign_in does an equivalent unit of work when the claimed identity does not resolve to any account, reverify_for_sensitive_action returns immediately in that case -- a real, measurable difference in how much work verification does depending on whether the identity exists, present on one entry point and not the other. Nothing about this returns the wrong answer -- both paths correctly refuse an unknown identity -- the finding is that how long refusal takes leaks whether the identity exists at all, and only through one of the two paths. unified-equalized-verification should be ACCEPTED outright: verify_with_equalized_work is extracted into one named function, its docstring states exactly what it defends against, and both entry points route through it, so the same amount of work happens whether or not the identity resolves. near-miss-guard-skips-equalization should be refused, and refused for the right reason: verify_with_equalized_work itself is correct, unchanged from unified-equalized-verification, and its own logic has nothing wrong with it. The defect is entirely at the call site -- both sign_in and reverify_for_sensitive_action add an early return for an unknown identity before ever calling the helper, on the reasoning that there is nothing to compare against, so why do the work. That reasoning reads as a free, obvious performance win, and it completely defeats the mitigation: the helper's correctness is irrelevant if nothing ever calls it on the path where it matters most. A reviewer who reads only the helper and finds it correct, without checking whether every caller that needs it actually reaches it, has done half the review. mutant-unknown-identity-verifies is a hard, unmissable auth bypass and primarily a Layer-5 execution case: verify_with_equalized_work still performs the equalizing work for an unresolved identity, but then returns True instead of False, so any claimed identity that does not exist authenticates successfully with any supplied credential whatsoever.",
+  "candidate_visible_files": [
+    "dual-entry-inconsistent-equalization/identity_verification.py",
+    "dual-entry-inconsistent-equalization/test_identity_verification.py",
+    "unified-equalized-verification/identity_verification.py",
+    "unified-equalized-verification/test_identity_verification.py",
+    "near-miss-guard-skips-equalization/identity_verification.py",
+    "near-miss-guard-skips-equalization/test_identity_verification.py",
+    "mutant-unknown-identity-verifies/identity_verification.py",
+    "mutant-unknown-identity-verifies/test_identity_verification.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "dual-entry-inconsistent-equalization's reverify_for_sensitive_action returns immediately for an identity that does not resolve to any account, without performing the equivalent unit of work sign_in performs in the same situation -- a real difference in verification cost between the two entry points that a timing-sensitive observer could use to tell whether an identity exists, present on one path and not the other.",
+    "near-miss-guard-skips-equalization's verify_with_equalized_work is itself correct and unchanged -- the defect is that both sign_in and reverify_for_sensitive_action add an early return for an unknown identity before calling it, so the helper never runs on exactly the path it exists to protect. A reviewer who only reads the helper and calls it correct, without checking whether every caller that needs the equalization actually reaches it, has missed the pack's central point.",
+    "mutant-unknown-identity-verifies's verify_with_equalized_work does the equalizing work for an unresolved identity but then returns True instead of False, so any identity that does not exist authenticates with any supplied credential -- an unconditional, unmissable bypass, not a timing leak."
+  ],
+  "must_not_find": [
+    "Crediting near-miss-guard-skips-equalization's verify_with_equalized_work as proof the whole variant is sound because the helper itself, read in isolation, has nothing wrong with it -- the defect is entirely at the two call sites that never reach it for an unknown identity.",
+    "Treating near-miss-guard-skips-equalization's early-return guard as a reasonable, low-risk optimization because 'there's no account to compare against, so there's nothing to check' -- that is exactly the reasoning that defeats the equalization, not a justification for it.",
+    "Describing dual-entry-inconsistent-equalization's issue as a false-authentication bug -- both of its entry points correctly refuse an unknown identity; the defect is a difference in verification cost between the two paths, not a wrong result from either one.",
+    "Rejecting unified-equalized-verification because supplying the same kind of docstring an attacker might read tells them the mitigation exists -- documenting a deliberate defense is not a vulnerability disclosure, and this pack's real-world basis does exactly that in its own source.",
+    "Accepting near-miss-guard-skips-equalization on the strength of its own bundled tests passing -- its tests only exercise the known-identity path, which was never broken; passing tests here says nothing about the unknown-identity path the near-miss actually defeats."
+  ],
+  "allowed_findings": [
+    "_hash_work being a simple reversed-string stand-in rather than a real one-way cryptographic hash is accurate but out of scope -- this pack tests whether verification cost is equalized across paths, not the strength of the hash itself.",
+    "Account, reset_work_counter, and work_performed could be organized differently (a dataclass, a context manager for the counter) independent of this pack's central judgment.",
+    "Noting that a directory lookup itself (directory.get(identity)) is not timing-equalized against a real key-value store's lookup cost is a fair, additional observation about the fixture's own abstraction, not a required finding about the equalization property being tested."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "known_identity_correct_credential_authenticates",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "equalization_work_matches",
+      "variant_expected_to_fail": "dual-entry-inconsistent-equalization"
+    },
+    {
+      "name": "equalization_work_matches",
+      "variant_expected_to_fail": "near-miss-guard-skips-equalization"
+    },
+    {
+      "name": "unknown_identity_never_authenticates",
+      "variant_expected_to_fail": "mutant-unknown-identity-verifies"
+    }
+  ],
+  "behavior_contract": [
+    "A correctly set credential must authenticate through every entry point that verifies it, and an incorrect one must not, for a known identity, in every variant.",
+    "An identity that does not resolve to any account must never authenticate, regardless of what credential is supplied, in every variant.",
+    "The amount of verification work performed for an identity that does not resolve to any account must equal the amount of work performed for a known identity with a wrong credential, through every entry point that performs verification -- not just some of them.",
+    "A correctly implemented equalization helper does not, by itself, guarantee equalized behavior -- every caller that can receive an unresolved identity must actually reach the helper on that path."
+  ],
+  "restraint_reason": "near-miss-guard-skips-equalization is built to separate two things a reviewer might otherwise fuse into one check: 'is the equalization logic correct' and 'does every path that needs equalization actually get it.' verify_with_equalized_work passes the first question with a clean read -- it is identical to the accepted variant's helper, correctly written, correctly documented. A reviewer who stops there, satisfied that the mitigation exists and is correct, has not checked the second question, and the second question is where this variant fails: both callers add a guard that returns before the helper is ever invoked for an unresolved identity, on reasoning that reads as an obvious, free performance win -- why hash a credential when there is no account to compare it against? That reasoning is exactly backwards for a timing-sensitive check: the whole point of doing the work anyway is that skipping it is observable. Restraint here runs in the opposite direction from auth-unusable-password-policy's: that pack's failure mode is inventing a defect against correct code, and this pack's is the mirror image -- accepting incorrect code because the one piece of it a reviewer happened to inspect closely (the helper) was correct, without checking whether the surrounding call sites actually use it where it matters.",
+  "applicable_domains": [
+    "python",
+    "identity-verification",
+    "timing-side-channels",
+    "call-site-defeat",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world design of django/django's check_password_with_timing_attack_mitigation in django.contrib.auth (ticket #20760), read from django/django at sha 0b40210e4808937a7c0922e8b7502bff4752faa3; no Django source is included, copied, or paraphrased -- identity_verification.py, every function and class name, and every docstring here are original to this fixture. The one exception is verify_with_equalized_work's docstring, which restates in original wording the concept the real function's own docstring states (that it exists to prevent an identity-enumeration side channel) rather than copying it verbatim."
+  },
+  "contamination": {
+    "renamed": [
+      "django",
+      "Django",
+      "ModelBackend",
+      "BaseBackend",
+      "user_can_authenticate",
+      "get_user_model",
+      "AUTH_USER_MODEL",
+      "check_password_with_timing_attack_mitigation",
+      "harden_runtime",
+      "20760"
+    ],
+    "minimized_from": "django.contrib.auth's check_password_with_timing_attack_mitigation and its use in ModelBackend.authenticate, read from django/django at sha 0b40210e4808937a7c0922e8b7502bff4752faa3 (no single PR -- this mitigation is a standing design in the current tree, addressing ticket #20760, not a change under review)",
+    "why": "The real mitigation lives inside Django's authentication backend machinery, depends on the User model and the pluggable password-hasher registry, and its timing property can only be measured with real wall-clock hashing, which would make a test flaky and slow; a renamed, minimized, pure-Python analogue (identity_verification.py, with a deterministic integer work counter standing in for elapsed time) preserves the one judgment-relevant property this pack tests -- a correctly extracted mitigation defeated by a call-site guard that never reaches it -- without exposing any Django symbol name, without needing Django installed, and without timing-based flakiness in CI."
+  }
+}

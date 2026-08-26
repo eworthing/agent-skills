@@ -1,0 +1,93 @@
+{
+  "source_repo": "django/django",
+  "accepted_sha": "0b40210e4808937a7c0922e8b7502bff4752faa3",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "restraint_against_invented_vulnerability_findings",
+  "variant_roles": {
+    "empty-credential-implicit-bypass": "red",
+    "sentinel-marked-no-credential": "green"
+  },
+  "expected_judgment": "empty-credential-implicit-bypass should be flagged for a real, silent bypass: verify_credential's `if not stored: return not supplied` treats an account with no local credential (represented here as an empty string) as requiring nothing at all, so supplying an empty guess authenticates. The bypass is specific to an empty supplied value -- any non-empty incorrect guess against the same account still correctly fails, and the finding should be scoped that precisely rather than generalized. sentinel-marked-no-credential should be ACCEPTED with nothing further asked of it: an account with no local credential of its own is represented by a prefix character no encoded credential can ever start with, followed by a random suffix, and is_credential_usable is checked before any comparison happens, so no supplied value -- not an empty string, not the marker's own value, not anything else -- is ever compared against a no-local-credential marker at all. This is the pack's central test, and the correct variant has nothing wrong in it: the reviewer's job is to find nothing, and specifically to not invent any of several very natural-sounding but false findings. The prefix-and-suffix scheme is not a code smell calling for a nullable column or a boolean flag -- it is the documented, deliberate policy this whole module implements. Supplying the marker's own value as a guess does not authenticate, because usability is checked before any comparison runs; this is demonstrable, not merely asserted -- running the check shows it returning false regardless of what is supplied. The random suffix is not decorative: two no-local-credential markers for two different accounts are demonstrably different from each other, which is exactly what stops the stored column from revealing which accounts share the same no-local-credential status. And the exact-prefix check is not fragile string matching, because the value on the other side of that comparison is never attacker-supplied -- it is produced only by this module's own marker and encoding functions, which are constructed so the two families of output can never collide.",
+  "candidate_visible_files": [
+    "empty-credential-implicit-bypass/credential_policy.py",
+    "empty-credential-implicit-bypass/test_credential_policy.py",
+    "sentinel-marked-no-credential/credential_policy.py",
+    "sentinel-marked-no-credential/test_credential_policy.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "empty-credential-implicit-bypass's verify_credential treats an empty stored credential as 'nothing to check,' so supplying an empty guess against an account with no local credential of its own authenticates -- a real, silent bypass.",
+    "The bypass in empty-credential-implicit-bypass requires supplying an empty string specifically; a non-empty incorrect guess against the same account still correctly fails, so the finding should be scoped to the empty-supplied case, not generalized to 'any guess works.'"
+  ],
+  "must_not_find": [
+    "Flagging sentinel-marked-no-credential's prefix-and-suffix marker as a code smell that should be replaced with a nullable column or an explicit boolean flag -- the sentinel is a deliberate, documented policy choice, not an oversight left to be cleaned up.",
+    "Claiming an attacker who supplies the marker's prefix character alone, or the full marker value, as a guess can authenticate against sentinel-marked-no-credential -- is_credential_usable is checked before any comparison runs, so no supplied value is ever compared against a no-local-credential marker at all, regardless of what that value is.",
+    "Dismissing the random suffix in mark_no_local_credential as decorative or as security theater that could be deleted because the prefix alone determines the outcome -- the suffix exists so that two accounts with no local credential of their own do not share an identical stored value, which would otherwise let anyone who can read the column tell which other accounts are also externally managed.",
+    "Calling the exact-prefix check in is_credential_usable fragile string matching on a credential field -- the value it is matched against is entirely under this module's own control, produced only by mark_no_local_credential or set_credential (which are constructed so the two can never collide), never by attacker-supplied input.",
+    "Treating sentinel-marked-no-credential's lack of a nullable-column or boolean-flag design as an unfinished simplification rather than as the documented policy it is.",
+    "Preferring empty-credential-implicit-bypass's representation over sentinel-marked-no-credential's on the grounds that a bare empty string is simpler or more obviously correct than a prefix-and-suffix scheme."
+  ],
+  "allowed_findings": [
+    "Observing that set_credential's encoding (`\"$enc$\" + raw[::-1]`) is a simple placeholder rather than a real one-way cryptographic transform is accurate but out of scope -- this pack tests the no-local-credential policy, not the encoding's cryptographic strength.",
+    "NO_LOCAL_CREDENTIAL_SUFFIX_LENGTH's specific value (40) or the suffix alphabet are implementation choices independent of this pack's central judgment.",
+    "Noting that sentinel-marked-no-credential's is_credential_usable could be exposed as a public entry point for callers that want to check usability without attempting a full verification is a reasonable API observation, not a required finding."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "ordinary_credential_round_trips",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "no_credential_rejects_empty_supplied",
+      "variant_expected_to_fail": "empty-credential-implicit-bypass"
+    },
+    {
+      "name": "no_credential_rejects_marker_as_supplied",
+      "variant_expected_to_fail": "empty-credential-implicit-bypass"
+    },
+    {
+      "name": "no_credential_markers_are_unique",
+      "variant_expected_to_fail": "empty-credential-implicit-bypass"
+    }
+  ],
+  "behavior_contract": [
+    "A correctly set credential must verify for the exact value it was set with and reject any other value, in every variant.",
+    "An account with no local credential of its own must reject every possible supplied value, including an empty string and the marker's own value, not just an arbitrary wrong guess.",
+    "Usability of a stored credential must be determined before any comparison against a supplied value is attempted -- a comparison must never run against a value known in advance to be unusable.",
+    "Two accounts that both have no local credential of their own must not be assigned the same stored value."
+  ],
+  "restraint_reason": "sentinel-marked-no-credential's prefix-and-suffix marker looks, on first read, like exactly the kind of magic-string sentinel that draws instinctive, well-earned suspicion: a special value baked into a data column instead of a nullable field or a boolean flag, matched by a plain string-prefix check. Every one of the natural findings that instinct produces here is wrong. The prefix is chosen because the encoding function that produces every real credential is constructed to never start with it, so there is no accidental collision to guard against. The random suffix is not decoration: it exists specifically so the stored column cannot be used to correlate which accounts share the same no-local-credential status. Supplying the marker's own value as a guess does not authenticate, because usability is checked before any comparison runs at all -- the marker is never compared against anything, so its value being echoed back changes nothing. And the string-prefix match itself is not fragile, because both sides of every real comparison are produced exclusively by this module's own functions, never by outside input. This pack has no near-miss and no mutant on purpose: the entire measurement is whether a reviewer, faced with a pattern that pattern-matches to several common anti-patterns, checks what the code actually does before naming any of them -- and finds nothing, because there is nothing to find.",
+  "applicable_domains": [
+    "python",
+    "credential-management",
+    "sentinel-values",
+    "refactoring-restraint",
+    "false-positive-avoidance"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world design of django/django's UNUSABLE_PASSWORD_PREFIX / is_password_usable policy in django.contrib.auth.hashers, read from django/django at sha 0b40210e4808937a7c0922e8b7502bff4752faa3; no Django source is included, copied, or paraphrased -- credential_policy.py, every function and constant name, and every docstring here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "django",
+      "Django",
+      "UNUSABLE_PASSWORD_PREFIX",
+      "is_password_usable",
+      "set_unusable_password",
+      "make_password",
+      "check_password",
+      "verify_password"
+    ],
+    "minimized_from": "django.contrib.auth.hashers's UNUSABLE_PASSWORD_PREFIX / UNUSABLE_PASSWORD_SUFFIX_LENGTH constants and is_password_usable, read from django/django at sha 0b40210e4808937a7c0922e8b7502bff4752faa3 (no single PR -- this policy is a standing design in the current tree, not a change under review)",
+      "why": "The real policy lives inside Django's password-hashing machinery, depends on Django's pluggable hasher registry, and is entangled with the User model and settings system, none of which can be reproduced faithfully as a minimal, dependency-free fixture; a renamed, minimized, pure-Python analogue (credential_policy.py, with a simple reversed-string stand-in for a one-way encoding) preserves the one judgment-relevant property this pack tests -- a deliberate sentinel policy that looks exploitable at a glance and is not -- without exposing any Django symbol name, and without needing Django installed."
+  }
+}
