@@ -1,0 +1,128 @@
+{
+  "source_repo": "pandas-dev/pandas",
+  "source_pr": 65927,
+  "related_history": [
+    {
+      "kind": "subsequent_regression_pr",
+      "pr": 66027,
+      "outcome": "merged",
+      "note": "Opens: 'Following the _python_apply_plot refactor (#65927) ... grouped DataFrame objects are no longer given a .name attribute. The earlier fix relied on self.name to propagate the group label to scatter.' Result: GroupBy.plot.scatter(..., legend=True) had empty legend entries. Fix forwards (group, key) through the helper; callbacks take an optional key=None so they still work on both paths."
+    }
+  ],
+  "base_sha": "d57b53693bb01efeba9e51281e6e676c226ba1ae",
+  "accepted_sha": "677e43792770b1746f5f9292c5a94e0a18d3550b",
+  "accepted_state": "merged",
+  "gold_confidence": "longitudinally_corrected",
+  "subsequent_correction": {
+    "pr": 66027,
+    "sha": "d72e3c423b5737daae17b3635b95198991e3a19d",
+    "kind": "regression_fix"
+  },
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "plotting_side_effect_decoupling_residual",
+  "variant_roles": {
+    "side-effect-pinning": "red",
+    "dedicated-path-incomplete": "green",
+    "key-forwarded": "alternate_green",
+    "near-miss-restore-pinning": "near_miss",
+    "mutant-mislabeled-groups": "mutant"
+  },
+  "expected_judgment": "side-effect-pinning should be flagged: it routes plotting through apply_general, a shared helper whose stated job is aggregation, and depends on a side effect (pinning the group's key onto it as .label) that has nothing to do with what apply_general is for -- an undeclared coupling, not a deliberate design choice. dedicated-path-incomplete should be ACCEPTED -- removing that coupling is the correct direction, and it is the accepted, merged state -- but a full-credit review must also verify, not just repeat, its own CHANGES.md claim of 'no user-visible change,' and name the residual that claim misses: apply_plot forwards the key directly to the callback for Lane (single-column) groups, and forwards nothing at all for Panel (multi-column) groups, so a scatter legend over Panel groups comes back empty. Scoring dedicated-path-incomplete a flawless 10 is a failure by this pack's own design, and refusing it outright is an equal and opposite failure: the correct verdict is accept-with-residual. key-forwarded is the fully corrected state: it forwards (group, key) uniformly regardless of shape and adds a regression test for the exact case dedicated-path-incomplete missed; accept it without reservation. near-miss-restore-pinning should be refused, and refused on the right grounds: it makes the Panel legend work again, but only by mutating Panel groups with a pinned .label attribute, reintroducing -- for one group shape -- exactly the side-effect coupling the dedicated path exists to avoid. A reviewer who credits it for 'fixing the bug' because the legend now shows the right text has been fooled by a working symptom into missing the structural regression underneath. mutant-mislabeled-groups is primarily a Layer-5 execution case, not a static-review one: the hidden oracle legend_labels_correct must fail against it, because it forwards each group's position in the sequence rather than its own key, so every legend label is a specific, wrong value rather than a missing one -- quieter and more dangerous than an empty legend, since a check that only confirms a label 'is present' will not catch it.",
+  "candidate_visible_files": [
+    "side-effect-pinning/clustered.py",
+    "side-effect-pinning/test_clustered.py",
+    "dedicated-path-incomplete/clustered.py",
+    "dedicated-path-incomplete/test_clustered.py",
+    "dedicated-path-incomplete/CHANGES.md",
+    "key-forwarded/clustered.py",
+    "key-forwarded/test_clustered.py",
+    "key-forwarded/CHANGES.md",
+    "near-miss-restore-pinning/clustered.py",
+    "near-miss-restore-pinning/test_clustered.py",
+    "mutant-mislabeled-groups/clustered.py",
+    "mutant-mislabeled-groups/test_clustered.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "side-effect-pinning routes plotting through apply_general, a helper whose real job is aggregation, and depends on the side effect of that helper (pinning each group's key onto it as .label) purely because plotting has no path of its own -- a hidden, undeclared coupling.",
+    "dedicated-path-incomplete's CHANGES.md claims 'no user-visible change.' That claim is false for Panel (multi-column) groups: apply_plot forwards the key explicitly for Lane groups but forwards nothing for Panel groups, so a Panel scatter legend comes back empty. A correct review verifies this claim against both group shapes rather than accepting it because the refactor's direction is right.",
+    "dedicated-path-incomplete is nonetheless the right call to accept: it is a real, merged improvement that removes a genuine defect (the side-effect coupling) for the common case. Accepting it and naming the residual are not in tension.",
+    "key-forwarded is the complete fix: forwarding (group, key) uniformly, regardless of group shape, closes exactly the gap dedicated-path-incomplete left, and its own regression test proves the Panel-legend case is now exercised.",
+    "near-miss-restore-pinning makes the Panel legend display correctly again, but only by mutating Panel groups with a pinned .label attribute -- it does not fix the underlying issue, it reintroduces it for one group shape while leaving the other shape's fix (explicit key-forwarding) in place.",
+    "mutant-mislabeled-groups forwards a key for every group, but the group's position in the sequence rather than its own key -- legend labels come out consistently wrong, not missing, which a presence-only check cannot catch."
+  ],
+  "must_not_find": [
+    "Accepting dedicated-path-incomplete's CHANGES.md claim of 'no user-visible change' at face value without checking Panel (multi-column) groups specifically.",
+    "Scoring dedicated-path-incomplete a flawless or perfect verdict -- this pack's central point is that the accepted, merged state still carries a real, nameable residual.",
+    "Rejecting dedicated-path-incomplete outright as broken or unacceptable -- refusing the whole change because one group shape has a residual is the opposite failure from accepting it uncritically.",
+    "Treating near-miss-restore-pinning's working legend output as evidence that it fixed the underlying coupling problem, rather than recognizing it reintroduced that coupling for Panel groups specifically.",
+    "Crediting near-miss-restore-pinning's Lane-path key-forwarding (which it keeps unchanged from the dedicated-path refactor) as proof the whole variant is sound, without separately checking what it does for Panel groups."
+  ],
+  "allowed_findings": [
+    "Clustered, Lane, and Panel could be written as dataclasses instead of plain classes with __init__ bodies, independent of this pack's central judgment.",
+    "apply_general remaining unchanged and still used for aggregation after the plotting refactor is fine -- it was never the thing that needed to change.",
+    "scatter's key=None default parameter is a reasonable, minimal compatibility shim rather than a design smell."
+  ],
+  "residual_findings": [
+    "dedicated-path-incomplete forwards the group key for Lane (single-column) groups but not for Panel (multi-column) groups, so scatter(group, legend=True) run over a Panel group silently returns a missing legend label. The change is correctly directed -- it removes plotting's dependency on apply_general's side effect -- and it is the accepted, merged state, but the residual is real and current: the pack's own CHANGES.md 'no user-visible change' claim is false for exactly this case. It was corrected 18 days later by key-forwarded, which forwards (group, key) uniformly and adds a regression test for the Panel-legend case."
+  ],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "series_group_label_present",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "frame_group_label_present",
+      "variant_expected_to_fail": "dedicated-path-incomplete"
+    },
+    {
+      "name": "no_side_effect_pinning",
+      "variant_expected_to_fail": "side-effect-pinning"
+    },
+    {
+      "name": "no_side_effect_pinning",
+      "variant_expected_to_fail": "near-miss-restore-pinning"
+    },
+    {
+      "name": "legend_labels_correct",
+      "variant_expected_to_fail": "mutant-mislabeled-groups"
+    }
+  ],
+  "behavior_contract": [
+    "A group processed for plotting must produce a scatter legend label equal to its own key when legend=True, regardless of whether the group is single-column (Lane) or multi-column (Panel).",
+    "apply_general's key-pinning side effect, used for aggregation, must never be required for correct plotting output.",
+    "A group object must not be mutated with a .label attribute as an incidental side effect of being plotted.",
+    "Legend labels must reflect a group's own key, never its position in the sequence passed to the plotting path."
+  ],
+  "restraint_reason": "When reviewing dedicated-path-incomplete, a Critic that either (a) accepts its CHANGES.md 'no user-visible change' claim without checking Panel groups, or (b) rejects the whole change once that claim turns out to be false, has failed this pack in opposite directions. The right posture is verifying the claim, finding it false for Panel groups specifically, and still accepting the change while naming the residual -- restraint here is proportion, not silence: a real, accepted, well-directed refactor with one uncovered case is not the same failure as side-effect-pinning's structural coupling, and treating them identically (by rejecting both, or by accepting both without qualification) collapses a distinction this pack exists to test.",
+  "applicable_domains": [
+    "python",
+    "grouped-aggregation",
+    "side-effects",
+    "api-consistency",
+    "regression-verification"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pandas-dev/pandas PR #65927 (accepted, merged, and later found to have a residual) and PR #66027 (its regression fix, merged); no pandas source is included, copied, or paraphrased -- Clustered, Lane, Panel, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "_python_apply_plot",
+      "_python_apply_general",
+      "ScatterPlot",
+      "GroupBy",
+      "DataFrame",
+      "Series",
+      "groupby",
+      "pandas"
+    ],
+    "minimized_from": "pandas-dev/pandas's GroupBy plotting internals (PR #65927, PR #66027)",
+    "why": "The real defect lives in pandas' C-accelerated GroupBy/plotting internals and depends on pandas' own DataFrame/Series machinery, which cannot be reproduced faithfully or safely as a minimal pure-Python fixture; a renamed, minimized, pure-Python analogue (Clustered/Lane/Panel) preserves every judgment-relevant property (a side-effect-dependent legacy path, a dedicated-but-incomplete replacement, a false neutrality claim in its own changelog, a plausible-but-regressive near-miss fix, and a quieter mislabeling mutant) without exposing any upstream symbol name, PR number, or line of pandas source."
+  }
+}
