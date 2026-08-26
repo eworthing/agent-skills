@@ -36,6 +36,7 @@ here proposes loop-path prose.
 - [The proposal, validated](#the-proposal-validated)
 - [Ranked source register](#ranked-source-register)
 - [Per-source fixture plans](#per-source-fixture-plans)
+- [Python track — second language](#python-track--second-language)
 - [Mapping to the existing eval layers](#mapping-to-the-existing-eval-layers)
 - [Relationship to the closed detection programme — read before building](#relationship-to-the-closed-detection-programme--read-before-building)
 - [Benchmark methodology borrowings](#benchmark-methodology-borrowings)
@@ -529,6 +530,145 @@ transaction correctness is DD-04's domain, measured legible 5/5 on the hardest
 available sub-domain (transaction-boundary ownership). Do not build until the first
 eight packs have reported.
 
+## Python track — second language
+
+Everything above is Swift. All 12 ranked sources are Apple-ecosystem, and nothing in this
+document said so, because being monolingual was never a decision anyone made. The owner
+directed adding Python as a **full parallel track** — a first-class language in the
+register, not a single control pack — **sequenced after the Swift triangle** (packs 1–3
+of [the adopted build order](#the-first-fixture-packs-adapted)).
+
+### What a second language buys that a fourth Swift pack does not
+
+`references/lens-apple.md` is **252 lines** of Swift-specific review guidance.
+`references/lens-generic.md` is **85 lines** shared across Rust, Go, Python, Node, Java,
+Kotlin and Ruby, of which roughly two bullets are Python-specific. Every measurement this
+project has ever taken was Swift, under the deep lens.
+
+So the Python track is the first chance to separate **"the skill is good"** from **"the
+Apple lens is good."** That is a real, never-measured question and it rides along free.
+
+It is also a confound: a Python pack that underperforms could be the model, the language,
+*or* the thin lens, and nothing in the pack distinguishes them. **Therefore the
+bare-rubric control is not optional on the Python track** — it is the only way to
+attribute a gap. Where the [open decisions](#open-owner-decisions) leave the bare-rubric
+arm optional for the Swift packs, it is required here, and a lens-attributable gap is a
+finding about `lens-generic.md`, not about Python.
+
+### Harvesting rules, learned while building this register
+
+- **pandas `REF:` is a systematic harvest.** pandas prefixes pure-refactor PR titles with
+  `REF:` and labels them `Refactor`. That turns "find expert-reviewed behavior-preserving
+  refactors" into a query. The Swift corpus has no equivalent and was assembled by
+  archaeology. Prefer repos with an explicit refactor convention.
+- **Exclusion rule: no lint-shaped cleanups.** Do not seed from mechanical sweeps
+  (`dict.update({k: v})` → assignment, unused-import removal). They are real refactors and
+  they are the wrong lesson: they train the Critic to chase surface idioms. This project
+  already measured that failure — advisory evals #35–#48 produced **zero recall lift**
+  because the seeded defects were too legible. Fixtures must separate judgment, not
+  eyesight.
+- **`is:unmerged` is unreliable on externally-reviewed repos.** SQLAlchemy PRs
+  #12534/#12535/#12537/#12538 all read `merged=NO` on GitHub and look like a cluster of
+  rejected drive-by refactors. They are not: SQLAlchemy reviews on Gerrit and mirrors to
+  GitHub, so PRs close as "unmerged" even when the change lands (#12537's final comment is
+  *"Gerrit review … has been **merged**"*). Any rejected-PR harvesting must exclude repos
+  with external review systems, or the restraint corpus fills with accepted work.
+
+### Ranked Python source register
+
+Every row verified against upstream with `gh` on 2026-08-25 — state, author, merge date,
+and diff size all checked, not taken from the proposal that suggested them.
+
+| # | Source | Verified state | Why it is unusually valuable | Fit |
+| --- | --- | --- | --- | --- |
+| P1 | python/cpython #126408 + #132351 (`gh-125038` / `gh-127682`) | #126408 **closed unmerged** 2025-05-25 (efimov-mikhail, **+530/−318 across 17 files**, adds a `CHECK_ITERABLE` bytecode); #132351 **merged** 2025-04-11 (markshannon, core dev, **+27/−15 across 5 files** — of which the production change is `Python/codegen.c` **+1/−4**, the rest being tests and a NEWS entry) | The **same structural goal**, pursued at ~20× the size and rejected, then achieved in a one-line production edit and merged. Core-dev sobolevn's rejection is on the record: *"changing where the error happens is not safe in terms of backward compatibility."* The only case in either language where RED and GREEN are the same edit | Restraint spine — Layer 2 twins + Layer 3 case; recall cannot solve it |
+| P2 | pandas-dev/pandas #65927 + #66027 | #65927 **merged** 2026-06-27 (jbrockmendel, +36/−3), labeled `Refactor`, body: *"This is a pure refactor (no behavior change)"*; #66027 **merged** 2026-07-15 (Saihritesh, +49/−5) | A core dev's behavior-neutrality **claim in its own PR body** that was false. #66027 opens: *"Following the `_python_apply_plot` refactor (#65927) … grouped `DataFrame` objects are no longer given a `.name` attribute"* — silently broke `GroupBy.plot.scatter(legend=True)`, corrected 18 days later with a regression test | Imperfect gold — does the reviewer *verify* a neutrality claim or *accept* it? Maps onto Reality/Honesty/Regression |
+| P3 | pandas-dev/pandas #66091 | **Merged** 2026-06-30 (jbrockmendel, +26/−3, 1 file), labeled `Refactor`,`Reshaping` | `get_dummies` stops depending on `select_dtypes`' internal `ArrowDtype.numpy_dtype` unwrap; expresses the intended column set as a local `_is_encodable` predicate. Equivalence claimed across numpy, masked, Arrow string/dictionary, categorical, object | Canonical pure refactor — dtype truth table (Layer 2) |
+| P4 | pandas-dev/pandas #66112 | **Merged** 2026-07-08 (jbrockmendel, +64/−30, 1 file), labeled `Refactor`; body: *"Behavior-neutral refactor… No user-visible change."* | Per-dtype predicate callables combined with `any`, replacing one frozenset-matched `dtype_predicate` — explicit groundwork for planned behavior-*changing* follow-ups | Predicate-equivalence pair + error/warning preservation |
+| P5 | python/cpython #136815 | **Merged** 2025-07-22 (anistark, +19/−15, 9 files) | Normalizes `is_emscripten` / `is_wasi` under a shared `is_wasm32` flag — the Python analogue of Swift Collections #298's platform-conditional near-miss, where "these two checks are the same" is true in most cells and false in one | Platform truth table — restraint twin |
+| P6 | pytest-dev/pytest #8913 | **Merged** 2021-08-01 (nicoddemus, +298/−173, 9 files) | String/`scopenum` scope handling replaced by a `Scope` enum while `FixtureRequest.scope` stays a `str` for public compatibility; the API trap is documented in the PR | Representation quality with a public/private boundary trap |
+| P7 | pallets/werkzeug #2517 | **Merged** 2022-10-13 (TomiBelan, +42/−67, 2 files) | Three distinct socket `ResourceWarning` cases; PR argues why a naive `detach()` is *less* elegant and why consolidating through `make_server()` removes duplication without changing behavior | Resource-lifecycle refactor — warning-emission oracle |
+| P8 | pydantic/pydantic #10725 | **Merged** 2024-11-08 (Viicos, +452/−268, 15 files) | Centralizes runtime typing checks across `typing` vs `typing_extensions`, `Annotated[ClassVar]`, stringified annotations; PR notes bugs fixed along the way | Runtime-typing zoo (Layer 2) |
+| P9 | django/django `tests/auth_tests` | Verified at `main` | Backend, forms, decorator, handler and basic-auth surfaces — the Python counterpart to the Vapor auth material, drawn from the test surface rather than one PR | Security/policy mutants, four mini-packs |
+
+### Python build order and what carries the signal
+
+**P1–P4 are the Python triangle** and carry nearly all the judgment signal:
+*refuse fake simplicity* (P1), *verify the neutrality claim* (P2), *refactor when it is
+right* (P3, P4). Build P1 first.
+
+P6 and P8 are the two largest diffs on the list (+298/−173 and +452/−268). Big diffs make
+diffuse oracles and expensive construction — the Swift track's best value came from its
+*smallest* pack (#298). They sort last and are the first candidates to cut if the track is
+trimmed.
+
+### Why P1 leads
+
+Every near-miss the Python proposal originally offered was **synthetic** — authored by us,
+then graded by us. The Swift track's cheapest and highest-signal pack, #298, is a
+*maintainer-rejected* PR: a real human near-miss with the reasoning on the record. P1
+restores that property and sharpens it, because RED and GREEN are the same edit:
+
+- **RED** — #126408: the "redundant" `GET_ITER` removed via a new bytecode instruction,
+  +530/−318 across 17 files, rejected. The redundancy was real; removing it that way was
+  still wrong.
+- **GREEN** — #132351: the same removal at +27/−15 across 5 files, of which the production
+  change is a single `codegen.c` hunk (`+1/−4`) and the remainder is tests plus a NEWS
+  entry — justified as restoring pre-3.12 behavior and making genexprs consistent with all
+  other generators.
+- **Test-oracle trap** — #132351 deletes a doctest from `Lib/test/test_genexps.py` that
+  reads *"Verify that the outermost for-expression makes an immediate check for
+  iterability"*, asserting `(i for i in 6)` raises `TypeError` at creation. The suite
+  actively certified the wrong behavior, so **"tests pass" was worthless as an oracle** —
+  the regression was found externally, by Nuitka's author using CPython as ground truth
+  (issue #127682).
+- **Mutant floor** — the original `gh-125038` crash repro
+  (`g.gi_frame.f_locals['.0'] = range(20); list(g)`) must stay fixed. Naive guard removal
+  **segfaults**: a hard, unmissable oracle no grader can argue with.
+
+### Schema and validator
+
+`contest-refactor/scripts/validate-gold-corpus.py` (shipped `e357a80`) is
+**language-neutral** — it checks manifest shape, `variant_roles`, and hidden-mode
+provenance leaks, never source language. **A Python pack needs no validator change to be
+valid.**
+
+If per-language axis fields (`python_axes`, `hidden_oracles`) are adopted, they are a
+schema change to that validator **and** `_validate_gold_corpus_selftest.py`, done RED-first
+as its own step *before* any pack is authored — so no pack is ever written against a schema
+the validator rejects. Note the shipped schema already requires `variant_roles` over the
+closed set `red`/`green`/`alternate_green`/`near_miss`/`mutant`; new fields must compose
+with it rather than duplicate it.
+
+**The leak check binds harder here.** Hidden-mode candidate-visible files must not carry
+original PR numbers, SHAs, or upstream symbol names. `GET_ITER`,
+`codegen_comprehension_iter`, `_python_apply_plot` and `select_dtypes` are exactly the
+needles check 7 hunts, so every Python pack needs renaming before it goes candidate-visible.
+
+### Cost
+
+At this document's ~500k-per-pack anchor, nine Python packs is **~4.5M** — three times the
+Swift tranche, and a second corpus rather than a second language. Two things should pull
+the real figure down, and both are assumptions until measured:
+
+- Python oracles are pure-Python asserts. No Swift toolchain, no SDK/platform matrix, no
+  fixture-regeneration branch — the largest per-pack cost on the Swift side.
+- P1–P4 come from two repos with one build story each.
+
+**Build P1 and price the rest off its actuals.** If P1 lands materially under 500k the
+track is cheaper than the Swift tranche despite having more packs; if it does not, cut to
+P1–P4 and re-decide.
+
+### What this track does *not* buy
+
+Adding Python here **does not close the G17 promotion bar's second-language condition.**
+That bar counts **adjudicated datapoints from live production runs against target repos**,
+not eval fixtures — its live tally is 4/5 applicable runs, 0/2 restraint cases, and 1 of 2
+required languages. Fixtures and run-adjudications are different evidence reaching the bar
+through different mechanisms. Closing G17's language gap needs a **Python target repo in an
+instrumented production run**, which is separate, much cheaper, and worth scheduling on its
+own.
+
 ## Mapping to the existing eval layers
 
 The feedback's layer table, corrected to this suite's actual six layers
@@ -804,6 +944,14 @@ simplicity (#298), know what behavior must survive (#2486)* — they upgrade exi
 pairs (cheapest integration), and pack 2 is nearly free given #13/#15 exist as the
 template. Every pack after that justifies itself against those three.
 
+**Then the Python track, P1–P9** — see [Python track — second
+language](#python-track--second-language) for its register, rationale, and cost. It is
+sequenced deliberately after the Swift triangle so the harness is proven on Swift before a
+second language is added, and its own build starts with **P1**
+(`cpython-genexpr-iterability`), whose actuals price the rest of that track. Note the
+Python triangle is P1–P4, not P1–P3: Python contributes a fourth shape the Swift set has no
+instance of — *a pure-refactor claim, made by an expert in the PR body, that was false*.
+
 **Then, once — not per pack.** After the hidden baselines exist for the packs that got
 built, the `provenance_labeled` batch calibration pass runs as its own step (see the
 [run-mode policy](#corpus-structure-and-provenance-schema)). It is a step in this plan,
@@ -821,7 +969,16 @@ remains open:
 
 - **Spend.** ~500k tokens per pack-order-of-magnitude; first three packs ≈ 1.5M.
   Same approval shape as a detection-programme measurement run, but aimed at fixture
-  construction + control runs rather than prose lift.
+  construction + control runs rather than prose lift. **The cost objection itself is
+  settled (owner, 2026-08-25): 1.5M is small against a production run at ~20M+ resident
+  context, so spend is not the binding constraint.** What remains open is the Python
+  track's ~4.5M at the same anchor — decided by measuring P1 and pricing the rest off its
+  actuals, not by estimate; see [Cost](#cost).
+- **Bare-rubric control — settled for Python, still open for Swift.** The control is
+  **required** on the Python track, because a thin shared `lens-generic.md` (85 lines
+  across seven languages) versus a deep `lens-apple.md` (252 lines) means an unattributed
+  gap could be the model, the language, or the lens. It stays optional on the Swift packs
+  as described below.
 - **Closure-hardening runs (packs 3 and the Vapor mini-packs).** Run the bare-rubric
   control on the real-world fixtures for the parked DD-01/DD-03/DD-05 classes? The
   parks are reversible by design; this is the cheapest possible way to stress them,
