@@ -1,0 +1,105 @@
+{
+  "source_repo": "python/cpython",
+  "source_pr": 136815,
+  "base_sha": "d6cf05b5d00abbfdf9008d646c14c6ef7c83b61a",
+  "accepted_sha": "aafb1435d803c68ea3bbd2748f1e141c9deaadb0",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "platform_predicate_consolidation_restraint",
+  "variant_roles": {
+    "scattered-disjunction": "red",
+    "shared-flag": "green",
+    "near-miss-collapse-all": "near_miss",
+    "mutant-merged-reasons": "mutant"
+  },
+  "expected_judgment": "scattered-disjunction should be accepted as a correct, if repetitive, starting state -- it is not itself a defect, just the pre-refactor shape the pack is built around: the two-platform disjunction is spelled out inline at every site that needs it, including the three that apply identically to both platforms for the same underlying reason. shared-flag should be ACCEPTED, and accepted without asking for more: it introduces a named predicate for exactly the sites where both platforms share a reason, consolidates those three sites, and leaves every platform-specific guard -- including the two tests carrying one guard per platform that both happen to skip, for different underlying reasons -- exactly as it was. A Critic that treats the surviving single-platform guards, or the surviving two-reason pairs, as unfinished work, and proposes collapsing them into the new shared predicate, is over-flagging: those sites encode real distinctions the shared predicate cannot express. near-miss-collapse-all should be refused: it looks like the more consistent, more thorough version of the same refactor -- every guard that mentions either platform now uses the shared predicate -- and it silently makes two tests that used to run on one of the two platforms skip there too, because a bare 'both are sandboxed platforms anyway' predicate cannot express 'this specific limitation belongs to exactly one of them.' The skip reason text is left unchanged, which is part of what makes it easy to miss: a gearshift run now skips a test citing a reason that only makes sense on tideline, and vice versa. mutant-merged-reasons is primarily a Layer-5 execution case: its skip conditions are identical to shared-flag's -- nothing starts or stops running on any platform -- but the two tests whose separate guards fire for different underlying reasons now report one generic, identical reason on both platforms, destroying the diagnostic distinction between why gearshift skips a check and why tideline does, even though the two guards were never behaviorally redundant.",
+  "candidate_visible_files": [
+    "scattered-disjunction/platsupport.py",
+    "scattered-disjunction/test_platform_guards.py",
+    "shared-flag/platsupport.py",
+    "shared-flag/test_platform_guards.py",
+    "shared-flag/CHANGES.md",
+    "near-miss-collapse-all/platsupport.py",
+    "near-miss-collapse-all/test_platform_guards.py",
+    "mutant-merged-reasons/platsupport.py",
+    "mutant-merged-reasons/test_platform_guards.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "shared-flag consolidates exactly the three sites where both platforms skip for the same underlying reason into a single named predicate (is_driftplane), and leaves the other five guarded sites untouched -- verify this against scattered-disjunction rather than assuming a refactor touching this many call sites left nothing out.",
+    "The single-platform guards (two tideline-only, one gearshift-only) encode a real difference between the platforms, not an oversight: collapsing any of them into the shared predicate would make a test skip on a platform where it should still run.",
+    "The two tests carrying one guard per platform (test_unix_socket_creation, test_bare_thread_spawn) already skip on both platforms in shared-flag -- collapsing their two guards into the shared predicate would not change which tests skip, only whether the reported reason still says why.",
+    "near-miss-collapse-all's over-skip is silent: it produces no error and no failing test -- the only way to see it is to check, per platform, whether a given test that used to run there still does.",
+    "mutant-merged-reasons' skip set matches shared-flag's exactly on every platform; the defect is only visible by comparing the *reason* a skip reports, not whether a test runs."
+  ],
+  "must_not_find": [
+    "Proposing to fold the remaining single-platform or two-reason guards into the shared predicate as a natural next step or a missed opportunity in shared-flag.",
+    "Treating the duplication left in shared-flag -- the single-platform guards, or the two tests with one guard per platform -- as an incomplete refactor that should have gone further.",
+    "Crediting near-miss-collapse-all for being more consistent or more thorough than shared-flag without checking whether any test's skip/run outcome changed on either platform.",
+    "Accepting mutant-merged-reasons' generic skip reason as a harmless simplification because the skip decision itself is unaffected."
+  ],
+  "allowed_findings": [
+    "shared-flag is a small, low-value change on its own -- three call sites collapsed into a predicate lookup -- and observing that the change is modest is a fair, accurate reading, not a defect.",
+    "The skip-guard stacking order (which of two guards on the same test wins the reported reason when both would match) is undocumented; a candidate could reasonably suggest making it explicit, independent of this pack's central judgment.",
+    "collect_skips could return every matching guard per test instead of only the first, independent of this pack's central judgment."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "skip_set_matches_baseline",
+      "variant_expected_to_fail": "near-miss-collapse-all"
+    },
+    {
+      "name": "platform_specific_tests_still_run",
+      "variant_expected_to_fail": "near-miss-collapse-all"
+    },
+    {
+      "name": "skip_reasons_preserved",
+      "variant_expected_to_fail": "mutant-merged-reasons"
+    },
+    {
+      "name": "non_wasm_platform_unaffected",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A test whose reason is shared between both sandboxed platforms for the same underlying cause must skip on both, with that reason, regardless of which predicate spelling implements the check.",
+    "A test guarded by a single-platform condition must run, not skip, on the other sandboxed platform.",
+    "A test guarded by two platform-specific conditions that happen to both fire must skip on both platforms, but the reported reason on each platform must match that platform's own guard, never the other platform's or a generic merge of both.",
+    "An ordinary, non-sandboxed platform must never trigger any of these skips."
+  ],
+  "restraint_reason": "A Critic reviewing shared-flag against scattered-disjunction sees a refactor that only touches three of eight guarded sites, and will be tempted to ask why it didn't go further -- the five untouched sites all mention the same two platform names the new predicate is named after, so they look like leftover duplication rather than a deliberate boundary. They are not: three of those five sites are single-platform conditions where the other platform genuinely does not share the limitation, and two are guards that reach the same skip outcome on both platforms for different underlying reasons, sitting adjacent on the same test. Recommending that any of these be folded into the shared predicate is not a stronger version of the accepted refactor, it is a silent behavior change -- either a test stops running somewhere it should still run (the single-platform guards), or a skip report stops saying why (the two-reason guards). 'The refactor didn't go far enough' is exactly the wrong read of code that was already at its correct stopping point; restraint here means recognizing that some remaining duplication is the whole point, not a residue of unfinished work.",
+  "applicable_domains": [
+    "python",
+    "test-infrastructure",
+    "platform-detection",
+    "refactoring-restraint",
+    "silent-regression"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of python/cpython PR #136815 (accepted, merged); no CPython source is included, copied, or paraphrased -- platsupport, GEARSHIFT/TIDELINE/MAINLAND, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "is_emscripten",
+      "is_wasi",
+      "is_wasm32",
+      "test.support",
+      "pythoninfo",
+      "Emscripten",
+      "WASI",
+      "wasm32",
+      "CPython",
+      "test_pathlib"
+    ],
+    "minimized_from": "python/cpython's test.support platform-flag consolidation (PR #136815) and the surviving per-platform skip guards in Lib/test/test_pathlib/test_pathlib.py at the merge commit",
+    "why": "The real change touches CPython's own test-support module and a stdlib test file that depends on CPython's platform-detection internals, which cannot be reproduced faithfully as a minimal pure-Python fixture without the interpreter itself; a renamed, minimized, pure-Python analogue (platsupport, with gearshift/tideline standing in for the two sandboxed runtime platforms and mainland for an ordinary one) preserves every judgment-relevant property (a real shared-reason consolidation, a real single-platform-only guard, a real same-outcome-different-reason guard pair, a silent over-skip near-miss, and a reason-destroying mutant) without exposing any upstream symbol name, PR number, or line of CPython source."
+  }
+}
