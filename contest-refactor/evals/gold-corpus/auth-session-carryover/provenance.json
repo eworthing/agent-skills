@@ -1,0 +1,128 @@
+{
+  "source_repo": "django/django",
+  "accepted_sha": "0b40210e4808937a7c0922e8b7502bff4752faa3",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "rekey_vs_discard_specificity",
+  "variant_roles": {
+    "no-rekey-sign-in": "red",
+    "rekey-or-discard-sign-in": "green",
+    "near-miss-always-rekey": "near_miss",
+    "mutant-identity-only-check": "mutant",
+    "mutant-always-discard": "mutant"
+  },
+  "expected_judgment": "no-rekey-sign-in should be accepted as a correct, if naive, starting state -- it is not itself a defect, just the pre-refactor shape the pack is built around: it writes the incoming principal's id and credential stamp into whatever session object it is given, and never touches the session's token or its data. Noting that this leaves the session token fixed across a sign-in (a fixation risk) and lets one principal's session data carry into a different principal's session is fair, motivating context for the refactor; it is not a required finding, since closing exactly those two gaps is what rekey-or-discard-sign-in then does. rekey-or-discard-sign-in should be ACCEPTED without reservation: it rotates the session's token on a first sign-in while retaining whatever the session already held -- a documented, deliberate contract, not an oversight -- and discards the session outright (new token, empty data) when the incoming principal differs from the one already signed in, or when the same principal's credential stamp no longer matches what the session has on file. near-miss-always-rekey should be refused: it looks like a harmless simplification of the same idea -- always rotate the token, skip the conditional entirely -- and it genuinely does defeat session fixation in every case, and it genuinely does preserve the anonymous-session retention contract. But rotating a token never clears a session's data; only discarding does, and discarding is exactly the operation this variant drops. Signing in as a second principal, or as the same principal after a credential change, over an existing session now carries the first principal's data forward into the second's session, silently, with nothing raising. mutant-identity-only-check is primarily a Layer-5 execution case: its handling of a first sign-in and of a different-principal sign-in is byte-identical to rekey-or-discard-sign-in, but it only compares principal identity, never the stored credential stamp against the incoming one, so a principal whose credentials changed elsewhere -- same identity, stale stamp -- keeps their old session, data and all, when it should have been discarded. mutant-always-discard is the mirror-image Layer-5 case: it looks, if anything, more cautious than rekey-or-discard-sign-in -- it discards the session on every single sign-in, with no condition at all, which trivially defeats fixation and trivially prevents any cross-principal or stale-credential carryover. It fails the pack's other, equally load-bearing contract: discarding unconditionally also wipes an anonymous session's data on a principal's very first sign-in, breaking the documented retention promise that data set before authentication survives it.",
+  "candidate_visible_files": [
+    "no-rekey-sign-in/session.py",
+    "no-rekey-sign-in/principal.py",
+    "no-rekey-sign-in/sign_in.py",
+    "no-rekey-sign-in/test_sign_in.py",
+    "rekey-or-discard-sign-in/session.py",
+    "rekey-or-discard-sign-in/principal.py",
+    "rekey-or-discard-sign-in/sign_in.py",
+    "rekey-or-discard-sign-in/test_sign_in.py",
+    "rekey-or-discard-sign-in/CHANGES.md",
+    "near-miss-always-rekey/session.py",
+    "near-miss-always-rekey/principal.py",
+    "near-miss-always-rekey/sign_in.py",
+    "near-miss-always-rekey/test_sign_in.py",
+    "mutant-identity-only-check/session.py",
+    "mutant-identity-only-check/principal.py",
+    "mutant-identity-only-check/sign_in.py",
+    "mutant-identity-only-check/test_sign_in.py",
+    "mutant-always-discard/session.py",
+    "mutant-always-discard/principal.py",
+    "mutant-always-discard/sign_in.py",
+    "mutant-always-discard/test_sign_in.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "rekey-or-discard-sign-in's anonymous-session retention is a documented, deliberate contract -- verify it by actually signing a principal in over a session that already holds data, not by assuming a 'rotate the token' refactor implies clearing everything.",
+    "near-miss-always-rekey's break is silent: signing in a second principal (or the same principal after a credential change) over an existing session carries the first principal's data forward, with no exception and no failing assertion -- because rotating a token never clears a session's data, and discarding is the operation this variant never calls.",
+    "mutant-identity-only-check's defect only shows up when the same principal's credential stamp no longer matches what the session has on file; every different-principal case behaves identically to rekey-or-discard-sign-in, so a check that never constructs a stamp-mismatch scenario will not catch it.",
+    "The anonymous-session-retention contract and the cross-principal-discard contract are two separate, independently-verifiable behaviors -- a fixture or reviewer that only checks one direction (retention, or non-carryover) cannot distinguish rekey-or-discard-sign-in from either near-miss-always-rekey or mutant-always-discard, each of which satisfies exactly one direction and silently fails the other.",
+    "mutant-always-discard's defect is the mirror image of near-miss-always-rekey's: it discards unconditionally, so it trivially passes every cross-principal and credential-change check, and fails only the anonymous-retention contract -- clearing an anonymous session's data on a principal's very first sign-in."
+  ],
+  "must_not_find": [
+    "Crediting near-miss-always-rekey for being 'simpler' or for uniformly defeating session fixation without checking whether a second principal's sign-in still carries the first principal's session data forward.",
+    "Treating rekey-or-discard-sign-in's anonymous-data retention as an accidental side effect or a bug, rather than the documented, deliberate contract it is.",
+    "Accepting mutant-identity-only-check because every different-principal case behaves correctly -- the defect is specific to a same-identity, changed-credential scenario and invisible without testing it directly.",
+    "Proposing that rekey-or-discard-sign-in should discard the session on every sign-in 'to be safe,' which would silently break the anonymous-session retention contract in the opposite direction.",
+    "Crediting mutant-always-discard for looking more cautious or more secure than rekey-or-discard-sign-in because it discards unconditionally -- unconditional discarding is exactly what breaks the anonymous-retention contract."
+  ],
+  "allowed_findings": [
+    "Session token generation using a simple incrementing counter rather than a cryptographically unpredictable value is a fixture simplification, independent of this pack's central judgment.",
+    "sign_in taking a bare Principal object rather than looking one up by credentials itself is a reasonable separation of concerns, not a design smell.",
+    "hmac.compare_digest requiring two strings of the same type is a reasonable constraint on how a credential stamp is represented, not something needing a softer fallback."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "cross_principal_data_is_not_carried_over",
+      "variant_expected_to_fail": "no-rekey-sign-in"
+    },
+    {
+      "name": "cross_principal_data_is_not_carried_over",
+      "variant_expected_to_fail": "near-miss-always-rekey"
+    },
+    {
+      "name": "anonymous_data_is_retained_on_first_sign_in",
+      "variant_expected_to_fail": "mutant-always-discard"
+    },
+    {
+      "name": "token_changes_when_it_must",
+      "variant_expected_to_fail": "no-rekey-sign-in"
+    },
+    {
+      "name": "credential_change_invalidates_session",
+      "variant_expected_to_fail": "no-rekey-sign-in"
+    },
+    {
+      "name": "credential_change_invalidates_session",
+      "variant_expected_to_fail": "near-miss-always-rekey"
+    },
+    {
+      "name": "credential_change_invalidates_session",
+      "variant_expected_to_fail": "mutant-identity-only-check"
+    }
+  ],
+  "behavior_contract": [
+    "A session with no prior signed-in principal must retain whatever data it already held after a principal signs in, in every variant that claims to preserve anonymous-session state.",
+    "A session's data must never remain reachable after a different principal signs in over it, or after the same principal signs in with a credential stamp that no longer matches what the session has on file.",
+    "A session's token must change on a first sign-in and on any sign-in that discards the session; it must be left alone when the same principal re-authenticates with a matching credential stamp.",
+    "Comparing only principal identity, and never the credential stamp, is a broken refactor even when every different-principal case still looks correct -- a credential change is exactly the case a stamp comparison exists to catch."
+  ],
+  "restraint_reason": "near-miss-always-rekey and rekey-or-discard-sign-in produce identical output for every single-principal scenario and for a first, anonymous-to-signed-in transition -- the only place they diverge is a session changing hands between principals, or a principal's credentials changing out from under an existing session. A Critic that only exercises the common cases -- which is most of what an ordinary test suite covers -- sees two behaviorally indistinguishable, equally simple implementations and has no reason to prefer one. Restraint here means recognizing that 'looks simpler and passes every test I wrote' is not the same claim as 'preserves every contract the original made,' and specifically that a token rotation and a data discard are two different operations that happen to co-occur in the common case, not one operation described two ways -- collapsing them is invisible until the one scenario, cross-principal carryover, that the discard operation was the only thing preventing.",
+  "applicable_domains": [
+    "python",
+    "session-management",
+    "authentication",
+    "security",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of django/django's contrib.auth.login() function, verified at sha 0b40210e4808937a7c0922e8b7502bff4752faa3; no Django source is included, copied, or paraphrased -- Session, Principal, sign_in, and every identifier here are original to this fixture. This pack is drawn from a live repository tree rather than a single pull request, so there is no source_pr to cite."
+  },
+  "contamination": {
+    "renamed": [
+      "django",
+      "Django",
+      "SESSION_KEY",
+      "HASH_SESSION_KEY",
+      "BACKEND_SESSION_KEY",
+      "cycle_key",
+      "get_session_auth_hash",
+      "constant_time_compare",
+      "login"
+    ],
+    "minimized_from": "django.contrib.auth.login()'s session-fixation handling: the SESSION_KEY-presence check, the identity/credential-hash comparison, and the cycle_key()/flush() choice it makes",
+    "why": "The real function lives inside Django's request/session middleware stack and depends on Django's own session backend, user model, and authentication backends, which cannot be reproduced faithfully as a minimal pure-Python fixture without Django itself; a renamed, minimized, pure-Python analogue (Session/Principal/sign_in) preserves the judgment-relevant property -- two different session operations (rotate a token, discard everything) chosen by a two-part condition, where collapsing to one operation is invisible in the common case -- without exposing any upstream symbol name or line of Django source. `hmac.compare_digest` is kept as-is: it is the ordinary stdlib mechanism for a constant-time comparison, not an upstream Django symbol, so it is not treated as a name to rename away from. There is no base_sha for this pack: no-rekey-sign-in is an invented naive strawman built to motivate the refactor, not a real prior commit in django's history, so there is no distinct 'before' state to cite a sha for."
+  }
+}

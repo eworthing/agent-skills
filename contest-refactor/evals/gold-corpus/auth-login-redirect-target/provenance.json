@@ -1,0 +1,127 @@
+{
+  "source_repo": "django/django",
+  "accepted_sha": "0b40210e4808937a7c0922e8b7502bff4752faa3",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "scoped_redirect_target_restraint",
+  "variant_roles": {
+    "bare-relative-target": "red",
+    "scoped-absolute-target": "green",
+    "near-miss-always-relative": "near_miss",
+    "mutant-trusts-forwarded-host": "mutant",
+    "mutant-unstapled-view": "mutant"
+  },
+  "expected_judgment": "bare-relative-target should be accepted as a correct, if lossy, starting state -- it is not itself a defect, just the pre-refactor shape the pack is built around: it always returns the bare request path as the return target, dropping the query string and ignoring the sign-in endpoint's own host entirely. Noting that this loses a principal's in-page state (a filtered view's query string) and would send a principal back to the wrong host if the sign-in endpoint is ever served cross-host is fair, motivating context; it is not a required finding, since closing exactly those two gaps is what scoped-absolute-target then does. scoped-absolute-target should be ACCEPTED without reservation: it defaults to the request's full absolute URL (query string included) as the return target, downgrading to a bare relative path only when the sign-in endpoint shares the request's scheme and host, or declares no scheme/host of its own. The asymmetry is deliberate, not an inconsistency to tidy: collapsing it to always-relative breaks a cross-host sign-in deployment, and collapsing it to always-absolute leaks the calling host into the sign-in endpoint's URL in the overwhelmingly common same-host case. It also staples entry_url and return_param_name onto the wrapped view for gate_scan.py to read later; nothing in gate.py's own function bodies reads them, and that is not evidence they are unused -- gate_scan.py is the consumer, and it lives in this same pack. near-miss-always-relative should be refused: it looks like a strict improvement over bare-relative-target -- same relative-path idea, but the query string is now correctly preserved -- and in every same-host deployment (which is what any locally-run test models by default) it is indistinguishable from scoped-absolute-target. It is wrong only in the cross-host deployment shape: a sign-in endpoint served from a different host gets a bare path back, which resolves against the *sign-in* host rather than the application host the principal actually started on. mutant-trusts-forwarded-host is primarily a Layer-5 execution case: its same-host and cross-host handling are byte-identical to scoped-absolute-target for an ordinary request, but it builds its notion of 'the current URL' from a client-supplied forwarded-host claim instead of the request's own verified host, so a request carrying a forged forwarded-host value can make the function embed that attacker-chosen host as the return target -- steering a principal off-site after they sign in. mutant-unstapled-view is the second, independent Layer-5 case, testing the restraint axis rather than the redirect-target axis: its request.py and redirect_target.py are byte-identical to scoped-absolute-target, but its gate.py never staples entry_url/return_param_name onto the wrapped view at all. Every ordinary redirect behaves identically to scoped-absolute-target; only gate_scan.py's reflective read of those attributes off a gated view breaks, returning None instead of the values the decorator was actually called with. This turns the stapled-attribute restraint case from an asserted claim into a demonstrated one: the consumer gate_scan.py genuinely depends on the staple, and deleting it genuinely breaks that consumer.",
+  "candidate_visible_files": [
+    "bare-relative-target/request.py",
+    "bare-relative-target/gate.py",
+    "bare-relative-target/gate_scan.py",
+    "bare-relative-target/redirect_target.py",
+    "bare-relative-target/test_redirect_target.py",
+    "scoped-absolute-target/request.py",
+    "scoped-absolute-target/gate.py",
+    "scoped-absolute-target/gate_scan.py",
+    "scoped-absolute-target/redirect_target.py",
+    "scoped-absolute-target/test_redirect_target.py",
+    "scoped-absolute-target/CHANGES.md",
+    "near-miss-always-relative/request.py",
+    "near-miss-always-relative/gate.py",
+    "near-miss-always-relative/gate_scan.py",
+    "near-miss-always-relative/redirect_target.py",
+    "near-miss-always-relative/test_redirect_target.py",
+    "mutant-trusts-forwarded-host/request.py",
+    "mutant-trusts-forwarded-host/gate.py",
+    "mutant-trusts-forwarded-host/gate_scan.py",
+    "mutant-trusts-forwarded-host/redirect_target.py",
+    "mutant-trusts-forwarded-host/test_redirect_target.py",
+    "mutant-unstapled-view/request.py",
+    "mutant-unstapled-view/gate.py",
+    "mutant-unstapled-view/gate_scan.py",
+    "mutant-unstapled-view/redirect_target.py",
+    "mutant-unstapled-view/test_redirect_target.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "scoped-absolute-target's same-scheme-and-host downgrade to a relative target is deliberate, not an inconsistency -- verify both directions (a hostless or same-host entry gets relative, a cross-host entry gets absolute) rather than assuming one implies the other.",
+    "The entry_url/return_param_name attributes gate.require_sign_in staples onto a wrapped view are read by gate_scan.py, a separate consumer in this same pack -- look for a reader before concluding they are unused.",
+    "near-miss-always-relative's break is silent and deployment-shape-specific: a cross-host sign-in endpoint gets a bare relative return target, which resolves against the sign-in host rather than the application host the request actually came from. Nothing raises, and a same-host test suite cannot distinguish this variant from scoped-absolute-target.",
+    "mutant-trusts-forwarded-host's defect only shows up when a request's client-claimed forwarded host differs from its real host; an ordinary request without that claim behaves identically to scoped-absolute-target, so a check that never sets a forwarded-host value will not catch it.",
+    "mutant-unstapled-view demonstrates, not just asserts, that gate_scan.py needs the staple: its redirect logic is otherwise unchanged from scoped-absolute-target, and only gate_scan.entry_endpoint_for/return_param_name_for silently start returning None once the staple is removed."
+  ],
+  "must_not_find": [
+    "Proposing to delete the entry_url/return_param_name attributes gate.require_sign_in staples onto the wrapped view because nothing in gate.py itself reads them -- gate_scan.py does, and it ships in this same pack.",
+    "Crediting near-miss-always-relative for being 'simpler' or 'consistently relative' without checking what it produces when the sign-in endpoint is on a different host than the request.",
+    "Treating scoped-absolute-target's same-host-relative / cross-host-absolute split as an inconsistency worth collapsing to one behavior in either direction.",
+    "Accepting mutant-trusts-forwarded-host because ordinary same-host and cross-host requests behave correctly -- the defect is specific to a spoofed forwarded-host claim and invisible without constructing one.",
+    "Accepting mutant-unstapled-view because every redirect it produces looks correct -- the defect is entirely in gate_scan.py's ability to read metadata that is no longer there, invisible to any check that only exercises the redirect itself."
+  ],
+  "allowed_findings": [
+    "Request storing scheme/host/path/query as separate plain attributes rather than a single parsed URL object is a fixture simplification, independent of this pack's central judgment.",
+    "gate.require_sign_in building its redirect response as a formatted string rather than a structured response object is a reasonable fixture stand-in, not a design smell.",
+    "Observing that gate.py's function bodies never read entry_url/return_param_name themselves is fair, accurate comment on its own -- it is not, by itself, a defect claim, since gate_scan.py is the actual reader."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "same_host_target_is_relative_with_query",
+      "variant_expected_to_fail": "bare-relative-target"
+    },
+    {
+      "name": "cross_host_entry_gets_absolute_target",
+      "variant_expected_to_fail": "bare-relative-target"
+    },
+    {
+      "name": "cross_host_entry_gets_absolute_target",
+      "variant_expected_to_fail": "near-miss-always-relative"
+    },
+    {
+      "name": "spoofed_forwarded_host_never_leaks_into_target",
+      "variant_expected_to_fail": "mutant-trusts-forwarded-host"
+    },
+    {
+      "name": "entry_endpoint_reflectable_without_reparsing",
+      "variant_expected_to_fail": "mutant-unstapled-view"
+    }
+  ],
+  "behavior_contract": [
+    "A sign-in endpoint that shares the request's scheme and host, or declares neither, must get a relative return target that includes the request's query string.",
+    "A sign-in endpoint on a different host than the request must get the request's full absolute URL as the return target, never a bare path.",
+    "The return target must never be built from a value the client can claim without validation (a forwarded-host header) in place of the request's own verified host.",
+    "gate_scan.entry_endpoint_for and gate_scan.return_param_name_for, applied to a view wrapped by gate.require_sign_in, must return exactly the entry_url and return_param_name that decorator call was given."
+  ],
+  "restraint_reason": "near-miss-always-relative and scoped-absolute-target produce identical output for every same-host request, which is what any deployment that doesn't run a separate accounts host looks like by default -- the two implementations only diverge when the sign-in endpoint is genuinely on a different host, a shape most local testing never constructs. Separately, scoped-absolute-target staples two attributes onto a wrapped view that nothing in the same function ever reads, which is exactly the shape of a 'dead code, delete it' finding -- except the reader lives in a different file in the same pack. Restraint here has two faces: not treating 'behaves the same in the deployment shape I tested' as proof of equivalence, and not treating 'nothing in this function reads it' as proof nothing reads it at all. Both require checking one file, or constructing one scenario, that a narrow read skips by default.",
+  "applicable_domains": [
+    "python",
+    "web-security",
+    "url-handling",
+    "open-redirect-prevention",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of django/django's contrib.auth.views._redirect_to_login() function and its login_required/LoginRequiredMiddleware stapled-attribute pattern, verified at sha 0b40210e4808937a7c0922e8b7502bff4752faa3; no Django source is included, copied, or paraphrased -- Request, gate, gate_scan, redirect_target_for, and every identifier here are original to this fixture. This pack is drawn from a live repository tree rather than a single pull request, so there is no source_pr to cite."
+  },
+  "contamination": {
+    "renamed": [
+      "django",
+      "Django",
+      "login_required",
+      "user_passes_test",
+      "redirect_to_login",
+      "LoginRequiredMiddleware",
+      "REDIRECT_FIELD_NAME",
+      "LOGIN_URL",
+      "resolve_url",
+      "build_absolute_uri",
+      "get_full_path"
+    ],
+    "minimized_from": "django.contrib.auth.views._redirect_to_login()'s same-scheme-and-host downgrade logic, and the login_required/LoginRequiredMiddleware stapled-attribute pattern it and user_passes_test share",
+    "why": "The real function lives inside Django's request/response and URL-resolution machinery and depends on Django's settings, middleware stack, and URL resolver, which cannot be reproduced faithfully as a minimal pure-Python fixture without Django itself; a renamed, minimized, pure-Python analogue (Request/gate/gate_scan/redirect_target_for) preserves the judgment-relevant properties -- a deliberate scheme-and-host-scoped downgrade that looks like an inconsistency, and a stapled-attribute coupling whose reader lives in a separate file -- without exposing any upstream symbol name or line of Django source. `urllib.parse.urlsplit` and `functools.wraps` are kept as-is: they are the ordinary stdlib mechanisms this fixture's URL comparison and decorator wrapping use, not upstream Django symbols, so they are not treated as names to rename away from. There is no base_sha for this pack: bare-relative-target is an invented naive strawman built to motivate the refactor, not a real prior commit in django's history, so there is no distinct 'before' state to cite a sha for."
+  }
+}

@@ -719,12 +719,21 @@ tokens so it is excluded:
 | P7 `werkzeug-socket-lifecycle` | 289,359 |
 | P8 `pydantic-typing-extra` | 567,802 |
 | P9a+P9b `auth-unusable-password-policy` + `auth-identity-probe-equalization` (one builder, both packs) | 411,692 |
-| **Total / mean (10 packs)** | **2,556,049 / ~256k** |
+| P9c+P9d `auth-session-carryover` + `auth-login-redirect-target` (one builder, both packs, **includes one rework round**) | 593,215 |
+| **Total / mean (12 packs)** | **3,149,264 / ~262k** |
 
-The P9 mini-packs are the first entries built two-to-an-agent, so 411,692 is a pair figure:
-**~206k per mini-pack**, against the ~268k full-pack mean it replaced. That is inside the
-150k–270k range projected for them below, and it is the first projection in this section that
-has survived contact with a measurement.
+The P9 mini-packs are the first entries built two-to-an-agent, so those last two rows are pair
+figures. They also happen to price a rework round, because one pair needed none and the other
+needed one:
+
+- **A+B: ~206k per mini-pack, accepted as delivered.**
+- **C+D: ~297k per mini-pack, including a round that unified `accepted_state` and added a fifth
+  variant to each pack.**
+
+So a review round that sends work back costs roughly **~90k per pack**, about 45% on top. Both
+pairs were built by the same model against near-identical briefs, so that difference is mostly
+the rework rather than pack difficulty. Worth knowing before treating a send-back as free: it is
+not expensive relative to shipping an unverified oracle, but it is not noise either.
 
 **So the honest correction is under 2×, not an order of magnitude.** ~268k against a
 ~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate
@@ -747,21 +756,21 @@ So the verification round is still paying for itself, but at eight packs it is c
 orchestrator mistakes rather than builder ones, which is an argument for keeping it and not for
 trusting the specs more.
 
-**What remains, and why the projection is now a range.** Only P9 is left, and it is four
-mini-packs rather than one entry — the mini-pack rule gives each its own contract, manifest and
-oracle set. They should run cheaper than a full pack (pack A carries only two variants, since a
-pure-restraint fixture must not ship a near-miss), but the section directly below is a record of
-this document projecting confidently from too few points and being wrong twice, so: **4 units at
-somewhere between ~150k and ~270k each, call it 0.6M–1.1M builder, roughly 0.8M–1.5M all-in.**
+**The track is complete, so this is an actual rather than a projection.** P1–P9 shipped as twelve
+pack directories (P9 is four mini-packs), at **3,149,264 measured builder tokens**. The last
+projection this section made — 4 mini-pack units at 150k–270k each — came in at 206k and 297k, so
+it held, which is the first time a number in this section survived contact with the thing it was
+predicting.
 
-Against **2,144,357 builder tokens measured across eight packs**, the full track lands somewhere
-near **3.6M–4.3M all-in.** That is materially above the ~2.7M and ~3.0M this section carried at
-six and seven packs, and no longer clearly under the ~4.5M anchor it was originally written to
-beat. The anchor was never the point — it came from Swift packs needing toolchain and SDK
-matrices this track does not — but the honest summary at eight packs is that the Python track is
-costing about what the Swift tranche was estimated to, not a fraction of it. The measured figure
-is what should be quoted; the earlier "cheaper than Swift" framing was a projection, and it did
-not survive P8.
+Builder spend is not the all-in figure. Adding spec authoring and the verification round at the
+~1.35× ratio recorded above puts the track near **~4.2M all-in**. That is above the ~2.7M and
+~3.0M this section carried at six and seven packs, and it is **not** under the ~4.5M anchor it was
+originally written to beat in any meaningful sense — it is the same number. The anchor was never
+the point (it came from Swift packs needing toolchain and SDK matrices this track does not), but
+the honest summary at completion is that **the Python track cost about what the Swift tranche was
+estimated to cost, not a fraction of it.** The earlier "cheaper than Swift" framing was a
+projection made at four packs and it did not survive the second half of the track. Quote the
+measured figure.
 
 **Upstream diff size predicts pack cost poorly, and the two intermediate readings of this
 data were both overconfident — including one written in this document and corrected below.**
@@ -1014,6 +1023,28 @@ Field semantics the fixtures rely on:
   protection, because there is no corresponding string that could leak. Do not substitute
   `merged` for a non-PR source — none of the other five values describes "this is simply
   what the project ships," and a wrong-but-enumerated value is worse than a new one.
+- **A `hidden_oracles` entry with no `variant_expected_to_fail` means four different things,
+  and only one of them is a defect.** The build rule is that *a check whose RED was never
+  observed is not verified*, so an oracle that cannot fail anywhere in its own pack deserves a
+  look — but do not mechanically "fix" every one of them. Nine of the first twelve packs have
+  at least one, and on inspection they fall into four kinds:
+  - **Control** — a baseline that must hold everywhere, and would fail if a variant were
+    grossly broken in a way that made the other oracles' failures meaningless
+    (`ordinary_credential_round_trips`, `plain_field_always_stored`).
+  - **Discriminator** — reports a classification rather than a verdict. P1's
+    `error_timing_truth_table` returns `construction` or `iteration` per variant; nothing
+    "fails" it, and it is nonetheless the pack's central signal.
+  - **Demonstration** — its *uniformity* is the finding. P1's `stale_test_trap` records that
+    every variant's own bundled suite passes, including the broken ones. That is the entire
+    lesson of the pack, which exists because upstream's suite actively certified the wrong
+    behavior; an oracle that fired here would be missing the point.
+  - **Gap** — guards a claim the pack makes but no variant exercises. This is the only
+    defective kind. Both P9 mini-packs C and D shipped one and both were closed by adding a
+    fifth variant rather than by deleting the oracle, because the claim was worth keeping and
+    the missing thing was the evidence.
+
+  Deciding which kind you have takes reading the oracle, not counting nulls. A sweep that
+  treats all four alike would delete P1's two best oracles.
 - **`prompt_exposure`** implements the leakage split — renaming symbols is not enough
   when the source PRs may live rent-free in model weights:
 
