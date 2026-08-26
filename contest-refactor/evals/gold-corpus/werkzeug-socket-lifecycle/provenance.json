@@ -1,0 +1,112 @@
+{
+  "source_repo": "pallets/werkzeug",
+  "source_pr": 2517,
+  "base_sha": "66c76a9bb1ec59ba26a5866bc0fcc02774d54c7e",
+  "accepted_sha": "7facafce567244a5a889dab1002bf104149e6d15",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "resource_ownership_consolidation_residual",
+  "variant_roles": {
+    "helper-and-eager-service": "red",
+    "consolidated-service-ownership": "green",
+    "near-miss-dropped-reuse": "near_miss",
+    "mutant-handoff-close-before-read": "mutant"
+  },
+  "expected_judgment": "helper-and-eager-service should be flagged for a real resource leak: start_service's adopt path builds a Service with bind=False, which still eagerly provisions its own placeholder Listener in __init__; when the caller's already-provisioned listener is then assigned onto service.listener, the placeholder is silently overwritten and never closed, leaking one descriptor per call that supplies a pre-provisioned listener. Nothing raises and nothing crashes -- the leak is only visible by checking what is still open after everything is closed, and the plain, non-adopt start_service(endpoint) path in this same variant has no such leak, so the finding must be scoped to the adopt path specifically, not generalized to the whole module. consolidated-service-ownership should be ACCEPTED as the right, merged direction -- deleting the standalone helper and moving clear_stale, reuse configuration, inheritance, the bind-and-activate sequence, and the placeholder cleanup all into Service.__init__ closes the leak for good -- but a full-credit review must also verify, not just repeat, its own CHANGES.md claim of 'no caller-visible behavior changes.' That claim is false in one respect: start_service's non-adopt path used to call Service's raw bind directly, letting an EndpointInUseError propagate to a caller that wanted to catch it; now that the friendly-message-and-terminate handling for a bind conflict lives inside Service.__init__ itself, every start_service call -- not just the handoff path that originally owned that behavior -- terminates the process on conflict instead of raising. This is a real, accepted, currently-shipping cost, not a regression this pack expects fixed: a Critic should name it as fair, accurate comment, and should neither reject consolidated-service-ownership over it nor propose 'fixing' it by reverting the constructor to a bare raise, which would just trade one caller-facing behavior change for another and contradicts the point of a friendly, fail-fast startup message. near-miss-dropped-reuse should be refused, and refused on the right grounds: it performs the identical consolidation -- helper deleted, placeholder closed on the non-bind path, inheritance still set -- and its own bundled tests all pass, but it never calls set_reuse at all, so every listener it provisions comes up with reuse disabled where every other variant (including the pre-refactor helper) enabled it. Nothing raises, no bundled test catches it; the regression is only visible by reading the configured flag directly, which is exactly the equivalence check a line-by-line responsibility mapping exists to force. mutant-handoff-close-before-read is primarily a Layer-5 execution case: it is structurally identical to consolidated-service-ownership -- same class attributes, same conflict handling, same leak fix -- except start_with_handoff closes the listener before reading its descriptor_id instead of after, so the id handed to a successor is always -1, a resource that is already dead by the time anything downstream tries to use it, even on a clean, uncontended provision.",
+  "candidate_visible_files": [
+    "helper-and-eager-service/service_listener.py",
+    "helper-and-eager-service/test_service_listener.py",
+    "consolidated-service-ownership/service_listener.py",
+    "consolidated-service-ownership/test_service_listener.py",
+    "consolidated-service-ownership/CHANGES.md",
+    "near-miss-dropped-reuse/service_listener.py",
+    "near-miss-dropped-reuse/test_service_listener.py",
+    "mutant-handoff-close-before-read/service_listener.py",
+    "mutant-handoff-close-before-read/test_service_listener.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "helper-and-eager-service's start_service(endpoint, adopt=...) leaves the eagerly-created placeholder Listener open and unreferenced once the adopted listener replaces it on the .listener attribute -- a real, silent descriptor leak on every call that supplies a pre-provisioned listener.",
+    "helper-and-eager-service's plain, non-adopt start_service(endpoint) path does not leak -- the same Listener object created in __init__ is the one that gets bound and later closed. The leak is specific to the adopt-path handoff, not a property of the module in general.",
+    "consolidated-service-ownership's CHANGES.md claims no caller-visible behavior changes. That claim is false for a bind conflict: start_service's non-adopt path used to raise EndpointInUseError from Service's raw bind, letting a caller catch it; now that the friendly-message-and-terminate handling lives inside Service.__init__, start_service also terminates the process on conflict. A correct review verifies this by tracing what a conflicting start_service call actually does, not by trusting the changelog line.",
+    "consolidated-service-ownership is nonetheless the right call to accept outright: it is a real, merged consolidation that deletes the standalone helper, gives every one of its responsibilities a preserved counterpart in Service, and closes the placeholder-descriptor leak in the adopt path. Accepting it and naming the residual are not in tension.",
+    "near-miss-dropped-reuse performs the identical helper deletion and leak fix as consolidated-service-ownership, but never calls set_reuse anywhere in Service.__init__, so every listener it provisions comes up with reuse_enabled False where the pre-refactor helper, and every other variant, set it True.",
+    "mutant-handoff-close-before-read's start_with_handoff releases the freshly provisioned listener before reading its descriptor id instead of after, so the id handed to a successor is already dead (-1) even on a clean, uncontended provision -- caught by the hidden oracle handoff_yields_live_descriptor, not by a static read of the surrounding code alone."
+  ],
+  "must_not_find": [
+    "Claiming helper-and-eager-service's plain, non-adopt start_service path also leaks a descriptor -- it doesn't; only the adopt path does.",
+    "Dismissing helper-and-eager-service's leak because nothing raises or because the service otherwise behaves correctly -- silence is exactly what makes it worth flagging, not a reason to wave it off.",
+    "Rejecting or downgrading consolidated-service-ownership because start_service terminates the process on a bind conflict -- this is a maintainer-accepted, currently-shipping cost of the same conflict-handling behavior the pre-refactor helper already had, relocated rather than newly introduced.",
+    "'Fixing' consolidated-service-ownership by replacing the friendly-message-and-terminate conflict handling with a bare raised exception -- that removes the intentional fail-fast startup behavior and is not something this pack's judgment calls for.",
+    "Accepting consolidated-service-ownership's CHANGES.md 'no caller-visible behavior changes' claim at face value without checking what start_service does on a bind conflict.",
+    "Crediting near-miss-dropped-reuse for fixing the descriptor leak as proof it is a fully correct consolidation, without independently checking that every one of the deleted helper's responsibilities -- reuse configuration specifically -- has a preserved counterpart.",
+    "Treating near-miss-dropped-reuse's missing reuse configuration as low-stakes because nothing in its own bundled test suite catches it -- that silence is exactly the failure mode a near-miss is built to demonstrate."
+  ],
+  "allowed_findings": [
+    "Listener, Service, clear_stale, and terminate could be organized differently (a dataclass, a context manager for Service, a module-level constant instead of a free function for terminate) independent of this pack's central judgment.",
+    "start_with_handoff's docstring describing a warm-restart successor is a simplification; a reviewer noting that a real handoff would also need the successor side reconstructed from the descriptor id is fair, additional context, not a required finding.",
+    "clear_stale remaining a small standalone function inside consolidated-service-ownership rather than being inlined into Service.__init__ is a reasonable structural choice, not a leftover needing further consolidation."
+  ],
+  "residual_findings": [
+    "consolidated-service-ownership moves the friendly-message-then-terminate behavior for a bind conflict from the deleted helper's own caller-facing entry point into Service.__init__ itself. Because start_service -- the single public factory used by a direct caller and by the reload/handoff path alike -- constructs a Service either way, a caller of start_service on a conflicting endpoint now gets the process terminated with a printed message instead of a catchable EndpointInUseError; previously only the reload-path helper behaved that way, and a direct start_service call raised, letting the caller retry on a different endpoint or handle the conflict itself. This mirrors werkzeug PR #2517, which moved an equivalent friendly-message-plus-sys.exit(1) block from a semi-public helper into BaseWSGIServer's own constructor and kept it there -- still present on werkzeug's main branch, not reverted or otherwise corrected. A Critic should name this as a real, accurate cost of the consolidation, not as a blocking defect, and should not propose replacing the friendly message with a bare raise as a 'fix.'"
+  ],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "no_descriptor_leak_on_adopt",
+      "variant_expected_to_fail": "helper-and-eager-service"
+    },
+    {
+      "name": "reuse_matches_legacy_default",
+      "variant_expected_to_fail": "near-miss-dropped-reuse"
+    },
+    {
+      "name": "handoff_yields_live_descriptor",
+      "variant_expected_to_fail": "mutant-handoff-close-before-read"
+    }
+  ],
+  "behavior_contract": [
+    "A Service's own listener, once bound, must remain open and usable for the whole lifetime of that Service, and a Service must never leave a second, unrelated listener open beside the one it actually uses.",
+    "Every listener handed off to a successor must have its descriptor id captured while still open -- a successor that receives an already-closed descriptor has received a dead resource, not a live one.",
+    "A listener's reuse setting must match what the pre-consolidation provisioning path set, for every construction path that binds one -- silently defaulting it off is a regression even when nothing raises and every bundled test still passes.",
+    "A refactor that deletes a standalone provisioning helper and folds its responsibilities into a class must give every one of those responsibilities a live counterpart in the class; a responsibility with no counterpart is a gap, not a simplification."
+  ],
+  "restraint_reason": "consolidated-service-ownership's CHANGES.md states plainly that there are no caller-visible behavior changes, and for the leak fix, the reuse setting, and the inheritance setting, that claim genuinely holds. It does not hold for a bind conflict: moving the friendly-message-and-terminate handling into Service.__init__ means start_service now shares that behavior on every call, not only through the reload-path helper that used to own it exclusively. A Critic who traces this correctly faces two ways to fail it: treating the process-termination behavior as a newly introduced, blocking defect that should sink the whole variant, or 'fixing' it by swapping the friendly terminate call for a bare raised exception so the constructor 'just raises like before.' Both are wrong, and for the same underlying reason -- this is a real, accepted, currently-shipping design choice (verified against werkzeug PR #2517's outcome: the equivalent code is still in BaseWSGIServer's constructor on main, never reverted), not an unresolved inconsistency waiting to be cleaned up. Restraint here means naming the discrepancy between the changelog's claim and the code precisely, then accepting the code as the accurate, deliberate design and the comment as the thing slightly overreaching -- not rejecting the refactor, and not rewriting behavior the maintainers chose on purpose.",
+  "applicable_domains": [
+    "python",
+    "resource-lifecycle-management",
+    "socket-lifecycle",
+    "api-consolidation",
+    "process-exit-semantics",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pallets/werkzeug PR #2517 (accepted, merged); no werkzeug source is included, copied, or paraphrased -- Listener, Service, EndpointInUseError, and every identifier here are original to this fixture. The one exception is consolidated-service-ownership/CHANGES.md's responsibility-mapping table, which restates in original wording the practice of the PR author's own line-by-line before/after mapping (a genuinely good habit for exactly this class of change) rather than copying the PR body verbatim."
+  },
+  "contamination": {
+    "renamed": [
+      "werkzeug",
+      "serving",
+      "prepare_socket",
+      "run_simple",
+      "make_server",
+      "BaseWSGIServer",
+      "WERKZEUG_SERVER_FD",
+      "LISTEN_QUEUE",
+      "TCPServer",
+      "HTTPServer",
+      "reloader",
+      "AirPlay",
+      "EADDRINUSE",
+      "5000"
+    ],
+    "minimized_from": "pallets/werkzeug's prepare_socket helper and BaseWSGIServer/run_simple socket-lifecycle handling (PR #2517)",
+    "why": "The real change lives inside werkzeug's WSGI server and reloader machinery, binds and listens on actual OS sockets, and depends on werkzeug's own request-serving internals, none of which can be reproduced faithfully or safely as a minimal, deterministic, network-free fixture; a renamed, minimized, pure-Python analogue (service_listener.py, with Listener/Service standing in for socket.socket/BaseWSGIServer, and a module-level descriptor ledger standing in for OS-level ResourceWarning detection) preserves every judgment-relevant property -- a real leak in a swap-in-a-pre-provisioned-resource path, a disclosed-but-incomplete 'no behavior change' claim, a silently dropped equivalence in a near-miss, and an ordering defect a hidden oracle can catch deterministically -- without exposing any upstream symbol name, PR number, or line of werkzeug source, and without ever opening a real socket."
+  }
+}

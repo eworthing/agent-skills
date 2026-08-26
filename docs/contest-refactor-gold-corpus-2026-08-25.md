@@ -680,6 +680,16 @@ to the validator **and** `_validate_gold_corpus_selftest.py`, done RED-first as 
 It is not needed for P1: nothing consumes an axis tag until a second Python pack exists to
 compare against, so defer it rather than building an abstraction with one caller.
 
+**Still deferred at seven packs, and it nearly slipped in by accident.** The P7 and P8 build
+specs both instructed the builder to add `python_axes` "consistent with how the other Python
+packs use it" — a spec error, since no pack has it and the field has never shipped. The P7
+builder refused, grepped the corpus, quoted this paragraph back, and asked before inventing
+an unvalidated field; the P8 spec was corrected mid-flight. Recorded because the failure mode
+is general: a build spec that asserts an existing convention is the cheapest way to smuggle
+an unshipped schema change into a corpus, and only a builder willing to contradict its brief
+catches it. If `python_axes` is ever wanted, it goes in through the validator first, as this
+paragraph already required.
+
 **The leak check binds harder here.** Hidden-mode candidate-visible files must not carry
 original PR numbers, SHAs, or upstream symbol names. `GET_ITER`,
 `codegen_comprehension_iter`, `_python_apply_plot` and `select_dtypes` are exactly the
@@ -688,7 +698,7 @@ needles check 7 hunts, so every Python pack needs renaming before it goes candid
 ### Cost — measured, 2026-08-25
 
 The plan was to build P1 and price the rest off its actuals rather than off the estimate.
-Four packs are now built, and the estimate was wrong in the expected direction but by far
+Seven packs are now built, and the estimate was wrong in the expected direction but by far
 less than it looked.
 
 **Measured builder spend, per pack.** Fresh tokens (`input + cache_creation + output`),
@@ -704,7 +714,8 @@ tokens so it is excluded:
 | P4 `pandas-select-dtypes-predicates` | 256,283 |
 | P5 `cpython-wasm-platform-predicate` | 195,200 |
 | P6 `pytest-scope-enum-public-compat` | 167,823 |
-| **Total / mean (6 packs)** | **1,287,196 / ~215k** |
+| P7 `werkzeug-socket-lifecycle` | 289,359 |
+| **Total / mean (7 packs)** | **1,576,555 / ~225k** |
 
 **So the honest correction is roughly 2×, not an order of magnitude.** ~231k against a
 ~500k anchor. Anyone reading an early draft of this section that claimed a 10× overestimate
@@ -716,10 +727,14 @@ caught a defect in every single pack (P1 empty provenance SHAs and a substring-l
 leak needle, P2 a green variant narrating its own residual, P3+P4 the role-leak that became
 [check 8](#schema-and-validator)). Budget the all-in figure nearer **~300k per pack**.
 
-**Projected for the remaining five: ~1.2M builder, ~1.5M all-in.** Nine packs all-in lands
-near **~2.7M** rather than the ~4.5M this section previously carried — cheaper, still not
-cheap, and now a measured number rather than an anchor inherited from Swift packs that
-needed toolchain and SDK matrices this track does not.
+**Projected for what remains.** P8 is one pack; P9 is four mini-packs, and the mini-pack rule
+(one contract each) is exactly the thing the cost hypothesis below says drives spend, so
+budget them as four, not as one entry. That is five builder units left at ~225k, so **~1.1M
+builder, ~1.4M all-in.** The full track lands near **~3.0M** rather than the ~4.5M this
+section previously carried — cheaper, still not cheap, and now a measured number rather than
+an anchor inherited from Swift packs that needed toolchain and SDK matrices this track does
+not. Note this is up from the ~2.7M projected at six packs: P7 came in above mean and P9
+resolved into four units rather than one.
 
 **Upstream diff size does not predict pack cost — and the sign is the opposite of the
 intuition.** This section previously flagged P6 (pytest, **+298/−173 across 9 files**) and P8
@@ -733,8 +748,26 @@ number of distinct behavioural contracts it has to model, not the line count it 
 P6 modelled two (public string-compatibility, and ordering); its 9 upstream files were 7
 files of mechanical call-site updates that never reached the fixture.
 
-**So P8 is not a budget risk on size alone.** One data point is one data point — but the
-directional worry recorded here is now contradicted rather than merely untested.
+**P7 is the second data point and it lands on the opposite corner, which is what makes the
+pair informative.** P7 has the *smallest* upstream diff on the whole register — werkzeug
+#2517 is **+42/−67 across 2 files**, one of which is a changelog — and it measured
+**289,359, the most expensive pack of the seven, 1.35× the mean.** So the two extremes of
+upstream diff size produced the two extremes of cost *in the wrong direction*: largest diff
+cheapest, smallest diff dearest. Diff size is not a weak predictor here; over this sample it
+is an inverted one.
+
+The contract-count hypothesis survives it. P7 had to build a resource-lifecycle model from
+nothing — a descriptor ledger, a listener with open/configure/bind/activate/close states,
+stale-endpoint clearing, conflict handling, and a descriptor handoff — because a faithful
+fixture could not just import a socket and still be deterministic. P6 inherited an enum and
+a property from the stdlib and had to invent almost no machinery. Upstream line count
+measures how much *existing* code the change touched; pack cost tracks how much *new*
+apparatus the fixture has to stand up before a single oracle can run.
+
+**So P8 is not a budget risk on size alone**, and the directional worry recorded here is now
+contradicted twice rather than merely untested. The honest caveat is that neither data point
+was preregistered: the hypothesis was written after P6 and P7 came in, so treat it as a
+pattern worth testing on P8/P9, not as an established rule.
 
 ### What this track does *not* buy
 
