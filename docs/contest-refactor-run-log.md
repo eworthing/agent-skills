@@ -687,3 +687,54 @@ narrow and reusable — a Step-3 executor dispatch loads SKILL.md plus its Step-
 does real git and build work, and spawns a nested reviewer that carries its own context, so
 per-loop budget figures are a poor proxy for what one dispatch actually costs. Price future
 executor dispatches off this measurement, not off the token-budget guard.
+
+## Gold corpus: the Python track, built end to end — 2026-08-26
+
+Nine register entries (P1–P9) shipped as **12 pack directories** under
+`contest-refactor/evals/gold-corpus/`, completing the second-language track the owner directed
+on 2026-08-25. `validate-gold-corpus.py` passes **12/12**; 80/80 selftests, `validate-repo`,
+`ruff==0.15.6` across 147 corpus files, and `token-budget --check` all clean at completion. The
+corpus is Layer-1 fixture material: it does **not** count toward the G17 promotion bar, which
+needs adjudicated datapoints from live runs against real target repos.
+
+**Built with sonnet builder agents, verified by the orchestrator.** Every pack was independently
+re-checked before commit: oracle matrix reproduced on an orchestrator run, all variant suites
+executed, hand needle sweep for upstream symbols and role tokens, and a confession sweep that no
+candidate-visible file narrates its own defect. Nothing was accepted on a builder's report alone.
+
+**Verification earned its cost, then changed what it was catching.** It found a defect in every
+one of P1–P6 (empty provenance SHAs, a substring-landmine leak needle, a green variant narrating
+its own residual, and a systemic role leak that became validator **check 8**). It found **none**
+in P7 or P8. What it caught instead, three times, was an error in the *orchestrator's own brief* —
+twice instructing builders to add a `python_axes` field that has never shipped, and once failing
+to tell a builder about an `accepted_state` convention invented after it was dispatched. Both
+builders refused the invented field, grepped the corpus, and quoted the deferral paragraph back
+rather than complying. At twelve packs the review round is catching orchestrator mistakes rather
+than builder ones, which argues for keeping it, not for trusting specs more.
+
+**Two mini-packs shipped an oracle that could not fail anywhere in its own pack.** The build rule
+is that a check whose RED was never observed is not verified. Both were closed by adding a fifth
+variant rather than deleting the oracle, because the claim was worth keeping and the missing thing
+was the evidence — most importantly for the stapled-attribute restraint case, whose whole argument
+is "deleting these breaks a consumer you cannot see from here," previously asserted and
+demonstrated by nothing. A corpus-wide sweep for the same shape then found it in nine of twelve
+packs and **almost all of those were false alarms**: the marker also covers controls,
+discriminators (P1's truth table classifies rather than judges) and demonstrations (P1's
+stale-test trap records that *every* variant's own suite passes, including the broken ones — its
+uniformity is the pack's entire lesson). Taxonomy written into the design doc, because a
+mechanical version of that sweep would have deleted P1's two best oracles.
+
+**Cost: 3,149,264 measured builder tokens, ~4.2M all-in.** Per-pack mean ~262k. A send-back costs
+roughly **~90k per pack, ~45% on top** — measured directly, since one P9 mini-pack pair needed no
+rework (~206k each) and the other needed one round (~297k each) under the same model and
+near-identical briefs.
+
+**The cost section of the design doc was wrong twice and both errors are left visible there.**
+At six packs it concluded from P6 alone that upstream diff size was an inverted predictor of pack
+cost; at seven it added P7 and called the original size-based worry "contradicted twice." P8 then
+came in as the largest diff *and* the most expensive pack, 2.5× the mean. Three confident readings
+drawn from whatever points had arrived, two overturned by the next pack. The durable correction is
+recorded as a methodological one: do not price a pack from its diff, and do not infer a rule from
+n=2 in a planning document. The related casualty is the framing — "cheaper than the Swift tranche"
+was projected at four packs and did not survive; at completion the Python track cost about what
+the Swift tranche was *estimated* to cost, not a fraction of it.

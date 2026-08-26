@@ -589,18 +589,27 @@ and diff size all checked, not taken from the proposal that suggested them.
 | P6 | pytest-dev/pytest #8913 | **Merged** 2021-08-01 (nicoddemus, +298/−173, 9 files) | String/`scopenum` scope handling replaced by a `Scope` enum while `FixtureRequest.scope` stays a `str` for public compatibility; the API trap is documented in the PR | Representation quality with a public/private boundary trap |
 | P7 | pallets/werkzeug #2517 | **Merged** 2022-10-13 (TomiBelan, +42/−67, 2 files) | Three distinct socket `ResourceWarning` cases; PR argues why a naive `detach()` is *less* elegant and why consolidating through `make_server()` removes duplication without changing behavior | Resource-lifecycle refactor — warning-emission oracle |
 | P8 | pydantic/pydantic #10725 | **Merged** 2024-11-08 (Viicos, +452/−268, 15 files) | Centralizes runtime typing checks across `typing` vs `typing_extensions`, `Annotated[ClassVar]`, stringified annotations; PR notes bugs fixed along the way | Runtime-typing zoo (Layer 2) |
-| P9 | django/django `tests/auth_tests` | Verified at `main` | Backend, forms, decorator, handler and basic-auth surfaces — the Python counterpart to the Vapor auth material, drawn from the test surface rather than one PR | Security/policy mutants, four mini-packs |
+| P9 | django/django `django/contrib/auth` | Verified at `main`, pinned `0b40210` | **Source corrected during the build — the register originally said `tests/auth_tests`, but the four contracts were read from the implementation (`backends.py`, `__init__.py`, `decorators.py`, `hashers.py`), not the test surface.** The Python counterpart to the Vapor auth material, drawn from a pinned tree rather than one PR | Security/policy mutants, four mini-packs — **BUILT**: `auth-unusable-password-policy`, `auth-identity-probe-equalization`, `auth-session-carryover`, `auth-login-redirect-target` |
 
 ### Python build order and what carries the signal
 
+> **STATUS: the Python track is COMPLETE as of 2026-08-26.** All of P1–P9 are built, verified
+> and committed, shipping as **12 pack directories** under
+> `contest-refactor/evals/gold-corpus/` (P9 is four mini-packs). `validate-gold-corpus.py`
+> passes 12/12. Measured builder spend **3,149,264 tokens**, ~4.2M all-in — see
+> [Cost](#cost--measured-2026-08-25), which also records the two projections this document got
+> wrong along the way. The **Swift track remains unbuilt**: all 12 sources in the
+> [main register](#ranked-source-register) are Swift and none has a pack on disk.
+
 **P1–P4 are the Python triangle** and carry nearly all the judgment signal:
 *refuse fake simplicity* (P1), *verify the neutrality claim* (P2), *refactor when it is
-right* (P3, P4). Build P1 first.
+right* (P3, P4). P1 was built first, as planned, so the rest could be priced off its actuals.
 
-P6 and P8 are the two largest diffs on the list (+298/−173 and +452/−268). Big diffs make
-diffuse oracles and expensive construction — the Swift track's best value came from its
-*smallest* pack (#298). They sort last and are the first candidates to cut if the track is
-trimmed.
+P6 and P8 are the two largest diffs on the list (+298/−173 and +452/−268). The reasoning at
+plan time was that big diffs make diffuse oracles and expensive construction, so they sorted
+last and were named as the first candidates to cut. **That reasoning was half wrong and the
+outcome is recorded rather than quietly dropped:** P6 came in the *cheapest* pack of the
+track and P8 the *dearest*. Neither was cut. See [Cost](#cost--measured-2026-08-25).
 
 ### Why P1 leads
 

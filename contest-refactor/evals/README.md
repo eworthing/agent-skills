@@ -5,13 +5,39 @@ different things — keep them distinct when reasoning about coverage. Layer 1 i
 deterministic (mechanical, no model); Layers 2–6 are host-dispatched and model-graded,
 and share the trial-validity rules below.
 
-## Gold corpus (validated proposal, not yet built)
+## Gold corpus — Python track BUILT (12 packs), Swift track not started
 
-A validated proposal for a `contest-refactor` eval gold corpus lives at
-[`docs/contest-refactor-gold-corpus-2026-08-25.md`](../../docs/contest-refactor-gold-corpus-2026-08-25.md) —
-real expert-reviewed Swift refactoring PRs with RED/GREEN/NEAR-MISS/MUTANT sibling derivation,
-executable hidden oracles, and a `must_not_find` negative oracle. It proposes fixtures under
-`evals/gold-corpus/`. **Nothing has been built yet** — that directory does not exist on disk.
+Fixture packs derived from real expert-reviewed refactoring PRs, with RED / GREEN / NEAR-MISS /
+MUTANT sibling variants, executable hidden oracles, and a `must_not_find` negative oracle. The
+design, source register, and measured costs are in
+[`docs/contest-refactor-gold-corpus-2026-08-25.md`](../../docs/contest-refactor-gold-corpus-2026-08-25.md).
+
+**Built and live in `evals/gold-corpus/` — 12 pack directories, completed 2026-08-26:**
+
+| Pack | Source | Tests |
+| --- | --- | --- |
+| `cpython-genexpr-iterability` | cpython #126408 (rejected) + #132351 (merged) | restraint spine — RED and GREEN are the same edit |
+| `pandas-groupby-plot-imperfect-gold` | pandas #65927 + #66027 | a behavior-neutrality claim that was false |
+| `pandas-get-dummies-select-dtypes` | pandas #66091 | canonical pure refactor |
+| `pandas-select-dtypes-predicates` | pandas #66112 | predicate equivalence, YAGNI restraint |
+| `cpython-wasm-platform-predicate` | cpython #136815 | restraint defined by what stays uncollapsed |
+| `pytest-scope-enum-public-compat` | pytest #8913 | a disclosed public-API compatibility shim |
+| `werkzeug-socket-lifecycle` | werkzeug #2517 | resource lifecycle; a maintainer-accepted residual |
+| `pydantic-typing-extra` | pydantic #10725 | two near-identically-named predicates, one call site |
+| `auth-unusable-password-policy` | django `contrib/auth` @ `0b40210` | **pure restraint** — no near-miss, no mutant |
+| `auth-identity-probe-equalization` | same | the defect is at the call site, not in the helper |
+| `auth-session-carryover` | same | two operations one condition; both collapses break it |
+| `auth-login-redirect-target` | same | an asymmetry both tidyings would break |
+
+Validate with `python3 ../scripts/validate-gold-corpus.py gold-corpus` (8 checks, exits 0 clean).
+Each pack's `oracles.py` is grader-only and runnable directly; it prints the observed
+variant × oracle matrix and exits non-zero if it diverges from `provenance.json`.
+
+**The Swift track is designed but unbuilt.** All 12 sources in the original register are Swift;
+none has a pack on disk. See the register in the design doc.
+
+**These are fixtures, not production evidence.** They do not count toward the G17 promotion bar,
+which requires adjudicated datapoints from live runs against real target repos.
 
 ## Trial validity (backlog item 21 — applies to every host-dispatched layer, 2–6)
 
