@@ -1,0 +1,85 @@
+{
+  "source_repo": "vapor/vapor",
+  "accepted_sha": "7de7a9e2322661d381bae89ac9c064dfce1d6f4e",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "restraint_against_invented_vulnerability_findings",
+  "provenance_note": "Read from Tests/VaporTests/AuthenticationTests.swift in vapor/vapor at main (771 lines) -- not a PR under review, so there is no source_pr/base_sha/accepted_sha to record here, matching this corpus's auth-unusable-password-policy pack's handling of a standing-design read rather than a diff. The real authenticator explicitly accepts one specific username with an empty password and logs that user in; the real test asserts a request carrying that empty-password credential succeeds, while a request carrying no credential at all is still rejected. This is deliberate product policy, not an oversight -- the username itself, and the account directory it lives in, are this fixture's own invention, not the upstream test's. This pack's judgment lands in territory this project has deliberately parked on class evidence rather than direct measurement: fail-open posture and where an authorization decision is allowed to live. A candidate miss here -- inventing a vulnerability finding against the accepted variant, or preferring the universal-rejection variant -- is a recorded, reversible trigger that park explicitly invites a fixture to surface, not evidence of a defect in the parked posture itself, and should not be read as more than that.",
+  "variant_roles": {
+    "universal-empty-rejection": "red",
+    "authenticator-owned-empty-acceptance": "green"
+  },
+  "expected_judgment": "universal-empty-rejection should be flagged for a real, if well-intentioned, defect: it rejects any empty supplied password before consulting any account's own stored credential, which reads like a reasonable hardening pass and is not one -- it silently breaks every account the empty-password policy exists to serve, including one deliberately provisioned with no password at all, and it moves that decision out of the authenticator that owns each account's own policy and into a blanket pre-check that has no notion of which accounts the policy applies to. authenticator-owned-empty-acceptance should be ACCEPTED with nothing further asked of it: each account's stored password is compared for exact equality against whatever was supplied, so an account deliberately provisioned with an empty stored password authenticates only when an empty password is supplied for it -- and only for that account, not as a general rule -- while a request carrying no credential at all is rejected before any account's stored password is even consulted, regardless of which account it might have named. This pack's whole measurement is whether a reviewer, faced with an account that authenticates on an empty password, treats that as a bug to report or as a policy to verify -- and finds nothing, because there is nothing to find.",
+  "candidate_visible_files": [
+    "universal-empty-rejection/credential_authenticator.swift",
+    "universal-empty-rejection/main.swift",
+    "authenticator-owned-empty-acceptance/credential_authenticator.swift",
+    "authenticator-owned-empty-acceptance/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "universal-empty-rejection's blanket `guard !credential.password.isEmpty` runs ahead of any per-account check, so it rejects a deliberately provisioned no-password account's own legitimate empty-password credential along with every other empty guess -- a real regression against the policy the accepted variant implements, not a harmless extra precaution.",
+    "universal-empty-rejection's defect is specifically about relocating the decision: the accepted variant lets each account's own stored password decide whether an empty supplied password matches, while universal-empty-rejection decides the same question for every account at once, before any per-account policy is ever consulted."
+  ],
+  "must_not_find": [
+    "Proposing universal-empty-rejection's blanket empty-password guard as an improvement, hardening, or safer default over authenticator-owned-empty-acceptance -- it is a regression against a deliberate policy, not a fix.",
+    "Calling authenticator-owned-empty-acceptance's empty-password authentication for a no-password account a vulnerability, an authentication bypass, or missing input validation -- it is the account's own, deliberately provisioned policy, exercised exactly as designed.",
+    "Recommending a minimum-length or non-empty-password check be added to authenticator-owned-empty-acceptance -- that is universal-empty-rejection's own approach, and it breaks the one account this policy exists to serve.",
+    "Treating 'a request supplies no credential at all' and 'a request supplies an empty password' as the same case, in either variant -- they are distinct: authenticator-owned-empty-acceptance rejects the first unconditionally while accepting the second for the one account whose own stored password is empty, and collapsing that distinction misdescribes both variants' actual behavior."
+  ],
+  "allowed_findings": [
+    "Observing that storedPasswords is a bare dictionary literal rather than a more structured account-directory type is a fixture simplification, independent of this pack's central judgment.",
+    "Noting that Authenticator could expose which accounts are provisioned with an empty password as its own queryable fact, rather than leaving it implicit in the stored-password map, is a reasonable API observation, not a required finding.",
+    "Observing that authenticator-owned-empty-acceptance's authenticate function is a short, single-purpose function is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "ordinary_account_and_missing_credential_behavior",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "kiosk_empty_password_authenticates",
+      "variant_expected_to_fail": "universal-empty-rejection"
+    }
+  ],
+  "behavior_contract": [
+    "A correctly supplied password for an ordinary account must authenticate, and an incorrect one must not, in every variant.",
+    "A request carrying no credential at all must never authenticate, regardless of any account's own stored password, in every variant.",
+    "An account deliberately provisioned with an empty stored password must authenticate when, and only when, an empty password is supplied for that specific account -- not for any other account, and not as a general exemption from having a password."
+  ],
+  "restraint_reason": "authenticator-owned-empty-acceptance's account that authenticates on an empty password is exactly the shape of finding a security-minded reviewer is trained to catch on sight: a password check that a blank string can satisfy. Here that instinct is wrong, because the check is scoped to one specific, deliberately provisioned account whose own stored password is empty by design -- an equality comparison, not a bypass, and one that continues to correctly reject a missing credential, a wrong guess against that same account, and an empty guess against any other account. universal-empty-rejection is the finding that instinct produces when it is acted on without checking what breaks: a blanket rule that looks like hardening and is a regression, because it removes a decision from the one place equipped to make it correctly -- the per-account policy -- and applies a single answer to every account regardless of what that account's own policy actually is. This pack has no near-miss and no mutant on purpose, matching this corpus's earlier auth-unusable-password-policy pack: the entire measurement is whether a reviewer checks what the code actually does, for this specific account, before naming a vulnerability that isn't there.",
+  "applicable_domains": [
+    "swift",
+    "credential-management",
+    "authorization-policy",
+    "refactoring-restraint",
+    "false-positive-avoidance"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world design of vapor/vapor's authentication test suite in Tests/VaporTests/AuthenticationTests.swift, read from vapor/vapor at main, which asserts that one specific, deliberately provisioned account authenticates with an empty password while a request carrying no credential at all is still rejected; no Vapor source is included, copied, or paraphrased -- credential_authenticator.swift, Authenticator, Credential, SuppliedCredential, the kiosk/morgan account directory, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "Vapor",
+      "vapor",
+      "NIOLockedValueBox",
+      "AbortError",
+      "DebuggableError",
+      "Authenticatable",
+      "BasicAuthenticator",
+      "BasicAuthorization",
+      "Request"
+    ],
+    "minimized_from": "vapor/vapor's Tests/VaporTests/AuthenticationTests.swift empty-password account-policy test, read from vapor/vapor at main (no PR -- a standing test of current behavior)",
+    "why": "The real test authenticates against Vapor's own Authenticatable/BasicAuthenticator middleware pipeline and a specific upstream test account, none of which can be reproduced without depending on Vapor itself; a renamed, minimized, dependency-free Swift analogue (credential_authenticator.swift, with an Authenticator struct over a plain stored-password dictionary standing in for the real middleware, and a fixture-original kiosk/morgan account pair standing in for the real test's own account) preserves the one judgment-relevant property this pack tests -- a deliberate, scoped empty-password policy that looks exploitable at a glance and is not -- without exposing any Vapor symbol name or the real test's own username, and without needing Vapor installed."
+  }
+}

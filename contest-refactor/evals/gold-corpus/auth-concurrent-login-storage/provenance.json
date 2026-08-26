@@ -1,0 +1,118 @@
+{
+  "source_repo": "vapor/vapor",
+  "accepted_sha": "7de7a9e2322661d381bae89ac9c064dfce1d6f4e",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "lost_update_race_wrong_synchronization_granularity",
+  "provenance_note": "Read from Tests/VaporTests/AuthenticationTests.swift in vapor/vapor at main (771 lines) -- not a PR under review, so there is no source_pr/base_sha/accepted_sha to record here, matching this corpus's auth-unusable-password-policy pack's handling of a standing-design read rather than a diff. The real test's own comment states the window is narrow -- against the previous storage-backed cache design it lost roughly one in ten pairs -- which is exactly why the real suite runs 1000 iterations of fresh concurrent requests logging in one type each: at that loss rate, 1000 tries make the flake essentially certain to surface at least once, without pinning down exactly when. That stress-loop design is precisely what this fixture avoids needing: probabilistic reproduction is appropriate for validating a real, timing-dependent race on real hardware, but a graded fixture that depends on a race window reproducing at some undetermined iteration is not reproducible on arbitrary grading hardware. This pack models the same lost-update mechanism as a scripted, deterministic interleaving of explicit read/modify/write steps instead -- no tasks, no timing, no stress loop -- so the lost update becomes a single, exact, always-reproducing fact rather than a one-in-ten chance.",
+  "variant_roles": {
+    "unsynchronized-shared-map": "red",
+    "atomic-commit-per-login": "green",
+    "per-kind-lock-shared-map-race": "near_miss",
+    "mutant-misrouted-storage-key": "mutant"
+  },
+  "expected_judgment": "unsynchronized-shared-map should be flagged for a real, silent lost update: storing a login is split into reading current storage and writing an updated copy back, with nothing preventing another caller's own read-modify-write from landing in between. When two callers store two different login kinds without either fully completing before the other starts, the second caller's write is based on a copy of storage taken before the first caller's write landed, so committing it discards the first caller's entry entirely -- not merged with it, gone. Scoped precisely: this only happens under that specific interleaving; either caller acting alone, or the two acting one fully after the other, stores and retrieves both kinds correctly. atomic-commit-per-login should be ACCEPTED outright: its write is a single, non-decomposed step with nothing captured ahead of time to go stale, so no interleaving of two callers' steps can ever produce a lost update -- demonstrated, not merely asserted, by running the exact interleaving that breaks the other two variants. per-kind-lock-shared-map-race should be refused, and refused for the specific reason that makes it the pack's genuine trap: it is not unsynchronized -- it acquires a real per-kind lock around each login kind's own read-modify-write, and that lock is not fake, reacquiring it while already held would trap the same way a real lock would deadlock a thread reacquiring itself. The problem is granularity, not the absence of locking: two different login kinds use two different locks, so a lock scoped to one kind provides no protection at all against a concurrent write to a different kind landing on the same shared map in between. The exact same interleaving that breaks unsynchronized-shared-map breaks this variant identically, because the lock two different callers actually contend on here is never the same lock. mutant-misrouted-storage-key is a hard, unmissable Layer-5 case, not a reviewer-judgment one: its write is just as indivisible and interleaving-safe as the accepted variant's, but one login kind's write silently targets the other kind's storage slot -- present in storage, permanently unretrievable under its own kind, regardless of any interleaving at all. A single caller storing that one kind alone, with no second caller involved, already fails.",
+  "candidate_visible_files": [
+    "unsynchronized-shared-map/login_registry.swift",
+    "unsynchronized-shared-map/main.swift",
+    "atomic-commit-per-login/login_registry.swift",
+    "atomic-commit-per-login/main.swift",
+    "per-kind-lock-shared-map-race/login_registry.swift",
+    "per-kind-lock-shared-map-race/main.swift",
+    "mutant-misrouted-storage-key/login_registry.swift",
+    "mutant-misrouted-storage-key/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "unsynchronized-shared-map's beginStore/commitStore split lets one caller's commit overwrite storage using a copy taken before another caller's own commit landed, losing that other caller's entry entirely when the two callers' steps interleave -- scoped to that specific interleaving, not to every use of the registry.",
+    "per-kind-lock-shared-map-race's lock is real (it genuinely prevents the same kind from being stored twice at once) but scoped to the wrong thing: two different login kinds acquire two different locks, so the lock provides no protection against the exact cross-kind interleaving that breaks unsynchronized-shared-map -- the same lost-update outcome occurs for the same underlying reason, the visible locking code notwithstanding.",
+    "atomic-commit-per-login's commit step captures nothing ahead of time and performs the entire read-modify-write in one non-decomposed call, which is what makes it immune to the specific interleaving that breaks the other two non-mutant variants -- this is checkable directly by running that interleaving, not merely a smaller diff.",
+    "mutant-misrouted-storage-key's defect requires no interleaving at all: one login kind's write always lands under the other kind's storage key, so that kind's own value is unretrievable even with a single caller acting alone."
+  ],
+  "must_not_find": [
+    "Treating per-kind-lock-shared-map-race as adequately synchronized because it contains real, working lock acquire/release calls -- the lock is real, but it is scoped per login kind, and two different kinds never contend on the same lock.",
+    "Crediting per-kind-lock-shared-map-race as safe because a test that stores only one login kind passes -- a single-kind test cannot exercise the cross-kind race this variant's granularity fails to prevent.",
+    "Describing unsynchronized-shared-map's bug as happening on every store, or as needing no interleaving to reproduce -- the loss is specific to two callers' steps landing in an interleaved order; either caller acting alone, or one caller fully finishing before the other starts, stores and retrieves correctly.",
+    "Conflating per-kind-lock-shared-map-race's defect with mutant-misrouted-storage-key's -- one is a synchronization-granularity race that only manifests under a specific interleaving, the other is an unconditional wrong-key bug that manifests every time, with or without any interleaving at all."
+  ],
+  "allowed_findings": [
+    "Noting that per-kind-lock-shared-map-race's Lock type is a minimal, fixture-specific stand-in rather than a real platform mutex is accurate but out of scope -- this pack tests synchronization granularity, not the lock primitive's own implementation.",
+    "PendingStore could be made a private, variant-internal type rather than part of LoginRegistry's public surface, independent of this pack's central judgment.",
+    "Observing that atomic-commit-per-login's beginStore does nothing beyond bundling its arguments is a fair, accurate reading of why it needs no snapshot, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [
+    {
+      "evidence_id": "misrouted-storage-key",
+      "applies_to_variants": ["mutant-misrouted-storage-key"],
+      "required_finding": "one login kind's commit writes to the other kind's storage slot, so that kind's own stored value is never retrievable by its own kind, independent of any interleaving",
+      "not_required_in": [
+        "atomic-commit-per-login",
+        "unsynchronized-shared-map",
+        "per-kind-lock-shared-map-race"
+      ]
+    }
+  ],
+  "hidden_oracles": [
+    {
+      "name": "both_kinds_retrievable_under_scripted_interleaving",
+      "variant_expected_to_fail": "unsynchronized-shared-map"
+    },
+    {
+      "name": "both_kinds_retrievable_under_scripted_interleaving",
+      "variant_expected_to_fail": "per-kind-lock-shared-map-race"
+    },
+    {
+      "name": "both_kinds_retrievable_under_scripted_interleaving",
+      "variant_expected_to_fail": "mutant-misrouted-storage-key"
+    },
+    {
+      "name": "both_kinds_retrievable_without_interleaving",
+      "variant_expected_to_fail": "mutant-misrouted-storage-key"
+    },
+    {
+      "name": "ordinary_login_round_trips",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "Two logins of different kinds, each stored exactly once, must both be retrievable afterward under their own kind, regardless of the order or interleaving of the steps that stored them.",
+    "A kind that was never stored must retrieve as nothing, in every variant.",
+    "Storing one kind must never cause a different kind's already-stored value to become unretrievable.",
+    "Whether a synchronization mechanism prevents a specific race is a question about what it actually contends on, not whether locking code is present -- a lock two concurrent writers never share provides no protection against each other."
+  ],
+  "restraint_reason": "This pack's near-miss is built to look like the responsible fix a reviewer would ask for after seeing unsynchronized-shared-map: real lock objects, real acquire/release calls, a precondition that actually traps on reentrant misuse. All of that is genuine, which is exactly the trap -- a reviewer who checks 'is there a lock here now?' and stops has verified the wrong property. The lock in per-kind-lock-shared-map-race is scoped per login kind, and this pack's entire race is a cross-kind race: two different kinds were never going to contend on the same lock, so locking each kind individually changes nothing about the interleaving that actually loses data. The correct review traces what the two racing callers actually share (the underlying storage map) against what the lock actually serializes (access to one kind's own critical section), and names the mismatch specifically -- not as 'this needs more locking' in the abstract, but as 'this needs a lock scoped to the thing that is actually shared.' Restraint also runs toward not conflating this with the mutant: the near-miss's failure is genuinely interleaving-dependent (a single-kind test, or a non-interleaved two-kind test, both pass it cleanly), while the mutant's wrong-key bug fires unconditionally -- treating both as \"the synchronization is broken\" in the same breath loses the distinction between a race and a deterministic misrouting bug.",
+  "applicable_domains": [
+    "swift",
+    "concurrency-coordination",
+    "synchronization-granularity",
+    "lost-update-race",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of vapor/vapor's Tests/VaporTests/AuthenticationTests.swift at main, whose own comment documents a narrow, roughly-one-in-ten-pairs lost-update race against a previous storage-backed cache design and a 1000-iteration stress loop built to surface it; no Vapor source is included, copied, or paraphrased -- LoginRegistry, LoginKind, PendingStore, Lock, and every identifier here are original to this fixture, modelling the race as a scripted, deterministic interleaving rather than real concurrency."
+  },
+  "contamination": {
+    "renamed": [
+      "Vapor",
+      "vapor",
+      "NIOLockedValueBox",
+      "AbortError",
+      "DebuggableError",
+      "Authenticatable",
+      "BasicAuthenticator",
+      "BasicAuthorization",
+      "Request",
+      "Authentication"
+    ],
+    "minimized_from": "vapor/vapor's Tests/VaporTests/AuthenticationTests.swift concurrent-login-storage race test, read from vapor/vapor at main (771 lines; no PR, a standing test of current behavior)",
+    "why": "The real test exercises genuine concurrent tasks issuing fresh requests against a shared authentication cache, with a documented roughly-one-in-ten-pairs loss rate against a previous storage design, surfaced only probabilistically across 1000 iterations -- reproducing that faithfully would make this fixture's own grading flaky on exactly the property it needs to be deterministic about. Instead, this fixture decomposes the shared operation into explicit, named steps (beginStore captures whatever a caller needs before yielding control back; commitStore performs the actual write once resumed) and drives a fixed, scripted order of those steps for two logical callers -- no tasks, no timing, no iteration count -- so the same lost-update mechanism becomes a single, exact, always-reproducing fact instead of a probability. This preserves the one judgment-relevant property the real test's fix and its own near-fix (a plausible-looking but wrongly-scoped synchronization attempt) exhibit, without exposing any Vapor symbol name, and without needing Vapor installed or any real threading."
+  }
+}
