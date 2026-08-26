@@ -598,8 +598,12 @@ and diff size all checked, not taken from the proposal that suggested them.
 > `contest-refactor/evals/gold-corpus/` (P9 is four mini-packs). `validate-gold-corpus.py`
 > passes 12/12. Measured builder spend **3,149,264 tokens**, ~4.2M all-in — see
 > [Cost](#cost--measured-2026-08-25), which also records the two projections this document got
-> wrong along the way. The **Swift track remains unbuilt**: all 12 sources in the
-> [main register](#ranked-source-register) are Swift and none has a pack on disk.
+> wrong along the way. **The Swift track is 1 of ~13 built** — `swift-collections-platform-guard-scope`
+> (#298) landed 2026-08-26 and is the corpus's only near-miss authored by a real external
+> contributor rather than in-house. It measured **962,603 tokens, 3.7× the Python per-pack mean**,
+> on the smallest upstream diff in either register; read
+> [that cost note](#the-first-swift-pack-cost-37-the-python-mean--read-this-before-scheduling-the-rest)
+> before scheduling the rest.
 
 **P1–P4 are the Python triangle** and carry nearly all the judgment signal:
 *refuse fake simplicity* (P1), *verify the neutrality claim* (P2), *refactor when it is
@@ -729,7 +733,8 @@ tokens so it is excluded:
 | P8 `pydantic-typing-extra` | 567,802 |
 | P9a+P9b `auth-unusable-password-policy` + `auth-identity-probe-equalization` (one builder, both packs) | 411,692 |
 | P9c+P9d `auth-session-carryover` + `auth-login-redirect-target` (one builder, both packs, **includes one rework round**) | 593,215 |
-| **Total / mean (12 packs)** | **3,149,264 / ~262k** |
+| **Total / mean (12 Python packs)** | **3,149,264 / ~262k** |
+| **Swift** `swift-collections-platform-guard-scope` (#298) | **962,603** |
 
 The P9 mini-packs are the first entries built two-to-an-agent, so those last two rows are pair
 figures. They also happen to price a rework round, because one pair needed none and the other
@@ -743,6 +748,39 @@ So a review round that sends work back costs roughly **~90k per pack**, about 45
 pairs were built by the same model against near-identical briefs, so that difference is mostly
 the rework rather than pack difficulty. Worth knowing before treating a send-back as free: it is
 not expensive relative to shipping an unverified oracle, but it is not noise either.
+
+#### The first Swift pack cost 3.7× the Python mean — read this before scheduling the rest
+
+`swift-collections-platform-guard-scope` measured **962,603 tokens**: the most expensive pack in
+the corpus, 1.7× the previous record (P8) and **3.7× the 12-pack Python mean**. It was built from
+**+3/−3 across 3 files** — the *smallest* upstream diff in either register.
+
+This document called #298 "the cheapest and highest-signal pack in either language." That was a
+claim about its upstream diff, and read as a claim about build cost it is now **the exact
+opposite of the truth**. This is the **fourth** time diff size has failed as a cost predictor
+here, and the second time it failed in the expensive direction. The rule stands: do not price a
+pack from its diff.
+
+**Plausible causes, none of them measured, listed so nobody mistakes them for findings:**
+
+- **First-in-a-new-language overhead.** There was no existing Swift pack to pattern-match, so
+  conventions had to be invented: the module/`main.swift` split, the `oracles.py`-shells-out-to-
+  `swiftc` harness, and a temp-directory trick to compile a grader probe at all. All of that is
+  plausibly one-time.
+- **Genuine discovery work that was worth paying for.** The builder set out expecting the
+  near-miss to differ by *value*, measured, found it does not — red, near-miss and green agree on
+  every platform × version cell — and redesigned the oracle to test the guard's admitted set
+  instead. Independently reproduced. Without that, the pack would have shipped a near-miss oracle
+  that silently never fires, which is exactly the defect two P9 mini-packs needed a rework round
+  to fix.
+- **A compile-and-run loop per variant**, where the Python packs simply imported a module.
+
+**Do not assume the next Swift pack is cheaper.** n=1. This section has now drawn a confident
+rule from too few points three separate times and been overturned by the next pack every time;
+treating "it was first-pack overhead" as established would be the fourth. **At this rate the
+remaining ~12 Swift sources are ~11.5M, and even halving is ~6M** — against ~3.1M for the entire
+twelve-pack Python track. That is a scheduling decision an owner should make explicitly with this
+number in front of them, not a detail to discover after three more packs.
 
 **So the honest correction is under 2×, not an order of magnitude.** ~268k against a
 ~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate
@@ -1032,6 +1070,21 @@ Field semantics the fixtures rely on:
   protection, because there is no corresponding string that could leak. Do not substitute
   `merged` for a non-PR source — none of the other five values describes "this is simply
   what the project ships," and a wrong-but-enumerated value is worse than a new one.
+- **A `rejected` source carries `base_sha` and omits `accepted_sha`.** The mirror of the case
+  above, first hit by the Swift #298 pack. The PR is real, so what it diffed from is real and
+  citable; but nothing was ever accepted, so there is no commit to cite and inventing one would
+  be the same fabricated citation the rule above exists to prevent. Where the pack's green is a
+  maintainer's *counter-proposal* rather than a merged change, say so in `provenance_note` and
+  do not let the absent `accepted_sha` read as an oversight.
+- **`oracle_kinds` is proposed and NOT adopted — same standing as `python_axes`.** The Swift
+  #298 build introduced a per-oracle field tagging each entry against the four-way taxonomy
+  above. It was removed before commit, for the reason the `python_axes` paragraph gives: no
+  validator reads it, one pack of thirteen would carry it, and the same content already lives in
+  that pack's `grading.md`, which is where prose for a human reader belongs. It has a better
+  consumer story than `python_axes` did — a validator could plausibly require every oracle to
+  declare its kind, which would turn the taxonomy from doctrine into a check — but that is a
+  validator change plus a backfill across every pack, done RED-first as its own step, not a
+  field bolted onto whichever pack happens to be in flight.
 - **A `hidden_oracles` entry with no `variant_expected_to_fail` means four different things,
   and only one of them is a defect.** The build rule is that *a check whose RED was never
   observed is not verified*, so an oracle that cannot fail anywhere in its own pack deserves a

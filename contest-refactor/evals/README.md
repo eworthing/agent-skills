@@ -33,8 +33,22 @@ Validate with `python3 ../scripts/validate-gold-corpus.py gold-corpus` (8 checks
 Each pack's `oracles.py` is grader-only and runnable directly; it prints the observed
 variant × oracle matrix and exits non-zero if it diverges from `provenance.json`.
 
-**The Swift track is designed but unbuilt.** All 12 sources in the original register are Swift;
-none has a pack on disk. See the register in the design doc.
+**Swift track — 1 of ~13 built:**
+
+| Pack | Source | Tests |
+| --- | --- | --- |
+| `swift-collections-platform-guard-scope` | swift-collections #298 (**rejected**) | the corpus's only near-miss authored by a real external contributor and rejected by a real maintainer |
+
+Swift variants are a `platform_support.swift` module plus a `main.swift` test, built with
+`swiftc platform_support.swift main.swift -o /tmp/<name> && /tmp/<name>` (exit 0 pass, 1 fail).
+Swift has no sibling-file import, and two plausible-looking commands fail badly: `swiftc a.swift
+b.swift` errors unless the entry file is named `main.swift`, and `swift a.swift b.swift` **exits
+0 having run nothing** — a silent false pass. Each pack's `oracles.py` stays Python and shells
+out to `swiftc`. Toolchain used: Swift 6.4 / Xcode 27. Never write build output into a pack
+directory.
+
+The remaining ~12 Swift sources are designed but unbuilt — see the register in the design doc,
+and read the cost note there first: the first Swift pack cost 3.7× the Python per-pack mean.
 
 **These are fixtures, not production evidence.** They do not count toward the G17 promotion bar,
 which requires adjudicated datapoints from live runs against real target repos.

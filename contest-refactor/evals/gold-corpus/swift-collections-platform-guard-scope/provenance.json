@@ -1,0 +1,114 @@
+{
+  "source_repo": "apple/swift-collections",
+  "source_pr": 298,
+  "base_sha": "939cfd25234472b4dc91c3caeab304d15bca9a73",
+  "accepted_state": "rejected",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "premise_false_near_miss_real_world_rejection",
+  "provenance_note": "The near-miss in this pack is not synthetic. Every near-miss in every other pack in this corpus was authored and graded in-house; this one is a real external contributor's pull request, closed unmerged by the real maintainer, with the maintainer's own rejection reasoning on the public record. That is this pack's most valuable property, and the reason it exists despite its small size. The rejection also held up longitudinally, which was checked against the upstream tree rather than assumed: at HEAD 7e2a4bc76109114ddbf97f4d4b4d45157c282db6 the proposed capability-check spelling appears zero times anywhere in the repository -- it was never adopted, at that call site or any other, in roughly three years -- while the explicit platform list the maintainer defended is still present, unchanged, in one of the three files the pull request touched. The two other files it touched no longer exist at all: the compatibility shim they belonged to was deleted outright once the old runtime stopped being supported, so the maintainer's counter-proposal (drop the guard, the inner availability check already covers it) has no surviving call site to check against and is corroborated only by the maintainer's stated reasoning, not by a later commit.",
+  "variant_roles": {
+    "explicit-platform-list": "red",
+    "guard-removed-availability-only": "green",
+    "near-miss-capability-guard-broad-admit": "near_miss",
+    "mutant-dropped-threshold": "mutant"
+  },
+  "expected_judgment": "explicit-platform-list should be accepted as a correct, if verbose, starting state -- it is not itself a defect: an outer guard admits exactly the four platform families known to share the underlying stdlib bug, and an inner check reports whether each one's runtime is new enough to have it fixed. It looks, at a glance, like it needs a fifth entry once a new platform family ships, and that appearance is the trap the whole pack is built around. guard-removed-availability-only should be ACCEPTED outright: the outer guard is deleted, and the inner check runs unconditionally for every platform. This is not a smaller version of the same idea -- it is a *correct* simplification, and demonstrably so: for every one of the four originally-guarded platforms, at both an old and a new runtime version, the answer is unchanged, and for the newly-shipped platform and an unrelated platform family alike -- both of which the old guard excluded entirely -- the answer is also unchanged, because the inner check's own default already reports 'not affected' for anything it holds no threshold for. Removing the guard costs nothing observable anywhere. near-miss-capability-guard-broad-admit should be refused, and refused for the specific, structural reason a competent, well-intentioned contribution earns: it replaces the explicit four-platform guard with a single broad capability predicate covering every platform built on the same underlying runtime family, on the reasonable-sounding grounds that spelling out a fifth platform by hand does not scale as that family grows. Three separate things are wrong with this, and a review that catches only the shallowest is not fully right. First, the premise is false -- the four-platform list was never incomplete, because the underlying bug never affects the newly-shipped platform in the first place, so there was never a fifth entry to add. Second, even granting the motivation, the substitute is not equivalent to what it replaces: the broad predicate admits the newly-shipped platform, and the original, deliberate four-platform list did not -- these are two different sets, not two spellings of the same set, even though the difference happens to be currently invisible in this specific inner check's output. Third, explicitness was the point: naming the four affected platforms directly documents the exact scope of a workaround for a known, specific bug, and a broad capability predicate erases that scope, making the guard's purpose unrecoverable from the code alone. The correct response to this contribution is neither to accept it, nor to reject it while stopping at 'the sets are not equivalent' -- the sets genuinely are not equivalent, but the deeper and more useful point is that guard-removed-availability-only shows there was a third, smaller option neither the explicit list nor the broad predicate considered: delete the guard entirely, because the inner check was always sufficient on its own. A review that rejects the near-miss only for non-equivalence, without noticing that the accepted answer is smaller than the original rather than a defense of it, has earned partial credit at best. mutant-dropped-threshold is a hard, unmissable Layer-5 case: it keeps guard-removed-availability-only's shape exactly, but drops the recorded version threshold for one of the four platforms, so every version of that platform -- including a genuinely old, still-buggy one -- is reported as unaffected, reintroducing the exact crash the original workaround existed to prevent.",
+  "candidate_visible_files": [
+    "explicit-platform-list/platform_support.swift",
+    "explicit-platform-list/main.swift",
+    "guard-removed-availability-only/platform_support.swift",
+    "guard-removed-availability-only/main.swift",
+    "near-miss-capability-guard-broad-admit/platform_support.swift",
+    "near-miss-capability-guard-broad-admit/main.swift",
+    "mutant-dropped-threshold/platform_support.swift",
+    "mutant-dropped-threshold/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "near-miss-capability-guard-broad-admit's motivation is genuine and reasonable on its face -- a new platform family shipped, and a capability predicate looks DRY and future-proof compared to a list that would otherwise need a new case each time. That the motivation is reasonable does not make the change correct.",
+    "The premise behind near-miss-capability-guard-broad-admit is false: the original four-platform list was never missing an entry, because the underlying bug it works around never affected the newly-shipped platform to begin with -- there was nothing to add a fifth case for.",
+    "near-miss-capability-guard-broad-admit's broad predicate is not an exact equivalent of the four-platform list it replaces: it admits the newly-shipped platform, which the deliberate four-platform list excluded on purpose. This is a genuine difference in the two guards themselves, checkable directly (see oracles.py's guard_admits_exactly_legacy_four), independent of whether any single inner-check output currently exposes it.",
+    "Naming the four affected platforms explicitly documents the exact scope of a workaround for a specific, known bug; collapsing that into a broad runtime-family predicate erases that scope from the code, even where the broad predicate happens to produce the same answer today.",
+    "guard-removed-availability-only is not merely an acceptable alternative to near-miss-capability-guard-broad-admit -- it is the correct answer, and it is smaller than the original rather than a defense of it: deleting the guard is demonstrably safe on every platform the original guard excluded, not just neutral on the four it admitted.",
+    "A review of near-miss-capability-guard-broad-admit that stops at 'the two guards are not exactly equivalent' without also recognizing that the guard should not exist at all has found a real problem but not the pack's central one; full credit requires naming guard-removed-availability-only's smaller, guard-free shape as the correct outcome, not merely rejecting the broad predicate.",
+    "mutant-dropped-threshold's dropped version threshold makes a genuinely old, still-buggy platform version report as unaffected -- the direction that reintroduces the original crash, not a harmless simplification."
+  ],
+  "must_not_find": [
+    "Accepting near-miss-capability-guard-broad-admit because a new platform shipped and the change looks like the obvious, DRY way to keep the guard current.",
+    "Refusing near-miss-capability-guard-broad-admit only on the grounds that a capability predicate and an explicit list are 'not exactly the same thing' as a generic type-safety instinct, without naming that it specifically over-admits the newly-shipped platform.",
+    "Treating a rejection of near-miss-capability-guard-broad-admit as complete once the non-equivalence is named, without going on to recognize that explicit-platform-list's original guard was also not the correct stopping point -- the guard should be removed entirely, not merely kept as-is or replaced with a different predicate.",
+    "Preferring explicit-platform-list over guard-removed-availability-only on the grounds that an explicit platform list is inherently safer or more conservative than removing the guard -- the guard's removal is verified safe, not merely simpler.",
+    "Crediting near-miss-capability-guard-broad-admit as harmless because no currently observable inner-check output differs from the accepted variant -- the guards themselves admit different sets, which is a real defect in the change independent of today's threshold table.",
+    "Treating mutant-dropped-threshold's missing version threshold as a reasonable simplification because most platforms are unaffected by it."
+  ],
+  "allowed_findings": [
+    "Version could be expressed with Swift's own version-comparison conveniences instead of a hand-rolled Comparable struct, independent of this pack's central judgment.",
+    "The version-threshold dictionary could be organized as a small struct-per-platform instead of a bare dictionary literal, independent of this pack's central judgment.",
+    "Noting that guard-removed-availability-only's isPotentiallyAffected function is now a two-line function and observing that the change is small is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "guard_admits_exactly_legacy_four",
+      "variant_expected_to_fail": "near-miss-capability-guard-broad-admit"
+    },
+    {
+      "name": "threshold_preserved_vs_baseline",
+      "variant_expected_to_fail": "mutant-dropped-threshold"
+    },
+    {
+      "name": "guard_removal_is_behaviorally_neutral",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "old_affected_version_still_reported_affected",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "For each of the four platforms known to share the underlying bug, a version below its recorded threshold must report affected, and a version at or above it must report unaffected, regardless of what shape the surrounding guard takes.",
+    "A platform with no recorded version threshold must report unaffected at every version -- there is nothing to guard against on a platform the bug was never known to touch.",
+    "A guard's admitted platform set is a fact about that guard, checkable directly, independent of whether the inner check's current threshold table happens to make the difference observable in output today.",
+    "Removing an outer guard must not change the answer on any platform the guard used to admit, and -- for this pack's specific inner check -- must not change the answer on any platform the guard used to exclude either; both are required for 'delete the guard' to be a safe recommendation, not just a smaller one."
+  ],
+  "restraint_reason": "near-miss-capability-guard-broad-admit is built to be genuinely persuasive, because the real contribution it is drawn from was genuine and well-intentioned: a new platform family had just shipped, the explicit four-platform list looked like it needed a fifth entry, and a single capability check looked like the obvious, DRY, future-proof fix. Every part of that reasoning is reasonable and none of it is malicious -- which is exactly what makes the correct refusal hard to get right. A reviewer who refuses this change only because 'a capability check is not exactly the same as an explicit list' has found a true fact but not exercised judgment: the two sets genuinely differ, and naming that they differ is necessary, but a reviewer who stops there has matched the maintainer's least interesting objection while missing the maintainer's own, more radical counter-proposal -- that the entire guard, in either form, was unnecessary from the start. The premise motivating the change (the list needs a fifth entry) was false the whole time, because the bug this workaround targets never touched the new platform to begin with; once that premise is gone, the right move is not to keep the four-platform list as a defended status quo, it is to notice the guard was never doing any work an unconditional check couldn't do on its own. Restraint here runs in both directions at once: refusing a plausible-sounding change for the right, specific reason (it admits a platform the original never did), while also not treating the pre-existing code as beyond further improvement just because the proposed change was wrong.",
+  "applicable_domains": [
+    "swift",
+    "platform-detection",
+    "compile-time-conditionals",
+    "refactoring-restraint",
+    "real-world-rejected-contribution"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Derived from the real-world case of apple/swift-collections PR #298 (closed, rejected 2023-06-22) and the maintainer's own public review comments on that PR; no swift-collections source is included, copied, or paraphrased -- Platform, Version, and every identifier here are original to this fixture. The near-miss variant's accompanying module comment restates the real contributor's own stated motivation in original wording (a new platform shipped, the list would need updating, a capability check is DRY and future-proof), not a verbatim quote of the PR body or its review thread."
+  },
+  "contamination": {
+    "renamed": [
+      "swift-collections",
+      "Collections",
+      "_CollectionsUtilities",
+      "canImport",
+      "Darwin",
+      "os(macOS)",
+      "os(iOS)",
+      "os(watchOS)",
+      "os(tvOS)",
+      "xrOS",
+      "visionOS",
+      "withContiguousStorage",
+      "CollectionTestCase",
+      "lorentey",
+      "o-nnerb"
+    ],
+    "minimized_from": "apple/swift-collections's _CollectionsUtilities platform-guard workaround for a stdlib precondition bug (PR #298, closed unmerged, base sha 939cfd25234472b4dc91c3caeab304d15bca9a73)",
+    "why": "The real guard lives inside swift-collections' own utility module, depends on the vendor's specific platform and OS-version identifiers, and only manifests differently across platforms this environment cannot compile for at all (the newly-shipped platform, and any non-vendor platform); a renamed, minimized Swift analogue (platform_support.swift, with a Platform enum and a Version struct standing in for the real #if/#available conditional pair) preserves every judgment-relevant property -- a plausible-looking but false premise, a broad predicate that is not an exact equivalent of what it replaces, and a smaller correct answer than either the original or the proposed change -- as fully deterministic data, testable on this machine with no cross-compilation, without exposing any upstream symbol name, platform identifier, PR number, or line of swift-collections source. The PR number (298) is covered by the manifest validator's own numeric leak check via source_pr and needs no separate contamination.renamed entry."
+  }
+}
