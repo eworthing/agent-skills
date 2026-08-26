@@ -1,23 +1,20 @@
 // A relay that lets one consumer pull values produced by several
 // independent sources, coordinated by an explicit phase per
-// combination of "is a consumer waiting" and "is a value already
-// available" -- rather than a single flag standing in for both.
+// combination of whether a consumer is currently waiting and whether a
+// value is already available.
 //
 // Source work is started exactly once, the first time any demand
-// arrives -- never restarted by a later demand -- and nothing here
-// runs on more than one unit of work at a time, so there is no
-// broader safety marker to satisfy either.
+// arrives, and is never restarted by a later demand.
 //
-// One deliberate ordering choice this design makes: a pending
-// consumer request is never resumed from inside this relay's own
-// bookkeeping update. `step` only ever returns *which* requests to
-// resume, as data, and leaves actually resuming them to the caller,
-// once this call has returned and any lock guarding this relay's own
-// state has been released. Resuming a request while still holding
-// that lock risks the resumed side re-entering this same relay before
-// the lock is free -- keeping "decide what happened" and "resume
-// whoever was waiting" as two separate, non-overlapping steps is what
-// avoids that.
+// A pending consumer request is never resumed from inside this
+// relay's own bookkeeping update. `step` only ever returns *which*
+// requests to resume, as data, and leaves actually resuming them to
+// the caller, once this call has returned and any lock guarding this
+// relay's own state has been released. Resuming a request while still
+// holding that lock risks the resumed side re-entering this same
+// relay before the lock is free -- keeping "decide what happened" and
+// "resume whoever was waiting" as two separate, non-overlapping steps
+// is what avoids that.
 
 enum SourceID: Int, Hashable {
     case first = 0

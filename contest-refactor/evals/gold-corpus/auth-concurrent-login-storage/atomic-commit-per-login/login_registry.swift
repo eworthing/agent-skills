@@ -3,12 +3,8 @@
 // and each is stored independently).
 //
 // Storing a login is a single, indivisible write: `commitStore` reads
-// current storage and writes the result back in one step, with no
-// point where another caller's own commit can land in between.
-// `beginStore` has nothing to remember ahead of time -- unlike a
-// design that captures a snapshot of storage before the write happens,
-// there is no stale copy here for a later commit to overwrite storage
-// with.
+// current storage and writes the result back in one step. `beginStore`
+// only bundles the kind and value together for that call.
 
 enum LoginKind: Int, Hashable {
     case primary = 0

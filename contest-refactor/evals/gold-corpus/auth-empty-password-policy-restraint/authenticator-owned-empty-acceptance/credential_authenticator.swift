@@ -1,9 +1,7 @@
 // Authenticates a supplied credential against each account's own stored
-// password. Most accounts require their stored password to match
-// exactly. A small number of accounts -- a shared kiosk terminal with no
-// individual owner to hold a secret, say -- are deliberately provisioned
-// with an empty stored password, and are meant to authenticate with an
-// empty one supplied.
+// password: the two must match exactly. A request that carries no
+// credential at all never authenticates -- there is no account's
+// stored password to compare against when nothing was supplied.
 
 struct Credential {
     let username: String

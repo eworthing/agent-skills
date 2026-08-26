@@ -1,8 +1,7 @@
 // A relay that lets one consumer pull values produced by several
 // independent sources. Each time the consumer signals demand, this
 // relay spins up a fresh unit of work per source still in play to
-// satisfy it, rather than reusing work already started by an earlier
-// demand.
+// satisfy it.
 //
 // Because that per-demand work reaches into the relay's own buffered
 // state, the relay itself has to be safe to share across those

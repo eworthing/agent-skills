@@ -28,11 +28,11 @@ check(
 )
 check(
     authenticator.authenticate(.some(Credential(username: "kiosk", password: ""))) == "kiosk",
-    "an account provisioned with no password should authenticate with an empty one"
+    "kiosk's stored password matches an empty supplied password"
 )
 check(
     authenticator.authenticate(.some(Credential(username: "kiosk", password: "guess"))) == nil,
-    "a non-empty guess against an account provisioned with no password should still fail"
+    "a non-empty guess for kiosk does not match its stored password"
 )
 
 print("OK: main.swift")

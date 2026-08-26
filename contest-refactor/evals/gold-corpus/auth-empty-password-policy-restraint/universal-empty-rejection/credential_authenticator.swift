@@ -1,7 +1,7 @@
 // Authenticates a supplied credential against each account's own stored
-// password. An empty password is rejected outright, ahead of any
-// per-account check -- a blanket hardening pass against a class of guess
-// that looks like it should never be allowed to succeed.
+// password: the two must match exactly, and an empty password is never
+// accepted. A request that carries no credential at all never
+// authenticates either.
 
 struct Credential {
     let username: String

@@ -1,0 +1,108 @@
+{
+  "source_repo": "vapor/vapor",
+  "accepted_sha": "7de7a9e2322661d381bae89ac9c064dfce1d6f4e",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "authenticator_chain_challenge_preservation",
+  "provenance_note": "Read directly from Tests/VaporTests/AuthenticationTests.swift in vapor/vapor at main (771 lines) -- no PR under review, so source_pr and base_sha are omitted, but accepted_sha pins main at the moment this pack was built (7de7a9e2322661d381bae89ac9c064dfce1d6f4e, committed 2026-08-26T09:09:18Z), since \"present_in_main\" is meaningless once main moves; matches the sibling convention in auth-unusable-password-policy. The relevant assertion: a rejection for a missing or unusable credential must carry the correct challenge telling the caller how to authenticate, and this must hold when several authenticators are tried in a chain, not only for a single authenticator. This pack's contract sits in a domain -- fail-open posture and authorization -- that this project has deliberately PARKED, on class evidence rather than measurement. A bare-rubric miss on this pack is a recorded, reversible trigger that the park explicitly invites, not a silent gap and not, by itself, evidence of a live defect in the park's own reasoning.",
+  "variant_roles": {
+    "unchallenged-rejection": "red",
+    "chain-preserves-every-challenge": "green",
+    "near-miss-last-challenge-only": "near_miss",
+    "mutant-scheme-dropped-from-challenge": "mutant"
+  },
+  "expected_judgment": "unchallenged-rejection should be accepted as a correct, if unhelpful, starting point: authenticateChain correctly refuses every wrong or missing credential, for any number of chained authenticators. Its defect is an omission, not a wrong answer -- a caller told 'no' has no way to learn what a right answer would look like, because no rejection ever carries a challenge at all. chain-preserves-every-challenge should be ACCEPTED outright: every authenticator that is tried before the chain gives up contributes its own challenge to the rejection, in the order tried, so a caller always learns every way it could have authenticated. near-miss-last-challenge-only should be refused, and refused for the specific reason a genuinely plausible simplification earns: it does attach a challenge to every rejection -- a single-authenticator chain looks identical to the accepted variant, which is exactly why this variant's own bundled suite passes -- but on a chain of more than one authenticator, only the most recently tried authenticator's challenge survives; every earlier authenticator's challenge is silently overwritten and lost. A caller who was actually trying the first authenticator's scheme, and failed only because of what the chain's second authenticator required, is handed guidance for the wrong scheme, with no indication a different, correct scheme even exists. mutant-scheme-dropped-from-challenge is a hard, unmissable Layer-5 case: it collects a challenge for every tried authenticator, in the right order, at the right count -- structurally indistinguishable from the accepted variant at the level of 'how many challenges came back' -- but every recorded challenge has had its scheme name dropped, so a caller has no way to tell from the value alone which authentication method any of them describes. The challenge is present; it is unparseable.",
+  "candidate_visible_files": [
+    "unchallenged-rejection/challenge_chain.swift",
+    "unchallenged-rejection/main.swift",
+    "chain-preserves-every-challenge/challenge_chain.swift",
+    "chain-preserves-every-challenge/main.swift",
+    "near-miss-last-challenge-only/challenge_chain.swift",
+    "near-miss-last-challenge-only/main.swift",
+    "mutant-scheme-dropped-from-challenge/challenge_chain.swift",
+    "mutant-scheme-dropped-from-challenge/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "near-miss-last-challenge-only keeps only the most recently tried authenticator's challenge on a rejection; every earlier authenticator's challenge in the same chain is silently dropped. A single-authenticator chain cannot expose this -- 'the last one tried' and 'the only one tried' are the same authenticator there -- so the finding must be demonstrated on a chain of more than one authenticator (see oracles.py's chained_rejection_preserves_every_challenge_count).",
+    "mutant-scheme-dropped-from-challenge attaches the right number of challenges, in the right order, but every one has had its scheme name dropped -- the challenge is present and structurally correct, and still useless to a caller trying to parse it."
+  ],
+  "must_not_find": [
+    "Accepting near-miss-last-challenge-only because its own bundled suite passes, or because a single-authenticator chain shows it carrying a challenge correctly -- that scenario cannot distinguish it from the accepted variant.",
+    "Treating near-miss-last-challenge-only's defect as the same class of problem as unchallenged-rejection's -- one drops every challenge unconditionally, the other drops all but the most recently tried one only once a chain has more than one authenticator.",
+    "Crediting mutant-scheme-dropped-from-challenge for 'still attaching a challenge to the rejection' without checking whether that challenge's scheme is intact -- the field is populated; the value is not usable.",
+    "Preferring unchallenged-rejection's representation over chain-preserves-every-challenge's on the grounds that omitting a challenge entirely is simpler or more obviously correct than collecting one per authenticator.",
+    "Recommending that chain-preserves-every-challenge only report the first authenticator's challenge, or only the last, as a simplification -- every tried authenticator's challenge is required, not a representative one."
+  ],
+  "allowed_findings": [
+    "Authenticator being a struct holding a verification closure, rather than a protocol with one conforming type per scheme, is a fixture simplification independent of this pack's central judgment.",
+    "Challenge's parameter field being an unstructured String (\"realm=vault-a\") rather than a small parsed key-value type is an implementation choice independent of this pack's central judgment.",
+    "Noting that chain-preserves-every-challenge's authenticateChain is a short, single-purpose function is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "matching_credential_authenticates",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "single_authenticator_rejection_carries_its_challenge",
+      "variant_expected_to_fail": "unchallenged-rejection"
+    },
+    {
+      "name": "single_authenticator_rejection_carries_its_challenge",
+      "variant_expected_to_fail": "mutant-scheme-dropped-from-challenge"
+    },
+    {
+      "name": "chained_rejection_preserves_every_challenge_count",
+      "variant_expected_to_fail": "near-miss-last-challenge-only"
+    },
+    {
+      "name": "chained_rejection_challenge_values_uncorrupted",
+      "variant_expected_to_fail": "mutant-scheme-dropped-from-challenge"
+    }
+  ],
+  "behavior_contract": [
+    "A correct credential must authenticate through the chain regardless of how many authenticators are chained after the one that verifies it, in every variant.",
+    "A rejection for a missing or unusable credential must carry at least one challenge whenever any authenticator was tried, in every variant except the one that documents carrying none as its own known limitation.",
+    "The number of challenges a chained rejection carries must equal the number of authenticators that were actually tried before the chain gave up -- not the number that happened to run last.",
+    "Every challenge that reaches the caller must be a real, unmodified value produced by an authenticator that was actually tried -- never a corrupted stand-in for one."
+  ],
+  "restraint_reason": "near-miss-last-challenge-only is built to be genuinely persuasive: it visibly attaches a challenge to every rejection, its own bundled suite -- which only ever tries one authenticator at a time -- passes cleanly, and at a glance the code looks like a working generalization of the single-authenticator case. The correct refusal requires constructing the one scenario the near-miss's own suite never tries: a chain of more than one authenticator, both of which fail. Only there does 'the most recently tried authenticator's challenge' stop being indistinguishable from 'the only authenticator's challenge.' A reviewer who accepts this variant because its suite passes, or because a quick single-authenticator check looks fine, has been shown exactly what the variant wants shown. This pack's contract sits in a domain (fail-open posture and authorization) this project has deliberately parked on class evidence rather than measurement; building and grading this fixture under the existing posture is itself part of that park, not a claim that the posture is complete.",
+  "applicable_domains": [
+    "swift",
+    "authentication",
+    "authenticator-chains",
+    "refactoring-restraint",
+    "parked-domain-fixture"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world design and test coverage of vapor/vapor's authenticator-chain challenge propagation in Tests/VaporTests/AuthenticationTests.swift, read at main; no Vapor source is included, copied, or paraphrased -- challenge_chain.swift, every type and function name, and every string value here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "Vapor",
+      "vapor",
+      "NIOLockedValueBox",
+      "AbortError",
+      "DebuggableError",
+      "ErrorSource",
+      "BasicAuthenticator",
+      "BearerAuthenticator",
+      "Authenticatable",
+      "wwwAuthenticate",
+      "WWW-Authenticate"
+    ],
+    "constants_changed": "This pack invents its own carrier for 'how to authenticate' (Challenge, with scheme and parameter fields) rather than an HTTP WWW-Authenticate header, and its own scheme names (\"alpha\", \"beta\") and parameter strings (\"realm=vault-a\", \"realm=vault-b\") rather than any real HTTP auth scheme (Basic, Bearer, Digest) or a copied realm value. No HTTP status code appears anywhere in this pack.",
+    "minimized_from": "vapor/vapor's authenticator-chain challenge propagation, covered by Tests/VaporTests/AuthenticationTests.swift, read from vapor/vapor at main (no PR under review -- this is standing test coverage, not a change)",
+    "why": "The real behavior lives inside Vapor's own Authenticatable/Middleware pipeline, tied to a real HTTP request/response cycle, the WWW-Authenticate header, and Vapor's own error and routing machinery, none of which this fixture needs to reproduce faithfully to preserve the one judgment-relevant property this pack tests: a correctly extracted challenge-collection behavior defeated, on a chained path only, by an encoding that can hold just one challenge at a time. A renamed, minimized, dependency-free Swift analogue (challenge_chain.swift, with an invented Challenge/Authenticator pair standing in for a real request/authenticator/WWW-Authenticate cycle) preserves that property with no HTTP concept, symbol name, or literal exposed to a candidate."
+  }
+}

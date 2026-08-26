@@ -2,10 +2,7 @@
 // than one kind at once -- a primary login and a secondary one, say --
 // and each is stored independently). Storing a login is split into two
 // steps: `beginStore` looks at what is currently stored, and
-// `commitStore` writes the result back. Splitting the write this way
-// mirrors how a caller might be suspended between reading shared
-// storage and writing it back, with another caller's own store
-// completing in between.
+// `commitStore` writes the result back.
 
 enum LoginKind: Int, Hashable {
     case primary = 0

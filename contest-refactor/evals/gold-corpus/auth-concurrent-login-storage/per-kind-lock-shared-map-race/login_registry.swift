@@ -1,8 +1,8 @@
 // Stores one login per kind (an account may be logged in through more
 // than one kind at once -- a primary login and a secondary one, say --
-// and each is stored independently). Each kind gets its own lock, so
-// two callers storing the *same* kind at once cannot interleave with
-// each other.
+// and each is stored independently). Each kind's storage update is
+// guarded by its own lock, so a caller's read-modify-write of storage
+// is synchronized before it lands.
 
 enum LoginKind: Int, Hashable {
     case primary = 0

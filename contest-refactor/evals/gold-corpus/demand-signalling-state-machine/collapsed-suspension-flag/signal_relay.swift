@@ -1,8 +1,7 @@
 // A relay that lets one consumer pull values produced by several
 // independent sources. Demand and delivery are tracked with a single
 // suspended flag plus one held slot for whatever is currently
-// pending, rather than a separate case for every combination of "is a
-// consumer waiting" and "is a value already available."
+// pending.
 
 enum SourceID: Int, Hashable {
     case first = 0

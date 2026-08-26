@@ -1,0 +1,124 @@
+{
+  "source_repo": "vapor/vapor",
+  "accepted_sha": "7de7a9e2322661d381bae89ac9c064dfce1d6f4e",
+  "accepted_state": "present_in_main",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "middleware_catch_rethrow_detail_preservation",
+  "provenance_note": "Read directly from Tests/VaporTests/AuthenticationTests.swift in vapor/vapor at main (771 lines) -- no PR under review, so source_pr and base_sha are omitted, but accepted_sha pins main at the moment this pack was built (7de7a9e2322661d381bae89ac9c064dfce1d6f4e, committed 2026-08-26T09:09:18Z), since \"present_in_main\" is meaningless once main moves; matches the sibling convention in auth-unusable-password-policy. The relevant assertion: a test captures four distinct pieces of an error as it passes through a middleware that catches and rethrows -- a human-readable reason, a challenge, a stable machine identifier, and the source location where the error was raised -- and all four must survive. This pack's contract sits in a domain -- fail-open posture and authorization -- that this project has deliberately PARKED, on class evidence rather than measurement. A bare-rubric miss on this pack is a recorded, reversible trigger that the park explicitly invites, not a silent gap and not, by itself, evidence of a live defect in the park's own reasoning.",
+  "variant_roles": {
+    "generic-error-on-catch": "red",
+    "middleware-forwards-original-failure": "green",
+    "near-miss-reason-and-challenge-only": "near_miss",
+    "mutant-identifier-from-wrapper": "mutant"
+  },
+  "expected_judgment": "generic-error-on-catch should be flagged: withErrorMiddleware catches whatever the guarded operation raises and rethrows a fresh, generic error in its place, so all four pieces of the original failure -- reason, challenge, identifier, and source location -- are lost every time, unconditionally. middleware-forwards-original-failure should be ACCEPTED outright: it catches the original failure and rethrows the exact same value, unchanged, so every one of the four pieces survives intact. near-miss-reason-and-challenge-only should be refused, and refused for the specific reason this pack exists to measure: it rethrows a value that carries the two pieces a human reads directly -- the reason and the challenge -- and silently drops the two pieces that automated handling and debugging depend on: the stable machine identifier and the source location where the failure was raised. Everything a reviewer checks by eyeballing the error message still looks completely right; a reviewer who checks only whether the message reads correctly, without checking whether the identifier and source location a downstream handler or a log aggregator would key on are still present, has done half the review. mutant-identifier-from-wrapper is a hard, unmissable Layer-5 case: it preserves the shape of all four fields -- reason, challenge, identifier, and source location are all present and non-empty on the rethrown value, and reason, challenge, and source all correctly match the original -- but the identifier is populated from the middleware's own wrapper label instead of forwarded from the original failure, so it is present, stable-looking, and answers a different, wrong question about what actually failed.",
+  "candidate_visible_files": [
+    "generic-error-on-catch/error_detail.swift",
+    "generic-error-on-catch/main.swift",
+    "middleware-forwards-original-failure/error_detail.swift",
+    "middleware-forwards-original-failure/main.swift",
+    "near-miss-reason-and-challenge-only/error_detail.swift",
+    "near-miss-reason-and-challenge-only/main.swift",
+    "mutant-identifier-from-wrapper/error_detail.swift",
+    "mutant-identifier-from-wrapper/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "near-miss-reason-and-challenge-only preserves the reason and the challenge -- the two pieces a human reads directly -- and drops the identifier and the source location, the two pieces automated handling and debugging depend on. This is invisible to a review that only checks whether the error message still reads correctly; it requires checking each of the four fields independently (see oracles.py's identifier_is_present and source_location_matches_original, both of which fail against exactly this variant).",
+    "mutant-identifier-from-wrapper's identifier is present and structurally correct-looking, but is populated from the middleware's own wrapper label rather than forwarded from the original failure -- it names the wrong thing while looking exactly as complete as the accepted variant's."
+  ],
+  "must_not_find": [
+    "Accepting near-miss-reason-and-challenge-only because the rethrown error's message (reason and challenge) reads correctly -- that is exactly the surface a reviewer who stops at eyeballing the message will find, and exactly what this pack exists to catch.",
+    "Treating near-miss-reason-and-challenge-only's dropped identifier and source location as a stylistic or logging-only concern rather than a real loss of information a downstream handler or log aggregator would depend on.",
+    "Crediting mutant-identifier-from-wrapper for 'having all four fields populated' without checking whether the identifier's actual value traces back to the original failure -- presence is not correctness.",
+    "Treating near-miss-reason-and-challenge-only and mutant-identifier-from-wrapper as the same class of defect because both fail to correctly deliver the original identifier -- one drops it outright (recoverably nothing), the other replaces it with a different, wrong, present value; a reviewer who conflates 'missing' with 'present but wrong' has not made the distinction this pack is built to require.",
+    "Accepting near-miss-reason-and-challenge-only or mutant-identifier-from-wrapper on the strength of their own bundled suites passing -- neither suite checks all four fields (the near-miss's suite never asserts on identifier or source location at all; the mutant's suite checks the identifier is present without checking its value), so a passing suite here says nothing about the property this pack tests."
+  ],
+  "allowed_findings": [
+    "AuthFailure and its sibling rethrown types (PartialFailure, WrappedFailure, GenericFailure) being separate concrete types conforming to a shared RethrownDetail protocol, rather than one type with optional fields, is a fixture simplification independent of this pack's central judgment.",
+    "SourceLocation being a hand-rolled file/line pair rather than using Swift's #file/#line literals is an implementation choice independent of this pack's central judgment.",
+    "Noting that middleware-forwards-original-failure's withErrorMiddleware is a short, single-purpose function is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "operation_succeeds_without_raising",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "reason_and_challenge_survive",
+      "variant_expected_to_fail": "generic-error-on-catch"
+    },
+    {
+      "name": "identifier_matches_original",
+      "variant_expected_to_fail": "generic-error-on-catch"
+    },
+    {
+      "name": "identifier_matches_original",
+      "variant_expected_to_fail": "near-miss-reason-and-challenge-only"
+    },
+    {
+      "name": "identifier_matches_original",
+      "variant_expected_to_fail": "mutant-identifier-from-wrapper"
+    },
+    {
+      "name": "identifier_is_present",
+      "variant_expected_to_fail": "generic-error-on-catch"
+    },
+    {
+      "name": "identifier_is_present",
+      "variant_expected_to_fail": "near-miss-reason-and-challenge-only"
+    },
+    {
+      "name": "source_location_matches_original",
+      "variant_expected_to_fail": "generic-error-on-catch"
+    },
+    {
+      "name": "source_location_matches_original",
+      "variant_expected_to_fail": "near-miss-reason-and-challenge-only"
+    }
+  ],
+  "behavior_contract": [
+    "An operation that does not fail must pass its result through the middleware untouched, in every variant.",
+    "A failure's human-readable reason and its challenge must survive a catch-and-rethrow, in every variant that does not discard the failure outright.",
+    "A failure's stable machine identifier must survive a catch-and-rethrow unchanged from the original -- populated from the original failure, never substituted with a value describing the middleware itself.",
+    "A field being present and non-nil on a rethrown error is not evidence it is correct -- presence and correctness are independent properties, and a reviewer must check both."
+  ],
+  "restraint_reason": "near-miss-reason-and-challenge-only is built to survive exactly the review a middleware bug usually gets: read the rethrown error's message, confirm it still describes the failure accurately, move on. It does, in every case -- the reason and the challenge are forwarded untouched. The two fields that never surface in a message a human reads (the machine identifier, the source location) are the ones silently dropped, and they are also the two fields nothing in this variant's own bundled suite checks. mutant-identifier-from-wrapper measures the next, sharper distinction: a field that is present is not thereby correct, and 'the middleware attaches an identifier' is not the same claim as 'the middleware forwards the original failure's identifier.' A reviewer who checks presence but not provenance for the identifier has made real progress over one who only reads the message, and still has not fully cleared this pack. This pack's contract sits in a domain (fail-open posture and authorization) this project has deliberately parked on class evidence rather than measurement; building and grading this fixture under the existing posture is itself part of that park, not a claim that the posture is complete.",
+  "applicable_domains": [
+    "swift",
+    "error-handling",
+    "middleware",
+    "refactoring-restraint",
+    "parked-domain-fixture"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world design and test coverage of vapor/vapor's error-detail preservation across a catching middleware in Tests/VaporTests/AuthenticationTests.swift, read at main; no Vapor source is included, copied, or paraphrased -- error_detail.swift, every type and function name, and every string value here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "Vapor",
+      "vapor",
+      "NIOLockedValueBox",
+      "AbortError",
+      "DebuggableError",
+      "ErrorSource",
+      "BasicAuthenticator",
+      "BearerAuthenticator",
+      "Authenticatable",
+      "wwwAuthenticate",
+      "WWW-Authenticate"
+    ],
+    "constants_changed": "This pack invents its own error type (AuthFailure), its own carrier for 'how to authenticate' (a plain challenge string, \"vault-token\", not an HTTP WWW-Authenticate header value), its own stable identifier string (\"auth.credential.missing\", not a real Vapor/Abort error identifier such as credentialsExpired), its own reason string (not \"The credentials have expired.\" or any other real Vapor error description), and its own invented source file/line (\"vault_gate.swift\", line 42, not a real Vapor source location). No HTTP status code appears anywhere in this pack.",
+    "minimized_from": "vapor/vapor's error-detail preservation across a catching middleware, covered by Tests/VaporTests/AuthenticationTests.swift, read from vapor/vapor at main (no PR under review -- this is standing test coverage, not a change)",
+    "why": "The real behavior lives inside Vapor's own DebuggableError/AbortError machinery and its ErrorSource type, tied to a real HTTP request/response cycle and Vapor's own routing and logging systems, none of which this fixture needs to reproduce faithfully to preserve the one judgment-relevant property this pack tests: a correctly forwarded four-field failure value defeated, on one variant, by an intermediate type that only carries two of the four fields, and on another, by an intermediate type that carries all four but repopulates one from the wrong source. A renamed, minimized, dependency-free Swift analogue (error_detail.swift, with an invented AuthFailure/RethrownDetail pair standing in for Vapor's own error-detail protocol) preserves that property with no HTTP concept, symbol name, or literal exposed to a candidate."
+  }
+}
