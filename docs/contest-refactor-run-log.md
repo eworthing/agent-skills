@@ -811,6 +811,13 @@ can see it — a comment naming the grader contains neither.
    change.
 5. Harness note: three of six reviews returned JSON this run could not have
    parsed mechanically — code fences, a split object with no `claim`, and one
-   wrapped in zero-width unicode. Any real runner needs schema validation at
-   that boundary, or should pin a verdict enum the way `reviewer-cases` does
-   instead of parsing prose.
+   wrapped in zero-width unicode. **Root cause identified by one of the
+   reviewers, not by inspection:** the agent message channel matches a bare
+   top-level JSON object against its own protocol schema (`shutdown_request`
+   and friends) and rejects it, so a reviewer returning structured output is
+   forced to fence or wrap it, and the wrapping is what breaks parsing.
+   The remedy is therefore not schema validation on the message text: a real
+   runner must have reviewers **write results to a file and return only a
+   path**, never carrying structured results through the message channel.
+   Pinning a verdict enum the way `reviewer-cases` does sidesteps it entirely
+   for verdict-grain layers.
