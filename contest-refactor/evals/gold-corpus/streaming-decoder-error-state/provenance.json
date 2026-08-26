@@ -1,0 +1,114 @@
+{
+  "source_repo": "apple/swift-nio",
+  "source_pr": 814,
+  "base_sha": "5fba8b7def5e3777d26883754c1390b8bb80ab32",
+  "accepted_sha": "f1efb4a10427fca6b89e4f4157aa3478c9d5f8f8",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "hotspot_scanner_restraint_state_density",
+  "provenance_note": "A downstream project's own six-month-old intermittent-failure bug was closed as fixed through the real #837 + #814 chain: #837 (merged ten days earlier) added the error-latch state that stops the decoder from calling decode again after a user-thrown error; #814 (this pack's source_pr) then moved the decoder onto a shared incremental-decoder protocol, carrying that error state forward as one of its cases, and raised allocation limits as a disclosed, measured trade to make the move. #814 participates in that resolution chain -- it did not, on its own, fix the downstream bug, and this is not a longitudinal defect story about #814 alone. This pack is a RESTRAINT control, not a defect hunt: a parser's states and branches are the domain here, not incidental complexity, and an automated complexity scanner that nominates this kind of code as a hotspot is supposed to be overruled by inspection, not obeyed.",
+  "variant_roles": {
+    "hand-rolled-buffer-loop": "red",
+    "protocol-decoder-with-error-state": "green",
+    "flattened-states-with-flags": "near_miss",
+    "mutant-missing-error-state": "mutant"
+  },
+  "expected_judgment": "hand-rolled-buffer-loop should be accepted as a correct, working starting point: its own buffering, re-entrancy guard, and leftover-bytes bookkeeping are inlined into the same type as its parsing state rather than factored out, and it decodes ordinary input correctly. Its genuine weakness is architectural, not behavioral on any single case -- the buffering concern is tangled with the parsing concern, so nothing about this decoder's own buffering logic could be reused by a second parser without copying it -- and, predating any error-latch, a consumer's thrown error is swallowed silently and decoding continues as if nothing happened. That is a real gap, but it is the gap the pack's later variants close, not a defect to flag as broken in isolation; the reviewer's job here is recognizing that this variant's larger flaw is coupling, not any one incorrect output. protocol-decoder-with-error-state should be ACCEPTED outright, and specifically accepted as the pack's most state-dense file: an awaitingHeader/awaitingCountedContinuation/awaitingUnboundedContinuation/errored state enum sitting on a small shared buffering-and-re-entrancy protocol. Every one of those states is a real, distinguishable protocol condition -- collapsing any of them changes decoded output on some legal input, which is exactly what this pack's other two failing variants demonstrate from different directions -- and the extra allocation the shared protocol costs per line and per frame, compared to a hand-tuned single-buffer loop, is disclosed in-code as a measured, accepted trade for reusability and for the guarantee the error-latch depends on, not incidental waste. flattened-states-with-flags should be refused, and refused for the specific, structural reason a genuinely tempting simplification earns: it keeps the same shared buffering protocol and the same correct error-latch, and only collapses the parsing-state enum into a couple of Bool flags plus a length counter, on the reasonable-sounding grounds that this reads more simply and drops a case. It is wrong on a concrete, checkable ground: it uses 'remaining == 0' as a stand-in for 'awaiting the start of a new message,' but that same value also holds throughout the entire body of an in-progress unbounded frame, since that mode never touches remaining -- so the two states the enum kept apart ('awaiting the start of a new message' and 'awaiting a continuation line of the current one') become indistinguishable by this encoding. A concrete, deterministic input (an unbounded frame whose first body line happens to look like a valid zero-length counted header) is parsed as two frames instead of one, silently, with no error and no rejected write anywhere in this variant's own bundled suite -- because that suite, like a reviewer stopping at 'it still looks like the same shape, just leaner,' never happens to exercise the one input this collapse gets wrong. mutant-missing-error-state is a hard, unmissable Layer-5 case, not a reviewer-judgment one: it keeps protocol-decoder-with-error-state's exact state enum and shared buffering protocol, minus the errored case and its do/catch latch. On the surface nothing distinguishes it from the accepted variant for any input that never triggers a consumer error, and its own bundled suite, which never triggers one, passes. Once the consumer throws for a delivered frame, this variant keeps calling it for every well-formed frame that follows -- the frame count after the throw is nonzero where the accepted variant's and the near-miss's are both zero -- with no crash and no visible symptom besides continued delivery after a failure that should have silenced it.",
+  "candidate_visible_files": [
+    "hand-rolled-buffer-loop/frame_decoder.swift",
+    "hand-rolled-buffer-loop/main.swift",
+    "protocol-decoder-with-error-state/frame_decoder.swift",
+    "protocol-decoder-with-error-state/main.swift",
+    "flattened-states-with-flags/frame_decoder.swift",
+    "flattened-states-with-flags/main.swift",
+    "mutant-missing-error-state/frame_decoder.swift",
+    "mutant-missing-error-state/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "flattened-states-with-flags's flag encoding cannot distinguish 'awaiting the start of a new message' from 'awaiting a continuation line of an open unbounded frame' -- both read as remaining == 0 -- so a body line that happens to look like a valid header is misread as starting a new frame instead of being taken as this frame's own content; a concrete input (an unbounded frame's first body line looking like a zero-length counted header, oracles.py's distinct_states_not_collapsible) is split into two decoded frames where the accepted variant produces one.",
+    "protocol-decoder-with-error-state's four-case state machine is not over-engineering to be trimmed: each case is a real, distinguishable protocol condition, and the pack's own near-miss and mutant each demonstrate, on a concrete input, what breaks when one of those distinctions is removed."
+  ],
+  "must_not_find": [
+    "Claiming protocol-decoder-with-error-state's state machine is inherently over-engineered or has too many states.",
+    "Flagging its nested switch/branches as a smell absent a demonstrated semantic duplicate between two of its cases.",
+    "Recommending that its parser states be flattened for readability.",
+    "Treating the raised per-message allocation this variant's shared buffering protocol costs (documented in-code) as structural waste -- it is a disclosed, benchmarked trade, not an unexamined regression.",
+    "Recommending flattened-states-with-flags's flag-and-counter encoding as a cleanup of protocol-decoder-with-error-state."
+  ],
+  "allowed_findings": [
+    "Frame's CustomStringConvertible conformance could instead be a free function used only by the grader-only probe, independent of this pack's central judgment.",
+    "The header-line parsing (line.hasPrefix(\"#\"), Int(line.dropFirst())) could be expressed with a small dedicated parsing helper instead of inline checks, independent of this pack's central judgment.",
+    "Noting that hand-rolled-buffer-loop's FrameDecoder is a single type doing more than protocol-decoder-with-error-state's split between IncrementalLineDecoder and FrameDecoder is a fair, accurate reading, not by itself a defect to fix in this pack's graded scope."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [
+    {
+      "evidence_id": "missing-error-state-transition",
+      "applies_to_variants": ["mutant-missing-error-state"],
+      "required_finding": "the decoder must latch into an error state and suppress later decode callbacks once the consumer has thrown",
+      "not_required_in": [
+        "protocol-decoder-with-error-state",
+        "hand-rolled-buffer-loop",
+        "flattened-states-with-flags"
+      ]
+    }
+  ],
+  "hidden_oracles": [
+    {
+      "name": "distinct_states_not_collapsible",
+      "variant_expected_to_fail": "flattened-states-with-flags"
+    },
+    {
+      "name": "no_delivery_after_consumer_error",
+      "variant_expected_to_fail": "mutant-missing-error-state"
+    },
+    {
+      "name": "ordinary_message_decodes_identically",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A line's meaning is decided solely by the decoder's current parsing state, never by inspecting what the line itself looks like once a frame is already open -- a body line that happens to resemble a header must still be taken as body content.",
+    "Once the consumer has thrown for a delivered frame, no further frame may reach the consumer for the remainder of that decoder's lifetime, regardless of how much well-formed input follows.",
+    "An ordinary, non-adversarial message must decode to the identical frame regardless of which variant's internal state representation or buffering strategy is used.",
+    "A parser's state count is not itself evidence of complexity to be reduced: each state here corresponds to a real, distinguishable protocol condition, and collapsing one changes decoded output on some legal, constructible input."
+  ],
+  "restraint_reason": "This pack exists because an automated complexity scanner is expected to nominate protocol-decoder-with-error-state as a hotspot on sight -- four states, a nested switch, several branches -- and the Critic's job is to inspect that nomination and dismiss it, not act on it. flattened-states-with-flags is built to make dismissal hard: it is genuinely shorter, it keeps the same shared buffering protocol and the same correct error-latch, and at a glance it looks like exactly the kind of state-count reduction a complexity-driven reviewer is primed to reward. The correct refusal requires checking a specific, constructible input rather than trusting that fewer cases means no lost information: 'remaining == 0' happens to be a safe proxy for 'awaiting a header' on every ordinary sequence, including everything in this variant's own bundled suite, and only fails on the one input where an open unbounded frame's body line happens to look like a header. A reviewer who says 'it still passes its own tests and reads more simply' has fallen into exactly the failure mode this pack is the regression test for. Symmetrically, this pack also measures restraint toward hand-rolled-buffer-loop and the allocation trade: hand-rolled-buffer-loop is not a defect to criticize for lacking the shared protocol's reusability, and protocol-decoder-with-error-state's higher per-message allocation is not a regression to flag without weighing what it buys -- both are the specific over-eager 'simplify it' or 'flag it' instincts this restraint control exists to catch.",
+  "applicable_domains": [
+    "swift",
+    "state-machines",
+    "incremental-decoding",
+    "refactoring-restraint",
+    "complexity-heuristics"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-nio PR #814 (accepted, merged 2019-03-06) moving an HTTP decoder onto a shared incremental-decoder protocol, and PR #837 (accepted, merged 2019-02-25) adding the error-latch state #814 carried forward -- both cited by a downstream project's own account of a six-month intermittent-failure bug closed through that combined chain. No swift-nio source is included, copied, or paraphrased -- Frame, FrameKind, FrameDecoder, IncrementalLineDecoder, and every identifier and protocol detail here (the header/counted/unbounded line-protocol shape itself) are original to this fixture, invented specifically to avoid reproducing any HTTP-specific framing detail."
+  },
+  "contamination": {
+    "renamed": [
+      "swift-nio",
+      "NIO",
+      "NIOCore",
+      "ByteToMessageDecoder",
+      "B2MD",
+      "ChannelHandlerContext",
+      "HTTPDecoder",
+      "HTTPRequestDecoder",
+      "HTTPResponseDecoder",
+      "ByteBuffer",
+      "weissi",
+      "Kitura"
+    ],
+    "constants_changed": "None needed. This pack's protocol (header lines '#<n>' / '#*', a '.' terminator, and the frame bodies used in its tests and oracles) is invented for this fixture and shares no literal value, header syntax, status code, or method name with HTTP or with anything in the two source PRs. The only numbers here (frame lengths like 1 and 2, and the fixture's own sentinel body line 'BOOM') are this fixture's own, chosen for its own test and oracle scenarios.",
+    "minimized_from": "apple/swift-nio's move of its HTTP decoder onto a shared ByteToMessageDecoder-family protocol (PR #814, merged, base sha 5fba8b7def5e3777d26883754c1390b8bb80ab32) carrying forward the error-latch state added by PR #837 (merged ten days earlier, sha 862533d08990d11f12c10d6ae924fbd482203e79)",
+    "why": "The real change lives inside swift-nio's own event-loop-driven Channel and ByteToMessageDecoder machinery, tied to real HTTP framing (status lines, header fields, chunked transfer encoding) and a genuinely asynchronous pipeline, none of which this fixture needs to reproduce faithfully to preserve the one judgment-relevant property this pack tests: a state-dense parser whose states are each load-bearing, a shared buffering-and-re-entrancy layer that costs measurable allocation for reusability, and an error-latch whose removal is silent and Layer-5-hard rather than reviewer-judgment-hard. A renamed, minimized, fully synchronous Swift analogue (frame_decoder.swift, with an invented line-oriented header/counted/unbounded protocol standing in for HTTP's own line-and-header grammar) preserves that property with no event loop, no promise machinery, and no HTTP-specific literal, syntax, or symbol name exposed to a candidate."
+  }
+}
