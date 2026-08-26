@@ -1,0 +1,106 @@
+{
+  "source_repo": "apple/swift-collections",
+  "source_pr": 488,
+  "base_sha": "82bd4f2d20e145e552ea392e5235de022979fe74",
+  "accepted_sha": "03cb4dac6e1acee9ff70de3661441662ae22be48",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "chunk_identity_diff_granularity_restraint",
+  "variant_roles": {
+    "plain-text-single-leaf": "red",
+    "owned-segment-storage": "green",
+    "near-miss-content-derived-identity": "near_miss",
+    "mutant-identity-reset-on-read": "mutant"
+  },
+  "expected_judgment": "plain-text-single-leaf should be accepted as a correct, if structurally coarse, starting state -- it is not itself a defect: a Spool backed by one plain leaf string produces correct joined text after every replace, and nothing about it is broken. Its limitation only shows up once you ask a question its design cannot answer at all -- 'which one chunk changed?' -- because chunk boundaries here are pure arithmetic over one shared string, not separate storage, so the only identity available is the leaf's own, shared by every chunk sliced from it. owned-segment-storage should be ACCEPTED outright, and accepted as a real, disclosed trade: it is longer and more complex locally than the leaf-backed version -- a managed storage class, a monotonic counter, a wrapper struct -- purely to buy a global property neither simpler design has, which is that replacing one chunk changes that chunk's identity and nothing else's, so a diff can skip every untouched chunk without reading its bytes. near-miss-content-derived-identity should be refused, and refused for the specific structural reason a genuinely tempting simplification earns: it keeps a per-chunk storage shape but derives each chunk's identity from its own content -- a hash of its text -- instead of from a separate allocation, on the reasonable-sounding grounds that this avoids a counter and a class while still giving a diff a cheap identity to compare. It is wrong on two independent, concrete grounds. First, deriving identity from content makes two chunks with equal text indistinguishable by identity, so an edit that happens to produce text equal to some other existing chunk is reported as no change at all -- a real, silent, missed edit, not a cosmetic difference. Second, computing that identity at all requires reading every byte of every chunk's text, on both sides of a diff, which is exactly the cost the stable-identity design exists to avoid; the near-miss still touches every byte, it has just moved the byte-touching from 'comparing content directly' to 'hashing content to fake an identity comparison.' mutant-identity-reset-on-read is a hard, unmissable Layer-5 case: it keeps owned-segment-storage's exact shape -- a storage class, a counter, the same identity-set lookup in the diff -- but rebuilds fresh storage for every chunk on every read of the chunk list, so a chunk that nothing touched still receives a brand-new identity token merely by being read. The stored text is completely unaffected and every replace still produces exactly the right final content; only the diff's notion of what changed degrades, silently reporting far more chunks as changed than actually were. A check that only reads the resulting text after a replace will not catch this; only a check that inspects which chunks a diff actually flagged will.",
+  "candidate_visible_files": [
+    "plain-text-single-leaf/text_spool.swift",
+    "plain-text-single-leaf/main.swift",
+    "owned-segment-storage/text_spool.swift",
+    "owned-segment-storage/main.swift",
+    "near-miss-content-derived-identity/text_spool.swift",
+    "near-miss-content-derived-identity/main.swift",
+    "mutant-identity-reset-on-read/text_spool.swift",
+    "mutant-identity-reset-on-read/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "near-miss-content-derived-identity's motivation is genuine and reasonable on its face -- it keeps a custom per-chunk storage type, avoids a counter and a storage class, and still appears to give a diff a cheap identity to compare against. That the motivation is reasonable does not make the change correct.",
+    "near-miss-content-derived-identity's content-derived identity makes two chunks with equal text indistinguishable: an edit that produces text equal to some other existing chunk is reported as no change at all. This is checkable directly (see oracles.py's content_equal_chunks_are_distinguishable) and is invisible to any review that only inspects the resulting text after a replace.",
+    "near-miss-content-derived-identity does not avoid the cost that owned-segment-storage's design exists to avoid: computing a content-derived identity requires reading every byte of every chunk, on both the old and new side of a diff, every time (see oracles.py's worst_case_compared_units_bounded), which is a real, measurable difference from owned-segment-storage's cost of only reading chunks it already knows changed.",
+    "owned-segment-storage's extra local complexity -- a managed storage class and a monotonic counter, in place of a plain string -- is a deliberate, disclosed trade for a global property: a diff can tell which single chunk changed without reading the content of any other chunk. Naming that the code is longer is a fair observation; treating the length itself as the defect, without weighing what it buys, is not a correct review.",
+    "mutant-identity-reset-on-read's defect only shows up by checking which chunks a diff actually reports as changed after an ordinary single-chunk replace; the resulting text is correct in every case, so a check that only inspects final content will not catch it."
+  ],
+  "must_not_find": [
+    "Refusing owned-segment-storage because plain-text-single-leaf is shorter, simpler, or has less code -- local simplicity was deliberately traded away here for a global property that plain-text-single-leaf cannot provide at all, and the trade is disclosed and measured, not accidental.",
+    "Accepting near-miss-content-derived-identity because it avoids a counter and a storage class and still looks like it gives a diff a cheap identity comparison -- it does not avoid the byte-reading cost, and it introduces a real content-collision defect that owned-segment-storage does not have.",
+    "Refusing near-miss-content-derived-identity only on the grounds that 'deriving identity from a hash feels fragile' as a generic instinct, without naming that it specifically collides on equal-content chunks and specifically still reads every byte.",
+    "Crediting near-miss-content-derived-identity as harmless because the final joined text is correct in every scenario -- the content-collision defect and the byte-reading cost are both about the diff's own output and internal cost, not about whether the text itself ends up right.",
+    "Accepting mutant-identity-reset-on-read because an ordinary replace still produces the correct final text -- the defect is in which chunks the diff reports as changed, not in the text a candidate would see by inspecting the result.",
+    "Crediting mutant-identity-reset-on-read for retaining the custom per-chunk storage type -- retaining the representation is not the graded property. This variant keeps owned-segment-storage's architecture exactly and buys nothing with it: its observed diff behaviour and its compared-units cost are identical to plain-text-single-leaf's, the variant the representation exists to beat. A reviewer who approves it on shape has graded the data structure instead of what the data structure was adopted for, which is the specific mistake this pack exists to catch."
+  ],
+  "allowed_findings": [
+    "moveIntoPlace-style extraction of the replace-and-rebuild step into a smaller helper is a reasonable stylistic suggestion, independent of this pack's central judgment.",
+    "Spool storing its chunks as a plain Swift array rather than a more specialized backing structure is a fixture simplification, independent of this pack's central judgment.",
+    "Noting that owned-segment-storage's Spool and Segment types are each short and single-purpose is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "single_chunk_edit_touches_one_chunk",
+      "variant_expected_to_fail": "mutant-identity-reset-on-read"
+    },
+    {
+      "name": "content_equal_chunks_are_distinguishable",
+      "variant_expected_to_fail": "near-miss-content-derived-identity"
+    },
+    {
+      "name": "worst_case_compared_units_bounded",
+      "variant_expected_to_fail": "plain-text-single-leaf"
+    },
+    {
+      "name": "resulting_text_correct_after_replace",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "After any single-chunk replace, the resulting joined text of a Spool must exactly match the expected text -- every character, in order -- regardless of what identity mechanism the implementation uses internally.",
+    "A diff's own reported cost (bytes of chunk content it had to read) is a real, measurable quantity, checkable directly, independent of whether the resulting text happens to look correct.",
+    "Two chunks holding identical text are not thereby the same chunk: an edit that changes one chunk's text to match another chunk's existing text is a real change at that position and must be reported as one, not silently treated as if nothing happened.",
+    "A chunk's identity must not change merely because the chunk list was read; only replacing a chunk's own content may change that chunk's identity, and every other chunk's identity must be unaffected by an edit elsewhere in the same Spool."
+  ],
+  "restraint_reason": "near-miss-content-derived-identity is built to be genuinely persuasive: it keeps the same per-chunk storage shape as the accepted design, so on the surface it looks like a strictly simpler way to get the same identity-based diff, without needing a monotonic counter or a dedicated storage class -- content itself, hashed, becomes the identity. A reviewer who stops at 'it still uses its own chunk type, so this is basically the same idea, just leaner' has matched the near-miss's own pitch rather than testing it. The correct refusal names two independent, concrete costs, neither visible from a superficial read: content-derived identity collapses on chunks with equal text, so an edit that lands on someone else's existing content is invisibly dropped from a diff's report; and computing that identity at all requires reading every byte of every chunk on both sides of the comparison, which is exactly the read-avoidance the accepted design's extra complexity was built to buy. Restraint here also runs toward plain-text-single-leaf, the RED starting point: it is not a defect to be criticized for having less machinery, and owned-segment-storage's added complexity is not free-floating cleverness -- it is a specific, disclosed, measured trade of local simplicity for a global diffing property, and a review that treats the added storage class as over-engineering merely because a plain string is shorter has missed what the code change is actually for.",
+  "applicable_domains": [
+    "swift",
+    "text-storage",
+    "chunk-identity",
+    "diff-granularity",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-collections PR #488 (accepted, merged, 1.4.0), which refactored a large text type's internal chunk representation from a plain-string-backed value into its own managed, copy-on-write storage buffer with stable per-chunk identity, motivated by the diffing efficiency that stable identity buys; no swift-collections source is included, copied, or paraphrased -- Spool, Segment, SegmentStorage, Leaf, diffSpools, and every identifier here are original to this fixture, and every numeric constant (chunk size and comparison bound) is this fixture's own, independent of any figure from the upstream pull request."
+  },
+  "contamination": {
+    "constants_changed": "The upstream pull request's own body quotes two specific worst-case diff-granularity figures for its motivating benchmark: a worst case of 2550 UTF-8 code units compared before the change, and 255 after. Neither number appears anywhere in this pack, and 255 is not used as a chunk size or capacity anywhere either. This fixture's chunk size (8 characters) and its worst-case compared-units bound (20) are both chosen independently for this corpus's own test scenarios and bear no relationship to the upstream figures; the specific pairing that makes this pack's oracles discriminate (owned-segment-storage's actual cost of 8 falling under the bound, every other variant's actual cost of 48 or 96 falling well over it) was derived from running this fixture's own code, not from reasoning about the upstream numbers. This pack is unusually exposed here because the bound is the load-bearing content of one oracle -- shipping upstream's figures would have hedged the discriminating test the pack exists to run.",
+    "renamed": [
+      "BigString",
+      "_Chunk",
+      "swift-collections",
+      "Collections",
+      "Rope",
+      "_Rope",
+      "Azoy",
+      "utf8Count"
+    ],
+    "minimized_from": "apple/swift-collections's refactor of a large text type's internal chunk representation from a plain-string-backed value into its own managed, copy-on-write storage buffer with stable per-chunk identity (PR #488, merged 1.4.0)",
+    "why": "The real change lives inside a large text type's own internal storage and copy-on-write machinery, tied to UTF-8 breadcrumbs and a real rope-of-chunks tree this environment has no reason to reproduce faithfully; a renamed, minimized Swift analogue (Spool/Segment/SegmentStorage, with a flat array standing in for a real tree of leaves) preserves every judgment-relevant property -- a correct but structurally coarse starting point, a disclosed trade of local complexity for a global identity property, a content-derived identity near-miss that both collides and fails to avoid the cost it claims to avoid, and an identity-invalidated-too-eagerly mutant whose defect is invisible to a contents-only check -- as fully deterministic, compilable Swift with no real UTF-8 handling or real copy-on-write buffer, without exposing any upstream symbol name, PR number, or line of swift-collections source. `String`, `Array`, `Set`, and `hashValue` are the ordinary Swift language and standard library this fixture's storage is built from, not swift-collections-specific symbols, and are not treated as rename targets."
+  }
+}
