@@ -680,15 +680,17 @@ to the validator **and** `_validate_gold_corpus_selftest.py`, done RED-first as 
 It is not needed for P1: nothing consumes an axis tag until a second Python pack exists to
 compare against, so defer it rather than building an abstraction with one caller.
 
-**Still deferred at seven packs, and it nearly slipped in by accident.** The P7 and P8 build
+**Still deferred at eight packs, and it nearly slipped in by accident.** The P7 and P8 build
 specs both instructed the builder to add `python_axes` "consistent with how the other Python
-packs use it" — a spec error, since no pack has it and the field has never shipped. The P7
-builder refused, grepped the corpus, quoted this paragraph back, and asked before inventing
-an unvalidated field; the P8 spec was corrected mid-flight. Recorded because the failure mode
-is general: a build spec that asserts an existing convention is the cheapest way to smuggle
-an unshipped schema change into a corpus, and only a builder willing to contradict its brief
-catches it. If `python_axes` is ever wanted, it goes in through the validator first, as this
-paragraph already required.
+packs use it" — a spec error, since no pack has it and the field has never shipped. **Both
+builders refused independently.** Each grepped the corpus, confirmed the validator and its
+selftest have zero references to the field, quoted this paragraph back, and declined to invent
+it; P8's builder reached that conclusion on its own before the orchestrator's correction even
+arrived. Recorded because the failure mode is general: a build spec that asserts an existing
+convention is the cheapest way to smuggle an unshipped schema change into a corpus, it arrives
+with the authority of the brief, and the only thing standing in its way is a builder willing to
+contradict its instructions. Two out of two did. If `python_axes` is ever wanted, it goes in
+through the validator first, as this paragraph already required.
 
 **The leak check binds harder here.** Hidden-mode candidate-visible files must not carry
 original PR numbers, SHAs, or upstream symbol names. `GET_ITER`,
@@ -698,7 +700,7 @@ needles check 7 hunts, so every Python pack needs renaming before it goes candid
 ### Cost — measured, 2026-08-25
 
 The plan was to build P1 and price the rest off its actuals rather than off the estimate.
-Seven packs are now built, and the estimate was wrong in the expected direction but by far
+Eight packs are now built, and the estimate was wrong in the expected direction but by far
 less than it looked.
 
 **Measured builder spend, per pack.** Fresh tokens (`input + cache_creation + output`),
@@ -715,31 +717,51 @@ tokens so it is excluded:
 | P5 `cpython-wasm-platform-predicate` | 195,200 |
 | P6 `pytest-scope-enum-public-compat` | 167,823 |
 | P7 `werkzeug-socket-lifecycle` | 289,359 |
-| **Total / mean (7 packs)** | **1,576,555 / ~225k** |
+| P8 `pydantic-typing-extra` | 567,802 |
+| **Total / mean (8 packs)** | **2,144,357 / ~268k** |
 
-**So the honest correction is roughly 2×, not an order of magnitude.** ~231k against a
-~500k anchor. Anyone reading an early draft of this section that claimed a 10× overestimate
+**So the honest correction is under 2×, not an order of magnitude.** ~268k against a
+~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate
 should discard that number: it was asserted before measurement and it was too optimistic.
 
 **That figure is the build agent only.** It excludes writing each pack's spec and the
 orchestrator's verification round — and verification is not optional overhead here: it
 caught a defect in every single pack (P1 empty provenance SHAs and a substring-landmine
 leak needle, P2 a green variant narrating its own residual, P3+P4 the role-leak that became
-[check 8](#schema-and-validator)). Budget the all-in figure nearer **~300k per pack**.
+[check 8](#schema-and-validator)). At the current ~268k mean that puts the all-in figure
+nearer **~360k per pack**.
 
-**Projected for what remains.** P8 is one pack; P9 is four mini-packs, and the mini-pack rule
-(one contract each) is exactly the thing the cost hypothesis below says drives spend, so
-budget them as four, not as one entry. That is five builder units left at ~225k, so **~1.1M
-builder, ~1.4M all-in.** The full track lands near **~3.0M** rather than the ~4.5M this
-section previously carried — cheaper, still not cheap, and now a measured number rather than
-an anchor inherited from Swift packs that needed toolchain and SDK matrices this track does
-not. Note this is up from the ~2.7M projected at six packs: P7 came in above mean and P9
-resolved into four units rather than one.
+**The defect rate fell as the spec template stabilized, and the direction of the catches
+reversed.** Verification found a defect in every one of P1–P6. It found **none** in P7 or P8:
+both reproduced their oracle matrix exactly, both swept clean for needles and confessions, and
+neither needed a fix before commit. What P7 and P8 *did* surface was an error in **my** brief —
+both were told to add a `python_axes` field that has never shipped, and both refused and
+grepped the corpus rather than inventing it (see [Schema and validator](#schema-and-validator)).
+So the verification round is still paying for itself, but at eight packs it is catching
+orchestrator mistakes rather than builder ones, which is an argument for keeping it and not for
+trusting the specs more.
 
-**Upstream diff size does not predict pack cost — and the sign is the opposite of the
-intuition.** This section previously flagged P6 (pytest, **+298/−173 across 9 files**) and P8
-(pydantic, +452/−268) as risks, on the reasoning that a much larger upstream diff than
-P1–P4's 1-to-64 production lines might cost more to minimize. P6 is now measured at
+**What remains, and why the projection is now a range.** Only P9 is left, and it is four
+mini-packs rather than one entry — the mini-pack rule gives each its own contract, manifest and
+oracle set. They should run cheaper than a full pack (pack A carries only two variants, since a
+pure-restraint fixture must not ship a near-miss), but the section directly below is a record of
+this document projecting confidently from too few points and being wrong twice, so: **4 units at
+somewhere between ~150k and ~270k each, call it 0.6M–1.1M builder, roughly 0.8M–1.5M all-in.**
+
+Against **2,144,357 builder tokens measured across eight packs**, the full track lands somewhere
+near **3.6M–4.3M all-in.** That is materially above the ~2.7M and ~3.0M this section carried at
+six and seven packs, and no longer clearly under the ~4.5M anchor it was originally written to
+beat. The anchor was never the point — it came from Swift packs needing toolchain and SDK
+matrices this track does not — but the honest summary at eight packs is that the Python track is
+costing about what the Swift tranche was estimated to, not a fraction of it. The measured figure
+is what should be quoted; the earlier "cheaper than Swift" framing was a projection, and it did
+not survive P8.
+
+**Upstream diff size predicts pack cost poorly, and the two intermediate readings of this
+data were both overconfident — including one written in this document and corrected below.**
+This section originally flagged P6 (pytest, **+298/−173 across 9 files**) and P8 (pydantic,
++452/−268 across 15) as budget risks, reasoning that a much larger upstream diff than
+P1–P4's 1-to-64 production lines would cost more to minimize. P6 then measured
 **167,823 — the cheapest pack of the six, 0.75× the P1–P5 mean.**
 
 The likely reason, offered as a hypothesis rather than a finding: a large upstream diff is
@@ -748,26 +770,38 @@ number of distinct behavioural contracts it has to model, not the line count it 
 P6 modelled two (public string-compatibility, and ordering); its 9 upstream files were 7
 files of mechanical call-site updates that never reached the fixture.
 
-**P7 is the second data point and it lands on the opposite corner, which is what makes the
-pair informative.** P7 has the *smallest* upstream diff on the whole register — werkzeug
-#2517 is **+42/−67 across 2 files**, one of which is a changelog — and it measured
-**289,359, the most expensive pack of the seven, 1.35× the mean.** So the two extremes of
-upstream diff size produced the two extremes of cost *in the wrong direction*: largest diff
-cheapest, smallest diff dearest. Diff size is not a weak predictor here; over this sample it
-is an inverted one.
+P7 then landed on the opposite corner: the *smallest* upstream diff on the register
+(werkzeug #2517, **+42/−67 across 2 files**, one of them a changelog) at **289,359 — 1.35×
+the mean.** On those two points this section asserted that diff size was "not a weak
+predictor but an inverted one," and that P8 was therefore "not a budget risk on size alone."
 
-The contract-count hypothesis survives it. P7 had to build a resource-lifecycle model from
-nothing — a descriptor ledger, a listener with open/configure/bind/activate/close states,
-stale-endpoint clearing, conflict handling, and a descriptor handoff — because a faithful
-fixture could not just import a socket and still be deterministic. P6 inherited an enum and
-a property from the stdlib and had to invent almost no machinery. Upstream line count
-measures how much *existing* code the change touched; pack cost tracks how much *new*
-apparatus the fixture has to stand up before a single oracle can run.
+**That was wrong, and P8 is the correction.** P8 has the largest upstream diff on the
+register and measured **567,802 — 2.1× the next dearest pack and 2.5× the P1–P7 mean.** The
+original size-based worry, which this section had declared "contradicted twice," turns out to
+have been right about the one pack it was actually about.
 
-**So P8 is not a budget risk on size alone**, and the directional worry recorded here is now
-contradicted twice rather than merely untested. The honest caveat is that neither data point
-was preregistered: the hypothesis was written after P6 and P7 came in, so treat it as a
-pattern worth testing on P8/P9, not as an established rule.
+**What three points support, stated conservatively:** upstream diff size and pack cost are
+not monotonically related (P6 is the counterexample and it is a real one), but neither is the
+relationship inverted (P8 is the counterexample to that). With n=3 spanning 167k–568k there
+is no defensible rule here, and the two readings above were each drawn from the two points
+available at the time. Do not project a pack's cost from its diff.
+
+The contract-count hypothesis is still the best available explanation, and it is *consistent*
+with all three, but it no longer discriminates. P7 was dear despite a tiny diff because it had
+to stand up a resource-lifecycle model from nothing — ledger, listener state machine,
+stale-clearing, conflict handling, descriptor handoff — since a deterministic fixture could
+not simply import a socket. P6 was cheap despite a large diff because it inherited an enum and
+a property from the stdlib and invented almost no machinery. P8 was dearest because it had
+both the most contracts (dual-registry recognition, wrapper see-through, evaluate-then-fallback
+resolution, and the two-predicate split) *and* the most apparatus: five modules per variant,
+twenty candidate-visible files. For P8 contract count and diff size point the same way, so it
+cannot separate them.
+
+**The methodological point is the durable one.** Two successive readings of this table were
+written from whatever points had arrived, each sounded settled, and each was overturned by the
+next pack. Both are left visible above rather than quietly rewritten, because the pattern —
+confident inference from n=2 in a planning document — is the thing worth not repeating. Treat
+the contract-count idea as a lens for *scoping* a pack, never as a basis for pricing one.
 
 ### What this track does *not* buy
 

@@ -1,0 +1,141 @@
+{
+  "source_repo": "pydantic/pydantic",
+  "source_pr": 10725,
+  "base_sha": "74f224c9f32c437b4e76dd32633acc078d172690",
+  "accepted_sha": "5b7c290cea532770618cefb6e3359efa2279921b",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "dual_registry_predicate_specificity",
+  "variant_roles": {
+    "single-registry-check": "red",
+    "dual-registry-split": "green",
+    "near-miss-bare-form-predicate": "near_miss",
+    "mutant-dropped-registry": "mutant"
+  },
+  "expected_judgment": "single-registry-check should be accepted as a correct, if narrower, starting state -- it is not itself a defect, just the pre-refactor shape the pack is built around: Derived is recognized only when it comes from markers_native, and the fallback pattern for a stringified annotation only matches a bare `Derived[...]` spelling, with no notion of a Tagged[...] wrapper at all. Noting that a legacy-registry-sourced marker or a wrapped declaration isn't yet recognized is fair, motivating context for the refactor; it is not a required finding, since closing exactly that gap is what dual-registry-split then does. dual-registry-split should be ACCEPTED, and accepted without asking for the is_derived_marker/is_derived_annotation split to be collapsed: it centralizes recognition across both markers_native and markers_legacy, adds Tagged[...] unwrapping and a widened stringified-annotation fallback, and splits detection into two functions of different specificity -- is_derived_marker asks whether an object is itself the special form, is_derived_annotation (used at the one call site that matters, stored_field_names) additionally unwraps Tagged and resolves the stringified case. is_derived_marker's own docstring names is_derived_annotation as the one most callers want. A Critic that reads two near-identical functions and proposes merging them, or that reads dual-registry-split's own CHANGES.md disclosure of a narrow known gap (a locally-aliased marker that is also an unresolvable forward reference) as an invitation to close it, is over-flagging: neither is a defect in what shipped. near-miss-bare-form-predicate should be refused: it looks like a harmless simplification -- calling stored_field_names with the shorter-named, seemingly-equivalent is_derived_marker instead of is_derived_annotation -- and it silently stops excluding any Tagged-wrapped Derived field and any stringified/forward-referenced Derived field of any form, native or legacy, wrapped or bare: none of it raises, the field is simply kept as an ordinary stored field. mutant-dropped-registry is primarily a Layer-5 execution case: its Tagged-unwrapping and stringified-fallback behavior are byte-identical to dual-registry-split, and every native-registry case behaves identically, but its marker-lookup tuple only contains markers_native, so any field whose Derived marker was imported from markers_legacy is silently kept as stored -- invisible to any check that never constructs a legacy-registry annotation.",
+  "candidate_visible_files": [
+    "single-registry-check/markers_native.py",
+    "single-registry-check/markers_legacy.py",
+    "single-registry-check/tags.py",
+    "single-registry-check/fieldspec.py",
+    "single-registry-check/test_fieldspec.py",
+    "dual-registry-split/markers_native.py",
+    "dual-registry-split/markers_legacy.py",
+    "dual-registry-split/tags.py",
+    "dual-registry-split/fieldspec.py",
+    "dual-registry-split/test_fieldspec.py",
+    "dual-registry-split/CHANGES.md",
+    "near-miss-bare-form-predicate/markers_native.py",
+    "near-miss-bare-form-predicate/markers_legacy.py",
+    "near-miss-bare-form-predicate/tags.py",
+    "near-miss-bare-form-predicate/fieldspec.py",
+    "near-miss-bare-form-predicate/test_fieldspec.py",
+    "mutant-dropped-registry/markers_native.py",
+    "mutant-dropped-registry/markers_legacy.py",
+    "mutant-dropped-registry/tags.py",
+    "mutant-dropped-registry/fieldspec.py",
+    "mutant-dropped-registry/test_fieldspec.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "dual-registry-split's stored_field_names still correctly recognizes a Derived marker imported from either markers_native or markers_legacy -- verify this by actually constructing a legacy-sourced annotation, not by assuming a 'just check a second module' refactor covered every registry.",
+    "is_derived_marker and is_derived_annotation are a deliberate specificity split, disclosed by is_derived_marker's own docstring ('in most cases you want is_derived_annotation instead') -- not needless duplication to be merged.",
+    "near-miss-bare-form-predicate's break is silent: a field annotated with a Tagged-wrapped or stringified/unresolved Derived marker silently gets treated as an ordinary stored field, with no exception and no failing assertion -- because stored_field_names there calls is_derived_marker, which never unwraps Tagged and never falls back to the regex.",
+    "mutant-dropped-registry's defect only shows up for a legacy-registry-sourced marker; every native-registry case (bare, Tagged-wrapped, stringified) behaves identically to dual-registry-split, so a check that never exercises the legacy registry will not catch it.",
+    "dual-registry-split's own CHANGES.md discloses a known, narrower gap (a locally-aliased marker that is also an unresolvable forward reference) -- recognizing this as an honest, accepted limitation rather than as evidence the whole registry-lookup mechanism is unreliable."
+  ],
+  "must_not_find": [
+    "Proposing to merge is_derived_marker and is_derived_annotation into a single function because they look nearly identical -- the specificity split is deliberate and is_derived_marker's own docstring says so.",
+    "Crediting near-miss-bare-form-predicate for being 'simpler' or 'using one predicate consistently' without checking whether a Tagged-wrapped or stringified Derived field still gets excluded.",
+    "Treating dual-registry-split's disclosed alias-plus-unresolvable-reference gap as something that must be closed before the change can be accepted, rather than as a named, honest limitation.",
+    "Accepting mutant-dropped-registry because every native-registry case (bare, wrapped, stringified) behaves correctly -- the defect is specific to the legacy registry and invisible without testing it directly."
+  ],
+  "allowed_findings": [
+    "`_MarkerAlias` and `_TaggedAlias` could use `__slots__` for memory efficiency, independent of this pack's central judgment.",
+    "`_get_markers_named` raising when a name has no registry entry anywhere is a reasonable defensive check, not something needing a softer fallback.",
+    "Noting, as CHANGES.md does, that the alias-plus-unresolvable-reference gap is genuinely narrow and hard to close in general is fair, accurate comment."
+  ],
+  "residual_findings": [
+    "dual-registry-split's is_derived_annotation resolves a stringified annotation by evaluating it in the record's namespace and only falls back to matching the raw source text when evaluation fails. A field locally aliased to a registry's Derived object (e.g. `from markers_legacy import Derived as LocalDerived`) whose annotation is also an unresolvable forward reference sits in the intersection of both limitations: evaluation fails (the referenced name doesn't exist), and the fallback regex only knows the literal spelling `Derived[`, not the local alias's own name. This is disclosed by the variant's own CHANGES.md as a known, accepted limitation, not something this refactor fixes, and closing it in general would require either evaluating an unevaluatable reference or enumerating every possible alias a caller might choose."
+  ],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "wrapped_derived_field_excluded",
+      "variant_expected_to_fail": "single-registry-check"
+    },
+    {
+      "name": "wrapped_derived_field_excluded",
+      "variant_expected_to_fail": "near-miss-bare-form-predicate"
+    },
+    {
+      "name": "bare_unresolved_derived_field_excluded",
+      "variant_expected_to_fail": "near-miss-bare-form-predicate"
+    },
+    {
+      "name": "wrapped_unresolved_derived_field_excluded",
+      "variant_expected_to_fail": "single-registry-check"
+    },
+    {
+      "name": "wrapped_unresolved_derived_field_excluded",
+      "variant_expected_to_fail": "near-miss-bare-form-predicate"
+    },
+    {
+      "name": "legacy_registry_bare_derived_field_excluded",
+      "variant_expected_to_fail": "single-registry-check"
+    },
+    {
+      "name": "legacy_registry_bare_derived_field_excluded",
+      "variant_expected_to_fail": "mutant-dropped-registry"
+    },
+    {
+      "name": "plain_field_always_stored",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A record field annotated with a Derived marker -- from either registry, bare or Tagged-wrapped, evaluated or an unresolved forward reference -- must be excluded from stored_field_names' result.",
+    "A record field with no Derived marker anywhere in its annotation must always appear in stored_field_names' result, in every variant.",
+    "is_derived_marker answers whether an object is itself the Derived special form; only is_derived_annotation is the contract stored_field_names actually needs, and swapping one for the other at that call site is a behavior change, not a style choice.",
+    "A refactor that adds a second registry to check must actually check it: recognizing a marker from one registry while silently ignoring the same-named marker from the other is a broken refactor even when every single-registry case still looks correct."
+  ],
+  "restraint_reason": "dual-registry-split's is_derived_marker/is_derived_annotation split, and its CHANGES.md-disclosed alias-plus-unresolved-reference gap, both invite the same over-eager instinct: a Critic that notices two near-identical functions, or a named limitation in a changelog, has a natural pull toward 'simplify this' or 'this should be closed.' Both pulls are wrong here. The two functions serve different callers at different specificity -- one asks 'is this object itself the marker,' the other asks 'should this record field be treated as derived' -- and near-miss-bare-form-predicate exists specifically to show what happens when a call site collapses that distinction by picking the narrower one: nothing raises, the field is just silently kept as stored. The disclosed gap is a named, accepted cost of a resolve-then-pattern-match strategy, not an oversight; demanding it be closed conflates fair comment ('this specific combination isn't handled') with a defect claim ('so the mechanism is unreliable'). Restraint here is telling a fair, disclosed limitation apart from an unresolved inconsistency, and telling a deliberate specificity split apart from needless duplication -- both are the same discipline as recognizing that a working simplification is not automatically an incomplete one.",
+  "applicable_domains": [
+    "python",
+    "runtime-type-introspection",
+    "annotation-resolution",
+    "api-consistency",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pydantic/pydantic PR #10725 (accepted, merged); no pydantic source is included, copied, or paraphrased -- Derived, Tagged, markers_native, markers_legacy, fieldspec, and every identifier here are original to this fixture. The one exception is dual-registry-split/CHANGES.md's behavior note, which restates in original wording the PR's own disclosed limitation (a locally-aliased marker combined with an unresolvable forward reference) rather than copying the PR body verbatim."
+  },
+  "contamination": {
+    "renamed": [
+      "pydantic",
+      "typing_extensions",
+      "_typing_extra",
+      "ClassVar",
+      "classvar",
+      "is_classvar",
+      "is_classvar_annotation",
+      "_check_classvar",
+      "_is_typing_name",
+      "_get_typing_objects_by_name_of",
+      "BaseModel",
+      "__class_vars__",
+      "Annotated",
+      "NewType",
+      "TypeAliasType",
+      "Viicos"
+    ],
+    "minimized_from": "pydantic/pydantic's _typing_extra module (PR #10725): the dual typing/typing_extensions name lookup, the Annotated-wrapping regex widening, and the is_classvar/is_classvar_annotation specificity split",
+    "why": "The real change lives inside pydantic's own annotation-resolution machinery (GenerateSchema and _typing_extra's other helpers, including NewType/TypeAliasType handling) and depends on pydantic's and typing_extensions' actual runtime objects, which cannot be reproduced faithfully as a minimal pure-Python fixture without both installed; a renamed, minimized, pure-Python analogue (fieldspec.py, with Derived/Tagged and two sibling registry modules standing in for ClassVar/Annotated and typing/typing_extensions) preserves every judgment-relevant property -- a dual-module identity hazard, a wrapper form that must be unwrapped, an evaluate-then-pattern-match resolution path, and two predicates of different specificity at the same call site -- without exposing any upstream symbol name, PR number, or line of pydantic source. `functools.lru_cache` and `re` are kept as-is: they are the ordinary stdlib mechanisms this fixture's registry cache and pattern fallback use, not upstream pydantic symbols, so they are not treated as names to rename away from."
+  }
+}
