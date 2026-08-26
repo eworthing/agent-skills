@@ -633,12 +633,18 @@ restores that property and sharpens it, because RED and GREEN are the same edit:
 provenance leaks, never source language. **A Python pack needs no validator change to be
 valid.**
 
-If per-language axis fields (`python_axes`, `hidden_oracles`) are adopted, they are a
-schema change to that validator **and** `_validate_gold_corpus_selftest.py`, done RED-first
-as its own step *before* any pack is authored — so no pack is ever written against a schema
-the validator rejects. Note the shipped schema already requires `variant_roles` over the
-closed set `red`/`green`/`alternate_green`/`near_miss`/`mutant`; new fields must compose
-with it rather than duplicate it.
+**`hidden_oracles` already ships — do not redefine it.** The schema specifies it as an
+array of objects (`{name, variant_expected_to_fail}`), and validator check 5 requires every
+`mutant` variant to be named by one. A proposal to use `hidden_oracles` as a flat list of
+oracle-*type* strings (`"pytest_behavior_matrix"`, `"platform_truth_table"`) conflicts with
+that shape and would break check 5. Oracle *kind* belongs in the entry's `name`, or in a
+new field — not by re-typing an existing one.
+
+`python_axes` is the only genuinely new field proposed. If adopted, it is a schema change
+to the validator **and** `_validate_gold_corpus_selftest.py`, done RED-first as its own step
+*before* any pack is authored, so no pack is written against a schema the validator rejects.
+It is not needed for P1: nothing consumes an axis tag until a second Python pack exists to
+compare against, so defer it rather than building an abstraction with one caller.
 
 **The leak check binds harder here.** Hidden-mode candidate-visible files must not carry
 original PR numbers, SHAs, or upstream symbol names. `GET_ITER`,

@@ -1,0 +1,120 @@
+{
+  "source_repo": "python/cpython",
+  "source_pr": 132351,
+  "related_history": [
+    {
+      "kind": "original_defect",
+      "issue": 125038,
+      "note": "Original crash: reassigning a generator expression's internal outermost-iterator slot to a non-iterator (still-iterable) object, then consuming the generator, corrupted state at the C level."
+    },
+    {
+      "kind": "rejected_pr",
+      "pr": 126408,
+      "outcome": "closed_unmerged",
+      "note": "Removed the guard by adding a whole new bytecode instruction (+530/-318 across 17 files). Core dev review: changing where the error happens is not safe for backward compatibility. This is the shape near-miss-checked-source is built from."
+    },
+    {
+      "kind": "regression_discovery",
+      "issue": 127682,
+      "note": "The eager guard (added to fix issue 125038) made construction-time TypeError-on-non-iterable observable and broke a legal iterable shape. Found externally by a third-party project using this project as ground truth, not by the bundled test suite -- the suite's own doctest asserted the eager behavior as correct."
+    }
+  ],
+  "base_sha": "07b8d3117fdbc4e5be55aab0be428c278ec84e12",
+  "accepted_sha": "d87e7f35297d34755026173d84a38eedfbed78de",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "redundant_guard_removal",
+  "variant_roles": {
+    "eager-guard": "red",
+    "lazy-consistent": "green",
+    "near-miss-checked-source": "near_miss",
+    "mutant-dropped-retention": "mutant"
+  },
+  "expected_judgment": "eager-guard should be flagged: its eager validation is inconsistent with the module's own lazy contract (every other lazy pipeline here defers errors to iteration time) and it silently drops support for a legal iterable shape (an iterator whose __iter__ returns an object lacking __iter__). lazy-consistent should be accepted: it removes exactly the guard, keeps retaining the original source, and replaces the one test that had encoded the old (wrong) timing as intended behavior, with a short note recording the change. near-miss-checked-source should be refused: it is a larger change (a new wrapper type, __slots__, an isinstance branch) that relocates the same eager double-iter() check into CheckedSource rather than removing it -- LazySelect still raises at construction and still rejects the legacy iterable shape, so it does not fix the inconsistency it claims to address. mutant-dropped-retention gets the timing question wrong too (it still raises eagerly, as an incidental side effect of caching the iterator rather than as a guard) and, more importantly, drops retention of the original source in favor of caching a single live iterator -- silently reintroducing a use-after-external-mutation corruption class that the original guard's retention (not its eager type-check) had been the part actually protecting against.",
+  "candidate_visible_files": [
+    "eager-guard/lazyselect.py",
+    "eager-guard/test_lazyselect.py",
+    "lazy-consistent/lazyselect.py",
+    "lazy-consistent/test_lazyselect.py",
+    "lazy-consistent/CHANGES.md",
+    "near-miss-checked-source/lazyselect.py",
+    "near-miss-checked-source/test_lazyselect.py",
+    "mutant-dropped-retention/lazyselect.py",
+    "mutant-dropped-retention/test_lazyselect.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "The eager guard duplicates work __iter__ already does for a well-behaved source (a source whose __iter__ returns a self-iterating iterator), but its early raise is user-visible: it makes LazySelect fail at construction, unlike every other lazy pipeline in this module.",
+    "Removing the guard changes the exception timing for a non-iterable source from construction-time to first-iteration-time. That is an observable, disclosed behavior change, not a no-op deletion, and any accepted fix must say so (see lazy-consistent/CHANGES.md).",
+    "The guard also rejects a source whose __iter__() returns an iterator lacking __iter__ of its own; removing the guard restores support for that legal shape.",
+    "eager-guard's own bundled test (test_immediate_iterability_check) passing is not evidence the eager behavior is correct -- it only proves the code is internally consistent with itself. A correct fix must replace that test, not just delete the guard line and leave the old test failing or, worse, delete the old test without adding its replacement.",
+    "The guard's retention of the original source (not its eager type-check) is what keeps external mutation of the internal handle safe. Any accepted rewrite must keep re-deriving a fresh iterator from the retained source on every iteration rather than caching a single iterator across iterations."
+  ],
+  "must_not_find": [
+    "Approval of introducing a CheckedSource-style wrapper type as the right way to remove the guard from LazySelect -- it relocates the eager check rather than removing it, so both the construction-time raise and the legacy-iterable rejection persist unchanged.",
+    "A claim that wrapping the eager check in a separate reusable type resolves the inconsistency-with-lazy-iteration complaint the pack is built around.",
+    "Treating the size of near-miss-checked-source's diff (new class, __slots__, an isinstance branch, extra tests) as evidence of thoroughness rather than as a sign the fix is solving the wrong layer of the problem."
+  ],
+  "allowed_findings": [
+    "predicate could be typed more specifically as Callable[[Any], bool] | None (already the case) or given a TypeVar for the element type.",
+    "The module could offer a map-style transform alongside select without changing anything about this pack's central judgment.",
+    "CheckedSource's __slots__ and isinstance guard are reasonable engineering on their own terms, independent of whether relocating the check is the right call."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "error_timing_truth_table",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "legacy_iterable_accepted",
+      "variant_expected_to_fail": "eager-guard"
+    },
+    {
+      "name": "corruption_repro_stays_fixed",
+      "variant_expected_to_fail": "mutant-dropped-retention"
+    },
+    {
+      "name": "stale_test_trap",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A non-iterable source must produce TypeError somewhere in the object's lifecycle -- never silently swallowed -- though an accepted fix may move that raise from construction to first iteration.",
+    "An iterable whose __iter__() returns an iterator lacking its own __iter__ must be usable end-to-end once the guard is gone (list(LazySelect(such_a_source)) must work).",
+    "Multiple independent iterations over the same LazySelect instance must each see the source from the start, as long as the underlying source itself supports repeated iteration.",
+    "External reassignment of the object's internal retained-source attribute to another compatible iterable must not corrupt or crash iteration in progress or afterward."
+  ],
+  "restraint_reason": "When reviewing lazy-consistent, a Critic that treats the exception's new construction-to-iteration timing shift as an unexplained behavior regression is over-flagging: the shift is the intended, disclosed fix (see CHANGES.md), matches the module's own laziness contract, and is covered by an updated test. Restraint here means recognizing a disclosed, justified behavior change instead of reflexively treating any user-visible timing difference as a defect.",
+  "applicable_domains": [
+    "python",
+    "iterator-protocol",
+    "lazy-evaluation",
+    "backward-compatibility",
+    "api-consistency"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of python/cpython PR #132351 (accepted, merged) and PR #126408 (proposed alternative, rejected); no CPython source is included, copied, or paraphrased -- LazySelect, CheckedSource, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "generator expression",
+      "GET_ITER",
+      "CHECK_ITERABLE",
+      "codegen_comprehension_iter",
+      "gi_frame",
+      "f_locals",
+      "f_locals['.0']",
+      "test_genexps"
+    ],
+    "minimized_from": "python/cpython's generator-expression construction/iteration semantics (issue 125038, issue 127682, PR 126408, PR 132351)",
+    "why": "The real defect lives in CPython's C-level bytecode compiler and frame implementation and cannot be reproduced faithfully or safely in pure Python; a renamed, minimized, pure-Python analogue (LazySelect) preserves every judgment-relevant property (real redundancy, observable timing change, a stale test that certifies the wrong behavior, a corruption class fixed by retention rather than by the type-check) without exposing any upstream symbol name, PR number, or line of CPython source."
+  }
+}

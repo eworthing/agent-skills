@@ -19,6 +19,13 @@ REVIEW_HISTORY.md
 findings_registry.json
 !contest-refactor/evals/**
 
+# ...but that negation is broad enough to re-include Python build artifacts, and the
+# gold-corpus packs ship runnable code whose oracles are executed in place. Without these
+# two lines every oracle run leaves committable __pycache__ behind. Later rules win, so
+# these must stay after the negation above.
+contest-refactor/evals/**/__pycache__/
+contest-refactor/evals/**/*.pyc
+
 # Per-agent skill install dirs (local symlinks / npx-skills artifacts, not repo content).
 # Keep skill-evaluator-1.0.0 — it is tracked and referenced by CLAUDE.md.
 .agents/
