@@ -668,7 +668,9 @@ tokens so it is excluded:
 | P2 `pandas-groupby-plot-imperfect-gold` | 258,315 |
 | P3 `pandas-get-dummies-select-dtypes` | 171,921 |
 | P4 `pandas-select-dtypes-predicates` | 256,283 |
-| **Total / mean** | **924,173 / ~231k** |
+| P5 `cpython-wasm-platform-predicate` | 195,200 |
+| P6 `pytest-scope-enum-public-compat` | 167,823 |
+| **Total / mean (6 packs)** | **1,287,196 / ~215k** |
 
 **So the honest correction is roughly 2×, not an order of magnitude.** ~231k against a
 ~500k anchor. Anyone reading an early draft of this section that claimed a 10× overestimate
@@ -685,11 +687,20 @@ near **~2.7M** rather than the ~4.5M this section previously carried — cheaper
 cheap, and now a measured number rather than an anchor inherited from Swift packs that
 needed toolchain and SDK matrices this track does not.
 
-**Re-measure rather than extrapolate if the pack shape changes.** P6 (pytest, +298/−173)
-and P8 (pydantic, +452/−268) are far larger upstream diffs than P1–P4, whose production
-changes were 1 to 64 lines. There is no evidence yet that a bigger upstream diff costs more
-to *minimize* — it may cost less, since more of it gets discarded — but the four measured
-packs cannot answer that.
+**Upstream diff size does not predict pack cost — and the sign is the opposite of the
+intuition.** This section previously flagged P6 (pytest, **+298/−173 across 9 files**) and P8
+(pydantic, +452/−268) as risks, on the reasoning that a much larger upstream diff than
+P1–P4's 1-to-64 production lines might cost more to minimize. P6 is now measured at
+**167,823 — the cheapest pack of the six, 0.75× the P1–P5 mean.**
+
+The likely reason, offered as a hypothesis rather than a finding: a large upstream diff is
+mostly *call-site churn* that gets discarded during minimization. What a pack costs is the
+number of distinct behavioural contracts it has to model, not the line count it came from.
+P6 modelled two (public string-compatibility, and ordering); its 9 upstream files were 7
+files of mechanical call-site updates that never reached the fixture.
+
+**So P8 is not a budget risk on size alone.** One data point is one data point — but the
+directional worry recorded here is now contradicted rather than merely untested.
 
 ### What this track does *not* buy
 

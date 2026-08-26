@@ -1,0 +1,102 @@
+{
+  "source_repo": "pytest-dev/pytest",
+  "source_pr": 8913,
+  "base_sha": "6247a956010855f227181ba6167c89bb500e9480",
+  "accepted_sha": "a83b359cf0902e0e55b79411dd54480be8a0aa4e",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "public_compat_shim_restraint",
+  "variant_roles": {
+    "stringly-typed": "red",
+    "enum-with-compat-property": "green",
+    "near-miss-enum-through-public-api": "near_miss",
+    "mutant-ordering-by-name": "mutant"
+  },
+  "expected_judgment": "stringly-typed should be accepted as a correct, if untyped, starting state -- it is not itself a defect, just the pre-refactor shape the pack is built around: every span is a bare string, ordering is done by looking a string up in an index mapping that is copied inline at each call site that needs it, and nothing stops a typo from producing a KeyError instead of a caught mistake. enum-with-compat-property should be ACCEPTED, and accepted without asking for the compatibility split to be cleaned up: it replaces the bare strings and scattered index mappings with one ordered Span enum plus centralized higher()/next_up() operations, Handle keeps an internal _span holding the real enum, and its public span property returns the plain string value so every existing caller -- equality against a literal, use as a dict key, string formatting -- keeps working unchanged. Handle's own CHANGES.md discloses, in the author's own words, that the internal attribute and the public property now carry different types under the same name, and that this is a deliberate, if awkward, compatibility choice, not an oversight. A Critic that reads this disclosure as an invitation to resolve the confusion -- by having span return the enum now that a typed enum exists -- is over-flagging: removing the split is the near-miss, not an improvement. near-miss-enum-through-public-api should be refused: it looks like the natural next step, cleaning up the very awkwardness the author flagged, by making span return the Span member itself instead of converting it to a string. This is a silent, total break of every downstream `handle.span == \"<value>\"` comparison, every dict keyed on the old string value, and every f-string that used to interpolate the span cleanly -- none of it raises, the comparisons simply stop being true. mutant-ordering-by-name is primarily a Layer-5 execution case: its compatibility property is correct and its skip/compare behavior for any single span looks identical to enum-with-compat-property, but its ordering relation is derived by sorting Span members alphabetically by name instead of by declaration position, so a pair like File/Batch -- adjacent and correctly ordered in the real declaration -- silently inverts, while some other pairs (Step/Suite, Batch/Run) happen to still agree by coincidence and mask the defect from a narrow local check.",
+  "candidate_visible_files": [
+    "stringly-typed/lifespan.py",
+    "stringly-typed/test_lifespan.py",
+    "enum-with-compat-property/lifespan.py",
+    "enum-with-compat-property/test_lifespan.py",
+    "enum-with-compat-property/CHANGES.md",
+    "near-miss-enum-through-public-api/lifespan.py",
+    "near-miss-enum-through-public-api/test_lifespan.py",
+    "mutant-ordering-by-name/lifespan.py",
+    "mutant-ordering-by-name/test_lifespan.py"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py"
+  ],
+  "must_find": [
+    "enum-with-compat-property's Handle.span still compares equal to the plain string value it always returned, is still usable as a dict key, and still formats the same way in an f-string -- verify this against stringly-typed rather than assuming a rename-shaped refactor preserved every caller's behavior.",
+    "The internal/public type split in enum-with-compat-property (`_span: Span` inside, `span -> str` outside) is a deliberate compatibility shim, disclosed by the variant's own CHANGES.md, not an inconsistency left to be cleaned up.",
+    "near-miss-enum-through-public-api's break is silent: `handle.span == \"step\"` returns False rather than raising, so nothing crashes and no test that only checks 'does this run without an exception' will catch it.",
+    "mutant-ordering-by-name's ordering defect is only visible by checking pairwise order across every span pair, not a handful -- Step/Suite and Batch/Run happen to still agree with the correct order, while File/Batch (and others) do not."
+  ],
+  "must_not_find": [
+    "Proposing to make enum-with-compat-property's public span property return the Span enum directly now that a typed enum exists, on the grounds that it would resolve the confusion CHANGES.md itself names.",
+    "Treating the internal/public type mismatch in enum-with-compat-property as an inconsistency, code smell, or unfinished refactor rather than as the disclosed compatibility choice it is.",
+    "Crediting near-miss-enum-through-public-api for being more type-consistent or 'more correct' than enum-with-compat-property without checking whether any existing string comparison, dict lookup, or format call still holds.",
+    "Accepting mutant-ordering-by-name's ordering as correct because a small sample of pairs (or a single-span check) still agrees with the declared order."
+  ],
+  "allowed_findings": [
+    "Observing that enum-with-compat-property's same-name-different-type split between `_span` and `span` is confusing on its own terms is fair, accurate comment -- it is not, by itself, a defect claim, and the pack's own CHANGES.md says as much.",
+    "`_type from_value` style boilerplate could be trimmed, or Span could expose a class method for parsing, independent of this pack's central judgment.",
+    "Handle could validate that `target` is not `None` for spans narrower than the top-level span, independent of this pack's central judgment."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "public_scope_compares_as_string",
+      "variant_expected_to_fail": "near-miss-enum-through-public-api"
+    },
+    {
+      "name": "scope_ordering_preserved",
+      "variant_expected_to_fail": "mutant-ordering-by-name"
+    },
+    {
+      "name": "higher_scope_and_next_scope_match_baseline",
+      "variant_expected_to_fail": "mutant-ordering-by-name"
+    },
+    {
+      "name": "internal_type_is_the_enum",
+      "variant_expected_to_fail": "stringly-typed"
+    }
+  ],
+  "behavior_contract": [
+    "A handle's public span must compare equal to the plain string it was built from, for every declared span, in every variant that claims compatibility.",
+    "Spans order low to high in exactly one sequence: step, suite, file, batch, run -- higher() and next_up() must agree with that sequence for every pair, not just a convenient subset.",
+    "next_up() applied to the highest span must return that same span, never advance past it or raise.",
+    "A refactor that introduces a typed internal representation alongside a compatible public one must keep both halves working; only one half changing at a time is a broken refactor even when the other half still looks fine in isolation."
+  ],
+  "restraint_reason": "enum-with-compat-property ships a disclosed, deliberately awkward compatibility shim: an internal `_span: Span` and a public `span` property of the same name but a different type. A Critic that has just read CHANGES.md's own admission that this might cause confusion has a natural, well-earned instinct to resolve it -- give the public property the same type as the internal attribute, now that a real enum exists. That instinct is exactly backwards here. The confusion is the price of compatibility, not a leftover to be tidied: every caller written against the old plain-string `scope` attribute depends on the public property staying a string, and removing the split (as near-miss-enum-through-public-api does) breaks every one of them silently, with no exception and no failing assertion to flag it. The author's own disclosure is honesty about a real cost, not an invitation to pay it off by breaking compatibility. Restraint here means treating a named, deliberate design tradeoff as settled, not as an open TODO -- exactly the same shape as recognizing that fair comment ('this is confusing') and a defect claim ('so remove it') are not the same thing.",
+  "applicable_domains": [
+    "python",
+    "api-compatibility",
+    "enum-refactoring",
+    "public-interface-design",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "MIT",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of pytest-dev/pytest PR #8913 (accepted, merged); no pytest source is included, copied, or paraphrased -- Span, Handle, lifespan, and every identifier here are original to this fixture. The one exception is enum-with-compat-property/CHANGES.md's behavior note, which restates in original wording the PR author's own disclosed design rationale (a same-name-different-type compatibility property) rather than copying the PR body verbatim."
+  },
+  "contamination": {
+    "renamed": [
+      "pytest",
+      "Scope",
+      "scopenum",
+      "_arg2scopenum",
+      "FixtureRequest",
+      "SubRequest",
+      "CallSpec2",
+      "_ScopeName"
+    ],
+    "minimized_from": "pytest-dev/pytest's Scope enum and FixtureRequest.scope compatibility property (PR #8913), plus the ordering/arithmetic helpers Scope centralizes",
+    "why": "The real change lives inside pytest's own fixture and config internals (FixtureDef, Config, Node, CallSpec2) and depends on the pytest interpreter machinery around them, which cannot be reproduced faithfully as a minimal pure-Python fixture without pytest itself; a renamed, minimized, pure-Python analogue (lifespan.py, with Span/Handle standing in for Scope/FixtureRequest) preserves both judgment-relevant properties -- a disclosed, deliberately awkward same-name-different-type compatibility shim, and a centralized ordering relation that a mutant can quietly invert -- without exposing any upstream symbol name, PR number, or line of pytest source. functools.total_ordering itself is kept as-is: it is the ordinary stdlib mechanism for the enum's ordering, not an upstream pytest symbol, so it is not treated as a name to rename away from."
+  }
+}
