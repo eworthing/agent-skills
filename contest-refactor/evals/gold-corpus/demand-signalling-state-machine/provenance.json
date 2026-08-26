@@ -1,0 +1,125 @@
+{
+  "source_repo": "apple/swift-async-algorithms",
+  "source_pr": 185,
+  "base_sha": "af9ce91db44aa0932e96f343b04470cbf4421ef2",
+  "accepted_sha": "314b10c6348be6614401e212444e78674567a481",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "state_machine_complexity_restraint_control",
+  "provenance_note": "This pack is a restraint control, not a defect hunt: the accepted answer is genuinely the most intricate file in the pack, and it is also the correct one. An automated hotspot scanner is expected to nominate it for its state count alone; a reviewer's job is to inspect it and dismiss that nomination, not confirm it. If a review turns this pack's GREEN into an automatic simplification finding, that is this pack's failure signal, not a successful catch. The real PR replaced a per-demand-task implementation with one coordinator task per iterator plus one child task per upstream, synchronized by a new state machine with explicit demand signalling and continuation-heavy cancellation handling, motivated by removing both a per-demand task-creation cost and an AsyncIterator: Sendable requirement at the same time; the PR's own review thread includes a genuine safety debate about the ordering of resuming a continuation while holding the coordinating lock, which this fixture's design comment (in the GREEN variant) preserves in substance without modelling a real lock or a real continuation.",
+  "variant_roles": {
+    "task-per-demand": "red",
+    "demand-signalled-state-machine": "green",
+    "collapsed-suspension-flag": "near_miss",
+    "mutant-dropped-cancellation": "mutant"
+  },
+  "expected_judgment": "task-per-demand should be accepted as a correct, if wasteful, starting state -- it is not broken: every demand it serves eventually gets the right value, in order, and cancellation resumes exactly what is outstanding. Its cost is real but narrow: on every single demand it restarts a fresh unit of work for every source still in play, rather than reusing work already started by an earlier demand, and because that per-demand work reaches into shared state, the coordinator itself has to carry a broad concurrency-safety marker it would not otherwise need. demand-signalled-state-machine should be ACCEPTED outright, and accepted as what it is: the single most state-dense file in this pack, with six distinct phases threading three real distinctions at once (whether a value is already available, whether a consumer request is outstanding, and whether every source has finished) -- and it is correct precisely because it keeps those distinctions apart rather than folding any pair of them together. Its added density is not incidental; it is what buys starting each source's work exactly once for the relay's lifetime, and it is what lets the two terminal-adjacent phases still answer a demand that arrives after everything is already done, instead of hanging. collapsed-suspension-flag should be refused, and refused for the specific, structural reason a genuinely tempting simplification earns: it looks like a strict readability win -- one bool and one optional slot standing in for the state enum -- and for every event sequence where at most one demand is ever outstanding at a time, it is completely indistinguishable from the accepted design, including under cancellation. The refusal has to name the actual seam: a single scalar slot cannot represent 'more than one demand outstanding' at all, so when a second demand arrives while the relay is already suspended waiting on the first, the flag-based design silently overwrites the one slot it has, and the first request is never resumed by anything, ever -- not rejected, not erred, simply forgotten. Nothing about this shows up by reading the buffered-value happy path, and nothing about it shows up under the cancellation scenarios a reviewer is most likely to reach for first, because those scenarios only ever have one request outstanding at cancellation time; it only shows up on the specific two-distinct-demands sequence oracles.py's distinct_states_not_collapsible drives. mutant-dropped-cancellation is a hard, unmissable Layer-5 case: it is demand-signalled-state-machine's exact state machine, with exactly one transition changed -- cancelling while a demand is outstanding and no value has arrived yet now discards that outstanding request instead of resuming it with a finish signal. Every sequence that never cancels while a request is outstanding is completely identical to the accepted variant, including this pack's own control sequence and this variant's own bundled test suite; only a sequence that cancels at that exact moment reveals it.",
+  "candidate_visible_files": [
+    "task-per-demand/signal_relay.swift",
+    "task-per-demand/main.swift",
+    "demand-signalled-state-machine/signal_relay.swift",
+    "demand-signalled-state-machine/main.swift",
+    "collapsed-suspension-flag/signal_relay.swift",
+    "collapsed-suspension-flag/main.swift",
+    "mutant-dropped-cancellation/signal_relay.swift",
+    "mutant-dropped-cancellation/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "collapsed-suspension-flag's motivation is genuine and reasonable on its face -- one bool and one optional value really do replace a six-case enum, and for any sequence with at most one demand outstanding at a time it is behaviorally indistinguishable from the accepted design. That the motivation is reasonable, and the collapse is invisible on the common path, does not make the change correct.",
+    "collapsed-suspension-flag's actual defect is concrete and checkable, not a vague complaint about flags being fragile: on the exact sequence of two demands arriving before either is satisfied, the accepted design queues both requests while the flag-based design's single storage slot overwrites the first pending request id with the second, so the first request is never resumed by anything -- see oracles.py's distinct_states_not_collapsible, whose two action lists diverge only at that step and nowhere before it.",
+    "demand-signalled-state-machine's added complexity is not free-floating cleverness -- it is a specific, disclosed trade for real properties task-per-demand does not have: a source's work is started exactly once for the relay's lifetime rather than restarted per demand, and more than one outstanding demand can be tracked and resolved correctly, in order.",
+    "mutant-dropped-cancellation's dropped transition only shows up on a sequence that cancels while a demand is genuinely outstanding and unsatisfied; the mutant's own bundled test suite passes, and any sequence that never reaches that exact moment -- including this pack's own control sequence -- is indistinguishable from the accepted variant."
+  ],
+  "must_not_find": [
+    "Flagging demand-signalled-state-machine's six-phase state machine as inherently over-engineered or as having too many states, on the strength of the state count alone.",
+    "Recommending demand-signalled-state-machine's nested phase-and-event branches be simplified, restructured, or flattened absent a demonstrated semantic duplicate between two of its phases -- naming that two branches share code is not the same as demonstrating they represent the same state.",
+    "Recommending the states be flattened to a suspended flag for readability -- that is precisely collapsed-suspension-flag's own pitch, and it loses the ability to track more than one outstanding demand.",
+    "Recommending collapsed-suspension-flag's flag-and-slot shape as a cleanup of demand-signalled-state-machine, on the grounds that it is shorter and the common paths behave identically.",
+    "Treating demand-signalled-state-machine's extra phases, associated values, or bookkeeping struct as complexity to be paid down, when they encode real, distinct protocol states (an available value, an outstanding request, a finished source) rather than incidental duplication."
+  ],
+  "allowed_findings": [
+    "Noting that demand-signalled-state-machine's Phase enum is the largest and most state-dense type in the pack is a fair, accurate observation, not itself a defect, provided it is not accompanied by a recommendation to reduce the state count without a demonstrated semantic duplicate.",
+    "SourceBookkeeping could be inlined into each Phase case instead of held as a separate struct, independent of this pack's central judgment.",
+    "task-per-demand's ConcurrencySafe conformance could be noted as unnecessary overhead once per-demand restarts are removed -- this is a fair, accurate observation about task-per-demand specifically, not a claim about demand-signalled-state-machine's design."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [
+    {
+      "evidence_id": "missing-cancellation-transition",
+      "applies_to_variants": ["mutant-dropped-cancellation"],
+      "required_finding": "cancellation must resume every pending continuation exactly once, and mutant-dropped-cancellation drops that resume for a request that is outstanding and unsatisfied at the moment cancellation arrives",
+      "not_required_in": [
+        "demand-signalled-state-machine",
+        "task-per-demand",
+        "collapsed-suspension-flag"
+      ]
+    },
+    {
+      "evidence_id": "redundant-per-demand-restart",
+      "applies_to_variants": ["task-per-demand"],
+      "required_finding": "task-per-demand restarts every live source's work on every demand instead of once, and that redundant restart is what forces its coordinator to carry a broad concurrency-safety marker the state-machine design does not need",
+      "not_required_in": [
+        "demand-signalled-state-machine",
+        "collapsed-suspension-flag",
+        "mutant-dropped-cancellation"
+      ]
+    }
+  ],
+  "hidden_oracles": [
+    {
+      "name": "every_continuation_resumed_exactly_once_under_cancellation",
+      "variant_expected_to_fail": "mutant-dropped-cancellation"
+    },
+    {
+      "name": "distinct_states_not_collapsible",
+      "variant_expected_to_fail": "collapsed-suspension-flag"
+    },
+    {
+      "name": "no_per_demand_task_creation",
+      "variant_expected_to_fail": "task-per-demand"
+    },
+    {
+      "name": "control_simple_demand_then_yield",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "Every demand that ever arrives must eventually be resumed exactly once -- either with the value that satisfies it or with a signal that no more values are coming -- including a demand that arrives after every source has already finished.",
+    "Cancellation must resume every request that is outstanding and unsatisfied at the moment it arrives, not only the most recently issued one.",
+    "Starting a source's work is a one-time cost for the lifetime of a relay; a demand arriving after that source's work is already underway must not restart it.",
+    "A relay's own notion of state must distinguish 'more than one demand is currently outstanding' from 'exactly one demand is outstanding' -- collapsing that distinction into a single flag and a single stored slot silently drops every outstanding request but the most recent one."
+  ],
+  "restraint_reason": "This pack's central risk is not that a reviewer misses a defect -- it is that a reviewer manufactures one out of demand-signalled-state-machine's own correctness. A six-case phase enum, each case carrying its own associated bookkeeping, is exactly the shape an automated complexity scanner is built to flag, and exactly the shape a reviewer primed to find problems will read as evidence of over-engineering before checking what each case is actually for. Every one of those six phases distinguishes a real, load-bearing combination -- a value ready with nobody waiting, one or more consumers waiting with nothing ready yet, neither, both terminal conditions, and the point of transition between waiting-with-sources-still-live and waiting-with-every-source-done -- and collapsing any one of those distinctions away is precisely what collapsed-suspension-flag does, which is why it is this pack's near-miss rather than a stray alternative. The correct review recognizes that the density buys something concrete (one-time source startup, correctly queued multi-demand tracking, an answer even to a demand that arrives after everything is already finished) and that task-per-demand's greater brevity is not free either -- it pays for its own simplicity with per-demand restart work and a broader safety requirement the state machine does not need. Restraint here runs in both directions: refusing to credit collapsed-suspension-flag's plausible-looking simplification for the specific, checkable reason it fails (a lost second demand, not a vague unease about flags), while also refusing to let demand-signalled-state-machine's genuine complexity read as a problem merely because it is the largest file in the pack.",
+  "applicable_domains": [
+    "swift",
+    "state-machines",
+    "concurrency-coordination",
+    "backpressure",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-async-algorithms PR #185 (accepted, merged 2022-10-10), which replaced a per-demand task-creation implementation with a per-iterator coordinator and a synchronizing state machine with explicit demand signalling, while removing an AsyncIterator: Sendable requirement; no swift-async-algorithms source is included, copied, or paraphrased -- Relay, SourceID, RelayEvent, RelayAction, SourceBookkeeping, ConcurrencySafe, and every identifier here are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "swift-async-algorithms",
+      "AsyncAlgorithms",
+      "AsyncSequence",
+      "AsyncIterator",
+      "merge",
+      "AsyncMerge2Sequence",
+      "Sendable",
+      "FranzBusch"
+    ],
+    "minimized_from": "apple/swift-async-algorithms's merge state-machine redesign that replaced per-demand task creation with a single per-iterator coordinating state machine and removed an AsyncIterator: Sendable requirement (PR #185, merged 2022-10-10, base sha af9ce91db44aa0932e96f343b04470cbf4421ef2, merge sha 314b10c6348be6614401e212444e78674567a481)",
+    "why": "The real change lives inside real Swift tasks, real continuations, and real cancellation handlers racing against each other, none of which this environment can reproduce deterministically without introducing genuine concurrency and the flakiness that comes with it. This fixture models the coordinator as a pure, synchronous state machine instead: an event enum, an action enum, and a step(event) -> [action] function, with every continuation represented purely as an integer request id inside the returned action list -- never as a real Swift continuation -- so 'every pending continuation resumed exactly once' becomes a plain, countable, deterministic fact rather than a race to be reproduced. Swift's own Sendable requirement is modelled by a fixture-original ConcurrencySafe marker protocol, conformed to only by task-per-demand, so the literal word Sendable never appears in any candidate-visible file; this substitution and its rationale are recorded here rather than in a candidate-visible comment. The real PR's own review-thread debate over resuming a continuation while holding the coordinating lock is preserved in substance as a design comment on demand-signalled-state-machine's own step function, describing why resumption happens only as returned data rather than from inside the state update -- without modelling a real lock, since this fixture has no real concurrency for one to guard."
+  }
+}
