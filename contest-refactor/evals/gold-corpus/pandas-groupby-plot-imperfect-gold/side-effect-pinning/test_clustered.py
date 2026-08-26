@@ -42,7 +42,7 @@ def main() -> int:
     test_lanes_split_by_key()
     test_apply_general_pins_label_for_aggregation()
     test_plot_legend_labels_uses_pinned_key()
-    print("OK: side-effect-pinning test_clustered.py")
+    print("OK: test_clustered.py")
     return 0
 
 

@@ -40,7 +40,7 @@ def main() -> int:
     test_filters_with_predicate()
     test_passes_through_without_predicate()
     test_immediate_iterability_check()
-    print("OK: eager-guard test_lazyselect.py")
+    print("OK: test_lazyselect.py")
     return 0
 
 

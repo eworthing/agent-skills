@@ -356,6 +356,61 @@ def _check_hidden_leak(pack_dir: Path, data: dict, manifest_path: Path) -> list[
     return violations
 
 
+#: Roles whose concealment is load-bearing. A candidate told which variant is the
+#: near-miss or the mutant has been handed the answer. `red`/`green` are deliberately
+#: NOT here: "red" and "green" are ordinary words, and matching them as raw substrings
+#: would false-positive on any fixture that mentions a colour or a passing test.
+_CONCEALED_ROLES = ("near_miss", "mutant")
+
+#: Bare role tokens, in the spellings a fixture is likely to write them.
+_ROLE_TOKENS = ("near_miss", "near-miss", "mutant")
+
+
+def _check_role_leak(
+    pack_dir: Path, data: dict, roles: dict[str, str], manifest_path: Path
+) -> list[Violation]:
+    """Check 8: a candidate-visible file must not name its own concealed role.
+
+    Check 7 hunts upstream provenance -- PR numbers, SHAs, renamed symbols. It has no
+    notion of the *corpus's own* structure, so a fixture that prints or comments its
+    own variant directory name ("OK: mutant-drops-wrapped test.py") sails past it while
+    telling the candidate exactly which variant is the plant. Observed across all four
+    packs built before this check existed.
+    """
+    if data.get("prompt_exposure") == "provenance_labeled":
+        return []  # as with check 7, concealment is moot once provenance is disclosed
+    visible = data.get("candidate_visible_files")
+    if not isinstance(visible, list) or not visible:
+        return []
+
+    needles = [v for v, role in roles.items() if role in _CONCEALED_ROLES]
+    needles.extend(_ROLE_TOKENS)
+
+    violations: list[Violation] = []
+    for rel in visible:
+        if not isinstance(rel, str):
+            continue
+        path = pack_dir / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for needle in needles:
+            if needle in text:
+                violations.append(
+                    Violation(
+                        "role-leak",
+                        f"candidate-visible file {rel!r} names a concealed role "
+                        f"({needle!r}); a fixture must not tell the candidate which "
+                        "variant is the near-miss or the mutant",
+                        manifest_path,
+                    )
+                )
+    return violations
+
+
 def _validate_one_pack(pack_dir: Path) -> list[Violation]:
     manifest_path = pack_dir / "provenance.json"
     if not manifest_path.is_file():
@@ -387,6 +442,7 @@ def _validate_one_pack(pack_dir: Path) -> list[Violation]:
     violations.extend(_check_must_find_if_present(pack_dir, data, manifest_path))
     violations.extend(_check_provenance_visibility(data, manifest_path))
     violations.extend(_check_hidden_leak(pack_dir, data, manifest_path))
+    violations.extend(_check_role_leak(pack_dir, data, roles, manifest_path))
     return violations
 
 

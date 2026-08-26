@@ -36,7 +36,7 @@ def test_plot_legend_labels_for_panels() -> None:
 def main() -> int:
     test_plot_legend_labels_for_lanes()
     test_plot_legend_labels_for_panels()
-    print("OK: key-forwarded test_clustered.py")
+    print("OK: test_clustered.py")
     return 0
 
 

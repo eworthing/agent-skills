@@ -38,7 +38,7 @@ def test_plot_legend_labels_for_lanes() -> None:
 def main() -> int:
     test_lanes_split_by_key()
     test_plot_legend_labels_for_lanes()
-    print("OK: dedicated-path-incomplete test_clustered.py")
+    print("OK: test_clustered.py")
     return 0
 
 

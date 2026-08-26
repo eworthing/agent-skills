@@ -439,6 +439,72 @@ def main() -> int:
             f"{r.returncode}: {r.stderr}",
         )
 
+        # --- role-leak (check 8): a fixture must not name its own concealed role ---
+
+        # RED: the variant's own directory name printed inside a candidate-visible file.
+        # This is the exact shape found in all four packs built before the check existed.
+        role_dir_root = root / "role-leak-dirname"
+        m = _baseline_manifest()
+        m["variant_roles"] = {"red": "red", "gold": "green", "sneaky-plant": "mutant"}
+        m["hidden_oracles"] = [{"name": "o", "variant_expected_to_fail": "sneaky-plant"}]
+        m["candidate_visible_files"] = ["sneaky-plant/test_thing.py"]
+        pack_dir = _write_pack(role_dir_root, "pack", m)
+        (pack_dir / "sneaky-plant" / "test_thing.py").write_text(
+            'print("OK: sneaky-plant test_thing.py")', encoding="utf-8"
+        )
+        r = _run(role_dir_root)
+        expect("role-leak-dirname", r.returncode == 1, f"expected exit 1, got {r.returncode}")
+        expect("role-leak-dirname", "[role-leak]" in r.stderr, r.stderr)
+
+        # RED: the bare role token, even when the directory name is innocuous.
+        role_token_root = root / "role-leak-token"
+        m = _baseline_manifest()
+        m["variant_roles"] = {"red": "red", "gold": "green", "variant-c": "near_miss"}
+        m["must_not_find"] = ["something"]
+        m["candidate_visible_files"] = ["variant-c/notes.md"]
+        pack_dir = _write_pack(role_token_root, "pack", m)
+        (pack_dir / "variant-c" / "notes.md").write_text(
+            "this is the near-miss arm", encoding="utf-8"
+        )
+        r = _run(role_token_root)
+        expect("role-leak-token", r.returncode == 1, f"expected exit 1, got {r.returncode}")
+        expect("role-leak-token", "[role-leak]" in r.stderr, r.stderr)
+
+        # restraint: a red/green variant naming itself is NOT a leak -- "red" and "green"
+        # are ordinary words and matching them would false-positive on real fixtures.
+        role_clean_root = root / "role-leak-clean"
+        m = _baseline_manifest()
+        m["candidate_visible_files"] = ["red/test_thing.py"]
+        pack_dir = _write_pack(role_clean_root, "pack", m)
+        (pack_dir / "red" / "test_thing.py").write_text(
+            'print("OK: red test_thing.py")  # a red pepper is green when unripe',
+            encoding="utf-8",
+        )
+        r = _run(role_clean_root)
+        expect(
+            "role-leak-restraint-plain-words",
+            r.returncode == 0,
+            f"expected exit 0, got {r.returncode}: {r.stderr}",
+        )
+
+        # restraint: labeled mode discloses provenance anyway, so check 8 must not bind.
+        role_labeled_root = root / "role-leak-labeled"
+        m = _baseline_manifest()
+        m["variant_roles"] = {"red": "red", "gold": "green", "sneaky-plant": "mutant"}
+        m["hidden_oracles"] = [{"name": "o", "variant_expected_to_fail": "sneaky-plant"}]
+        m["prompt_exposure"] = "provenance_labeled"
+        m["candidate_visible_files"] = ["sneaky-plant/test_thing.py", "provenance.json"]
+        pack_dir = _write_pack(role_labeled_root, "pack", m)
+        (pack_dir / "sneaky-plant" / "test_thing.py").write_text(
+            'print("OK: sneaky-plant test_thing.py")', encoding="utf-8"
+        )
+        r = _run(role_labeled_root)
+        expect(
+            "role-leak-restraint-labeled-mode",
+            r.returncode == 0,
+            f"labeled mode must not trigger the role-leak check, got {r.returncode}: {r.stderr}",
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

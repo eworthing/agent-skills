@@ -42,7 +42,7 @@ def main() -> int:
     test_filters_with_predicate()
     test_passes_through_without_predicate()
     test_iterability_check_is_lazy()
-    print("OK: lazy-consistent test_lazyselect.py")
+    print("OK: test_lazyselect.py")
     return 0
 
 

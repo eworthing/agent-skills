@@ -27,7 +27,7 @@ def test_passes_through_without_predicate() -> None:
 def main() -> int:
     test_filters_with_predicate()
     test_passes_through_without_predicate()
-    print("OK: mutant-dropped-retention test_lazyselect.py")
+    print("OK: test_lazyselect.py")
     return 0
 
 

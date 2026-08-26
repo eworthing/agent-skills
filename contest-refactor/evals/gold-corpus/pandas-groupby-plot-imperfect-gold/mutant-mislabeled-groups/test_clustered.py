@@ -32,7 +32,7 @@ def test_plot_legend_labels_are_present() -> None:
 
 def main() -> int:
     test_plot_legend_labels_are_present()
-    print("OK: mutant-mislabeled-groups test_clustered.py")
+    print("OK: test_clustered.py")
     return 0
 
 

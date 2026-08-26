@@ -46,7 +46,7 @@ def main() -> int:
     test_passes_through_without_predicate()
     test_checked_source_validates_eagerly()
     test_lazyselect_wraps_transparently()
-    print("OK: near-miss-checked-source test_lazyselect.py")
+    print("OK: test_lazyselect.py")
     return 0
 
 
