@@ -3,9 +3,10 @@
 // hash of its text) rather than from a separate piece of storage. This
 // looks like it gives a diff the same cheap identity comparison as owning
 // storage would, while being simpler to write: no storage object, no
-// counter to allocate from. Two chunks that happen to hold identical text
-// are therefore indistinguishable by identity, and computing that identity
-// at all means reading every byte of the chunk's text, every time.
+// counter to allocate from. It also means a chunk's identity depends on
+// nothing but the chunk itself, so two spools built by different routes
+// agree about which chunks they share without having to coordinate on a
+// counter first.
 
 struct DiffReport {
     var changedIndices: [Int]
