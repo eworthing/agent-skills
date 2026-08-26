@@ -1,0 +1,118 @@
+{
+  "source_repo": "apple/swift-nio",
+  "source_pr": 2486,
+  "base_sha": "fd3076131f3bddf5bce0002358914ff66fa431c3",
+  "accepted_sha": "30595ad2897f5dda5829b381440e8893f883f483",
+  "accepted_state": "merged",
+  "gold_confidence": "high",
+  "prompt_exposure": "provenance_hidden",
+  "fixture_role": "test_oracle_trap_partial_fix_data_loss",
+  "provenance_note": "This is the Swift counterpart to the Python pack cpython-genexpr-iterability (P1): both turn on the same lesson, that a test suite can actively certify the wrong behavior, so 'tests pass' is worthless as an oracle on its own. Here the maintainer's own PR body names two separate holes in the pre-fix code, and describes fixing only the first as an incomplete, plausible-looking change -- the near-miss in this pack is that exact partial fix, not an invented one.",
+  "variant_roles": {
+    "reject-before-ready": "red",
+    "flush-buffered-writes-on-activation": "green",
+    "near-miss-buffer-without-activation-flush": "near_miss",
+    "mutant-drop-before-ready": "mutant"
+  },
+  "expected_judgment": "reject-before-ready should be accepted as the pre-fix starting state, not flagged as broken on its own terms -- it rejects a write outright when the pipe is not yet live, and its own bundled suite contains a test asserting exactly that rejection, which passes. That passing test is not evidence the behavior is correct: rejecting a write outright is itself the defect this pack exists to correct, because a value that could have been safely held and sent later is instead lost to the caller immediately, and the fact that the rejection is loud (the write call reports failure) does not make it the right design once buffering is possible. flush-buffered-writes-on-activation should be ACCEPTED outright: a write is never rejected, and activation itself attempts to deliver anything already waiting, so a value written before the pipe was ready is never left stranded regardless of whether any further flush call happens afterward. near-miss-buffer-without-activation-flush should be refused, and refused for the specific reason the pack is built around: it fixes exactly one of the two things wrong with reject-before-ready -- a write is no longer rejected, and its own bundled suite proves that a write followed by activation followed by an explicit flush does eventually get delivered -- but activation on its own does nothing to send what is already waiting. On any path where a further flush call happens to occur after activation, this variant is indistinguishable from the accepted one. On a path where no further flush ever comes, a written value sits in the pipe forever: not rejected, not lost with an error, simply never sent. Nothing in this variant's own suite exercises that path, which is exactly why its own passing suite is not sufficient evidence of correctness -- the same lesson reject-before-ready's suite demonstrates from the opposite direction. mutant-drop-before-ready is a hard, unmissable Layer-5 case, not a reviewer-judgment one: on the surface it looks like the same fix as flush-buffered-writes-on-activation -- a write is never rejected, and activation attempts to deliver anything waiting -- but a write issued before the pipe is live is never actually queued anywhere, so no activation and no later flush, however many are attempted, can ever recover it. Every possible path loses the value permanently, silently, with the caller told the write succeeded.",
+  "candidate_visible_files": [
+    "reject-before-ready/pipe_support.swift",
+    "reject-before-ready/main.swift",
+    "flush-buffered-writes-on-activation/pipe_support.swift",
+    "flush-buffered-writes-on-activation/main.swift",
+    "near-miss-buffer-without-activation-flush/pipe_support.swift",
+    "near-miss-buffer-without-activation-flush/main.swift",
+    "mutant-drop-before-ready/pipe_support.swift",
+    "mutant-drop-before-ready/main.swift"
+  ],
+  "grader_only_files": [
+    "provenance.json",
+    "grading.md",
+    "oracles.py",
+    "oracle_probe.swift"
+  ],
+  "must_find": [
+    "reject-before-ready's own bundled test, which asserts that a write issued before activation is rejected, passing is not evidence that rejecting the write is correct behavior -- it is evidence the pre-fix suite certified the exact defect this pack exists to correct. A reviewer who runs the suite, sees green, and stops there has learned nothing.",
+    "flush-buffered-writes-on-activation never rejects a write, and its activation step attempts delivery of anything already waiting -- verify this against a scenario where activation happens with no further flush call, not only a scenario where a flush conveniently follows activation.",
+    "near-miss-buffer-without-activation-flush fixes only one of reject-before-ready's two problems: writes are no longer rejected, but activation alone does not attempt delivery -- a value written before the pipe is live is only ever sent if some later flush call happens to occur after activation, and nothing in the code or in this variant's own suite guarantees that it will.",
+    "near-miss-buffer-without-activation-flush's silent failure mode is specifically the absence of a later flush, not an error: a value can sit held indefinitely with no exception, no rejected write, and no failing assertion anywhere in its own bundled suite.",
+    "mutant-drop-before-ready's write issued before the pipe is live is never queued anywhere at all -- not merely delayed until a flush happens to arrive, as in the near-miss, but permanently unrecoverable regardless of how many activations or flushes follow, while still reporting the write as accepted."
+  ],
+  "must_not_find": [
+    "Treating reject-before-ready's own passing test suite as evidence that rejecting an early write is correct, sufficient, or safe behavior.",
+    "Accepting near-miss-buffer-without-activation-flush because its own bundled suite passes, including a test that shows a write followed by activation followed by an explicit flush being delivered -- that test exercises a path the near-miss happens to handle, not the path it fails.",
+    "Treating near-miss-buffer-without-activation-flush and mutant-drop-before-ready as the same class of problem because neither variant ever rejects a write or throws an error -- one is a value that can still be recovered by a later flush, the other is a value that is gone the instant it was written and unrecoverable by any subsequent operation.",
+    "Crediting mutant-drop-before-ready for 'not rejecting writes anymore' as evidence of a correct fix, without checking whether a written value is ever actually queued for delivery.",
+    "Concluding that flush-buffered-writes-on-activation is unverified or merely plausible because its own bundled suite is the only evidence offered -- the pack's hidden oracles independently confirm delivery happens on activation alone, with no dependence on a later flush."
+  ],
+  "allowed_findings": [
+    "Pipe's write/flush/activate could be expressed as a protocol with multiple conforming implementations instead of one concrete class, independent of this pack's central judgment.",
+    "buffered and emitted could be exposed as read-only computed properties backed by a single combined log instead of two separate arrays, independent of this pack's central judgment.",
+    "Noting that flush-buffered-writes-on-activation's activate() reusing flush() internally is a small, minimal change is a fair, accurate reading, not a defect."
+  ],
+  "residual_findings": [],
+  "must_find_if_present": [],
+  "hidden_oracles": [
+    {
+      "name": "activation_emits_pending_writes",
+      "variant_expected_to_fail": "near-miss-buffer-without-activation-flush"
+    },
+    {
+      "name": "activation_emits_pending_writes",
+      "variant_expected_to_fail": "mutant-drop-before-ready"
+    },
+    {
+      "name": "no_accepted_write_is_permanently_lost",
+      "variant_expected_to_fail": "mutant-drop-before-ready"
+    },
+    {
+      "name": "emitted_preserves_write_order",
+      "variant_expected_to_fail": null
+    },
+    {
+      "name": "stale_test_trap",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "A write issued at any point, before or after the pipe is live, must eventually be reported in the emitted sequence once the pipe is live and has been given the chance to send it -- it must never simply vanish while the pipe still reports the write as accepted.",
+    "Writes must emerge in the order they were issued, regardless of when relative to activation they were written or how many flush calls occurred.",
+    "A variant's own bundled test suite passing is not, by itself, evidence that its behavior is correct -- a suite can be internally consistent with a defect it was written to expect.",
+    "Recoverability after activation and permanent loss are different failure classes even when both present identically as 'no error, no rejection' to the caller -- distinguishing them requires checking multiple points in the sequence, not just the immediate result of a single operation."
+  ],
+  "restraint_reason": "near-miss-buffer-without-activation-flush is the maintainer's own second hole, not an invented trap: the real PR body describes fixing only the write-rejection problem as a plausible, incomplete refactor that 'frequently wouldn't unbuffer them again until a flush happened after activation' on most paths, while quietly leaving some paths (a connection that never gets a second flush) with a value that is held forever. A reviewer who checks only 'does this reject writes anymore' will find it does not, and stop. The restraint this pack measures is checking one level deeper: not merely whether a write is accepted, but whether accepting it is followed by any guaranteed path to delivery, or only a probable one. The mutant sits right next to this near-miss and is deliberately easy to conflate with it at a glance -- both report every write as accepted, and neither variant's caller ever sees an error -- so refusing the near-miss for the right reason (delivery is not guaranteed without a fortunate subsequent flush) rather than the wrong one (writes are sometimes not delivered, full stop, same as the mutant) is itself part of what full credit requires: the near-miss's data is recoverable, the mutant's is not, and collapsing that distinction is failing the pack in a different way than accepting the near-miss outright.",
+  "applicable_domains": [
+    "swift",
+    "state-machines",
+    "test-oracle-validity",
+    "data-loss",
+    "refactoring-restraint"
+  ],
+  "license": {
+    "spdx": "Apache-2.0",
+    "attribution": "Original code, written for this corpus. Conceptually inspired by the real-world case of apple/swift-nio PR #2486 (accepted, merged 2023-07-31) and its author's own PR-body description of the two holes it fixes; no swift-nio source is included, copied, or paraphrased -- Pipe, and every identifier here, are original to this fixture."
+  },
+  "contamination": {
+    "renamed": [
+      "swift-nio",
+      "NIO",
+      "SwiftNIO",
+      "Channel",
+      "channelActive",
+      "handlerAdded",
+      "lifecycleManager",
+      "ChannelError",
+      "inappropriateOperationForState",
+      "writeAndFlush",
+      "AcceptHandler",
+      "BaseSocket",
+      "NIOAny",
+      "NIOBSDSocket",
+      "TLSify",
+      "Lukasa"
+    ],
+    "constants_changed": "None needed. Audited every literal in this pack's candidate-visible files against the two upstream code snippets provided (the guard check and the removed test): neither contains a distinctive value (buffer size, retry count, watermark, timeout) to replace. The only literals here are the fixture's own write payloads (1, 2, 3), chosen for this fixture and not derived from swift-nio.",
+    "minimized_from": "apple/swift-nio's Channel write-buffering and activation lifecycle (PR #2486, merged, base sha fd3076131f3bddf5bce0002358914ff66fa431c3)",
+    "why": "The real fix touches swift-nio's own event-loop-driven Channel machinery, promise-based write completion, and a large, genuinely async test harness (+473/-13 across 6 files), none of which can be reproduced faithfully or deterministically as a minimal fixture without pulling in an event loop and real or simulated concurrency; a renamed, minimized, purely synchronous Swift analogue (pipe_support.swift, with Pipe standing in for Channel and a plain Bool-returning write instead of a promise) preserves the one judgment-relevant property this pack tests -- a test suite that actively certifies a defect, and a maintainer-documented partial fix that looks complete until checked against the specific path it does not cover -- without exposing any upstream symbol name, PR number, or line of swift-nio source, and with every oracle a plain, deterministic, single-threaded check."
+  }
+}

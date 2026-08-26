@@ -735,6 +735,8 @@ tokens so it is excluded:
 | P9c+P9d `auth-session-carryover` + `auth-login-redirect-target` (one builder, both packs, **includes one rework round**) | 593,215 |
 | **Total / mean (12 Python packs)** | **3,149,264 / ~262k** |
 | **Swift** `swift-collections-platform-guard-scope` (#298) | **962,603** |
+| **Swift** `swiftnio-write-before-active` (#2486) | **861,392** |
+| **Swift subtotal / mean (2 packs)** | **1,823,995 / ~912k — 3.5× the Python mean** |
 
 The P9 mini-packs are the first entries built two-to-an-agent, so those last two rows are pair
 figures. They also happen to price a rework round, because one pair needed none and the other
@@ -781,6 +783,27 @@ treating "it was first-pack overhead" as established would be the fourth. **At t
 remaining ~12 Swift sources are ~11.5M, and even halving is ~6M** — against ~3.1M for the entire
 twelve-pack Python track. That is a scheduling decision an owner should make explicitly with this
 number in front of them, not a detail to discover after three more packs.
+
+##### Measured: it was not first-pack overhead
+
+`swiftnio-write-before-active` is the second Swift pack, built by the same agent, reusing the
+conventions #298 established rather than inventing them — the module/`main.swift` split, the
+CLI-probe harness, the temp-directory compile trick, all handed over in the brief. It measured
+**861,392: 0.90× the first Swift pack.**
+
+So the most plausible of the three causes above is **refuted**, and refusing to claim it was the
+right call. Two Swift packs at 962,603 and 861,392 against a twelve-pack Python mean of ~262k puts
+**Swift at roughly 3.3× Python per pack, as a property of the language track rather than of
+starting it.** The remaining causes are unseparated and now look more structural than
+situational: a compile-and-run loop per variant instead of an import, a grader harness that must
+shell out and parse rather than call a function, and fixtures that must model behaviour as data
+because Swift's compile-time conditionals and platform matrix cannot be exercised on one machine.
+
+**This is n=2 and this section has been wrong from small n three times, so the number to plan
+against is the measurement, not an extrapolation from it.** What can be said: nothing observed so
+far suggests Swift packs get cheaper with practice. **The remaining ~11 Swift sources at the
+observed mean are ~10M** — roughly three times what the entire Python track cost — and that is
+the figure an owner should weigh, not the hope that the third pack finally comes down.
 
 **So the honest correction is under 2×, not an order of magnitude.** ~268k against a
 ~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate
