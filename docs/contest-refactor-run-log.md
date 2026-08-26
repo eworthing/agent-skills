@@ -821,3 +821,47 @@ can see it — a comment naming the grader contains neither.
    path**, never carrying structured results through the message channel.
    Pinning a verdict enum the way `reviewer-cases` does sidesteps it entirely
    for verdict-grain layers.
+
+### Second arm, same day: the near-miss cells — 6/6
+
+The first arm reviewed GREEN variants only, which tests restraint and never
+tests discrimination. This arm presented near-miss variants the way the
+implementation reviewer actually sees a change — current code, proposed code,
+and the refactor's own stated motivation — and asked accept/reject plus the
+specific input that differs. Two cells, three sonnet reps each.
+
+Both motivations were true as far as they went. Cell C: *the parser's state enum
+is more machinery than this needs; collapsing it to flags plus a counter is
+shorter with no behaviour change.* Cell D: *derive chunk identity from content
+rather than allocating storage — simpler, no counter, no extra object.*
+
+**6 of 6 rejected, each naming the correct mechanism.** Cell C's three all found
+a header-shaped line inside an open unbounded frame body (`#*`, `#0`, `.` twice;
+`#*`, `#2`, `.` once) and identified `remaining == 0` doubling as "awaiting a
+header". Cell D's three all constructed a content-collision scenario — replacing
+a chunk with text equal to another chunk's — and identified the resulting
+mis-report. Both packs' `must_find` items, derived from the code.
+
+This ran **after** the answer-leak sweep, so no reviewer could read the defect
+out of a comment. Combined with the first arm: **near-miss discrimination 6/6,
+restraint 5/6**, across twelve reviews.
+
+Asking for the differing input, not just a verdict, is what makes the result
+readable: a reviewer rejecting on general suspicion would have returned `null`
+there, and none did.
+
+**Open items 2, 4 and 5 are closed by this run.**
+- Item 2 shipped as check 9 (`b3e7098`). It immediately found an eighth leak
+  nobody had spotted by hand: the decoder pack's accepted variant told the
+  reader that flagging its allocation shape was "exactly the kind of finding
+  this pack's restraint grading exists to catch" — its own `must_not_find`, in
+  a doc comment. The check's first version matched substrings and fired on
+  "this package's own request objects", ordinary prose in three packs; the
+  word-boundary restraint case is now pinned in the selftest.
+- Item 4: `(this variant)` swept from 78 candidate-visible files.
+- Item 5: reviewers wrote verdicts to files and replied only `DONE`. Six of six
+  parsed with no corruption, against three of six in the first arm. The fix is
+  confirmed, and a real runner should adopt it.
+
+Items 1 (measure the remaining 23 packs' `allowed_findings`) and 3 (the
+minimised-seam question) remain open.
