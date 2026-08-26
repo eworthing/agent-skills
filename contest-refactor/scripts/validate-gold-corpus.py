@@ -36,6 +36,16 @@ Checks per pack:
    in `candidate_visible_files` contains the pack's own PR number, commit
    SHAs (`base_sha`, `accepted_sha`, `subsequent_correction.sha`), or an
    original upstream symbol name from `contamination.renamed`.
+8. In hidden mode, no candidate-visible file names its own concealed role --
+   the variant directory name of a `near_miss`/`mutant`, or a bare role token.
+9. In hidden mode, no candidate-visible file names the grading machinery
+   (`oracles.py`, `grading.md`, `must_not_find`, ...) or narrates its own
+   place in the corpus ("this pack", "the trap", "the accepted answer").
+   Word-bounded, so ordinary prose like "this package's own request objects"
+   passes. Checks 7 and 8 are blind to this class by construction: a comment
+   reading "see oracles.py's <name> for the exact input this misparses"
+   carries neither upstream provenance nor a role name, and gives away more
+   than either -- the defect, and the name of the check hunting it.
 
 An absent or empty corpus directory is not an error: this validator ships
 ahead of the corpus, so it exits 0 with a "no packs found" line rather than
@@ -365,6 +375,38 @@ _CONCEALED_ROLES = ("near_miss", "mutant")
 #: Bare role tokens, in the spellings a fixture is likely to write them.
 _ROLE_TOKENS = ("near_miss", "near-miss", "mutant")
 
+#: Grader machinery a candidate-visible file must never name, and the phrases a
+#: fixture uses when it starts narrating its own place in the corpus. Matched
+#: case-insensitively.
+#:
+#: Distinct from checks 7 and 8. Check 7 hunts *upstream* provenance and check 8
+#: hunts a variant's own *role name*; a comment reading "see oracles.py's
+#: distinct_states_not_collapsible for the exact input this misparses" contains
+#: neither, and hands over strictly more than either -- the defect and the name of
+#: the check looking for it.
+#:
+#: Bare "fixture" is deliberately absent: one pack's own subject matter is pytest
+#: fixture lifetimes, and matching the bare word would fail it on every line of a
+#: correct file. The self-referential spellings below are what a leak looks like.
+_GRADER_VOCABULARY = (
+    "oracles.py",
+    "grading.md",
+    "provenance.json",
+    "must_find",
+    "must_not_find",
+    "allowed_findings",
+    "hidden_oracles",
+    "gold corpus",
+    "gold-corpus",
+    "this fixture",
+    "the fixture",
+    "this variant",
+    "this pack",
+    "the accepted answer",
+    "the trap",
+    "deliberately introduced",
+)
+
 
 def _check_role_leak(
     pack_dir: Path, data: dict, roles: dict[str, str], manifest_path: Path
@@ -411,6 +453,56 @@ def _check_role_leak(
     return violations
 
 
+def _check_grader_vocabulary_leak(
+    pack_dir: Path, data: dict, manifest_path: Path
+) -> list[Violation]:
+    """Check 9: a candidate-visible file must not name the grading machinery.
+
+    Checks 7 and 8 both missed this class for the corpus's whole life, by
+    construction: check 7 looks for upstream provenance and check 8 for a variant's
+    own role name, and a comment that says "see oracles.py's
+    distinct_states_not_collapsible for the exact input this misparses" contains
+    neither. Seven such leaks were found by *running* packs against a reviewer --
+    one reviewer quoted a fixture's own comment back inside its finding -- across
+    two packs built in different sessions months apart. They gave away more than
+    either older check guards: the defect itself, and the name of the oracle
+    hunting for it.
+    """
+    if data.get("prompt_exposure") == "provenance_labeled":
+        return []  # as with checks 7 and 8, concealment is moot once disclosed
+    visible = data.get("candidate_visible_files")
+    if not isinstance(visible, list) or not visible:
+        return []
+
+    violations: list[Violation] = []
+    for rel in visible:
+        if not isinstance(rel, str):
+            continue
+        path = pack_dir / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore").lower()
+        except OSError:
+            continue
+        for needle in _GRADER_VOCABULARY:
+            # Word-bounded, not substring: a bare "this pack" test fires on the
+            # perfectly ordinary "this package's own request objects", which three
+            # packs open with.
+            if re.search(rf"\b{re.escape(needle)}\b", text):
+                violations.append(
+                    Violation(
+                        "grader-vocabulary-leak",
+                        f"candidate-visible file {rel!r} names the grading machinery "
+                        f"or its own place in the corpus ({needle!r}); a fixture must "
+                        "read as ordinary code, never as a graded artifact aware of "
+                        "being one",
+                        manifest_path,
+                    )
+                )
+    return violations
+
+
 def _validate_one_pack(pack_dir: Path) -> list[Violation]:
     manifest_path = pack_dir / "provenance.json"
     if not manifest_path.is_file():
@@ -443,6 +535,7 @@ def _validate_one_pack(pack_dir: Path) -> list[Violation]:
     violations.extend(_check_provenance_visibility(data, manifest_path))
     violations.extend(_check_hidden_leak(pack_dir, data, manifest_path))
     violations.extend(_check_role_leak(pack_dir, data, roles, manifest_path))
+    violations.extend(_check_grader_vocabulary_leak(pack_dir, data, manifest_path))
     return violations
 
 

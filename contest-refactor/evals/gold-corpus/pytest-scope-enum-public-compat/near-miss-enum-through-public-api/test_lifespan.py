@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""lifespan's own bundled test suite (this variant).
+"""lifespan's own bundled test suite.
 
 Run directly: python3 test_lifespan.py -- exits 0 on success.
 """

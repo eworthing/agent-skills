@@ -1,4 +1,4 @@
-// frame_decoder's own bundled test suite (this variant).
+// frame_decoder's own bundled test suite.
 //
 // Run: swiftc frame_decoder.swift main.swift -o /tmp/<name> && /tmp/<name>
 // Exits 0 on success, 1 on failure.
@@ -31,8 +31,7 @@ recorded = []
 decoder.feed("#*\nfirst\nsecond\n.\n")
 check(recorded == [Frame(kind: .unbounded, body: ["first", "second"])], "an unbounded frame should read until its terminator")
 
-// Error-latch: this variant's flags-vs-enum difference is unrelated to
-// error handling, and this part of it is correct.
+// A frame whose consumer throws is still delivered before decoding stops.
 recorded = []
 decoder.feed("#1\nBOOM\n")
 check(recorded == [Frame(kind: .counted, body: ["BOOM"])], "the frame that triggers the throw is itself still delivered")

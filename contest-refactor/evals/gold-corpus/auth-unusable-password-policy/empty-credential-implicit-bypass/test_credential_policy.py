@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""credential_policy's own bundled test suite (this variant).
+"""credential_policy's own bundled test suite.
 
 Run directly: python3 test_credential_policy.py -- exits 0 on success.
 """

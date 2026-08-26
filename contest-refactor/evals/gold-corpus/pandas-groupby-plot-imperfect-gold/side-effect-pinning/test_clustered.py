@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clustered's own bundled test suite (this variant).
+"""Clustered's own bundled test suite.
 
 Run directly: python3 test_clustered.py -- exits 0 on success.
 """

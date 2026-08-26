@@ -38,8 +38,8 @@ enum DecodeConsumerError: Error {
 /// Shared incremental-line decoding: buffering and re-entrancy guarding,
 /// factored out so a parser only has to say what one complete line means.
 ///
-/// Trade note (mirrors the real upstream case this pack is based on):
-/// funneling every parser through one shared drain loop costs a queued
+/// Trade note: funneling every parser through one shared drain loop
+/// costs a queued
 /// `String` per line and a fresh body-array copy per completed frame,
 /// where a decoder that owns its own tight buffering loop end-to-end can
 /// reuse a single scratch buffer across an entire session instead. That
@@ -47,9 +47,6 @@ enum DecodeConsumerError: Error {
 /// against what it buys -- one buffering-and-re-entrancy implementation
 /// instead of one per parser, and the guarantee the error-latch below
 /// depends on -- and accepted as measured, not incidental, overhead.
-/// Flagging this allocation shape as waste without weighing that trade is
-/// exactly the kind of finding this pack's restraint grading exists to
-/// catch.
 protocol IncrementalLineDecoder: AnyObject {
     /// Bytes/characters received but not yet resolved into a complete
     /// line -- a chunk boundary can split a line in half.

@@ -505,6 +505,53 @@ def main() -> int:
             f"labeled mode must not trigger the role-leak check, got {r.returncode}: {r.stderr}",
         )
 
+        # --- grader-vocabulary-leak (check 9): a fixture must not name the grading
+        # machinery. Reconstructed from a real leak: a comment pointing at the very
+        # oracle that catches the variant's defect. Checks 7 and 8 both pass it --
+        # it carries no upstream provenance and no role name -- which is why 9 exists.
+        gv_root = root / "grader-vocab-oracle"
+        m = _baseline_manifest()
+        m["candidate_visible_files"] = ["red/test_thing.py"]
+        pack_dir = _write_pack(gv_root, "pack", m)
+        (pack_dir / "red" / "test_thing.py").write_text(
+            "# See oracles.py's distinct_states_not_collapsible for the input.\n",
+            encoding="utf-8",
+        )
+        r = _run(gv_root)
+        expect("grader-vocab-oracle", r.returncode == 1, f"expected exit 1, got {r.returncode}")
+        expect("grader-vocab-oracle", "[grader-vocabulary-leak]" in r.stderr, r.stderr)
+
+        # a fixture narrating its own place in the corpus is the same class
+        gv_self_root = root / "grader-vocab-selfref"
+        m = _baseline_manifest()
+        m["candidate_visible_files"] = ["red/test_thing.py"]
+        pack_dir = _write_pack(gv_self_root, "pack", m)
+        (pack_dir / "red" / "test_thing.py").write_text(
+            "# exactly the kind of finding this pack's restraint grading catches\n",
+            encoding="utf-8",
+        )
+        r = _run(gv_self_root)
+        expect("grader-vocab-selfref", r.returncode == 1, f"expected exit 1, got {r.returncode}")
+
+        # restraint: word-bounded, not substring. "this package's" is ordinary prose
+        # that three real packs open with, and a bare "this pack" test fails all of
+        # them. Likewise a pack whose own subject is pytest fixture lifetimes.
+        gv_clean_root = root / "grader-vocab-clean"
+        m = _baseline_manifest()
+        m["candidate_visible_files"] = ["red/test_thing.py"]
+        pack_dir = _write_pack(gv_clean_root, "pack", m)
+        (pack_dir / "red" / "test_thing.py").write_text(
+            '"""Fixture-lifetime helpers used by this package\'s request objects.\n\n'
+            'A fixture is torn down when the last thing at its span finishes."""\n',
+            encoding="utf-8",
+        )
+        r = _run(gv_clean_root)
+        expect(
+            "grader-vocab-restraint-word-boundary",
+            r.returncode == 0,
+            f"expected exit 0, got {r.returncode}: {r.stderr}",
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

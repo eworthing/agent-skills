@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""service_listener's own bundled test suite (this variant).
+"""service_listener's own bundled test suite.
 
 Run directly: python3 test_service_listener.py -- exits 0 on success.
 """

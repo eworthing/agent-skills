@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""identity_verification's own bundled test suite (this variant).
+"""identity_verification's own bundled test suite.
 
 Run directly: python3 test_identity_verification.py -- exits 0 on success.
 """

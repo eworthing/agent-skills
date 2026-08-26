@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""sign_in's own bundled test suite (this variant).
+"""sign_in's own bundled test suite.
 
 Run directly: python3 test_sign_in.py -- exits 0 on success.
 """

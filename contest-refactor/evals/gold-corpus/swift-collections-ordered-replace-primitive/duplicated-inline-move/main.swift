@@ -1,4 +1,4 @@
-// ordered_replace's own bundled test suite (this variant).
+// ordered_replace's own bundled test suite.
 //
 // Run: swiftc ordered_replace.swift main.swift -o /tmp/<name> && /tmp/<name>
 // Exits 0 on success, 1 on failure.

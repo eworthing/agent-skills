@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""fieldspec's own bundled test suite (this variant).
+"""fieldspec's own bundled test suite.
 
 Run directly: python3 test_fieldspec.py -- exits 0 on success.
 """

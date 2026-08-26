@@ -116,10 +116,8 @@ final class FrameDecoder {
     }
 
     private func deliver(_ frame: Frame) {
-        // No error-latch here: if the consumer throws, this predates that
-        // safeguard entirely -- the error is swallowed and decoding
-        // continues exactly as if nothing happened. That is the specific
-        // gap a later change (kept out of this variant on purpose) closes.
+        // If the consumer throws, the error is swallowed here and
+        // decoding continues with the lines that follow.
         try? onFrame(frame)
     }
 }

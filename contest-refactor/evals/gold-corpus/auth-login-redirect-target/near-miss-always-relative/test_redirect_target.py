@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""redirect_target's own bundled test suite (this variant).
+"""redirect_target's own bundled test suite.
 
 Run directly: python3 test_redirect_target.py -- exits 0 on success.
 """

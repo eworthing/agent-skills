@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""columnstore's own bundled test suite (this variant).
+"""columnstore's own bundled test suite.
 
 Run directly: python3 test_columnstore.py -- exits 0 on success.
 """

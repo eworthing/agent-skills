@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Coltable's own bundled test suite (this variant).
+"""Coltable's own bundled test suite.
 
 Run directly: python3 test_coltable.py -- exits 0 on success.
 """

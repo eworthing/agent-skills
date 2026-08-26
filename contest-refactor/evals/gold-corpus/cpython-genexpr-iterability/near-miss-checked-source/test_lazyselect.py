@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LazySelect's own bundled test suite (this variant).
+"""LazySelect's own bundled test suite.
 
 Run directly: python3 test_lazyselect.py -- exits 0 on success.
 """
