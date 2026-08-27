@@ -5,7 +5,7 @@ different things — keep them distinct when reasoning about coverage. Layer 1 i
 deterministic (mechanical, no model); Layers 2–6 are host-dispatched and model-graded,
 and share the trial-validity rules below.
 
-## Gold corpus — Python track BUILT (12 packs), Swift track not started
+## Gold corpus — BOTH tracks BUILT (25 packs: 12 Python, 13 Swift)
 
 Fixture packs derived from real expert-reviewed refactoring PRs, with RED / GREEN / NEAR-MISS /
 MUTANT sibling variants, executable hidden oracles, and a `must_not_find` negative oracle. The
@@ -29,17 +29,27 @@ design, source register, and measured costs are in
 | `auth-session-carryover` | same | two operations one condition; both collapses break it |
 | `auth-login-redirect-target` | same | an asymmetry both tidyings would break |
 
-Validate with `python3 ../scripts/validate-gold-corpus.py gold-corpus` (8 checks, exits 0 clean).
+Validate with `python3 ../scripts/validate-gold-corpus.py gold-corpus` (9 checks, exits 0 clean).
 Each pack's `oracles.py` is grader-only and runnable directly; it prints the observed
 variant × oracle matrix and exits non-zero if it diverges from `provenance.json`.
 
-**Swift track — 3 of ~13 built:**
+**Swift track — 13 of 13 built, completed 2026-08-26:**
 
 | Pack | Source | Tests |
 | --- | --- | --- |
 | `swift-collections-platform-guard-scope` | swift-collections #298 (**rejected**) | the corpus's only near-miss authored by a real external contributor and rejected by a real maintainer |
 | `swiftnio-write-before-active` | swift-nio #2486 | the suite certified the defect — a passing test asserts the wrong behavior |
 | `swift-collections-ordered-replace-primitive` | swift-collections #688 | "just call the public method" — wrong in three ways the author documented in advance |
+| `store-core-composition-residual` | TCA #3460 (+ #3845) | three judgments held apart at once; **longitudinally corrected** — a dead actor nobody removed for eleven months |
+| `strict-concurrency-fake-fixes` | swift-nio #2959 (**contested**) | two near-misses, two different reasons for the same "this doesn't really fix it" |
+| `swiftnio-registration-id-representation` | swift-nio #1801 | a real, working generalization that is shorter than either sibling and still the wrong answer |
+| `streaming-decoder-error-state` | swift-nio #814 | **pure restraint** against a complexity scanner — the hotspot nomination is meant to be dismissed |
+| `demand-signalling-state-machine` | swift-async-algorithms #185 | a six-case phase enum a reviewer is expected to manufacture a defect out of |
+| `rope-chunk-stable-identity` | swift-collections #488 | content-derived identity looks strictly simpler and loses the diff property |
+| `auth-challenge-preservation` | vapor `main` @ `7de7a9e2` | the bundled suite only ever tries one authenticator, so it passes |
+| `auth-concurrent-login-storage` | same | real locks, real acquire/release, wrong granularity |
+| `auth-error-detail-preservation` | same | the rethrown message still reads correctly in every case |
+| `auth-empty-password-policy-restraint` | same | **pure restraint** — a blank-password check that is right to leave alone |
 
 Swift variants are a `platform_support.swift` module plus a `main.swift` test, built with
 `swiftc platform_support.swift main.swift -o /tmp/<name> && /tmp/<name>` (exit 0 pass, 1 fail).
@@ -49,8 +59,14 @@ b.swift` errors unless the entry file is named `main.swift`, and `swift a.swift 
 out to `swiftc`. Toolchain used: Swift 6.4 / Xcode 27. Never write build output into a pack
 directory.
 
-The remaining ~10 Swift sources are designed but unbuilt — see the register in the design doc,
-and read the cost note there first: Swift packs measure ~1.01M each, 3.9x the Python per-pack mean, with no downward trend across three.
+The register in the design doc is now fully consumed; every source it ranked has a pack.
+
+**Do not quote the design doc's per-pack cost figures.** Its Python numbers (P2 = 258,315,
+P4 = 256,283) are builder-transcript totals and reconcile exactly; its Swift numbers
+(~1.01M each, "3.9x Python") match no transcript and were not measured the same way, so the
+ratio between them is not a like-for-like comparison and should not be used to price future
+tracks. Swift packs are genuinely more expensive — a toolchain in the loop, no sibling-file
+import, per-variant build commands — but by how much is unmeasured.
 
 **These are fixtures, not production evidence.** They do not count toward the G17 promotion bar,
 which requires adjudicated datapoints from live runs against real target repos.

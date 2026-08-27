@@ -740,6 +740,18 @@ tokens so it is excluded:
 | **Swift subtotal / mean (3 packs)** | **3,043,544 / ~1.01M — 3.9× the Python mean** |
 | **Corpus total (15 packs)** | **6,192,808** |
 
+> **Correction, 2026-08-26 — the Swift rows are not measured the same way as the Python rows, so
+> the ratio between them is not a like-for-like comparison.** Every Python figure reconciles
+> against a builder transcript (spot-checked: P2 = 258,315 and P4 = 256,283 match exactly). **No
+> transcript matches any of the three Swift figures.** Their provenance could not be reconstructed.
+> Treat "~1.01M per Swift pack" and "3.9× the Python mean" as **unverified**, and do not use either
+> to price a future language track — including in the sections below, which were written on top of
+> them and are left standing as the record of what was believed at the time. Swift packs are
+> genuinely dearer (a toolchain in the loop, no sibling-file import, per-variant build commands);
+> by how much is unmeasured. Re-measuring means re-deriving all thirteen from transcripts, which
+> is worth doing before anyone budgets a third language, and is not worth doing to settle a number
+> nothing currently depends on.
+
 The P9 mini-packs are the first entries built two-to-an-agent, so those last two rows are pair
 figures. They also happen to price a rework round, because one pair needed none and the other
 needed one:
@@ -825,6 +837,15 @@ remaining **~10 Swift sources at ~1.01M are ~10.1M** — more than three times w
 twelve-pack Python track cost, and more than the whole corpus has cost to date. Building out the
 rest of the Swift register is not a continuation of the current effort; it is a larger project
 than everything in this document put together, and should be scheduled as one.
+
+> **Outcome, 2026-08-26.** The owner read that estimate and directed the build anyway. The Swift
+> register is now **complete — 13 of 13 packs, corpus at 25**. The ~10.1M projection was never
+> reconciled against actuals, and per the correction above it rests on unverified Swift figures,
+> so it should not be cited as a measured result either. What is measured: the corpus was then
+> **executed** against a blind reviewer for the first time, which found what validating it could
+> not — 8 answer-leaks and **3 real bugs in accepted variants** (a state-machine hang, a
+> `sourceCount` over-count, an empty-stamp session carryover). That execution, not the build, is
+> where the register earned its cost.
 
 **So the honest correction is under 2×, not an order of magnitude.** ~268k against a
 ~500k anchor — and that gap has narrowed with every pack measured, not widened. Anyone reading an early draft of this section that claimed a 10× overestimate
