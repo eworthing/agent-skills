@@ -51,7 +51,8 @@
   ],
   "allowed_findings": [
     "TicketID, BeltLane, and HandlingTier could each conform to a shared small protocol (e.g. a common `rawValue`-bearing protocol) instead of being three unrelated structs, independent of this pack's central judgment.",
-    "Noting that typed-fields-single-conversion's ConveyorCommandWord is now the only place in the file with a `<<` or `>>` operator is a fair, accurate reading, not a defect."
+    "Noting that typed-fields-single-conversion's ConveyorCommandWord is now the only place in the file with a `<<` or `>>` operator is a fair, accurate reading, not a defect.",
+    "TicketID's failable initializer is only ever exercised with a single mid-range value, so neither its rejection path (an out-of-range raw value returning nil) nor the exact 40-bit boundary value itself is ever tested, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

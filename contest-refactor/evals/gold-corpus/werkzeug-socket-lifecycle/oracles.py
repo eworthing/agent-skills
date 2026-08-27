@@ -4,7 +4,7 @@ shown to a candidate (listed in provenance.json's grader_only_files).
 
 Imports each variant's `service_listener.py` fresh by file path (every
 variant reuses the same module name, so plain `import service_listener`
-would collide) and runs the three oracles declared in provenance.json's
+would collide) and runs the four oracles declared in provenance.json's
 `hidden_oracles`:
 
     no_descriptor_leak_on_adopt   -- THE DISCRIMINATOR for the RED shape. A
@@ -38,7 +38,9 @@ Exit 0 iff every observed result matches its declared expectation.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import sys
 import types
 from itertools import count
@@ -94,12 +96,42 @@ def handoff_yields_live_descriptor(mod: types.ModuleType) -> bool:
     return descriptor_id >= 0
 
 
+def conflicting_construction_is_not_silent(mod: types.ModuleType) -> bool:
+    """A second Service on an endpoint the first still holds must be refused.
+
+    How it is refused differs by variant and that is not what this checks:
+    the pre-consolidation shape raises EndpointInUseError, the consolidated
+    shape prints and terminates. Either is a refusal. Binding straight over
+    a live registration and returning a working Service is not, and no other
+    oracle here would notice -- none of them constructs two Services on one
+    endpoint. Added after a blind review sweep found exactly that: stale-
+    clearing had been folded into every construction path during the
+    consolidation, discarding the registration bind() checks against, so the
+    conflict branch could not fire from any call site.
+    """
+    endpoint = ("oracle-conflict", next(_handoff_ports))
+    first = mod.Service(endpoint)
+    try:
+        # The refusal prints a message on the way out; swallow it so it does
+        # not interleave with this battery's own matrix output.
+        with contextlib.redirect_stderr(io.StringIO()):
+            mod.Service(endpoint)
+    except (SystemExit, mod.EndpointInUseError):
+        return True
+    finally:
+        first.close()
+    return False
+
+
 def main() -> int:
     modules = {variant: load_variant(variant) for variant in VARIANTS}
 
     leak_results = {name: no_descriptor_leak_on_adopt(mod) for name, mod in modules.items()}
     reuse_results = {name: reuse_matches_legacy_default(mod) for name, mod in modules.items()}
     handoff_results = {name: handoff_yields_live_descriptor(mod) for name, mod in modules.items()}
+    conflict_results = {
+        name: conflicting_construction_is_not_silent(mod) for name, mod in modules.items()
+    }
 
     print("=== no_descriptor_leak_on_adopt ===")
     for name, ok in leak_results.items():
@@ -110,8 +142,18 @@ def main() -> int:
     print("=== handoff_yields_live_descriptor ===")
     for name, ok in handoff_results.items():
         print(f"  {name}: {'live descriptor' if ok else 'DEAD DESCRIPTOR HANDED OFF'}")
+    print("=== conflicting_construction_is_not_silent (control) ===")
+    for name, ok in conflict_results.items():
+        print(f"  {name}: {'refused' if ok else 'BOUND OVER A LIVE ENDPOINT'}")
 
     failures = []
+
+    for name in VARIANTS:
+        if conflict_results.get(name) is not True:
+            failures.append(
+                f"{name}: conflicting_construction_is_not_silent must hold, "
+                f"got {conflict_results.get(name)}"
+            )
 
     expected_leak = {
         "helper-and-eager-service": False,

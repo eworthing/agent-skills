@@ -48,7 +48,9 @@
   "allowed_findings": [
     "Pipe's write/flush/activate could be expressed as a protocol with multiple conforming implementations instead of one concrete class, independent of this pack's central judgment.",
     "buffered and emitted could be exposed as read-only computed properties backed by a single combined log instead of two separate arrays, independent of this pack's central judgment.",
-    "Noting that flush-buffered-writes-on-activation's activate() reusing flush() internally is a small, minimal change is a fair, accurate reading, not a defect."
+    "Noting that flush-buffered-writes-on-activation's activate() reusing flush() internally is a small, minimal change is a fair, accurate reading, not a defect.",
+    "flush()'s `guard isLive else { return }` is never exercised while `isLive` is still false -- every test path only reaches flush() after activation has already set it true -- independent of this pack's central judgment.",
+    "write(_:)'s `Bool` return value is always `true` in every code path, so it currently carries no information a caller could act on, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

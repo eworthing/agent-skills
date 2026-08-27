@@ -104,7 +104,6 @@ class Service:
         if not bind:
             self.listener.close()
             return
-        clear_stale(endpoint)
         self.listener.set_inheritable(True)
         try:
             self.listener.bind(endpoint)
@@ -145,6 +144,12 @@ def start_with_handoff(endpoint: tuple[str, int]) -> int:
     This is the shape a warm restart uses: the successor picks the same
     resource back up from the descriptor id instead of rebinding.
     """
+    # Only a warm restart may drop a leftover registration for this endpoint:
+    # the predecessor's entry is stale by definition once it has handed over.
+    # Doing this on every construction path instead would discard the entry
+    # bind() checks against, so an ordinary second Service on a live endpoint
+    # would bind straight over the first one without conflict.
+    clear_stale(endpoint)
     listener = provision_listener(endpoint)
     descriptor_id = listener.descriptor_id
     listener.close()

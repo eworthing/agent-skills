@@ -50,7 +50,8 @@
   "allowed_findings": [
     "Listener, Service, clear_stale, and terminate could be organized differently (a dataclass, a context manager for Service, a module-level constant instead of a free function for terminate) independent of this pack's central judgment.",
     "start_with_handoff's docstring describing a warm-restart successor is a simplification; a reviewer noting that a real handoff would also need the successor side reconstructed from the descriptor id is fair, additional context, not a required finding.",
-    "clear_stale remaining a small standalone function inside consolidated-service-ownership rather than being inlined into Service.__init__ is a reasonable structural choice, not a leftover needing further consolidation."
+    "clear_stale remaining a small standalone function inside consolidated-service-ownership rather than being inlined into Service.__init__ is a reasonable structural choice, not a leftover needing further consolidation.",
+    "CHANGES.md advertises that `reuse_by_default` and `backlog` being class attributes lets a subclass override either, but no test constructs a subclass to confirm an override actually takes effect, independent of this pack's central judgment."
   ],
   "residual_findings": [
     "consolidated-service-ownership moves the friendly-message-then-terminate behavior for a bind conflict from the deleted helper's own caller-facing entry point into Service.__init__ itself. Because start_service -- the single public factory used by a direct caller and by the reload/handoff path alike -- constructs a Service either way, a caller of start_service on a conflicting endpoint now gets the process terminated with a printed message instead of a catchable EndpointInUseError; previously only the reload-path helper behaved that way, and a direct start_service call raised, letting the caller retry on a different endpoint or handle the conflict itself. This mirrors werkzeug PR #2517, which moved an equivalent friendly-message-plus-sys.exit(1) block from a semi-public helper into BaseWSGIServer's own constructor and kept it there -- still present on werkzeug's main branch, not reverted or otherwise corrected. A Critic should name this as a real, accurate cost of the consolidation, not as a blocking defect, and should not propose replacing the friendly message with a bare raise as a 'fix.'"
@@ -68,6 +69,10 @@
     {
       "name": "handoff_yields_live_descriptor",
       "variant_expected_to_fail": "mutant-handoff-close-before-read"
+    },
+    {
+      "name": "conflicting_construction_is_not_silent",
+      "variant_expected_to_fail": null
     }
   ],
   "behavior_contract": [

@@ -1,0 +1,124 @@
+{
+  "packs": [
+    {
+      "pack": "swiftnio-registration-id-representation",
+      "findings": [
+        {
+          "summary": "TicketID's failable initializer is only ever called with one mid-range value; neither the nil-returning rejection path nor the exact 40-bit boundary value is ever exercised",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against typed-fields-single-conversion/command_word.swift:16-19 (`init?(rawValue:) { guard rawValue <= 0xFF_FFFF_FFFF else { return nil }; ... }`) and main.swift:15-28, which only ever constructs `TicketID(rawValue: 1000)!`. Neither the boundary value 0xFF_FFFF_FFFF nor an over-limit value is tested, and the nil path is never hit. Raised identically by all three reps. Unrelated to the pack's central judgment (typed fields vs. generic bit-packing helper) -- this is purely a coverage gap in the accepted variant's own bundled test.",
+          "proposed_allowed_finding": "TicketID's failable initializer is only ever exercised with a single mid-range value, so neither its rejection path (an out-of-range raw value returning nil) nor the exact 40-bit boundary value itself is ever tested, independent of this pack's central judgment."
+        },
+        {
+          "summary": "Bundled tests only prove encode/decode self-consistency (round-trip); no test pins the packed layout against a hardcoded literal word, so a bit-position bug applied symmetrically to both pack and unpack would round-trip perfectly and still pass",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: main.swift's only checks are round-trips through `ConveyorCommandWord(assignment).assignment` and the three decode accessors applied to `packed.rawValue`, never a hand-computed literal UInt64 decoded to an independently-known expected (ticket, lane, tier). Real, accurate, independent gap. Only 1/3 reps (C) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "The `& 0xFF_FFFF_FFFF` mask on the ticket field's decode (line 65) is provably dead: a 64-bit word shifted right by 24 is already bounded to 40 bits, unlike the lane/tier masks on the next two lines, which are load-bearing",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified by direct calculation: command_word.swift:65 `(rawValue >> 24) & 0xFF_FFFF_FFFF` -- since rawValue is UInt64 and the shift is 24, the result already fits in 40 bits (2^40-1 == 0xFF_FFFF_FFFF), making the mask a no-op given this fixture's specific 24-bit shift / 40-bit field alignment. Lines 66-67's masks are correctly identified as necessary (shifting by 8 or 0 leaves far more than the field's own width of high bits to strip). A sharp, technically correct observation, independent of central judgment. Only 1/3 reps (C) -- not promoted.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "swiftnio-write-before-active",
+      "findings": [
+        {
+          "summary": "flush()'s `guard isLive else { return }` is never exercised while isLive is actually false -- every test path reaches flush() only after activate() has already set isLive true",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified against flush-buffered-writes-on-activation/pipe_support.swift:20-24 and main.swift: `early`/`ordered` reach flush() only via activate() (isLive set true one line earlier inside activate()); `ready.flush()` at main.swift:24 is called after `ready.activate()` at line 22. No test ever calls `.flush()` while isLive is still false, so deleting the guard would not fail any existing assertion. Raised by A and B. Independent of central judgment (reviewers never saw reject-before-ready, the near-miss, or the mutant to compare against).",
+          "proposed_allowed_finding": "flush()'s `guard isLive else { return }` is never exercised while `isLive` is still false -- every test path only reaches flush() after activation has already set it true -- independent of this pack's central judgment."
+        },
+        {
+          "summary": "No test isolates whether write() on an already-live pipe emits immediately versus waiting for an explicit flush; a mutation making write() auto-flush would pass unchanged",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: main.swift's `ready` case does `activate()`, `write(2)`, then an explicit `flush()`, with no assertion in between checking `ready.emitted.isEmpty` right after the write. An auto-flush-on-write() mutation would produce an identical final state. Real, accurate, independent gap. Only 1/3 reps (C) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "write(_:) always returns true; the @discardableResult Bool carries no information a caller could act on",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "CONSTRUCTION ARTIFACT -- flagging for a fix-vs-disclose decision. Verified against flush-buffered-writes-on-activation/pipe_support.swift:14-18 (`func write(_ value: Int) -> Bool { buffered.append(value); return true }`, every path returns true unconditionally) and, by contrast, reject-before-ready/pipe_support.swift:12-19, where the SAME signature is load-bearing: `guard isLive else { return false }` legitimately rejects a write there. The Bool return value is a vestige of the pre-fix (RED) design, left over from removing the rejection branch when this variant was built -- it now serves no purpose in the accepted variant. No CHANGES.md exists for this pack to disclose it as deliberate. Raised by B and C. Independent of central judgment.",
+          "proposed_allowed_finding": "write(_:)'s `Bool` return value is always `true` in every code path, so it currently carries no information a caller could act on, independent of this pack's central judgment."
+        },
+        {
+          "summary": "Pipe shares its exact name with Foundation's Pipe (an IPC primitive), and main.swift imports Foundation -- a reader could momentarily conflate them",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: pipe_support.swift:9 `final class Pipe`; main.swift:6 `import Foundation`. No actual compile-time ambiguity (local type wins name resolution), but the naming-collision-for-a-reader observation is accurate as stated. Cosmetic, independent of central judgment. Only 1/3 reps (C) -- not promoted.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "werkzeug-socket-lifecycle",
+      "findings": [
+        {
+          "summary": "Service.__init__ calls clear_stale(endpoint) unconditionally immediately before bind(endpoint), silently discarding the exact _BOUND_ENDPOINTS entry bind()'s conflict check depends on -- the except EndpointInUseError/terminate() branch is unreachable dead code via every production call path, so two live Services CAN silently double-bind the same endpoint with no error, no termination, and no test catching it",
+          "reps": 3,
+          "classification": "INCORRECT_FIXTURE",
+          "note": "VERIFIED against consolidated-service-ownership/service_listener.py: line 108 `clear_stale(endpoint)` runs unconditionally, immediately before line 112 `self.listener.bind(endpoint)`, inside the same synchronous __init__ call, with nothing in between that could repopulate _BOUND_ENDPOINTS for that endpoint. `clear_stale` (lines 76-78) unconditionally does `_BOUND_ENDPOINTS.discard(endpoint)` with no liveness check at all. `bind()` (lines 57-61) raises EndpointInUseError only `if endpoint in _BOUND_ENDPOINTS` -- a condition that can never be true immediately after clear_stale just discarded that exact key. Traced concretely: construct Service(x); _BOUND_ENDPOINTS={x}. Construct a second Service(x) *without closing the first*: its __init__ discards x, then bind() sees x absent, succeeds, re-adds x -- no exception, no terminate() call, and the first listener is still open, now silently untracked. `bind()` is called from exactly one call site in the whole module (line 112), so this branch is provably unreachable via any public API. Confirmed this is genuinely a variant-specific regression, not present upstream: in the RED baseline (helper-and-eager-service), `clear_stale` is only called inside `open_listener` (used by `provision_listener`/`start_with_handoff`, the warm-restart-recovery path) -- `Service.__init__`'s own bind branch there calls `bind()` directly with NO clear_stale in front of it, so a genuine conflict there DOES raise EndpointInUseError uncaught. The consolidation hoisted `clear_stale` into the single shared `Service.__init__`, applying it to every construction including the plain `start_service()` path that previously had no such call -- this is the bug's origin. This directly CONTRADICTS the pack's own provenance.json: must_find item 3 and the residual_findings entry both assert that a bind conflict on `start_service`'s non-adopt path now 'terminates the process' instead of raising -- but the actual code shows the conflict is never even detected, let alone acted on. The pack's own hidden oracle battery (oracles.py) also never exercises this: its three oracles (no_descriptor_leak_on_adopt, reuse_matches_legacy_default, handoff_yields_live_descriptor) never construct two Services on the same endpoint, so this bug would slip through automated grading entirely, independent of what a reviewer finds. Reps: B and C both fully diagnosed the root cause at 'Critical' severity, with an exact call trace and a proposed fix (gate clear_stale to the genuinely-stale/warm-restart case). A independently flagged the same code region (the except-branch and terminate() are untested, 'leaving the entire conflict/process-termination branch ... zero coverage') without identifying that it is actually unreachable -- but A's own prescribed remedy (construct two Services on the same endpoint, monkeypatch terminate, assert it fires) would, if actually implemented, fail its assertion and expose this exact bug. Recommend the team lead treat this as a genuine fixture defect requiring either a code fix (scope clear_stale to the warm-restart path only) or a provenance/must_find rewrite -- not something to patch via allowed_findings.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "The fd-leak fix (closing the bind=False placeholder immediately) has no regression test: no assertion checks the open-descriptor ledger before/after the adopt path",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: test_adopting_a_listener_keeps_it_usable (test_service_listener.py:38-44) only asserts `service.listener is prepared` and `.descriptor_id >= 0`, never checking that the discarded placeholder's id left `_OPEN_DESCRIPTORS`. Real, accurate coverage gap, independent of central judgment. Only 1/3 reps (B) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Listener.activate(backlog) stores self.backlog but nothing in the module, its tests, or the grader's oracles ever reads it back",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified by direct grep of service_listener.py, test_service_listener.py, and oracles.py: `.backlog` is written (service_listener.py:64, 117) but never read anywhere, including by the grader-only oracle file. Checked whether this is a construction artifact specific to this variant: it is not -- the identical write-only pattern (`def activate(self, backlog): self.backlog = backlog`) exists unchanged in the RED baseline (helper-and-eager-service) too, so it's a fixture-wide simplification (modeling a value an OS syscall would consume, not something introduced by this variant's consolidation), not variant-specific debris. Independent of central judgment. Only 1/3 reps (B) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "CHANGES.md claims reuse_by_default/backlog being class attributes lets a subclass override either, but no test actually subclasses Service to confirm an override takes effect",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified: test_service_listener.py's five tests all construct plain `Service` or call module-level helpers; none defines a Service subclass anywhere. The CHANGES.md capability claim (lines 14-16) is genuinely unverified. Raised by B and C. Independent of central judgment -- doesn't dispute the leak fix, reuse fix, or the conflict-handling discrepancy; purely a documentation-vs-test-coverage gap.",
+          "proposed_allowed_finding": "CHANGES.md advertises that `reuse_by_default` and `backlog` being class attributes lets a subclass override either, but no test constructs a subclass to confirm an override actually takes effect, independent of this pack's central judgment."
+        },
+        {
+          "summary": "reuse_enabled and inheritable are recorded on Listener and checked by a test, but bind() never branches on either -- they model real socket options as inert data in this simulation",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: set_reuse/set_inheritable (service_listener.py:51-55) only assign; bind() (lines 57-61) decides solely on _BOUND_ENDPOINTS membership, never reads self.reuse_enabled or self.inheritable. Accurate fixture-design observation (consistent with the module's own stated purpose of simulating socket lifecycle without opening real sockets), offered with a soft 'no action needed if intentional' remedy. Does not touch near-miss-dropped-reuse (reviewers never saw that variant) or otherwise brush against must_not_find #7. Independent of central judgment. Only 1/3 reps (C) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "test_start_with_handoff_returns_an_int only asserts isinstance(int), not >= 0, so a regression that hands off an already-closed (-1) descriptor would still pass",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: test_service_listener.py:33-35 asserts only `isinstance(descriptor_id, int)`, which -1 also satisfies; the accepted variant's own start_with_handoff (service_listener.py:150-152) correctly reads descriptor_id before close(), so this is a coverage gap in the bundled test, not a live bug in this variant. Independent of central judgment. Only 1/3 reps (A) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "_OPEN_DESCRIPTORS is written on every Listener creation/close but never read anywhere in candidate-visible code (service_listener.py or test_service_listener.py), despite the class docstring's claim that it makes a leak 'observable from outside'",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified true for candidate-visible files. Checked whether this is genuinely dead/unreferenced: it is not -- oracles.py (grader-only, invisible to a candidate) reads it directly at lines 76 and 80 (`no_descriptor_leak_on_adopt`). So the finding is accurate as scoped to visible code, but the ledger is real, load-bearing grading infrastructure, not construction debris -- noting this distinction for context. Independent of central judgment. Only 1/3 reps (A) -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Service.__init__'s bind=False branch allocates a full Listener only to close it immediately, because start_service's adopt path then overwrites .listener from outside instead of threading the adopted listener into the constructor",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: service_listener.py:104-107 (`self.listener = Listener(); if not bind: self.listener.close(); return`) followed by start_service's adopt path (lines 130-133) overwriting `service.listener = adopt` from outside. Accurate structural observation with a constructive alternative (add an optional `listener:` parameter). Does not dispute that the leak fix works -- it's a style/design suggestion, not a correctness claim. Independent of central judgment. Only 1/3 reps (A) -- not promoted.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    }
+  ]
+}
