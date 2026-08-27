@@ -70,3 +70,53 @@ wrong. G17 is **Indirect coverage citation** (`validation.md:67`): when
 instrumented-pass promotion condition is met, implemented in
 `_artifact_run_identity.py`. Any earlier statement that "fixtures do not move G17 by
 design" was reasoning from the wrong gate.
+
+## Peer-review outcome — 2026-08-27 (codex `gpt-5.6-sol`, high)
+
+`VERDICT: REVISE`. **The ranking does not change: C stays first, and gate wiring does
+not earn its own programme of work.** Stop remains right for corpus harvesting and for
+broad gate wiring.
+
+**The reuse argument was called what it is.** Verbatim: *"Reusing the 26 packs is not
+evidence of value; on its own, that argument is sunk-cost reasoning. Existing assets
+reduce marginal cost, but they do not raise expected benefit."* The five-gate map above
+is candidate discovery, not a payoff estimate, and the coverage counts must never be
+used as the metric.
+
+**What survives, and it is genuinely useful:** the mapping gives C's bounded live run a
+concrete specimen. The recommended ordering is **C instantiated with a G24 probe** >
+E > A > B > D, using `swiftnio-write-before-active`, because a passing suite that is
+itself misleading evidence is G24's stated purpose — a real counterfactual rather than
+an absent citation.
+
+**The distinction that decides whether this is real work:** it is a different bet *only*
+if the emission happens naturally through the production run path. Hand-authoring a
+`loop_result` to satisfy the gate is the same bet relabelled — "another fixture whose
+expected answer was encoded by its author".
+
+**Coverage-theatre test, to be applied before claiming anything.** A real robustness gap
+requires all three:
+
+1. the normal emitter supplies the gate's inputs with **no** pack-specific adapters and
+   no answer-key leakage;
+2. the gate rejects the known-bad case while accepting a matched good sibling;
+3. **bypassing the gate changes an observable loop decision** — continuation, promotion,
+   or review disposition — not merely a coverage counter.
+
+If the work requires manually filling the exact field the gate checks, or only shows the
+predicate returns false, it is theatre; selftests already establish predicate behaviour.
+
+**Terminal failure conditions for the probe** (any one stops gate wiring entirely, with
+no substitution of another pack, gate, or adapter): emission needs hand-authoring or
+pack-specific translation; G24 cannot separate the misleading-suite case from its
+corrected sibling; the gate fires only after its expected answer was encoded into the
+emission; enabling vs bypassing G24 changes no loop decision; or completing it requires
+more than one pack, one gate, one live run.
+
+Success justifies investigating **one** further integration gap. It does not justify
+bulk-wiring compatible packs.
+
+**On the G17 error:** it did not change the earlier ranking. It invalidates the specific
+claim that fixtures categorically could not affect G17 and weakens that part of the
+rationale, but the decisive objections were broader — no external value function,
+repeated flat measurements, and the need for one bounded live run first.
