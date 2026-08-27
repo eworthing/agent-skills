@@ -1,0 +1,58 @@
+diff --git a/Package.swift b/Package.swift
+index c026816..b7008b5 100644
+--- a/Package.swift
++++ b/Package.swift
+@@ -3,5 +3,8 @@ import PackageDescription
+ 
+ let package = Package(
+     name: "WorkspaceCore",
+-    targets: [.executableTarget(name: "WorkspaceCore", path: "Sources/WorkspaceCore")]
++    targets: [
++        .executableTarget(name: "WorkspaceCore", path: "Sources/WorkspaceCore"),
++        .testTarget(name: "WorkspaceCoreTests", dependencies: ["WorkspaceCore"], path: "Tests/WorkspaceCoreTests"),
++    ]
+ )
+diff --git a/Sources/WorkspaceCore/main.swift b/Sources/WorkspaceCore/main.swift
+index 9a85199..1a046d6 100644
+--- a/Sources/WorkspaceCore/main.swift
++++ b/Sources/WorkspaceCore/main.swift
+@@ -1,24 +1,7 @@
+-// workspace's own bundled test suite.
+-//
+-// Run: swiftc workspace.swift main.swift -o /tmp/<name> && /tmp/<name>
+-// Exits 0 on success, 1 on failure.
+-
+-import Foundation
+-
+-func check(_ condition: Bool, _ message: String) {
+-    if !condition {
+-        print("FAIL: \(message)")
+-        exit(1)
+-    }
+-}
++// Demonstrates constructing a Workspace and scoping into a child panel.
++// Correctness assertions live in Tests/WorkspaceCoreTests (run via `swift test`).
+ 
+ let root = Workspace<EditorPanel>(state: EditorState(title: "Untitled", inspector: InspectorState(zoom: 1)))
+-check(root.state.title == "Untitled", "title should read back")
+-
+ let inspector = root.child(InspectorPanel.self, at: \EditorState.inspector)
+-check(inspector.state.zoom == 1, "scoped zoom should match parent")
+-
+ inspector.state.zoom = 4
+-check(root.state.inspector.zoom == 4, "writing through the scoped child should reach the parent")
+-
+-print("OK: main.swift")
++print("workspace title=\(root.state.title) zoom=\(root.state.inspector.zoom)")
+diff --git a/Sources/WorkspaceCore/workspace.swift b/Sources/WorkspaceCore/workspace.swift
+index e3ba7d0..1e74df5 100644
+--- a/Sources/WorkspaceCore/workspace.swift
++++ b/Sources/WorkspaceCore/workspace.swift
+@@ -53,7 +53,3 @@ final class Workspace<Node: Panel> {
+         )
+     }
+ }
+-
+-// Reserved for a future default execution context; not wired into any
+-// scoping path yet.
+-actor QuietQueue {}
