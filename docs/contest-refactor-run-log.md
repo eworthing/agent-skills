@@ -1046,3 +1046,44 @@ produced them. Where every source case happens to make restraint correct, the
 corpus cannot distinguish calibrated restraint from blanket refusal — and it
 will report the second as success. Any future axis wants a deliberate check that
 both directions are represented before it is used to measure anything.
+
+### The clause that came out of it — two runs, no ship — 2026-08-26
+
+The restraint cluster's obvious lever was a stopping condition for Meta-Rule 5
+(`Prefer subtractive fixes`), which has none. Two measured attempts, neither
+shipped; `method.md` is unchanged.
+
+**Run 1 (clause v1, 204 tok).** Control 5/20 collapse misses, clause 4/20 —
+one pair against a pre-registered 2-pair floor. Null. The mechanism was
+quotable: v1 asked "what changes for a caller", and on the only live case the
+honest answer is *nothing*, because extracting the shared helper is
+behavior-preserving. What it costs is coupling. So the clause did not merely
+fail to stop the miss, it **supplied the justification** — three arm reviewers
+cited its own test as their reason. The flaw was recorded before scoring and
+confirmed independently by codex `gpt-5.6-sol` (B1, high confidence).
+
+**Run 2 (clause v3, 223 tok)** added codex's positive criterion — *where two
+sites express one policy and must change together, consolidating them is the
+fix* — plus blind scoring, a real negative control, and counterbalanced order.
+Pandas over-merge went the wrong way (control 2/5 → arm 4/5); config
+consolidation recall was identical at 4/5.
+
+**And run 2's real finding is that neither run can carry a conclusion.** Pooled
+across arms, reviewers who saw the duplicate-authority case first over-merged on
+pandas **1/4**; those who saw pandas first, **5/6**. The control itself moved
+**5/5 → 2/5 between runs on the same brief and the same case**, differing only
+in what else was in the batch. Batch composition and order move this measurement
+more than the prose does, and more than the effect the design was built to
+detect. Run 1's 5/5 headline reported a context-sensitive effect as a constant.
+
+Before any further prose measurement on this axis: one case per fresh context
+(counterbalancing measured the order effect rather than removing it),
+re-establish the baseline under that regime, and either raise n or accept that
+only effects larger than ~3-of-5 are visible. The blocker is the harness, not
+the wording.
+
+What the exercise banked: the negative-control pack, which discriminated on
+first use (8/10 consolidated, 2 local-repair, 0 missed); a reusable blind
+control/arm harness with pre-registration and a decision rule that fired
+correctly against its author twice; and the standing evidence that this project
+still has no measured way to move a judgment lever on this axis.
