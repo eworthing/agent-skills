@@ -46,7 +46,8 @@
   "allowed_findings": [
     "shared-flag is a small, low-value change on its own -- three call sites collapsed into a predicate lookup -- and observing that the change is modest is a fair, accurate reading, not a defect.",
     "The skip-guard stacking order (which of two guards on the same test wins the reported reason when both would match) is undocumented; a candidate could reasonably suggest making it explicit, independent of this pack's central judgment.",
-    "collect_skips could return every matching guard per test instead of only the first, independent of this pack's central judgment."
+    "collect_skips could return every matching guard per test instead of only the first, independent of this pack's central judgment.",
+    "test_platform_guards.py's self-check only calls collect_skips against MAINLAND and asserts it is empty; it never asserts the expected {test_name: reason} skip map for GEARSHIFT or TIDELINE, so a future edit to is_driftplane or to any individual guard could silently change which tests skip -- or with what reason -- on either sandboxed platform without failing the bundled suite. This is a real gap in the self-check's own coverage, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

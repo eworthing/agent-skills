@@ -1,0 +1,80 @@
+{
+  "packs": [
+    {
+      "pack": "cpython-wasm-platform-predicate",
+      "findings": [
+        {
+          "summary": "Bundled test suite only asserts collect_skips(MAINLAND, ALL_TESTS) == {}; never asserts expected skip sets/reasons for GEARSHIFT or TIDELINE, so a future edit to is_driftplane or any single guard could silently change what skips (or why) on either sandboxed platform without failing the suite.",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against shared-flag/test_platform_guards.py: main() calls collect_skips exactly once, against MAINLAND only, and asserts it equals {}. No call anywhere passes GEARSHIFT or TIDELINE. This is a coverage-gap observation about the accepted variant's own self-check, orthogonal to the pack's central judgment (which sites got consolidated, whether the near-miss over-skips, whether the mutant merges reasons). Does not overlap must_not_find (which is about folding remaining guards into the shared predicate, crediting the near-miss, or excusing the mutant's merged reason) or any existing allowed_findings entry. All 3 reps raised essentially the identical observation independently.",
+          "proposed_allowed_finding": "test_platform_guards.py's self-check only calls collect_skips against MAINLAND and asserts it is empty; it never asserts the expected {test_name: reason} skip map for GEARSHIFT or TIDELINE, so a future edit to is_driftplane or to any individual guard could silently change which tests skip -- or with what reason -- on either sandboxed platform without failing the bundled suite. This is a real gap in the self-check's own coverage, independent of this pack's central judgment."
+        }
+      ]
+    },
+    {
+      "pack": "demand-signalling-state-machine",
+      "findings": [
+        {
+          "summary": "A consumer request arriving after the last buffered value drains can hang forever if every source finished while that value was still buffered -- the .holding+.demandArrived transition dropped to .quiescent instead of checking sources.allFinished.",
+          "reps": 2,
+          "classification": "INCORRECT_FIXTURE",
+          "note": "Raised independently by reps A and C (not B). Verified REAL and now FIXED in demand-signalled-state-machine/signal_relay.swift lines 85-96: the .holding+.demandArrived case now reads `buffered.isEmpty ? (sources.allFinished ? .finished : .quiescent(sources: sources)) : .holding(...)` with an explanatory comment, and the same fix was applied to mutant-dropped-cancellation's copy of the same transition (commit 8de74bc). oracles.py gained a fifth check, buffered_value_survives_source_completion, documenting exactly this history. Per instructions: not proposed as an allowed finding, not treated as a restraint miss -- this pack's restraint point (six-phase density is warranted, don't flatten it) is untouched by this fix.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Relay.init(sourceCount:) accepts an arbitrary Int, but SourceID only defines two concrete cases (.first, .second), so sourceCount >= 3 (or == 0) silently under-counts real sources and the machine can never legitimately reach .finished -- any later demand hangs.",
+          "reps": 3,
+          "classification": "INCORRECT_FIXTURE",
+          "note": "Raised independently by all three reps (A Serious, B Serious, C Moderate). DISCREPANCY TO FLAG: I could NOT verify this one as fixed. Current demand-signalled-state-machine/signal_relay.swift:68-70 is still `init(sourceCount: Int) { phase = .awaitingFirstDemand(sources: SourceBookkeeping(total: sourceCount)) }` -- no precondition, no validation, no derivation of `total` from `allSources(sourceCount).count`. `git log`/`git status` on this pack's directory show only one commit since the pack was built (8de74bc), which touches solely the .holding+.demandArrived drain transition in demand-signalled-state-machine and mutant-dropped-cancellation -- nothing touches init(sourceCount:) or SourceBookkeeping.total in either the green variant or task-per-demand (which has the identical unbounded-sourceCount shape at task-per-demand/signal_relay.swift:44-47). Classifying as instructed (reviewer is right, pack was to be repaired), but the repair does not appear to have landed yet -- recommend the team lead re-check before treating this as closed, since as of this verification the bug is still live in the accepted variant's source.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "A source event (valueProduced/sourceFinished) arriving before the first demand falls through to the generic `default: return []` in .awaitingFirstDemand, indistinguishable from genuinely-harmless no-ops elsewhere, with no assertion documenting the invariant that sources shouldn't emit before being started.",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Raised only by rep A (Minor). Verified true: .awaitingFirstDemand only has explicit switch arms for .demandArrived and .cancelled; a .valueProduced or .sourceFinished event there falls to the bottom `default: return []`. This is a defensive-assertion/observability suggestion, not a claim about state count or a proposal to collapse/flatten phases, so it doesn't touch must_not_find (which is specifically about flagging the six-phase design as over-engineered or recommending flattening). Below the 2-of-3 threshold for an allowed_findings proposal.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "pandas-get-dummies-select-dtypes",
+      "findings": [
+        {
+          "summary": "should_encode's \"masked_text\" case (plain and Packed) is never exercised by test_columnstore.py's _table() fixture, so the refactor's own claim that every previously-encoded column kind is still encoded is unverified for a third of the encode-eligible kinds.",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Raised by reps A and B (not C). Verified against local-predicate/columnstore.py (should_encode checks kind in {text, masked_text, choice}) and local-predicate/test_columnstore.py's _table() (only text, number, choice, Packed(text), Packed(choice) -- no masked_text anywhere, plain or Packed). This is a test-coverage gap in the accepted variant's own bundled suite, not a claim about the equivalence verdict itself or about column_subset/should_encode duplication, so it doesn't overlap must_not_find or existing allowed_findings entries.",
+          "proposed_allowed_finding": "should_encode's \"masked_text\" case -- one of the three kinds it is meant to pick up -- is never exercised by test_columnstore.py's _table() fixture, either as a plain column or Packed, so the refactor's own claim that every column kind previously picked up is still picked up is unverified for that kind, independent of this pack's central judgment."
+        },
+        {
+          "summary": "The Packed-unwrap one-liner (`col.kind.primitive if isinstance(col.kind, Packed) else col.kind`) is duplicated verbatim between column_subset and should_encode instead of factored into a shared helper.",
+          "reps": 2,
+          "classification": "RESTRAINT_MISS",
+          "note": "Raised by reps A (Minor) and C (Cosmetic). This is the exact pattern the pack's restraint_reason names almost verbatim: 'A Critic that flags local-predicate for re-implementing logic column_subset already has -- unwrapping a Packed kind to its primitive -- is over-flagging.' must_not_find bullet 1 also forbids 'Flagging local-predicate for duplicating logic column_subset already has.' Even though the remedy proposed (extract a shared _primitive_kind helper) is milder than 'just call column_subset,' the underlying observation -- that should_encode's unwrap duplicates column_subset's -- is precisely what the pack says is over-flagging, since the whole point of should_encode is to stop depending on column_subset's specific unwrap behavior. Verified the duplication is real (columnstore.py lines 53 and 63 are identical), but per the 'if unsure, call it RESTRAINT_MISS' instruction, this should not be promoted to allowed_findings.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "column_subset lost its only caller in this bundle when encode_categoricals switched to should_encode; no test in this bundle calls column_subset directly, so within this snapshot it has zero test coverage even though its docstring still frames it as the general-purpose selector used elsewhere.",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Raised only by rep B (Minor), who explicitly scoped it: 'this may still be tested by other files elsewhere in the library that are outside this review's four directories.' Verified true within the bundle: test_columnstore.py's import line never imports or calls column_subset. This is a coverage-scope observation, not a claim that column_subset should change or that should_encode should reuse it, so it does not touch must_not_find. It's also close in spirit to the existing allowed_findings entry ('column_subset remaining unchanged and still used elsewhere ... is fine'). Below the 2-of-3 threshold for a new proposal.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "pandas-groupby-plot-imperfect-gold",
+      "findings": [
+        {
+          "summary": "apply_plot only forwards a group's key to the callback for Lane (single-column) groups; for Panel (multi-column) groups the key is silently dropped, so every Panel-based legend lookup returns None, contradicting CHANGES.md's 'no user-visible change' claim.",
+          "reps": 3,
+          "classification": "COVERED",
+          "note": "This is the pack's documented residual_findings entry, found independently by all three reps (A, B, C -- all Critical severity, all naming the same isinstance(group, Lane) branch in apply_plot at clustered.py, the same getattr(group, 'label', None) fallback in scatter, and the same missing Panel-legend test). Verified against dedicated-path-incomplete/clustered.py: apply_plot forwards key=group.key only inside `if isinstance(group, Lane)`, else calls fn(group) with no key -- exactly as described. This is the pack's whole point (accept-with-residual, not flawless-10 and not outright rejection) and all three reviewers correctly surfaced it. No proposed allowed_finding -- this is scored via residual_findings/must_find, not allowed_findings.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    }
+  ]
+}

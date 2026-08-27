@@ -56,7 +56,8 @@
   "allowed_findings": [
     "Column, Table, and Packed could use dataclasses or more consistent __slots__ usage, independent of this pack's central judgment.",
     "column_subset remaining unchanged and still used elsewhere in the library for general-purpose column selection is fine -- it never needed to change.",
-    "should_encode could be exposed as a public, documented predicate rather than a module-level helper, without changing this pack's verdicts."
+    "should_encode could be exposed as a public, documented predicate rather than a module-level helper, without changing this pack's verdicts.",
+    "should_encode's \"masked_text\" case -- one of the three kinds it is meant to pick up -- is never exercised by test_columnstore.py's _table() fixture, either as a plain column or Packed, so the refactor's own claim that every column kind previously picked up is still picked up is unverified for that kind, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

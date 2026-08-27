@@ -44,7 +44,11 @@ final class Relay: ConcurrencySafe {
     private let total: Int
 
     init(sourceCount: Int) {
-        total = sourceCount
+        // SourceID enumerates every source this relay can represent. A caller
+        // asking for more than that would leave the finished-count target
+        // permanently out of reach, because the surplus sources can never
+        // report finishing, so count what is actually representable.
+        total = allSources(sourceCount).count
         phase = .running(buffered: [], requests: [], finishedSources: [])
     }
 
