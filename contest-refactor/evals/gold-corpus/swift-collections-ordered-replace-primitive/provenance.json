@@ -47,7 +47,9 @@
   "allowed_findings": [
     "moveIntoPlace could be written as a method on a shared protocol both Roster and Ledger conform to, instead of a free generic function, independent of this pack's central judgment.",
     "Roster and Ledger storing their elements as plain arrays rather than a more specialized backing structure is a fixture simplification, independent of this pack's central judgment.",
-    "Noting that shared-move-primitive's Roster.replace and Ledger.replaceLabel are now both short, symmetric functions is a fair, accurate reading, not a defect."
+    "Noting that shared-move-primitive's Roster.replace and Ledger.replaceLabel are now both short, symmetric functions is a fair, accurate reading, not a defect.",
+    "Roster.items and Ledger's roster and values properties are plain, non-private stored properties that a caller could mutate directly outside of replace and replaceLabel, independent of this pack's central judgment.",
+    "Roster's lookupCount property is incremented on every call to position(of:) but is never read by the bundled test suite, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

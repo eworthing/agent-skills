@@ -50,7 +50,8 @@
   "allowed_findings": [
     "Version could be expressed with Swift's own version-comparison conveniences instead of a hand-rolled Comparable struct, independent of this pack's central judgment.",
     "The version-threshold dictionary could be organized as a small struct-per-platform instead of a bare dictionary literal, independent of this pack's central judgment.",
-    "Noting that guard-removed-availability-only's isPotentiallyAffected function is now a two-line function and observing that the change is small is a fair, accurate reading, not a defect."
+    "Noting that guard-removed-availability-only's isPotentiallyAffected function is now a two-line function and observing that the change is small is a fair, accurate reading, not a defect.",
+    "guardAdmits(_:) always returns true and is never called by isPotentiallyAffected or any other function in the file, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

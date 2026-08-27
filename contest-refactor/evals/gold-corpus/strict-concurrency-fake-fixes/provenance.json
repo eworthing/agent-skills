@@ -66,7 +66,8 @@
   "allowed_findings": [
     "Noting that guarded-value-container's compatibility annotations (Sendable, nonisolated(unsafe)) carry a real, ongoing maintenance cost even when correctly justified, independent of this pack's central judgment.",
     "Noting that the real-world approach this pack is drawn from was contested from inside the project within weeks of merging is a fair, accurate reading of the historical record, not a defect in this pack's judgment.",
-    "HitCounter's lock-based and actor-based variants could be written as a struct wrapping a class-based lock box instead of a class owning the lock directly, independent of this pack's central judgment."
+    "HitCounter's lock-based and actor-based variants could be written as a struct wrapping a class-based lock box instead of a class owning the lock directly, independent of this pack's central judgment.",
+    "HitCounter's bundled test suite exercises recordPageView and recordAPIHit only sequentially on a single thread, never concurrently, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [
