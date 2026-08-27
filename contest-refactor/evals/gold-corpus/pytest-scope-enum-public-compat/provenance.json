@@ -45,7 +45,8 @@
   "allowed_findings": [
     "Observing that enum-with-compat-property's same-name-different-type split between `_span` and `span` is confusing on its own terms is fair, accurate comment -- it is not, by itself, a defect claim, and the pack's own CHANGES.md says as much.",
     "`_type from_value` style boilerplate could be trimmed, or Span could expose a class method for parsing, independent of this pack's central judgment.",
-    "Handle could validate that `target` is not `None` for spans narrower than the top-level span, independent of this pack's central judgment."
+    "Handle could validate that `target` is not `None` for spans narrower than the top-level span, independent of this pack's central judgment.",
+    "`Span.__lt__` rebuilds `list(self.__class__)` on every comparison instead of reusing the module-level `SPANS` list already computed just below the class, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

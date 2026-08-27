@@ -1,0 +1,143 @@
+{
+  "packs": [
+    {
+      "pack": "pandas-select-dtypes-predicates",
+      "findings": [
+        {
+          "summary": "Unrecognized/typo'd type name in include/exclude silently matches zero columns instead of raising",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against per-type-callables/coltable.py: _type_predicate's generic fallback (line 43, `return lambda column: column.kind == type_name`) is only reached for names other than 'flag'/'count', and select() never validates a caller-supplied type name against KNOWN_KINDS. Accurate. Unrelated to the pack's central judgment (equivalence claim, disclosed forward-looking indirection, near-miss flag/count collapse, or any/all mutant).",
+          "proposed_allowed_finding": "_type_predicate's generic fallback never validates `type_name` against `KNOWN_KINDS`, so an unrecognized or typo'd type name passed to `include`/`exclude` silently matches zero columns instead of raising, independent of this pack's central judgment."
+        },
+        {
+          "summary": "select()'s behavior when include and exclude are both supplied together is never exercised by the bundled tests",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified: all five tests in test_coltable.py pass only include or only exclude, never both in the same call. Genuine coverage gap, independent of central judgment.",
+          "proposed_allowed_finding": "select()'s behavior when `include` and `exclude` are both supplied is never exercised by the bundled test suite, leaving the precedence between them unverified, independent of this pack's central judgment."
+        }
+      ]
+    },
+    {
+      "pack": "pydantic-typing-extra",
+      "findings": [
+        {
+          "summary": "No test exercises a Derived marker that is both Tagged[...]-wrapped and an unresolved forward reference, so the regex fallback's optional Tagged group is never verified",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified against dual-registry-split: test_tagged_wrapped_derived_field_is_excluded uses 'Tagged[Derived[int], \"cache\"]', which fully evaluates (Tagged/Derived/int all in NAMESPACE) and is caught by the _TaggedAlias-unwrap + is_derived_marker branch, never reaching the _Unresolved regex path; the only forward-ref test (test_bare_forward_ref_derived_field_is_excluded) is unwrapped. So the pattern's optional `Tagged[` group is genuinely untested. Independent of central judgment. Raised by A and C.",
+          "proposed_allowed_finding": "No test exercises a Derived marker that is both `Tagged[...]`-wrapped and an unresolved forward reference, so the fallback regex's optional `Tagged[` group is never verified independent of the Tagged-alias short-circuit path, independent of this pack's central judgment."
+        },
+        {
+          "summary": "dual-registry-split's CHANGES.md-disclosed alias-plus-unresolvable-reference gap flagged as a 'Serious' defect requiring a fix",
+          "reps": 1,
+          "classification": "RESTRAINT_MISS",
+          "note": "Rep C's finding treats the disclosed, accepted limitation (a locally-aliased Derived marker combined with an unresolvable forward reference, named verbatim in CHANGES.md and in residual_findings) as a 'Serious' data-modeling correctness gap and proposes closing it (walk the alias at scan time, or raise instead of silently defaulting to stored). This is must_not_find #3 by name: 'Treating dual-registry-split's disclosed alias-plus-unresolvable-reference gap as something that must be closed before the change can be accepted, rather than as a named, honest limitation.'",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Proposes collapsing the multi-module marker registry by having markers_legacy re-export markers_native's Derived object instead of instantiating its own",
+          "reps": 1,
+          "classification": "RESTRAINT_MISS",
+          "note": "Rep C proposes eliminating the dual-registry mechanism -- this pack's central feature (fixture_role: dual_registry_predicate_specificity) -- on the grounds that the two registries currently hold semantically-identical singleton objects. The fixture deliberately models two independently-versioned vocabularies (standing in for pydantic's typing/typing_extensions problem) that a real caller cannot simply merge by re-export. Not one of the four enumerated must_not_find bullets verbatim, but it is the same 'these look identical, so merge them' instinct as must_not_find #1 (merging is_derived_marker/is_derived_annotation), aimed at the registry instead of the functions. Flagged per the team lead's 'if unsure, call it RESTRAINT_MISS' instruction.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "_resolve only catches NameError; other eval failures (e.g. AttributeError from a qualified reference) propagate uncaught instead of degrading to _Unresolved",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: _resolve (fieldspec.py:78-82) has `except NameError` only, so e.g. an annotation string referencing an existing-but-attributeless name would raise AttributeError instead of falling back. Accurate, independent of central judgment. Only 1/3 reps -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Regex fallback only recognizes a bare or Tagged-wrapped Derived spelling; an unresolved Derived wrapped in any other generic (e.g. Optional[Derived[int]]) is silently kept as stored",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: _DERIVED_PATTERN.match anchors at position 0 and only matches a `Tagged[`- or `Derived[`-prefixed string; 'Optional[Derived[int]]' as unresolved source text won't match. This is a different, undisclosed gap from CHANGES.md's alias case -- behavior_contract only commits to 'bare or Tagged-wrapped' -- and the remedy offered is soft ('or document as an additional known limitation'), not a demand to fix before acceptance, so it does not read as the must_not_find #3 pattern. Only 1/3 reps -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "_resolve's eval(source, namespace) can mutate the caller's namespace dict in place (CPython inserts __builtins__ if absent)",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified as accurate CPython eval() semantics -- a dict passed as combined globals/locals with no '__builtins__' key gets one inserted in place. Real but low-severity, independent of central judgment. Only 1/3 reps -- not promoted.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "pytest-scope-enum-public-compat",
+      "findings": [
+        {
+          "summary": "Same-name-different-type split between Handle._span and Handle.span called a 'silent-failure trap'; proposes adding a distinctly-named enum accessor to resolve the ambiguity",
+          "reps": 1,
+          "classification": "RESTRAINT_MISS",
+          "note": "This is the pack's central trap. must_not_find explicitly forbids 'Treating the internal/public type mismatch in enum-with-compat-property as an inconsistency, code smell, or unfinished refactor rather than as the disclosed compatibility choice it is.' The cited technical facts (str-vs-Enum comparison silently False, alphabetical vs. lifecycle sort order if a caller sorted by the string) are accurate, but the conclusion -- that this needs a remedy/rename -- is exactly the over-flagging instinct the restraint_reason describes as 'exactly backwards here.'",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "next_up()'s test only asserts the result differs from the start, not the exact successor, so a skip-a-span mutation would pass",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: test_next_up_moves_forward asserts `next_up(first) != first` only, which a SPANS[idx+2] mutation would also satisfy. Real coverage gap, independent of central judgment (compat property / ordering mutant). Only 1/3 reps -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "next_up()'s tests exercise only the very top and very bottom transitions, missing the second-to-top transition where an off-by-one clamp would surface",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: only SPANS[-1] (clamp) and SPANS[0] (moves-forward) are tested; the Batch->Run (second-to-top) transition is never checked. Distinct specific gap from the finding above (different mutation each would catch), independent of central judgment. Only 1/3 reps -- not promoted.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Span.__lt__ rebuilds list(self.__class__) on every comparison instead of reusing the module-level SPANS list",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified: __lt__ (lifespan.py:29-33) does `order = list(self.__class__)` per call, while `SPANS = list(Span)` already exists at module scope just below and is reused correctly by next_up. Pure performance/duplication nit, independent of central judgment. Raised by B and C.",
+          "proposed_allowed_finding": "`Span.__lt__` rebuilds `list(self.__class__)` on every comparison instead of reusing the module-level `SPANS` list already computed just below the class, independent of this pack's central judgment."
+        },
+        {
+          "summary": "No test checks that a Span compares as not-less-than itself (reflexivity), so a `<`-to-`<=` boundary-flip mutation in __lt__ would go undetected",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: test_ordering_matches_declared_low_to_high only iterates strictly-later pairs (`spans[i+1:]`), never a span against itself. Real coverage gap, independent of central judgment. Only 1/3 reps -- not promoted.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "rope-chunk-stable-identity",
+      "findings": [
+        {
+          "summary": "SegmentStorage's identity counter (nextIdentity) is an unsynchronized shared static mutated with += 1, a data race under concurrent construction that could hand out duplicate identity tokens",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified: `private static var nextIdentity = 0` mutated via `SegmentStorage.nextIdentity += 1` in init, with no lock, atomic, or actor isolation. Real Swift concurrency hazard in owned-segment-storage's own implementation, unrelated to the pack's local-complexity-vs-global-diffing-property judgment or the near-miss/mutant distinctions. None of the three reviewers used this to argue the design is over-engineered -- all three took it as an implementation gap in an otherwise-accepted mechanism, which is the correct read.",
+          "proposed_allowed_finding": "`SegmentStorage`'s identity counter (`nextIdentity`) is a shared `static var` mutated with an unsynchronized `+= 1`, so concurrent construction from more than one thread could race and hand out duplicate identity tokens, independent of this pack's central judgment."
+        },
+        {
+          "summary": "SegmentStorage.text is declared var even though nothing in the file mutates it in place; declaring it let would let the compiler enforce the immutability invariant replaceChunk currently upholds only by convention",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified: `var text: String` (text_spool.swift:15); replaceChunk always allocates a fresh Segment/SegmentStorage rather than mutating text in place, so nothing in the file exercises the mutability. Accurate, independent of central judgment.",
+          "proposed_allowed_finding": "`SegmentStorage.text` could be declared `let` instead of `var`, letting the compiler enforce the invariant that existing storage's text never changes in place (currently upheld only by `replaceChunk`'s convention of always allocating fresh storage), independent of this pack's central judgment."
+        },
+        {
+          "summary": "The bundled diffSpools test only checks changedIndices.contains(2) and comparedUnits >= 0, not the exact expected set/value, so an over- or under-reporting defect would still pass",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified: main.swift's checks are `report.changedIndices.contains(2)` and `report.comparedUnits >= 0`, both trivially true even if every index were reported changed or the wrong byte count computed. Genuine weak-assertion gap in the accepted variant's own bundled test, independent of central judgment (this is about the shipped test's rigor, not about comparing to the mutant or near-miss, which none of these reviewers saw). B raised this as two separate claims (changedIndices completeness, comparedUnits tautology); counted as one reviewer's observation alongside A and C's combined single claims.",
+          "proposed_allowed_finding": "The bundled test for `diffSpools` only checks that the replaced index is present in `changedIndices` and that `comparedUnits` is non-negative, rather than asserting the exact expected set and value, so a defect that over- or under-reports changed chunks would still pass, independent of this pack's central judgment."
+        },
+        {
+          "summary": "Spool.init's chunkSize parameter is accepted but never stored or used anywhere in the type",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified: `init(chunkSize: Int, chunks: [String])` never references chunkSize again anywhere in the file. Accurate dead-parameter observation, independent of central judgment. Raised by B and C.",
+          "proposed_allowed_finding": "`Spool.init`'s `chunkSize` parameter is accepted but never stored or used anywhere in the type, independent of this pack's central judgment."
+        }
+      ]
+    }
+  ]
+}

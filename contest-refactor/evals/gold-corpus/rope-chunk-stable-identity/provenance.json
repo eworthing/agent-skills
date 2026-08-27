@@ -48,7 +48,11 @@
   "allowed_findings": [
     "moveIntoPlace-style extraction of the replace-and-rebuild step into a smaller helper is a reasonable stylistic suggestion, independent of this pack's central judgment.",
     "Spool storing its chunks as a plain Swift array rather than a more specialized backing structure is a fixture simplification, independent of this pack's central judgment.",
-    "Noting that owned-segment-storage's Spool and Segment types are each short and single-purpose is a fair, accurate reading, not a defect."
+    "Noting that owned-segment-storage's Spool and Segment types are each short and single-purpose is a fair, accurate reading, not a defect.",
+    "`SegmentStorage`'s identity counter (`nextIdentity`) is a shared `static var` mutated with an unsynchronized `+= 1`, so concurrent construction from more than one thread could race and hand out duplicate identity tokens, independent of this pack's central judgment.",
+    "`SegmentStorage.text` could be declared `let` instead of `var`, letting the compiler enforce the invariant that existing storage's text never changes in place (currently upheld only by `replaceChunk`'s convention of always allocating fresh storage), independent of this pack's central judgment.",
+    "The bundled test for `diffSpools` only checks that the replaced index is present in `changedIndices` and that `comparedUnits` is non-negative, rather than asserting the exact expected set and value, so a defect that over- or under-reports changed chunks would still pass, independent of this pack's central judgment.",
+    "`Spool.init`'s `chunkSize` parameter is accepted but never stored or used anywhere in the type, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

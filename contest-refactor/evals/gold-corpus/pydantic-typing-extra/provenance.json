@@ -58,7 +58,8 @@
   "allowed_findings": [
     "`_MarkerAlias` and `_TaggedAlias` could use `__slots__` for memory efficiency, independent of this pack's central judgment.",
     "`_get_markers_named` raising when a name has no registry entry anywhere is a reasonable defensive check, not something needing a softer fallback.",
-    "Noting, as CHANGES.md does, that the alias-plus-unresolvable-reference gap is genuinely narrow and hard to close in general is fair, accurate comment."
+    "Noting, as CHANGES.md does, that the alias-plus-unresolvable-reference gap is genuinely narrow and hard to close in general is fair, accurate comment.",
+    "No test exercises a Derived marker that is both `Tagged[...]`-wrapped and an unresolved forward reference, so the fallback regex's optional `Tagged[` group is never verified independent of the Tagged-alias short-circuit path, independent of this pack's central judgment."
   ],
   "residual_findings": [
     "dual-registry-split's is_derived_annotation resolves a stringified annotation by evaluating it in the record's namespace and only falls back to matching the raw source text when evaluation fails. A field locally aliased to a registry's Derived object (e.g. `from markers_legacy import Derived as LocalDerived`) whose annotation is also an unresolvable forward reference sits in the intersection of both limitations: evaluation fails (the referenced name doesn't exist), and the fallback regex only knows the literal spelling `Derived[`, not the local alias's own name. This is disclosed by the variant's own CHANGES.md as a known, accepted limitation, not something this refactor fixes, and closing it in general would require either evaluating an unevaluatable reference or enumerating every possible alias a caller might choose."

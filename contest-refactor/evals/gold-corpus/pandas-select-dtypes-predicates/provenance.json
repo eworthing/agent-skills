@@ -45,7 +45,9 @@
   "allowed_findings": [
     "_type_predicate could be rewritten as a dict/registry keyed by type name instead of an if/elif chain, independent of this pack's central judgment.",
     "Column could validate that `values` is non-empty or reject unknown kwargs, independent of this pack's central judgment.",
-    "A reviewer observing that per-type-callables' groundwork payoff (the planned future per-type matching change) is not visible anywhere in this diff is making a fair, accurate observation, not a defect claim."
+    "A reviewer observing that per-type-callables' groundwork payoff (the planned future per-type matching change) is not visible anywhere in this diff is making a fair, accurate observation, not a defect claim.",
+    "_type_predicate's generic fallback never validates `type_name` against `KNOWN_KINDS`, so an unrecognized or typo'd type name passed to `include`/`exclude` silently matches zero columns instead of raising, independent of this pack's central judgment.",
+    "select()'s behavior when `include` and `exclude` are both supplied is never exercised by the bundled test suite, leaving the precedence between them unverified, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],
