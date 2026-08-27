@@ -1,0 +1,144 @@
+diff --git a/fieldspec.py b/fieldspec.py
+index c5988ec..ab71b51 100644
+--- a/fieldspec.py
++++ b/fieldspec.py
+@@ -13,15 +13,20 @@ already-evaluated object.
+ from __future__ import annotations
+ 
+ import re
+-from functools import cache
+ 
+ import markers_legacy
+ import markers_native
+-from tags import _TaggedAlias
++from tags import TaggedAlias
+ 
+ _MARKER_MODULES = (markers_native, markers_legacy)
++_DERIVED_MARKERS = tuple(module.Derived for module in _MARKER_MODULES)
+ 
+-_DERIVED_PATTERN = re.compile(r"((\w+\.)?Tagged\[)?(\w+\.)?Derived\[")
++# Fallback text match for an annotation that failed to `eval` (an unresolved
++# forward reference). "Derived" must end the identifier: either subscripted
++# ("Derived[") or bare and not immediately followed by another word
++# character, so a bare `Derived` forward ref matches but `DerivedFoo` does
++# not.
++_DERIVED_PATTERN = re.compile(r"((\w+\.)?Tagged\[)?(\w+\.)?Derived(?:\[|(?!\w))")
+ 
+ 
+ class _Unresolved:
+@@ -35,19 +40,6 @@ class _Unresolved:
+         return f"_Unresolved({self.source!r})"
+ 
+ 
+-@cache
+-def _get_markers_named(name: str) -> tuple[object, ...]:
+-    """The `name` marker as defined in every registry module that has one."""
+-    result = tuple(getattr(module, name) for module in _MARKER_MODULES if hasattr(module, name))
+-    if not result:
+-        raise ValueError(f"no registry defines a marker named {name!r}")
+-    return result
+-
+-
+-def _is_registered_marker(obj: object, name: str) -> bool:
+-    return any(obj is candidate for candidate in _get_markers_named(name))
+-
+-
+ def is_derived_marker(tp: object) -> bool:
+     """Whether `tp` is itself the Derived special form, bare or
+     parametrized, from either registry.
+@@ -56,9 +48,10 @@ def is_derived_marker(tp: object) -> bool:
+     function does not see through a `Tagged[...]` wrapper and does not
+     resolve an unresolved forward reference.
+     """
+-    if _is_registered_marker(tp, "Derived"):
++    if any(tp is marker for marker in _DERIVED_MARKERS):
+         return True
+-    return _is_registered_marker(getattr(tp, "__origin__", None), "Derived")
++    origin = getattr(tp, "__origin__", None)
++    return any(origin is marker for marker in _DERIVED_MARKERS)
+ 
+ 
+ def is_derived_annotation(tp: object) -> bool:
+@@ -68,7 +61,7 @@ def is_derived_annotation(tp: object) -> bool:
+     Unwraps a `Tagged[...]` wrapper and falls back to matching the raw
+     source text when `tp` is an unresolved forward reference.
+     """
+-    if isinstance(tp, _TaggedAlias):
++    if isinstance(tp, TaggedAlias):
+         tp = tp.__tagged_type__
+     if is_derived_marker(tp):
+         return True
+diff --git a/tags.py b/tags.py
+index fc81cb8..7018931 100644
+--- a/tags.py
++++ b/tags.py
+@@ -10,14 +10,19 @@ from __future__ import annotations
+ 
+ 
+ class Tagged:
+-    """`Tagged[SomeType, *metadata]` -- subscripting builds a `_TaggedAlias`."""
+-
+-    def __class_getitem__(cls, params: tuple[object, ...]) -> _TaggedAlias:
++    """`Tagged[SomeType, *metadata]` -- subscripting builds a `TaggedAlias`."""
++
++    def __class_getitem__(cls, params: object) -> TaggedAlias:
++        if not isinstance(params, tuple):
++            raise TypeError(
++                "Tagged[...] requires a type and at least one metadata item, "
++                "e.g. Tagged[int, 'meta']"
++            )
+         tp, *metadata = params
+-        return _TaggedAlias(tp, tuple(metadata))
++        return TaggedAlias(tp, tuple(metadata))
+ 
+ 
+-class _TaggedAlias:
++class TaggedAlias:
+     def __init__(self, tp: object, metadata: tuple[object, ...]) -> None:
+         self.__tagged_type__ = tp
+         self.__metadata__ = metadata
+diff --git a/test_fieldspec.py b/test_fieldspec.py
+index aaaa4e7..5fc99d1 100644
+--- a/test_fieldspec.py
++++ b/test_fieldspec.py
+@@ -46,6 +46,14 @@ def test_bare_forward_ref_derived_field_is_excluded() -> None:
+     assert names == ["total"], names
+ 
+ 
++def test_bare_unsubscripted_forward_ref_derived_field_is_excluded() -> None:
++    # "Derived" itself is unresolved in this namespace (not imported at all),
++    # forcing the source-text fallback match rather than eval -- this is the
++    # same fallback path as the subscripted case above, just without "[...]".
++    names = stored_field_names({"total": "int", "cached_total": "Derived"}, {"int": int})
++    assert names == ["total"], names
++
++
+ def test_is_derived_marker_recognizes_both_registries() -> None:
+     assert is_derived_marker(NativeDerived[int])
+     assert is_derived_marker(LegacyDerived[int])
+@@ -55,14 +63,25 @@ def test_is_derived_annotation_sees_through_tagged() -> None:
+     assert is_derived_annotation(Tagged[NativeDerived[int], "cache"])
+ 
+ 
++def test_tagged_without_metadata_raises_clear_error() -> None:
++    try:
++        Tagged[int]
++    except TypeError as exc:
++        assert "at least one metadata item" in str(exc), exc
++    else:
++        raise AssertionError("Tagged[int] with no metadata should have raised TypeError")
++
++
+ def main() -> int:
+     test_plain_field_is_stored()
+     test_bare_derived_field_is_excluded()
+     test_legacy_derived_field_is_also_excluded()
+     test_tagged_wrapped_derived_field_is_excluded()
+     test_bare_forward_ref_derived_field_is_excluded()
++    test_bare_unsubscripted_forward_ref_derived_field_is_excluded()
+     test_is_derived_marker_recognizes_both_registries()
+     test_is_derived_annotation_sees_through_tagged()
++    test_tagged_without_metadata_raises_clear_error()
+     print("OK: test_fieldspec.py")
+     return 0
+ 

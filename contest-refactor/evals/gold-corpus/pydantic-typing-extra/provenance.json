@@ -97,6 +97,10 @@
     {
       "name": "plain_field_always_stored",
       "variant_expected_to_fail": null
+    },
+    {
+      "name": "unsubscripted_unresolved_derived_field_excluded",
+      "variant_expected_to_fail": "near-miss-bare-form-predicate"
     }
   ],
   "behavior_contract": [

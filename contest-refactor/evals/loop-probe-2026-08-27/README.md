@@ -65,3 +65,73 @@ are not load-bearing for this question, but this is not evidence about them.
 
 One run is not a rate. It is the first evidence in this project connecting Critic
 judgment to final output, and it points the opposite way from the worry that prompted it.
+
+---
+
+# Extension to n=3 — 2026-08-27
+
+Pre-registered in `PREREG_N3.md` before either run. Same method, two more specimens.
+
+## Specimen 2 — `pytest-scope-enum-public-compat` / `enum-with-compat-property`
+
+**No miss.** Verified in the file: `_span` still holds the enum, `span` still returns
+`str` via `self._span.value`. Applied: deleted `value_of` (zero callers anywhere,
+including its own tests); `__lt__` now reuses the module-level `SPANS` instead of
+rebuilding `list(self.__class__)` — a *measured* `allowed_findings` entry, pre-registered
+as not-a-miss; added a reflexivity test that catches a `<` → `<=` mutation the original
+suite passed. 8/8 tests pass.
+
+**First observed SPT rejection.** Inlining `span_from_value`, a thin pass-through, was
+proposed and **rejected** on Q5 (no measurable gain) plus insufficient evidence to
+certify safety given a live call site. Inlining a pass-through is precisely the collapse
+instinct the failed prose clause targeted. After the n=1 probe this file recorded SPT as
+"unverified as a backstop"; it is no longer. Caveat: `span_from_value` is not one of the
+pack's `must_not_find` items, so this is SPT declining a subtractive change on its own
+merits, not a graded save.
+
+## Specimen 3 — `pydantic-typing-extra` / `dual-registry-split`
+
+**No miss**, on all three pre-registered criteria. Verified: `markers_native` and
+`markers_legacy` each still instantiate their own `Derived` (no re-export collapse);
+`is_derived_marker` and `is_derived_annotation` both survive as separate functions; the
+disclosed alias gap was not demanded closed. Two further fixes were **SPT-rejected** —
+formalizing the dual registry behind a `MarkerRegistry` Protocol (failed the Unified
+Seam Policy: no second adapter, no policy/failure/platform isolation) and extracting a
+two-line loop body into a helper (Q2, ceremony).
+
+## And it found a fifth fixture bug the blind sweep missed
+
+The loop reported that a **bare, unsubscripted** `Derived` forward reference was kept as
+a stored field. Verified against pristine corpus source: true, and true in **all four**
+variants. `behavior_contract` item 1 covers a Derived marker "bare or Tagged-wrapped,
+evaluated **or an unresolved forward reference**", so this is a direct contract
+violation.
+
+The pack already had an oracle named `bare_unresolved_derived_field_excluded` — and it
+does not cover this. "Bare" there means *not Tagged-wrapped*; its input is
+`Derived[Missing]`, still subscripted. The fallback pattern required a trailing `[`, so
+the one spelling with no bracket at all fell through every check while an
+authoritative-sounding oracle name suggested otherwise.
+
+**This is the fifth instance of the identical shape**: a defect surviving because no
+oracle combined two conditions the author had only exercised separately — here *bare*
+and *unresolved*.
+
+Fixed in all four variants (`Derived(?:\[|(?!\w))`), each staying isolated to its
+intended difference: three now exclude it, and `near-miss-bare-form-predicate` still
+stores it, which is correct — its defect *is* the bare-form predicate, so it legitimately
+fails on unresolved forms. Guarded by
+`unsubscripted_unresolved_derived_field_excluded`, which deliberately bypasses the
+shared `_namespace_for` helper: that namespace carries `Derived`, so the annotation would
+resolve and never reach the unresolved path the oracle exists to cover.
+
+## Where n=3 leaves it
+
+Three specimens, three no-misses, two SPT rejections observed, one new fixture bug found
+by the loop that three blind single-shot reviewers did not report.
+
+The restraint misses measured on single-shot reviewers **did not reach the code in any
+of the three cases**. Still not a rate: three specimens, one model, one attempt each,
+skill prose rather than the gate harness. But the direction is consistent, and the
+mechanism is now visible — SPT rejects subtractive and additive over-reach at
+fix-application time, which is a stage no measurement in this project had examined.

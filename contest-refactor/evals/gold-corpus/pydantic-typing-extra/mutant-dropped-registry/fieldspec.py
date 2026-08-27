@@ -20,7 +20,7 @@ from tags import _TaggedAlias
 
 _MARKER_MODULES = (markers_native,)
 
-_DERIVED_PATTERN = re.compile(r"((\w+\.)?Tagged\[)?(\w+\.)?Derived\[")
+_DERIVED_PATTERN = re.compile(r"((\w+\.)?Tagged\[)?(\w+\.)?Derived(?:\[|(?!\w))")
 
 
 class _Unresolved:

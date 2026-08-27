@@ -123,6 +123,37 @@ def bare_unresolved_derived_field_excluded(
     return results
 
 
+def unsubscripted_unresolved_derived_field_excluded(
+    variants: dict[str, types.SimpleNamespace],
+) -> dict[str, bool]:
+    """A Derived marker with NO subscript, unresolvable, must still be excluded.
+
+    Added 2026-08-27 after a full review-and-apply loop, run blind against the
+    accepted variant, found that every variant kept such a field as stored --
+    a direct violation of behavior_contract item 1, which covers a Derived
+    marker "bare or Tagged-wrapped, evaluated or an unresolved forward
+    reference".
+
+    bare_unresolved_derived_field_excluded above does not cover it and never
+    did: "bare" there means "not Tagged-wrapped", and its input is
+    `Derived[Missing]` -- still subscripted. The fallback pattern required a
+    trailing `[`, so the one spelling with no bracket at all fell through
+    every check. The name suggested coverage the input did not provide.
+    """
+    results = {}
+    for name, mods in variants.items():
+        # Deliberately NOT _stored(): its namespace carries `Derived`, so the
+        # annotation would resolve to the marker object and never reach the
+        # unresolved path this oracle exists to cover. A record whose module
+        # annotates `"Derived"` without importing it at runtime is exactly the
+        # forward reference that cannot be evaluated.
+        names = mods.fieldspec.stored_field_names(
+            {"total": "int", "cached": "Derived"}, {"int": int}
+        )
+        results[name] = "cached" not in names
+    return results
+
+
 def wrapped_unresolved_derived_field_excluded(
     variants: dict[str, types.SimpleNamespace],
 ) -> dict[str, bool]:
@@ -156,6 +187,7 @@ def main() -> int:
 
     wrapped = wrapped_derived_field_excluded(variants)
     bare_unresolved = bare_unresolved_derived_field_excluded(variants)
+    unsubscripted = unsubscripted_unresolved_derived_field_excluded(variants)
     wrapped_unresolved = wrapped_unresolved_derived_field_excluded(variants)
     legacy_bare = legacy_registry_bare_derived_field_excluded(variants)
     plain = plain_field_always_stored(variants)
@@ -163,6 +195,9 @@ def main() -> int:
     print("=== wrapped_derived_field_excluded ===")
     for name, ok in wrapped.items():
         print(f"  {name}: {'excluded' if ok else 'KEPT AS STORED'}")
+    print("=== unsubscripted_unresolved_derived_field_excluded ===")
+    for name, ok in unsubscripted.items():
+        print(f"  {name}: {'excluded' if ok else 'STORED'}")
     print("=== bare_unresolved_derived_field_excluded ===")
     for name, ok in bare_unresolved.items():
         print(f"  {name}: {'excluded' if ok else 'KEPT AS STORED'}")
@@ -189,6 +224,19 @@ def main() -> int:
             failures.append(
                 f"{name}: expected wrapped_derived_field_excluded={expected}, "
                 f"got {wrapped.get(name)}"
+            )
+
+    expected_unsubscripted = {
+        "single-registry-check": True,
+        "dual-registry-split": True,
+        "near-miss-bare-form-predicate": False,
+        "mutant-dropped-registry": True,
+    }
+    for name, expected in expected_unsubscripted.items():
+        if unsubscripted.get(name) != expected:
+            failures.append(
+                f"{name}: expected unsubscripted_unresolved_derived_field_excluded="
+                f"{expected}, got {unsubscripted.get(name)}"
             )
 
     expected_bare_unresolved = {

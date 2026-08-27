@@ -14,7 +14,7 @@ import re
 
 import markers_native
 
-_DERIVED_PATTERN = re.compile(r"(\w+\.)?Derived\[")
+_DERIVED_PATTERN = re.compile(r"(\w+\.)?Derived(?:\[|(?!\w))")
 
 
 class _Unresolved:
