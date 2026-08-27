@@ -36,7 +36,9 @@
   "allowed_findings": [
     "Observing that set_credential's encoding (`\"$enc$\" + raw[::-1]`) is a simple placeholder rather than a real one-way cryptographic transform is accurate but out of scope -- this pack tests the no-local-credential policy, not the encoding's cryptographic strength.",
     "NO_LOCAL_CREDENTIAL_SUFFIX_LENGTH's specific value (40) or the suffix alphabet are implementation choices independent of this pack's central judgment.",
-    "Noting that sentinel-marked-no-credential's is_credential_usable could be exposed as a public entry point for callers that want to check usability without attempting a full verification is a reasonable API observation, not a required finding."
+    "Noting that sentinel-marked-no-credential's is_credential_usable could be exposed as a public entry point for callers that want to check usability without attempting a full verification is a reasonable API observation, not a required finding.",
+    "verify_credential compares the encoded supplied value against the stored value with plain string equality (`==`) rather than a constant-time comparison such as hmac.compare_digest, opening a timing side channel on credential verification -- independent of this pack's central judgment on the no-local-credential sentinel policy.",
+    "The bundled test suite never directly asserts that a no-local-credential marker is treated as unusable (is_credential_usable(marker) is False, verify_credential(marker, ...) is False) -- test_no_local_credential_marker_exists only checks isinstance(marker, str). This is a test-coverage gap, independent of this pack's central judgment, and is not itself a claim that the marker can be exploited."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

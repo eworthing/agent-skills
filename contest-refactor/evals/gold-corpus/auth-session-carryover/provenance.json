@@ -84,6 +84,10 @@
       "variant_expected_to_fail": "no-rekey-sign-in"
     },
     {
+      "name": "empty_credential_stamp_still_invalidates_session",
+      "variant_expected_to_fail": "mutant-identity-only-check"
+    },
+    {
       "name": "credential_change_invalidates_session",
       "variant_expected_to_fail": "near-miss-always-rekey"
     },

@@ -20,8 +20,13 @@ from session import Session
 def sign_in(session: Session, principal: Principal) -> None:
     stamp = principal.credential_stamp
     if session.principal_id is not None:
-        if session.principal_id != principal.id or (
-            stamp and not hmac.compare_digest(session.credential_stamp or "", stamp)
+        # The stamp comparison is not conditional on the incoming stamp being
+        # non-empty. An absent or empty stamp that does not match what the
+        # session has on file is exactly a credential change, and gating the
+        # comparison on the new stamp being truthy lets stale session data
+        # survive one.
+        if session.principal_id != principal.id or not hmac.compare_digest(
+            session.credential_stamp or "", stamp or ""
         ):
             session.discard()
     else:

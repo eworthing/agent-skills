@@ -63,7 +63,9 @@
   "allowed_findings": [
     "Request storing scheme/host/path/query as separate plain attributes rather than a single parsed URL object is a fixture simplification, independent of this pack's central judgment.",
     "gate.require_sign_in building its redirect response as a formatted string rather than a structured response object is a reasonable fixture stand-in, not a design smell.",
-    "Observing that gate.py's function bodies never read entry_url/return_param_name themselves is fair, accurate comment on its own -- it is not, by itself, a defect claim, since gate_scan.py is the actual reader."
+    "Observing that gate.py's function bodies never read entry_url/return_param_name themselves is fair, accurate comment on its own -- it is not, by itself, a defect claim, since gate_scan.py is the actual reader.",
+    "gate.require_sign_in's redirect interpolates the computed return target directly into the query string without URL-encoding it, so a request whose path or query contains '&', '=', or '#' corrupts the redirect (and can leak a fragment of the original query as a spurious top-level parameter of the sign-in endpoint's URL) -- a real gap independent of this pack's central judgment (the same-host/cross-host scoping and the staple-attribute contract).",
+    "Observing that Request.forwarded_host is stored in __init__ but never read by any of scoped-absolute-target's own files is accurate as a within-variant observation, independent of this pack's central judgment -- note that forwarded_host is a field shared across the pack's variants and is read by mutant-trusts-forwarded-host, so this is not evidence the field is dead code in general, only that this variant does not consume it."
   ],
   "residual_findings": [],
   "must_find_if_present": [],

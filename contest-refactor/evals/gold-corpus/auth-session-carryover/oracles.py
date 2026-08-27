@@ -5,7 +5,7 @@ shown to a candidate (listed in provenance.json's grader_only_files).
 Loads each variant's `sign_in.py` fresh by module name -- every variant
 reuses the same module names (`session`, `principal`, `sign_in`), so a
 stable sys.path + sys.modules dance is needed to avoid one variant's
-modules leaking into the next -- and runs the four oracles declared in
+modules leaking into the next -- and runs the five oracles declared in
 provenance.json's `hidden_oracles`:
 
     cross_principal_data_is_not_carried_over    -- signing in as a second
@@ -61,6 +61,24 @@ provenance.json's `hidden_oracles`:
                                                     so a changed stamp is
                                                     caught along with
                                                     everything else.
+
+    empty_credential_stamp_still_invalidates_session -- the same
+                                                    discriminator at an empty
+                                                    stamp. Added after a blind
+                                                    review sweep: two of three
+                                                    independent reviewers found
+                                                    the accepted variant gated
+                                                    its stamp comparison on the
+                                                    incoming stamp being truthy,
+                                                    so a same-principal sign-in
+                                                    presenting an empty stamp
+                                                    skipped the check entirely
+                                                    and stale data survived.
+                                                    Every other oracle here
+                                                    changes a stamp from one
+                                                    non-empty value to another,
+                                                    which is why none of them
+                                                    saw it.
 
     anonymous_data_is_retained_on_first_sign_in above is the mirror-image
     discriminator: it fails in mutant-always-discard, which discards on
@@ -168,6 +186,29 @@ def credential_change_invalidates_session(
     return results
 
 
+def empty_credential_stamp_still_invalidates_session(
+    variants: dict[str, types.SimpleNamespace],
+) -> dict[str, bool]:
+    """A credential change to an EMPTY stamp is still a credential change.
+
+    Added after a blind review sweep. Two of three independent reviewers found
+    that the accepted variant gated its stamp comparison on the incoming stamp
+    being truthy, so a same-principal sign-in presenting an empty stamp skipped
+    the mismatch check and stale session data survived -- a direct violation of
+    this pack's own behavior_contract. They were right, and it was fixed. The
+    pack's other oracles never saw it: every one of them changes a stamp from
+    one non-empty value to another.
+    """
+    results = {}
+    for name, mods in variants.items():
+        session = mods.session.Session()
+        mods.sign_in.sign_in(session, _alice(mods))
+        session.data["cart"] = ["item"]
+        mods.sign_in.sign_in(session, _alice(mods, stamp=""))
+        results[name] = "cart" not in session.data
+    return results
+
+
 def main() -> int:
     variants = {name: load_variant(name) for name in VARIANTS}
 
@@ -175,6 +216,7 @@ def main() -> int:
     retained = anonymous_data_is_retained_on_first_sign_in(variants)
     token_changes = token_changes_when_it_must(variants)
     credential_change = credential_change_invalidates_session(variants)
+    empty_stamp = empty_credential_stamp_still_invalidates_session(variants)
 
     print("=== cross_principal_data_is_not_carried_over ===")
     for name, ok in cross.items():
@@ -240,6 +282,20 @@ def main() -> int:
             failures.append(
                 f"{name}: expected credential_change_invalidates_session={expected}, "
                 f"got {credential_change.get(name)}"
+            )
+
+    expected_empty_stamp = {
+        "no-rekey-sign-in": False,
+        "rekey-or-discard-sign-in": True,
+        "near-miss-always-rekey": False,
+        "mutant-identity-only-check": False,
+        "mutant-always-discard": True,
+    }
+    for name, expected in expected_empty_stamp.items():
+        if empty_stamp.get(name) != expected:
+            failures.append(
+                f"{name}: expected empty_credential_stamp_still_invalidates_session={expected}, "
+                f"got {empty_stamp.get(name)}"
             )
 
     if failures:

@@ -1,0 +1,108 @@
+{
+  "packs": [
+    {
+      "pack": "auth-login-redirect-target",
+      "findings": [
+        {
+          "summary": "gate.py's redirect interpolates the computed return target into the sign-in URL's query string without URL-encoding, so a multi-parameter query (containing '&') corrupts the round trip and can smuggle extra parameters into the sign-in endpoint's own query string.",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against source: gate.py:29 `f\"{target_entry_url}?{target_param}={target}\"` with `target` built from the request's raw, unescaped path/query (request.py). No test uses a multi-param query. Real, demonstrable defect in the accepted variant's response-building, unrelated to the pack's central judgment (same-host/cross-host scoping, staple-attribute consumer). Not covered by must_find/allowed_findings; does not overlap any must_not_find entry (allowed_findings #2 defends the choice of a plain f-string over a structured response object, not the missing escaping).",
+          "proposed_allowed_finding": "gate.require_sign_in's redirect interpolates the computed return target directly into the query string without URL-encoding it, so a request whose path or query contains '&', '=', or '#' corrupts the redirect (and can leak a fragment of the original query as a spurious top-level parameter of the sign-in endpoint's URL) -- a real gap independent of this pack's central judgment (the same-host/cross-host scoping and the staple-attribute contract)."
+        },
+        {
+          "summary": "gate_scan.py's entry_endpoint_for/return_param_name_for have zero direct test coverage for the reflective attribute contract with gate.py, correctly identifying gate.py as writer and gate_scan.py as reader.",
+          "reps": 2,
+          "classification": "COVERED",
+          "note": "Matches must_find item 2 ('the entry_url/return_param_name attributes ... are read by gate_scan.py ... look for a reader before concluding they are unused'). Reps A and C explicitly name gate.py as writer and gate_scan.py as reader of the same attribute names -- exactly the insight required -- then add the legitimate observation that the round trip itself is untested. Does not fall into must_not_find #1 (no proposal to delete the staples).",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Request.forwarded_host is stored on every request but never read by any file in this variant (request.py, gate.py, gate_scan.py, redirect_target.py).",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified: no file among scoped-absolute-target's own 5 files reads .forwarded_host. Distinct from the entry_url/return_param_name trap in must_not_find #1 -- that attribute's reader (gate_scan.py) IS in this variant's visible fileset; forwarded_host's reader (used by the separate mutant-trusts-forwarded-host variant) is not part of this variant's bundle at all, so within-variant 'unused' is accurate, not a restraint failure. Flagging for the contract author: forwarded_host is not truly dead code pack-wide, only within this variant's own files, so any allowed_findings entry should be scoped that way.",
+          "proposed_allowed_finding": "Observing that Request.forwarded_host is stored in __init__ but never read by any of scoped-absolute-target's own files is accurate as a within-variant observation, independent of this pack's central judgment -- note that forwarded_host is a field shared across the pack's variants and is read by mutant-trusts-forwarded-host, so this is not evidence the field is dead code in general, only that this variant does not consume it."
+        },
+        {
+          "summary": "The same-origin downgrade check compares scheme/host case-sensitively, so an entry_url differing only in case from the current host falls through to the absolute-URL branch unnecessarily.",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: redirect_target.py compares urlsplit() results with plain `==`; scheme/host are case-insensitive per RFC 3986. Correct, fails-safe (over-qualifies rather than under-qualifies), unrelated to central judgment. Singleton (rep A only) -- noting, not proposing per instructions.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "auth-session-carryover",
+      "findings": [
+        {
+          "summary": "sign_in()'s discard-on-mismatch check is unconditionally skipped whenever the incoming principal's credential_stamp is falsy (empty string or None), even for the same principal_id -- a same-principal re-sign-in with an empty stamp keeps the prior session's data and overwrites the previously valid stamp with the empty one, instead of discarding as the module's own docstring/CHANGES.md/behavior_contract require.",
+          "reps": 3,
+          "classification": "INCORRECT_FIXTURE",
+          "note": "Empirically confirmed by running the accepted fixture directly: sign_in(session, Principal('alice','stamp-alice-1')); session.data['cart']=['item']; sign_in(session, Principal('alice','')) leaves session.data == {'cart': ['item']} and session.token unchanged -- it should have been discarded. This is `stamp and not hmac.compare_digest(...)` short-circuiting to falsy whenever the new stamp is empty/None, regardless of what the stored stamp was. This directly violates the pack's own written behavior_contract ('A session's data must never remain reachable after ... the same principal signs in with a credential stamp that no longer matches what the session has on file') and its own docstring/CHANGES.md. Not addressed anywhere in must_find/must_not_find/allowed_findings -- rekey-or-discard-sign-in is asserted to be 'ACCEPTED without reservation,' but it has a genuine, demonstrable security-relevant gap the contract does not anticipate. All three reps converged on the same root cause independently.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Session tokens are generated from a monotonically increasing in-process counter rather than a cryptographically random value, making them predictable/enumerable and undermining rotate_token()'s stated fixation-defense purpose.",
+          "reps": 1,
+          "classification": "COVERED",
+          "note": "Matches allowed_findings verbatim: 'Session token generation using a simple incrementing counter rather than a cryptographically unpredictable value is a fixture simplification, independent of this pack's central judgment.' Raised only by rep C.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "auth-unusable-password-policy",
+      "findings": [
+        {
+          "summary": "set_credential's transform ('$enc$' + raw[::-1]) is a trivially invertible reversal, not a real one-way hash, so any stored value can be turned back into the original credential in O(1).",
+          "reps": 3,
+          "classification": "COVERED",
+          "note": "Matches allowed_findings verbatim: 'Observing that set_credential's encoding ($enc$ + raw[::-1]) is a simple placeholder rather than a real one-way cryptographic transform is accurate but out of scope -- this pack tests the no-local-credential policy, not the encoding's cryptographic strength.' Not a restraint miss -- entirely orthogonal to the sentinel/marker judgment this pack is built around. No RESTRAINT_MISS here despite the high finding count: none of the 3 reps flagged the sentinel pattern itself, proposed deleting it, called the suffix decorative, or claimed the marker's own value could authenticate.",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "verify_credential compares the encoded supplied value against the stored value with plain string equality (`==`) rather than a constant-time comparison (e.g. hmac.compare_digest), opening a timing side channel.",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified against source: credential_policy.py's verify_credential uses `set_credential(supplied) == stored`. Correct, real, and entirely independent of the sentinel-pattern judgment this pack tests. Not addressed by must_find/must_not_find/allowed_findings.",
+          "proposed_allowed_finding": "verify_credential compares the encoded supplied value against the stored value with plain string equality (`==`) rather than a constant-time comparison such as hmac.compare_digest, opening a timing side channel on credential verification -- independent of this pack's central judgment on the no-local-credential sentinel policy."
+        },
+        {
+          "summary": "The bundled test suite never directly asserts that a no-local-credential marker is treated as unusable -- test_no_local_credential_marker_exists only checks isinstance(marker, str), never is_credential_usable(marker) or verify_credential(marker, ...).",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified: test_credential_policy.py has exactly 3 tests, and the marker test only does an isinstance check. This is a coverage-gap observation, not a claim that the marker is exploitable, so it does not overlap must_not_find #2. Independent of the central judgment. Raised by reps A and C; not B.",
+          "proposed_allowed_finding": "The bundled test suite never directly asserts that a no-local-credential marker is treated as unusable (is_credential_usable(marker) is False, verify_credential(marker, ...) is False) -- test_no_local_credential_marker_exists only checks isinstance(marker, str). This is a test-coverage gap, independent of this pack's central judgment, and is not itself a claim that the marker can be exploited."
+        }
+      ]
+    },
+    {
+      "pack": "cpython-genexpr-iterability",
+      "findings": [
+        {
+          "summary": "LazySelect.__init__'s `source: Iterable[Any]` type hint no longer matches the class's own tested behavior, since test_iterability_check_is_lazy constructs LazySelect(6) (a non-iterable int) and expects success.",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified: lazyselect.py annotates `source: Iterable[Any]`; test_lazyselect.py's test_iterability_check_is_lazy constructs LazySelect(6) and asserts construction succeeds, which a type checker would flag against that annotation. Accurate, unrelated to the guard-removal/timing judgment this pack tests. Raised by reps A and B; not C (C had no findings).",
+          "proposed_allowed_finding": "LazySelect.__init__'s `source: Iterable[Any]` type hint no longer matches the class's own tested behavior -- test_iterability_check_is_lazy constructs LazySelect(6), a non-iterable int, and expects it to succeed -- independent of this pack's central judgment on guard removal and error timing."
+        },
+        {
+          "summary": "__iter__ manually reimplements the iterator protocol (`iter()` + `next()` + try/except StopIteration) where a plain `for item in it:` loop is behaviorally identical and preserves the same lazy-construction semantics.",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified: the manual next()/StopIteration loop in __iter__ is equivalent to a for-loop over the same iterator inside a generator function; laziness is unaffected either way. Reasonable simplification observation, unrelated to central judgment. Raised by reps A and B.",
+          "proposed_allowed_finding": "__iter__'s manual `it = iter(self._source); while True: try: item = next(it) except StopIteration: return` loop is behaviorally identical to a plain `for item in it:` loop, including preserving laziness -- a reasonable simplification suggestion, independent of this pack's central judgment."
+        },
+        {
+          "summary": "The class docstring's claim that a LazySelect can be iterated more than once (as long as source supports it) is untested -- no test iterates the same instance twice.",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified: all three tests in test_lazyselect.py construct a fresh instance and iterate exactly once. Accurate coverage-gap observation, not a claim of an actual defect; rep A itself scoped it as cosmetic. Singleton (rep A only) -- noting, not proposing.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    }
+  ]
+}

@@ -63,7 +63,9 @@
   "allowed_findings": [
     "predicate could be typed more specifically as Callable[[Any], bool] | None (already the case) or given a TypeVar for the element type.",
     "The module could offer a map-style transform alongside select without changing anything about this pack's central judgment.",
-    "CheckedSource's __slots__ and isinstance guard are reasonable engineering on their own terms, independent of whether relocating the check is the right call."
+    "CheckedSource's __slots__ and isinstance guard are reasonable engineering on their own terms, independent of whether relocating the check is the right call.",
+    "LazySelect.__init__'s `source: Iterable[Any]` type hint no longer matches the class's own tested behavior -- test_iterability_check_is_lazy constructs LazySelect(6), a non-iterable int, and expects it to succeed -- independent of this pack's central judgment on guard removal and error timing.",
+    "__iter__'s manual `it = iter(self._source); while True: try: item = next(it) except StopIteration: return` loop is behaviorally identical to a plain `for item in it:` loop, including preserving laziness -- a reasonable simplification suggestion, independent of this pack's central judgment."
   ],
   "residual_findings": [],
   "must_find_if_present": [],
