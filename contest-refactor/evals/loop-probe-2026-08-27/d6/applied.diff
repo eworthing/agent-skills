@@ -1,0 +1,18 @@
+diff --git a/lazyselect.py b/lazyselect.py
+index cadd7f2..6ba3583 100644
+--- a/lazyselect.py
++++ b/lazyselect.py
+@@ -30,12 +30,7 @@ class LazySelect:
+         self._predicate = predicate
+ 
+     def __iter__(self) -> Iterator[Any]:
+-        it = iter(self._source)
+         predicate = self._predicate
+-        while True:
+-            try:
+-                item = next(it)
+-            except StopIteration:
+-                return
++        for item in self._source:
+             if predicate is None or predicate(item):
+                 yield item

@@ -1,0 +1,112 @@
+diff --git a/service_listener.py b/service_listener.py
+index 179eed6..f1f69e0 100644
+--- a/service_listener.py
++++ b/service_listener.py
+@@ -16,7 +16,6 @@ from itertools import count
+ DEFAULT_BACKLOG = 8
+ 
+ _id_seq = count(1)
+-_OPEN_DESCRIPTORS: set[int] = set()
+ _BOUND_ENDPOINTS: set[tuple[str, int]] = set()
+ 
+ 
+@@ -27,8 +26,8 @@ class EndpointInUseError(Exception):
+ class Listener:
+     """A single bound, listening resource.
+ 
+-    Tracks its own open/closed state in the module-level descriptor ledger
+-    so a leaked instance is observable from outside.
++    Reports its own open/closed state through `descriptor_id` -- there is
++    no separate ledger to keep in sync.
+     """
+ 
+     def __init__(self) -> None:
+@@ -37,7 +36,7 @@ class Listener:
+         self.reuse_enabled = False
+         self.inheritable = False
+         self._endpoint: tuple[str, int] | None = None
+-        _OPEN_DESCRIPTORS.add(self._id)
++        self.backlog: int | None = None
+ 
+     @property
+     def descriptor_id(self) -> int:
+@@ -67,7 +66,6 @@ class Listener:
+         if self._closed:
+             return
+         self._closed = True
+-        _OPEN_DESCRIPTORS.discard(self._id)
+         if self._endpoint is not None:
+             _BOUND_ENDPOINTS.discard(self._endpoint)
+             self._endpoint = None
+diff --git a/test_service_listener.py b/test_service_listener.py
+index 10ba4c1..e4e4a4b 100644
+--- a/test_service_listener.py
++++ b/test_service_listener.py
+@@ -11,7 +11,14 @@ from pathlib import Path
+ 
+ sys.path.insert(0, str(Path(__file__).resolve().parent))
+ 
+-from service_listener import provision_listener, start_service, start_with_handoff
++import service_listener
++from service_listener import (
++    DEFAULT_BACKLOG,
++    Service,
++    provision_listener,
++    start_service,
++    start_with_handoff,
++)
+ 
+ 
+ def test_listener_starts_open_and_closes_cleanly() -> None:
+@@ -33,6 +40,10 @@ def test_plain_service_lifecycle_leaves_nothing_open() -> None:
+ def test_start_with_handoff_returns_an_int() -> None:
+     descriptor_id = start_with_handoff(("handoff", 8903))
+     assert isinstance(descriptor_id, int)
++    # Must be captured before the listener closes, not after -- a closed
++    # listener reports -1, which is still an int and would slip past a
++    # bare isinstance check.
++    assert descriptor_id >= 0
+ 
+ 
+ def test_adopting_a_listener_keeps_it_usable() -> None:
+@@ -44,19 +55,38 @@ def test_adopting_a_listener_keeps_it_usable() -> None:
+     service.close()
+ 
+ 
+-def test_provisioned_listener_has_reuse_and_inheritance_enabled() -> None:
++def test_provisioned_listener_has_reuse_inheritance_and_backlog_set() -> None:
+     listener = provision_listener(("reuse", 8905))
+     assert listener.reuse_enabled is True
+     assert listener.inheritable is True
++    assert listener.backlog == DEFAULT_BACKLOG
+     listener.close()
+ 
+ 
++def test_bind_conflict_prints_and_terminates_instead_of_raising() -> None:
++    endpoint = ("conflict", 8906)
++    occupied = provision_listener(endpoint)
++
++    terminate_calls: list[int] = []
++    original_terminate = service_listener.terminate
++    service_listener.terminate = terminate_calls.append
++    try:
++        conflicting = Service(endpoint)
++    finally:
++        service_listener.terminate = original_terminate
++
++    assert terminate_calls == [1]
++    occupied.close()
++    conflicting.close()
++
++
+ def main() -> int:
+     test_listener_starts_open_and_closes_cleanly()
+     test_plain_service_lifecycle_leaves_nothing_open()
+     test_start_with_handoff_returns_an_int()
+     test_adopting_a_listener_keeps_it_usable()
+-    test_provisioned_listener_has_reuse_and_inheritance_enabled()
++    test_provisioned_listener_has_reuse_inheritance_and_backlog_set()
++    test_bind_conflict_prints_and_terminates_instead_of_raising()
+     print("OK: test_service_listener.py")
+     return 0
+ 

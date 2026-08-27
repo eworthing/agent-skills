@@ -1,0 +1,66 @@
+diff --git a/clustered.py b/clustered.py
+index e30ac99..46703c6 100644
+--- a/clustered.py
++++ b/clustered.py
+@@ -65,13 +65,12 @@ def apply_general(groups: list, fn: Callable) -> list:
+ 
+ def apply_plot(groups: list, fn: Callable) -> list:
+     """Dedicated plotting path. Forwards each group's key to the callback
+-    explicitly, instead of relying on `apply_general` pinning it."""
++    explicitly, instead of relying on `apply_general` pinning it. Any group
++    exposing `.key` (Lane, Panel, ...) is forwarded uniformly -- groups
++    without one get `key=None`, same as before this fix for Lane."""
+     results = []
+     for group in groups:
+-        if isinstance(group, Lane):
+-            results.append(fn(group, key=group.key))
+-        else:
+-            results.append(fn(group))
++        results.append(fn(group, key=getattr(group, "key", None)))
+     return results
+ 
+ 
+diff --git a/test_clustered.py b/test_clustered.py
+index 071e324..7bdb215 100644
+--- a/test_clustered.py
++++ b/test_clustered.py
+@@ -11,7 +11,7 @@ from pathlib import Path
+ 
+ sys.path.insert(0, str(Path(__file__).resolve().parent))
+ 
+-from clustered import Clustered, plot_legend_labels
++from clustered import Clustered, apply_general, plot_legend_labels
+ 
+ RECORDS = [
+     {"team": "north", "x": 1},
+@@ -34,9 +34,30 @@ def test_plot_legend_labels_for_lanes() -> None:
+     assert labels == ["north", "south"], labels
+ 
+ 
++def test_plot_legend_labels_for_panels() -> None:
++    """Panels must get real legend labels the same way Lanes do -- before
++    the apply_plot fix this returned [None, None] because only Lane got
++    its key forwarded."""
++    panels = Clustered(RECORDS, key=lambda r: r["team"]).panels(["x"])
++    labels = plot_legend_labels(panels)
++    assert labels == ["north", "south"], labels
++
++
++def test_apply_general_pins_label_and_calls_fn() -> None:
++    """apply_general's whole contract: pin `.label` from `.key`, then call
++    fn on each group. Previously untested -- this is the only current
++    caller-side proof its mutation still does what its docstring claims."""
++    lanes = Clustered(RECORDS, key=lambda r: r["team"]).lanes("x")
++    seen = apply_general(lanes, lambda g: g.label)
++    assert seen == ["north", "south"], seen
++    assert [lane.label for lane in lanes] == ["north", "south"]
++
++
+ def main() -> int:
+     test_lanes_split_by_key()
+     test_plot_legend_labels_for_lanes()
++    test_plot_legend_labels_for_panels()
++    test_apply_general_pins_label_and_calls_fn()
+     print("OK: test_clustered.py")
+     return 0
+ 

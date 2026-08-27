@@ -1,0 +1,95 @@
+diff --git a/credential_policy.py b/credential_policy.py
+index 6c07c85..785ed97 100644
+--- a/credential_policy.py
++++ b/credential_policy.py
+@@ -9,6 +9,8 @@ credential can ever start with, followed by a run of random characters.
+ 
+ from __future__ import annotations
+ 
++import hashlib
++import hmac
+ import secrets
+ import string
+ 
+@@ -17,6 +19,14 @@ NO_LOCAL_CREDENTIAL_SUFFIX_LENGTH = 26
+ 
+ _SUFFIX_ALPHABET = string.ascii_letters + string.digits
+ 
++# PBKDF2-HMAC-SHA256, OWASP's 2023 minimum-iteration recommendation for
++# this algorithm. Stdlib-only (hashlib) -- no new dependency to hash a
++# credential correctly.
++_HASH_ALGORITHM = "sha256"
++_ITERATIONS = 600_000
++_SALT_BYTES = 16
++_ENCODED_PREFIX = "$pbkdf2-sha256$"
++
+ 
+ def is_credential_usable(stored: str | None) -> bool:
+     """True if `stored` was not produced by mark_no_local_credential()."""
+@@ -37,14 +47,23 @@ def mark_no_local_credential() -> str:
+     return NO_LOCAL_CREDENTIAL_PREFIX + suffix
+ 
+ 
++def _pbkdf2(raw: str, salt_hex: str, iterations: int) -> str:
++    return hashlib.pbkdf2_hmac(
++        _HASH_ALGORITHM, raw.encode("utf-8"), bytes.fromhex(salt_hex), iterations
++    ).hex()
++
++
+ def set_credential(raw: str) -> str:
+     """Encode `raw` into a storable credential value.
+ 
+-    Never starts with NO_LOCAL_CREDENTIAL_PREFIX, so an encoded credential
+-    and a no-local-credential marker can never be mistaken for each
+-    other.
++    A salted PBKDF2-HMAC-SHA256 hash, not a reversible transform: nothing
++    short of brute force recovers `raw` from the stored value. Never
++    starts with NO_LOCAL_CREDENTIAL_PREFIX, so an encoded credential and a
++    no-local-credential marker can never be mistaken for each other.
+     """
+-    return "$enc$" + raw[::-1]
++    salt = secrets.token_hex(_SALT_BYTES)
++    digest = _pbkdf2(raw, salt, _ITERATIONS)
++    return f"{_ENCODED_PREFIX}{_ITERATIONS}${salt}${digest}"
+ 
+ 
+ def verify_credential(stored: str | None, supplied: str) -> bool:
+@@ -52,8 +71,15 @@ def verify_credential(stored: str | None, supplied: str) -> bool:
+ 
+     Checked before any comparison happens: an unusable `stored` value
+     (nothing local to compare against) never proceeds to a comparison at
+-    all, regardless of what `supplied` is.
++    all, regardless of what `supplied` is. The comparison itself runs in
++    constant time so a mismatch can't be timed to learn how many leading
++    bytes matched.
+     """
+     if not is_credential_usable(stored):
+         return False
+-    return set_credential(supplied) == stored
++    try:
++        iterations, salt, digest = stored.removeprefix(_ENCODED_PREFIX).split("$")
++        computed = _pbkdf2(supplied, salt, int(iterations))
++    except ValueError:
++        return False  # not our encoding (e.g. pre-migration format): can't verify, not a match
++    return hmac.compare_digest(computed, digest)
+diff --git a/test_credential_policy.py b/test_credential_policy.py
+index 7e6de38..7c358e2 100644
+--- a/test_credential_policy.py
++++ b/test_credential_policy.py
+@@ -29,10 +29,16 @@ def test_no_local_credential_marker_exists() -> None:
+     assert isinstance(marker, str)
+ 
+ 
++def test_no_local_credential_marker_never_verifies() -> None:
++    marker = mark_no_local_credential()
++    assert verify_credential(marker, "anything") is False
++
++
+ def main() -> int:
+     test_correct_credential_verifies()
+     test_wrong_credential_fails()
+     test_no_local_credential_marker_exists()
++    test_no_local_credential_marker_never_verifies()
+     print("OK: test_credential_policy.py")
+     return 0
+ 

@@ -1,0 +1,64 @@
+diff --git a/platsupport.py b/platsupport.py
+index c24b7c6..75c6c38 100644
+--- a/platsupport.py
++++ b/platsupport.py
+@@ -38,7 +38,11 @@ def skip_if(predicate: Callable[[str], bool], reason: str):
+ 
+     def decorator(func):
+         guards = list(getattr(func, "__skip_guards__", ()))
+-        guards.append((predicate, reason))
++        # Decorators apply bottom-up, so the guard closest to `def` is added
++        # first. Insert at the front so guard priority matches the natural
++        # top-to-bottom reading of stacked @skip_if lines (the topmost
++        # decorator is "the first guard" the docstring above means).
++        guards.insert(0, (predicate, reason))
+         func.__skip_guards__ = guards
+         return func
+ 
+diff --git a/test_platform_guards.py b/test_platform_guards.py
+index c5e9088..644e815 100644
+--- a/test_platform_guards.py
++++ b/test_platform_guards.py
+@@ -71,6 +71,42 @@ ALL_TESTS = [
+ ]
+ 
+ 
++def test_collect_skips_matches_expected_reasons_per_platform():
++    """collect_skips must report the right skip reason for every guarded
++    test on each sandboxed platform -- not just the trivial MAINLAND case
++    (nothing skips) that main() below already checks."""
++    assert collect_skips("gearshift", ALL_TESTS) == {
++        "test_shared_temp_writable": "sandboxed runtimes only expose an in-memory temp directory",
++        "test_process_fork": "sandboxed runtimes cannot fork a new process",
++        "test_large_page_alloc": "sandboxed runtimes cap a single allocation below the desktop default",
++        "test_symlink_target_preserved": "gearshift's virtual filesystem does not preserve symlink targets across a rebuild",
++        "test_unix_socket_creation": "gearshift has no native unix-domain socket implementation",
++        "test_bare_thread_spawn": "gearshift's worker pool cannot spawn a bare OS thread",
++    }
++    assert collect_skips("tideline", ALL_TESTS) == {
++        "test_shared_temp_writable": "sandboxed runtimes only expose an in-memory temp directory",
++        "test_process_fork": "sandboxed runtimes cannot fork a new process",
++        "test_large_page_alloc": "sandboxed runtimes cap a single allocation below the desktop default",
++        "test_user_account_lookup": "tideline has no user accounts",
++        "test_dotdot_path_resolution": "tideline path collapse for '..' segments does not match POSIX resolution",
++        "test_unix_socket_creation": "tideline sockets require a capability this harness does not grant",
++        "test_bare_thread_spawn": "tideline threads are disabled in this build's runtime config",
++    }
++
++
++def test_skip_if_first_declared_guard_wins_on_overlap():
++    """Stacked guards whose predicates can both be true for one platform
++    must report the topmost (first-declared) reason, per the contract
++    documented on skip_if."""
++
++    @skip_if(is_driftplane, "outer reason")
++    @skip_if(is_gearshift, "inner reason")
++    def dummy():
++        pass
++
++    assert collect_skips("gearshift", [dummy]) == {"dummy": "outer reason"}
++
++
+ def main() -> int:
+     skipped = collect_skips(MAINLAND, ALL_TESTS)
+     assert skipped == {}, f"mainland should skip nothing, got {skipped}"

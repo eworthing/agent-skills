@@ -1,0 +1,49 @@
+diff --git a/settings.py b/settings.py
+index 35dca46..d9146b2 100644
+--- a/settings.py
++++ b/settings.py
+@@ -11,9 +11,6 @@ answers "which layer did that come from", and is what the --explain
+ command prints.
+ """
+ 
+-ORDER = ("env", "project", "user")
+-
+-
+ def effective_value(key, env, project, user, defaults):
+     if key in env:
+         return env[key]
+@@ -25,10 +22,10 @@ def effective_value(key, env, project, user, defaults):
+ 
+ 
+ def describe_source(key, env, project, user, defaults):
+-    if env.get(key):
++    if key in env:
+         return "env"
+-    if project.get(key):
++    if key in project:
+         return "project"
+-    if user.get(key):
++    if key in user:
+         return "user"
+     return "default"
+diff --git a/test_settings.py b/test_settings.py
+index 4958dc1..ac59f92 100644
+--- a/test_settings.py
++++ b/test_settings.py
+@@ -31,6 +31,16 @@ def test_source_reports_user():
+     assert _call(settings.describe_source, "mode", user={"mode": "slow"}) == "user"
+ 
+ 
++def test_empty_string_is_a_carried_override_not_an_absence():
++    # An explicitly empty value in a higher layer still wins -- and
++    # describe_source must agree with effective_value about *which*
++    # layer won, per the module's documented "carries" contract.
++    env = {"retries": ""}
++    project = {"retries": "5"}
++    assert _call(settings.effective_value, "retries", env=env, project=project) == ""
++    assert _call(settings.describe_source, "retries", env=env, project=project) == "env"
++
++
+ if __name__ == "__main__":
+     for name, fn in sorted(globals().items()):
+         if name.startswith("test_"):
