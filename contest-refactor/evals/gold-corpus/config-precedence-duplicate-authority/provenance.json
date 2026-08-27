@@ -1,0 +1,74 @@
+{
+  "source_repo": null,
+  "source_pr": null,
+  "base_sha": null,
+  "accepted_sha": null,
+  "accepted_state": "constructed",
+  "gold_confidence": "constructed_negative_control",
+  "prompt_exposure": "hidden",
+  "fixture_role": "duplicate_authority_consolidation_required",
+  "provenance_note": "Constructed, not harvested, and the only pack in the corpus that is. Every other pack drawn from a real reviewed change happens to make restraint the correct answer on the collapse axis: a 2026-08-26 scan of all 25 manifests found zero must_find or residual_findings item anywhere that requires a reviewer to RECOMMEND consolidating two sites. That one-sidedness is a measurement hazard, not a property of real code -- a reviewer that refuses every merge scores perfectly on the rest of the corpus, and nothing in it would notice. This pack exists to make that detectable, so it is deliberately the mirror image: the duplication here is real duplicate authority, it has already drifted, and consolidation is the graded-correct remedy. Constructed provenance is a genuine weakness relative to the harvested packs -- there is no maintainer's judgment behind it, only the canon's own duplicate-authority smell -- and it should be replaced by a harvested equivalent if one is found.",
+  "variant_roles": {
+    "two-owners-drifted": "red",
+    "single-resolver": "green",
+    "near-miss-shared-presence-only": "near_miss",
+    "mutant-reordered-precedence": "mutant"
+  },
+  "expected_judgment": "Accept single-resolver outright. The consolidation is the fix, not a tidying of it.",
+  "candidate_visible_files": [
+    "two-owners-drifted/settings.py",
+    "two-owners-drifted/test_settings.py",
+    "single-resolver/settings.py",
+    "single-resolver/test_settings.py",
+    "single-resolver/CHANGES.md",
+    "near-miss-shared-presence-only/settings.py",
+    "near-miss-shared-presence-only/test_settings.py",
+    "near-miss-shared-presence-only/CHANGES.md",
+    "mutant-reordered-precedence/settings.py",
+    "mutant-reordered-precedence/test_settings.py",
+    "mutant-reordered-precedence/CHANGES.md"
+  ],
+  "grader_only_files": ["provenance.json", "grading.md", "oracles.py"],
+  "must_find": [
+    "two-owners-drifted answers one question -- which layer owns this key -- in two independent walks, and they have already drifted. describe_source tests each layer for truthiness, so a key overridden to an explicitly empty string reports 'default' while effective_value returns the empty override the caller asked for. Confirmed by oracles.py's value_and_reported_source_agree, not merely suspected.",
+    "The correct remedy is to give that question one owner, and a review that stops at repairing describe_source's condition has not found the defect. single-resolver is the right call to accept outright: one walk returns the value and the layer it came from together, so the two answers cannot disagree by construction. Recommending that consolidation -- not a local repair of the drifted condition -- is the graded-correct answer here. This is the one place in the corpus where a merge recommendation is required rather than resisted.",
+    "near-miss-shared-presence-only looks like the same fix and is not. Extracting _carries gives layer presence a single definition and genuinely fixes the empty-override case, so the shared helper is real work. But each function still walks the layer order itself, and describe_source's copy puts user ahead of project -- so a key carried by both the project and user files still reports the wrong layer. Same defect class, still live, moved to a different input.",
+    "mutant-reordered-precedence consolidates correctly and resolves self-consistently, so no agreement check can see its defect: it resolves against env, then user, then project, and a key carried by both the project and user files silently takes the user value. Its bundled suite passes unchanged; only env_outranks_project catches it."
+  ],
+  "must_not_find": [
+    "Refusing the consolidation on the grounds that effective_value and describe_source serve different callers -- the ordinary read path and the --explain command. Different callers is not different policy: both answer which layer owns the key, and that shared answer is what makes this duplicate authority rather than a resemblance.",
+    "Treating two-owners-drifted's disagreement as a local condition bug to patch where it appears. Changing describe_source's truthiness test to a presence test restores agreement today and leaves two owners of the layer order, which is the thing that drifted.",
+    "Accepting near-miss-shared-presence-only because it removes visible duplication and its bundled suite passes. The suite never sets the same key in two layers at once, which is the only input its remaining copy of the order can be seen on.",
+    "Reporting a duplicate-authority finding against single-resolver. After consolidation the question has exactly one owner; value_and_reported_source_agree confirms it, and inventing a residual here is a hallucinated finding, not caution."
+  ],
+  "allowed_findings": [],
+  "residual_findings": [],
+  "hidden_oracles": [
+    {
+      "name": "value_and_reported_source_agree",
+      "variant_expected_to_fail": "two-owners-drifted"
+    },
+    {
+      "name": "env_outranks_project",
+      "variant_expected_to_fail": "mutant-reordered-precedence"
+    },
+    {
+      "name": "default_when_no_layer_carries",
+      "variant_expected_to_fail": null
+    }
+  ],
+  "behavior_contract": [
+    "The layer a resolved value actually came from must be the layer reported for that key, for every combination of layers and for values that are empty or otherwise falsy.",
+    "Layer precedence is the process environment, then the project file, then the user file, then the built-in defaults, for every key.",
+    "A layer carries a key when the key is present in it, whatever the value; an explicitly empty override is a value, not an absence.",
+    "Whatever decides which layer owns a key must have exactly one owner. Two code paths answering that question independently can drift, and the drift is silent -- no error, no failing test, only a wrong answer from --explain."
+  ],
+  "restraint_reason": "The restraint this pack asks for is the opposite of the corpus's usual direction, which is exactly why it exists. Everywhere else a reviewer is asked to leave a deliberate separation alone; here a reviewer who has learned that reflex must still recognise real duplicate authority and say so. The trap for an over-corrected reviewer is must_not_find item 1: effective_value and describe_source do serve different callers, and that difference is genuine but irrelevant, because both answer the same question. A reviewer who declines the merge on the strength of the resemblance-is-not-duplication rule has over-applied it, and this pack is the only place in the corpus where that failure is visible at all.",
+  "applicable_domains": ["configuration", "generic"],
+  "license": "constructed for this corpus; no upstream source",
+  "contamination": {
+    "renamed": [],
+    "constants_changed": [],
+    "why": "Constructed rather than derived from an upstream change, so there is no upstream identifier, symbol name, or SHA to launder out of the candidate-visible files."
+  }
+}
