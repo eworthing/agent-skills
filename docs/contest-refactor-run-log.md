@@ -1087,3 +1087,42 @@ first use (8/10 consolidated, 2 local-repair, 0 missed); a reusable blind
 control/arm harness with pre-registration and a decision rule that fired
 correctly against its author twice; and the standing evidence that this project
 still has no measured way to move a judgment lever on this axis.
+
+## Decision: stop fixture and prose work — 2026-08-26
+
+Peer-reviewed by codex `gpt-5.6-sol` (high) as a decision, with "stop investing"
+offered as a first-class option. Ranked outcome: **C → E → A → B → D**, verdict
+REVISE on the framing. Recorded here so a later session does not restart the
+fixture program from the enthusiasm in the sections above.
+
+**Stop now: harvesting packs, and measuring prose clauses on the collapse axis.**
+Three flat prose results, a control that swings 5/5 → 2/5 on identical inputs, and
+zero shipped run-path changes across the whole corpus programme. Codex's phrasing:
+that axis is economically exhausted. This does **not** retract the corpus — it is a
+better evaluator than it was — it retracts the belief that more of it buys skill
+improvement.
+
+**Do once, pre-registered, then decide: one bounded live instrumented run against a
+real target repo.** It is the only setting where the loop, the gates, convergence and
+HALT/handoff actually run, and everything measured to date tests the skill's *prose*
+against a single-shot reviewer. Design note that removes the need for a separate
+differential arm: **freeze the initial Critic report**, then attribute every later
+finding, gate intervention and handoff to the loop.
+
+**The falsifiable signal, agreed in advance — Zero Incremental Loop Yield.** In that
+run, if the work after the frozen initial report produces zero maintainer-adjudicated
+accepted findings absent from it, zero gate interventions that prevent or materially
+correct a bad Actor change, and zero useful HALT/handoff decisions, the loop has not
+demonstrated incremental value. **Do not authorize a second dedicated run. Stop.**
+
+**Open, and owner-blocking: there is no external value function.** Every result in
+this document is measured against token spend and G17, an internally defined tally.
+Moving G17 is evidence, not benefit. Before the live run is authorized, the owner
+needs to state the minimum production-relevant outcome that would justify it and a
+hard stopping budget. Nothing here can supply that.
+
+**Two corrections to how earlier sections read.** The four fixture bugs and eight
+answer-leaks show the **evaluator was immature**, not that further corpus investment
+improves the skill; they should not be cited as returns. And the 6,192,808+ tokens
+already spent should carry **zero positive weight** in any future decision — that
+figure is acquisition cost, not prospective return.
