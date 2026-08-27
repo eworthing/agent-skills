@@ -1,0 +1,59 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "should_encode's docstring says a column is encoded if it holds 'text or choice' values, but the implementation also matches 'masked_text' (and the module-level docstring lists 'masked_text' as one of the four valid kinds). A maintainer trusting the docstring could 'fix' the set by dropping masked_text, silently changing which columns get encoded.",
+          "severity": "Cosmetic",
+          "source": "columnstore.py:60-64 — docstring: \"A column should be one-hot encoded if it holds text or choice\\n    values, whether stored as a plain primitive or packed...\" vs code: \"return kind in {\\\"text\\\", \\\"masked_text\\\", \\\"choice\\\"}\"",
+          "remedy": "Update the docstring to name all three matched kinds explicitly (text, masked_text, choice) so it matches both the implementation and the file-level docstring's kind list."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "markers_legacy.py imports the leading-underscore _MarkerForm class from markers_native across a module boundary. The underscore is the standard Python signal for 'internal to this module, don't import elsewhere,' but the legacy module deliberately depends on it, creating an ownership asymmetry that fieldspec.py's docstring ('two independent modules that each define their own Derived object') doesn't hint at — a future reader renaming or inlining _MarkerForm inside markers_native as 'private cleanup' would silently break markers_legacy.",
+          "severity": "Cosmetic",
+          "source": "markers_legacy.py:9 — \"from markers_native import _MarkerForm\"",
+          "remedy": "Drop the leading underscore (e.g. rename to MarkerForm) in markers_native.py to signal it's an intentionally shared type, rather than leaving a 'private' name imported cross-module."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "The module docstring frames this refactor's whole point as replacing 'a mapping copied at each call site' with 'one ordered enum.' But Span.__lt__ still rebuilds its own ordered list — `list(self.__class__)` — on every single comparison, instead of reusing the module-level SPANS list that next_up() already uses for the same purpose. Behavior is correct (list(Span) is deterministic), but the stated goal of the refactor is only half-achieved: the comparison operators (<, <=, >, >=, all derived from __lt__ via @total_ordering) still pay a fresh list-construction on every call.",
+          "severity": "Noticeable",
+          "source": "lifespan.py:29-33 — \"def __lt__(self, other: Span) -> bool:\\n ... order = list(self.__class__)\\n return order.index(self) < order.index(other)\" vs lifespan.py:36 \"SPANS = list(Span)\" and lifespan.py:7 \"now backed by one ordered enum instead of a mapping copied at each call site.\"",
+          "remedy": "Have __lt__ reuse the existing module-level SPANS list instead of rebuilding it: `return SPANS.index(self) < SPANS.index(other)`."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "QuietQueue is a bare actor with no members, no callers, and its own comment admits it is 'not wired into any scoping path yet' — it exists purely as speculative scaffolding for a future default execution context. Neither workspace.swift nor main.swift references it. Introducing an isolation domain (an actor) with zero current use is exactly the kind of unrequested structure the refactor rubric asks to prove friction for before adding.",
+          "severity": "Serious",
+          "source": "workspace.swift:57-59 — \"// Reserved for a future default execution context; not wired into any\\n// scoping path yet.\\nactor QuietQueue {}\"",
+          "remedy": "Delete QuietQueue. Add a default execution context back when something concrete actually needs it — the empty actor has no product benefit today, only future-proofing ceremony."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "CHANGES.md claims 'No test's skip/run outcome changes on any platform,' but test_platform_guards.py's main() only calls collect_skips(MAINLAND, ALL_TESTS) — mainland never matches any guard predicate (gearshift/tideline/driftplane), before or after this refactor, so that assertion is a no-op with respect to the actual change. Nothing in the shown test suite calls collect_skips with 'gearshift' or 'tideline' to confirm the three tests switched to is_driftplane still skip on both platforms with the right reason, or that the untouched single-platform/dual-guard tests still behave as before. The refactor's own subject (driftplane guard consolidation) has zero executable verification here.",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:74-76 — \"def main() -> int:\\n    skipped = collect_skips(MAINLAND, ALL_TESTS)\\n    assert skipped == {}, f\\\"mainland should skip nothing, got {skipped}\\\"\" — the only collect_skips call in the file — vs CHANGES.md:11-12 \"No test's skip/run outcome changes on any platform.\"",
+          "remedy": "Add assertions that call collect_skips(GEARSHIFT, ALL_TESTS) and collect_skips(TIDELINE, ALL_TESTS) and check the expected skip set/reasons for each, so the is_driftplane consolidation is actually exercised instead of only the platform where nothing skips."
+        }
+      ]
+    }
+  ]
+}

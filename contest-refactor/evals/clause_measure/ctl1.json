@@ -1,0 +1,89 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "should_encode duplicates the Packed-unwrapping ternary already implemented in column_subset, instead of calling a shared helper. If a second wrapper type is ever added, only one of the two call sites might get updated.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 (`alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`) duplicated at columnstore.py:63 (`kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`)",
+          "remedy": "Extract a single `_unwrap_kind(kind: str | Packed) -> str` helper and call it from both `column_subset` and `should_encode`."
+        },
+        {
+          "claim": "should_encode's hardcoded kind set includes 'masked_text', but no test exercises a masked_text column (plain or Packed), so a regression that silently drops it from the set would go undetected -- unlike 'text' and 'choice', which are covered.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:64 (`return kind in {\"text\", \"masked_text\", \"choice\"}`); test_columnstore.py:17-26 `_table()` fixture defines only text/number/choice/packed_name/packed_grade columns, none with kind 'masked_text'",
+          "remedy": "Add a masked_text column (plain and Packed) to `_table()` and assert it's included in `encode_categoricals`."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "_DERIVED_PATTERN's optional `Tagged[` group exists specifically to catch a Tagged-wrapped Derived marker when the whole annotation fails to resolve, but no test exercises that combination -- every Tagged test in test_fieldspec.py resolves successfully, and every unresolved-forward-ref test is a bare (non-Tagged) Derived.",
+          "severity": "Noticeable",
+          "source": "fieldspec.py:24 (`_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")`); test_fieldspec.py has test_tagged_wrapped_derived_field_is_excluded (fully resolvable) and test_bare_forward_ref_derived_field_is_excluded (unresolvable, but no Tagged wrapper) -- no test combines both",
+          "remedy": "Add a test like `stored_field_names({'cached_total': 'Tagged[Derived[Missing], \"cache\"]'}, NAMESPACE)` asserting exclusion, to prove the regex fallback covers the exact case its optional Tagged group was written for."
+        },
+        {
+          "claim": "The CHANGES.md limitation note is scoped only to a locally-aliased Derived import combined with an unresolvable forward reference. Tracing _resolve/_DERIVED_PATTERN shows the identical 'can't be recognized' failure also occurs for a locally-aliased Tagged import (e.g. `from tags import Tagged as T`) wrapping an unresolvable annotation, since `.match()` anchors at position 0 and an alias name won't match the pattern's literal `Tagged[`.",
+          "severity": "Noticeable",
+          "source": "fieldspec.py:24 (literal `Tagged\\[` in the pattern); CHANGES.md:11-19 limitation note ('a field locally aliased to a registry's `Derived` object ... whose annotation is *also* an unresolvable forward reference')",
+          "remedy": "Broaden the CHANGES.md note to state the fallback is alias-sensitive for both names the pattern hardcodes (`Tagged` and `Derived`), not just `Derived`."
+        },
+        {
+          "claim": "markers_legacy.py imports and reuses the underscore-prefixed _MarkerForm from markers_native, crossing a module boundary via a name whose leading underscore conventionally signals 'private to this module'.",
+          "severity": "Cosmetic",
+          "source": "markers_legacy.py:9 (`from markers_native import _MarkerForm`)",
+          "remedy": "If _MarkerForm is genuinely a shared building block, drop the leading underscore (or move it to a small shared module) so the import doesn't cross a declared privacy boundary."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "Span.__lt__ rebuilds the full ordered member list on every comparison instead of reusing the module-level SPANS list, duplicating exactly the 'copied at each call site' pattern the file's own docstring says was eliminated by this refactor.",
+          "severity": "Noticeable",
+          "source": "lifespan.py:32 (`order = list(self.__class__)`) vs lifespan.py:36 (`SPANS = list(Span)`); docstring at lifespan.py:7 ('now backed by one ordered enum instead of a mapping copied at each call site')",
+          "remedy": "Have `__lt__` use `SPANS.index(self) < SPANS.index(other)` (reordering the module so SPANS is defined before the class if needed), so there's one ordered list, not two."
+        },
+        {
+          "claim": "Handle.span changed from a plain writable attribute to a read-only property. CHANGES.md's compatibility claim is carefully scoped to callers that only read .span, but no test verifies the write-path: a caller that used to assign .span now hits AttributeError instead of succeeding.",
+          "severity": "Noticeable",
+          "source": "lifespan.py:70-72 (`@property\\n    def span(self) -> str:\\n        return self._span.value` -- no setter); CHANGES.md:9-11 ('Every existing caller that only ever read `.span` sees no change')",
+          "remedy": "Add a test asserting `handle.span = 'x'` raises AttributeError (documenting the intentional break), and confirm no in-repo caller ever assigns `.span` directly before shipping."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "QuietQueue is a dead, unreferenced actor declared purely for a hypothetical future concurrency plan -- it's never instantiated or wired into Workspace, child(), or main.swift.",
+          "severity": "Serious",
+          "source": "workspace.swift:57-59 (`// Reserved for a future default execution context; not wired into any\\n// scoping path yet.\\nactor QuietQueue {}`)",
+          "remedy": "Delete QuietQueue until an actual caller needs it; add it back, with its real usage, when the concurrency requirement is concrete."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "test_platform_guards.py's bundled suite only calls collect_skips(MAINLAND, ALL_TESTS); it never calls collect_skips on GEARSHIFT or TIDELINE. MAINLAND is precisely the platform where is_driftplane is trivially False regardless of implementation, so the passing suite gives no evidence for CHANGES.md's actual claim -- that the three is_driftplane-guarded tests still skip identically on both sandboxed platforms after the consolidation.",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:74-76 (`skipped = collect_skips(MAINLAND, ALL_TESTS)\\n    assert skipped == {}, f\"mainland should skip nothing, got {skipped}\"`); CHANGES.md:11-12 ('No test's skip/run outcome changes on any platform')",
+          "remedy": "Add collect_skips(GEARSHIFT, ALL_TESTS) and collect_skips(TIDELINE, ALL_TESTS) assertions checking the exact skip set on each: all is_driftplane-guarded tests skip on both; single-platform guards skip only on their platform; the two combined-guard tests skip on both."
+        },
+        {
+          "claim": "collect_skips iterates a test's __skip_guards__ in decorator-application order (innermost/bottom decorator first), which is the reverse of the visual top-to-bottom order the guards are written in for test_unix_socket_creation and test_bare_thread_spawn; harmless today only because each test's stacked guards target mutually exclusive platforms.",
+          "severity": "Cosmetic",
+          "source": "platsupport.py:39-45 (`def decorator(func):\\n        guards = list(getattr(func, \"__skip_guards__\", ()))\\n        guards.append((predicate, reason))` -- each decorator appends, and decorators apply bottom-up); test_platform_guards.py:50-53 test_unix_socket_creation stacks `@skip_if(is_gearshift, ...)` above `@skip_if(is_tideline, ...)` in source but tideline's guard lands first in the list",
+          "remedy": "Note in skip_if's docstring that evaluation order follows decorator-application (bottom-up), or reverse the append so evaluation order matches source order, before anyone adds overlapping guards where order matters."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "should_encode() and column_subset() each independently re-derive a column's primitive kind with the identical unwrap expression, so the 'what is this column's real kind' rule now has two textual copies that must be kept in sync by hand if a new Packed-wrapped kind is ever added.",
+          "severity": "Cosmetic",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract a small `_primitive_kind(col) -> str` helper and have both `column_subset` and `should_encode` call it, so there is one authority for unwrapping Packed."
+        },
+        {
+          "claim": "should_encode's encode-eligible set includes 'masked_text', but no fixture column in the bundled test suite carries kind 'masked_text' (packed or plain), so the CHANGES.md parity claim ('every column kind that used to be picked up... is still picked up here') is unverified for one of the three literal kinds.",
+          "severity": "Cosmetic",
+          "source": "columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`; test_columnstore.py:17-26 `_table()` fixture has no `masked_text`-kind column",
+          "remedy": "Add a `masked_text` (and ideally `Packed(\"masked_text\")`) column to `_table()` and assert it's included in `encode_categoricals`."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "_resolve calls eval(source, namespace) with the caller's namespace dict passed directly as globals; CPython auto-injects a '__builtins__' key into any globals dict that lacks one, so the first resolved annotation silently mutates the shared namespace object. In the bundled tests this hits the module-level NAMESPACE dict reused by every test function.",
+          "severity": "Cosmetic",
+          "source": "fieldspec.py:78-82 `def _resolve(source, namespace): try: return eval(source, namespace) except NameError: ...`; test_fieldspec.py:19 `NAMESPACE = {...}` defined once and passed to every `stored_field_names` call",
+          "remedy": "Pass eval a namespace copy that already has '__builtins__' pinned (e.g. `eval(source, {\"__builtins__\": {}, **namespace})`) if the namespace dict must not be mutated as a side effect of resolution."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "CHANGES.md claims every existing caller that only reads `.span` sees no change, but `Handle.__init__` performs no coercion or validation: a caller still constructing Handle the pre-refactor way (passing a plain string for `span`, matching the old `span: str` attribute this replaces) constructs successfully, then crashes with AttributeError the first time `.span` is read, since `self._span` is a `str` and `str` has no `.value`. That is exactly the read path the compat property exists to keep working.",
+          "severity": "Serious",
+          "source": "lifespan.py:66 `def __init__(self, span: Span, target: object = None) -> None:` and lifespan.py:70-72 `@property\\n    def span(self) -> str:\\n        return self._span.value`",
+          "remedy": "Coerce in `__init__`, e.g. `self._span = span if isinstance(span, Span) else Span(span)`, so a string argument fails fast at construction (or is accepted) instead of deferring the crash to an unrelated later `.span` read."
+        },
+        {
+          "claim": "The module now has two independent sources for span declaration order: the public, mutable `SPANS = list(Span)` (used by next_up, and imported directly by the test module) and Span.__lt__'s freshly rebuilt `list(self.__class__)` (which backs higher/</>=  via total_ordering). Nothing keeps them in sync; if SPANS is ever reordered or mutated by an importer, next_up and higher/< would disagree about ordering with no test catching the drift. This undercuts the stated point of the refactor ('one ordered enum instead of a mapping copied at each call site') since order is still expressed twice.",
+          "severity": "Noticeable",
+          "source": "lifespan.py:29-33 `def __lt__(self, other): ... order = list(self.__class__); return order.index(self) < order.index(other)` vs lifespan.py:36 `SPANS = list(Span)`",
+          "remedy": "Make SPANS the single order authority: define it as a tuple (not a mutable list) and have `__lt__` compare `SPANS.index(self) < SPANS.index(other)` instead of recomputing `list(self.__class__)`."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "`actor QuietQueue {}` is declared but never referenced anywhere in workspace.swift or main.swift -- not passed into Workspace, not used by child(), not touched by the test suite. The comment above it admits it is speculative scaffolding for a feature that doesn't exist yet.",
+          "severity": "Noticeable",
+          "source": "workspace.swift:57-59 `// Reserved for a future default execution context; not wired into any\\n// scoping path yet.\\nactor QuietQueue {}`",
+          "remedy": "Delete QuietQueue. Add it back only when an actual caller needs a default execution context; it currently fails the deletion test (removing it changes nothing observable)."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "CHANGES.md's central claim is 'No test's skip/run outcome changes on any platform,' but the bundled test suite's main() only ever calls collect_skips(MAINLAND, ALL_TESTS) -- it never calls collect_skips(GEARSHIFT, ...) or collect_skips(TIDELINE, ...), the two platforms is_driftplane actually combines and the only platforms where the three migrated guards' skip decision could differ from before. (Manual trace confirms the current logic is in fact correct for both platforms, but the suite provides no evidence of that -- a future change to is_driftplane or the guard list would not be caught.)",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:74-81 `def main() -> int: skipped = collect_skips(MAINLAND, ALL_TESTS); assert skipped == {}, ...` (no corresponding call for GEARSHIFT or TIDELINE); CHANGES.md:11 \"No test's skip/run outcome changes on any platform.\"",
+          "remedy": "Add `assert collect_skips(GEARSHIFT, ALL_TESTS) == {...expected...}` and the same for TIDELINE, enumerating the expected skip set for each, so the parity claim is actually exercised rather than asserted."
+        }
+      ]
+    }
+  ]
+}

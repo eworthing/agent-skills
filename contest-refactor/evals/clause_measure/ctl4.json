@@ -1,0 +1,65 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "should_encode duplicates column_subset's Packed-unwrapping logic (the line that decides a column's effective primitive kind) instead of calling column_subset or a shared helper, giving the codebase two independent places that must agree on how a Packed kind unwraps.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` (in column_subset) duplicated at columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` (in should_encode)",
+          "remedy": "Extract the unwrap into one helper (e.g. `_primitive_kind(col) -> str`) and have both column_subset and should_encode call it, so a future change to Packed-unwrapping has a single call site instead of two that can silently drift apart."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "markers_native.Derived and markers_legacy.Derived are two distinct marker objects with different identity (correctly, per design), but both are constructed with the literal name \"Derived\", so their repr strings are identical and don't reveal which registry a given marker came from -- confusing in any debug output or error message that prints a marker.",
+          "severity": "Cosmetic",
+          "source": "markers_native.py:39 `Derived = _MarkerForm(\"Derived\")`; markers_legacy.py:11 `Derived = _MarkerForm(\"Derived\")` -- both construct `_MarkerForm` whose `__repr__` (markers_native.py:20-21) returns only `self._name`",
+          "remedy": "Give each registry's marker a distinguishing display name (e.g. \"markers_native.Derived\" / \"markers_legacy.Derived\") or override __repr__ to include the owning module, so a printed marker tells you which vocabulary it belongs to."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "Span.__lt__ rebuilds the ordered member list with `list(self.__class__)` on every comparison instead of reusing the module-level `SPANS` list that next_up already uses for exactly the same lookup -- two independent sources of truth for span order in the same file.",
+          "severity": "Noticeable",
+          "source": "lifespan.py:32 `order = list(self.__class__)` inside `__lt__`, versus lifespan.py:36 `SPANS = list(Span)` and lifespan.py:54 `idx = SPANS.index(span)` inside `next_up`",
+          "remedy": "Have __lt__ use the existing SPANS list (`SPANS.index(self) < SPANS.index(other)`) instead of recomputing list(self.__class__), matching how next_up already does it."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "`actor QuietQueue {}` is dead code: it has zero references from Workspace, child, or the test suite, and the adjacent comment admits it isn't wired into any scoping path -- speculative isolation scaffolding built for a use that doesn't exist yet.",
+          "severity": "Noticeable",
+          "source": "workspace.swift:57-59 `// Reserved for a future default execution context; not wired into any scoping path yet.` / `actor QuietQueue {}`",
+          "remedy": "Delete QuietQueue now; add a real execution-context type when a concrete caller actually needs one. An unreferenced actor with a comment promising future wiring is exactly the kind of scaffolding that should wait for the need that justifies it."
+        },
+        {
+          "claim": "getState and setState are declared `var` but are assigned exactly once, inside each initializer, and never reassigned afterward -- `let` would state the real (fixed-after-init) contract.",
+          "severity": "Cosmetic",
+          "source": "workspace.swift:30-31 `private var getState: () -> Node.State` / `private var setState: (Node.State) -> Void`",
+          "remedy": "Change both to `let`; nothing in Workspace reassigns them after init."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "test_platform_guards.py's main() only calls collect_skips against MAINLAND, a platform that matches zero guards, and never computes or asserts the skip set for GEARSHIFT or TIDELINE -- the two platforms whose guards were actually merged into is_driftplane by this change. GEARSHIFT and TIDELINE aren't even imported into the test file. CHANGES.md's claim that \"No test's skip/run outcome changes on any platform\" is asserted but not exercised by this suite for the platforms the refactor touches.",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:14 import line omits GEARSHIFT/TIDELINE (only MAINLAND, collect_skips, is_driftplane, is_gearshift, is_tideline, skip_if are imported); test_platform_guards.py:75-76 `skipped = collect_skips(MAINLAND, ALL_TESTS)` / `assert skipped == {}, ...` is the only collect_skips call in the file",
+          "remedy": "Add assertions that compute collect_skips(GEARSHIFT, ALL_TESTS) and collect_skips(TIDELINE, ALL_TESTS) against the expected skip sets, so the is_driftplane consolidation is actually verified on the two platforms it changed, not just on the no-op mainland case."
+        }
+      ]
+    }
+  ]
+}

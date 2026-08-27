@@ -1,0 +1,71 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "CHANGES.md asserts this is a pure refactor where 'every column kind that used to be picked up by the alias-list call is still picked up here, and nothing else is,' and the module docstring lists three text-like aliases ('text', 'masked_text', 'choice'). But the bundled test suite never constructs or asserts on a 'masked_text' column, so the parity claim for that specific alias is unverified by any test in this pack.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`; test_columnstore.py:17-31 `_table()`/`test_encodes_text_and_choice_including_packed` construct and assert only \"text\", \"number\", \"choice\", and their Packed variants -- no \"masked_text\" column exists in the fixture",
+          "remedy": "Add a `masked_text` (and `Packed(\"masked_text\")`) column to the `_table()` fixture and assert it appears in `encode_categoricals`'s result, so the behavior-parity claim in CHANGES.md is actually covered."
+        },
+        {
+          "claim": "`column_subset` and `should_encode` each independently repeat the identical Packed-unwrap ternary. Nothing about the two call sites depends on that unwrap logic differing -- only the alias set / return shape differs -- so the duplication is a real, if small, drift risk (e.g. a future Packed-like wrapper is unwrapped correctly in one place and forgotten in the other).",
+          "severity": "Cosmetic",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Factor the unwrap into a small private helper, e.g. `def _primitive(kind: str | Packed) -> str`, and call it from both `column_subset` and `should_encode`. No caller-visible change."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "`_DERIVED_PATTERN` was written to also match a `Tagged[...]`-prefixed unresolved forward reference (the optional `((\\w+\\.)?Tagged\\[)?` group), and that branch is reachable through `is_derived_annotation`'s fallback when a Tagged-wrapped annotation fails to eval. But no test exercises that combination -- the only Tagged test (`test_tagged_wrapped_derived_field_is_excluded`) uses `Tagged[Derived[int], \"cache\"]`, which resolves successfully and never reaches the regex fallback at all.",
+          "severity": "Noticeable",
+          "source": "fieldspec.py:24 `_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")`; test_fieldspec.py:37-41 `test_tagged_wrapped_derived_field_is_excluded` only covers the fully-resolvable case",
+          "remedy": "Add a case like `stored_field_names({\"total\": \"int\", \"cached_total\": 'Tagged[Derived[Missing], \"cache\"]'}, NAMESPACE)` (where `Missing` is absent from `NAMESPACE`) to prove the Tagged-prefixed regex fallback actually excludes the field, not just the bare-Derived fallback."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "`Handle.span` was narrowed from what CHANGES.md implies was a plain writable `str` attribute to a read-only property with no setter. CHANGES.md's compatibility guarantee is explicitly scoped to readers ('Every existing caller that only ever read `.span` sees no change'), and the test suite only ever reads `.span` (equality, dict-key, formatting) -- it never assigns to it. If any existing caller previously did `handle.span = ...`, that call now raises `AttributeError: can't set attribute`, and nothing here proves that no such caller exists.",
+          "severity": "Serious",
+          "source": "lifespan.py:70-72 `@property\\n    def span(self) -> str:\\n        return self._span.value` (no setter defined); CHANGES.md:9 \"Every existing caller that only ever read `.span` sees no change.\"",
+          "remedy": "Either add a setter (`@span.setter def span(self, value: str): self._span = Span(value)`) to preserve write-through compatibility, or grep the consuming codebase for `.span =` assignments and record that none exist as the executable evidence this claim needs."
+        },
+        {
+          "claim": "`Span.__lt__` rebuilds `list(self.__class__)` on every comparison, duplicating the module-level `SPANS = list(Span)` that already exists for exactly this purpose. Nothing depends on the two lists differing.",
+          "severity": "Cosmetic",
+          "source": "lifespan.py:32 `order = list(self.__class__)` inside `__lt__`, vs. lifespan.py:36 `SPANS = list(Span)`",
+          "remedy": "Have `__lt__` use the module-level `SPANS` constant instead of rebuilding the list locally."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "`actor QuietQueue {}` is defined but never referenced by `Workspace`, `child(_:at:)`, or anything in main.swift. It is speculative scaffolding for a feature that doesn't exist yet. The deletion test passes cleanly: removing it changes nothing for any caller in either file.",
+          "severity": "Noticeable",
+          "source": "workspace.swift:57-59 `// Reserved for a future default execution context; not wired into any\\n// scoping path yet.\\nactor QuietQueue {}`",
+          "remedy": "Delete `QuietQueue`. If a default execution context is genuinely planned, add it when a caller actually needs it -- an unwired actor sitting in the same file as the type it will supposedly serve invites someone to assume it's already load-bearing."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "CHANGES.md's central behavior-preservation claim for this refactor is 'No test's skip/run outcome changes on any platform' -- but `main()` in the bundled test suite only ever calls `collect_skips` with `MAINLAND`, the one platform where nothing is guarded and the assertion is simply `skipped == {}`. Neither `GEARSHIFT` nor `TIDELINE` -- the two platforms `is_driftplane` actually consolidates, and the only platforms where any guard (single- or double-stacked) fires -- is ever passed to `collect_skips` anywhere in this file. The refactor's one stated guarantee is therefore asserted but not exercised by the suite that ships with it.",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:74-79 `def main() -> int:\\n    skipped = collect_skips(MAINLAND, ALL_TESTS)\\n    assert skipped == {}, ...` (only call to `collect_skips` in the file); CHANGES.md:11-12 \"No test's skip/run outcome changes on any platform.\"",
+          "remedy": "Extend `main()` (or add a small helper) to call `collect_skips(GEARSHIFT, ALL_TESTS)` and `collect_skips(TIDELINE, ALL_TESTS)` and assert the expected skip sets on each -- including the three `is_driftplane`-consolidated tests and the two double-guard tests -- so the consolidation's behavior parity is actually demonstrated, not just narrated."
+        }
+      ]
+    }
+  ]
+}

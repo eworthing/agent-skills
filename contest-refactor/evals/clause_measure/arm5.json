@@ -1,0 +1,65 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "should_encode's own docstring says a column is encoded \"if it holds text or choice values\" but the actual set literal it checks against also includes \"masked_text\" -- a third kind the module-level docstring names as one of the four column kinds this library supports. The function's stated contract and its implementation disagree, and test_columnstore.py's fixture never constructs a masked_text column (plain or Packed), so nothing exercises the kind the docstring omits.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:60-64 `\"\"\"A column should be one-hot encoded if it holds text or choice\\n    values...\"\"\"` followed by `return kind in {\"text\", \"masked_text\", \"choice\"}`; test_columnstore.py:17-26 `_table()` fixture (no masked_text column, plain or Packed)",
+          "remedy": "Update should_encode's docstring to name masked_text explicitly, and add a masked_text column (and a Packed(\"masked_text\") column) to the test fixture so the claim is verified rather than only asserted."
+        },
+        {
+          "claim": "The Packed-unwrap rule (\"use col.kind.primitive when kind is a Packed, otherwise col.kind itself\") is written out identically in both column_subset and should_encode. Nothing about either function requires it to differ from the other; if a second wrapper type or unwrap rule is added, it is easy to update one call site and miss the other.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract a one-line helper, e.g. `_primitive_kind(col: Column) -> str`, and call it from both column_subset and should_encode. Same behavior for every existing caller of either function."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "fieldspec.py's docstring says an annotation \"may also be wrapped in Tagged[...]\" AND separately \"may arrive as an unresolved forward reference\", implying the two can combine (a Tagged-wrapped annotation that itself fails to eval). _DERIVED_PATTERN's structure (`((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[`) does account for an optional leading \"Tagged[\" before \"Derived[\", so the combined case is handled -- but no test in test_fieldspec.py ever passes a source string like `'Tagged[Derived[Missing], \"x\"]'`. The existing Tagged test (test_tagged_wrapped_derived_field_is_excluded) uses a fully-resolvable namespace, so it never reaches the regex fallback at all, and the existing unresolved-forward-ref test (test_bare_forward_ref_derived_field_is_excluded) isn't Tagged-wrapped. The one code path that combines both disclosed edge cases has zero coverage.",
+          "severity": "Cosmetic",
+          "source": "fieldspec.py:7-10 docstring (\"may also be wrapped in `Tagged[...]`\" / \"unresolved forward reference\"); fieldspec.py:24 `_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")`; test_fieldspec.py:37-46 (Tagged case is resolvable, forward-ref case is not Tagged-wrapped)",
+          "remedy": "Add `stored_field_names({\"total\": \"int\", \"cached_total\": 'Tagged[Derived[Missing], \"x\"]'}, NAMESPACE)` asserting `[\"total\"]`, to prove the Tagged+unresolved fallback the docstring describes actually works."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "CHANGES.md describes Handle.span as changed from \"a plain span: str attribute\" to a read-only property, and certifies that \"every existing caller that only ever read .span sees no change.\" That phrasing is scoped to readers; it does not say what happens to a caller that used to assign to .span. The property as written (`span` getter only, no setter) means any such assignment now raises AttributeError instead of updating the span, and test_lifespan.py exercises only reads (equality, dict-key, string formatting) -- never an assignment -- so this narrowing from read-write to read-only is not proven safe by anything shown here.",
+          "severity": "Serious",
+          "source": "lifespan.py:70-72 `@property\\n    def span(self) -> str:\\n        return self._span.value` (no setter defined); CHANGES.md:3-4 \"`Handle` used to carry a plain `span: str` attribute... It now carries `_span: Span`... with a read-only `span` property\" and CHANGES.md:9 \"Every existing caller that only ever read `.span` sees no change\"",
+          "remedy": "Either add a `span.setter` that resolves a string back to a Span via span_from_value (keeping .span read-write), or, if no caller anywhere ever assigns to .span, say that plainly instead of scoping the safety claim to readers only."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "`actor QuietQueue {}` is declared but never referenced anywhere -- not in Workspace's initializers, not in child(at:), not in main.swift. The comment above it says as much (\"not wired into any scoping path yet\"). It is speculative scaffolding for a hypothetical future execution context, sitting in the same file as an otherwise complete, self-consistent generic store.",
+          "severity": "Noticeable",
+          "source": "workspace.swift:57-59 `// Reserved for a future default execution context; not wired into any\\n// scoping path yet.\\nactor QuietQueue {}`",
+          "remedy": "Delete QuietQueue and its comment. Nothing currently depends on it, so removing it changes nothing for any caller (deletion test passes trivially); add it back only when an actual scoping path needs a default execution context."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "CHANGES.md's central claim is \"No test's skip/run outcome changes on any platform\" for merging three inline two-platform checks into is_driftplane. But test_platform_guards.py's main() only ever calls collect_skips against MAINLAND (asserting it skips nothing) and then runs every test body. It never calls collect_skips(GEARSHIFT, ALL_TESTS) or collect_skips(TIDELINE, ALL_TESTS) to confirm the three is_driftplane-guarded tests (test_shared_temp_writable, test_process_fork, test_large_page_alloc) still skip on both sandboxed platforms with their original reason text, or that the untouched single-platform and dual-guard tests are unaffected. The one claim this refactor most needs evidence for -- behavior on gearshift and tideline -- is exactly the claim this suite never runs.",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:74-79 `def main() -> int:\\n    skipped = collect_skips(MAINLAND, ALL_TESTS)\\n    assert skipped == {}, ...` (no equivalent call for GEARSHIFT or TIDELINE); CHANGES.md:11 \"No test's skip/run outcome changes on any platform.\"",
+          "remedy": "Add `collect_skips(GEARSHIFT, ALL_TESTS)` and `collect_skips(TIDELINE, ALL_TESTS)` assertions checking the expected skip set and reason strings for each, so the cross-platform preservation claim is executable evidence, not reasoning about mainland alone."
+        }
+      ]
+    }
+  ]
+}

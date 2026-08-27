@@ -1,0 +1,52 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "should_encode reimplements the identical Packed→primitive unwrap already present in column_subset instead of sharing it. The transformation itself (unwrap a Packed kind to its .primitive, else use the kind as-is) never differs between the two call sites -- only the set of aliases each checks against differs, and that part is a deliberate, documented design choice (should_encode expresses its own alias set locally rather than delegating to column_subset). The unwrap mechanic itself is a plain duplicate.",
+          "severity": "Cosmetic",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract a small `_primitive(col: Column) -> str` helper and call it from both `column_subset` and `should_encode`. This preserves should_encode's own inline alias set (the module docstring's stated rationale) while removing the duplicated unwrap mechanic."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": [
+        {
+          "claim": "CHANGES.md claims the fallback path 'sees through a Tagged[...] wrapper' even for a stringified/unresolved annotation, and _DERIVED_PATTERN is written with an optional `Tagged[` prefix specifically to support that case. But no test in test_fieldspec.py actually drives an unresolved forward reference wrapped in Tagged[...]: test_tagged_wrapped_derived_field_is_excluded uses names that are all present in NAMESPACE, so eval() succeeds and the code takes the isinstance(tp, _TaggedAlias) branch of is_derived_annotation, never reaching the regex fallback at all. test_bare_forward_ref_derived_field_is_excluded exercises the regex fallback but without a Tagged[ prefix. The `Tagged[` half of the regex is therefore unverified by the bundled suite.",
+          "severity": "Noticeable",
+          "source": "fieldspec.py:24 `_DERIVED_PATTERN = re.compile(r\"((\\w+\\.)?Tagged\\[)?(\\w+\\.)?Derived\\[\")`; test_fieldspec.py:37-41 (test_tagged_wrapped_derived_field_is_excluded, all names resolvable) and test_fieldspec.py:44-46 (test_bare_forward_ref_derived_field_is_excluded, no Tagged wrapper) cover the two halves separately but never combined",
+          "remedy": "Add a test case like `stored_field_names({\"total\": \"int\", \"cached_total\": 'Tagged[Derived[Missing], \"cache\"]'}, NAMESPACE)` (Missing absent from NAMESPACE, forcing eval failure) to confirm the Tagged[ branch of the fallback regex actually fires and excludes the field."
+        }
+      ]
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "CHANGES.md frames the change as compatibility-preserving ('Every existing caller ... sees no change') but the guarantee is explicitly scoped to callers that 'only ever read .span' -- construction-side compatibility is a separate, unaddressed question. Handle.__init__ now requires a Span member; the docstring's own framing ('Handle used to carry a plain span: str attribute') implies the prior constructor accepted a bare string for that attribute. Nothing in the given source shows construction call sites were audited or migrated. A caller still constructing Handle with a raw string (matching the old attribute's type) would store that string as _span, and the first read of .span would raise AttributeError calling .value on a str.",
+          "severity": "Noticeable",
+          "source": "lifespan.py:66 `def __init__(self, span: Span, target: object = None) -> None:`; CHANGES.md: \"Every existing caller that only ever read `.span` sees no change\"",
+          "remedy": "Either broaden Handle.__init__ to accept `Span | str` and normalize via span_from_value, or explicitly verify (and state) that every construction call site has been migrated to pass Span members, so the compatibility claim covers writers as well as readers."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "`actor QuietQueue {}` is declared but never referenced anywhere in workspace.swift or main.swift. Its own comment admits it is speculative: 'Reserved for a future default execution context; not wired into any scoping path yet.' This is unused scaffolding added ahead of any real need -- the deletion test passes trivially since nothing depends on it.",
+          "severity": "Serious",
+          "source": "workspace.swift:57-59 `// Reserved for a future default execution context; not wired into any\n// scoping path yet.\nactor QuietQueue {}`",
+          "remedy": "Delete QuietQueue now. Reintroduce a default execution context (with a name reflecting its actual purpose) only when a real caller needs one."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": []
+    }
+  ]
+}

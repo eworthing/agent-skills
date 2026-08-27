@@ -1,0 +1,52 @@
+{
+  "reviews": [
+    {
+      "case": "pandas-get-dummies-select-dtypes/local-predicate",
+      "findings": [
+        {
+          "claim": "The Packed-unwrapping rule (\"a column's effective kind is col.kind.primitive when kind is a Packed, else col.kind itself\") is duplicated verbatim in column_subset and should_encode instead of living in one place. The two call sites will silently drift out of sync if Packed's unwrap rule ever changes (e.g. a second wrapper type, or Packed gaining more than one primitive).",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract a small shared helper, e.g. `_primitive_kind(col: Column) -> str`, and have both column_subset and should_encode call it. No behavior changes for any caller of either function."
+        }
+      ]
+    },
+    {
+      "case": "pydantic-typing-extra/dual-registry-split",
+      "findings": []
+    },
+    {
+      "case": "pytest-scope-enum-public-compat/enum-with-compat-property",
+      "findings": [
+        {
+          "claim": "`Handle.span` used to be documented as a plain, presumably read-write `span: str` attribute (per the class docstring: \"span is a read-only, string-typed view kept for callers written against the old plain-string attribute\"), but the new implementation is a property with a getter only -- no setter. Any existing caller that assigns `handle.span = ...` directly (rather than only reading it) would now raise AttributeError instead of working as before. test_lifespan.py only exercises read paths (equality, dict-key, str formatting) -- none of it assigns to `.span` -- so this narrowing from writable attribute to read-only property is not exercised by the provided test suite. The CHANGES.md note itself hedges only for callers that \"only ever read .span\", implicitly leaving open whether a write-caller exists elsewhere in the package.",
+          "severity": "Serious",
+          "source": "lifespan.py:70-72 `@property\\n    def span(self) -> str:\\n        return self._span.value` (no setter); compare lifespan.py:64 docstring \"span is a read-only, string-typed view kept for callers written against the old plain-string attribute\" and CHANGES.md:2-3 \"Handle used to carry a plain `span: str` attribute... It now carries `_span: Span`... with a read-only `span` property\"",
+          "remedy": "Either add a `@span.setter` that accepts a `Span` or a string (coercing via `span_from_value`) so the public attribute stays read-write and behavior-preserving, or, if no caller in the package ever writes `.span`, verify that claim (grep/executable check) and state it plainly in the compat note instead of hedging only on readers."
+        }
+      ]
+    },
+    {
+      "case": "store-core-composition-residual/core-composition-with-dead-isolation",
+      "findings": [
+        {
+          "claim": "`QuietQueue` is an unused, unreferenced actor. It is never constructed, never passed anywhere, and nothing in Workspace's init, child(at:), or main.swift's test touches it. It adds a concurrency-isolation type to the file's public surface that does nothing and could mislead a reader into thinking Workspace already has some execution-context story wired in.",
+          "severity": "Noticeable",
+          "source": "workspace.swift:57-59 `// Reserved for a future default execution context; not wired into any\\n// scoping path yet.\\nactor QuietQueue {}`",
+          "remedy": "Delete `QuietQueue` and its comment. Nothing depends on it (deletion test passes trivially); reintroduce it when an actual caller needs a default execution context, not speculatively."
+        }
+      ]
+    },
+    {
+      "case": "cpython-wasm-platform-predicate/shared-flag",
+      "findings": [
+        {
+          "claim": "CHANGES.md asserts \"No test's skip/run outcome changes on any platform\" for this refactor (combining three per-platform-pair guards into a single is_driftplane guard), but test_platform_guards.py's main() only ever calls collect_skips against MAINLAND and asserts that dict is empty. It never calls collect_skips(GEARSHIFT, ALL_TESTS) or collect_skips(TIDELINE, ALL_TESTS) to check that the three now-combined tests (test_shared_temp_writable, test_process_fork, test_large_page_alloc) still skip on both of those platforms with the expected reason, or that the untouched guards still behave as before. The behavior-preservation claim for gearshift and tideline is reasoning-only; it is invisible to the one platform config (mainland) this suite actually executes.",
+          "severity": "Serious",
+          "source": "test_platform_guards.py:74-79 `def main() -> int:\\n    skipped = collect_skips(MAINLAND, ALL_TESTS)\\n    assert skipped == {}, ...` (no equivalent call/assert for GEARSHIFT or TIDELINE); CHANGES.md:11 \"No test's skip/run outcome changes on any platform.\"",
+          "remedy": "Extend main() (or add cases) to call collect_skips(GEARSHIFT, ALL_TESTS) and collect_skips(TIDELINE, ALL_TESTS) and assert the expected skip set and reason text for each, so the cross-platform preservation claim is backed by executable evidence instead of only a mainland run."
+        }
+      ]
+    }
+  ]
+}
