@@ -1,0 +1,62 @@
+{
+  "r01": {
+    "A": "OVER_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "Extract a single helper, e.g. `def _primitive(kind: str | Packed) -> str: return kind.primitive if isinstance(kind, Packed) else kind`, and call it from both column_subset and should_encode.",
+    "B_quote": "Have both functions iterate ORDER against a {name: mapping} dict with one shared carries-check, so the precedence order and the definition of 'carries' are each expressed exactly once instead of twice."
+  },
+  "r02": {
+    "A": "NO_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "",
+    "B_quote": "make it the single source of truth: loop over a list of (name, layer_dict) pairs built from ORDER for both functions, e.g. `for name, layer in zip(ORDER, (env, project, user)): if key in layer: return layer[key] / name`, so precedence is expressed once and the two functions can no longer disagree on it."
+  },
+  "r03": {
+    "A": "OVER_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "Extract a one-line helper, e.g. `def _primitive_kind(kind: str | Packed) -> str: return kind.primitive if isinstance(kind, Packed) else kind`, and call it from both column_subset and should_encode. Minimal ceremony, no new class or seam, and it removes the one policy (how to resolve a column's primitive kind) that both functions must keep in sync.",
+    "B_quote": "Stop expressing the precedence policy twice. Add one internal helper, e.g. `_layer_for(key, env, project, user)` returning the layer name using presence (`in`) checks per the documented contract, and have both effective_value and describe_source call it (the latter mapping the returned layer to its value or to \"default\"). This removes the duplicate-authority split rather than just patching describe_source's checks in place."
+  },
+  "r04": {
+    "A": "OVER_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "Extract a small shared helper, e.g. `_primitive_kind(kind: str | Packed) -> str`, and have both `column_subset` and `should_encode` call it instead of repeating the isinstance/unwrap expression.",
+    "B_quote": "Make `describe_source` use the same presence check as `effective_value` (`key in env`, `key in project`, `key in user`) instead of truthiness, so the two functions agree on which layer supplied the value. Ideally derive both from one shared lookup so this can't drift again."
+  },
+  "r05": {
+    "A": "NO_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "",
+    "B_quote": "Rewrite describe_source to use the same `key in <layer>` presence checks as effective_value (or, better, replace both functions' independent if-chains with one shared resolver -- e.g. iterate an ordered list of (name, layer) pairs and return the first layer where `key in layer` holds -- so effective_value and describe_source derive from a single owner of the precedence rule instead of two hand-maintained copies that can drift)."
+  },
+  "r06": {
+    "A": "OVER_MERGE",
+    "B": "LOCAL_REPAIR",
+    "A_quote": "Extract the unwrap into one function (e.g. `def primitive_kind(col: Column) -> str`) or a `Column.primitive_kind` property, and have both `column_subset` and `should_encode` call it. This is the 'same policy, must change together' case, not a coincidental resemblance -- the two call sites are not free to evolve apart because they both claim to answer the identical question (what primitive does this column's kind represent).",
+    "B_quote": "AMBIGUOUS: the disagreement itself is fixed only by 'Change `describe_source` to the same presence checks `effective_value` uses (`if key in env: return \"env\"`, etc.), so both functions implement one precedence policy instead of two independently-drifted copies of it' (an aligned-conditions repair, not a merge). The companion ORDER finding's remedy -- 'drive both functions from `ORDER` (e.g. iterate the layers in order and return on first match) so there is exactly one place that encodes the precedence, instead of a constant plus two hand-written chains that can drift independently' -- DRYs the order sequence but never proposes a shared/single-owner walk or resolver, so it does not clear the CONSOLIDATED bar either. Scored LOCAL_REPAIR."
+  },
+  "r07": {
+    "A": "NO_MERGE",
+    "B": "LOCAL_REPAIR",
+    "A_quote": "",
+    "B_quote": "AMBIGUOUS: the disagreement itself is fixed only by 'Rewrite describe_source's three checks to use the same `key in env` / `key in project` / `key in user` presence tests effective_value already uses, so both functions agree on what \"carries\" means for every layer' (an aligned-conditions repair, not a merge). The companion ORDER finding's remedy -- 'make it the actual mechanism: have both functions loop over ORDER against a dict of layers so precedence is encoded once instead of twice' -- lacks explicit shared/single-owner phrasing (no helper, no resolver, no 'one function calls the other'), so it does not clear the CONSOLIDATED bar either. Scored LOCAL_REPAIR."
+  },
+  "r08": {
+    "A": "NO_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "",
+    "B_quote": "Drive both functions from one shared helper built on ORDER, e.g. `def _carrying_layer(key, layers): return next((name for name, layer in zip(ORDER, layers) if key in layer), None)`, so the precedence order and the presence rule are each defined exactly once."
+  },
+  "r09": {
+    "A": "OVER_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "Extract one helper, e.g. `_primitive(kind: str | Packed) -> str`, and have both column_subset and should_encode call it. One owner for the unwrap policy instead of two copies kept in sync by hand.",
+    "B_quote": "Make describe_source use the same presence check as effective_value (`if key in env: return \"env\"`, etc.) instead of truthiness. Better: derive value and source from one shared layer-walk so the two checks cannot drift apart again."
+  },
+  "r10": {
+    "A": "OVER_MERGE",
+    "B": "CONSOLIDATED",
+    "A_quote": "Factor the unwrap into one small module-level helper, e.g. `_primitive_kind(kind: str | Packed) -> str: return kind.primitive if isinstance(kind, Packed) else kind`, and have both `column_subset` and `should_encode` call it. Keeps the two functions' distinct concerns (generic alias-set filter vs. domain predicate) separate while removing the duplicated unwrap rule itself.",
+    "B_quote": "Give precedence resolution one owner instead of two: e.g. `def _source_layer(key, env, project, user): return next((n for n, layer in ((\"env\", env), (\"project\", project), (\"user\", user)) if key in layer), None)`, then have effective_value look up that layer's value (or defaults if None) and describe_source return that layer name (or \"default\")."
+  }
+}

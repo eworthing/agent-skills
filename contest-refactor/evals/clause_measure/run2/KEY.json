@@ -1,0 +1,42 @@
+{
+  "r01": [
+    "arm",
+    "pandas_first"
+  ],
+  "r02": [
+    "control",
+    "config_first"
+  ],
+  "r03": [
+    "arm",
+    "config_first"
+  ],
+  "r04": [
+    "control",
+    "pandas_first"
+  ],
+  "r05": [
+    "control",
+    "pandas_first"
+  ],
+  "r06": [
+    "arm",
+    "pandas_first"
+  ],
+  "r07": [
+    "control",
+    "config_first"
+  ],
+  "r08": [
+    "arm",
+    "config_first"
+  ],
+  "r09": [
+    "arm",
+    "pandas_first"
+  ],
+  "r10": [
+    "control",
+    "pandas_first"
+  ]
+}

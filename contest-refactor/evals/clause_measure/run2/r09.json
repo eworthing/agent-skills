@@ -1,0 +1,32 @@
+{
+  "reviews": [
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "should_encode's \"masked_text\" branch has zero test coverage. The test fixture never constructs a plain or Packed \"masked_text\" column, so a future edit that drops, mistypes, or narrows that literal would pass the whole suite silently, even though the module docstring names masked_text as one of the three kinds that must be encoded.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`; test_columnstore.py:17-26 (_table() fixture omits any masked_text or Packed(\"masked_text\") column)",
+          "remedy": "Add a Column(\"notes\", \"masked_text\", [...]) and a Packed(\"masked_text\") column to the _table() fixture, and assert both names appear in encode_categoricals(...)'s result, mirroring the existing packed_name/packed_grade coverage."
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "describe_source checks truthiness (`env.get(key)`) instead of presence (`key in env`), so it silently misreports the source layer whenever the winning layer's value is falsy (an explicit empty-string or \"0\" override, for example). This directly violates the module's own stated invariant that an explicit empty string is a deliberate override, not an absence. effective_value gets this right with `in` checks; describe_source does not, so the two functions can disagree about where a value came from -- e.g. env={\"retries\": \"\"} makes effective_value correctly return \"\" from env, but describe_source falls through past env (never testing presence) all the way to \"default\".",
+          "severity": "Serious",
+          "source": "settings.py:5-7 (`A layer \"carries\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.`) vs settings.py:28 `if env.get(key):` (and the matching project/user checks at settings.py:30,32)",
+          "remedy": "Change describe_source's three checks to `key in env` / `key in project` / `key in user`, matching effective_value's presence semantics exactly."
+        },
+        {
+          "claim": "The ORDER tuple declares the three-layer precedence but is never referenced anywhere in the module -- effective_value and describe_source each hardcode the same env-then-project-then-user sequence independently in their own if-chains. That duplication is how the two functions were able to drift apart (see the describe_source bug above): fixing describe_source in isolation still leaves a second, independent copy of the same precedence policy free to drift again the next time a layer is added, reordered, or renamed.",
+          "severity": "Noticeable",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` (unused); settings.py:17-24 and settings.py:27-34 (two independently hardcoded layer sequences)",
+          "remedy": "Drive both functions from one shared helper built on ORDER, e.g. `def _carrying_layer(key, layers): return next((name for name, layer in zip(ORDER, layers) if key in layer), None)`, so the precedence order and the presence rule are each defined exactly once."
+        }
+      ]
+    }
+  ]
+}
