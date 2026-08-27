@@ -1,0 +1,38 @@
+{
+  "reviews": [
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "describe_source tests layer membership with truthiness (.get(key)) while effective_value tests membership with presence (in). For a key holding a deliberate empty-string override, effective_value correctly returns the override from its layer, but describe_source falls through to a lower-priority layer and reports the wrong source. This directly contradicts the module's documented 'carries' semantics, and describe_source is what the --explain command prints, so the wrong answer is user-visible.",
+          "severity": "Critical",
+          "source": "settings.py:18 `if key in env:` (presence) vs settings.py:28 `if env.get(key):` (truthiness); docstring settings.py:6-7 'A layer \"carries\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.'",
+          "remedy": "Make describe_source use the same presence check as effective_value (`if key in env: return \"env\"`, etc.) instead of truthiness. Better: derive value and source from one shared layer-walk so the two checks cannot drift apart again."
+        },
+        {
+          "claim": "The ORDER tuple reads as the single source of truth for layer precedence but is never referenced by either function. effective_value and describe_source each hardcode the same three-layer order independently via separate if/elif chains, and those two chains have already drifted from each other (see the finding above).",
+          "severity": "Serious",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` -- not read anywhere else in the file; compare the independent chains at settings.py:18-24 and settings.py:28-34.",
+          "remedy": "Either wire ORDER into both functions (iterate the named layers by that tuple, one real authority for precedence) or delete it -- a declared-but-unused 'authority' invites exactly the kind of silent drift seen above."
+        }
+      ]
+    },
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "column_subset and should_encode each independently re-implement the identical Packed-unwrapping expression. The two currently agree, but there is no single owner of 'how a Packed kind reduces to its primitive' -- a future change to Packed (or a new wrapper type) can be applied to one call site and missed in the other.",
+          "severity": "Serious",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` -- identical expression, two call sites.",
+          "remedy": "Extract one helper, e.g. `_primitive(kind: str | Packed) -> str`, and have both column_subset and should_encode call it. One owner for the unwrap policy instead of two copies kept in sync by hand."
+        },
+        {
+          "claim": "should_encode's membership set includes \"masked_text\", one of the three kinds CHANGES.md says must still be picked up after the refactor, but the bundled test suite never constructs a column of kind \"masked_text\" or Packed(\"masked_text\"). The equivalence claim is unverified for that alias, plain or packed.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`; test_columnstore.py:17-26 fixture columns are only \"text\", \"number\", \"choice\", Packed(\"text\"), Packed(\"choice\").",
+          "remedy": "Add a masked_text column and a Packed(\"masked_text\") column to the fixture and assert both are included in encode_categoricals -- the one alias CHANGES.md's equivalence claim doesn't currently exercise."
+        }
+      ]
+    }
+  ]
+}

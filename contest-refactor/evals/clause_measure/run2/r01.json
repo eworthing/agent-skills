@@ -1,0 +1,38 @@
+{
+  "reviews": [
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "should_encode's `masked_text` branch has zero test coverage, in either plain or Packed form. CHANGES.md claims this is a pure refactor where 'every column kind that used to be picked up by the alias-list call is still picked up here, and nothing else is,' but the fixture table in test_columnstore.py never includes a masked_text column (plain or Packed), so that claim is unverified for one of the three encoded kinds.",
+          "severity": "Noticeable",
+          "source": "test_columnstore.py:17-25 (`_table()` fixture: columns are name/text, age/number, grade/choice, packed_name/Packed(text), packed_grade/Packed(choice) -- no masked_text) vs columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`",
+          "remedy": "Add a masked_text column and a Packed(\"masked_text\") column to _table() and assert both appear in encode_categoricals(), matching the coverage already given to text and choice."
+        },
+        {
+          "claim": "The Packed-unwrapping expression is duplicated verbatim in column_subset and should_encode. The module docstring itself commits these two functions to the same unwrapping behavior ('should_encode unwraps a Packed kind to the primitive it packs the same way column_subset does'), so this is one policy expressed at two sites, not two similar-looking pieces of code that are free to diverge -- exactly the case where consolidating is the fix, per the same-policy rule. If a second wrapper type is ever added, one site can be updated and the other missed, silently breaking the 'same set of columns' invariant CHANGES.md relies on.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` (in column_subset) vs columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` (in should_encode); shared-policy claim at columnstore.py:6-8",
+          "remedy": "Extract a single helper, e.g. `def _primitive(kind: str | Packed) -> str: return kind.primitive if isinstance(kind, Packed) else kind`, and call it from both column_subset and should_encode."
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "describe_source checks whether a layer carries a key by truthiness (`env.get(key)`), while effective_value checks by presence (`key in env`). The module's own docstring defines carrying as presence regardless of value: 'A layer \"carries\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.' So for a key explicitly set to \"\" in a higher-precedence layer, effective_value correctly returns that empty-string override, but describe_source treats the empty string as absent, falls through to a lower layer, and reports the wrong source for the value the caller is actually getting. This is the --explain command's output (per the docstring), so it silently misreports precedence on exactly the case the contract calls out as intentional. No test exercises an empty-string value.",
+          "severity": "Critical",
+          "source": "settings.py:5-8 (docstring: \"A layer \\\"carries\\\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.\") vs settings.py:18 `if key in env:` (effective_value) and settings.py:28 `if env.get(key):` (describe_source); same drift repeats at settings.py:20/30 (project) and settings.py:22/32 (user)",
+          "remedy": "Make describe_source use the same presence check as effective_value (`if key in env: return \"env\"`, etc.) instead of truthiness, so both functions agree on what 'carries' means."
+        },
+        {
+          "claim": "ORDER = (\"env\", \"project\", \"user\") is declared at module scope but never referenced anywhere in the file. Both effective_value and describe_source instead hard-code their own copy of the same three-layer sequence, which is how the two functions were free to drift onto different carries-checks (see the describe_source finding above) without either author needing to touch the other's code.",
+          "severity": "Serious",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` (no other reference in file) vs the independently hard-coded sequences at settings.py:18-22 and settings.py:28-32",
+          "remedy": "Have both functions iterate ORDER against a {name: mapping} dict with one shared carries-check, so the precedence order and the definition of 'carries' are each expressed exactly once instead of twice."
+        }
+      ]
+    }
+  ]
+}

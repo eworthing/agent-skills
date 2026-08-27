@@ -999,3 +999,50 @@ and was caught by reading.
 open, joined by two new ones: the collapse-instinct prose clause the restraint
 cluster argues for, and the differential arm that would tell us how much of any
 result belongs to the loop rather than to the prose.
+
+## The corpus was one-sided, and could not have told us — 2026-08-26
+
+Building a restraint clause for the collapse instinct turned up a defect in the
+corpus itself, worth more than the clause.
+
+A scan of all 25 manifests found **zero** `must_find` or `residual_findings`
+item anywhere requiring a reviewer to *recommend* consolidating two sites. Every
+collapse-axis item in the corpus teaches restraint. That is a property of how
+the packs were harvested, not of real code, and it leaves a hole with teeth:
+**a reviewer that refuses every merge scores perfectly on all 25 packs, and
+nothing in the corpus notices.**
+
+It bit immediately. The clause measurement's designated discrimination control
+was `cpython-wasm-platform-predicate`, chosen because its `must_find` asks a
+reviewer to refuse three collapses and recognise that two others are harmless.
+Checked against the data: **zero of five control reviewers ever made that
+observation** — all four who engaged the pack did so through its untested-platform
+gap instead. The guard never fired. An earlier claim in that work that a blanket
+"never merge" clause would fail this control was simply wrong; it would have
+passed undetected.
+
+`config-precedence-duplicate-authority` (pack 26) is the fix. Two functions
+answer the same question — which config layer owns this key — in two independent
+walks, and they have drifted: the source walk tests truthiness, so a key
+overridden to an explicitly empty string reports `default` while the value walk
+returns the empty override. Consolidation is the remedy and `must_find` item 2
+requires the reviewer to recommend it. Its near-miss extracts a genuine shared
+presence helper that really does fix the empty case, and still keeps a second
+copy of the layer order with user ahead of project; its mutant consolidates
+correctly and resolves self-consistently against the wrong order. All four
+bundled suites pass, so every defect is invisible to the shipped tests, and two
+oracles are required because each certifies half the variants alone.
+
+The pack is **constructed, not harvested** — the only one in the corpus, recorded
+as a weakness in its own `provenance_note` and `grading.md`. There is no
+maintainer's judgment behind it, only the canon's duplicate-authority smell. It
+should be replaced if a harvested equivalent is found. Until then it is the only
+thing standing between this corpus and a reviewer that has learned restraint too
+well.
+
+**The general lesson is about corpus construction, not this axis.** Packs
+harvested from accepted refactors inherit the direction of the judgment that
+produced them. Where every source case happens to make restraint correct, the
+corpus cannot distinguish calibrated restraint from blanket refusal — and it
+will report the second as success. Any future axis wants a deliberate check that
+both directions are represented before it is used to measure anything.

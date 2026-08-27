@@ -1,0 +1,38 @@
+{
+  "reviews": [
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "The test suite added alongside this refactor never exercises the \"masked_text\" kind, plain or Packed, even though CHANGES.md explicitly claims the refactor preserves encoding behavior for every kind that used to be picked up, and should_encode's categorical set is {\"text\", \"masked_text\", \"choice\"} -- one of the three named kinds is untested in both its plain and packed form.",
+          "severity": "Noticeable",
+          "source": "test_columnstore.py:17-26 (`_table()` only builds \"text\"/\"number\"/\"choice\" columns plus Packed(\"text\")/Packed(\"choice\") -- no \"masked_text\" or Packed(\"masked_text\") column exists anywhere in the file) and CHANGES.md:7-10 (\"so every column kind that used to be picked up by the alias-list call is still picked up here, and nothing else is. No change in which columns get encoded.\")",
+          "remedy": "Add a `Column(\"notes\", \"masked_text\", [...])` and a `Column(\"packed_notes\", Packed(\"masked_text\"), [...])` to `_table()` and assert both land in `encode_categoricals`'s result, so the test suite actually backs the parity claim the changelog makes instead of leaving 1 of 3 categorical kinds unverified."
+        },
+        {
+          "claim": "column_subset is defined but has no caller and no test anywhere in the given source -- encode_categoricals now calls should_encode directly, and test_columnstore.py's import list omits column_subset entirely -- yet the module docstring asserts it \"remains the general-purpose way to pick columns by kind elsewhere in this library,\" a claim nothing in this file set supports.",
+          "severity": "Cosmetic",
+          "source": "columnstore.py:42 (`def column_subset(table: Table, include: Iterable[str]) -> list[Column]:`) contrasted with columnstore.py:67-69 (`encode_categoricals` calls only `should_encode`) and test_columnstore.py:14 (import list excludes `column_subset`)",
+          "remedy": "If column_subset genuinely has no other caller, delete it (dead code, subtractive fix); if it does have external callers elsewhere in the library, this variant should carry evidence of that (a caller or a test) rather than an unverifiable docstring assertion."
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "describe_source uses truthy `.get(key)` checks while effective_value uses presence (`in`) checks for the same env/project/user precedence, so the two functions disagree on any key whose value is present but falsy (e.g. an explicit empty-string override) -- directly contradicting this file's own documented contract that 'an explicitly empty string is a deliberate override, not an absence.' Concretely: with env={\"retries\": \"\"}, project={\"retries\": \"5\"}, effective_value(\"retries\", ...) returns \"\" (respecting the env override) but describe_source(\"retries\", ...) returns \"project\" (wrong layer, since \"\" is falsy and gets skipped).",
+          "severity": "Critical",
+          "source": "settings.py:5-8 (docstring: \"A layer \\\"carries\\\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.\") vs settings.py:18 (`if key in env:`) and settings.py:28 (`if env.get(key):`) -- same pattern repeats at settings.py:20/30 (project) and settings.py:22/32 (user)",
+          "remedy": "Rewrite describe_source to use the same `key in <layer>` presence checks as effective_value (or, better, replace both functions' independent if-chains with one shared resolver -- e.g. iterate an ordered list of (name, layer) pairs and return the first layer where `key in layer` holds -- so effective_value and describe_source derive from a single owner of the precedence rule instead of two hand-maintained copies that can drift). Add a regression test with a falsy-but-present override (empty string or \"0\") to lock this in, since none of the existing tests use anything but truthy values."
+        },
+        {
+          "claim": "ORDER is declared at module scope but never referenced by either function; effective_value and describe_source each hardcode the same three-layer sequence independently via separate if-chains instead of deriving from ORDER. This is the structural reason the two functions were free to drift in the first place (see the describe_source finding above).",
+          "severity": "Noticeable",
+          "source": "settings.py:14 (`ORDER = (\"env\", \"project\", \"user\")`), unused by settings.py:17-24 and settings.py:27-34",
+          "remedy": "Drive both functions off ORDER (loop over it to find the first layer that carries the key), or delete ORDER if a shared resolver replaces the hardcoded sequences -- either way, stop maintaining the layer order in three separate places (the constant plus two independent if-chains)."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "reviews": [
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "describe_source tests each layer with a truthiness check (`.get(key)`), while effective_value tests the same layers with a presence check (`key in ...`). The module docstring explicitly defines a key as 'carried' by presence alone -- 'an explicitly empty string is a deliberate override, not an absence' -- so for any key whose value in a higher-precedence layer is empty string (or any other falsy-but-present value), effective_value correctly returns that layer's value while describe_source skips past that layer and reports the wrong source (or 'default'). The two owners of the same precedence rule have drifted on exactly the case the docstring calls out. No test in test_settings.py exercises an empty-string/falsy override, so the drift is unguarded.",
+          "severity": "Critical",
+          "source": "settings.py:5-7 \"A layer \\\"carries\\\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.\" contradicted by settings.py:28,30,32 `if env.get(key):` / `if project.get(key):` / `if user.get(key):`, versus the correct presence checks at settings.py:18,20,22 `if key in env:` / `if key in project:` / `if key in user:`",
+          "remedy": "Make describe_source use the same presence check as effective_value (`if key in env: return \"env\"`, etc.) instead of `.get(key)` truthiness. Add a test with an empty-string override (e.g. env={\"retries\": \"\"}) asserting both effective_value returns \"\" and describe_source returns \"env\", so the documented invariant is enforced by the suite, not just prose."
+        },
+        {
+          "claim": "ORDER = (\"env\", \"project\", \"user\") is declared at module scope but is never read by either function; effective_value and describe_source each hard-code their own independent if/elif chain over the same three layers instead of iterating ORDER. This is the structural duplicate-authority problem underlying the case: three separate encodings of one precedence rule (the unused ORDER tuple, plus two separate hand-written chains) that can silently diverge, as they already have.",
+          "severity": "Serious",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` (no reference to `ORDER` anywhere else in the file) versus the duplicated literal chains at settings.py:18-23 and settings.py:28-33",
+          "remedy": "Either delete ORDER if it's dead, or -- given the two chains have already drifted -- make it the single source of truth: loop over a list of (name, layer_dict) pairs built from ORDER for both functions, e.g. `for name, layer in zip(ORDER, (env, project, user)): if key in layer: return layer[key] / name`, so precedence is expressed once and the two functions can no longer disagree on it."
+        }
+      ]
+    },
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "should_encode's own docstring says a column is encoded 'if it holds text or choice values' (two kinds), but its implementation checks membership in {\"text\", \"masked_text\", \"choice\"} (three kinds) -- the doc omits masked_text even though the module-level docstring lists masked_text as one of the four recognized kind tags. No test in test_columnstore.py constructs a plain or Packed masked_text column, so nothing in the given source confirms which is correct: the code silently encoding masked_text, or the docstring's narrower claim. CHANGES.md asserts this refactor caused 'no change in which columns get encoded' and that should_encode picks up exactly what the prior alias-list call to column_subset picked up, but that claim is unverifiable from the given files and this doc/code mismatch is exactly where a silent behavior change (masked_text columns starting or ceasing to be one-hot encoded) would hide.",
+          "severity": "Serious",
+          "source": "columnstore.py:60-62 `\"\"\"A column should be one-hot encoded if it holds text or choice\\n    values, whether stored as a plain primitive or packed into a\\n    memory-efficient extension format.\"\"\"` versus columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`; module docstring columnstore.py:3-4 lists `(\"text\", \"masked_text\", \"choice\", \"number\")`; CHANGES.md:8-10 \"every column kind that used to be picked up by the alias-list call is still picked up here, and nothing else is. No change in which columns get encoded.\"; absent case in test_columnstore.py:17-26 `_table()` fixture, which has no masked_text or Packed(\"masked_text\") column",
+          "remedy": "Fix should_encode's docstring to name all three kinds it actually checks (text, masked_text, choice), then add a test asserting a plain masked_text column and a Packed(\"masked_text\") column are both included by encode_categoricals -- pinning down intent so the doc, code, and CHANGES.md's 'no change' claim all agree and future edits to the kind set can't drift unnoticed."
+        }
+      ]
+    }
+  ]
+}

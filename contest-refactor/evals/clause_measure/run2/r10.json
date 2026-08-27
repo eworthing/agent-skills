@@ -1,0 +1,32 @@
+{
+  "reviews": [
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "should_encode() re-implements column_subset()'s Packed-unwrapping logic verbatim instead of sharing it. Both functions independently compute \"the primitive kind of a column\" with the identical one-liner, so a future change to how Packed is unwrapped (e.g. a nested Packed, or a new wrapper type) has two call sites to update and no compiler/test enforcement that they stay in sync -- the same duplicate-authority shape that causes silent precedence drift elsewhere in this corpus.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Factor the unwrap into one small module-level helper, e.g. `_primitive_kind(kind: str | Packed) -> str: return kind.primitive if isinstance(kind, Packed) else kind`, and have both `column_subset` and `should_encode` call it. Keeps the two functions' distinct concerns (generic alias-set filter vs. domain predicate) separate while removing the duplicated unwrap rule itself."
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "effective_value() and describe_source() use two different, independently-written rules for \"does this layer carry the key,\" and they have drifted apart: effective_value checks presence (`key in env`), matching the module docstring's explicit contract that \"an explicitly empty string is a deliberate override, not an absence.\" describe_source instead checks truthiness (`env.get(key)`), so a present-but-falsy override (e.g. project sets retries=\"\") is silently skipped. Concretely: with project={\"retries\": \"\"}, effective_value returns \"\" (correctly sourced from project), but describe_source reports \"default\" or \"user\" instead of \"project\" -- exactly the case the docstring calls out by name. Since describe_source is stated to be \"what the --explain command prints,\" the diagnostic tool built specifically to answer precedence questions gives a wrong answer in precisely the scenario it exists to explain, and no test exercises a falsy-but-present value to catch it.",
+          "severity": "Critical",
+          "source": "settings.py:18 `if key in env:` vs settings.py:28 `if env.get(key):` (same drift repeats at settings.py:20/30 for project and settings.py:22/32 for user)",
+          "remedy": "Give precedence resolution one owner instead of two: e.g. `def _source_layer(key, env, project, user): return next((n for n, layer in ((\"env\", env), (\"project\", project), (\"user\", user)) if key in layer), None)`, then have effective_value look up that layer's value (or defaults if None) and describe_source return that layer name (or \"default\"). Add a regression test with a present-but-empty override (project={\"retries\": \"\"}) to lock in the fix."
+        },
+        {
+          "claim": "ORDER = (\"env\", \"project\", \"user\") is declared as if it were the source of truth for layer precedence but is never read anywhere in the file -- both effective_value and describe_source hardcode their own separate if-chains in that order instead. This is a third, disconnected place the precedence order lives: editing ORDER changes nothing, and a future maintainer trying to fix the drift in the finding above by editing ORDER would have no effect.",
+          "severity": "Noticeable",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` (no reference to ORDER elsewhere in the file)",
+          "remedy": "Either delete ORDER if it's not part of the public API, or make it the real source of truth by having both functions iterate over it (see remedy above) so there is exactly one place that encodes layer order."
+        }
+      ]
+    }
+  ]
+}

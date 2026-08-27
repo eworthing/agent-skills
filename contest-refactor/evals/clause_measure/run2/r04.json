@@ -1,0 +1,44 @@
+{
+  "reviews": [
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "The Packed-unwrap expression `col.kind.primitive if isinstance(col.kind, Packed) else col.kind` is duplicated verbatim in `column_subset` and `should_encode`. Both functions independently encode the same 'how to read a column's primitive kind' rule; nothing keeps them in sync if the Packed contract ever changes (e.g. a second wrapper attribute, or Packed nesting).",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` and columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract a small shared helper, e.g. `_primitive_kind(kind: str | Packed) -> str`, and have both `column_subset` and `should_encode` call it instead of repeating the isinstance/unwrap expression."
+        },
+        {
+          "claim": "`should_encode`'s categorical set is `{\"text\", \"masked_text\", \"choice\"}`, and the module docstring calls out `masked_text` by name as one of the four kind tags, but no test exercises a plain `\"masked_text\"` column (only `packed_name`/`Packed(\"text\")` and `packed_grade`/`Packed(\"choice\")` are covered for encode-worthy kinds). A regression that dropped or misspelled the `masked_text` branch would pass the current suite.",
+          "severity": "Noticeable",
+          "source": "test_columnstore.py:17-26 `_table()` (no `\"masked_text\"` or `Packed(\"masked_text\")` column) and test_columnstore.py:29-31 `test_encodes_text_and_choice_including_packed` (asserts only `name`, `grade`, `packed_name`, `packed_grade`)",
+          "remedy": "Add a `masked_text` column (plain and/or packed) to `_table()` and assert it appears in `encode_categoricals(...)`, matching the coverage already given to `text` and `choice`."
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "`effective_value` treats a key as present with `key in env` (correctly honoring the docstring's stated rule that 'an explicitly empty string is a deliberate override, not an absence'), but `describe_source` checks `env.get(key)` (and the same for `project`/`user`), which is falsy for an explicit empty string. So for a key set to `\"\"` in, say, `project`, `effective_value` returns `\"\"` from the project layer, while `describe_source` skips the project layer (and env/user) and reports `\"default\"` -- a different layer than the one that actually produced the value, and the `--explain` command (per the module docstring) prints exactly this wrong source.",
+          "severity": "Critical",
+          "source": "settings.py:17-24 `effective_value` (`if key in env: ... if key in project: ... if key in user: ...`) vs settings.py:27-34 `describe_source` (`if env.get(key): ... if project.get(key): ... if user.get(key): ...`)",
+          "remedy": "Make `describe_source` use the same presence check as `effective_value` (`key in env`, `key in project`, `key in user`) instead of truthiness, so the two functions agree on which layer supplied the value. Ideally derive both from one shared lookup so this can't drift again."
+        },
+        {
+          "claim": "`ORDER = (\"env\", \"project\", \"user\")` is defined but never referenced by `effective_value` or `describe_source` -- both hard-code the same three-layer precedence as separate if-chains. `ORDER` looks like the authority for precedence order, but editing it has zero effect on behavior, and it's this same duplication (two independent if-chains encoding one precedence rule) that let the two functions drift apart (see the Critical finding on presence-vs-truthiness above).",
+          "severity": "Serious",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` (unused) vs the independent if-chains at settings.py:18-23 and settings.py:28-33",
+          "remedy": "Either delete the unused `ORDER` constant, or -- better, since it would also close the presence/truthiness drift above -- have both functions iterate over `ORDER` (plus a final \"default\" step) through one shared lookup so precedence is defined in exactly one place."
+        },
+        {
+          "claim": "No test in test_settings.py exercises a layer carrying an explicit empty-string value, which is the exact scenario the module docstring calls out by name ('an explicitly empty string is a deliberate override, not an absence'). This is precisely the case that exposes the `describe_source` truthiness bug above, and it currently has zero coverage.",
+          "severity": "Noticeable",
+          "source": "test_settings.py:1-38 (no test sets any layer to `\"\"`; compare to the documented rule in settings.py:5-7)",
+          "remedy": "Add a test that sets a layer's value to the empty string and asserts both `effective_value` returns `\"\"` and `describe_source` reports that same layer, not a lower-precedence one."
+        }
+      ]
+    }
+  ]
+}

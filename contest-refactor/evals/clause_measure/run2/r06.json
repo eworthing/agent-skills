@@ -1,0 +1,32 @@
+{
+  "reviews": [
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "The Packed-unwrap rule ('what primitive kind does this column represent') is implemented twice, verbatim, as independent inline expressions instead of one shared authority. `column_subset` and `should_encode` both need this exact same logic to stay correct, so a change to how `Packed` is unwrapped (e.g. a new wrapper case, a renamed attribute) must be made in both places or the two functions silently diverge on which columns they consider text/choice-like.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` duplicated at columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract the unwrap into one function (e.g. `def primitive_kind(col: Column) -> str`) or a `Column.primitive_kind` property, and have both `column_subset` and `should_encode` call it. This is the 'same policy, must change together' case, not a coincidental resemblance -- the two call sites are not free to evolve apart because they both claim to answer the identical question (what primitive does this column's kind represent)."
+        }
+      ]
+    },
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "`describe_source` checks layer membership by truthiness (`env.get(key)`) while `effective_value` and the module docstring define membership as presence (`key in env`). The docstring is explicit that 'an explicitly empty string is a deliberate override, not an absence' -- but `describe_source` treats any falsy value (empty string, \"0\", explicit None/False if the layers ever carry non-string values) as absent and falls through to the next layer. So for a key set to a falsy value in a higher-precedence layer, `effective_value` returns that layer's value while `describe_source` reports a lower-precedence layer as the source -- the two functions disagree about where the value that's actually being used came from. `--explain` output would misattribute the source in exactly the case the docstring calls out as a deliberate override.",
+          "severity": "Critical",
+          "source": "settings.py:28-30 `if env.get(key):\\n        return \"env\"\\n    if project.get(key):\\n        return \"project\"\\n    if user.get(key):\\n        return \"user\"` contradicts settings.py:6-7 `A layer \"carries\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.` and settings.py:18-20 `if key in env:\\n        return env[key]`",
+          "remedy": "Change `describe_source` to the same presence checks `effective_value` uses (`if key in env: return \"env\"`, etc.), so both functions implement one precedence policy instead of two independently-drifted copies of it."
+        },
+        {
+          "claim": "`ORDER` names the env/project/user precedence but neither `effective_value` nor `describe_source` reads it -- the order is instead hard-coded as a separate if/elif chain in each function. Within this file `ORDER` is unreferenced, and the two chains it supposedly documents have already drifted from each other (see the Critical finding above), which is the failure mode you'd expect when one policy is expressed three separate times.",
+          "severity": "Noticeable",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` unused by settings.py:18-23 and settings.py:28-30",
+          "remedy": "Once the drift above is fixed, drive both functions from `ORDER` (e.g. iterate the layers in order and return on first match) so there is exactly one place that encodes the precedence, instead of a constant plus two hand-written chains that can drift independently. If `ORDER` is genuinely unused elsewhere too, that's dead code and should go."
+        }
+      ]
+    }
+  ]
+}

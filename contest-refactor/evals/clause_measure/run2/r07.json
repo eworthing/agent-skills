@@ -1,0 +1,38 @@
+{
+  "reviews": [
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "describe_source uses a truthiness check (`X.get(key)`) instead of a presence check (`key in X`), so it silently disagrees with effective_value and with the module's own documented precedence contract whenever a layer carries a key with a falsy value (the docstring's own named example: an explicit empty string). For env={\"retries\": \"\"}, effective_value returns \"\" from env (correct per the docstring), but describe_source skips env because `env.get(\"retries\")` is falsy, and reports the wrong layer (falls through to project/user/default) instead of \"env\". The --explain output this function drives would then name the wrong source for a deliberate override.",
+          "severity": "Serious",
+          "source": "settings.py:18 `if key in env:` (effective_value's presence check) vs settings.py:28 `if env.get(key):` (describe_source's truthiness check), contradicting settings.py:6-7 \"A layer \\\"carries\\\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.\"",
+          "remedy": "Rewrite describe_source's three checks to use the same `key in env` / `key in project` / `key in user` presence tests effective_value already uses, so both functions agree on what \"carries\" means for every layer."
+        },
+        {
+          "claim": "ORDER is declared as if it were the single source of truth for layer precedence, but neither effective_value nor describe_source reads it -- each hardcodes its own env/project/user sequence independently. ORDER can be edited with zero effect on behavior, and the two real precedence sequences can drift from each other (as in the finding above) without ORDER reflecting or catching it.",
+          "severity": "Noticeable",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` is never referenced in effective_value (settings.py:17-24) or describe_source (settings.py:27-34).",
+          "remedy": "Either delete ORDER as dead documentation, or make it the actual mechanism: have both functions loop over ORDER against a dict of layers so precedence is encoded once instead of twice."
+        }
+      ]
+    },
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "should_encode's docstring says a column is encoded \"if it holds text or choice values,\" naming only two kinds, but the implementation on the next line also encodes \"masked_text\" -- a kind the module-level docstring lists as a distinct first-class kind. The function's own contract undercounts what it actually does.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:60-61 \"A column should be one-hot encoded if it holds text or choice\\n    values\" vs columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`",
+          "remedy": "Update the docstring to name all three encoded kinds: \"if it holds text, masked_text, or choice values.\""
+        },
+        {
+          "claim": "CHANGES.md asserts this is a pure refactor where \"every column kind that used to be picked up by the alias-list call is still picked up here, and nothing else is,\" but the bundled test suite never exercises a \"masked_text\" column (plain or Packed) at all. The fixture covers text, number, choice, Packed(text), and Packed(choice) but omits masked_text entirely, so the one kind whose docstring wording is already inconsistent (previous finding) is also the one kind the tests can't catch regressing.",
+          "severity": "Serious",
+          "source": "test_columnstore.py:17-26 `_table()` constructs Column(\"name\", \"text\", ...), Column(\"age\", \"number\", ...), Column(\"grade\", \"choice\", ...), Column(\"packed_name\", Packed(\"text\"), ...), Column(\"packed_grade\", Packed(\"choice\"), ...) -- no \"masked_text\" case anywhere; none of test_encodes_text_and_choice_including_packed, test_excludes_numbers, or test_should_encode_unwraps_packed (lines 29-41) references it either.",
+          "remedy": "Add a masked_text column (plain and Packed(\"masked_text\")) to the fixture and assert both appear in encode_categoricals' output, closing the gap that would let a future edit silently drop masked_text support undetected."
+        }
+      ]
+    }
+  ]
+}

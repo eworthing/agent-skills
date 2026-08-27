@@ -1,0 +1,44 @@
+{
+  "reviews": [
+    {
+      "case": "B",
+      "findings": [
+        {
+          "claim": "effective_value and describe_source independently re-implement the same layered-precedence policy, and they have drifted: effective_value tests presence with `key in env` (so an explicit empty-string override counts as the layer carrying the key, per the module docstring's stated contract), while describe_source tests truthiness with `env.get(key)` (so an explicit empty-string override is treated as absent and falls through to the next layer). For a key set to \"\" in env, effective_value returns \"\" (env), but describe_source reports \"project\", \"user\", or \"default\" instead of \"env\" -- the --explain output would name the wrong layer, contradicting the value effective_value actually used.",
+          "severity": "Serious",
+          "source": "settings.py:18 `if key in env:` vs settings.py:28 `if env.get(key):` (same drift repeats at lines 20/30 for project and 22/32 for user); contract stated at settings.py:5-7 `A layer \"carries\" a key when the key is present, whatever the value -- an explicitly empty string is a deliberate override, not an absence.`",
+          "remedy": "Stop expressing the precedence policy twice. Add one internal helper, e.g. `_layer_for(key, env, project, user)` returning the layer name using presence (`in`) checks per the documented contract, and have both effective_value and describe_source call it (the latter mapping the returned layer to its value or to \"default\"). This removes the duplicate-authority split rather than just patching describe_source's checks in place."
+        },
+        {
+          "claim": "The three-layer test/lookup order is asserted a third time, independently of the two if-chains, by the module-level `ORDER` tuple -- but ORDER is never referenced by effective_value, describe_source, or the test file, so it cannot enforce or even signal the drift between the two functions it appears to document.",
+          "severity": "Cosmetic",
+          "source": "settings.py:14 `ORDER = (\"env\", \"project\", \"user\")` -- not read anywhere else in settings.py or test_settings.py",
+          "remedy": "Either wire ORDER into the lookup (iterate it in effective_value/describe_source instead of hardcoding the chain) or delete it. A constant that describes a policy but isn't consulted by the code implementing that policy is a third place to keep in sync and is the same drift risk as the effective_value/describe_source split."
+        },
+        {
+          "claim": "No test exercises an explicit empty-string override, even though the module docstring calls out that exact case as the reason presence (not truthiness) must be used. The drift between effective_value and describe_source is invisible to this suite.",
+          "severity": "Noticeable",
+          "source": "test_settings.py:1-38 (all five tests use non-empty string values for env/project/user); contract at settings.py:6-8",
+          "remedy": "Add a test that sets a layer's value to \"\" and asserts both effective_value returns \"\" and describe_source names that same layer -- this is the test that would have caught the drift in finding 1."
+        }
+      ]
+    },
+    {
+      "case": "A",
+      "findings": [
+        {
+          "claim": "column_subset and should_encode each unwrap a Packed kind to its primitive with the identical expression (`col.kind.primitive if isinstance(col.kind, Packed) else col.kind`), duplicated verbatim rather than shared. The module docstring explains why encode_categoricals bypasses column_subset (it expresses its own column set via should_encode), but that rationale justifies not sharing the *set-membership* logic -- it doesn't explain duplicating the *kind-resolution* logic, which both functions need identically and would need to change together if a second wrapper type were added.",
+          "severity": "Noticeable",
+          "source": "columnstore.py:53 `alias = col.kind.primitive if isinstance(col.kind, Packed) else col.kind` vs columnstore.py:63 `kind = col.kind.primitive if isinstance(col.kind, Packed) else col.kind`",
+          "remedy": "Extract a one-line helper, e.g. `def _primitive_kind(kind: str | Packed) -> str: return kind.primitive if isinstance(kind, Packed) else kind`, and call it from both column_subset and should_encode. Minimal ceremony, no new class or seam, and it removes the one policy (how to resolve a column's primitive kind) that both functions must keep in sync."
+        },
+        {
+          "claim": "CHANGES.md asserts the should_encode refactor is behavior-preserving for every kind column_subset used to pick up, but the test suite never constructs a column with kind \"masked_text\" or Packed(\"masked_text\") -- one of the three categories should_encode's own docstring names. The equivalence claim for that kind is asserted, not verified.",
+          "severity": "Cosmetic",
+          "source": "CHANGES.md:7-10 `every column kind that used to be picked up ... is still picked up here, and nothing else is`; test_columnstore.py:1-53 has no occurrence of \"masked_text\"; should_encode's category set at columnstore.py:64 `return kind in {\"text\", \"masked_text\", \"choice\"}`",
+          "remedy": "Add a masked_text column (plain and Packed) to the test fixture and assert it's encoded, matching the coverage already given to text and choice."
+        }
+      ]
+    }
+  ]
+}
