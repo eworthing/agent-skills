@@ -1,0 +1,8 @@
+{
+  "packs": [
+    {
+      "pack": "auth-challenge-preservation",
+      "findings": []
+    }
+  ]
+}

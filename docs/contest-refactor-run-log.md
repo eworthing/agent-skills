@@ -864,4 +864,138 @@ there, and none did.
   confirmed, and a real runner should adopt it.
 
 Items 1 (measure the remaining 23 packs' `allowed_findings`) and 3 (the
-minimised-seam question) remain open.
+minimised-seam question) remain open. Item 1 is closed by the section below.
+
+### Item 1: the whole corpus, classified — 2026-08-26
+
+The sweep's 127 findings across 23 packs were classified pack by pack, six
+sonnet classifiers run one at a time. Each was required to verify a finding
+against the accepted variant's source and cite `file:line` before classifying
+it, because reviewers had already asserted things the source contradicts.
+
+**28 `allowed_findings` landed.** Every one was raised by at least two of three
+independent reviewers, verified accurate, and found unrelated to its pack's
+central judgment. They are now pre-excused rather than counting against a
+reviewer. The bar mattered: 50 findings came back INDEPENDENT and only 28
+cleared two reps, so roughly two in five accurate incidental observations are
+things a single reviewer notices and the other two do not.
+
+`auth-challenge-preservation` returned zero findings from all three reviewers —
+a clean restraint pass, and the reason the run covers 23 packs but 22 classifier
+files.
+
+#### 5 restraint misses, and 4 of them are one instinct
+
+All five are named verbatim in their packs' own `must_not_find`. What matters is
+that four are the same reflex wearing four different costumes:
+
+| Pack | What the reviewer wanted to collapse |
+| --- | --- |
+| `pandas-get-dummies-select-dtypes` | a one-liner duplicated across two functions — extract a shared helper |
+| `pydantic-typing-extra` | two registries holding identical objects — re-export one from the other |
+| `pytest-scope-enum-public-compat` | `_span` and `span`, same name different type — rename to disambiguate |
+| `store-core-composition-residual` | the `Panel` protocol adds nothing over parameterizing directly — delete it |
+
+Four packs, two languages, four unrelated domains, one instinct: **these look
+alike, so collapse them.** In every case the duplication is load-bearing and the
+pack says so. The fifth miss is a different shape — `pydantic-typing-extra`'s
+disclosed alias gap flagged as a Serious defect requiring a fix — and it is the
+same family as the reclassification below.
+
+This is the corpus's most actionable output for the skill so far. The reviewers
+were not bare models: the sweep gave each one the skill's own review protocol
+(`method.md`'s Simplify Pressure Test and Meta-Rules, `architecture-rubric.md`'s
+severity anchors, `lens-generic.md`). So a miss is the skill's guidance failing
+to stop an over-flag, not model noise. It is also the half of the skill this
+project has already measured as movable: recall levers produced zero lift across
+advisory evals #35–#48, and this sweep's 6/6 near-miss discrimination says again
+that finding defects is not where help is needed, while W3.1's tier-1 prose
+clause moved sonnet over-claim from 2/5 to 0/5.
+
+What this corpus does **not** exercise: the Actor–Critic loop, the gates, halt
+and handoff, the ledger. Separating harness from model needs a differential arm
+— the same pack run once through the full loop and once with a reviewer holding
+only the prose. That has not been run.
+
+#### Two classifier errors, in opposite directions
+
+The classifiers were told "if unsure, call it RESTRAINT_MISS." That instruction
+was wrong and it produced a false result of each kind in a single run.
+
+A classifier flagged all three reviewers naming `store-core-composition-residual`'s
+dead actor as a restraint miss, on the rule that they had demanded a fix for a
+disclosed limitation. But that pack's `must_find` item 3 *requires* naming it —
+"full credit requires both" — and the only restraint clause nearby forbids
+scoring the variant flawless, which the classifier itself recorded no reviewer
+did. It is a **3/3 recall success**, reclassified. `residual_findings` and
+`must_find` can describe the same thing deliberately, and here they do.
+
+The same classifier called `swift-collections-platform-guard-scope`'s
+`guardAdmits(_:)` unintended debris worth deleting. `oracle_probe.swift:37`
+calls it against every variant and `grading.md:29` declares it a required
+per-variant predicate. It looks unused only inside the candidate-visible slice,
+which is what `allowed_findings` exists to absorb. Deleting it would have broken
+the harness.
+
+Both errors survived a classifier that was otherwise careful, and both were
+caught by reading the manifest rather than by any check. The blunt tie-break was
+dropped from later briefs.
+
+#### The fourth fixture bug, and what all four have in common
+
+`werkzeug-socket-lifecycle`'s accepted variant called `clear_stale(endpoint)`
+immediately before `bind(endpoint)`, discarding the registration `bind()`'s
+conflict check reads. The conflict branch was unreachable from every call site;
+two live Services bound one endpoint in silence.
+
+This one is qualitatively worse than the other three. The pack's `must_find` #3
+tells a reviewer to verify that a conflicting `start_service` terminates the
+process, *"by tracing what a conflicting call actually does, not by trusting the
+changelog."* A reviewer who traced it honestly and reported that the path never
+fires would have been scored as **missing** the item. The fixture punished the
+correct answer — the one failure mode a grading corpus cannot tolerate, because
+it trains the exact opposite of what the pack was built to teach.
+
+Fixed by scoping `clear_stale` to the warm-restart path, mirroring where the
+pre-consolidation helper called it, in all three post-consolidation variants so
+each stays isolated to its intended difference. Every existing oracle matrix
+came back byte-identical.
+
+**All four fixture bugs share one shape.** Each was invisible because no oracle
+combined two conditions the pack's author had only ever exercised separately:
+
+| Pack | The pair nothing combined |
+| --- | --- |
+| `auth-session-carryover` | a credential change **and** an empty stamp — every other oracle moved a stamp between two non-empty values |
+| `demand-signalling-state-machine` (hang) | a buffered value **and** source completion |
+| `demand-signalling-state-machine` (over-count) | a source count **and** exceeding what `SourceID` can represent |
+| `werkzeug-socket-lifecycle` | two Services **and** one endpoint |
+
+Each oracle tested the shape its author had in mind, and each author had one
+shape in mind. Three of the four were found by two or three independent blind
+reviewers; none was found by the validator, which checks structure, or by the
+oracles, which check the cases someone thought to write. **Validating a corpus
+and executing it are different instruments, and only the second finds this
+class.** Every fix now carries a regression oracle whose RED was observed before
+it was implemented.
+
+A fifth guard was added without a bug behind it: the `sourceCount` fix had
+shipped with no oracle at all, so nothing would have failed if a variant
+reverted it. Auditing the session's own repairs for regression guards is worth
+doing as a step, not assumed.
+
+#### One check deliberately not built
+
+Two static invariants for declared-vs-implemented oracle drift were measured
+against all 25 packs before writing either: the `=== name ===` print-header
+convention diverges in 10 packs, failure-message phrasing in 5. All 15 were
+checked and every one is phrasing, not a real gap. A check on either would be
+pure false-positive noise, or would mean rewriting a third of the corpus to
+satisfy a linter. The direction actually hit here — an oracle implemented, run
+and asserted but never declared in the manifest — has no low-noise static check
+and was caught by reading.
+
+**Item 1 closed — 23 of 23 packs.** Item 3 (the minimised-seam question) remains
+open, joined by two new ones: the collapse-instinct prose clause the restraint
+cluster argues for, and the differential arm that would tell us how much of any
+result belongs to the loop rather than to the prose.
