@@ -1116,7 +1116,10 @@ correct a bad Actor change, and zero useful HALT/handoff decisions, the loop has
 demonstrated incremental value. **Do not authorize a second dedicated run. Stop.**
 
 **Open, and owner-blocking: there is no external value function.** Every result in
-this document is measured against token spend and G17, an internally defined tally.
+this document is measured against token spend and an internally defined promotion
+tally. (That tally was repeatedly mislabelled "G17" during this session; G17 is
+actually Indirect coverage citation, `validation.md:67`. See
+`evals/GATE_PACK_MAP.md` § Correction.)
 Moving G17 is evidence, not benefit. Before the live run is authorized, the owner
 needs to state the minimum production-relevant outcome that would justify it and a
 hard stopping budget. Nothing here can supply that.
