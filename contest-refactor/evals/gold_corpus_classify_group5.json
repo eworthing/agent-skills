@@ -1,0 +1,80 @@
+{
+  "packs": [
+    {
+      "pack": "store-core-composition-residual",
+      "findings": [
+        {
+          "summary": "QuietQueue actor is declared and never referenced anywhere in workspace.swift, and all three reviewers demanded it be deleted",
+          "reps": 3,
+          "classification": "RESTRAINT_MISS",
+          "note": "Verified core-composition-with-dead-isolation/workspace.swift:57-59: `actor QuietQueue {}` preceded by 'Reserved for a future default execution context; not wired into any scoping path yet.' No reference to QuietQueue anywhere in workspace.swift or main.swift. This is exactly must_find item 3 and the pack's sole residual_findings entry -- the accepted architecture correctly carries this named residual (score 9.5, not 10), and all three reviewers (A, B, C) named it with appropriately minor/cosmetic severity, never scoring the variant as flawless (so must_not_find's 'flawless verdict' trap was avoided). However, each reviewer's remedy explicitly demanded deletion ('Delete QuietQueue...'), which matches the RESTRAINT_MISS criterion 'demanded a fix for a disclosed/accepted limitation named in residual_findings' literally. Flagging per that rule, though this is a soft/borderline case -- the severity calibration itself was correct, and recommending eventual deletion mirrors the real-world resolution described in provenance.json's related_history (PR #3845 later deleted it). Not eligible for allowed_finding promotion regardless, since it names the pack's central residual and doing so pack-wide would defeat must_not_find item 4 (inventing this residual against other variants).",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Bundled test never verifies a root-level write is visible when read back through an already-created child; only tests scoped-child-write-reaches-root and initial-child-matches-parent",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified core-composition-with-dead-isolation/main.swift:15-22: three checks only -- title read (16), child's initial zoom matches parent (19), and a write THROUGH the child reaching the parent (21-22). No check writes to root.state and reads back through an already-created child. workspace.swift:49-54's child(_:at:) closures reference `self.state[keyPath: path]` dynamically (not a cached snapshot), so behavior is currently correct, but this specific direction is genuinely untested -- confirmed this isn't covered by any hidden oracle either (scoped_child_initial_matches_parent only checks the value immediately after scoping, before any write, per oracles.py:77-87). Unrelated to the must_find/must_not_find/restraint_reason axis (architecture acceptance, residual naming, near-miss refusal on key-path safety, mutant write-loss detection).",
+          "proposed_allowed_finding": null
+        },
+        {
+          "summary": "Panel protocol / EditorPanel / InspectorPanel called ceremony that adds no compile-time safety beyond parameterizing Workspace directly over the state type",
+          "reps": 1,
+          "classification": "RESTRAINT_MISS",
+          "note": "Verified core-composition-with-dead-isolation/workspace.swift:8-10 (protocol Panel), :21-27 (EditorPanel/InspectorPanel), :49-54 (child's Sub.Type parameter). Reviewer B recommends deleting Panel/EditorPanel/InspectorPanel and making Workspace generic directly over State -- this is a direct match to must_not_find item 2 ('Treating core-composition-with-dead-isolation's extra declarations... as complexity to pay down, rather than recognizing the architecture as the correct direction') and item 1 (protocol/declaration count is not a finding against the composed variant). Confirmed oracles.py's key_path_root_type_checked shows the Node: Panel generic constraint is exactly what makes the compile-time safety guarantee work, so B's premise that Panel 'adds ceremony without buying compile-time safety' contradicts the pack's own confirmed behavior.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    },
+    {
+      "pack": "strict-concurrency-fake-fixes",
+      "findings": [
+        {
+          "summary": "Bundled test only calls recordPageView/recordAPIHit sequentially on one thread, so it can never detect a regression that removes or narrows the lock guarding count",
+          "reps": 2,
+          "classification": "INDEPENDENT",
+          "note": "Verified guarded-value-container/hit_counter.swift:6-25: `count` is private (line 8), and every access goes through lock.lock()/unlock() in increment() (10-14) and currentCount (16-20). main.swift:15-19 confirms both call sites run sequentially on a single thread, never concurrently. Accurate as B and C describe. This pack's fixture is deliberately synchronous/deterministic by design (provenance.json contamination.why: 'no real concurrency (no Task, no threads, no timing)'), so a literal concurrent stress test is outside this fixture's own model, but the coverage observation itself is true and unrelated to the must_find/must_not_find axis, which is entirely about structural reasoning (private+lock, actor-isolation topology cost, a false invariant claim) rather than whether runtime interleaving is exercised by a test.",
+          "proposed_allowed_finding": "HitCounter's bundled test suite exercises recordPageView and recordAPIHit only sequentially on a single thread, never concurrently, independent of this pack's central judgment."
+        }
+      ]
+    },
+    {
+      "pack": "swift-collections-ordered-replace-primitive",
+      "findings": [
+        {
+          "summary": "Roster.items and Ledger's roster/values are plain, non-private stored properties with no encapsulation, so external mutation of either one can desync them and later corrupt or crash replaceLabel",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified shared-move-primitive/ordered_replace.swift:23 (`var items: [String] = []`, no access modifier) and :49-50 (`var roster = Roster()`, `var values: [Int] = []`, no access modifier). replaceLabel (54-65) resolves `pos` once (59) and reuses it for both moveIntoPlace calls (62, 63), assuming the two arrays stay aligned; nothing enforces that. main.swift:33 confirms Ledger is constructed directly via its memberwise init with caller-supplied roster/values, with no length validation. Same lack of access control present in all four variants (checked duplicated-inline-move, near-miss-delegates-to-roster-replace, mutant-reordered-move-primitive). Unrelated to must_find/must_not_find, which concern extraction level and diagnostic/lookup-count preservation for the near-miss, not access control. Distinct from the pack's own pre-existing allowed_finding about plain-array storage (that one is about data-structure choice; this is about access-level encapsulation).",
+          "proposed_allowed_finding": "Roster.items and Ledger's roster and values properties are plain, non-private stored properties that a caller could mutate directly outside of replace and replaceLabel, independent of this pack's central judgment."
+        },
+        {
+          "summary": "Roster.lookupCount is incremented on every position(of:) call but is never read by the bundled test suite or any other candidate-visible logic",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified shared-move-primitive/ordered_replace.swift:24 (`var lookupCount = 0`), :30-33 (incremented in position(of:)), :52 (Ledger.lookupCount forwards roster.lookupCount). Grepped lookupCount across all four variants' main.swift files and oracles.py: no candidate-visible reference anywhere. Accurate. Note for awareness: lookupCount is in fact load-bearing for the grader's own hidden lookup_work_count oracle, which uses it to catch near-miss-delegates-to-roster-replace's doubled lookup (must_find item 3) -- but that mechanism lives only in oracles.py (grader-only), and isn't itself named in must_find/must_not_find for the variant under review here (shared-move-primitive), so flagging it as untested from a blind read of only the candidate-visible file is a fair, independent code-quality observation rather than a hit on the pack's stated discrimination axis.",
+          "proposed_allowed_finding": "Roster's lookupCount property is incremented on every call to position(of:) but is never read by the bundled test suite, independent of this pack's central judgment."
+        }
+      ]
+    },
+    {
+      "pack": "swift-collections-platform-guard-scope",
+      "findings": [
+        {
+          "summary": "guardAdmits(_:) always returns true and is never called by isPotentiallyAffected or anything else, despite its doc comment reading as if it still scopes which platforms are checked",
+          "reps": 3,
+          "classification": "INDEPENDENT",
+          "note": "Verified guard-removed-availability-only/platform_support.swift:41-45: `func guardAdmits(_ platform: Platform) -> Bool { true }`, comment 'Every platform reaches the check below directly; nothing scopes which platforms this applies to.' isPotentiallyAffected (47-49) calls only isNewEnoughToSkipWorkaround; no other call site exists in the file. Comparison with explicit-platform-list/platform_support.swift:41-52 confirms guardAdmits used to be a real 4-platform filter wrapped around isPotentiallyAffected; the accepted variant neutered the body and dropped the wrapping call but left the declaration in place rather than deleting it, which is why a variant literally named 'guard removed' still contains a guard-shaped stub. This is not a behavior_contract violation (isPotentiallyAffected behaves correctly on every platform regardless of the stub's presence, confirmed by guard_removal_is_behaviorally_neutral being expected to pass with no failing variant), so not INCORRECT_FIXTURE, and it is unrelated to must_find/must_not_find (which concern the near-miss's over-admission and the mutant's dropped threshold). Flagging separately for the team lead: this pack's residual_findings is empty, so unlike store-core-composition-residual's QuietQueue this leftover does not appear to be an intentional disclosed residual -- may be worth an actual fixture cleanup (delete guardAdmits) or an explicit residual_findings entry.",
+          "proposed_allowed_finding": "guardAdmits(_:) always returns true and is never called by isPotentiallyAffected or any other function in the file, independent of this pack's central judgment."
+        },
+        {
+          "summary": "versionThresholds is a plain dictionary not required to cover every Platform case (missing overlay, openfield); a future Platform case needing the workaround could silently default to unaffected with no compiler check tying Platform.allCases to versionThresholds.keys",
+          "reps": 1,
+          "classification": "INDEPENDENT",
+          "note": "Verified guard-removed-availability-only/platform_support.swift:6-13 (Platform has 6 cases: anchor, companion, wrist, parlor, overlay, openfield), :24-29 (versionThresholds has 4 entries, missing overlay and openfield), :34-39 (guard-else defaults an unlisted platform to unaffected). Accurate, and this default-to-unaffected behavior for an unlisted platform is explicitly declared correct by behavior_contract item 2 ('A platform with no recorded version threshold must report unaffected at every version'), so the finding does not dispute the pack's judgment for the two already-unguarded platforms -- it is a forward-looking maintenance suggestion (an exhaustive switch or a completeness test) about platforms not yet added. Distinct from mutant-dropped-threshold's defect (which drops a threshold for one of the four already-known-affected platforms) and unrelated to the near-miss's over-admission axis.",
+          "proposed_allowed_finding": null
+        }
+      ]
+    }
+  ]
+}

@@ -249,6 +249,23 @@ def buffered_value_survives_source_completion(binaries: dict[str, Path]) -> dict
     }
 
 
+#: SourceID can represent two sources. A caller asking for more than that must
+#: not leave the finished-count target permanently out of reach: the surplus
+#: sources do not exist, so they can never report finishing. Same event sequence
+#: at a representable count is the paired control -- it isolates the over-count
+#: from the ordinary finish path, which is what makes a failure here readable.
+OVERCOUNT_EVENTS = ["demand:1", "finish:0", "finish:1", "demand:2"]
+OVERCOUNT_EXPECTED = [["start:0", "start:1"], [], ["finish:1"], ["finish:2"]]
+
+
+def surplus_source_count_does_not_strand_relay(binaries: dict[str, Path]) -> dict[str, bool]:
+    return {
+        variant: run_probe(binary, 3, OVERCOUNT_EVENTS) == OVERCOUNT_EXPECTED
+        and run_probe(binary, 2, OVERCOUNT_EVENTS) == OVERCOUNT_EXPECTED
+        for variant, binary in binaries.items()
+    }
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="signal-relay-oracles-") as tmp:
         scratch_dir = Path(tmp)
@@ -258,6 +275,7 @@ def main() -> int:
         distinct_results = distinct_states_not_collapsible(binaries)
         task_creation_results = no_per_demand_task_creation(binaries)
         buffered_results = buffered_value_survives_source_completion(binaries)
+        overcount_results = surplus_source_count_does_not_strand_relay(binaries)
         control_results = control_simple_demand_then_yield(binaries)
 
         print("=== every_continuation_resumed_exactly_once_under_cancellation ===")
@@ -274,6 +292,9 @@ def main() -> int:
         print("=== buffered_value_survives_source_completion ===")
         for name, ok in buffered_results.items():
             print(f"  {name}: {'delivered then finished' if ok else 'BUFFERED VALUE LOST OR HUNG'}")
+        print("=== surplus_source_count_does_not_strand_relay (control) ===")
+        for name, ok in overcount_results.items():
+            print(f"  {name}: {'terminates' if ok else 'RELAY STRANDED'}")
         print("=== control_simple_demand_then_yield (control) ===")
         for name, ok in control_results.items():
             print(f"  {name}: {'matches expected sequence' if ok else 'DIVERGES FROM EXPECTED'}")
@@ -314,6 +335,13 @@ def main() -> int:
                 failures.append(
                     f"{name}: expected buffered_value_survives_source_completion={expected}, "
                     f"got {buffered_results.get(name)}"
+                )
+
+        for name in VARIANTS:
+            if overcount_results.get(name) is not True:
+                failures.append(
+                    f"{name}: surplus_source_count_does_not_strand_relay must hold, "
+                    f"got {overcount_results.get(name)}"
                 )
 
         for name in VARIANTS:

@@ -86,6 +86,14 @@
       "variant_expected_to_fail": "task-per-demand"
     },
     {
+      "name": "buffered_value_survives_source_completion",
+      "variant_expected_to_fail": "collapsed-suspension-flag"
+    },
+    {
+      "name": "surplus_source_count_does_not_strand_relay",
+      "variant_expected_to_fail": null
+    },
+    {
       "name": "control_simple_demand_then_yield",
       "variant_expected_to_fail": null
     }
