@@ -1,0 +1,75 @@
+Only in v2-d1a: .pytest_cache
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/settings.py v2-d1a/settings.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/settings.py	2026-08-26 20:28:41
++++ v2-d1a/settings.py	2026-08-28 09:50:42
+@@ -13,22 +13,30 @@
+ 
+ ORDER = ("env", "project", "user")
+ 
++_MISSING = object()
+ 
++
++def _resolve(key, env, project, user):
++    """Return (layer_name, value) for the first layer in ORDER carrying key.
++
++    "Carries" means the key is present, per the module contract above: an
++    explicit empty string is a deliberate override, not an absence. Both
++    public functions below resolve through this one check so they cannot
++    disagree about which layer wins.
++    """
++    for name, layer in zip(ORDER, (env, project, user)):
++        if key in layer:
++            return name, layer[key]
++    return None, _MISSING
++
++
+ def effective_value(key, env, project, user, defaults):
+-    if key in env:
+-        return env[key]
+-    if key in project:
+-        return project[key]
+-    if key in user:
+-        return user[key]
+-    return defaults.get(key)
++    _, value = _resolve(key, env, project, user)
++    if value is _MISSING:
++        return defaults.get(key)
++    return value
+ 
+ 
+ def describe_source(key, env, project, user, defaults):
+-    if env.get(key):
+-        return "env"
+-    if project.get(key):
+-        return "project"
+-    if user.get(key):
+-        return "user"
+-    return "default"
++    name, _ = _resolve(key, env, project, user)
++    return name or "default"
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/test_settings.py v2-d1a/test_settings.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/test_settings.py	2026-08-26 20:33:33
++++ v2-d1a/test_settings.py	2026-08-28 09:50:47
+@@ -31,6 +31,22 @@
+     assert _call(settings.describe_source, "mode", user={"mode": "slow"}) == "user"
+ 
+ 
++def test_empty_string_is_a_deliberate_override():
++    assert _call(settings.effective_value, "mode", env={"mode": ""}) == ""
++    assert _call(settings.describe_source, "mode", env={"mode": ""}) == "env"
++
++
++def test_project_beats_user():
++    assert (
++        _call(settings.effective_value, "retries", project={"retries": "5"}, user={"retries": "1"})
++        == "5"
++    )
++    assert (
++        _call(settings.describe_source, "retries", project={"retries": "5"}, user={"retries": "1"})
++        == "project"
++    )
++
++
+ if __name__ == "__main__":
+     for name, fn in sorted(globals().items()):
+         if name.startswith("test_"):

@@ -1,0 +1,20 @@
+--- /Users/Shared/git/agent-skills/contest-refactor/references/method.md	2026-08-24 23:47:13
++++ /private/tmp/claude-502/-Users-Shared-git-agent-skills/051852b6-ffb7-44f6-9d95-881320b484b5/scratchpad/spt-q3/prose/method.md	2026-08-28 09:46:52
+@@ -108,7 +108,7 @@
+ 
+ 1. Does it fix real ambiguity?
+ 2. Is it the smallest honest fix?
+-3. Does it avoid duplicate layers?
++3. Does it avoid duplicate layers? Count owners: for each question the finding names, how many code paths answer it after the fix? More than one owner of the same question — whether the fix added the second owner or left an existing pair standing — is a "no".
+ 4. Does runtime behavior remain honest?
+ 5. Does the product improve — measurably, and by more than the item you are declining?
+ 
+@@ -118,6 +118,8 @@
+ 
+ **Q5 is the leverage question.** The other four ask whether a fix is honest; Q5 asks whether it is worth doing *now*, and it fails two ways. The gain is not nameable — say which dimension moves and by how much in the `score_impact` shape (G39); "it is tidier" is not a product improvement. Or the gain is real but smaller than what you are declining, and the concrete case there is repetition: when prior fixes of the **same defect class in the same file** moved the target dimension zero, one more instance samples the class instead of closing it. Downgrade to closing it — sweep that file for the shape and fix the instances together, or take the systemic fix — or take the higher-gain backlog item. Key that on the class (`category_hint` + `primary_file` in the registry), never on `stable_id`: each instance is a fresh finding with a fresh id, so an id-keyed check never fires. This is not a bar on small fixes; it is a bar on the *fifth* small fix that has stopped moving anything.
+ 
++**Q3 counts owners.** A question is a decision the module makes that callers observe: which layer wins, what "carries" means, in what order things resolve. Two sites own the same question when a demonstrated disagreement between them is a bug — drift with a repro — or when a documented contract obliges each to give the same answer independently. When that is proven, a symptom repair that restores agreement today still leaves the owner count at two and fails Q3; the honest fix is the one that ends with exactly one owner. That consolidation is not ceremony (Q2): the parallel cascades are the defect, not the cost. Its gain is measurable (Q5): the demonstrated drift class becomes impossible, with the repro as evidence. Serving different callers does not make it a different question — two functions backing different commands still need one owner if they must agree. The guard is Q4 and the owner count itself: sites that answer different questions, or that may legitimately diverge, have owner count one each — collapsing them changes behavior and fails the test.
++
+ The **Step-3 reviewer answers Q5 without the comparison.** It sees a diff, not the backlog or `findings_registry.json`, so it can judge whether this change improves the product and cannot judge what it displaced — asking it to would be asking it to guess. The comparative half belongs to whoever holds the backlog: Step 2, and the Critic's Adversarial Pass.
+ 
+ **Fake-clean fix anti-examples** (each fails SPT; all observed in production loops):

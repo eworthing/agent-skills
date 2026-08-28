@@ -1,0 +1,48 @@
+Only in v2-pyt: .pytest_cache
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pytest-scope-enum-public-compat/enum-with-compat-property/lifespan.py v2-pyt/lifespan.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pytest-scope-enum-public-compat/enum-with-compat-property/lifespan.py	2026-08-26 07:34:44
++++ v2-pyt/lifespan.py	2026-08-28 10:22:33
+@@ -29,8 +29,7 @@
+     def __lt__(self, other: Span) -> bool:
+         if self.__class__ is not other.__class__:
+             return NotImplemented
+-        order = list(self.__class__)
+-        return order.index(self) < order.index(other)
++        return SPANS.index(self) < SPANS.index(other)
+ 
+ 
+ SPANS = list(Span)
+@@ -38,10 +37,6 @@
+ 
+ def span_from_value(value: str) -> Span:
+     return Span(value)
+-
+-
+-def value_of(span: Span) -> str:
+-    return span.value
+ 
+ 
+ def higher(a: Span, b: Span) -> Span:
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pytest-scope-enum-public-compat/enum-with-compat-property/test_lifespan.py v2-pyt/test_lifespan.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pytest-scope-enum-public-compat/enum-with-compat-property/test_lifespan.py	2026-08-26 14:01:42
++++ v2-pyt/test_lifespan.py	2026-08-28 10:22:47
+@@ -26,6 +26,11 @@
+     assert next_up(first) != first
+ 
+ 
++def test_next_up_returns_immediate_successor() -> None:
++    for i, span in enumerate(SPANS[:-1]):
++        assert next_up(span) == SPANS[i + 1], (span, next_up(span))
++
++
+ def test_handle_carries_its_target() -> None:
+     sentinel = object()
+     handle = Handle(span_from_value("step"), target=sentinel)
+@@ -61,6 +66,7 @@
+ def main() -> int:
+     test_next_up_clamps_at_the_top()
+     test_next_up_moves_forward()
++    test_next_up_returns_immediate_successor()
+     test_handle_carries_its_target()
+     test_public_span_compares_as_string()
+     test_public_span_works_as_a_dict_key()

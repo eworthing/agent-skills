@@ -1,0 +1,26 @@
+Only in v2-d2: .pytest_cache
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/auth-unusable-password-policy/sentinel-marked-no-credential/test_credential_policy.py v2-d2/test_credential_policy.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/auth-unusable-password-policy/sentinel-marked-no-credential/test_credential_policy.py	2026-08-26 14:01:42
++++ v2-d2/test_credential_policy.py	2026-08-28 10:01:29
+@@ -29,10 +29,21 @@
+     assert isinstance(marker, str)
+ 
+ 
++def test_no_local_credential_marker_never_verifies() -> None:
++    marker = mark_no_local_credential()
++    assert verify_credential(marker, "anything") is False
++
++
++def test_missing_credential_never_verifies() -> None:
++    assert verify_credential(None, "anything") is False
++
++
+ def main() -> int:
+     test_correct_credential_verifies()
+     test_wrong_credential_fails()
+     test_no_local_credential_marker_exists()
++    test_no_local_credential_marker_never_verifies()
++    test_missing_credential_never_verifies()
+     print("OK: test_credential_policy.py")
+     return 0
+ 

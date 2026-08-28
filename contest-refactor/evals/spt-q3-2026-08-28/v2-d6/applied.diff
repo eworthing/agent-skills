@@ -1,0 +1,58 @@
+Only in v2-d6: .pytest_cache
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/cpython-genexpr-iterability/lazy-consistent/test_lazyselect.py v2-d6/test_lazyselect.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/cpython-genexpr-iterability/lazy-consistent/test_lazyselect.py	2026-08-26 14:01:42
++++ v2-d6/test_lazyselect.py	2026-08-28 10:30:26
+@@ -6,6 +6,7 @@
+ 
+ from __future__ import annotations
+ 
++import itertools
+ import sys
+ from pathlib import Path
+ 
+@@ -38,10 +39,45 @@
+         raise AssertionError("expected TypeError once iteration begins")
+ 
+ 
++def test_reiterates_source_fresh() -> None:
++    """The module docstring's central promise: the same LazySelect can be
++    consumed more than once, re-reading `source` fresh each time. Guards
++    against a regression that moves the `iter(self._source)` call from
++    `__iter__` into `__init__`, which would silently exhaust the source on
++    the first pass and starve every subsequent one."""
++    ls = LazySelect(range(6), lambda x: x % 2 == 0)
++    first = list(ls)
++    second = list(ls)
++    assert first == [0, 2, 4], first
++    assert second == [0, 2, 4], second
++
++
++def test_only_pulls_what_is_consumed() -> None:
++    """LazySelect is lazy, not just deferred-eager: consuming a small prefix
++    must not force the rest of `source`. An implementation that filters
++    eagerly (e.g. builds a list comprehension up front) would still pass
++    every other test in this file -- they all use small finite ranges where
++    eager and lazy filtering produce the same result -- so this test uses a
++    source two orders of magnitude larger than what gets consumed to make
++    an eager rewrite fail loudly instead of slipping through unnoticed."""
++    pulled: list[int] = []
++
++    def source():
++        for i in range(1_000_000):
++            pulled.append(i)
++            yield i
++
++    result = list(itertools.islice(LazySelect(source(), lambda x: x % 2 == 0), 3))
++    assert result == [0, 2, 4], result
++    assert len(pulled) < 1000, len(pulled)
++
++
+ def main() -> int:
+     test_filters_with_predicate()
+     test_passes_through_without_predicate()
+     test_iterability_check_is_lazy()
++    test_reiterates_source_fresh()
++    test_only_pulls_what_is_consumed()
+     print("OK: test_lazyselect.py")
+     return 0
+ 

@@ -1,0 +1,58 @@
+Only in v2-pyd: .pytest_cache
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pydantic-typing-extra/dual-registry-split/fieldspec.py v2-pyd/fieldspec.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pydantic-typing-extra/dual-registry-split/fieldspec.py	2026-08-27 15:06:11
++++ v2-pyd/fieldspec.py	2026-08-28 10:15:17
+@@ -17,7 +17,6 @@
+ 
+ import markers_legacy
+ import markers_native
+-from tags import _TaggedAlias
+ 
+ _MARKER_MODULES = (markers_native, markers_legacy)
+ 
+@@ -68,7 +67,7 @@
+     Unwraps a `Tagged[...]` wrapper and falls back to matching the raw
+     source text when `tp` is an unresolved forward reference.
+     """
+-    if isinstance(tp, _TaggedAlias):
++    if hasattr(tp, "__tagged_type__"):
+         tp = tp.__tagged_type__
+     if is_derived_marker(tp):
+         return True
+@@ -77,7 +76,10 @@
+ 
+ def _resolve(source: str, namespace: dict[str, object]) -> object:
+     try:
+-        return eval(source, namespace)
++        # `eval(source, ns)` injects `__builtins__` into `ns` when it's
++        # missing -- eval a copy so a caller's namespace is never mutated
++        # as an undocumented side effect.
++        return eval(source, dict(namespace))
+     except NameError:
+         return _Unresolved(source)
+ 
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pydantic-typing-extra/dual-registry-split/test_fieldspec.py v2-pyd/test_fieldspec.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/pydantic-typing-extra/dual-registry-split/test_fieldspec.py	2026-08-26 14:01:42
++++ v2-pyd/test_fieldspec.py	2026-08-28 10:15:25
+@@ -55,6 +55,13 @@
+     assert is_derived_annotation(Tagged[NativeDerived[int], "cache"])
+ 
+ 
++def test_stored_field_names_does_not_mutate_namespace() -> None:
++    namespace = dict(NAMESPACE)
++    before_keys = set(namespace)
++    stored_field_names({"total": "int", "cached_total": "Derived[int]"}, namespace)
++    assert set(namespace) == before_keys, namespace
++
++
+ def main() -> int:
+     test_plain_field_is_stored()
+     test_bare_derived_field_is_excluded()
+@@ -63,6 +70,7 @@
+     test_bare_forward_ref_derived_field_is_excluded()
+     test_is_derived_marker_recognizes_both_registries()
+     test_is_derived_annotation_sees_through_tagged()
++    test_stored_field_names_does_not_mutate_namespace()
+     print("OK: test_fieldspec.py")
+     return 0
+ 

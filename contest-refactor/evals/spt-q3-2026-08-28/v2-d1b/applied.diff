@@ -1,0 +1,74 @@
+Only in v2-d1b: .pytest_cache
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/settings.py v2-d1b/settings.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/settings.py	2026-08-26 20:28:41
++++ v2-d1b/settings.py	2026-08-28 09:55:27
+@@ -14,21 +14,27 @@
+ ORDER = ("env", "project", "user")
+ 
+ 
++def _carrier(key, env, project, user):
++    """Name of the first layer (in ORDER) that carries key, or None.
++
++    "Carries" means present, whatever the value -- this is the single
++    predicate both effective_value and describe_source defer to, so they
++    cannot disagree about which layer wins.
++    """
++    layers = {"env": env, "project": project, "user": user}
++    for name in ORDER:
++        if key in layers[name]:
++            return name
++    return None
++
++
+ def effective_value(key, env, project, user, defaults):
+-    if key in env:
+-        return env[key]
+-    if key in project:
+-        return project[key]
+-    if key in user:
+-        return user[key]
++    layers = {"env": env, "project": project, "user": user}
++    name = _carrier(key, env, project, user)
++    if name is not None:
++        return layers[name][key]
+     return defaults.get(key)
+ 
+ 
+ def describe_source(key, env, project, user, defaults):
+-    if env.get(key):
+-        return "env"
+-    if project.get(key):
+-        return "project"
+-    if user.get(key):
+-        return "user"
+-    return "default"
++    return _carrier(key, env, project, user) or "default"
+diff -ru -x RUN_REPORT.md -x __pycache__ /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/test_settings.py v2-d1b/test_settings.py
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/test_settings.py	2026-08-26 20:33:33
++++ v2-d1b/test_settings.py	2026-08-28 09:55:32
+@@ -31,6 +31,25 @@
+     assert _call(settings.describe_source, "mode", user={"mode": "slow"}) == "user"
+ 
+ 
++def test_empty_string_override_is_carried_not_default():
++    # An explicit empty string is a deliberate override per the module
++    # docstring, not an absence -- both functions must agree it came from env.
++    assert _call(settings.effective_value, "retries", env={"retries": ""}) == ""
++    assert _call(settings.describe_source, "retries", env={"retries": ""}) == "env"
++
++
++def test_empty_string_override_still_beats_lower_layer():
++    assert (
++        _call(
++            settings.describe_source,
++            "retries",
++            env={"retries": ""},
++            project={"retries": "5"},
++        )
++        == "env"
++    )
++
++
+ if __name__ == "__main__":
+     for name, fn in sorted(globals().items()):
+         if name.startswith("test_"):
