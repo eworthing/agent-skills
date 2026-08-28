@@ -1,0 +1,48 @@
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/settings.py	2026-08-26 20:28:41
++++ /private/tmp/claude-502/-Users-Shared-git-agent-skills/051852b6-ffb7-44f6-9d95-881320b484b5/scratchpad/spt-q3/t-d1a/settings.py	2026-08-28 09:36:31
+@@ -25,10 +25,10 @@
+ 
+ 
+ def describe_source(key, env, project, user, defaults):
+-    if env.get(key):
++    if key in env:
+         return "env"
+-    if project.get(key):
++    if key in project:
+         return "project"
+-    if user.get(key):
++    if key in user:
+         return "user"
+     return "default"
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/test_settings.py	2026-08-26 20:33:33
++++ /private/tmp/claude-502/-Users-Shared-git-agent-skills/051852b6-ffb7-44f6-9d95-881320b484b5/scratchpad/spt-q3/t-d1a/test_settings.py	2026-08-28 09:36:37
+@@ -31,6 +31,29 @@
+     assert _call(settings.describe_source, "mode", user={"mode": "slow"}) == "user"
+ 
+ 
++def test_falsy_override_still_counts_as_carried():
++    # A layer that explicitly sets a key to "" is a deliberate override, not an
++    # absence (per settings.py's module docstring) -- effective_value and
++    # describe_source must agree on that.
++    assert _call(settings.effective_value, "retries", env={"retries": ""}) == ""
++    assert _call(settings.describe_source, "retries", env={"retries": ""}) == "env"
++
++
++def test_project_beats_user():
++    assert (
++        _call(
++            settings.effective_value, "retries", project={"retries": "5"}, user={"retries": "1"}
++        )
++        == "5"
++    )
++    assert (
++        _call(
++            settings.describe_source, "retries", project={"retries": "5"}, user={"retries": "1"}
++        )
++        == "project"
++    )
++
++
+ if __name__ == "__main__":
+     for name, fn in sorted(globals().items()):
+         if name.startswith("test_"):

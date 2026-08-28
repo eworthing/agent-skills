@@ -1,0 +1,61 @@
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/settings.py	2026-08-26 20:28:41
++++ /private/tmp/claude-502/-Users-Shared-git-agent-skills/051852b6-ffb7-44f6-9d95-881320b484b5/scratchpad/spt-q3/t-d1b/settings.py	2026-08-28 09:41:43
+@@ -14,21 +14,26 @@
+ ORDER = ("env", "project", "user")
+ 
+ 
++def _find(key, env, project, user):
++    """Return (layer_name, layer_dict) for the first layer carrying `key`.
++
++    A layer "carries" a key when the key is present, whatever the value --
++    matching the "carries" contract in the module docstring. Returns
++    (None, None) when no layer carries the key.
++    """
++    for name, layer in zip(ORDER, (env, project, user)):
++        if key in layer:
++            return name, layer
++    return None, None
++
++
+ def effective_value(key, env, project, user, defaults):
+-    if key in env:
+-        return env[key]
+-    if key in project:
+-        return project[key]
+-    if key in user:
+-        return user[key]
+-    return defaults.get(key)
++    _, layer = _find(key, env, project, user)
++    if layer is None:
++        return defaults.get(key)
++    return layer[key]
+ 
+ 
+ def describe_source(key, env, project, user, defaults):
+-    if env.get(key):
+-        return "env"
+-    if project.get(key):
+-        return "project"
+-    if user.get(key):
+-        return "user"
+-    return "default"
++    name, _ = _find(key, env, project, user)
++    return name or "default"
+--- /Users/Shared/git/agent-skills/contest-refactor/evals/gold-corpus/config-precedence-duplicate-authority/two-owners-drifted/test_settings.py	2026-08-26 20:33:33
++++ /private/tmp/claude-502/-Users-Shared-git-agent-skills/051852b6-ffb7-44f6-9d95-881320b484b5/scratchpad/spt-q3/t-d1b/test_settings.py	2026-08-28 09:41:49
+@@ -31,6 +31,15 @@
+     assert _call(settings.describe_source, "mode", user={"mode": "slow"}) == "user"
+ 
+ 
++def test_empty_string_override_is_carried():
++    # Per the module docstring: a layer "carries" a key when the key is
++    # present, whatever the value -- an explicit empty string is a
++    # deliberate override, not an absence. effective_value and
++    # describe_source must agree on which layer produced it.
++    assert _call(settings.effective_value, "mode", env={"mode": ""}) == ""
++    assert _call(settings.describe_source, "mode", env={"mode": ""}) == "env"
++
++
+ if __name__ == "__main__":
+     for name, fn in sorted(globals().items()):
+         if name.startswith("test_"):
