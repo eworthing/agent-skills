@@ -4,9 +4,11 @@
 went five rounds with codex/gpt-5.6-sol (blocking 10 → 8 → 6 → 4 → 3); the ten
 decisions in §1 then went four rounds with opencode/glm-5.3 (D1–D9 accepted and
 stable across three consecutive rounds; D10 revised each round). A fifth decision
-round timed out twice with no output and was abandoned, so D10's final state is
-reviewed through round 4 and confirmed by nothing later. Not started;
-implementation is gated on Wave 0's approval step.
+round timed out twice with no output and was abandoned; D10's final state is
+reviewed through round 4 and **settled by owner decision**. Full rationale —
+options, verified facts, blast radius per decision — in
+[`assessment-validity-decisions.md`](assessment-validity-decisions.md). Not
+started; implementation is gated on Wave 0's approval step.
 
 **Spec:** [`assessment-validity-improvement-spec.md`](assessment-validity-improvement-spec.md)
 (1,636 lines; opencode/glm-5.3 APPROVED R3, codex/gpt-5.6-sol APPROVED R10)
