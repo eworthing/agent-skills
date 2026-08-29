@@ -75,10 +75,12 @@ note = "Loop commit exists; commit-dependent evidence is resolvable."
 # expected runnable, and silence from it is a finding about the validator.
 
 [deferred.step1-post-write]
-gates = ["G18", "G43", "G48", "transition-legality",
+gates = ["required-artifact",
+         "G18", "G43", "G48", "transition-legality",
          "G16", "G30", "G31", "retirement-rule",
          "G22", "G32", "G47"]
 reasons = [
+  "required-artifact demands REVIEW_HISTORY.json, which does not exist until archive",
   "G18/G43/G48/transition-legality read HIST, which is one loop behind until archive",
   "G16/G30/G31/retirement-rule read REG, not yet updated for this loop",
   "G22 reads the archive divider in REVIEW_HISTORY.md, written at archive",
@@ -87,8 +89,10 @@ reasons = [
 ]
 
 [deferred.step3-prearchive]
-gates = ["G18", "G43", "G48", "transition-legality", "G22", "G32", "G47"]
+gates = ["required-artifact",
+         "G18", "G43", "G48", "transition-legality", "G22", "G32", "G47"]
 reasons = [
+  "required-artifact demands REVIEW_HISTORY.json, which does not exist until archive",
   "HIST is still one loop behind until archive",
   "G22's divider is written at archive",
   "G32 needs the challenge; G47 needs linked execution evidence",

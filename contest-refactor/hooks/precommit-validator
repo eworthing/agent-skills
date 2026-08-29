@@ -23,7 +23,11 @@
 
 set -u
 
-PHASE="postchallenge-precommit"
+# The phase is INFERRED from the artifact, never assumed. A loop commits at
+# several points; validating a mid-loop commit at the strictest phase would
+# block a correct commit for a gate whose input does not exist yet -- the phase
+# model's own defect, inverted. Override for testing: CONTEST_REFACTOR_HOOK_PHASE.
+DEFAULT_PHASE="step3-prearchive"
 SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VALIDATOR="$SKILL_ROOT/scripts/validate-artifact.py"
 
@@ -43,7 +47,7 @@ if [ "${1:-}" = "--health" ]; then
   else
     printf '  python3    : MISSING\n'; status=1
   fi
-  printf '  phase      : %s\n' "$PHASE"
+  printf '  phase      : inferred per artifact (default %s)\n' "$DEFAULT_PHASE"
   # A hook that is not registered cannot fire. Report that distinctly from a
   # validation failure -- the register's "distinguish missing hook from failure"
   # design item.
@@ -135,6 +139,41 @@ print(d.get("cwd") or "")
 if [ ! -f "$CWD/CURRENT_REVIEW.json" ]; then
   exit 0
 fi
+
+PHASE=$(printf '%s' "${CONTEST_REFACTOR_HOOK_PHASE:-}" )
+if [ -z "$PHASE" ]; then
+  PHASE=$(python3 - "$CWD" "$DEFAULT_PHASE" <<'PYIN' 2>/dev/null
+import json, sys
+from pathlib import Path
+
+cwd, default = Path(sys.argv[1]), sys.argv[2]
+try:
+    cr = json.loads((cwd / "CURRENT_REVIEW.json").read_text(encoding="utf-8"))
+except Exception:
+    # Unreadable artifact: pick the phase that defers MOST, so a malformed file
+    # is judged by the validator on its merits rather than blocked for gates
+    # whose inputs may not exist. Validation still runs.
+    print("step1-post-write")
+    raise SystemExit(0)
+
+# Phase is inferred from STRUCTURAL facts only -- which files exist -- never
+# from whether their contents AGREE. Content agreement is what the gates
+# themselves check: G18 asks "does history match current". Inferring the phase
+# from that same question is circular, and lets a broken artifact evade the gate
+# by looking earlier than it is. Measured: a fixture whose history holds 3 loops
+# while current_review.loop == 4 (exactly G18's defect) was classified
+# pre-archive and its real failure deferred.
+hist_path = cwd / "REVIEW_HISTORY.json"
+if not hist_path.is_file():
+    print(default)
+    raise SystemExit(0)
+
+# History exists: we are at or past archive. Whether it AGREES is G18's job.
+print("postchallenge-precommit" if cr.get("halt_success_challenge") else "postarchive")
+PYIN
+)
+fi
+[ -n "$PHASE" ] || PHASE="$DEFAULT_PHASE"
 
 if [ ! -f "$VALIDATOR" ]; then
   emit "contest-refactor hook: validator missing at $VALIDATOR — blocking fail-closed."

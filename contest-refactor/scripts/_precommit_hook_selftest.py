@@ -118,6 +118,32 @@ def main() -> int:
             assert "--probe" in proc.stdout, "health must point at the activation probe"
             checks += 1
 
+    # --- phase inference -----------------------------------------------------
+    with tempfile.TemporaryDirectory() as tmp:
+        # 9. A mid-loop commit, before history is appended, must be ALLOWED.
+        #    The loop commits at several points; judging every commit at the
+        #    strictest phase blocks a correct commit for a gate whose input does
+        #    not exist yet -- the phase model's own defect, inverted.
+        mid = Path(tmp) / "midloop"
+        shutil.copytree(FIXTURES / "v3-clean-loop", mid)
+        (mid / "REVIEW_HISTORY.json").unlink()
+        rc, out = run(payload("git commit -m 'loop 1: mid-loop'", str(mid)))
+        assert rc == 0, f"a pre-archive commit must not be blocked: {out}"
+        checks += 1
+
+        # 10. REGRESSION. Phase must be inferred from STRUCTURAL facts (which
+        #     files exist), never from whether their contents agree -- content
+        #     agreement is what the gates check. Inferring phase from "does
+        #     history match current" is circular and lets a broken artifact
+        #     evade G18 by looking pre-archive. This fixture is exactly that
+        #     shape: history holds fewer loops than current_review.loop.
+        broken = Path(tmp) / "broken"
+        shutil.copytree(FIXTURES / "g43-convergence-pass-missing", broken)
+        rc, out = run(payload("git commit -m 'loop 4: emit'", str(broken)))
+        assert rc == 2, "a broken artifact must not evade the gate via phase inference"
+        assert "postarchive" in out, f"history present means at/after archive: {out}"
+        checks += 1
+
     print(f"_precommit_hook_selftest: OK ({checks} assertions)")
     return 0
 

@@ -22,7 +22,7 @@ import _canon  # type: ignore[import-not-found]
 
 PHASES_FILE = SKILL_ROOT / "canon" / "validator-phases.toml"
 # Rule ids the validator emits that are not `G<n>` gate-registry ids.
-NON_GATE_RULES = {"transition-legality", "retirement-rule"}
+NON_GATE_RULES = {"transition-legality", "retirement-rule", "required-artifact"}
 
 
 def load() -> dict:
