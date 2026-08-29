@@ -155,3 +155,54 @@ against `REVIEW_HISTORY.json`, which is not appended until archive, so a
 mid-loop `G18` failure is an artifact of phase, not a defect. Deriving that
 dimension needs no new runs: the sweep already materializes each state's file
 list (`files` per row), which is the raw input.
+
+## 6. The phase dimension — and a correction
+
+Deriving the second dimension from the same sweep (each row records the files
+present at that state) produced a result that **falsifies the prediction stated
+in §5**, and the correction matters more than the original claim.
+
+§5 predicted that a gate whose input file is absent would *fail* at that phase —
+`G18` compares `CURRENT_REVIEW.json` against `REVIEW_HISTORY.json`, so a mid-loop
+`G18` failure would be "phase, not defect". Measured across the 82 states:
+
+| | states missing `REVIEW_HISTORY.json` | states with it |
+| --- | --- | --- |
+| `G18` fires | **0 / 8** | 24 / 65 (37%) |
+| distinct gates firing | **1** (`G5` only) | 24 |
+| mean issues per state | 3.5 | 5.2 |
+
+`G18` does not fail without its input. **It goes silent.** So do roughly twenty
+other gates: on the eight incomplete states, `G5` is the only rule that fires at
+all (28 issues), while `G18`, `G19`, `G21-scorecard`, `G32`, `evidence-chain` and
+the rest never execute. The validator still exits 1 — but on a single narrow
+rule, with most of its battery having quietly not run.
+
+### The design constraint this produces
+
+**A phase with incomplete inputs looks cleaner than a phase with complete ones,
+for the wrong reason.** Fewer gates can execute, so fewer issues are reported,
+so the artifact appears healthier mid-loop than at terminal. Any five-phase
+validator that simply runs the battery per phase inherits this directly.
+
+So the phase configuration cannot be a gate *list* alone. Each phase must declare
+which gates are **expected runnable** there, and a gate that produced no finding
+because its input was absent must be reported as **skipped-for-phase**, never
+folded into a pass. Otherwise the hook reports "clean" at exactly the phases
+where it checked least.
+
+This is the same defect class the assessment-validity research documented from a
+competitor (losing coverage *raised* the grade) and that schema v6 answers with
+derived validity plus missing-critical-coverage invalidation — found here in this
+repo's own tooling, by measurement rather than by argument. The two projects want
+the same invariant: **absence of a finding is not evidence of compliance unless
+the check actually ran.**
+
+### Status of deliverable 1
+
+- **state→gate dimension: collected** (§5), sparse and usable.
+- **phase→runnability dimension: derived** (this section) — the mechanism is
+  silence, not failure, and it is measured on 82 real states.
+- **Still owed:** the per-phase *expected-runnable* declaration itself, which is
+  a design decision rather than a measurement, and the skipped-for-phase
+  reporting channel in the validator. Both belong to the funded build.
