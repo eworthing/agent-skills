@@ -82,10 +82,13 @@ Three attempts to test it produced no evidence:
 2. Model `deepseek-v4-flash` returned HTTP 403: China-hosted, requires workspace opt-in.
 3. `glm-5.3` hung for **70 minutes with zero bytes written**, and was killed.
 
+4. **Health probe** — a bare `Reply with exactly: OK` prompt, no repo, no
+   plugin, 90-second deadline: hung, **zero bytes**, killed (exit 137).
+
 Attempt 3 matches an earlier failure the same day: a peer-review round on the
-same provider/model timed out twice at 30 minutes with nothing streamed. Two
-independent hangs, one with a two-sentence prompt against an empty repo, indicate
-the environment — plausibly quota exhaustion presenting as a hang — rather than
+same provider/model timed out twice at 30 minutes with nothing streamed. Four
+independent hangs, the last on a two-word prompt with no plugin and no
+repository, indicate the environment — plausibly quota exhaustion presenting as a hang — rather than
 anything about the plugin API. **The opencode demonstration is deferred, not
 failed**, and remains the register's stated priority because opencode is the
 production runner.
@@ -111,3 +114,44 @@ and a `hooks.json` registering a `PreToolUse` hook on matcher `.*`; a stub that
 reads stdin, extracts `tool_input.command`, and exits 2 with a stderr message on
 `git commit`; a scratch repo with one staged file; `codex exec
 --dangerously-bypass-hook-trust`.
+
+## 5. Validator deliverable 1 — the state→gate dimension is already collected
+
+The register's first validator deliverable is "the phase-to-gate matrix and
+expected artifact state per phase". Half of it exists as data:
+`run-kit/reports/benchhype-posthoc-sweep-2026-08-21.json` holds **82 artifact
+states** from BenchHype's real history (May→Aug, 4 runs), each validated by
+subprocessing the shipped `validate-artifact.py`, with **24 distinct gates**
+firing across them.
+
+Cross-tabulating gate against emitted artifact state shows the mapping is
+genuinely sparse — the validator does not need every gate at every phase:
+
+| Gate | Where it fires (artifact state) | Reading |
+| --- | --- | --- |
+| `G37` | `HALT_STAGNATION`=11, `HALT_LOOP_CAP`=1 | terminal-only |
+| `G21-scorecard` | `HALT_SUCCESS`=9, `HALT_SUCCESS_candidate`=9 | success-terminal only |
+| `evidence-chain` | `CONTINUE`=12, `HALT_SUCCESS_candidate`=12 | pre-terminal |
+| `transition-legality` | `HALT_LOOP_CAP`=8, `CONTINUE`=7, `HALT_STAGNATION`=6 | transition points |
+| `G5`, `G18`, `G19` | every state | universal |
+
+State distribution across the 82: `CONTINUE`=32, `HALT_SUCCESS`=18,
+`HALT_STAGNATION`=12, none=11, `HALT_SUCCESS_candidate`=6, `HALT_LOOP_CAP`=3.
+
+**Interpretation rule, carried from the sweep itself:** these counts include
+EPOCH OBSERVATIONS — a strict failure on an artifact written before a gate
+shipped is not a violation by the run. The table therefore maps **applicability
+per state**, not defect rates.
+
+### What is still missing
+
+Emitted artifact *state* is not the same axis as validator *phase*
+(`step1-post-write | step3-prearchive | postarchive | postchallenge-precommit |
+postcommit`). This data supplies the **state→gate** dimension. The
+**phase→artifact-availability** dimension is still owed: which files exist at
+each phase, and therefore which gates are structurally unrunnable there rather
+than failing. `G18` is the worked example — it compares `CURRENT_REVIEW.json`
+against `REVIEW_HISTORY.json`, which is not appended until archive, so a
+mid-loop `G18` failure is an artifact of phase, not a defect. Deriving that
+dimension needs no new runs: the sweep already materializes each state's file
+list (`files` per row), which is the raw input.
