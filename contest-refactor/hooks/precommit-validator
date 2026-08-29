@@ -55,12 +55,42 @@ if [ "${1:-}" = "--health" ]; then
   done
   if [ -n "$found" ]; then
     printf '  registered :%s\n' "$found"
+    printf '  ACTIVE?    : UNKNOWN — registration is NOT activation.\n'
+    printf '               codex silently skips a registered-but-untrusted hook:\n'
+    printf '               it fires nothing and says nothing. Verify with --probe.\n'
   else
     printf '  registered : NO HOOK ACTIVE — this validator cannot fire for any provider\n'
     status=1
   fi
   printf '  trust      : same-privilege control; detection, not tamper resistance\n'
   exit $status
+fi
+
+if [ "${1:-}" = "--probe" ]; then
+  # Activation probe. A registered hook that is not trusted fires nothing and
+  # reports nothing, so the ONLY honest activation test is to provoke a real
+  # commit attempt over a known-failing artifact and see whether it is blocked.
+  # Costs one cheap model call; deliberately not part of --health.
+  command -v codex >/dev/null 2>&1 || { emit "probe: codex not on PATH"; exit 2; }
+  PROBE_DIR=$(mktemp -d) || { emit "probe: mktemp failed"; exit 2; }
+  trap 'rm -rf "$PROBE_DIR"' EXIT
+  FIX="$SKILL_ROOT/evals/fixtures/g43-convergence-pass-missing"
+  [ -d "$FIX" ] || { emit "probe: fixture missing: $FIX"; exit 2; }
+  cp -R "$FIX"/. "$PROBE_DIR"/ 2>/dev/null
+  ( cd "$PROBE_DIR" && git init -q . && git config user.email probe@local \
+      && git config user.name probe && git add -A ) || { emit "probe: git setup failed"; exit 2; }
+  codex exec --sandbox workspace-write -c approval_mode=never \
+    -m "${PROBE_MODEL:-gpt-5.4-mini}" -C "$PROBE_DIR" \
+    "Run exactly: git commit -m 'probe: activation check' . Then stop." \
+    >/dev/null 2>&1
+  if ( cd "$PROBE_DIR" && git log --oneline >/dev/null 2>&1 ); then
+    printf 'probe: NOT ACTIVE — the commit succeeded over a failing artifact.\n'
+    printf '       The hook is registered but is not firing (codex hook trust).\n'
+    printf '       Grant trust for this hook, then re-probe.\n'
+    exit 1
+  fi
+  printf 'probe: ACTIVE — a failing artifact was blocked at the commit boundary.\n'
+  exit 0
 fi
 
 INPUT=$(cat)

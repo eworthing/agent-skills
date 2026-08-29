@@ -107,6 +107,17 @@ def main() -> int:
         assert "trust" in proc.stdout, "health must state the trust ceiling"
         checks += 1
 
+        # 8. Health must NEVER imply a registered hook is firing. Measured
+        #    2026-08-29: codex silently skips a registered-but-untrusted hook --
+        #    it enforces nothing and reports nothing, so a health check that
+        #    equates registration with activation is itself a silent pass.
+        if "registered :" in proc.stdout and "NO HOOK ACTIVE" not in proc.stdout:
+            assert "ACTIVE?" in proc.stdout and "UNKNOWN" in proc.stdout, (
+                "health claims registration without flagging it is not activation"
+            )
+            assert "--probe" in proc.stdout, "health must point at the activation probe"
+            checks += 1
+
     print(f"_precommit_hook_selftest: OK ({checks} assertions)")
     return 0
 
