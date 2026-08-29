@@ -1,0 +1,107 @@
+# Five-phase validator model (Tier-3 project).
+#
+# WHY THIS FILE EXISTS. `validate-artifact.py` runs its whole battery at once.
+# That is correct at a terminal, committed artifact and wrong everywhere else:
+# measured over 82 real BenchHype artifact states, a state missing
+# REVIEW_HISTORY.json produced findings from exactly ONE rule (G5) while ~20
+# other gates stayed SILENT -- they did not fail for want of their input, they
+# never ran. Mean issues fell 5.2 -> 3.5. So an incomplete phase looks CLEANER
+# than a complete one, which is the "losing coverage raises the grade" defect.
+# Evidence: analysis/contest-refactor/TIER3-PROVIDER-DEMOS-2026-08-28.md section 6.
+#
+# THE RULE THIS FILE ENCODES. A gate that produces no finding because its input
+# was absent MUST be reported as `skipped_for_phase`, never folded into a pass.
+# Each phase therefore declares what it expects to be runnable, so silence can
+# be distinguished from compliance.
+#
+# INPUT SYMBOLS
+#   CR   CURRENT_REVIEW.json         REG  findings_registry.json
+#   HIST REVIEW_HISTORY.json/.md     DIR  the artifact directory itself
+#
+# `fresh` means the artifact reflects THIS loop. A file can be present and
+# stale: on loop 2+ REVIEW_HISTORY.json exists from loop 1 but does not contain
+# the current loop until archive, so history-dependent gates are not merely
+# file-gated, they are freshness-gated. Presence is not readiness.
+#
+# PROVENANCE. Gate-to-input mapping is authoritative -- derived from the
+# `run_checks` call signatures in scripts/validate-artifact.py, not inferred
+# from co-occurrence. (The empirical route was tried and is confounded: only 8
+# of 82 states are incomplete and all share one shape, so co-occurrence cannot
+# separate a real dependency from an accident of sampling.)
+#
+# STATUS. First draft of the per-phase sets. The input mapping is authoritative;
+# the phase ASSIGNMENTS are a design decision that the funded build must
+# validate against per-phase fixtures before any hook enforces them.
+
+schema_version = 1
+
+phases = [
+  "step1-post-write",
+  "step3-prearchive",
+  "postarchive",
+  "postchallenge-precommit",
+  "postcommit",
+]
+
+# --- Input availability per phase -------------------------------------------
+
+[inputs.step1-post-write]
+fresh = ["CR", "DIR"]
+stale = ["REG", "HIST"]
+note = "CURRENT_REVIEW.json written for this loop; the registry is not yet updated and history is not yet appended."
+
+[inputs.step3-prearchive]
+fresh = ["CR", "REG", "DIR"]
+stale = ["HIST"]
+note = "Findings registered for this loop; history still one loop behind."
+
+[inputs.postarchive]
+fresh = ["CR", "REG", "HIST", "DIR"]
+stale = []
+note = "History appended. First phase at which cross-artifact agreement is meaningful."
+
+[inputs.postchallenge-precommit]
+fresh = ["CR", "REG", "HIST", "DIR"]
+stale = []
+note = "Challenge recorded. The commit does not exist yet -- this is the hook's interception point."
+
+[inputs.postcommit]
+fresh = ["CR", "REG", "HIST", "DIR"]
+stale = []
+note = "Loop commit exists; commit-dependent evidence is resolvable."
+
+# --- Gates deferred per phase, each with the input that is not yet fresh ------
+# A deferred gate MUST report `skipped_for_phase`. Anything not deferred is
+# expected runnable, and silence from it is a finding about the validator.
+
+[deferred.step1-post-write]
+gates = ["G18", "G43", "G48", "transition-legality",
+         "G16", "G30", "G31", "retirement-rule",
+         "G22", "G32", "G47"]
+reasons = [
+  "G18/G43/G48/transition-legality read HIST, which is one loop behind until archive",
+  "G16/G30/G31/retirement-rule read REG, not yet updated for this loop",
+  "G22 reads the archive divider in REVIEW_HISTORY.md, written at archive",
+  "G32 needs the independent challenge, which has not run",
+  "G47 cites a wrapped execution whose evidence is linked later in the loop",
+]
+
+[deferred.step3-prearchive]
+gates = ["G18", "G43", "G48", "transition-legality", "G22", "G32", "G47"]
+reasons = [
+  "HIST is still one loop behind until archive",
+  "G22's divider is written at archive",
+  "G32 needs the challenge; G47 needs linked execution evidence",
+]
+
+[deferred.postarchive]
+gates = ["G32", "G47"]
+reasons = ["The challenge has not run; execution evidence is not linked yet"]
+
+[deferred.postchallenge-precommit]
+gates = []
+reasons = ["Full battery is runnable. This is the phase the Tier-3 hook enforces."]
+
+[deferred.postcommit]
+gates = []
+reasons = ["Full battery runnable; G47 resolves against the loop commit (post-hoc phase)."]
