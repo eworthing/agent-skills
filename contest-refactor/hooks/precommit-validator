@@ -1,0 +1,126 @@
+#!/bin/bash
+# Tier-3 pre-commit validator hook (contest-refactor).
+#
+# Fires at the commit boundary with zero model cooperation and fails closed:
+# if the loop's artifact does not pass strict validation at the
+# postchallenge-precommit phase, the commit is blocked and the validator's
+# findings are returned to the model.
+#
+# TRUST CEILING -- state this wherever the hook is described. This is a
+# SAME-PRIVILEGE control. Every supported harness runs hooks as the agent's own
+# OS user from agent-writable config, so it defeats the measured failure (a loop
+# that forgets to invoke the validator -- 0/6 prose fire rate) and does NOT
+# defeat a model that edits or removes this hook. It is detection, not tamper
+# resistance. See analysis/contest-refactor/ITEM14-HOST-ATTESTATION-DESIGN.
+#
+# CONTRACT (verified on claude_code 2026-08-20 and codex 2026-08-28, which share
+# one payload shape): stdin carries JSON with .tool_name and
+# .tool_input.command; exit 2 + stderr blocks the call and returns stderr to the
+# model; exit 0 allows it.
+#
+# Install:  hooks/install-hook.sh <provider>     Health: precommit-validator --health
+# Portable bash 3.2 (macOS) + bash 4+ (Linux): no mapfile, no associative arrays.
+
+set -u
+
+PHASE="postchallenge-precommit"
+SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+VALIDATOR="$SKILL_ROOT/scripts/validate-artifact.py"
+
+emit() { printf '%s\n' "$*" >&2; }
+
+if [ "${1:-}" = "--health" ]; then
+  status=0
+  printf 'contest-refactor pre-commit validator — health\n'
+  printf '  skill root : %s\n' "$SKILL_ROOT"
+  if [ -f "$VALIDATOR" ]; then
+    printf '  validator  : present\n'
+  else
+    printf '  validator  : MISSING (%s)\n' "$VALIDATOR"; status=1
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    printf '  python3    : %s\n' "$(python3 --version 2>&1)"
+  else
+    printf '  python3    : MISSING\n'; status=1
+  fi
+  printf '  phase      : %s\n' "$PHASE"
+  # A hook that is not registered cannot fire. Report that distinctly from a
+  # validation failure -- the register's "distinguish missing hook from failure"
+  # design item.
+  found=""
+  for cfg in "$HOME/.claude/settings.json" "$HOME/.codex/hooks.json"; do
+    if [ -f "$cfg" ] && grep -q "precommit-validator" "$cfg" 2>/dev/null; then
+      found="$found $cfg"
+    fi
+  done
+  if [ -n "$found" ]; then
+    printf '  registered :%s\n' "$found"
+  else
+    printf '  registered : NO HOOK ACTIVE — this validator cannot fire for any provider\n'
+    status=1
+  fi
+  printf '  trust      : same-privilege control; detection, not tamper resistance\n'
+  exit $status
+fi
+
+INPUT=$(cat)
+
+CMD=$(printf '%s' "$INPUT" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+ti = d.get("tool_input") or {}
+c = ti.get("command")
+print(c if isinstance(c, str) else "")
+' 2>/dev/null)
+
+# A payload we cannot parse is NOT silently allowed: it would disable this hook
+# invisibly if the provider changed its shape. We warn loudly and allow, because
+# blocking every tool call on a parse error bricks the session -- worse than a
+# missed check. The warning is the detection signal.
+if [ -z "$CMD" ] && ! printf '%s' "$INPUT" | grep -q '"tool_input"'; then
+  emit "contest-refactor hook: unrecognized PreToolUse payload (no .tool_input) —"
+  emit "  the commit-boundary check DID NOT RUN. Provider contract may have changed."
+fi
+
+case "$CMD" in
+  *"git commit"*) ;;
+  *) exit 0 ;;
+esac
+
+CWD=$(printf '%s' "$INPUT" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+print(d.get("cwd") or "")
+' 2>/dev/null)
+[ -n "$CWD" ] || CWD="$PWD"
+
+# No artifact in this repo means this is not a contest-refactor loop commit.
+# Allow it: the hook governs loop commits, not every commit the user makes.
+if [ ! -f "$CWD/CURRENT_REVIEW.json" ]; then
+  exit 0
+fi
+
+if [ ! -f "$VALIDATOR" ]; then
+  emit "contest-refactor hook: validator missing at $VALIDATOR — blocking fail-closed."
+  emit "Run hooks/precommit-validator --health to diagnose."
+  exit 2
+fi
+
+OUT=$(python3 -B "$VALIDATOR" "$CWD" --mode strict --phase "$PHASE" 2>&1)
+RC=$?
+
+if [ $RC -eq 0 ]; then
+  exit 0
+fi
+
+emit "contest-refactor: commit BLOCKED — artifact failed strict validation at phase $PHASE."
+emit "$OUT"
+emit "Fix the findings above and retry. This hook is a same-privilege control:"
+emit "it detects a skipped validation, it does not prove one happened."
+exit 2
