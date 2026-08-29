@@ -43,6 +43,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import _canon  # type: ignore[import-not-found]  # noqa: E402
+import _validator_phase  # type: ignore[import-not-found]  # noqa: E402
 from _artifact_attestation import check_g47_execution_evidence  # noqa: E402
 from _artifact_core import (  # noqa: E402
     Issue,
@@ -281,6 +282,16 @@ def main(argv: Iterable[str] | None = None) -> int:
         help="G47 freshness phase: pre-commit compares the working tree; post-hoc resolves the loop commit",
     )
     parser.add_argument(
+        "--phase",
+        default=None,
+        metavar="PHASE",
+        help=(
+            "five-phase model (canon/validator-phases.toml): withhold findings from "
+            "gates canon declares un-runnable at PHASE and report them as "
+            "skipped_for_phase, so silence is not read as a pass"
+        ),
+    )
+    parser.add_argument(
         "--gates",
         default=None,
         metavar="G1,G2,...",
@@ -304,6 +315,14 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
     if selected_gates is not None:
         issues = [i for i in issues if _gate_matches(i.rule, selected_gates)]
+    skipped_for_phase: tuple[str, ...] = ()
+    if args.phase is not None:
+        issues, skipped_for_phase = _validator_phase.partition(issues, args.phase)
+    if skipped_for_phase:
+        sys.stderr.write(
+            f"skipped_for_phase ({args.phase}): {', '.join(skipped_for_phase)} "
+            f"— input not fresh at this phase; NOT evidence of compliance\n"
+        )
     label_prefix = "WARN" if args.mode == "advisory" else "FAIL"
     if issues:
         for issue in issues:
@@ -319,6 +338,8 @@ def main(argv: Iterable[str] | None = None) -> int:
             "artifact_dir": str(artifact_dir),
             "mode": args.mode,
             "issue_count": len(issues),
+            "phase": args.phase,
+            "skipped_for_phase": list(skipped_for_phase),
             "issues": [issue.to_dict() for issue in issues],
         }
         try:

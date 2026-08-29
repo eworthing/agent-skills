@@ -82,6 +82,51 @@ def main() -> int:
     )
     checks += 1
 
+    # --- partition(): the behaviour the canon file exists to drive ----------
+    import _validator_phase as vp
+
+    class _I:
+        def __init__(self, rule):
+            self.rule = rule
+
+    early = "step1-post-write"
+    enforce = "postchallenge-precommit"
+
+    # A deferred gate's finding is withheld and the gate is named instead.
+    keep, skipped = vp.partition([_I("G18"), _I("G5")], early, SKILL_ROOT)
+    assert [i.rule for i in keep] == ["G5"], "deferred G18 must be withheld at an early phase"
+    assert "G18" in skipped, "withheld gate must be reported as skipped"
+    checks += 1
+
+    # Sub-rules follow their gate (G21-scorecard under G21), matching the
+    # predicate validate-artifact.py and validate-fixtures.py already use.
+    keep, _ = vp.partition([_I("G32-binding")], early, SKILL_ROOT)
+    assert keep == [], "a sub-rule of a deferred gate must be withheld too"
+    checks += 1
+
+    # The enforcement phase withholds NOTHING -- the hook fires there.
+    issues = [_I("G18"), _I("G5"), _I("G47")]
+    keep, skipped = vp.partition(issues, enforce, SKILL_ROOT)
+    assert len(keep) == len(issues) and skipped == (), (
+        "the hook's enforcement phase must never withhold a finding"
+    )
+    checks += 1
+
+    # A gate that is NOT deferred keeps firing -- the model scopes, it does not
+    # blanket-suppress.
+    keep, _ = vp.partition([_I("G5")], early, SKILL_ROOT)
+    assert [i.rule for i in keep] == ["G5"], "non-deferred gate must survive partitioning"
+    checks += 1
+
+    # Unknown phase is a usage error, not a silent empty deferral.
+    try:
+        vp.partition([], "no-such-phase", SKILL_ROOT)
+    except SystemExit as exc:
+        assert exc.code == 2, "unknown phase must exit 2"
+    else:
+        raise AssertionError("unknown phase must not be accepted")
+    checks += 1
+
     print(f"_validator_phases_selftest: OK ({checks} assertions, {len(phases)} phases)")
     return 0
 
