@@ -24,7 +24,7 @@ JSON mirror schemas (`CURRENT_REVIEW.json`, `REVIEW_HISTORY.json`, `findings_reg
 Loop N of M (cap)
 
 ### System Flag
-[STATE: CONTINUE] | [STATE: HALT_SUCCESS] | [STATE: HALT_STAGNATION] | [STATE: HALT_LOOP_CAP]
+[STATE: <state>] — verbatim `CURRENT_REVIEW.json.state` (any canon state, `HALT_SUCCESS_candidate` included), rewritten on every write of the file including main's candidate → `HALT_SUCCESS` promotion. G51 fails the two files disagreeing.
 
 ---
 

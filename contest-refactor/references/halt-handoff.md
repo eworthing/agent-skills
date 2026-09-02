@@ -118,7 +118,7 @@ Triggered when every scorecard category reaches 10, OR 9.5+ with `accepted` resi
 
 Fires once, at the exact point SKILL.md's Step 1 Routing promotes a `HALT_SUCCESS_candidate` to terminal `HALT_SUCCESS` after the challenge holds — before that commit, not after.
 
-1. **Archive first, both artifacts, before validating.** Run
+1. **Flip both flags, then archive, then validate.** Set `state: "HALT_SUCCESS"` in `CURRENT_REVIEW.json` **and** rewrite the System Flag line in `CURRENT_REVIEW.md` to `[STATE: HALT_SUCCESS]` — the Markdown is rewritten, never appended to, and G51 fails a promotion whose flag still reads `HALT_SUCCESS_candidate` (the 2026-09-02 opencode run shipped exactly that). Then run
    `python3 "$SKILL_DIR/scripts/archive_history.py" write ./CURRENT_REVIEW.json
    ./REVIEW_HISTORY.json --md ./REVIEW_HISTORY.md --md-divider promotion
    --md-verb promotion --md-body -` (piping the challenge-outcome narrative via

@@ -162,7 +162,7 @@ between adjudication and routing cannot lose the decision.
 | Outcome | Main action |
 |---|---|
 | **broke** | Commit a CONTINUE transition carrying the finding as Priority 1 (with the `candidate_commit_sha` reference); re-dispatch loop N+1. If the fix needs a CLAUDE-md Stop/Ask decision → `HALT_STAGNATION` subtype `user_decision` instead. The challenger broke it → demote, never promote. |
-| **held** | Record `halt_success_challenge` (challenger_model, outcome `"held"`, binding, attempts[], reason); promote to terminal `HALT_SUCCESS`; commit. G32 gates the emit. |
+| **held** | Record `halt_success_challenge` (challenger_model, outcome `"held"`, binding, attempts[], reason); promote to terminal `HALT_SUCCESS` in both artifacts — JSON `state` and the Markdown System Flag line (G51); commit. G32 gates the emit. |
 | **unavailable / timeout** (after the bounded retry envelope) | **Fail closed**: commit `HALT_STAGNATION` subtype `verification_blocked` (or `user_decision`). Never auto-promote; never route to CONTINUE-without-a-finding. A terminal success is never blessed by silence. |
 
 ### v5 aggregate routing (staged panel)
