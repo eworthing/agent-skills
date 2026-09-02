@@ -1,0 +1,72 @@
+# Priority-replay fixture spec (Tier-1P, kind = "deferral"). Third kind in this family.
+#
+# `rank` fixtures ask "given four valid candidates, which went first?"
+# `residual_disposition` fixtures ask "where did a single off-path gap land?"
+# This one asks: "an item the ranking has correctly declined four loops running —
+# does the loop ever stop declining it?"
+#
+# Class S (selection/scheduling) per contest-refactor-detection-domains.md
+# § Lever classes. The endpoint is a counter, not set membership: the control is
+# expected to rank correctly, and does. The question is whether ranking correctly
+# forever is the same thing as making progress.
+
+id = "deferred-item-1"
+kind = "deferral"
+
+# ---- the four elements ----------------------------------------------------------
+# Discrimination is by DIMENSION (G39-shaped `score_impact`), same as the sibling
+# fixtures. The seeded history is load-bearing here in a way it is not for `rank`:
+# the deferral streak lives in seed/REVIEW_HISTORY.json's per-loop `backlog[]`, not
+# in the scorecard.
+
+# TARGET — the deferred item. Loses on EVERY pre-existing criterion, by construction
+# (see counterfactual_pre_check below). Its only claim is the streak.
+expected_escalated_stable_id = "F-021"
+expected_escalated_dimension = "credibility"
+expected_escalated_primary_file = "Sources/LedgerKit/Ledger.swift"
+
+# DECOY — the item the control is RIGHT to pick, and the displacement control.
+# A real decomposition: LedgerStore owns parsing, validation, persistence and
+# presentation. Wins on distance (4.0 vs 2.0), dimension stall (6 vs 2), severity
+# (Serious vs Noticeable) and Meta-Rule 5 subtractivity, all at once.
+# It must survive the escalation: a Serious architectural finding that vanishes
+# because a streak item jumped the queue is displacement, not progress.
+decoy_dimension = "architecture_quality"
+decoy_primary_file = "Sources/LedgerKit/LedgerStore.swift"
+
+# RESTRAINT CONTROL — the definitional trap, and the reason this fixture exists.
+# F-034 appears in FOUR consecutive seeded backlogs, exactly like the target.
+# Every appearance is at `priority: 1` with `targeted_finding_status:
+# "carried_forward"` — it was selected and attempted each loop, not deferred.
+# A model that counts backlog APPEARANCES escalates it; a model that counts
+# DEFERRALS (priority >= 2) does not. Tried-and-rejected is not the same as
+# never-tried, and only the second is what the streak rule is about.
+restraint_dimension = "framework_idioms"
+restraint_primary_file = "Sources/LedgerKit/RetryPolicy.swift"
+
+# BLOCKED — real, ranked on merit, barred by the standing operational constraint.
+# Streak 2, deliberately below the threshold, so it cannot supply a second
+# escalation and make the primary counter ambiguous.
+blocked_dimension = "concurrency"
+blocked_primary_file = "Sources/LedgerKit/SyncCoordinator.swift"
+
+stalled_dimensions = ["architecture_quality", "framework_idioms", "concurrency"]
+lens = "lens-apple.md"
+test_command = "swift test"
+
+# ---- seeded signatures, guarded by _priority_replay_selftest.py -------------------
+# stall_signature is checked against what the seeded scorecard implies;
+# deferral_signature against what the seeded per-loop backlog[] implies under the
+# `priority >= 2` rule. Both exist because a silently drifting seed inverts the
+# expected answer without changing a single assertion.
+
+[stall_signature]
+architecture_quality = 6
+framework_idioms = 5
+concurrency = 3
+credibility = 2
+
+[deferral_signature]
+F-021 = 4    # target      — four loops in the backlog, never above priority 2
+F-034 = 0    # restraint   — four loops in the backlog, every one AT priority 1
+F-047 = 2    # blocked     — below the threshold on purpose

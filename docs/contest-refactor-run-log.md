@@ -1088,6 +1088,49 @@ control/arm harness with pre-registration and a decision rule that fired
 correctly against its author twice; and the standing evidence that this project
 still has no measured way to move a judgment lever on this axis.
 
+## Deferral-escalation smoke — 2026-08-29 (NO-SHIP, killed at 2 reps)
+
+The item-deferral escalation was going to give `method-critic.md` criterion 2's *Item
+deferral* branch the hard remedy its *Dimension stall* sibling already has. It died at the
+smoke, for **~2 reps instead of ~10**, and the two things it found are worth more than the
+clause would have been.
+
+**The stopping rule fired.** Pre-registered: *"if either rep escalates the target, the
+control already reaches the answer."* Rep 1 put the target at **Priority 1 under the
+unchanged prose**, naming the existing rule as it did so — *"among actionable candidates the
+ledger-ordering item also wins the item-deferral tiebreak, having been demoted from Priority
+2 to Priority 3 across loops 12-15 without ever being executed."* Rep 2 deferred it to
+priority 4. **1/2, not the predicted 0/2.** No full arms purchased.
+
+**Why the counterfactual pre-check missed it — the transferable lesson.** The pre-check
+verified distance, dimension stall, severity and Meta-Rule 5 subtractivity, and forgot
+**criterion 0, Actionability**. Two of the four planted roles are unactionable in practice,
+so with both out of contention the target became the top *actionable* candidate for free and
+the existing tiebreak confirmed it. This is `stalled-domain-1`'s disease reproduced by a
+pre-check written specifically to avoid it. **The class-S pre-check in
+`contest-refactor-detection-domains.md` § Lever classes must enumerate criterion 0 alongside
+the ranking criteria** — that correction is folded in.
+
+**The finding that outlives the lever.** Rep 2 promoted the *restraint control* to Priority
+1, calling it *"deferred at Priority 1 for 4 consecutive loops"* — counting backlog
+**appearances** as deferrals. That reading is defensible: the prose says the streak is
+*"consecutive prior loops in which an item sat in the backlog and was not executed,"* and a
+tried-and-rejected item satisfies that sentence exactly. So the proposed clause would have
+**amplified** the miscount, promoting harder on a number the skill defines ambiguously. The
+operative definition — **deferred ⟺ in `loops[N].backlog[]` at `priority >= 2`** — lives only
+in `evals/priority-fixtures/deferred-item-1` and its grader. Any future version of this lever
+carries the definition into the prose *first*, and that is now the cheaper, better-evidenced
+candidate.
+
+**Kept:** the fixture, the `--deferral-only` grader mode, and the seed extension that makes a
+deferral streak observable at all (the `rank` fixtures' seeds carry no `backlog[]`). All
+mutation-tested. **Known fixture defect:** the decoy never materialised — both reps reported
+`architecture_quality` explicitly clean on a 5-file package — so the DISPLACEMENT restraint
+counter is vacuous on this codebase and a revival needs a decomposition defect a cold Critic
+actually raises.
+
+**Not shipped:** the `method-critic.md:47-48` prose change. It stays unwritten.
+
 ## Decision: stop fixture and prose work — 2026-08-26
 
 Peer-reviewed by codex `gpt-5.6-sol` (high) as a decision, with "stop investing"
@@ -1129,3 +1172,47 @@ answer-leaks show the **evaluator was immature**, not that further corpus invest
 improves the skill; they should not be cited as returns. And the 6,192,808+ tokens
 already spent should carry **zero positive weight** in any future decision — that
 figure is acquisition cost, not prospective return.
+
+## Instrumented run #9 — 2026-09-02 (opencode `qwen3.8-flash`; `--reset`; HALT_SUCCESS at loop 2)
+
+Run `run-2026-09-02-8747656fada148bb83e1dd5236653b65` on BenchHype at skill rev `aff93c3`,
+loop 1 `af18aebc` (F-024 seven-site `public` narrowing, reviewer approved, compile-matrix
+evidence the 2026-08-25 rejected attempt lacked), candidate `46515689`, promotion `2b5247e9`.
+Every role (Critic, executor, reviewer, challenger) ran on `opencode-go/qwen3.8-flash`,
+source `inherited`. Wall clock 1h49m, ~$1.09, 35M cache-read tokens. `validate-artifact.py`
+strict OK at every commit. Evidence: `~/.contest-refactor/observe/tool-events.jsonl` (the
+opencode observe plugin, 538 events), opencode's sqlite `part` table for tool outputs, the
+attestation ledger (6 records), `/tmp/bh*` gate and reviewer logs.
+
+**Defects found and their fixes (`b13750d`, `000c7d8`, and the G51 commit):**
+
+1. **Markdown System Flag left at `HALT_SUCCESS_candidate` after promotion.** Every promotion
+   instruction named only the JSON `state`; `archive_history.py --md-divider promotion`
+   never touches CURRENT_REVIEW.md; the validator never read the Markdown. Fix: promotion
+   obligation 1 flips both flags before archiving; output-format-markdown.md defines the
+   System Flag as verbatim `CURRENT_REVIEW.json.state`; **G51** enforces parity from epoch
+   `md_state_parity` (rev `000c7d8`). BenchHype's committed artifact predates the epoch and
+   stays green; its flag line is still wrong on disk.
+2. **Citation coverage omitted from the handoff.** `coverage_ledger.py` aborted on the
+   2026-08-24 run's absolute `source_roots` entry, which `--reset` keeps forever. Fix: invalid
+   historical roots are set aside, counted, and named; BenchHype now reads 29/607 (4.8%).
+3. **Documented opencode default model unusable.** `opencode-go/deepseek-v4-flash` now needs a
+   China-hosted workspace opt-in; the reviewer's first spawn errored and the fallback ran on
+   the executor's own model (recorded honestly as `retry_cause: spawn_error`). Fix: default
+   moved to `opencode-go/qwen3.8-flash` in prose, the G19 table, and both pinning selftests.
+4. **A backgrounded `--targeted` gate died silently** ~60s in (progress files prove it reached
+   the UI-test stage; no ledger record, empty log; cause absent from every log). The executor
+   ran `rm -f .artifacts/local-gate/lock*` and re-ran in the foreground — harmless only because
+   the single-flight guard had already shown the earlier gate dead. Fix: async-join rule B5,
+   locks belong to the gate; relaunch in the foreground, lock untouched.
+
+**Skill changes since the 2026-08-25 run (`d13bba4..aff93c3`, 72 commits) exercised here:**
+`--gates` selector used on every mid-loop battery; `--reset` deleted CURRENT_REVIEW.md and the
+Step-0 seed + preflight passed; bracket-anchored single-flight guard adopted by the opencode
+executor; clean-tree assertion ran before Step-3 edits; registry judge stamps present on the
+F-024 occurrence; G47 evidence/skip-reason shape correct (loop 1 cited event `e6b8d09f`);
+SPT-Q3 owner-count vocabulary appeared in the challenger's reasoning. Not exercised: the
+Tier-3 commit-boundary hook and `--phase` (Codex-only install; `phase: null` in every
+validator run), kill-tree fencing (no executor replacement). One practice gap: the
+pre-commit full battery was run without `--attestation-phase pre-commit`, so G47's resolver
+failed until after the commit — the flag is not discoverable from the prose the executor read.

@@ -685,11 +685,36 @@ The ledger's merged findings are above; these four things were *live state* with
 - **Pending probe (wrapper adoption, item 14)** — keyed probe for the next sweep: does a loop given the sub-step-3 wrapped-run instruction actually invoke `attested_run.py` and cite the event, vs a no-guidance control leaving `execution_evidence: null` out of inertia (or to dodge the stricter gate)? 5+ reps per arm when run (design §6's behavioral flag; the gate mechanically working when the wrapper IS invoked is already selftested — adoption is the open question).
 - **Sweep protocol** — LLM behavioral probes are batched (~3–5 pending, disjoint failure signatures, one keyed probe per change, measured spend recorded per sweep). Sweeps #1, #2, #4, #5 and the paired-arm study (#3) are closed; their results are quoted where merged above. Sweep #5 ran at batch size 2 (below the ~3–5 convention) deliberately: the third pending probe (`--scope`) is production-run-gated, and the two executable probes were the fleet's highest-risk unvalidated prose changes — holding them for a bigger batch bought nothing.
 
+### Two churn-discovery gaps found while pre-checking row 24 slice D (2026-08-29)
+
+Both surfaced from the zero-cost counterfactual pre-check that parked slice D. They are loop
+bookkeeping, not detection reach, so they live here rather than in the detection register.
+
+**[C1] `discovery.churn_top20` is silently optional and is skipped about half the time.**
+`references/startup.md:38` marks sub-step 6b "optional but recommended", and **G40**
+(`validation.md:182`) checks only that `source_roots`, `test_command` and `lens` are non-empty —
+`churn_top20` is unchecked. Measured on BenchHype: the field is `[]` in **9 of 17** history loops
+and in the current `CURRENT_REVIEW.json`. The consequence is not cosmetic: `method.md:82`'s
+"top-3 most-churned files become mandatory deep-review targets" is the skill's only churn-keyed
+mandatory-target rule, and on every loop with an empty list that rule silently does nothing. This
+is the same class as the loop-path P2 above — an instruction that is stated and then not reached —
+and it is cheaper and better-evidenced than slice D ever was. Smallest correction: either make 6b
+required and extend G40's non-empty check to it, or state in `startup.md` that skipping 6b disables
+the `method.md:82` rule, so the omission is a disclosed choice rather than an invisible one.
+
+**[C2] `audit-churn.sh` tie order is undocumented.** Ranks are produced by `sort -rn` on `uniq -c`
+output, so equal edit counts break by `sort`'s last-resort whole-line comparison — i.e.
+**reverse-lexicographic path**. It is deterministic and reproducible at a fixed sha, which is what
+matters, but nothing says so, and it is exactly the property slice D's "ordering reproducible from
+a fixed sha" acceptance criterion would have had to pin. One comment line in the script.
+
 ### Open backlog carried from the deep-dive at its deletion
 
 Rows 30/33–35 were merged as [I1]–[I3] and the row-35 adjudication above. Rows already shipped despite stale status columns: 1, 2, 4, 7, 9, 10, 17–22, 28, 31, 32. Still genuinely open:
 
 **Rows 23, 24, 25 and 27 moved 2026-08-21** to [`contest-refactor-detection-domains.md`](contest-refactor-detection-domains.md) — they are detection-reach items (what the loop looks for in the target codebase), and that document now owns them alongside the competitor domain sweep. Row numbers are preserved there for citation continuity.
+
+**Measurement routing (added 2026-08-29).** Selection/scheduling levers whose mechanism is owned by this register are measured against the **class-S endpoint** in [`contest-refactor-detection-domains.md`](contest-refactor-detection-domains.md) § *Lever classes — route before you measure*, not against the detection bar. The detection bar requires the control to fail, which a correctly-behaving control will not do for an ordering or scheduling change; `stalled-domain-1` already measured `DOES NOT DISCRIMINATE` at control 4/5 for exactly this reason.
 
 | Row | Item | State |
 |---|---|---|

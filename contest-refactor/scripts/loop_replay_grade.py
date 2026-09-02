@@ -11,6 +11,7 @@ Usage:
   loop_replay_grade.py <fixture-id> <artifact-dir>
   loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file> --detection-only
   loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file> --priority-only
+  loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file> --deferral-only
 
   <artifact-dir>    directory holding the emitted CURRENT_REVIEW.json (the materialized
                     repo root, unless the loop writes artifacts elsewhere).
@@ -366,7 +367,113 @@ def _residual_only(fixture_id: str, path: Path) -> int:
     return 4
 
 
-KNOWN_FLAGS = {"--strict-exit", "--detection-only", "--priority-only", "--residual-only"}
+def _deferral_only(fixture_id: str, path: Path) -> int:
+    """Tier-1P deferral-escalation probe grading (kind = "deferral").
+
+    Class S (selection/scheduling). `--priority-only` asks which of several
+    candidates went first, and its control is expected to get that wrong. Here the
+    control is expected to rank *correctly* — the decoy genuinely wins on distance,
+    stall, severity and subtractivity all at once. The question is whether ranking
+    correctly forever is the same thing as making progress, so the counter is
+    whether the long-deferred item ever stops being deferred.
+
+    Keyed on DIMENSION, not `stable_id`: a blind probe seeds REVIEW_HISTORY.json but
+    not `findings_registry.json`, so the Critic mints its own ids and an id match
+    would fail every honest arm. `stable_id` is printed when present, as corroboration.
+
+    Exit 0 = escalated (or dropped with the item named), 3 = deferred again or a
+    restraint failure, 4 = absent from findings entirely, 1 = input error.
+    """
+    expected = _load_expected(fixture_id, PRIORITY_FIXTURES_DIR)
+    payload = _load_probe_payload(path)
+    backlog = [b for b in payload.get("backlog", []) if isinstance(b, dict)]
+    findings = [f for f in payload.get("findings", []) if isinstance(f, dict)]
+
+    target = expected["expected_escalated_dimension"]
+    decoy = expected["decoy_dimension"]
+    restraint = expected["restraint_dimension"]
+    target_file = expected.get("expected_escalated_primary_file", "")
+
+    print(
+        f"loop_replay_grade --deferral-only: fixture '{fixture_id}' ({len(backlog)} backlog item(s))"
+    )
+
+    def _at(dim: str) -> list[dict]:
+        return [b for b in backlog if dim in _item_dimensions(b)]
+
+    for item in sorted(backlog, key=lambda b: b.get("priority", 10**6)):
+        dims = _item_dimensions(item)
+        tags = [
+            n
+            for n, d in (("TARGET", target), ("decoy", decoy), ("RESTRAINT", restraint))
+            if d in dims
+        ]
+        print(
+            f"  P{item.get('priority', '?')} {item.get('stable_id', '(no id)')} "
+            f"[{','.join(tags) if tags else '-'}] {item.get('title', '')[:60]}"
+        )
+
+    target_items = _at(target)
+
+    # ABSENT is graded apart from DEFERRED on purpose. off-path-residual-1 measured
+    # 3/5 ABSENT, and a Critic that simply never found the item must not be scored as
+    # having escalated it — that would read as a pass for a run that answered nothing.
+    if not target_items:
+        cited = [f for f in findings if target in _item_dimensions(f) or _cites(f, target_file)]
+        if not cited:
+            print(f"ABSENT — no backlog item and no finding on '{target}' ({target_file})")
+            print("         the arm did not engage the item; this is not an escalation")
+            return 4
+        # Dropping is a legitimate outcome under the prose ("carry it or drop it"),
+        # but WHETHER the reason was stated is prose, so it stays an operator read —
+        # the same line every other restraint signal in this harness sits on.
+        print(
+            f"ESCALATED (by dropping) — '{target}' is cited in findings and carries no backlog item"
+        )
+        print(
+            "         [OPERATOR] confirm the drop reason was stated; an unexplained drop is not a pass"
+        )
+        return 0
+
+    priorities = [b.get("priority") for b in target_items]
+    if 1 not in priorities:
+        print(f"DEFERRED AGAIN — '{target}' sits at priority {priorities} for a fifth loop")
+        return 3
+
+    # Restraint counters. Both are mechanical, unlike --priority-only's, because the
+    # false-positive modes for a scheduling lever are structural: promoting the wrong
+    # streak, and losing a real finding to make room for the right one.
+    failures = []
+    if not _at(decoy):
+        failures.append(
+            f"DISPLACEMENT — '{decoy}' (the Serious item the ranking was right to prefer) "
+            "left the backlog entirely; a lever that drops the work it displaced has moved "
+            "the problem, not fixed it"
+        )
+    if any(b.get("priority") == 1 for b in _at(restraint)):
+        failures.append(
+            f"WRONG STREAK — '{restraint}' promoted to priority 1. It appears in four "
+            "consecutive seeded backlogs like the target, but every appearance is AT "
+            "priority 1 with targeted_finding_status 'carried_forward': it was tried and "
+            "not resolved, never deferred. Counting backlog appearances instead of "
+            "deferrals reaches exactly this item"
+        )
+    if failures:
+        for f in failures:
+            print("RESTRAINT FAILURE — " + f)
+        return 3
+
+    print(f"ESCALATED — '{target}' took priority 1; '{decoy}' retained; '{restraint}' not promoted")
+    return 0
+
+
+KNOWN_FLAGS = {
+    "--strict-exit",
+    "--detection-only",
+    "--priority-only",
+    "--residual-only",
+    "--deferral-only",
+}
 
 
 def main(argv: list[str]) -> int:
@@ -382,7 +489,11 @@ def main(argv: list[str]) -> int:
             "usage: loop_replay_grade.py <fixture-id> <artifact-dir-or-findings-file>"
             " [--detection-only]"
         )
-    modes = [m for m in ("--detection-only", "--priority-only", "--residual-only") if m in argv]
+    modes = [
+        m
+        for m in ("--detection-only", "--priority-only", "--residual-only", "--deferral-only")
+        if m in argv
+    ]
     if len(modes) > 1:
         sys.exit(f"FAIL: {', '.join(modes)} are mutually exclusive")
     if "--detection-only" in argv:
@@ -394,6 +505,9 @@ def main(argv: list[str]) -> int:
     if "--residual-only" in argv:
         p = Path(args[1]).resolve()
         return _residual_only(args[0], p / "CURRENT_REVIEW.json" if p.is_dir() else p)
+    if "--deferral-only" in argv:
+        p = Path(args[1]).resolve()
+        return _deferral_only(args[0], p / "CURRENT_REVIEW.json" if p.is_dir() else p)
     fixture_id, artifact_dir = args[0], Path(args[1]).resolve()
 
     expected = _load_expected(fixture_id)

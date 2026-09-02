@@ -1,0 +1,760 @@
+{
+  "schema_version": 4,
+  "loops": [
+    {
+      "loop": 1,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 2,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 3,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 4,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 5,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 6,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 7,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 8,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.0,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 9,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "UP"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 10,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 6.0,
+          "delta": "UP"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 8.5,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 11,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.0,
+          "delta": "UP"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "UP"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      }
+    },
+    {
+      "loop": 12,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.5,
+          "delta": "UP"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.0,
+          "delta": "SAME"
+        }
+      },
+      "backlog": [
+        {
+          "stable_id": "F-034",
+          "title": "Hand-rolled backoff loop in RetryPolicy",
+          "kind": "simplification",
+          "why_it_matters": "the delay ladder is computed by an open loop rather than a closed form",
+          "score_impact": "framework_idioms +0.5",
+          "priority": 1,
+          "rank": 1
+        },
+        {
+          "stable_id": "F-021",
+          "title": "Ledger ordering contract contradicts its own implementation",
+          "kind": "correctness",
+          "why_it_matters": "the documented ordering guarantee is not the one the code provides",
+          "score_impact": "credibility +0.5",
+          "priority": 2,
+          "rank": 2
+        }
+      ],
+      "loop_result": {
+        "targeted_finding_status": "carried_forward"
+      }
+    },
+    {
+      "loop": 13,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.0,
+          "delta": "UP"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 7.5,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "UP"
+        }
+      },
+      "backlog": [
+        {
+          "stable_id": "F-034",
+          "title": "Hand-rolled backoff loop in RetryPolicy",
+          "kind": "simplification",
+          "why_it_matters": "the delay ladder is computed by an open loop rather than a closed form",
+          "score_impact": "framework_idioms +0.5",
+          "priority": 1,
+          "rank": 1
+        },
+        {
+          "stable_id": "F-021",
+          "title": "Ledger ordering contract contradicts its own implementation",
+          "kind": "correctness",
+          "why_it_matters": "the documented ordering guarantee is not the one the code provides",
+          "score_impact": "credibility +0.5",
+          "priority": 2,
+          "rank": 2
+        }
+      ],
+      "loop_result": {
+        "targeted_finding_status": "carried_forward"
+      }
+    },
+    {
+      "loop": 14,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "framework_idioms": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 8.0,
+          "delta": "UP"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "SAME"
+        }
+      },
+      "backlog": [
+        {
+          "stable_id": "F-034",
+          "title": "Hand-rolled backoff loop in RetryPolicy",
+          "kind": "simplification",
+          "why_it_matters": "the delay ladder is computed by an open loop rather than a closed form",
+          "score_impact": "framework_idioms +0.5",
+          "priority": 1,
+          "rank": 1
+        },
+        {
+          "stable_id": "F-047",
+          "title": "Per-entry upload loop in SyncCoordinator.flush",
+          "kind": "concurrency",
+          "why_it_matters": "each pending entry is uploaded in its own sequential request",
+          "score_impact": "concurrency +0.5",
+          "priority": 2,
+          "rank": 2
+        },
+        {
+          "stable_id": "F-021",
+          "title": "Ledger ordering contract contradicts its own implementation",
+          "kind": "correctness",
+          "why_it_matters": "the documented ordering guarantee is not the one the code provides",
+          "score_impact": "credibility +0.5",
+          "priority": 3,
+          "rank": 3
+        }
+      ],
+      "loop_result": {
+        "targeted_finding_status": "carried_forward"
+      }
+    },
+    {
+      "loop": 15,
+      "schema_version": 4,
+      "state": "CONTINUE",
+      "scorecard": {
+        "architecture_quality": {
+          "score": 5.5,
+          "delta": "SAME"
+        },
+        "state_management": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "domain_modeling": {
+          "score": 7.0,
+          "delta": "SAME"
+        },
+        "data_flow": {
+          "score": 7.5,
+          "delta": "UP"
+        },
+        "framework_idioms": {
+          "score": 6.0,
+          "delta": "SAME"
+        },
+        "concurrency": {
+          "score": 6.5,
+          "delta": "SAME"
+        },
+        "simplicity": {
+          "score": 8.0,
+          "delta": "SAME"
+        },
+        "test_strategy": {
+          "score": 9.0,
+          "delta": "SAME"
+        },
+        "credibility": {
+          "score": 7.5,
+          "delta": "SAME"
+        }
+      },
+      "backlog": [
+        {
+          "stable_id": "F-034",
+          "title": "Hand-rolled backoff loop in RetryPolicy",
+          "kind": "simplification",
+          "why_it_matters": "the delay ladder is computed by an open loop rather than a closed form",
+          "score_impact": "framework_idioms +0.5",
+          "priority": 1,
+          "rank": 1
+        },
+        {
+          "stable_id": "F-047",
+          "title": "Per-entry upload loop in SyncCoordinator.flush",
+          "kind": "concurrency",
+          "why_it_matters": "each pending entry is uploaded in its own sequential request",
+          "score_impact": "concurrency +0.5",
+          "priority": 2,
+          "rank": 2
+        },
+        {
+          "stable_id": "F-021",
+          "title": "Ledger ordering contract contradicts its own implementation",
+          "kind": "correctness",
+          "why_it_matters": "the documented ordering guarantee is not the one the code provides",
+          "score_impact": "credibility +0.5",
+          "priority": 3,
+          "rank": 3
+        }
+      ],
+      "loop_result": {
+        "targeted_finding_status": "carried_forward"
+      }
+    }
+  ]
+}

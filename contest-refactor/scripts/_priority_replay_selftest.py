@@ -45,7 +45,7 @@ MANIFEST = SKILL_ROOT / "evals" / "priority_replay_baseline.json"
 REPLICATION = SKILL_ROOT / "evals" / "priority_replay_replication.json"
 GRADER = HERE / "loop_replay_grade.py"
 
-FIXTURE_KINDS = {"rank", "residual_disposition"}
+FIXTURE_KINDS = {"rank", "residual_disposition", "deferral"}
 
 ROLE_KEYS = (
     "expected_priority_1_dimension",
@@ -60,12 +60,38 @@ RESIDUAL_KEYS = (
     "legitimate_dimension",
 )
 
+DEFERRAL_KEYS = (
+    "expected_escalated_stable_id",
+    "expected_escalated_dimension",
+    "decoy_dimension",
+    "restraint_dimension",
+    "blocked_dimension",
+)
+
+KIND_KEYS = {"rank": ROLE_KEYS, "residual_disposition": RESIDUAL_KEYS, "deferral": DEFERRAL_KEYS}
+
 failures: list[str] = []
 
 
 def check(cond: bool, msg: str) -> None:
     if not cond:
         failures.append(msg)
+
+
+def _grade_as(fixture_id: str, mode: str, payload: dict) -> int:
+    """Same subprocess contract as _grade, for any fixture/mode pair."""
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as tf:
+        json.dump(payload, tf)
+        path = Path(tf.name)
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(GRADER), fixture_id, str(path), mode],
+            capture_output=True,
+            text=True,
+        )
+        return proc.returncode
+    finally:
+        path.unlink(missing_ok=True)
 
 
 def _grade(payload: dict) -> int:
@@ -164,7 +190,7 @@ def main() -> int:
             kind in FIXTURE_KINDS,
             f"{name}: kind={kind!r} not in {sorted(FIXTURE_KINDS)}",
         )
-        required = ROLE_KEYS if kind == "rank" else RESIDUAL_KEYS
+        required = KIND_KEYS.get(kind, ROLE_KEYS)
         roles = {}
         for key in required:
             val = spec.get(key)
@@ -197,6 +223,36 @@ def main() -> int:
                     f"{name}: {dim!r} listed in stalled_dimensions but seed implies "
                     f"loops_since_up={implied.get(dim)}",
                 )
+
+        # 4a) deferral signature matches the seeded per-loop backlog[]. Exact analogue
+        # of the stall guard above, and needed for the same reason: the deferral streak
+        # is the whole endpoint of a kind="deferral" fixture, it lives in the seed
+        # rather than in any assertion, and a seed that drifts inverts the expected
+        # answer without a single check going red. The `priority >= 2` rule IS the
+        # definition under test — the restraint control has four backlog appearances
+        # and zero deferrals, and only this rule tells them apart.
+        declared = spec.get("deferral_signature") or {}
+        if declared and hist_path.is_file():
+            hist = json.loads(hist_path.read_text(encoding="utf-8"))
+            ordered = sorted(hist.get("loops", []), key=lambda e: e.get("loop", 0))
+            for sid, want in declared.items():
+                streak = 0
+                for entry_loop in ordered:
+                    hit = [
+                        b for b in (entry_loop.get("backlog") or []) if b.get("stable_id") == sid
+                    ]
+                    streak = streak + 1 if (hit and hit[0].get("priority", 1) >= 2) else 0
+                check(
+                    streak == want,
+                    f"{name}: deferral_signature[{sid}]={want} but seed/REVIEW_HISTORY.json "
+                    f"implies {streak} (loops in backlog at priority >= 2) — the seed drifted "
+                    "and the expected answer may have inverted",
+                )
+            check(
+                any(b.get("backlog") for b in ordered),
+                f"{name}: kind=deferral but no seeded loop carries backlog[] — the "
+                "deferral streak is unobservable and the fixture cannot discriminate",
+            )
 
         # 4b) blind dispatch — codebase/ is copied into the probe, so it must not
         # name the roles or state the verdict. An earlier draft of this fixture
@@ -322,6 +378,60 @@ def main() -> int:
         for label, payload, want in cases:
             got = _grade(payload)
             check(got == want, f"grader {label}: expected exit {want}, got {got}")
+
+        # 5b) grader discrimination for kind="deferral". Every exit path is exercised:
+        # a grader that cannot report a failure reports a clean GREEN forever, and both
+        # restraint counters here are mechanical, so there is no excuse for leaving them
+        # untested the way an operator-read signal would have to be.
+        d_target = {
+            "priority": 1,
+            "stable_id": "F-021",
+            "title": "t",
+            "score_impact": "credibility +0.5",
+        }
+        d_decoy = {
+            "priority": 2,
+            "stable_id": "F-012",
+            "title": "d",
+            "score_impact": "architecture_quality +1.0",
+        }
+        d_restraint = {
+            "priority": 1,
+            "stable_id": "F-034",
+            "title": "r",
+            "score_impact": "framework_idioms +0.5",
+        }
+        d_cited = {"evidence": ["Sources/LedgerKit/Ledger.swift:12 ordering contract"]}
+
+        deferral_cases = [
+            (
+                "RED: target still at priority 2",
+                {"backlog": [d_decoy | {"priority": 1}, d_target | {"priority": 2}]},
+                3,
+            ),
+            ("GREEN: target escalated, decoy retained", {"backlog": [d_target, d_decoy]}, 0),
+            ("restraint failure: decoy displaced out of the backlog", {"backlog": [d_target]}, 3),
+            (
+                "restraint failure: wrong streak promoted",
+                {"backlog": [d_target, d_decoy, d_restraint]},
+                3,
+            ),
+            (
+                "ABSENT: target neither ranked nor found",
+                {"backlog": [d_decoy | {"priority": 1}], "findings": []},
+                4,
+            ),
+            (
+                "GREEN by dropping: cited in findings, no backlog item",
+                {"backlog": [d_decoy | {"priority": 1}], "findings": [d_cited]},
+                0,
+            ),
+            ("empty everything is ABSENT, not a pass", {"backlog": [], "findings": []}, 4),
+        ]
+        if "deferred-item-1" in on_disk:
+            for label, payload, want in deferral_cases:
+                got = _grade_as("deferred-item-1", "--deferral-only", payload)
+                check(got == want, f"grader deferral {label}: expected exit {want}, got {got}")
 
         # the mutually-exclusive flag guard
         proc = subprocess.run(

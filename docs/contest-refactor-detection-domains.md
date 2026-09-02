@@ -9,7 +9,8 @@ cost, and process. This document owns the skill's *reach*: which classes of defe
 all, and how confident it is in what it reports. A rule of thumb — if the item changes what a
 reviewer would say about the target repo, it belongs here; if it changes what `validate-artifact.py`
 or the loop's own bookkeeping does, it belongs there. Items that sit on the seam are cross-referenced,
-never dual-listed.
+never dual-listed. The calibration discipline below governs every loop-behaviour lever, not only
+detection domains — see [Lever classes](#lever-classes--route-before-you-measure).
 
 **Created 2026-08-21**, seeded by the competitor domain sweep of that date plus the four detection
 rows migrated out of the review register's open backlog (rows 23, 24, 25, 27).
@@ -17,6 +18,7 @@ rows migrated out of the review register's open backlog (rows 23, 24, 25, 27).
 ## Contents
 
 - [Calibration discipline — read before adding any domain](#calibration-discipline--read-before-adding-any-domain)
+  - [Lever classes — route before you measure](#lever-classes--route-before-you-measure)
   - [Detection-domain promotion bar](#detection-domain-promotion-bar)
 - [Current coverage baseline](#current-coverage-baseline)
 - [Competitor domain sweep — 2026-08-21](#competitor-domain-sweep--2026-08-21)
@@ -44,6 +46,96 @@ nothing.
 A defect is **legible** when the bare rubric already finds it. Legibility is measured, never
 assumed, and it is the property that decides whether a candidate domain can demonstrate anything:
 a legible defect leaves no lift for added prose to capture. Every zero above was a legible corpus.
+
+### Lever classes — route before you measure
+
+The bar below was written for one class of candidate and is stated in that class's terms: it
+requires the **control to fail**. That is the right test for a lever meant to make the reviewer
+*see* something it currently misses. It is the wrong test for everything else — a lever that
+changes ordering, scheduling, or restraint is measured against a control that is behaving
+correctly, so "did the control miss it" has no answer.
+
+**Two candidates have already been mis-routed into it, and both are on record.** **DD-13** is a
+restraint lever; this document already says it *"never belonged in this queue"*, that criterion 2
+does not apply to it, and that criterion 4 is its experiment. **`stalled-domain-1`** is a
+*selection* lever, and it is the sharper case: its RED arm measured the control at **4/5**, verdict
+`DOES NOT DISCRIMINATE`, recorded in `evals/priority_replay_baseline.json` with the note *"at 4/5
+there is no headroom … adjusting the fixture until the control fails would be fitting the
+instrument to the hypothesis."* The change was not shown to be bad. The endpoint had no headroom
+by construction.
+
+Classify first. The class decides the endpoint; the 4/5-vs-≤2/5 *shape* is shared by all three.
+
+| Class | Question | Endpoint | Unit |
+| --- | --- | --- | --- |
+| **R — recall / detection** | does the reviewer see a defect class it currently misses? | criteria 2+3 as written: illegible RED (control ≤ 1/5), then measured lift (treat ≥ 4/5) | one blind Critic run per rep |
+| **P — precision / restraint** | does it stop the reviewer over-flagging something clean? | **criterion 4 is the experiment.** Control over-flags ≥ 4/5 on named near-misses; treat ≤ 1/5; plus a recall-safety set the treat arm must not lose (DD-13: 5/5 → 0/5, recall safety 15/15) | one blind Critic run per rep, per near-miss |
+| **S — selection / scheduling** | does it change *what gets examined* or *which queued item gets executed*, holding judgment quality fixed? | the **selection endpoint** below | one Critic run against a **seeded history**; an N-loop replay only when a single run provably cannot isolate |
+
+Criteria 1, 5 and 6 (blind case, budget, owner adjudication) are class-independent and apply to all
+three.
+
+**The selection endpoint (class S).** Register all four before running:
+
+1. **The counter** — one integer computed by a committed grader from the emitted artifact plus the
+   seeded `REVIEW_HISTORY.json`, with **no model and no prose reading**. Examples: rank of the
+   target item; deferral-streak length at emit; distinct dimensions named across the backlog;
+   files cited over files in inventory.
+2. **The threshold and direction** — the value that counts as a pass, fixed in writing first.
+3. **The restraint counter** — a second integer, on the same run, that must **not** move.
+4. **The counterfactual pre-check** — see below.
+
+Decision rule, reusing the recall bar's shape verbatim: **treat crosses the threshold in ≥ 4 of 5
+reps and control in ≤ 2 of 5, with zero restraint failures in treat.** Overlapping distributions
+are lateral; do not ship on lateral. The only thing that changes is what a rep's verdict *means* —
+"the counter crossed" rather than "the defect was found".
+
+**What a false positive is when you change ordering rather than detection.** Two named modes; a
+class-S fixture carries a control for each:
+
+- **Manufactured work** — the promoted item is not a real finding, or fails the Simplify Pressure
+  Test. This is already the `restraint control` role in `evals/priority-fixtures/`, and the grader
+  fails a pure claim on that dimension.
+- **Displacement** — the promoted item is real but strictly worse than the one it displaced, and
+  the displaced item becomes the new stuck item. Measured with the **same counter applied to the
+  displaced item**: a lever that moves the problem has not fixed it. No extra fixture is needed —
+  the Priority-1 accounting sentence has to name what it displaced, and that naming stays
+  operator-read for the same reason every other restraint signal here does.
+
+**The counterfactual pre-check — run it before buying an arm.** Name the existing criterion a
+correct control would use to reach the same answer. **If one exists, the arms will not separate and
+the run is already spent.** This is class S's equivalent of *"run criterion 2 first, alone"*, and it
+is the cheapest lesson on this page: `stalled-domain-1` and `off-path-residual-1` between them
+established that their controls were already right. In `stalled-domain-1` the target won on
+distance *and* stall, so the pre-existing rule reached it without the change. A class-S fixture is
+discriminating only when **every** pre-existing criterion points at a *different* item than the
+lever does. Enumerate them explicitly and in this order, because the cheap ones are not the ones
+that bite: **criterion 0 (Actionability) first**, then distance, dimension stall, severity, and
+Meta-Rule 5 subtractivity.
+
+**Criterion 0 is the one that gets forgotten, and it is the one that killed the first class-S
+fixture built under this section.** `deferred-item-1` (2026-08-29) planted a target that loses on
+distance, stall, severity and subtractivity — all four verified before the arm — and its RED
+control escalated it anyway, 1 of 2 reps. Two of the four planted roles were *unactionable* (one
+barred by a standing user constraint, one re-derived as a blocked defect), so with both out of
+contention the target became the top **actionable** candidate for free and the pre-existing
+tiebreak reached it unaided. A candidate that wins by elimination has not been isolated. Check
+what remains *rankable*, not just what ranks lower.
+
+A pre-check can also kill a candidate outright on banked data, at zero model cost. Row 24 slice D
+was parked that way on 2026-08-29: the unordered walk already reaches churn-ranked files at 2.9×
+base rate, so the ordering rule had roughly one file of headroom in 1313.
+
+**Do not re-tune the fixture to restore headroom.** `priority_replay_baseline.json` records the
+rule and the reason: *"adjusting the fixture until the control fails would be fitting the
+instrument to the hypothesis."* Re-set the threshold, or park the lever.
+
+**When a single seeded run is not enough.** Both recorded Tier-1P negatives concluded the
+production failure is a *multi-loop supply* phenomenon that a cold single-loop probe cannot
+observe. A replayed N-loop history is the honest instrument for that, and it costs N× per rep. It
+is **not** authorised by this section — it inherits the live-run gate in
+[`contest-refactor-run-log.md`](contest-refactor-run-log.md) § *Decision: stop fixture and prose
+work — 2026-08-26*, which requires an owner-stated value threshold and stopping budget first.
 
 ### Detection-domain promotion bar
 
@@ -473,7 +565,7 @@ Row numbers preserved for citation continuity with the retired deep-dive.
 | Row | Item | State |
 | --- | --- | --- |
 | 23 | Detection-lens expansion (latent-premises, retry-safety, operational) | **CLOSED 2026-08-22.** Decomposed 2026-08-21 into DD-01…DD-14 ([named candidates](#named-candidates--row-23-decomposition)), each with a target file, a budget class, and a next unmet criterion; "expansion" resolved into fourteen candidates that passed or parked individually. The row's own closing condition — every DD-* promoted or parked — is now met: one shipped (DD-13), two shipped as detectors, four measured and failed criterion 2, five parked on class evidence, one parked on criterion 1, one merged into row 24. See the [disposition table](#the-detection-programme-closed-2026-08-22) |
-| 24 | Deterministic selection + coverage manifest + resumable scan | **Slices A/B/B2 shipped 2026-08-19** ([`ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md`](../analysis/contest-refactor/ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md)): `--scope` given an effect (guarded by `_flag_effect_selftest.py`), `scripts/coverage_ledger.py` + selftest with derived terminal state and a registry cross-check, and a wording-pinned *Coverage disclosure* section in `halt-handoff.md`. **Open: C** (fingerprint invalidation + resume, gated on B staying stable across ≥5 real loops) and **D** (churn prior, advisory ordering). The 2026-08-21 coverage analyzer measured 302/1313 files cited across all historical BenchHype loops (BenchHypeKit 24%) — uneven-coverage proof for C/D |
+| 24 | Deterministic selection + coverage manifest + resumable scan | **Slices A/B/B2 shipped 2026-08-19** ([`ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md`](../analysis/contest-refactor/ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md)): `--scope` given an effect (guarded by `_flag_effect_selftest.py`), `scripts/coverage_ledger.py` + selftest with derived terminal state and a registry cross-check, and a wording-pinned *Coverage disclosure* section in `halt-handoff.md`. **Open: C** (fingerprint invalidation + resume, gated on B staying stable across ≥5 real loops). **D parked 2026-08-29** on a zero-cost counterfactual pre-check — the unordered walk already reaches churn-ranked files at **2.9× base rate** (23/26 = 88% of surviving churn top-30 cited, vs a 177/577 = 30.7% source base rate), leaving ordering roughly one file of headroom in 1313; see [`ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md`](../analysis/contest-refactor/ITEM24-COVERAGE-UNIT-DESIGN-2026-08-19.md) §8 row D. The 2026-08-21 coverage analyzer measured 302/1313 files cited across all historical BenchHype loops (BenchHypeKit 24%) — uneven-coverage proof for C/D |
 | 25 | Tool-grounded substrate + per-language rules | **Half A shipped 2026-08-19** ([`ITEM25-TOOL-SUBSTRATE-2026-08-19.md`](../analysis/contest-refactor/ITEM25-TOOL-SUBSTRATE-2026-08-19.md)): `scripts/tool_runner.py` + selftest, six typed non-run outcomes (`absent`/`not_applicable` are never `clean`), redaction + injection containment, `ruff` wired, `audit_cochange.py` adopted — all in Step-0 sub-step 6c at zero loop-path tokens. **Open: Half B** (per-language rule packs) is budget-blocked, not undesigned: the two packs matching the eval corpus total 3,029 tokens (swift 1,422 + python 1,607) against 429/407 tokens of live headroom. **Adjudicated 2026-08-21 — record the wall, stay blocked.** No measured lift exists to justify a 7× ceiling bump on a judgment lever, and the calibration discipline at the top of this document is the reason: added prose has repeatedly measured a recall lift of zero. Re-open with a measured lift, not with a redraft |
 | 27 | Per-finding disproof pipeline | **Adjudicated 2026-08-21 — assurance is owned by the Critic's own pass.** No separate disproof stage, no per-finding fan-out; a finding must survive its own crux-and-reproducer challenge before it is emitted. Two consequences worth recording. (a) **The recording half already ships**: the registry occurrence stub carries `withdrawn` — "the Critic audited the finding and reclassified it as not-a-finding; no code change" (`method.md` Step 1.5) — so what is missing is the *trigger discipline*, not a schema. (b) **The known risk is self-grading**: the arm that found the finding also clears it, which is exactly the correlated-family blind spot the G35/G36 six-provider review caught codex-side. Remaining work is prose on the Critic path, so it enters the promotion bar like any other candidate — and like DD-13 it inverts it, since a disproof gate is a precision lever whose experiment is criterion 4, not 2/3 |
 

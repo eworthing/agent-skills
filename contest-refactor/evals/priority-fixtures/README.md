@@ -62,6 +62,71 @@ accounting is prose, and a `framework_idioms` claim that is secondary to another
 not a restraint failure — the production finding this models carried
 `concurrency +0.5; framework_idioms +0.5` honestly for fifteen loops.
 
+## `deferred-item-1` — the third kind (`kind = "deferral"`)
+
+The two fixtures above ask **which** candidate went first, and expect the control to get
+it wrong. This one asks a different question, and expects the control to get the ranking
+**right**: an item the ranking has correctly declined four loops running — does the loop
+ever stop declining it?
+
+That inversion is the point. `stalled-domain-1`'s RED arm measured the control at
+**4/5**, `DOES NOT DISCRIMINATE`, because its target won on distance *and* stall, so the
+pre-existing rule reached it without any change. This fixture is built the opposite way:
+**every** pre-existing criterion points at the decoy.
+
+| role | dim | distance | stall | severity | subtractive | deferral streak |
+|---|---|---|---|---|---|---|
+| **target** | `credibility` 7.5 | 2.0 | 2 | Noticeable | no | **4** |
+| **decoy** | `architecture_quality` 5.5 | **4.0** | **6** | **Serious** | **yes** | 0 |
+| **restraint** | `framework_idioms` 6.0 | 3.5 | 5 | Noticeable | no | **0** |
+| **blocked** | `concurrency` 6.5 | 3.0 | 3 | Serious | no | 2 |
+
+**The decoy is not a bad item.** It is the item the control is *right* to pick, winning
+on four criteria at once. Its second job is the displacement control: it must still be in
+the backlog after the escalation, because a lever that drops a Serious finding to make
+room has moved the problem rather than fixed it.
+
+**The restraint control is the definitional trap.** `F-034` appears in four consecutive
+seeded backlogs, exactly like the target — but every appearance is at `priority: 1` with
+`targeted_finding_status: "carried_forward"`. It was selected and attempted each loop,
+never deferred. A model that counts backlog *appearances* escalates it; one that counts
+*deferrals* does not. The operative definition, computable from committed artifact data
+with no schema change (G42 supplies `stable_id`, G18 supplies the history):
+
+> **deferred in loop N ⟺ the `stable_id` appears in `loops[N].backlog[]` at `priority >= 2`.**
+
+### Seed shape
+
+Unlike the `rank` fixtures, whose seeds carry only `{loop, schema_version, scorecard,
+state}`, this seed carries per-loop `backlog[]` in full G39/G42 shape plus a minimal
+`loop_result.targeted_finding_status`. The streak lives there and nowhere else, so
+`_priority_replay_selftest.py` guards `deferral_signature` against the seed the same way
+it already guards `stall_signature` — a silently drifting seed inverts the answer without
+turning a single check red.
+
+### Running one
+
+Same pinned dispatch template and the same seeding as above; the existing output contract
+already carries `findings[]`, `backlog[]` and `priority_1_accounting`, so no prompt
+variant is needed.
+
+```bash
+python3 scripts/loop_replay_grade.py deferred-item-1 <findings.json> --deferral-only
+```
+
+Exit **0** = escalated (or dropped, with the item named), **3** = deferred again *or* a
+restraint failure, **4** = absent from findings entirely, **1** = input error.
+
+**Exit 4 is graded apart from exit 3 deliberately.** `off-path-residual-1` measured 3/5
+ABSENT on a comparable cold Critic-only probe; a run that never engaged the item must not
+be scored as having escalated it.
+
+Class **S** under
+[`contest-refactor-detection-domains.md`](../../../docs/contest-refactor-detection-domains.md)
+§ *Lever classes*, so the endpoint is a counter with a registered restraint counter, not
+set membership. The decision rule below is unchanged — only what a rep's verdict *means*
+changes.
+
 ## Decision rule
 
 Reused verbatim from [`../loop-fixtures/DETECTION-PROBE.md`](../loop-fixtures/DETECTION-PROBE.md):
