@@ -201,3 +201,7 @@ title = "Persisted implementation-hotspot evidence — sanitized schema-v2 cover
 [[validation_gates]]
 id = "G50"
 title = "Hotspot triage completeness — discovery_consumption.hotspot_triage key set must equal the scanner roster exactly (pre-emit, hotspot-triage epoch)"
+
+[[validation_gates]]
+id = "G51"
+title = "Markdown System Flag parity — the first `[STATE: <state>]` line in CURRENT_REVIEW.md equals CURRENT_REVIEW.json.state (pre-commit, md-state-parity epoch)"

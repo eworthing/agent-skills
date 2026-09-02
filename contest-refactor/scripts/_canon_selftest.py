@@ -255,7 +255,8 @@ GOLDEN_CANON_JSON = """{
     "G47": "Execution-evidence linkage — ledger record resolves, command human-pinned, source fingerprint fresh per phase, exit 0, consistency_check on both sides (opt-in via loop_result.execution_evidence; item 14 Tier 1)",
     "G48": "run_id identity discipline — non-null run_id matches run-<UTC yyyy-mm-dd>-<uuid4().hex> and never changes across consecutive loops of one run (REPORT-ONLY: post-G48 epoch exists; Issue withheld until the instrumented-pass promotion condition is met — promotion bar in _artifact_run_identity.py)",
     "G49": "Persisted implementation-hotspot evidence — sanitized schema-v2 coverage/candidates required for hotspot-v2 rulesets",
-    "G50": "Hotspot triage completeness — discovery_consumption.hotspot_triage key set must equal the scanner roster exactly (pre-emit, hotspot-triage epoch)"
+    "G50": "Hotspot triage completeness — discovery_consumption.hotspot_triage key set must equal the scanner roster exactly (pre-emit, hotspot-triage epoch)",
+    "G51": "Markdown System Flag parity — the first `[STATE: <state>]` line in CURRENT_REVIEW.md equals CURRENT_REVIEW.json.state (pre-commit, md-state-parity epoch)"
   },
   "extra": {
     "fixture_rule_kinds": [

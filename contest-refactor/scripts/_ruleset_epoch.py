@@ -80,6 +80,8 @@ HOTSPOT_TRIAGE = "hotspot_triage"
 HOTSPOT_TRIAGE_REV = "7ffd502"
 ATTESTATION_SKIP = "attestation_skip"
 ATTESTATION_SKIP_REV = "1609cd6"
+MD_STATE_PARITY = "md_state_parity"
+MD_STATE_PARITY_REV = "000c7d8"
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 # Oldest -> newest. Index comparison in `applies()` is what lets a future
@@ -93,12 +95,14 @@ EPOCHS: tuple[str, ...] = (
     FINGERPRINT_BOUND,
     HOTSPOT_TRIAGE,
     ATTESTATION_SKIP,
+    MD_STATE_PARITY,
 )
 
 # Newest -> oldest, paired with each epoch's boundary revision. Extending this
 # (and EPOCHS above) is the whole job of adding a future git-ancestry-provable
 # epoch; classify() and _is_at_or_after() need no changes.
 _PROVABLE_EPOCHS: tuple[tuple[str, str], ...] = (
+    (MD_STATE_PARITY, MD_STATE_PARITY_REV),
     (ATTESTATION_SKIP, ATTESTATION_SKIP_REV),
     (HOTSPOT_TRIAGE, HOTSPOT_TRIAGE_REV),
     (FINGERPRINT_BOUND, FINGERPRINT_BOUND_REV),
@@ -165,6 +169,12 @@ REQUIREMENT_EPOCHS: dict[str, str] = {
     # output-format-migrations.md's two-commit shape for a retroactive field --
     # see _artifact_attestation.py's check_g47_execution_evidence).
     "G47_SKIP_REASON": ATTESTATION_SKIP,
+    # G51: the CURRENT_REVIEW.md System Flag must equal CURRENT_REVIEW.json.state.
+    # Landed 2026-09-02, commit 000c7d8 (the prose-only commit that made the
+    # promotion rewrite an obligation; this checker enforcement follows in the
+    # same wave, per output-format-migrations.md's two-commit shape -- see
+    # _artifact_md_flag.py's check_g51_md_state_parity).
+    "G51_MD_STATE_PARITY": MD_STATE_PARITY,
     # Slot for a future client, still unclaimed.
     # "G17_COVERAGE_CITATION": CURRENT,
 }

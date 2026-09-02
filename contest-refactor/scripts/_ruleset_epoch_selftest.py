@@ -97,6 +97,11 @@ def _classify_cases() -> list[tuple[str, dict, str]]:
             epoch.ATTESTATION_SKIP,
         ),
         (
+            "md-state-parity boundary revision",
+            {"schema_version": 4, "skill_rev": "000c7d8"},
+            epoch.MD_STATE_PARITY,
+        ),
+        (
             "unresolved valid SHA cannot prove the newer epoch",
             {"schema_version": 4, "skill_rev": "0000000"},
             epoch.CURRENT,
@@ -188,9 +193,9 @@ def _check_shallow_head_fallback() -> list[str]:
         # clone satisfies -- classify() tries newest-first, so it proves the
         # newest defined epoch, not specifically hotspot_v2. Update this
         # constant again the next time a newer provable epoch is added.
-        if got != epoch.ATTESTATION_SKIP:
+        if got != epoch.MD_STATE_PARITY:
             found.append(
-                f"classify: shallow current HEAD expected {epoch.ATTESTATION_SKIP!r}, got {got!r}"
+                f"classify: shallow current HEAD expected {epoch.MD_STATE_PARITY!r}, got {got!r}"
             )
     return found
 
@@ -274,6 +279,17 @@ if epoch.applies("G47_SKIP_REASON", _TRIAGE_ART):
     failures.append("applies: G47_SKIP_REASON must not retroactively apply before attestation_skip")
 if not epoch.applies("G47_SKIP_REASON", _SKIP_REASON_ART):
     failures.append("applies: G47_SKIP_REASON must apply at the attestation-skip boundary")
+
+_PARITY_ART = {"schema_version": 4, "skill_rev": "000c7d8"}
+_SKIP_ART = {"schema_version": 4, "skill_rev": "1609cd6"}
+if epoch.REQUIREMENT_EPOCHS.get("G51_MD_STATE_PARITY") != epoch.MD_STATE_PARITY:
+    failures.append("REQUIREMENT_EPOCHS['G51_MD_STATE_PARITY'] must start at md_state_parity")
+if epoch.applies("G51_MD_STATE_PARITY", _SKIP_ART):
+    failures.append(
+        "applies: G51_MD_STATE_PARITY must not retroactively apply before md_state_parity"
+    )
+if not epoch.applies("G51_MD_STATE_PARITY", _PARITY_ART):
+    failures.append("applies: G51_MD_STATE_PARITY must apply at the md-state-parity boundary")
 
 # [I1] items 1-4: the four requirement keys the new enforcement checkers read
 # (_artifact_independence.py, _artifact_transitions.py,
@@ -381,7 +397,7 @@ if failures:
     sys.exit(1)
 print(
     f"OK: _ruleset_epoch classifies {len(_classify_cases())} skill_rev shapes, the matrix "
-    f"scopes G43/G46/G49/G32/G50, preserves the shallow-HEAD fallback, and pins a marker-less "
+    f"scopes G43/G46/G49/G32/G50/G47/G51, preserves the shallow-HEAD fallback, and pins a marker-less "
     f"artifact's intentional G43/G46 under-coverage"
 )
 sys.exit(0)

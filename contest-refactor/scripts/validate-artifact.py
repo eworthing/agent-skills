@@ -88,6 +88,7 @@ from _artifact_history import (  # noqa: E402
     check_retirement_rule,
 )
 from _artifact_independence import check_challenge_independence_report_only  # noqa: E402
+from _artifact_md_flag import check_g51_md_state_parity  # noqa: E402
 from _artifact_panel import check_g32_halt_success_challenge  # noqa: E402
 from _artifact_remediation import check_g46_general_remediation_fields  # noqa: E402
 from _artifact_residual import (  # noqa: E402
@@ -211,6 +212,7 @@ def run_checks(
     issues.extend(check_g34_halt_tail_invariants(current_review, canon))
     issues.extend(check_g35_halt_handoff_shape(current_review, canon))
     issues.extend(check_g36_required_state(current_review, canon))
+    issues.extend(check_g51_md_state_parity(artifact_dir, current_review))
     issues.extend(check_g37_terminal_residual_accounting(current_review))
     issues.extend(check_g38_premium_model_budget_guard(current_review, canon))
     issues.extend(check_g45_exhaustion_record(current_review, canon))
