@@ -12,7 +12,7 @@ on 2026-08-23).
 
 DEFAULTS_PRESENT tracks the tuned per-provider defaults and guards against an
 accidental default change (claude_code moved to claude-sonnet-5 on 2026-07-13 when
-the host `sonnet` tier rolled; gpt-5.6-luna / deepseek-v4-flash stay put). Update
+the host `sonnet` tier rolled; gpt-5.6-luna / qwen3.8-flash stay put; opencode moved deepseek-v4-flash -> qwen3.8-flash on 2026-09-02 when opencode-go put deepseek behind a China-hosted workspace opt-in). Update
 this tuple in the SAME commit as provider-adapters.md + validate-artifact.py
 _PROVIDER_DEFAULTS — three copies of one fact.
 
@@ -30,7 +30,7 @@ STALE = ("claude-opus-4-7",)
 # Strings that MUST appear after the refresh (current upgrade targets + fable tier).
 REQUIRED = ("claude-opus-4-8", "gpt-5.6-sol", "claude-fable-5")
 # Tuned per-provider defaults that must stay put (no accidental default bump).
-DEFAULTS_PRESENT = ("claude-sonnet-5", "gpt-5.6-luna", "deepseek-v4-flash")
+DEFAULTS_PRESENT = ("claude-sonnet-5", "gpt-5.6-luna", "qwen3.8-flash")
 
 
 def main() -> int:

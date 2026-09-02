@@ -276,13 +276,26 @@ def compute_ledger(
 ) -> dict:
     loops = history.get("loops") or []
     source_roots: list[str] = []
+    # A root one historical loop declared badly must not veto the whole ledger:
+    # `--reset` keeps REVIEW_HISTORY.json, so an absolute root recorded by one
+    # pre-reset run (BenchHype 2026-08-24, loop 1) would otherwise block every
+    # later run's coverage figure until a `--purge`. Set aside, counted, named.
+    invalid_roots: list[str] = []
     for entry in loops:
         roots = (entry.get("discovery") or {}).get("source_roots") or []
         for r in roots:
-            if r not in source_roots:
-                source_roots.append(r)
+            if r in source_roots or r in invalid_roots:
+                continue
+            try:
+                _validate_source_root(r)
+            except InvalidSourceRoot:
+                invalid_roots.append(r)
+                continue
+            source_roots.append(r)
 
     denominator, excluded, missing_roots = first_party_files(repo_root, source_roots)
+    if invalid_roots:
+        excluded["invalid_root"] = len(invalid_roots)
     denom_set = set(denominator)
     first_cite = cited_paths(history)
 
@@ -395,6 +408,8 @@ def compute_ledger(
             # scanned == included + excluded, derived on every run (design note §5)
             "excluded_by_reason": excluded,
             "missing_roots": missing_roots,
+            # absolute or '..'-escaping roots from history, skipped not walked
+            "invalid_roots": invalid_roots,
             "scanned": total + sum(excluded.values()),
         },
         "per_root": per_root,
@@ -500,6 +515,11 @@ def main(argv: list[str] | None = None) -> int:
             )
         if led["revision"]["unavailable_loops"]:
             print(f"  no recorded revision for loop(s): {led['revision']['unavailable_loops']}")
+        if led["denominator"]["invalid_roots"]:
+            print(
+                "  skipped invalid declared root(s) from history: "
+                f"{led['denominator']['invalid_roots']}"
+            )
     return 0
 
 

@@ -300,34 +300,63 @@ def main() -> int:
             f"a missing root contributes zero included files, got {per_root}",
         )
 
-    # --- Phase 1: absolute / '..'-escaping roots -> typed error, exit 2 ------
-    # (via the CLI path -- main() is what catches InvalidSourceRoot and turns it
-    # into a clean exit 2 instead of an uncaught relative_to() ValueError.)
+    # --- Phase 1: absolute / '..'-escaping roots -> skipped, counted, named ---
+    # A bad root one historical loop declared must not veto the ledger: --reset
+    # keeps REVIEW_HISTORY.json, so BenchHype's 2026-08-24 absolute root blocked
+    # the 2026-09-02 run's coverage figure. The ledger sets it aside and walks
+    # nothing under it (the /etc root would otherwise leak files in).
     with tempfile.TemporaryDirectory() as td:
         abs_repo = Path(td) / "abs_repo"
         abs_repo.mkdir()
+        (abs_repo / "src").mkdir()
+        (abs_repo / "src" / "a.py").write_text("x = 1\n", encoding="utf-8")
         (abs_repo / "REVIEW_HISTORY.json").write_text(
             json.dumps(
-                {"loops": [{"loop": 1, "discovery": {"source_roots": ["/etc"]}, "findings": []}]}
+                {
+                    "loops": [
+                        {"loop": 1, "discovery": {"source_roots": ["/etc"]}, "findings": []},
+                        {"loop": 2, "discovery": {"source_roots": ["src"]}, "findings": []},
+                    ]
+                }
             ),
             encoding="utf-8",
         )
+        out_json = abs_repo / "led.json"
         p = subprocess.run(
-            [sys.executable, str(SKILL_ROOT / "scripts" / "coverage_ledger.py"), str(abs_repo)],
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts" / "coverage_ledger.py"),
+                str(abs_repo),
+                "--json",
+                str(out_json),
+            ],
             capture_output=True,
             text=True,
         )
         check(
-            p.returncode == 2,
-            f"an absolute source root must exit 2 (plumbing), got {p.returncode}: {p.stderr[:200]}",
+            p.returncode == 0,
+            f"an absolute historical root must not abort the ledger, got {p.returncode}: {p.stderr[:200]}",
+        )
+        led_abs = json.loads(out_json.read_text(encoding="utf-8"))
+        check(
+            led_abs["denominator"]["invalid_roots"] == ["/etc"],
+            f"the invalid root must be named, got {led_abs['denominator'].get('invalid_roots')}",
         )
         check(
-            "source_roots entries must be repo-relative" in p.stderr,
-            f"the absolute-root error must name the typed message, got {p.stderr!r}",
+            led_abs["source_roots"] == ["src"] and led_abs["denominator"]["files"] == ["src/a.py"],
+            f"only the valid root is walked, got {led_abs['source_roots']} / {led_abs['denominator']['files']}",
+        )
+        check(
+            led_abs["denominator"]["excluded_by_reason"].get("invalid_root") == 1,
+            f"the skip must be counted, got {led_abs['denominator']['excluded_by_reason']}",
+        )
+        check(
+            "skipped invalid declared root(s) from history: ['/etc']" in p.stdout,
+            f"the CLI must report the skipped root, got {p.stdout!r}",
         )
         check(
             "Traceback" not in p.stderr,
-            f"an invalid root must be a clean error, not a raw traceback: {p.stderr!r}",
+            f"an invalid root must never surface as a raw traceback: {p.stderr!r}",
         )
 
         escape_repo = Path(td) / "escape_repo"
@@ -338,18 +367,27 @@ def main() -> int:
             ),
             encoding="utf-8",
         )
+        esc_json = escape_repo / "led.json"
         p = subprocess.run(
-            [sys.executable, str(SKILL_ROOT / "scripts" / "coverage_ledger.py"), str(escape_repo)],
+            [
+                sys.executable,
+                str(SKILL_ROOT / "scripts" / "coverage_ledger.py"),
+                str(escape_repo),
+                "--json",
+                str(esc_json),
+            ],
             capture_output=True,
             text=True,
         )
         check(
-            p.returncode == 2,
-            f"a '..'-escaping source root must exit 2 (plumbing), got {p.returncode}",
+            p.returncode == 0,
+            f"a '..'-escaping source root is skipped, not fatal, got {p.returncode}: {p.stderr[:200]}",
         )
+        led_esc = json.loads(esc_json.read_text(encoding="utf-8"))
         check(
-            "source_roots entries must be repo-relative" in p.stderr,
-            f"the escaping-root error must name the typed message, got {p.stderr!r}",
+            led_esc["denominator"]["invalid_roots"] == ["../evil"]
+            and led_esc["denominator"]["files"] == [],
+            f"the escaping root must be named and nothing walked, got {led_esc['denominator']}",
         )
 
     # --- Phase 1: source_roots() enumerator + --list-source-roots ------------

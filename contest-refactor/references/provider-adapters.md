@@ -63,6 +63,7 @@ Agent({
   - **B2**: fence a replaced executor by killing its process tree first: PGID kill, then sweep for re-parented children, before incrementing `executor_generation`.
   - **B3**: require a single-flight test-gate guard using a bracket-anchored process pattern such as `pgrep -f '[r]un_local_gate'`; a bare `pgrep -f` self-matches.
   - **B4/item 13**: establish this section as the single home for async join and cross-reference it from the three spawn points. A completed subagent whose final message was not delivered as a tool result is not a failure and is not retried: wait for completion, read the final message from the run record/transcript, and route only on that verdict. Restate, do not re-review. Never route on an empty result.
+  - **B5**: a test gate's lock and marker files belong to the gate. A gate whose lease carries a pid + start-epoch identity self-heals a stale lock; deleting a live one recreates the concurrent-gate contamination of incident 2. When B3's guard reports no gate running yet the gate still refuses to start, halt and report the lock as a blocker. A backgrounded launch whose log stays empty and whose guard reports no process after the launch is dead — relaunch it in the foreground where the host allows long calls (opencode does), keeping the lock untouched. Observed 2026-09-02: an opencode executor ran `rm -f .artifacts/local-gate/lock*` before its relaunch; harmless that time only because the guard had already shown the earlier gate dead.
 
 ### codex (verified 2026-08-19)
 
@@ -88,11 +89,11 @@ Three-tier spawn preference, tried in order. **The tier actually used determines
 **Tier 2 — subprocess**, when no native task tool is available:
 
 ```
-opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
-# resume: opencode run --session <id> --model opencode-go/deepseek-v4-flash '<prompt>'
+opencode run --model opencode-go/qwen3.8-flash '<prompt>'
+# resume: opencode run --session <id> --model opencode-go/qwen3.8-flash '<prompt>'
 ```
 
-- **Default model**: `opencode-go/deepseek-v4-flash` — `--model` takes `provider/model`; a bare id is invalid
+- **Default model**: `opencode-go/qwen3.8-flash` — `--model` takes `provider/model`; a bare id is invalid. Was `opencode-go/deepseek-v4-flash` until 2026-09-02: opencode-go now serves that id only China-hosted behind a workspace opt-in, so the spawn errors (`AI_APICallError … requires explicit opt in`) and the run falls back to the loop's own model with `retry_cause: spawn_error`.
 - **Permissions**: default mode (write allowed)
 - **Resume**: `--session <id>` flag
 - Record `spawn_isolation: "subagent"`, `loop_model` = the `--model` value passed, and `loop_model_source` per [Model overrides](#model-overrides) (`user_flag` / `env_override` / `default`).
@@ -159,7 +160,7 @@ therefore emits v4, and the machinery is live while the capability is not.
 
 The loop subagent MAY spawn ≤2–3 read-only helper sub-agents for bounded analysis (interpret an `audit_*` output, grep public surface, summarize churn). Unlike the reviewer and challenger, a helper emits **no verdict** — it returns candidate evidence the loop subagent re-derives and synthesizes, and the Critic/reviewer do the real judgment — so nothing the loop commits is gated on a helper. That makes the helper the one role where the **cheapest** model is the right default.
 
-- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.6-luna` at `-c model_reasoning_effort=medium`; opencode `opencode-go/deepseek-v4-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
+- **Default model (helper tier):** claude_code `claude-haiku-4-5`; codex `gpt-5.6-luna` at `-c model_reasoning_effort=medium`; opencode `opencode-go/qwen3.8-flash` (codex/opencode are already at their cheapest tier). Read-only enforcement is the same as the reviewer-spawn profile.
 - **Evidence (2026-06-27):** on bounded read-only analysis, `claude-haiku-4-5` matched `claude-sonnet-4-6` exactly — same real concerns surfaced, same look-alikes dismissed, zero misleading output (3/3 tasks). See [evals/reviewer-model-experiment.md § Helpers](../evals/reviewer-model-experiment.md). This is the inverse of the reviewer result: haiku's weakness is open-ended *judgment* (where it over-rejects), and a helper makes no judgment call.
 - **Not recorded** in `CURRENT_REVIEW.json` — helpers are ephemeral and off the audit/gate path, so there is no `helper_model` field or gate (deliberate low scope; nothing consumes it).
 
@@ -220,7 +221,7 @@ If a resolved `loop_model` is premium and the invocation is not dry-run, the mai
 
 ## When to upgrade the model
 
-The default per-provider models (Sonnet on Claude Code, gpt-5.6-luna on Codex, opencode-go/deepseek-v4-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
+The default per-provider models (Sonnet on Claude Code, gpt-5.6-luna on Codex, opencode-go/qwen3.8-flash on OpenCode) are tuned for typical loop work on small-to-medium codebases.
 
 **Prefer the default; upgrading is a precaution, not a measured win (evidence, 2026-06-27).** The default-tier (Sonnet) Critic caught **5/5** cross-module / forces-dependent defects in the `principal_baseline` benchmark, and a focused re-check found Sonnet catches the **3 hardest** principal flags (consistency-boundary, abstraction-seam, process-owner) decisively. So upgrading the Critic to Opus shows **no measured recall benefit** on the tested corpus — there is nothing in it Sonnet misses for Opus to catch. Treat the upgrade as an *unmeasured precaution* for codebases beyond what that corpus exercises (very large >100K LOC, dense concurrency, large state machines), or when a run visibly stalls — not as a default reflex on "this feels complex." Reflexively upgrading to Opus burns tokens for a benefit that is, so far, unmeasured. (Full method + result: [evals/reviewer-model-experiment.md § Critic tier](../evals/reviewer-model-experiment.md).) If you do upgrade:
 

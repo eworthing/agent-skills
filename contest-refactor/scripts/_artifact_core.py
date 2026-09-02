@@ -42,7 +42,7 @@ _PROVIDER_DEFAULTS: dict[str, str | None] = {
     "claude_code": "claude-sonnet-5",
     "codex": "gpt-5.6-luna",
     # opencode's --model requires provider/model; a bare id is rejected by the CLI.
-    "opencode": "opencode-go/deepseek-v4-flash",
+    "opencode": "opencode-go/qwen3.8-flash",
     "unknown": None,
 }
 

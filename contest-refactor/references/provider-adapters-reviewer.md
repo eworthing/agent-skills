@@ -52,13 +52,13 @@ codex exec --model gpt-5.6-luna -c model_reasoning_effort=xhigh --sandbox read-o
 - **Enforcement**: `--sandbox read-only` (values `read-only|workspace-write|danger-full-access`) is a real gate — stronger than the prompt-only contract other providers fall back to.
 - **Reviewer-permitted tools**: shell commands from the read-only allow-list above (other shell commands → reviewer rejects)
 
-### opencode (verified 2026-08-19)
+### opencode (verified 2026-08-19; default model moved to `opencode-go/qwen3.8-flash` 2026-09-02 — see provider-adapters.md § opencode Tier 2)
 
 ```
-opencode run --model opencode-go/deepseek-v4-flash '<prompt>'
+opencode run --model opencode-go/qwen3.8-flash '<prompt>'
 ```
 
-- **Default model**: `opencode-go/deepseek-v4-flash`
+- **Default model**: `opencode-go/qwen3.8-flash`
 - **Enforcement**: there is **no `--read-only` flag**, and unknown flags are silently ignored — relying on one runs with write allowed. Set `permission` in `opencode.json`: `{"edit": "deny"}` (values `ask|allow|deny`). `OPENCODE_PERMISSION` carries the same shape, unverified.
 - **Reviewer-permitted tools**: native `read`, `grep`, `glob`; shell restricted to the read-only allow-list
 

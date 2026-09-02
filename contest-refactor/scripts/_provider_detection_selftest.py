@@ -151,7 +151,7 @@ def main() -> int:
         )
     # --model takes provider/model; a bare id fails the spawn, which falls back to inline
     # and quietly costs the run its independent challenger.
-    if "opencode-go/deepseek-v4-flash" not in adapters:
+    if "opencode-go/qwen3.8-flash" not in adapters:
         failures.append(
             "the opencode model id lost its provider prefix; `--model` requires provider/model "
             "and a bare id is not a valid model"
@@ -270,10 +270,10 @@ def main() -> int:
     # helper tier and a descriptive line behind -- three sites, fixed one at a time
     # across two days. A class guard is cheaper than finding the fourth.
     for lineno, line in enumerate(adapters.splitlines(), 1):
-        for hit in re.finditer(r"(?<![\w/-])deepseek-v4-flash", line):
+        for hit in re.finditer(r"(?<![\w/-])qwen3\.8-flash", line):
             if not line[: hit.start()].endswith("opencode-go/"):
                 failures.append(
-                    f"provider-adapters.md:{lineno} names a BARE `deepseek-v4-flash`; "
+                    f"provider-adapters.md:{lineno} names a BARE `qwen3.8-flash`; "
                     "opencode's --model requires provider/model and rejects a bare id"
                 )
 
