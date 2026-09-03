@@ -33,7 +33,9 @@
       "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
       "symbol": "TrimRange.init",
       "line_start": 9,
-      "line_end": 25
+      "line_end": 25,
+      "expected_miss": true,
+      "expected_miss_reason": "W1a rule decision 2026-09-03: TrimRange.init's checks are lower-bound guard-form (`guard x >= 0`), which reject NaN by comparison semantics; one_sided_guard fires only on upper-only and negated if-throw shapes. Kept as a row so the miss is recorded."
     },
     {
       "fid": 204,

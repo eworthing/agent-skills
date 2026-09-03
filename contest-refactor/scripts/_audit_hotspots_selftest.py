@@ -838,6 +838,77 @@ def test_tracked_fixture_manifests(_: Path) -> str | None:
     return None
 
 
+# --- Queue D - invariant, experimental (OCR-GAP-REMEDIATION-PLAN-2026-09-03 W1a) --------
+INVARIANT_FIXTURES = SKILL_ROOT / "evals" / "hotspot-fixtures" / "invariant"
+
+INVARIANT_FIRES = {
+    "OneSidedGuardFires.swift": "one_sided_guard",
+    "ClampUncheckedFires.swift": "clamp_unchecked",
+    "IdCollectionNoUniquenessFires.swift": "id_collection_no_uniqueness",
+    "CodableBypassesThrowingInitFires.swift": "codable_bypasses_throwing_init",
+    "IntConversionUnboundedFires.swift": "int_conversion_unbounded",
+    # NaN/inf flow refinements (coordinator round, post-5f6392f):
+    "NegatedLessThanThrow_Fires.swift": "one_sided_guard",
+    "CollectionElementFieldFires.swift": "one_sided_guard",
+    "IntConversionMaxOnlyClamp_Fires.swift": "int_conversion_unbounded",
+}
+INVARIANT_SILENT = [
+    "OneSidedGuardSilentBothDirections.swift",
+    "ClampUncheckedSilentFiniteChecked.swift",
+    "IdCollectionNoUniquenessSilentSetChecked.swift",
+    "CodableBypassesThrowingInitSilentCustomDecode.swift",
+    "IntConversionUnboundedSilentMinMaxWrapped.swift",
+    # NaN/inf flow refinements: guard-form lower bound + later min( clamp
+    # together are a complete safe range (fid 131's shape) -- must NOT fire
+    # one_sided_guard OR clamp_unchecked.
+    "LowerGuardThenMinClamp_Silent.swift",
+    "CollectionElementFieldSilentTwoSided.swift",
+    "LowerOnlyGuardForm_Silent.swift",
+    "CollectionElementSplitBoundsKeypathFinite_Silent.swift",
+]
+
+
+def test_queue_d_invariant_signals(base: Path) -> str | None:
+    invariant_json = base / "queue_d_invariant.json"
+    out, err, rc = _run(
+        INVARIANT_FIXTURES,
+        ["--json", "--experimental-invariant-queue", "--invariant-json", str(invariant_json)],
+    )
+    if rc != 0:
+        return f"scanner exited {rc}: {err}"
+    if not invariant_json.exists():
+        return "--invariant-json side file was not written"
+    doc = json.loads(invariant_json.read_text(encoding="utf-8"))
+    if doc.get("schema_version") != 3:
+        return f"expected side file schema_version 3, got {doc.get('schema_version')}"
+    if doc.get("promotion_allowed") is not False:
+        return "invariant side file must carry promotion_allowed: false"
+
+    candidates_by_path = {c["path"]: c for c in doc.get("candidates", [])}
+
+    for filename, signal in INVARIANT_FIRES.items():
+        candidate = candidates_by_path.get(filename)
+        if candidate is None:
+            return f"{filename}: expected an invariant candidate, none produced"
+        if "invariant" not in candidate.get("candidate_queues", []):
+            return f"{filename}: candidate missing 'invariant' in candidate_queues"
+        value = candidate.get("invariant_signals", {}).get(signal, 0)
+        if value <= 0:
+            return f"{filename}: expected {signal} > 0, got {value}"
+
+    for filename in INVARIANT_SILENT:
+        candidate = candidates_by_path.get(filename)
+        if candidate is not None:
+            return f"{filename}: expected to stay silent, got candidate {candidate['symbol']!r}"
+
+    if out.strip():
+        stdout_doc = json.loads(out)
+        if stdout_doc.get("schema_version") != 2:
+            return "canonical stdout must stay schema_version 2 with the experimental flag set"
+
+    return None
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         base = Path(tmpdir)
@@ -867,6 +938,7 @@ def main() -> int:
                 test_ast_grep_failure_is_partial_without_raw_output,
             ),
             ("tracked_fixture_manifests", test_tracked_fixture_manifests),
+            ("queue_d_invariant_signals", test_queue_d_invariant_signals),
             ("swift_enum_only_counts_as_scanned", test_swift_enum_only_counts_as_scanned),
             (
                 "swift_function_bearing_file_scans_normally",

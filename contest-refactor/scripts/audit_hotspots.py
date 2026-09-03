@@ -28,6 +28,11 @@ Supported stacks:
 
 Usage:
   scripts/audit_hotspots.py [<repo-root>] [--scope DIR] [--top-k N] [--json]
+    [--experimental-invariant-queue --invariant-json PATH [--invariant-top-k N]]
+
+  The experimental flags add Queue D (invariant) candidate evidence for Swift
+  value types to a SIDE FILE only (v3 shape); canonical stdout stays
+  schema_version 2, byte-for-byte unchanged, whether or not the flags are set.
 
 Exit codes:
   0 = reported `ok`, `partial`, `absent`, or `not_applicable`
@@ -41,7 +46,6 @@ import ast
 import json
 import re
 import shutil
-import subprocess
 import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
@@ -52,9 +56,17 @@ from pathlib import Path
 # _EXACT_CASE_IGNORE_DIRS are re-exported (the `as`-alias form tells ruff this is
 # deliberate) for import compatibility -- no current consumer imports them from
 # this module, but nothing forbids one.
+from _ast_grep import _AST_GREP_FAILURES as _AST_GREP_FAILURES
+from _ast_grep import _ast_grep_matches
 from _fs_filters import _EXACT_CASE_IGNORE_DIRS as _EXACT_CASE_IGNORE_DIRS
 from _fs_filters import IGNORE_DIRS as IGNORE_DIRS
 from _fs_filters import is_generated_file, is_ignored_path, is_test_file
+from _invariant_signals import InvariantCandidate, InvariantSignals, TypeContext
+from _invariant_signals import analyze_member as _analyze_invariant_member
+from _invariant_signals import analyze_type as _analyze_invariant_type
+from _invariant_signals import analyze_type_level as _analyze_invariant_type_level
+from _invariant_signals import candidate_id as _invariant_candidate_id
+from _invariant_signals import select_top_k as _select_invariant_top_k
 from audit_clones import _mask as _mask_source
 
 _LANG_BY_EXT: dict[str, str] = {
@@ -645,52 +657,6 @@ def _analyze_text_function(
     return sig, sorted(all_calls)
 
 
-#: (reason, path) for genuine ast-grep failures, drained to a bounded stderr
-#: diagnostic at the end of a run. Not part of the persisted JSON document.
-_AST_GREP_FAILURES: list[tuple[str, str]] = []
-
-
-def _ast_grep_matches(
-    ast_grep_bin: str, path: Path, lang: str, selector: str
-) -> tuple[list[dict], bool]:
-    # ast-grep exits 1 (not 0) with valid JSON "[]" when a file has no matches for
-    # the given kind — that is a successful scan, not a failure. Only a launch
-    # error, timeout, or stdout that isn't decodable JSON is a genuine failure.
-    cmd = [
-        ast_grep_bin,
-        "run",
-        "--lang",
-        lang,
-        "--kind",
-        selector,
-        "--json=compact",
-        str(path),
-    ]
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    except subprocess.TimeoutExpired:
-        _AST_GREP_FAILURES.append(("timeout", str(path)))
-        return [], False
-    except OSError:
-        _AST_GREP_FAILURES.append(("launch-error", str(path)))
-        return [], False
-    stdout = proc.stdout.strip()
-    if not stdout:
-        if proc.returncode == 0:
-            return [], True
-        _AST_GREP_FAILURES.append(("undecodable-output", str(path)))
-        return [], False
-    try:
-        matches = json.loads(stdout)
-    except json.JSONDecodeError:
-        _AST_GREP_FAILURES.append(("undecodable-output", str(path)))
-        return [], False
-    if not isinstance(matches, list):
-        _AST_GREP_FAILURES.append(("undecodable-output", str(path)))
-        return [], False
-    return matches, True
-
-
 def _match_offsets(match: dict) -> tuple[int, int]:
     offsets = match.get("range", {}).get("byteOffset", {})
     return int(offsets.get("start", 0)), int(offsets.get("end", 0))
@@ -857,6 +823,167 @@ def _wire_private_helpers(records: list[_ScannedFunction]) -> None:
             if resolved_calls.get(id(helper)):
                 record.candidate.signals.private_call_depth = 2
                 break
+
+
+_INVARIANT_SWIFT_SELECTOR = ":is(class_declaration, init_declaration, function_declaration)"
+_TYPE_KEYWORD_RE = re.compile(r"^(?:[\w@]+\s+)*(?:class|struct|actor|enum)\b")
+_INIT_KEYWORD_RE = re.compile(r"^(?:[\w@]+\s+)*init\b")
+
+
+def _classify_swift_declaration(text: str) -> str:
+    """Which of the three `_INVARIANT_SWIFT_SELECTOR` kinds a match's text is."""
+    stripped = text.strip()
+    if _TYPE_KEYWORD_RE.match(stripped):
+        return "type"
+    if _INIT_KEYWORD_RE.match(stripped):
+        return "init"
+    return "function"
+
+
+def scan_swift_file_for_invariants(
+    path: Path, repo_root: Path, ast_grep_bin: str
+) -> tuple[list[InvariantCandidate], bool]:
+    """Queue D (invariant): one ast-grep call, classified by node text.
+
+    Reuses `_smallest_container` (already used to resolve Swift function
+    ownership for Queues A-C) instead of a separate ast-grep call per type --
+    a member match with no enclosing type range gets an empty TypeContext,
+    which IS the "top-level function" case the plan calls out (target 262).
+    """
+    matches, ok = _ast_grep_matches(ast_grep_bin, path, "swift", _INVARIANT_SWIFT_SELECTOR)
+    if not ok:
+        return [], False
+
+    rel_path = str(path.relative_to(repo_root)).replace("\\", "/")
+
+    type_ranges: list[tuple[int, int, str]] = []
+    contexts: dict[str, TypeContext] = {}
+    type_lines_by_key: dict[str, tuple[int, int]] = {}
+    members: list[tuple[dict, str]] = []
+    for match in matches:
+        text = str(match.get("text", ""))
+        kind = _classify_swift_declaration(text)
+        if kind != "type":
+            members.append((match, kind))
+            continue
+        start, end = _match_offsets(match)
+        key = f"{start}:{end}"
+        type_ranges.append((start, end, key))
+        contexts[key] = _analyze_invariant_type(rel_path, text, _match_lines(match))
+        type_lines_by_key[key] = _match_lines(match)
+
+    candidates: list[InvariantCandidate] = []
+    for match, kind in members:
+        start, end = _match_offsets(match)
+        owner_key = _smallest_container(start, end, type_ranges)
+        ctx = contexts.get(owner_key, TypeContext(type_name=""))
+        member_kind = "init_declaration" if kind == "init" else "function_declaration"
+        candidate = _analyze_invariant_member(
+            rel_path, ctx, member_kind, str(match.get("text", "")), _match_lines(match)
+        )
+        if candidate:
+            candidates.append(candidate)
+
+    for key, ctx in contexts.items():
+        type_candidate = _analyze_invariant_type_level(rel_path, ctx, type_lines_by_key[key])
+        if type_candidate:
+            candidates.append(type_candidate)
+
+    return candidates, True
+
+
+def _merge_invariant_roster(
+    roster: list[CandidateSymbol], invariant_top_k: list[InvariantCandidate]
+) -> tuple[list[CandidateSymbol], dict[tuple[str, str, int, int], InvariantSignals]]:
+    """Union invariant hits into a COPY of the roster; `roster` itself is never mutated
+    (the canonical v2 stdout document is built from the original `roster` list)."""
+    merged: list[CandidateSymbol] = []
+    index: dict[tuple[str, str, int, int], int] = {}
+    for c in roster:
+        copy = CandidateSymbol(
+            path=c.path,
+            symbol=c.symbol,
+            start_line=c.start_line,
+            end_line=c.end_line,
+            signals=c.signals,
+            candidate_queues=list(c.candidate_queues),
+            primary_queue=c.primary_queue,
+            direct_private_helpers=list(c.direct_private_helpers),
+        )
+        index[(copy.path, copy.symbol, copy.start_line, copy.end_line)] = len(merged)
+        merged.append(copy)
+
+    invariant_signals_by_identity: dict[tuple[str, str, int, int], InvariantSignals] = {}
+    for inv in invariant_top_k:
+        key = (inv.path, inv.symbol, inv.start_line, inv.end_line)
+        invariant_signals_by_identity[key] = inv.signals
+        if key in index:
+            existing = merged[index[key]]
+            if "invariant" not in existing.candidate_queues:
+                existing.candidate_queues.append("invariant")
+        else:
+            index[key] = len(merged)
+            merged.append(
+                CandidateSymbol(
+                    path=inv.path,
+                    symbol=inv.symbol,
+                    start_line=inv.start_line,
+                    end_line=inv.end_line,
+                    signals=FunctionSignals(),
+                    candidate_queues=["invariant"],
+                    primary_queue="invariant",
+                )
+            )
+    return merged, invariant_signals_by_identity
+
+
+def _invariant_json_document(
+    status: str,
+    coverage: dict[str, dict[str, int | str]],
+    merged_roster: list[CandidateSymbol],
+    invariant_signals_by_identity: dict[tuple[str, str, int, int], InvariantSignals],
+    queue_counts: dict[str, int],
+) -> dict:
+    zero_signals = InvariantSignals()
+    candidates = []
+    for c in merged_roster:
+        key = (c.path, c.symbol, c.start_line, c.end_line)
+        inv_signals = invariant_signals_by_identity.get(key, zero_signals)
+        candidates.append(
+            {
+                "path": c.path,
+                "symbol": c.symbol,
+                "line_range": {"start": c.start_line, "end": c.end_line},
+                "candidate_queues": c.candidate_queues,
+                "primary_queue": c.primary_queue,
+                "signals": asdict(c.signals),
+                "invariant_signals": asdict(inv_signals),
+                "candidate_id": _invariant_candidate_id(c.path, c.symbol, c.start_line, c.end_line),
+                "neighborhood": {"direct_private_helpers": c.direct_private_helpers},
+            }
+        )
+    return {
+        "schema_version": 3,
+        "status": status,
+        "coverage": coverage,
+        "promotion_allowed": False,
+        "candidates": candidates,
+        "queue_counts": queue_counts,
+    }
+
+
+def _write_invariant_side_file(
+    invariant_json_path: str,
+    status: str,
+    coverage: dict[str, dict[str, int | str]],
+    merged_roster: list[CandidateSymbol],
+    invariant_signals_by_identity: dict[tuple[str, str, int, int], InvariantSignals],
+    queue_counts: dict[str, int],
+) -> None:
+    doc = _invariant_json_document(
+        status, coverage, merged_roster, invariant_signals_by_identity, queue_counts
+    )
+    Path(invariant_json_path).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
 
 
 def scan_non_python_file(
@@ -1060,10 +1187,31 @@ def main() -> int:
         action="store_true",
         help="Emit structured JSON with promotion_allowed: false",
     )
+    parser.add_argument(
+        "--experimental-invariant-queue",
+        action="store_true",
+        help="Add Queue D (invariant) candidate evidence for Swift value types to the "
+        "--invariant-json side file. Canonical stdout stays schema_version 2, unchanged.",
+    )
+    parser.add_argument(
+        "--invariant-json",
+        help="Path to write the v3 invariant-queue side document. Required with "
+        "--experimental-invariant-queue.",
+    )
+    parser.add_argument(
+        "--invariant-top-k",
+        type=int,
+        default=12,
+        help="Top invariant candidates to select, ranked by signal total (default: 12)",
+    )
     args = parser.parse_args()
 
     if args.top_k < 1:
         parser.error("--top-k must be at least 1")
+    if args.experimental_invariant_queue and not args.invariant_json:
+        parser.error("--experimental-invariant-queue requires --invariant-json PATH")
+    if args.invariant_top_k < 1:
+        parser.error("--invariant-top-k must be at least 1")
 
     repo_dir = Path(args.repo_root).resolve()
     if not repo_dir.is_dir():
@@ -1114,7 +1262,13 @@ def main() -> int:
         },
     }
 
+    empty_queue_counts = {"control": 0, "mutation": 0, "navigation": 0, "invariant": 0}
+
     if not py_files and not non_py_files:
+        if args.experimental_invariant_queue:
+            _write_invariant_side_file(
+                args.invariant_json, "not_applicable", coverage, [], {}, empty_queue_counts
+            )
         if args.json:
             doc = _json_document(
                 "not_applicable",
@@ -1130,6 +1284,10 @@ def main() -> int:
     if not py_files and ast_grep_missing:
         # Only non-Python files exist, and ast-grep is absent: skip gracefully with install guidance
         coverage["ast_grep"].update({"failed": len(non_py_files), "outcome": "absent"})
+        if args.experimental_invariant_queue:
+            _write_invariant_side_file(
+                args.invariant_json, "absent", coverage, [], {}, empty_queue_counts
+            )
         if args.json:
             doc = _json_document(
                 "absent",
@@ -1158,10 +1316,17 @@ def main() -> int:
         candidates.extend(file_candidates)
         coverage["python"]["scanned" if complete else "failed"] += 1
 
+    invariant_candidates: list[InvariantCandidate] = []
     if not ast_grep_missing:
         for p, lang in non_py_files:
             file_candidates, complete = scan_non_python_file(p, lang, repo_dir)
             candidates.extend(file_candidates)
+            if args.experimental_invariant_queue and lang == "swift":
+                inv_file_candidates, inv_ok = scan_swift_file_for_invariants(
+                    p, repo_dir, ast_grep_bin
+                )
+                invariant_candidates.extend(inv_file_candidates)
+                complete = complete and inv_ok
             coverage["ast_grep"]["scanned" if complete else "failed"] += 1
         if coverage["ast_grep"]["failed"]:
             coverage["ast_grep"]["outcome"] = "partial"
@@ -1176,6 +1341,25 @@ def main() -> int:
     roster, queue_rosters = rank_and_select(candidates, top_k_per_queue=args.top_k)
     incomplete = bool(coverage["python"]["failed"] or coverage["ast_grep"]["failed"])
     status = "partial" if incomplete else "ok"
+
+    if args.experimental_invariant_queue:
+        invariant_top_k = _select_invariant_top_k(invariant_candidates, args.invariant_top_k)
+        merged_roster, invariant_signals_by_identity = _merge_invariant_roster(
+            roster, invariant_top_k
+        )
+        queue_counts = {
+            queue: len(queue_rosters.get(queue, []))
+            for queue in ("control", "mutation", "navigation")
+        }
+        queue_counts["invariant"] = len(invariant_top_k)
+        _write_invariant_side_file(
+            args.invariant_json,
+            status,
+            coverage,
+            merged_roster,
+            invariant_signals_by_identity,
+            queue_counts,
+        )
 
     if args.json:
         doc = _json_document(status, coverage, roster, queue_rosters)
