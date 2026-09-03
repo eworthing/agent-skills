@@ -105,3 +105,44 @@ unmeasured perf (82); race no human can produce (66); auto-republish already cov
 
 Not recommended: new lens prose (the docket's zero-lift record stands) or the canonical v3 bump
 (unchanged from the 2026-09-03 decision).
+
+## Scoped dry-run result — 2026-09-03, same day
+
+`/contest-refactor --reset --dry-run --scope BenchHypeKit/Sources/BenchHypeSettingsFeature` from
+opencode at `909164fb`, loop model `opencode-go/qwen3.8-flash`. Sessions `ses_f9798b911ffe…`
+(main) and `ses_f97946651ffe…` (loop). Wall 861s, 3396 tests green, cost $0.34 (11.6M cache-read,
+84k output). HALT_DRY_RUN after Step 2; bookkeeping files left modified, no source change.
+
+**Coverage: 10/10 Settings files explicitly read** (read tool or cat/sed), plus 12 out-of-scope
+files. Selection is no longer the explanation for anything below.
+
+**Recall against the 29 validated-real OCR sites in the module: 0/29.** Four findings emitted
+(F-025 display mapping in views, F-026 permissive defaults in SettingsScreenContext, F-027
+DiagnosticsView `public`, F-028 no render test for the control-to-intent mapping); scoped
+scorecard average 9.33, concurrency 10, test_strategy 8.5. Site overlaps, all with a different
+defect named:
+
+| OCR site | OCR defect | What the Critic wrote at the same site |
+| --- | --- | --- |
+| 45 `statusMessage` | `.restoredAwaitingReload` arm drops the carried `error`, reads as success | hotspot `confirm` → F-025: the label mapping belongs on the owner type |
+| 63, 64/73 `applySettingsChange` / `settingBinding` | stale-snapshot read-modify-write (ESCALATE); update + save dispatched on every slider tick | Authority Map verdict "Single and clear"; hotspot `confirm` → F-028: no test |
+| 40, 42 `fileImporter` / `fileMover` | restore with no confirmation; `.failure` arm silently dropped | framework_idioms 9.5 proof cites them as native idioms |
+| 68 refresh button | no in-flight / failure surface (ESCALATE) | concurrency 10 proof: "`.task` refreshes are view-lifecycle-scoped and reducer-guarded" |
+| 65 (OCR **rejected**: defaults not reachable today) | — | F-026, the Critic's second finding |
+
+Not touched at all: 39/44 (view gate ≠ reducer gate), 50/51/52 (`.failed` phases never
+rendered), 46/47 (paywall price nil / pending swallowed), 71/72 (canonical vs draft reads),
+the seven help-copy drifts (54–58, 60), the four accessibility findings (48, 61, 62, 67), 69, 53.
+
+**Reading.** With every file read, a flash Critic asked the rubric's questions — ownership,
+layering, idioms, test presence — and answered them plausibly, then certified 9.5 on dimensions
+whose proof text names the exact sites where OCR's confirmed bugs live. The rubric can express
+most of these (hidden state machines, silent failure, draft-vs-canonical authority); the Critic
+did not apply it that way. What OCR found and this run cannot: bugs. What this run found and OCR
+cannot: the missing render test (F-028), which is a real gap.
+
+**Open confound: the model.** The docket's "legible 5/5" results were measured with a Claude
+Critic on planted fixtures. This is the first real-corpus recall figure and it is on flash. Next:
+the identical command from Codex, same cost class, same day if possible. If Codex also lands near
+0/29, the gap is the method's question set, not the judge, and a per-file bug pass (OCR's shape)
+becomes a candidate Step-0 aid rather than a lens.
