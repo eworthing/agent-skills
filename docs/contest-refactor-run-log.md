@@ -1216,3 +1216,35 @@ Tier-3 commit-boundary hook and `--phase` (Codex-only install; `phase: null` in 
 validator run), kill-tree fencing (no executor replacement). One practice gap: the
 pre-commit full battery was run without `--attestation-phase pre-commit`, so G47's resolver
 failed until after the commit — the flag is not discoverable from the prose the executor read.
+
+## OCR-gap remediation W0–W2 — 2026-09-03 (corpus-measured detectors; recall bars missed, shipped experimental/optional)
+
+Plan: `analysis/contest-refactor/OCR-GAP-REMEDIATION-PLAN-2026-09-03.md` (rev 5, peer-approved by
+codex gpt-5.6-sol after five rounds). Ground truth: BenchHype `2b5247e9`, run #9's own HALT_SUCCESS
+commit, versus `80499e9c` after the validated OCR fixes. Runner: `contest-refactor/evals/ocr-corpus/run_corpus.py`
+(run-gated on `BENCHHYPE_ROOT` / `TIERCADE_ROOT`; coverage validity before counting; `--assert`).
+
+Commits, serial: `055be90` W0 · `5f6392f` filter fix · `1a49a6a` filter fix · `f3972bd` W2 · `7eb8d43` W1a.
+Sweep 86/86, ruff 0.15.6, validate-repo, 102 fixtures, eval-skill 80% unchanged at each.
+
+| Detector | Bar | Result | Reason |
+| --- | --- | --- | --- |
+| invariant queue, recall @ `2b5247e9` | ≥ 7/10 | **5/10** (202, 204, 266, 224, 262) | 226/227 `Script.validateSteps` (pattern-bound value; `[ScriptStep]` uniqueness by `.id`); 189 absent clamp; 205 no throwing init at pre-fix; 267 lower-only guard-form rejects NaN by comparison semantics, silent by design |
+| invariant queue, silence @ `80499e9c` | 0/10 | **0/10** | needed keypath `allSatisfy(\.isFinite)` recognition, `$0.`-prefixed operands, and per-parameter union of allSatisfy regions |
+| invariant queue, must-stay-silent | 0/4 | **0/4** | 131 went silent once `guard x >= 0` + later `min(` read as a complete range |
+| invariant queue, BenchHypeDomain candidates @ post | ≤ 20 | **3** | |
+| invariant queue, Tiercade `92e2347` | ≤ 0.25/file | **0 / 317 files** | scope restricted to inits and `validate*`/`make*` per the plan table; the unscoped run had 7/10 implausible rows |
+| invariant queue, clean corpus | 0 | **0** | W0's TrimSpan fixture was itself mislabeled and fixed |
+| dead surface, recall @ `2b5247e9` | ≥ 8/10 | **2/10** (221, 282 as `test_only`) | bare-name collision at whole-repo scope (another enum's `.warning`, another type's `rosterID`); fid 195 had a real Persistence caller — manifest error, recorded |
+| dead surface, dead rows @ `80499e9c` | ≤ 30 | **0** | the 270 first measured came from `--scope` narrowing the reference search; fixed to declarations-only |
+| dead surface, Tiercade | ≤ 0.3/file | **179 / 300 = 0.60** | 5/5 and 9/10 spot-checked rows genuinely unreferenced; the bar was a guess. `--require-type-mention` variant measured: 379 rows, 4/10 new false positives — rejected |
+
+Two shared-filter defects found by the corpus, both fixed with pinned selftests: `*Spec.swift` was
+treated as a Quick spec (BenchHype's `PlaybackSpec.swift`, three targets, had never been scanned by
+any tool); `<Module>Tests` / `UITests` directory components were not test trees (two BenchHype
+UI-test support files left the ledger denominator).
+
+Decisions (owner delegated): W3 canonical `hotspot_scan` v3 declined below the bar; both detectors
+wired as optional aids in `startup.md` 6c; W4 live loop deferred (re-entry: a second corpus lifts
+invariant recall to 7/10, or the owner funds one loop at ~33.5M tokens). Process note: the Sonnet
+wave agents hit the account's monthly spend limit mid-W1a; the remaining W1a work was done by hand.

@@ -2,7 +2,18 @@
 
 Date: 2026-09-03. Revision 5, **APPROVED** by peer review round 5 (codex gpt-5.6-sol, effort high;
 rounds 1–4 REVISE, 22 blocking findings resolved). Three non-blocking clarifications from round 5
-folded in below. Status: awaiting owner go, nothing built.
+folded in below.
+
+**Outcome 2026-09-03 (owner delegated the go decision):** W0 (`055be90`), W2 (`f3972bd`) and W1a
+(`7eb8d43`) landed serially, plus two shared-filter fixes the corpus exposed (`5f6392f`
+`*Spec.swift` is production source; `1a49a6a` `<Module>Tests` directories are test trees). Both
+recall bars were missed and reported honestly: invariant queue 5/10 (0 false positives on two
+repos), dead-surface aid 2/10 (0 dead rows on BenchHypeDomain post-fix, 179 genuine on Tiercade).
+Decisions: **W3 canonical v3 bump declined**; both detectors are wired as optional Step-0 aids in
+startup.md 6c so the loop reaches them today with no schema or gate change; **W4 deferred** until a
+second corpus lifts invariant recall to the 7-of-10 bar or the owner funds the loop explicitly
+(the account hit its monthly spend limit mid-W1a). Numbers and per-fid reasons: run-log entry
+"OCR-gap remediation W0–W2 — 2026-09-03" and DD-15/DD-16/DD-17 in the detection-domains doc.
 Inputs: `analysis/contest-refactor/OCR-VS-CONTEST-REFACTOR-BENCHHYPE-2026-09-02.md` (rev 2),
 `BenchHype/.artifacts/ocr/scan-domain-validated.json`, BenchHype fix commits `5ef7a09c` … `80499e9c`.
 
