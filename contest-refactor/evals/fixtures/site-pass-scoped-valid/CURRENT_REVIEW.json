@@ -1,0 +1,1153 @@
+{
+ "schema_version": 4,
+ "loop": 1,
+ "loop_cap": 10,
+ "state": "HALT_DRY_RUN",
+ "halt_subtype": null,
+ "halt_handoff_text": null,
+ "halt_handoff": {
+  "state": "HALT_DRY_RUN",
+  "text": "Loop 1 ended at HALT_DRY_RUN \u2014 --dry-run was set on this invocation, so I ran Step 0 (Discovery), Step 1 (Critic), and Step 2 (Architect plan) but stopped before Step 3 (Execution). No code changes. No commit.\n\nThis run is SCOPED to BenchHypeKit/Sources/BenchHypeSettingsFeature \u2014 the scorecard and findings are claims about that subtree, not the repository.\n\nTargeted Priority-1 finding: F1 (stable_id F-025) \u2014 Derived display state (enum-to-user-text mapping) lives in feature views at three sites.\n\nThe plan I would execute (in CURRENT_REVIEW.md \"Loop 1 Plan (dry-run)\" section):\n  Files to change: BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift, BenchHypeKit/Sources/BenchHypeApplication/Projections/SettingsViewState.swift, BenchHypeKit/Sources/BenchHypeApplication/State/BackupState.swift, BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift, BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift, BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/SettingsViewStateTests.swift, BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/DiagnosticsViewSnapshotTests.swift\n  Files NOT to touch: AppReducer*.swift, SettingsDraft, IntentDispatcher, DiagnosticsReducer.swift, CuesFileStore.swift, RootScene.swift, PaywallView.swift, HelpView.swift, SettingsScreenContext.swift, UITestIdentifiers.swift, UI test targets\n  Blast radius: bounded to the change list above\n  Expected scorecard impact: state_management 9.0\u21929.5; domain_modeling 9.0\u21929.5; simplicity residual queued\u2192accepted\n\nNote: backlog item 3 (F-026) is blocked on an unconditional AGENTS.md code-vs-doc stop-and-ask (render rule vs RootScene wiring disagree on Apple Music availability); an execution loop reaching it must route to the owner's decision, not guess.\n\nNext step options:\n  (a) Execute the plan \u2014 re-invoke \"/contest-refactor\" (no flag). The --dry-run flag is invocation-scoped; absence of the flag means execute. No --reset needed.\n  (b) Re-plan with a different target \u2014 edit the Improvement Backlog in CURRENT_REVIEW.md to promote a different finding to Priority 1. After reordering items, the next Step-1 emit re-derives priority numbers; no manual renumbering is needed. Then re-invoke \"/contest-refactor --dry-run\" to see the new plan.\n  (c) Abort \u2014 leave the dry-run state on disk; nothing was changed.",
+  "expected_actions": [
+   {
+    "action_id": "execute-dry-run-plan",
+    "description": "Re-invoke /contest-refactor without --dry-run to execute the Loop 1 plan (F-025 relocation pass).",
+    "match_keywords": [
+     "loop 2",
+     "display"
+    ],
+    "match_paths": [
+     "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+     "BenchHypeKit/Sources/BenchHypeApplication/Projections/SettingsViewState.swift",
+     "BenchHypeKit/Sources/BenchHypeApplication/State/BackupState.swift",
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift"
+    ],
+    "match_kind": "all_of"
+   },
+   {
+    "action_id": "replan-different-target",
+    "description": "User reorders the Improvement Backlog in CURRENT_REVIEW.md, then re-invokes with --dry-run.",
+    "match_keywords": [
+     "backlog",
+     "dry-run"
+    ],
+    "match_paths": [],
+    "match_kind": "any_of"
+   },
+   {
+    "action_id": "abort-halt",
+    "description": "User accepts the dry-run halt; no commits expected.",
+    "match_keywords": [],
+    "match_paths": [],
+    "match_kind": "no_drift_expected"
+   }
+  ]
+ },
+ "re_validated_at_sha": null,
+ "re_validation_context": null,
+ "dry_run": true,
+ "strictness": "standard",
+ "loop_metrics": null,
+ "run_id": "run-2026-09-03-b05b49155e1d4fc4987a9bf00c61e6f6",
+ "source_rev": "909164fbbc3ecce0fb5d2edd6db3d76443946b84",
+ "candidate_fingerprint": null,
+ "halt_success_challenge": null,
+ "provider": "opencode",
+ "loop_model": "opencode-go/qwen3.8-flash",
+ "loop_model_source": "inherited",
+ "reviewer_model": "opencode-go/qwen3.8-flash",
+ "reviewer_model_source": "inherited",
+ "spawn_isolation": "subagent",
+ "skill_rev": "1b4ddd5",
+ "premium_dry_run": null,
+ "premium_loop_override": false,
+ "findings_registry_path": "./findings_registry.json",
+ "discovery": {
+  "source_roots": [
+   "BenchHypeKit/Sources/BenchHypeSettingsFeature"
+  ],
+  "scope": "BenchHypeKit/Sources/BenchHypeSettingsFeature",
+  "test_command": "./scripts/run_local_gate.sh --quick",
+  "build_command": "./scripts/run_local_gate.sh --targeted",
+  "lens": "Apple",
+  "adrs": [
+   "ADR-0001: reject transport parity tests (accepted)",
+   "ADR-0003: transition modes \u2014 duck-match and device volume fade (accepted)"
+  ],
+  "domain_terms": [
+   "Transition Mode",
+   "Fade",
+   "Duck",
+   "Duck-Veil",
+   "Duck-Match Envelope",
+   "Volume Ramp",
+   "True Fade",
+   "Fade Duration",
+   "AppState",
+   "EditingState",
+   "NavigationState",
+   "PlaybackState",
+   "InstanceID",
+   "CueTransport",
+   "CueKind"
+  ],
+  "test_scope": "full",
+  "test_filter": null,
+  "prior_audit_docs": [
+   {
+    "path": "docs/audits/README.md",
+    "date": "2026-08-31"
+   },
+   {
+    "path": "docs/audits/contest-refactor-residuals-run-2026-09-02-8747656fada148bb83e1dd5236653b65.md",
+    "date": "2026-09-02"
+   }
+  ],
+  "churn_top20": [
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer.swift",
+    "edits": 80
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Projections/LiveViewState.swift",
+    "edits": 80
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Reducer/PlaybackReducer.swift",
+    "edits": 79
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Engine/AppEngine.swift",
+    "edits": 72
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift",
+    "edits": 71
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeLiveFeature/LiveContent.swift",
+    "edits": 65
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Editing.swift",
+    "edits": 62
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeLiveFeature/LiveContent+Board.swift",
+    "edits": 60
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Projections/AppSnapshot+Project.swift",
+    "edits": 58
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+    "edits": 54
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeKit/Views/Live/LiveView.swift",
+    "edits": 54
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Projections/AppSnapshot.swift",
+    "edits": 52
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSharedUI/Components/TileView.swift",
+    "edits": 51
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundSheet.swift",
+    "edits": 50
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeApplication/Projections/LibraryViewState.swift",
+    "edits": 48
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeLiveFeature/LiveScreenContext.swift",
+    "edits": 46
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeAppleMusic/LiveMusicKitClient.swift",
+    "edits": 45
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypePersistence/Backup/BackupModels.swift",
+    "edits": 44
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeKit/Views/Boards/TileView.swift",
+    "edits": 43
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeLiveFeature/RosterLiveScreen.swift",
+    "edits": 40
+   }
+  ],
+  "tool_sweep": {
+   "repo_root": ".",
+   "promotion_allowed": false,
+   "tools": [
+    {
+     "name": "ruff",
+     "outcome": "ok",
+     "detail": null,
+     "counts": {
+      "findings": 0
+     },
+     "digest": "sha256:82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+     "hits": [],
+     "redactions": [],
+     "injection_markers": 0
+    },
+    {
+     "name": "swiftlint",
+     "outcome": "ok",
+     "detail": null,
+     "counts": {
+      "findings": 0
+     },
+     "digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "hits": [],
+     "redactions": [],
+     "injection_markers": 0
+    },
+    {
+     "name": "biome",
+     "outcome": "absent",
+     "detail": "biome not on PATH (install: npm install -g @biomejs/biome)",
+     "counts": {},
+     "digest": null,
+     "hits": [],
+     "redactions": [],
+     "injection_markers": 0
+    },
+    {
+     "name": "golangci-lint",
+     "outcome": "not_applicable",
+     "detail": "no files matching *.go",
+     "counts": {},
+     "digest": null,
+     "hits": [],
+     "redactions": [],
+     "injection_markers": 0
+    },
+    {
+     "name": "clippy",
+     "outcome": "not_applicable",
+     "detail": "no files matching *.rs",
+     "counts": {},
+     "digest": null,
+     "hits": [],
+     "redactions": [],
+     "injection_markers": 0
+    }
+   ]
+  },
+  "hotspot_scan": {
+   "schema_version": 2,
+   "status": "ok",
+   "coverage": {
+    "python": {
+     "discovered": 0,
+     "scanned": 0,
+     "failed": 0
+    },
+    "ast_grep": {
+     "discovered": 10,
+     "scanned": 10,
+     "failed": 0,
+     "outcome": "ok"
+    }
+   },
+   "promotion_allowed": false,
+   "candidates": [
+    {
+     "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+     "symbol": "BackupSettingsView.statusMessage",
+     "line_range": {
+      "start": 112,
+      "end": 125
+     },
+     "candidate_queues": [
+      "control"
+     ],
+     "primary_queue": "control",
+     "signals": {
+      "decision_count": 5,
+      "max_nesting": 2,
+      "condition_operand_max": 1,
+      "logical_lines": 11,
+      "mutation_sites": 0,
+      "mutation_span": 0,
+      "distinct_mutated_fields": 0,
+      "mutable_local_count": 0,
+      "private_helper_fanout": 0,
+      "single_use_private_helper_count": 0,
+      "private_call_depth": 0,
+      "direct_call_fanout": 0
+     },
+     "neighborhood": {
+      "direct_private_helpers": []
+     }
+    },
+    {
+     "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+     "symbol": "SettingsScreenContent.multiTapGesturesSection",
+     "line_range": {
+      "start": 251,
+      "end": 283
+     },
+     "candidate_queues": [
+      "control",
+      "navigation"
+     ],
+     "primary_queue": "navigation",
+     "signals": {
+      "decision_count": 2,
+      "max_nesting": 2,
+      "condition_operand_max": 1,
+      "logical_lines": 22,
+      "mutation_sites": 0,
+      "mutation_span": 0,
+      "distinct_mutated_fields": 0,
+      "mutable_local_count": 0,
+      "private_helper_fanout": 1,
+      "single_use_private_helper_count": 1,
+      "private_call_depth": 1,
+      "direct_call_fanout": 2
+     },
+     "neighborhood": {
+      "direct_private_helpers": [
+       "tapActionPicker"
+      ]
+     }
+    },
+    {
+     "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+     "symbol": "SettingsScreenContent.playbackSection",
+     "line_range": {
+      "start": 285,
+      "end": 344
+     },
+     "candidate_queues": [
+      "navigation"
+     ],
+     "primary_queue": "navigation",
+     "signals": {
+      "decision_count": 0,
+      "max_nesting": 0,
+      "condition_operand_max": 0,
+      "logical_lines": 45,
+      "mutation_sites": 0,
+      "mutation_span": 0,
+      "distinct_mutated_fields": 0,
+      "mutable_local_count": 0,
+      "private_helper_fanout": 1,
+      "single_use_private_helper_count": 1,
+      "private_call_depth": 1,
+      "direct_call_fanout": 11
+     },
+     "neighborhood": {
+      "direct_private_helpers": [
+       "fadeSlider"
+      ]
+     }
+    },
+    {
+     "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+     "symbol": "SettingsScreenContext.settingBinding",
+     "line_range": {
+      "start": 54,
+      "end": 62
+     },
+     "candidate_queues": [
+      "navigation"
+     ],
+     "primary_queue": "navigation",
+     "signals": {
+      "decision_count": 0,
+      "max_nesting": 0,
+      "condition_operand_max": 0,
+      "logical_lines": 9,
+      "mutation_sites": 1,
+      "mutation_span": 2,
+      "distinct_mutated_fields": 1,
+      "mutable_local_count": 1,
+      "private_helper_fanout": 1,
+      "single_use_private_helper_count": 1,
+      "private_call_depth": 2,
+      "direct_call_fanout": 3
+     },
+     "neighborhood": {
+      "direct_private_helpers": [
+       "applySettingsChange"
+      ]
+     }
+    }
+   ],
+   "queue_counts": {
+    "control": 2,
+    "mutation": 0,
+    "navigation": 2
+   }
+  },
+  "notes": "SCOPED RUN: --scope BenchHypeKit/Sources/BenchHypeSettingsFeature. Repo enumerates first-party roots [BenchHype, BenchHypeKit/Sources, scripts, tools]; this run reviews nothing outside the scope dir and its scorecard is a claim about the scope subtree, not the repository. test_command pinned in verify-trust store (~/.contest-refactor/verify-trust.json, pinned 2026-08-23) = ./scripts/run_local_gate.sh --quick (floor). AGENTS.md Definition of Done requires ./scripts/run_local_gate.sh --targeted (quick's stages + app build + change-mapped UI tests) for any Swift source change in BenchHypeKit \u2014 recorded as build_command; discrepancy: the pin is --quick, the project gate for changes is --targeted; any loop that edits source must pass --targeted. Step 1 ground-truth pass runs the pinned --quick command. No --test-filter; full-suite within pinned command. Working-tree clean-tree check (Step 0 sub-step 4b) skipped: invocation is --dry-run, Step 3 never executes.",
+  "site_pass_roster": {
+   "scope": "BenchHypeKit/Sources/BenchHypeSettingsFeature",
+   "paths": [
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/AppBuildInfo.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreen.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/StarterSoundLicensesView.swift"
+   ],
+   "digest": "937f6f600ad4c5887aacf50eefafda5b3b95a8d93e7638efdc5e17043bcee6c3"
+  }
+ },
+ "discovery_consumption": {
+  "hotspot_triage": [
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+    "symbol": "BackupSettingsView.statusMessage",
+    "disposition": "confirm"
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+    "symbol": "SettingsScreenContent.multiTapGesturesSection",
+    "disposition": "contextualize"
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+    "symbol": "SettingsScreenContent.playbackSection",
+    "disposition": "contextualize"
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+    "symbol": "SettingsScreenContext.settingBinding",
+    "disposition": "confirm"
+   }
+  ]
+ },
+ "verdict": "Good app, but not top-tier yet",
+ "verdict_explanation": "Scoped claim (BenchHypeSettingsFeature subtree only): a small, disciplined, reducer-honest feature \u2014 1,843 lines, zero stored adapter state, zero unstructured Tasks, single dispatch path. It is held below the 9.5 bar by view-side derived display state at three sites that the repo's own projection contract already forbids, an untested control-to-intent mapping on the main settings screen, and a composition interface whose permissive defaults and manually-coupled availability fields admit lying UI states.",
+ "scorecard": {
+  "architecture_quality": {
+   "score": 9.5,
+   "delta": "SAME",
+   "proof": "SettingsScreenContext.swift:5-41 (value-type context; closure-injection seam encoding the features-narrow rule, survives deletion test); boundaries ok 108 rules in this loop's pinned gate run",
+   "residual_blocking_10": "Permissive defaults (appleMusicAvailable=false, no-op closure defaults) plus manually-synchronized availability fields on the public composition interface",
+   "residual_disposition": "queued",
+   "residual_rationale_or_backlog_ref": "F2",
+   "unverifiable_due_to_build_failure": false
+  },
+  "state_management": {
+   "score": 9.0,
+   "delta": "SAME",
+   "proof": "Single writer path SettingsScreenContext.swift:116-125; symmetric dialog state DiagnosticsView.swift:51-57; but derived display state lives in views at three sites and one availability fact is split across two fields \u2014 blockers named by backlog items 1 and 3",
+   "residual_blocking_10": null,
+   "residual_disposition": null,
+   "residual_rationale_or_backlog_ref": null,
+   "unverifiable_due_to_build_failure": false
+  },
+  "domain_modeling": {
+   "score": 9.0,
+   "delta": "SAME",
+   "proof": "Display names on types at call sites (SettingsScreenContent.swift:90-91; Route.swift:30 isWireless); blocker: second interpretation of domain enum OutputDestination (case\u2192display-string) in a feature view at DiagnosticsView.swift:81-89, violating Hard Rule 4's one-map-site rule; named by backlog item 1",
+   "residual_blocking_10": null,
+   "residual_disposition": null,
+   "residual_rationale_or_backlog_ref": null,
+   "unverifiable_due_to_build_failure": false
+  },
+  "data_flow": {
+   "score": 9.5,
+   "delta": "SAME",
+   "proof": "One-way flow: projection in, typed intents out (SettingsScreenContext.swift:116-118); destinations injected as closures, no ambient port reach (SettingsScreenContent.swift:224-245)",
+   "residual_blocking_10": "Diagnostic trace gate is a string-keyed UserDefaults channel duplicated at three sites instead of flowing through the typed seam",
+   "residual_disposition": "accepted",
+   "residual_rationale_or_backlog_ref": "Forced by the features-no-adapter-imports rule and mechanically enforced: named gate applemusic-trace-key-sync verified live at scripts/check_boundaries.sh:1195-1208 and green this loop (boundaries: ok, 108 rules); moving the key through state would add launch-path cost to a default-off diagnostic switch",
+   "unverifiable_due_to_build_failure": false
+  },
+  "framework_idioms": {
+   "score": 9.5,
+   "delta": "SAME",
+   "proof": "Form with documented macOS rationale SettingsScreenContent.swift:19-21; #if os(macOS) symbol gating never canImport misuse (SettingsScreenContent.swift:394-400); native fileImporter/fileMover/ShareLink; iOS-26 neutralValue slider with VoiceOver parity (SettingsScreenContent.swift:299-306)",
+   "residual_blocking_10": "AnyView-erased destination closures (SettingsScreenContext.swift:38-41)",
+   "residual_disposition": "accepted",
+   "residual_rationale_or_backlog_ref": "Type erasure is forced by the features-narrow rule (feature cannot import BenchHypeLiveFeature to name the destination type); the degradation behavior (nil omits the row) is documented at the property; friction-proof is the rule itself",
+   "unverifiable_due_to_build_failure": false
+  },
+  "concurrency": {
+   "score": 10,
+   "delta": "SAME",
+   "proof": "G25 walk: zero CheckedContinuation/withCheckedThrowingContinuation occurrences in scope (grep-listed this loop), no delegate audit applicable; zero unstructured Task (README claim verified); .task lifecycle-scoped (DiagnosticsView.swift:42-45); @MainActor value-type context; re-entry guarded at the reducer seam (DiagnosticsReducer.swift:15)",
+   "residual_blocking_10": null,
+   "residual_disposition": null,
+   "residual_rationale_or_backlog_ref": null,
+   "unverifiable_due_to_build_failure": false
+  },
+  "simplicity": {
+   "score": 9.5,
+   "delta": "SAME",
+   "proof": "1,843 lines, no protocol soup, no repository theater; the 15-line SettingsScreen facade earns its keep as the visibility boundary",
+   "residual_blocking_10": "Three view-side label functions (\u224828 lines) removable to their owner types (F1); near-duplicate multiTap footer prose (SettingsScreenContent.swift:262-280) judged cosmetic \u2014 differing copy for differing state, earns its keep",
+   "residual_disposition": "queued",
+   "residual_rationale_or_backlog_ref": "F1",
+   "unverifiable_due_to_build_failure": false
+  },
+  "test_strategy": {
+   "score": 8.5,
+   "delta": "SAME",
+   "proof": "Feature-target surfaces covered: snapshots (Paywall/Diagnostics/Help/StarterLicenses), SettingsViewState projection tests, AppBuildInfo pure-fns; paywall flow at app level (PaywallUITests.swift:10-48). Blocker: no test at the control\u2192intent mapping of the 16 settings controls \u2014 playback identifiers built for tests that do not exist (zero consumers of settings.playback.* grepped across all test targets this loop); swap of defaultFadeInSeconds/Out keyPaths (SettingsScreenContent.swift:311/316) passes every current test; named by backlog item 2",
+   "residual_blocking_10": null,
+   "residual_disposition": null,
+   "residual_rationale_or_backlog_ref": null,
+   "unverifiable_due_to_build_failure": false
+  },
+  "credibility": {
+   "score": 9.5,
+   "delta": "SAME",
+   "proof": "Doc-vs-code sweep of scope: README rule claims true; trace-key comment's gate claim verified real (check_boundaries.sh:1195-1208); AppBuildInfo comments match code; ADR-0003-consistency of transition copy verified against CONTEXT.md vocabulary",
+   "residual_blocking_10": "Render-rule comment (SettingsScreenContent+AppleMusic.swift:12-24) describes a reachable cold-start branch the production wiring (RootScene.swift:341) makes unreachable \u2014 code and doc disagree; AGENTS.md treats the doc as binding, conflict reported; owner adjudication queued with F2",
+   "residual_disposition": "queued",
+   "residual_rationale_or_backlog_ref": "F2",
+   "unverifiable_due_to_build_failure": false
+  }
+ },
+ "authority_map": [
+  {
+   "concern": "Settings edits (draft \u2192 persisted prefs)",
+   "owner": "EditingState.settingsDraft (reducer-side)",
+   "allowed_writers": [
+    "SettingsScreenContext.applySettingsChange via .editing intents (single view path)"
+   ],
+   "readers": [
+    "SettingsViewState projection (settingBinding get arm)",
+    "editing reducer",
+    "persistence effect"
+   ],
+   "persistence_seam": ".editing(.saveSettingsDraft) \u2192 application",
+   "async_mutation_entry_points": [],
+   "verdict": "Single and clear"
+  },
+  {
+   "concern": "Apple Music availability + entitlement display",
+   "owner": "Split: context.appleMusicAvailable (composer-supplied, defaulted) vs SettingsViewState.appleMusicEntitlement (projection)",
+   "allowed_writers": [
+    "app-shell construction (RootScene.swift:338-346 derives availability from entitlement non-nilness, manually)"
+   ],
+   "readers": [
+    "SettingsScreenContent+AppleMusic appleMusicSection branches"
+   ],
+   "persistence_seam": null,
+   "async_mutation_entry_points": [
+    "injected requestAppleMusicAuthorization/Refresh closures"
+   ],
+   "verdict": "Split and ambiguous"
+  },
+  {
+   "concern": "Backup operation state",
+   "owner": "BackupState.phase (reducer)",
+   "allowed_writers": [
+    "backup intents and effect outcomes"
+   ],
+   "readers": [
+    "BackupSettingsView (including its view-side statusMessage interpretation \u2014 Finding F1)"
+   ],
+   "persistence_seam": "backup effects (application)",
+   "async_mutation_entry_points": [],
+   "verdict": "Single and clear"
+  },
+  {
+   "concern": "Diagnostics phases + cleanup staging",
+   "owner": "application diagnostics state (storage/integrity/cleanup phases)",
+   "allowed_writers": [
+    "diagnostics reducer arms, re-entry guarded"
+   ],
+   "readers": [
+    "DiagnosticsView; pendingCleanup is view-staged payload"
+   ],
+   "persistence_seam": "DiagnosticsPort \u2014 delete authority re-validates each filename (sanitize, containment, live reference set: CuesFileStore.swift:175-192)",
+   "async_mutation_entry_points": [
+    ".task refresh intents (view-lifecycle-scoped)"
+   ],
+   "verdict": "Single and clear"
+  },
+  {
+   "concern": "Apple Music trace-logging gate",
+   "owner": "UserDefaults key (no state-model owner; deliberate documented diagnostic channel)",
+   "allowed_writers": [
+    "DiagnosticsView @AppStorage toggle"
+   ],
+   "readers": [
+    "BenchHypeAppleMusic/BoundedRelease.swift:24",
+    "AppleMusicPlaylistTracksView.swift:18"
+   ],
+   "persistence_seam": "UserDefaults",
+   "async_mutation_entry_points": [],
+   "verdict": "Single and clear"
+  }
+ ],
+ "strengths": [
+  "Destructive cleanup re-validated at the write authority (sanitize + containment + live reference set, CuesFileStore.swift:184-192) \u2014 staged-snapshot staleness cannot become a wrong delete",
+  "The repo's projection contract is stated where enforced (AppSnapshot.swift:210-212 'Projection-owned so the view stays render-only') \u2014 and F1 is judged against that in-repo standard",
+  "Destination-closure seam encodes platform isolation honestly with documented nil-degradation (SettingsScreenContext.swift:34-41) \u2014 survives the deletion test",
+  "A11y at the control level: gain slider accessibilityValue matches visual readout (SettingsScreenContent.swift:306), brand-rule icon-vs-badge discipline documented at use site (+AppleMusic.swift:170-174), touch-target minimums on caption links (StarterSoundLicensesView.swift:38-42)"
+ ],
+ "findings": [
+  {
+   "loop_local_id": "F1",
+   "stable_id": "F-025",
+   "id": "F1",
+   "title": "Derived display state (enum-to-user-text mapping) lives in feature views at three sites",
+   "why_it_matters": "The repo's own Hard Rule 5 and its in-source projection contract put derived display state in *ViewState projections and on the enum type (Hard Rule 4); three view-side switches violate that pattern in the reviewed subtree, and the class was already swept and fixed elsewhere twice (registry F-001, F-008/F-009).",
+   "what_is_wrong": "DiagnosticsView resolves domain enum OutputDestination and application enum InterruptionState to user-facing labels; BackupSettingsView resolves BackupPhase to status copy. Product messaging is shaped at the read-site instead of the owner-site.",
+   "evidence": [
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift:81-97 (routeDestinationLabel, interruptionLabel)",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift:112-125 (statusMessage)",
+    "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift:22-41 (enum home; isWireless on type, display label is the only interpretation outside it)",
+    "BenchHypeKit/Sources/BenchHypeApplication/Projections/AppSnapshot.swift:210-212 (in-repo precedent: projection owns the display string)",
+    "CURRENT_REVIEW.json.discovery.hotspot_scan (statusMessage decision_count 5, control queue)"
+   ],
+   "test_failed": "Replace-don't-layer",
+   "dependency_category": null,
+   "leverage_impact": "A new surface reporting backup/interruption/route status must re-derive the strings; only views can answer them today.",
+   "locality_impact": "Status-copy edits touch feature files now and owner files later, drifting.",
+   "metric_signal": "scanner control-queue candidate statusMessage (decision_count 5 / 11 lines) \u2014 corroborating, not deciding",
+   "why_weakens_submission": "Violates the subtree's own documented single-owner display rule at three sites; contained (no live drift demonstrated), so Noticeable \u2014 but the pattern across one module reduces ownership credibility.",
+   "severity": "Noticeable weakness",
+   "adr_conflicts": [],
+   "adr_reopen_justification": null,
+   "minimal_correction_path": "Byte-identical relocation: displayName computed on OutputDestination (its home, BenchHypeDomain/Values/Route.swift \u2014 Hard Rule 4's canonical form); interruption display field on DiagnosticsViewState (its home projection, Projections/SettingsViewState.swift); statusMessage computed on BackupState.phase's owning type (State/BackupState.swift). Delete the three view functions; relocate string assertions into SettingsViewStateTests through the projection interface. No new seam or protocol.",
+   "blast_radius": {
+    "change": [
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+     "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+     "BenchHypeKit/Sources/BenchHypeApplication/State/BackupState.swift",
+     "BenchHypeKit/Sources/BenchHypeApplication/Projections/SettingsViewState.swift",
+     "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/SettingsViewStateTests.swift",
+     "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/DiagnosticsViewSnapshotTests.swift"
+    ],
+    "avoid": [
+     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Editing.swift",
+     "BenchHypeKit/Sources/BenchHypeApplication/Reducer/PlaybackReducer.swift",
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+     "BenchHypeKit/Sources/BenchHypePersistence"
+    ]
+   }
+  },
+  {
+   "loop_local_id": "F2",
+   "stable_id": "F-026",
+   "id": "F2",
+   "title": "Context composition admits lying states: permissive defaults plus manually-synchronized availability fields",
+   "why_it_matters": "Hard Rule 3's parallel-fields signal: appleMusicAvailable and state.appleMusicEntitlement must agree, nothing in the type enforces it, and the defaults (=false, ={} closures) convert a forgotten wire-up into a silently-wrong UI instead of a compile error.",
+   "what_is_wrong": "The render rule claims 'available && entitlement nil -> Authorize (cold-start)' is a reachable state, while the only production construction derives availability from entitlement non-nilness, making that branch unreachable. Code and doc disagree on the invariant \u2014 per AGENTS.md the doc is treated as binding and the conflict is reported here; the conflict blocks autonomous fix.",
+   "evidence": [
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift:10-26 (defaulted parameters)",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift:31-33 (three parallel fields)",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift:12-24 (render rule incl. cold-start branch)",
+    "BenchHype/BenchHype/RootScene.swift:338-346 (appleMusicAvailable derived from entitlement != nil)",
+    "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/DiagnosticsViewSnapshotTests.swift (second construction site relying on defaults)"
+   ],
+   "test_failed": "n/a",
+   "dependency_category": null,
+   "leverage_impact": "Every future call site must re-learn the coupling rule to wire the struct honestly.",
+   "locality_impact": "The availability fact is owned jointly by caller, context, and view branching.",
+   "metric_signal": "none",
+   "why_weakens_submission": "A public composition interface whose lying states are reachable and whose doc and wiring disagree about which states exist is a credibility and state-ownership weakness; latent, not live \u2014 Noticeable.",
+   "severity": "Noticeable weakness",
+   "adr_conflicts": [],
+   "adr_reopen_justification": null,
+   "minimal_correction_path": "Blocked pending owner adjudication of the doc-vs-code conflict (AGENTS.md stop-and-ask, not coverable by the Hard Rule 3/4 safe harbor): if the render rule is the invariant, RootScene.swift:341 is the wrong derivation and the model needs a build-time availability signal; if the derivation is the invariant, the doc branch is stale. Then replace bool + two closures + defaults with one sum type (enum AppleMusicAccess { case unavailable; case available(authorize:, refresh:) }) and drop the defaults; two construction sites update.",
+   "blast_radius": {
+    "change": [
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+     "BenchHype/BenchHype/RootScene.swift",
+     "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/DiagnosticsViewSnapshotTests.swift"
+    ],
+    "avoid": [
+     "BenchHypeKit/Sources/BenchHypeAppleMusic",
+     "BenchHypeKit/Sources/BenchHypeApplication/Reducer"
+    ]
+   }
+  },
+  {
+   "loop_local_id": "F3",
+   "stable_id": "F-027",
+   "id": "F3",
+   "title": "DiagnosticsView is public with zero cross-module consumers",
+   "why_it_matters": "Repeat of the api-surface-scope class retired twice in this repo's registry (F-022, F-024): unjustified public widens the module's supported surface for no caller.",
+   "what_is_wrong": "Only same-module consumers exist (the in-file NavigationLink in SettingsScreenContent and @testable snapshot tests); no app-target call site survives this loop's repo-wide grep.",
+   "evidence": [
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift:8 (public struct)",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift:211-216 (same-module consumer)",
+    "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/DiagnosticsViewSnapshotTests.swift:3 (@testable import \u2014 internal is sufficient; precedent PaywallView demoted at af18aebc with snapshot tests green)",
+    "HelpView public is justified by BenchHype/BenchHype/BenchHypeApp.swift:92 (contrast: a real cross-module consumer exists there, not here)"
+   ],
+   "test_failed": "Deletion test",
+   "dependency_category": null,
+   "leverage_impact": "None gained; the public initializer exposes cross-module reach no module uses.",
+   "locality_impact": "The supported-surface list overstates reality.",
+   "metric_signal": "none",
+   "why_weakens_submission": "Cosmetic in isolation; a third instance of a class the repo already invested in cleaning is a pattern signal on API-surface discipline.",
+   "severity": "Cosmetic for contest",
+   "adr_conflicts": [],
+   "adr_reopen_justification": null,
+   "minimal_correction_path": "Drop public from DiagnosticsView and its init; compile matrix is the oracle (same mechanics as af18aebc). Fold into F1's loop (same file, one line).",
+   "blast_radius": {
+    "change": [
+     "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift"
+    ],
+    "avoid": [
+     "BenchHype/",
+     "BenchHypeKit/Sources/BenchHypeApplication/Projections/SettingsViewState.swift (DiagnosticsViewState stays)"
+    ]
+   }
+  },
+  {
+   "loop_local_id": "F4",
+   "stable_id": "F-028",
+   "id": "F4",
+   "title": "The settings control-to-intent mapping has no test at any surface",
+   "why_it_matters": "Sixteen controls bind by keyPath; a mis-wire passes every current gate, and the screen's own playback identifiers were built for tests that do not exist.",
+   "what_is_wrong": "No SettingsScreenContent render test in the feature target; no UI test consumes settings.playback.* or the tap-action pickers; reducer tests assert intent semantics but cannot see which control dispatches which keyPath. Mutation check: swapping defaultFadeInSeconds/defaultFadeOutSeconds bindings leaves the full pinned suite green.",
+   "evidence": [
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift:311,316 (swap candidates)",
+    "BenchHypeKit/Sources/BenchHypeSharedUI/UITestIdentifiers.swift:73,93 (identifiers with zero test consumers \u2014 grep across BenchHypeKit/Tests, BenchHypeUITests, BenchHypeMacUITests this loop)",
+    "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/ (no SettingsScreenContent test file)",
+    "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift:54-62 (the untested binding surface)",
+    "BenchHype/BenchHypeUITests/PaywallUITests.swift:10-48 (contrast: paywall flow does have a UI test)"
+   ],
+   "test_failed": "Interface-as-test-surface",
+   "dependency_category": null,
+   "leverage_impact": "None today \u2014 the existing snapshot mechanics can pin the mapping without new machinery.",
+   "locality_impact": "The flow's tests would not survive a view refactor, the test-shape signal.",
+   "metric_signal": "none",
+   "why_weakens_submission": "An untested mapping on a user-facing settings surface with realistic silent-regression risk caps regression resistance; off the primary playback flow, so Noticeable, not disqualifier.",
+   "severity": "Noticeable weakness",
+   "adr_conflicts": [],
+   "adr_reopen_justification": null,
+   "minimal_correction_path": "One value-differentiated render test for SettingsScreenContent using the existing @testable snapshot pattern: distinct fade-in/out and gain values in the fed SettingsViewState make a keyPath swap change the rendered .dump (fadeSlider prints value text, SettingsScreenContent.swift:352-363). No new harness, no new seam.",
+   "blast_radius": {
+    "change": [
+     "BenchHypeKit/Tests/BenchHypeSettingsFeatureTests/SettingsScreenContentSnapshotTests.swift"
+    ],
+    "avoid": [
+     "BenchHype/BenchHypeUITests",
+     "BenchHype/BenchHypeMacUITests",
+     "BenchHypeKit/Sources/BenchHypeSharedUI/UITestIdentifiers.swift",
+     "all source files under BenchHypeKit/Sources/BenchHypeSettingsFeature"
+    ]
+   }
+  }
+ ],
+ "simplification_check": {
+  "structurally_necessary": "F1 consolidates three enum->display mappings onto their owner types \u2014 passes Replace-don't-layer (view helpers deleted, assertions land at the projection interface); F2 removes representable contradiction via a sum type (Hard Rule 3's prescribed shape) once the owner adjudicates the doc conflict.",
+  "new_seam_justified": false,
+  "new_seam_adapters": [],
+  "helpful_simplification": "F3 public drop is a one-line deletion riding F1's file pass; the settings flow already lives at the IntentDispatcher seam \u2014 the fixes relocate and model, never add layers.",
+  "should_not_be_done": "A SettingsBinder protocol to make bindings injectable (fails Unified Seam Policy: one adapter, no behavior-faithful fakes); routing the trace-gate key through reducer state (ceremony for a default-off diagnostic already gate-checked against drift).",
+  "tests_after_fix": "SettingsViewStateTests gains the relocated string assertions (projection interface); new SettingsScreenContentSnapshotTests pins control->value mapping; DiagnosticsViewSnapshotTests unchanged unless serialization moves; no old tests deleted \u2014 none mirror the removed helpers."
+ },
+ "backlog": [
+  {
+   "priority": 1,
+   "stable_id": "F-025",
+   "title": "Move the three view-side enum->display mappings to their owner types; fold the F-027 public drop into the same pass",
+   "kind": "structural",
+   "rank": "needed for winning",
+   "why_it_matters": "Restores the repo's own single-owner display rule across the subtree and closes a class already retired elsewhere twice.",
+   "score_impact": "state_management +0.5; domain_modeling +0.5"
+  },
+  {
+   "priority": 2,
+   "stable_id": "F-028",
+   "title": "Add the value-differentiated SettingsScreenContent render test pinning control->value mapping",
+   "kind": "structural",
+   "rank": "needed for winning",
+   "why_it_matters": "Today the settings-edit flow has no test that fails when a control binds the wrong field.",
+   "score_impact": "test_strategy +0.5"
+  },
+  {
+   "priority": 3,
+   "stable_id": "F-026",
+   "title": "Collapse appleMusicAvailable + two closure params + defaults into one sum type",
+   "kind": "structural",
+   "rank": "helpful",
+   "why_it_matters": "Removes the representable lying-composition state. Blocked on an unconditional AGENTS.md code-vs-doc stop-and-ask (render rule +AppleMusic.swift:12-24 vs RootScene.swift:341): the owner must adjudicate which side is the invariant before any loop attempts it.",
+   "score_impact": "architecture_quality +0.5; credibility +0.5"
+  }
+ ],
+ "unresolved_reason": null,
+ "deepening_candidates": [
+  {
+   "candidate_module": "SettingsScreenContext (composition interface)",
+   "source_friction_proven": "RootScene.swift:341 manually derives one public parameter from a different projection field to keep the F-026 pair consistent (see Finding F2)",
+   "why_shallow_or_misplaced": "The caller must know the coupling rule; the type cannot. The interface carries three related fields where one state should live.",
+   "behavior_to_move_behind_interface": "Availability branching collapses to one sum-type match at the render site (already partially structured at SettingsScreenContent+AppleMusic.swift:43-69).",
+   "dependency_category": "in-process",
+   "test_surface_after_change": "Same snapshot surfaces; construction becomes exhaustive over two states.",
+   "smallest_first_step": "Owner adjudication of the F-026 invariant (backlog item 3), then the enum.",
+   "what_not_to_do": "Do not inject a protocol or view-model layer; the struct is the right shape, just modeled as a product."
+  }
+ ],
+ "convergence_pass": [],
+ "builder_notes": [
+  {
+   "pattern": "A repo that documents its display-ownership rule at one enforcement site (AppSnapshot.swift:211 'view stays render-only') still leaks where no grep reaches: view-side switches returning user-facing strings.",
+   "how_to_recognize": "private func ... -> String? whose body is a switch over an enum from another module.",
+   "smallest_coding_rule": "If a view computes a sentence, a type or a projection computes it instead.",
+   "stack_example": "DiagnosticsView.swift:81-97 resolves OutputDestination/InterruptionState to labels inside the view while Route.swift:30 keeps isWireless on the type \u2014 the label is the orphaned half."
+  },
+  {
+   "pattern": "Permissive defaults on a composition type convert a forgotten wire-up into wrong output instead of a compile error.",
+   "how_to_recognize": "= false / = {} parameters that select user-visible branches.",
+   "smallest_coding_rule": "Defaults only where every defaulted value is safe in every combination; otherwise make the state a sum type.",
+   "stack_example": "SettingsScreenContext.swift:13-17 \u2014 an app that forgets appleMusicAvailable: true renders 'This build was not compiled with Apple Music support' in a build that was."
+  },
+  {
+   "pattern": "Compliance is not clearance \u2014 and claims are not checks: a comment asserting its own duplication is 'gate-checked' must be opened before it is filed or accepted.",
+   "how_to_recognize": "Prose citing an enforcement mechanism (a script, a test, a rule) as the safety net for a structural shortcut.",
+   "smallest_coding_rule": "grep for the named check before trusting or filing the claim.",
+   "stack_example": "AppleMusicPlaylistTracksView.swift:8-12 claimed the three-way key literal is gate-synced; check_boundaries.sh:1195-1208 shows a real named check (applemusic-trace-key-sync) \u2014 finding converted to accepted residual."
+  },
+  {
+   "pattern": "Priority-1 accounting: P1 (F-025) moves state_management and domain_modeling 9.0->9.5. The further-from-target candidate F-028 (test_strategy 8.5) was considered first under distance-to-target and ranks second on expected marginal gain \u2014 two dimensions onto the target line versus one halfway, at equal severity; neither fails the SPT, so gain decides. F-026 ties on state-ownership merit but is blocked by the code-vs-doc stop-and-ask (criterion 0: ranked on merit, blocker named, next actionable item taken). Stalled-Dimension Sweep: N/A at loop 1 (floor loop 4). Adversarial Pass on Accepted Residuals: N/A at loop 1 (no prior accepted residual in this run).",
+   "how_to_recognize": "A ranking driven purely by 'which finding looks worst' ratchets the nearest-target dimension while the rest stand still.",
+   "smallest_coding_rule": "Rank by expected marginal contest gain, name the accounting sentence every loop.",
+   "stack_example": "See CURRENT_REVIEW.md Builder Notes item 4."
+  },
+  {
+   "pattern": "Scorecard humility check \u2014 three least-confident claims: (1) state_management 9.0 vs 9.5: the F1 trio is 28 lines with no live drift; a reviewer could meet the 9-anchor and accept it \u2014 scored unmet because the anchor is owner-site separation itself (DiagnosticsView.swift:81). (2) F2 'Split and ambiguous': if availability is by definition build-time, RootScene.swift:341 is the single source and only the doc is stale \u2014 both readings fit current source. (3) concurrency 10: the zero-continuation claim covers this subtree only; the .task refresh pair leans on the out-of-scope reducer guard (DiagnosticsReducer.swift:15), quoted, not re-derived.",
+   "how_to_recognize": "Any ceiling resting on a mechanism outside the reviewed scope.",
+   "smallest_coding_rule": "Cite the boundary of what was actually walked, per dimension.",
+   "stack_example": "Scoped-run Discovery sentence: all claims are subtree claims, not repository claims."
+  }
+ ],
+ "narrative": "Place \u2014 scoped to BenchHypeSettingsFeature: a disciplined feature surface (single dispatch path, honest seams, verified doc claims, ADR-consistent copy, clean concurrency) held below winning structure by one repeated ownership pattern (display shaping in views, F-025), an untested control-mapping surface (F-028), and a composition interface with lying-state defaults (F-026, blocked on an owner call the repo itself mandates as unconditional). Simplification helped \u2014 the strongest fixes are relocations and a deletion, adding no seam. Runtime ownership is trustworthy where enforced; concurrency is trustworthy and clean; tests under-protect the main screen. Future work risk is a SettingsBinder protocol \u2014 the fake-clean reward to refuse.",
+ "loop_result": null,
+ "implementation_review": null,
+ "site_pass": {
+  "files": [
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/AppBuildInfo.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "finding",
+      "finding_ids": [
+       "F1",
+       "F3"
+      ]
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "not_applicable",
+      "reason": "static help copy; no intent-dispatching control"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreen.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "not_applicable",
+      "reason": "context type; no control in file"
+     },
+     "Q4": {
+      "status": "finding",
+      "finding_ids": [
+       "F2"
+      ]
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   },
+   {
+    "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/StarterSoundLicensesView.swift",
+    "reads": "full",
+    "questions": {
+     "Q1": {
+      "status": "clean"
+     },
+     "Q2": {
+      "status": "clean"
+     },
+     "Q3": {
+      "status": "clean"
+     },
+     "Q4": {
+      "status": "clean"
+     },
+     "Q5": {
+      "status": "clean"
+     },
+     "Q6": {
+      "status": "clean"
+     },
+     "Q7": {
+      "status": "clean"
+     },
+     "Q8": {
+      "status": "clean"
+     }
+    }
+   }
+  ]
+ }
+}

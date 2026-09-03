@@ -256,7 +256,8 @@ GOLDEN_CANON_JSON = """{
     "G48": "run_id identity discipline — non-null run_id matches run-<UTC yyyy-mm-dd>-<uuid4().hex> and never changes across consecutive loops of one run (REPORT-ONLY: post-G48 epoch exists; Issue withheld until the instrumented-pass promotion condition is met — promotion bar in _artifact_run_identity.py)",
     "G49": "Persisted implementation-hotspot evidence — sanitized schema-v2 coverage/candidates required for hotspot-v2 rulesets",
     "G50": "Hotspot triage completeness — discovery_consumption.hotspot_triage key set must equal the scanner roster exactly (pre-emit, hotspot-triage epoch)",
-    "G51": "Markdown System Flag parity — the first `[STATE: <state>]` line in CURRENT_REVIEW.md equals CURRENT_REVIEW.json.state (pre-commit, md-state-parity epoch)"
+    "G51": "Markdown System Flag parity — the first `[STATE: <state>]` line in CURRENT_REVIEW.md equals CURRENT_REVIEW.json.state (pre-commit, md-state-parity epoch)",
+    "G52": "Site-pass ledger completeness — scoped runs carry site_pass.files[] covering discovery.site_pass_roster.paths exactly, each partitioning Q1..Q8 with finding ids resolving; unscoped runs carry null (pre-emit, site_pass epoch; REPORT-ONLY until the SITE-PASS plan W2 bar — promotion bar in _artifact_site_pass.py)"
   },
   "extra": {
     "fixture_rule_kinds": [

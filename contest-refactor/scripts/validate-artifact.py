@@ -102,6 +102,7 @@ from _artifact_review_contract import (  # noqa: E402
     check_rounds_membership,
 )
 from _artifact_run_identity import check_g48_run_identity  # noqa: E402
+from _artifact_site_pass import check_g52_site_pass  # noqa: E402
 from _artifact_transitions import check_transition_report_only  # noqa: E402
 
 SKILL_ROOT = SCRIPT_DIR.parent
@@ -233,6 +234,7 @@ def run_checks(
     issues.extend(check_g40_discovery_persistence(current_review))
     issues.extend(check_g49_hotspot_scan(current_review))
     issues.extend(check_g50_hotspot_triage(current_review))
+    issues.extend(check_g52_site_pass(current_review))
     issues.extend(check_g41_cap_loop_executed(current_review))
     issues.extend(check_g42_backlog_stable_id(current_review))
     issues.extend(check_g43_convergence_pass(current_review, history, canon))

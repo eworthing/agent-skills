@@ -102,6 +102,11 @@ def _classify_cases() -> list[tuple[str, dict, str]]:
             epoch.MD_STATE_PARITY,
         ),
         (
+            "site-pass boundary revision",
+            {"schema_version": 4, "skill_rev": "1b4ddd5"},
+            epoch.SITE_PASS,
+        ),
+        (
             "unresolved valid SHA cannot prove the newer epoch",
             {"schema_version": 4, "skill_rev": "0000000"},
             epoch.CURRENT,
@@ -193,9 +198,9 @@ def _check_shallow_head_fallback() -> list[str]:
         # clone satisfies -- classify() tries newest-first, so it proves the
         # newest defined epoch, not specifically hotspot_v2. Update this
         # constant again the next time a newer provable epoch is added.
-        if got != epoch.MD_STATE_PARITY:
+        if got != epoch.SITE_PASS:
             found.append(
-                f"classify: shallow current HEAD expected {epoch.MD_STATE_PARITY!r}, got {got!r}"
+                f"classify: shallow current HEAD expected {epoch.SITE_PASS!r}, got {got!r}"
             )
     return found
 

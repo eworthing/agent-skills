@@ -1,0 +1,9 @@
+id = "site-pass-scoped-valid"
+purpose = "Positive site_pass-epoch scoped fixture: the real 2026-09-03 flash dry-run on BenchHypeSettingsFeature with skill_rev at the site_pass boundary (1b4ddd5), discovery.scope set, the script-emitted 10-file site_pass_roster (digest re-derives), and a site_pass ledger covering all 10 files with Q1..Q8 partitioned (finding, clean and not_applicable answers all present). G52 silent; strict exits 0."
+expected_result = "pass"
+pair_exception = "report-only: G52 emits diagnostics, never an Issue, until the SITE-PASS plan W2 bar is met; the three site-pass fixtures are a positive/diagnostic/unscoped triple whose expectations flip together at promotion (W3)."
+notes = "CURRENT_REVIEW.json is evals/ocr-corpus/baselines/benchhype-settings-flash-2026-09-03.json plus the site-pass fields; REVIEW_HISTORY.json is that loop verbatim (G18); Markdown, history Markdown and registry are the BenchHype dry-run artifacts of the same day."
+
+[[tested_rules]]
+kind = "gate"
+id = "G52"

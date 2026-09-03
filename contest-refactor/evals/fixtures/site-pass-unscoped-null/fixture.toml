@@ -1,0 +1,9 @@
+id = "site-pass-unscoped-null"
+purpose = "Positive site_pass-epoch unscoped fixture: discovery.scope, site_pass_roster and site_pass all null. G52 keys on discovery.scope and stays silent; strict exits 0."
+expected_result = "pass"
+pair_exception = "report-only: G52 emits diagnostics, never an Issue, until the SITE-PASS plan W2 bar is met; the three site-pass fixtures are a positive/diagnostic/unscoped triple whose expectations flip together at promotion (W3)."
+notes = "Derived from site-pass-scoped-valid with the three site-pass fields set to null (the unscoped v1 shape); source_roots left as recorded."
+
+[[tested_rules]]
+kind = "gate"
+id = "G52"

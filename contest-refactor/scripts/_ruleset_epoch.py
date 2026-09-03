@@ -82,6 +82,10 @@ ATTESTATION_SKIP = "attestation_skip"
 ATTESTATION_SKIP_REV = "1609cd6"
 MD_STATE_PARITY = "md_state_parity"
 MD_STATE_PARITY_REV = "000c7d8"
+# site_pass: discovery.scope + script-emitted site_pass_roster + per-file site_pass ledger
+# (G52, report-only). Bound to the W1a prose commit (SITE-PASS plan, 2026-09-03).
+SITE_PASS = "site_pass"
+SITE_PASS_REV = "1b4ddd5"
 SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 # Oldest -> newest. Index comparison in `applies()` is what lets a future
@@ -96,12 +100,14 @@ EPOCHS: tuple[str, ...] = (
     HOTSPOT_TRIAGE,
     ATTESTATION_SKIP,
     MD_STATE_PARITY,
+    SITE_PASS,
 )
 
 # Newest -> oldest, paired with each epoch's boundary revision. Extending this
 # (and EPOCHS above) is the whole job of adding a future git-ancestry-provable
 # epoch; classify() and _is_at_or_after() need no changes.
 _PROVABLE_EPOCHS: tuple[tuple[str, str], ...] = (
+    (SITE_PASS, SITE_PASS_REV),
     (MD_STATE_PARITY, MD_STATE_PARITY_REV),
     (ATTESTATION_SKIP, ATTESTATION_SKIP_REV),
     (HOTSPOT_TRIAGE, HOTSPOT_TRIAGE_REV),
@@ -125,6 +131,9 @@ _SKILL_REV_RE = re.compile(r"^[0-9a-f]{4,40}$")
 # Add a new required field or record here — never as an inline epoch `if` in the
 # checker — per output-format-migrations.md's "Adding a required field" rule.
 REQUIREMENT_EPOCHS: dict[str, str] = {
+    # G52: site_pass ledger on scoped runs (report-only until the SITE-PASS W2 bar).
+    # Landed 2026-09-03, prose commit 1b4ddd5.
+    "G52_SITE_PASS": SITE_PASS,
     # G43: convergence_pass[] coverage + clean-streak proposal owing.
     # Landed 2026-08-06, commit 9346822.
     "G43_CONVERGENCE_PASS": CURRENT,

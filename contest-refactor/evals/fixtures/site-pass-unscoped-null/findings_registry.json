@@ -1,0 +1,1061 @@
+{
+  "registry_schema_version": 3,
+  "next_serial": 25,
+  "entries": [
+    {
+      "stable_id": "F-001",
+      "title": "PlaybackOrigin persistence coding is duplicated across two record mappings",
+      "category_hint": "duplicate-domain-enum-mapping",
+      "primary_file": "BenchHypeKit/Sources/BenchHypePersistence/Mapping/PlayHistoryEntryRecordMapping.swift",
+      "primary_evidence_lines": [
+        74,
+        120
+      ],
+      "test_failed": "n/a",
+      "severity": "Serious deduction",
+      "first_seen_loop": 1,
+      "first_seen_sha": "04e38d29aea3430a4c6ad6fab1aec22818a44aea",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:f8502a4deef7482fc4c291c191e0f740fa58958d19c261818a34c981f274c770",
+            "evidence_paths_hash": "sha256:eb4e9e91561da390bd8858e3463d74ebffd1a7748e80c04f4ac214151ecfceaa"
+          },
+          "attempted_remedy_hash": "sha256:59c0855eca93380f6603ecd6d075c3d6196734008d62f61a0b84883e9897923c"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-002",
+      "title": "Apple Music bulk-selection routing is duplicated",
+      "category_hint": "duplicate-presentation-routing",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundSheet.swift",
+      "primary_evidence_lines": [
+        238,
+        273
+      ],
+      "test_failed": "Shallow module",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "73a4bff3",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:4f5adb6271ce0fc0d8bc37f42a34fe7a5587198fc335c7e859c8eeeadc0f3576",
+            "evidence_paths_hash": "sha256:84e6b8d65c5d66b39cdd0b22b6cb961f22b25a2f22bf90b04544ee29f63e8f79"
+          },
+          "attempted_remedy_hash": "sha256:2aa55067047a613197c552259ce70c6ec923bc18ee3edf21b78afbd5ed57ec51"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-003",
+      "title": "Apple Music trim-start policy is duplicated across adapters",
+      "category_hint": "duplicate-adapter-policy",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeAppleMusic/AppleMusicTransport.swift",
+      "primary_evidence_lines": [
+        437
+      ],
+      "test_failed": "Shallow module",
+      "severity": "Cosmetic for contest",
+      "first_seen_loop": 1,
+      "first_seen_sha": "73a4bff3",
+      "last_seen_loop": 2,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "73a4bff3",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:bc0c866060c0cf075daef55409ebf733bc5356d8802c8e5e104132569094d707",
+            "evidence_paths_hash": "sha256:12922a2bb921346700a46af46ae49376da8f6470eadf8553b35abc5596466ffe"
+          },
+          "attempted_remedy_hash": "sha256:79b61a410d08e4230164e47704d21bcca61e9a7a9ad319914d1e93d7b46d1e1f"
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F2",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:bc0c866060c0cf075daef55409ebf733bc5356d8802c8e5e104132569094d707",
+            "evidence_paths_hash": "sha256:12922a2bb921346700a46af46ae49376da8f6470eadf8553b35abc5596466ffe"
+          },
+          "attempted_remedy_hash": "sha256:79b61a410d08e4230164e47704d21bcca61e9a7a9ad319914d1e93d7b46d1e1f",
+          "idempotency_key": "loop2-F-003-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-004",
+      "title": "Apple Music bulk-selection presentation has no direct test surface",
+      "category_hint": "missing-feature-surface-test",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundSheet.swift",
+      "primary_evidence_lines": [
+        369,
+        376
+      ],
+      "test_failed": "n/a",
+      "severity": "Cosmetic for contest",
+      "first_seen_loop": 1,
+      "first_seen_sha": "73a4bff3",
+      "last_seen_loop": 3,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "73a4bff3",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d92f800c7c620ac86127e71479fab1986c046136ae31df79ce7df6f2b0c21f87",
+            "evidence_paths_hash": "sha256:2c7aca6463165783b1c8c95765120937476ab5dc5f34cbd40c29ffade32ed764"
+          },
+          "attempted_remedy_hash": "sha256:5a277bc84f39f263f69f913b94c78a6821f5d12ccc0b0b320a03a0371fae7e9b"
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "bc4e6333f46736e42af62c6f823bbd389ed6fcbc",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:2ce62f85c058afaa77d55c70f044b7c8a1bf10c130e156d328ae2ff3a16d4743",
+            "evidence_paths_hash": "sha256:e4b1a26384aced590260ff6d1142a991c482902b2fdcc4c4fe15f42a6b3b63ee"
+          },
+          "attempted_remedy_hash": "sha256:184a9cc40650f00790f1af6583a0de9e68e843509b2db3e666bf91d643c76063",
+          "idempotency_key": "loop5-F-004-open"
+        },
+        {
+          "loop": 6,
+          "loop_local_id": "F4",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:dd792ce712c2b8768732a9d284807b3730ef25bc952911d44ef9ceebb6a5b4d1",
+            "evidence_paths_hash": "sha256:4b5506c5bc8eae667384d547c86ea40cff36895037ba28bb6679f5094e481c66"
+          },
+          "attempted_remedy_hash": "sha256:e6ed998cc6067a8f2c31177eb86ab8ed58e62c2d18d80ac76bfb32aa58f65d8f"
+        },
+        {
+          "loop": 3,
+          "loop_local_id": "F3",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:2ce62f85c058afaa77d55c70f044b7c8a1bf10c130e156d328ae2ff3a16d4743",
+            "evidence_paths_hash": "sha256:e4b1a26384aced590260ff6d1142a991c482902b2fdcc4c4fe15f42a6b3b63ee"
+          },
+          "attempted_remedy_hash": "sha256:e6ed998cc6067a8f2c31177eb86ab8ed58e62c2d18d80ac76bfb32aa58f65d8f",
+          "idempotency_key": "loop3-F-004-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-005",
+      "title": "Bulk import session admits incompatible workflow state",
+      "category_hint": "parallel-workflow-state",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeApplication/State/BulkAddSoundSession.swift",
+      "primary_evidence_lines": [
+        120,
+        382
+      ],
+      "test_failed": "Shallow module",
+      "severity": "Serious deduction",
+      "first_seen_loop": 3,
+      "first_seen_sha": "2e23cd2711df820a776e83b33089d3810686bade",
+      "last_seen_loop": 4,
+      "occurrences": [
+        {
+          "loop": 3,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "2e23cd2711df820a776e83b33089d3810686bade",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:545488602fcc2681fddafec2695e181c577795c349c6af36ac597fbab365307a",
+            "evidence_paths_hash": "sha256:ea0f73047f1056161a18b268af4a936264c3d19b08e25693aecfb74338eed4fd"
+          },
+          "attempted_remedy_hash": "sha256:4c5aa3a3d906bcf37fad84773375c78376bbfaa70212fd071eb6d9ee5eafee07",
+          "idempotency_key": "loop3-F-005-open"
+        },
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:00d4856d216a7c0e276e0d6ed9bde18959131d6117908a3aad3d3c04f21c2d91",
+            "evidence_paths_hash": "sha256:01133fac50e6dd40bb959a291ac97753a547a2b3caf6a359707b9f79f20075a0"
+          },
+          "attempted_remedy_hash": "sha256:ff1a88597040fb46f2623195a9289e6a0bdf9d0c2a4daf899de5f2b7db4e00e5",
+          "idempotency_key": "loop4-F-005-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-006",
+      "title": "Successful game-package collisions orphan staged cue assets",
+      "category_hint": "unowned-staged-resources",
+      "primary_file": "BenchHypeKit/Sources/BenchHypePersistence/GamePackage/GamePackageImportSupport.swift",
+      "primary_evidence_lines": [
+        51,
+        63
+      ],
+      "test_failed": "n/a",
+      "severity": "Serious deduction",
+      "first_seen_loop": 5,
+      "first_seen_sha": "bc4e6333f46736e42af62c6f823bbd389ed6fcbc",
+      "last_seen_loop": 5,
+      "occurrences": [
+        {
+          "loop": 5,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:a1da92c9c617e1388f243bf4b9fe186328def68a60ee709fc42a04463b5c1bd4",
+            "evidence_paths_hash": "sha256:c45202ed00a8da5eb22e69a21ed848cc90e7ba0010f46ab3933e17352611a3c5"
+          },
+          "attempted_remedy_hash": "sha256:852f548872c384c7228909304ad53d4ac7c9981bafd036c822d0ba47a728cbe4",
+          "idempotency_key": "loop5-F-006-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-007",
+      "title": "Wide-batch drain test races its own snapshot assertion",
+      "category_hint": "test-completion-race",
+      "primary_file": "BenchHypeKit/Tests/BenchHypeApplicationTests/EffectPumpWideBatchTests.swift",
+      "primary_evidence_lines": [
+        53,
+        64
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 5,
+      "first_seen_sha": "bc4e6333f46736e42af62c6f823bbd389ed6fcbc",
+      "last_seen_loop": 11,
+      "occurrences": [
+        {
+          "loop": 5,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "bc4e6333f46736e42af62c6f823bbd389ed6fcbc",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:9eb64bcd9ab31109eeb249738be59b3a7050cf16839f9c110b81df6f9e8f6b7a",
+            "evidence_paths_hash": "sha256:12ac3e7700bef49ec84d4b85f93f24dee649db5547d397877336e043e76d28a5"
+          },
+          "attempted_remedy_hash": "sha256:f8324c00c6d8265ef5d818243914a23b3de8c7981c4a6ad48647e03188e5d353",
+          "idempotency_key": "loop5-F-007-open"
+        },
+        {
+          "loop": 6,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:d72f2014b46d6791a29a3ad7e3bc501569c00ff295f642c4af4c4dac2e0d88f5",
+            "evidence_paths_hash": "sha256:d058e9fc187a8038728e34dc4db8275aa806d90105f04909068f6f005fc90d2e"
+          },
+          "attempted_remedy_hash": "sha256:1172586a96e373e1f9f5fb56e0d25cad999fbd75a7aed4a596c5244499385ddf"
+        },
+        {
+          "loop": 7,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:9992923f247fe662f7ce0c9893dd5a32253ff41ffeb211b806a46f6ac3e67ba7",
+            "evidence_paths_hash": "sha256:ddfaad2dca550538b0fea217b09733cfcab7ff1d81ab8cce970abc5c7c93cf03"
+          },
+          "attempted_remedy_hash": "sha256:6984cf80c51be02adfa5b4bd0f655d49ec874a16ba641f07c1c841f26c1a4ce5"
+        },
+        {
+          "loop": 8,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "052e46baa77143e1cb4ca3a71bb9113b158ddfd2",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:b207535a3c2378d801f2a2ddfcad903695892e25f1fa5e63adf65320c1731f68",
+            "evidence_paths_hash": "sha256:f5e63ed8e959e61e51f0ba8f7cf57e53d6942e80a274de5ac601b44f05b6334b"
+          },
+          "attempted_remedy_hash": "sha256:4fd3b1201774412e77ee87d4db8be855d14f3d4e96967f7bf99c7a1cc8e4496e"
+        },
+        {
+          "loop": 9,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "fc44da86852f46a84e84e2a10ffb1b5b1eda6ce9",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:280fd535f7463be27a5f45e49961319bf50facee2b2c1d5d91bcde8cae006e6e",
+            "evidence_paths_hash": "sha256:4216b3846bdac8f721d33e5a9480aff52fb31705d7ae531dc558cd859194501c"
+          },
+          "attempted_remedy_hash": "sha256:4c7134d94c3da9deaeb90ecd2ffc1540027ab58bdb8b933d427a322cdd43aa63"
+        },
+        {
+          "loop": 10,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:9915811703bda8368857e4d320b8e32d635dc6e4c2dc5bb01887b07e0b520987",
+            "evidence_paths_hash": "sha256:6cca2b56df8e68fdbca2203c4aad8aa198e3c9cc1187dcbea3cc2a6c41eb16dc"
+          },
+          "attempted_remedy_hash": "sha256:eac38d4f9cf4984f479407acbfebd06e37c5f9dce2fa995cbbe48b28170cfb5c"
+        },
+        {
+          "loop": 11,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:2d4e5cc4c4e3cf3e174e1389d312b264f9a3e58cc7b33933b88764f7becfb80f",
+            "evidence_paths_hash": "sha256:ad5f9fb545c6ddbc8ce807a9d0e783ac8df66665a1a8c33a46f38cd19d401323"
+          },
+          "attempted_remedy_hash": "sha256:81c6d8a423ea4bd3301d3d058cf335ccf8e04b425881f42a3fb4b681ec5b4210"
+        },
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "withdrawn",
+          "sha": "333c5046",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:b796ddac61a7cc7e63f0671fc1fe3cd42e4f974a565f7db7e253a2f4314770fc",
+            "evidence_paths_hash": "sha256:e314a0ce52747983cd86292df7de4558f4623ef9454c431a96d5f31c3ad71219"
+          },
+          "withdrawal_rationale": "Critic audited on current source (333c5046): the test uses actor-isolated SnapshotCollector (line 75-87) with await latest.record(snapshot) into actor-isolated record(_:); after await engine.waitForIdle(), #expect(await latest.cueCount() == 1000) reads through the actor and sees every record. The 7 prior 'open' occurrences described earlier versions of this test; the registry description does not match the live code. Reclassified as not-a-finding per method.md § Step 1.6."
+        }
+      ],
+      "status": "withdrawn"
+    },
+    {
+      "stable_id": "F-008",
+      "title": "Flat playback status is modelled twice across the module graph",
+      "category_hint": "duplicate-domain-enum-mapping",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeSharedUI/Components/TileView.swift",
+      "primary_evidence_lines": [
+        6,
+        27
+      ],
+      "test_failed": "Deletion test",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 6,
+      "first_seen_sha": "e024a19b71139d459554225d2c11b3a20d3d66f4",
+      "last_seen_loop": 6,
+      "occurrences": [
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:ad8b724d0687fb38cdca7865678c7e998e4fa3cef94d3a2c350d465573c82af6",
+            "evidence_paths_hash": "sha256:046c98359702a3cf6ac8172903c338bcc04735816d9e0a98aa8134ef7e59670d"
+          },
+          "attempted_remedy_hash": "sha256:0004e0c151ca8d18072f9b2231ab5acc8e45b4bfdeb387784182484e08bc3cd4"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-009",
+      "title": "Tile playback visuals re-derive a Domain mapping the status type already computes",
+      "category_hint": "duplicate-status-severity-interpretation",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeSharedUI/Components/TilePlaybackVisuals.swift",
+      "primary_evidence_lines": [
+        8,
+        54
+      ],
+      "test_failed": "Shallow module",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 6,
+      "first_seen_sha": "e024a19b71139d459554225d2c11b3a20d3d66f4",
+      "last_seen_loop": 8,
+      "occurrences": [
+        {
+          "loop": 6,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:08a0094f506b7824eae856586c9c7d39e4aa76b1836f61d1faf9c46b74aff96d",
+            "evidence_paths_hash": "sha256:20d50ec3b50e03afba493ca7ce7bdc1c5de0a93a6268040b7a3e76d1fe17bc85"
+          },
+          "attempted_remedy_hash": "sha256:9251f8104a9ca58ad33a711353cf766359ec56b6b5f21b0fce4b269c9a6f4a2f"
+        },
+        {
+          "loop": 7,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:b4c2999421dea6e81f0b28c3734fc81e2971e18b27b16f687966c901cd9bbd4b",
+            "evidence_paths_hash": "sha256:1fc05c2ab9229ec2dda230f9f69a7a9876959c3462620668f679ecb5a928848f"
+          },
+          "attempted_remedy_hash": "sha256:07b3993303ec74b9e14c68a5b4102d19f04551b8b6c71aa821ab757e9dc6b85d"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-010",
+      "title": "The add-sound sheet owns routing for a workflow the reducer owns, and decides it on an edge of a stream documented to drop intermediate values",
+      "category_hint": "view-owned-workflow-navigation-authority",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundSheet.swift",
+      "primary_evidence_lines": [
+        18,
+        123
+      ],
+      "test_failed": "n/a",
+      "severity": "Serious deduction",
+      "first_seen_loop": 7,
+      "first_seen_sha": "02bcdb35913c1a29a427f67a2ec91724a093cc2e",
+      "last_seen_loop": 11,
+      "occurrences": [
+        {
+          "loop": 7,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:24f792c023efed74acfe33b2482743866d7d6fe3a9668893f3f07a68c80b3ed4",
+            "evidence_paths_hash": "sha256:353b3a83ac8398150d9a4cc9b81e557797739707576d01073bf327a72e237f3b"
+          },
+          "attempted_remedy_hash": "sha256:62f9bb6610909c4c885f943c08bb8dc153a27b03a96573046b1aab06b2edb93f"
+        },
+        {
+          "loop": 8,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "052e46baa77143e1cb4ca3a71bb9113b158ddfd2",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:0d12b87362036434768a86b2ba063e220de33ae92a2f914bb38c219600fe32b9",
+            "evidence_paths_hash": "sha256:ba6fa1f51d26c3b7649dcfaa05cc4799f39a04e8e1337bba7cabfa1812b33c2d"
+          },
+          "attempted_remedy_hash": "sha256:16df66f654e9a0dde2b0ac9d406e44cf804a253476c7f7d14d43c1d17afe671e"
+        },
+        {
+          "loop": 9,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "fc44da86852f46a84e84e2a10ffb1b5b1eda6ce9",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:0322efd8e43fb30ebf7a6ccedf439024c79d27592e1fbefa7fce8cc77b037e37",
+            "evidence_paths_hash": "sha256:cad46c29cfbde73a367272e883847600ae1eb8a78312ac8918994edb73c69d20"
+          },
+          "attempted_remedy_hash": "sha256:cb56a515de6a39c0d38f05b3b939d9cbb1266ac8422f9a47be5fc29b43727bab"
+        },
+        {
+          "loop": 10,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:da65f8c63e3e1dc58e39b51e9e9223e45d0575bedb170f9b265b3534293c2b8b",
+            "evidence_paths_hash": "sha256:c300460b144b8ed0db5a4cf2feb3fe08b03accf512338bd4a81d4f1ee6bf4bc4"
+          },
+          "attempted_remedy_hash": "sha256:3846c8b4cac592d84f6fdc24799ecb5f1b884ed54e314aaeef367e449fa4dbf6"
+        },
+        {
+          "loop": 11,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:a306bb3e6d0fd16a0263edc31711236a9dfd76217d7236e9ef2832bc94357cb9",
+            "evidence_paths_hash": "sha256:ef8a72aa1c5856e2b84abcc2b1e2fd82a3091a47d985331b5fa431efa7e28626"
+          },
+          "attempted_remedy_hash": "sha256:59c5dff80c54ffc75c328605bab781c36720fe2d76f6d0b64544204b38353fa5"
+        },
+        {
+          "loop": 12,
+          "status": "resolved",
+          "reviewer_reason": "n/a"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "stable_id": "F-011",
+      "title": "Three settings-persist reducer arms restate the same save protocol and only one carries the restore guard",
+      "category_hint": "duplicated-settings-save-protocol",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+Workflow.swift",
+      "primary_evidence_lines": [
+        248,
+        341
+      ],
+      "test_failed": "n/a",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 8,
+      "first_seen_sha": "052e46baa77143e1cb4ca3a71bb9113b158ddfd2",
+      "last_seen_loop": 2,
+      "occurrences": [
+        {
+          "loop": 8,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "052e46baa77143e1cb4ca3a71bb9113b158ddfd2",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:5e02d1c4fa868a2ae492e5f012304a74e3ea2eab221c712249d14708bdbf2487",
+            "evidence_paths_hash": "sha256:0eb8c1b57a764821dd679c40cb623b270a3129b4053844eb3429d527925724b7"
+          },
+          "attempted_remedy_hash": "sha256:e73135798ecc9174a37eeee11d619eefb733c80bd58e9e0dcb3b3f4793a06bdb"
+        },
+        {
+          "loop": 9,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "fc44da86852f46a84e84e2a10ffb1b5b1eda6ce9",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:eaf396d2eac56367d0f1dde784904db1e8fb66c43402ac9df9cc2bca10ef33f3",
+            "evidence_paths_hash": "sha256:d3c7a0f37711e97b473d035777db73c9afef523a59b492aa95cbf70b742c4b76"
+          },
+          "attempted_remedy_hash": "sha256:fba2ba23b1a212dbc0d4ed19df9e5f2dbc6d17b94188d6036852bf4258604484"
+        },
+        {
+          "loop": 10,
+          "loop_local_id": "F4",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:f6a5c53357673be712e1b9d0106d4436b6cac5c169fb21cd289e7e73bb6228d5",
+            "evidence_paths_hash": "sha256:a92adf6150ae5a3a71fb3b1bf7bbb45548149d9e5e28ca6605484530c791c4df"
+          },
+          "attempted_remedy_hash": "sha256:362bc0ed00a2682d0d2abe14709916e2d1854bcce0aef6060457d012524f2d4b"
+        },
+        {
+          "loop": 11,
+          "loop_local_id": "F3",
+          "status": "open",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:179dc0c6553688895bea0fcc9360a9015089951b04d071ff0344f7be1031f661",
+            "evidence_paths_hash": "sha256:76cf9b54db9dab91c5173e9701a83818a05849cf654dc241f51a90b602fdd26c"
+          },
+          "attempted_remedy_hash": "sha256:51ac9727300fd503d9808cf38e62d20b273cb9d7379004edb560d90655e9e4a1"
+        },
+        {
+          "loop": 1,
+          "loop_local_id": "F2",
+          "status": "rejected_attempt",
+          "sha": "95c530a56838d3de2d2b80806bff4ecba4260396",
+          "challenger_break": {
+            "challenger_model": "opencode-go/minimax-m3",
+            "outcome": "broke",
+            "arm": "residual_refutation",
+            "target": "F-011 / simplicity 9.5",
+            "reason": "Candidate's acceptance premise 'SPT would reject any further consolidation' overgeneralized; the closure-parameter shape with unconditional restore-guard inside the helper passes every SPT question + deletion test without ceremony."
+          }
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "be0f1c66137a615242cdf2819094b22ce0403763",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:5e02d1c4fa868a2ae492e5f012304a74e3ea2eab221c712249d14708bdbf2487",
+            "evidence_paths_hash": "sha256:0eb8c1b57a764821dd679c40cb623b270a3129b4053844eb3429d527925724b7"
+          },
+          "attempted_remedy_hash": "sha256:1b8c4e8d2e1f4f9b9c3e7a5d8f6e2c1b4a9d8e7f6c5b4a3d2e1f0c9b8a7d6e5f",
+          "idempotency_key": "loop2-F-011-resolved"
+        }
+      ],
+      "status": "resolved",
+      "last_seen_sha": "be0f1c66137a615242cdf2819094b22ce0403763"
+    },
+    {
+      "stable_id": "F-012",
+      "title": "Mounting the sequential trim screen is what mints the sequential-import session",
+      "category_hint": "view-owned-workflow-ignition",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/SequentialTrimView.swift",
+      "primary_evidence_lines": [
+        40,
+        40
+      ],
+      "test_failed": "n/a",
+      "severity": "Serious deduction",
+      "first_seen_loop": 10,
+      "first_seen_sha": "be54b1e620ea0b6a08d40a8e2e0d0f78bd6a0c0f",
+      "last_seen_loop": 10,
+      "occurrences": [
+        {
+          "loop": 10,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:4a8813caaaec183affbab490f49be497c0e4bc3fe339c3d0aab6831cccc52818",
+            "evidence_paths_hash": "sha256:4ab029a299439fa2d8052b50031cd3ecb9645948c35e89742cc28743323212a2"
+          },
+          "attempted_remedy_hash": "sha256:687b679af1c14d40a39c0757fab91c43a676808ad9be1bb6e0e1adec50c88579"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-013",
+      "title": "The sequential Replace ending has no test anywhere in the repository",
+      "category_hint": "missing-reducer-arm-test",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeApplication/Reducer/AppReducer+PersistenceCompletion+Cue.swift",
+      "primary_evidence_lines": [
+        26,
+        26
+      ],
+      "test_failed": "n/a",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 10,
+      "first_seen_sha": "be54b1e620ea0b6a08d40a8e2e0d0f78bd6a0c0f",
+      "last_seen_loop": 10,
+      "occurrences": [
+        {
+          "loop": 10,
+          "loop_local_id": "F5",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:700e56169654791e66bb081e50aa96f18f11de0e0c1901c430882c895478d3ba",
+            "evidence_paths_hash": "sha256:e410aeb1613bbc7b346d2a6d998c5658af7421dc51ee398197cda73b6761ff04"
+          },
+          "attempted_remedy_hash": "sha256:156809772769b9f5388d61404fcfff9ecc414cbcb32f09e23fb79bdc79bc19d8"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-014",
+      "title": "Two architecture docs describe pre-loop-12 behaviour the source no longer implements",
+      "category_hint": "doc-vs-code-contradiction",
+      "primary_file": "docs/core-architecture-primer-reference.md + BenchHypeKit/Sources/BenchHypeApplication/Intents/WorkflowIntent.swift",
+      "primary_evidence_lines": [
+        102,
+        114
+      ],
+      "test_failed": "n/a",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "6fdd854fef67d340c02573eaabba07760054883b",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "b871e880...",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:9eb64bcd9ab31109eeb249738be59b3a7050cf16839f9c110b81df6f9e8f6b7a",
+            "evidence_paths_hash": "sha256:2c7aca6463165783b1c8c95765120937476ab5dc5f34cbd40c29ffade32ed764"
+          },
+          "attempted_remedy_hash": "sha256:5a277bc84f39f263f69f913b94c78a6821f5d12ccc0b0b320a03a0371fae7e9b",
+          "idempotency_key": "loop1-F-014-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-015",
+      "title": "Roster projection used an opposite duplicate-cue lookup",
+      "category_hint": "inconsistent-projection-index-policy",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeApplication/Projections/RosterLiveViewState.swift",
+      "primary_evidence_lines": [
+        409,
+        446
+      ],
+      "test_failed": "Deletion test",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "5d85cc142d63aac4651420ec71573c12a2b5262b",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-016",
+      "title": "Duplicate-resolution tests copy the same pending-duplicate fixture",
+      "category_hint": "duplicated-test-fixture",
+      "primary_file": "BenchHypeKit/Tests/BenchHypeApplicationTests/AddSoundDuplicateResolutionTests.swift",
+      "primary_evidence_lines": [
+        417,
+        475
+      ],
+      "test_failed": "Replace-don't-layer",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 1,
+      "first_seen_sha": "5d85cc142d63aac4651420ec71573c12a2b5262b",
+      "last_seen_loop": 2,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F2",
+          "status": "backlog",
+          "sha": "<pending>"
+        },
+        {
+          "loop": 2,
+          "loop_local_id": "F2",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:3e2d9b3469bf0eb98497c1c3e402ebed135a902be6b3a8354d56cc6796429b6e",
+            "evidence_paths_hash": "sha256:677c13974d08b5dfd97401a2ccf34c886819e9f44f9c3e02993c45299dac02de"
+          },
+          "attempted_remedy_hash": "sha256:1852966df5e109a9e208574d229775e392f9c9f592ab903e953527c0975a8354",
+          "idempotency_key": "loop2-F-016-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-017",
+      "title": "Apple Music board bulk selection can be re-routed into a library import by a stale progress-view snapshot",
+      "category_hint": "stale-snapshot-duplicate-workflow-ignition",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AppleMusicBulkProgressView.swift",
+      "primary_evidence_lines": [
+        44,
+        60
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 4,
+      "first_seen_sha": "b42862d41b5bd339507491ad191a3610bbdd1332",
+      "last_seen_loop": 5,
+      "occurrences": [
+        {
+          "loop": 4,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "b42862d41b5bd339507491ad191a3610bbdd1332",
+          "challenger_break": {
+            "challenger_model": "gpt-5.6-luna",
+            "challenger_isolation": "subagent",
+            "outcome": "broke",
+            "arm": "new_finding",
+            "target": "data_flow",
+            "candidate_commit_sha": "b42862d41b5bd339507491ad191a3610bbdd1332",
+            "reason": "A stale AddSoundContext snapshot can make AppleMusicBulkProgressView enqueue a nil-target library start after a terminal board-targeted start and replace the board workflow.",
+            "spt": {
+              "result": "passed",
+              "rationale": "Moving library dispatch to the existing selection gesture and deleting mount-time ignition removes a duplicate authority without adding a layer."
+            }
+          }
+        },
+        {
+          "loop": 5,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:1d1b97bc949463006b4bb1ec18052761266d235735f602abc303ad2c167ef6b3",
+            "evidence_paths_hash": "sha256:7a9877ebf1445b52799fe9744849b3698d9ddc03941864c125d8b730e15f08fe"
+          },
+          "attempted_remedy_hash": "sha256:f59bea2a5cdbd64b2de5aa4a5205edd11cb6403329876ffe0c640bd0aa36c57f",
+          "idempotency_key": "loop5-F-017-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-018",
+      "title": "Accepted test-strategy residual ignores the untested Apple Music bulk route",
+      "category_hint": "missing-feature-route-regression-test",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundSheet.swift",
+      "primary_evidence_lines": [
+        371,
+        379
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Likely disqualifier",
+      "first_seen_loop": 5,
+      "first_seen_sha": "3be45950b17a01518ada2ff59c2b6c653174128a",
+      "last_seen_loop": 6,
+      "occurrences": [
+        {
+          "loop": 5,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "3be45950b17a01518ada2ff59c2b6c653174128a",
+          "challenger_break": {
+            "challenger_model": "gpt-5.6-luna",
+            "challenger_isolation": "subagent",
+            "outcome": "broke",
+            "arm": "residual_refutation",
+            "target": "test_strategy",
+            "candidate_commit_sha": "3be45950b17a01518ada2ff59c2b6c653174128a",
+            "reason": "The repaired AddSoundSheet route can be deleted or target-swapped while downstream dispatcher/reducer tests and the mapped UI gate remain green.",
+            "spt": {
+              "result": "passed",
+              "rationale": "One direct feature-surface test at the existing route boundary protects the primary flow without adding a runtime owner, protocol, wrapper, or instrumentation layer."
+            }
+          }
+        },
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:f6f550ecd214b579699533f95258ed7f4fbed0e0c83e431c1d3dbbd476c07575",
+            "evidence_paths_hash": "sha256:20d3d6d509e9bc993f940b7e8a92118600c6276cf767070e19143c5de70c68c0"
+          },
+          "attempted_remedy_hash": "sha256:d89663cce69e222e2f3c0318361e00b2227272e862d95ec94b428be866f3c943",
+          "idempotency_key": "loop6-F-018-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-019",
+      "title": "Library route test accepts an unrelated snapshot as proof of session start",
+      "category_hint": "feature-test-false-pass",
+      "primary_file": "BenchHypeKit/Tests/BenchHypeLibraryFeatureTests/AddSoundSheetRouteTests.swift",
+      "primary_evidence_lines": [
+        25,
+        33
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 6,
+      "first_seen_sha": "16e68f7917a8e4094c26eec1b27ff247203ae686",
+      "last_seen_loop": 7,
+      "occurrences": [
+        {
+          "loop": 6,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "16e68f7917a8e4094c26eec1b27ff247203ae686",
+          "challenger_break": {
+            "challenger_model": "gpt-5.6-luna",
+            "challenger_isolation": "subagent",
+            "outcome": "broke",
+            "arm": "residual_refutation",
+            "target": "F-018 / test_strategy",
+            "candidate_commit_sha": "16e68f7917a8e4094c26eec1b27ff247203ae686",
+            "reason": "The library route test accepts an absent session as boardPlacement nil and a Step return discarded by production callbacks.",
+            "spt": {
+              "result": "passed",
+              "rationale": "Require a nonnil session and observe the existing production navigation surface without adding a runtime owner or abstraction."
+            }
+          }
+        },
+        {
+          "loop": 7,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:3d5c5d7d91629d1fb0a3a860043a9f710ad21c21557a15bcdcd642fa05bb84dc",
+            "evidence_paths_hash": "sha256:88b22a8f6d683247408896dbf62fd901bfb64760bc5a0c0df08337967ab941f9"
+          },
+          "attempted_remedy_hash": "sha256:c8ce04283db0cdceb5a894745d4ca9211bb116ceca305f06e2ec399db7ebb68a",
+          "idempotency_key": "loop7-F-019-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-020",
+      "title": "Apple Music multi-select from direct Live loses the walkout binding",
+      "category_hint": "direct-live-bulk-walkout-target-loss",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundSheet.swift",
+      "primary_evidence_lines": [
+        89,
+        256
+      ],
+      "test_failed": "n/a",
+      "severity": "Serious deduction",
+      "first_seen_loop": 7,
+      "first_seen_sha": "fa311edc09f1d8499df16f1a70ae24c290f4f41b",
+      "last_seen_loop": 8,
+      "occurrences": [
+        {
+          "loop": 7,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "fa311edc09f1d8499df16f1a70ae24c290f4f41b",
+          "challenger_break": {
+            "challenger_model": "gpt-5.6-luna",
+            "challenger_isolation": "subagent",
+            "outcome": "broke",
+            "arm": "new_finding",
+            "target": "data_flow",
+            "candidate_commit_sha": "fa311edc09f1d8499df16f1a70ae24c290f4f41b",
+            "reason": "Direct-Live Apple Music multi-select enters a library bulk workflow that cannot carry the player's walkout binding, so saved cues remain unattached.",
+            "spt": {
+              "result": "passed",
+              "rationale": "Suppress multi-select only while isWalkoutArmed is true; retain the existing single-track completion path and add no runtime owner or state field."
+            }
+          }
+        },
+        {
+          "loop": 8,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:230b70f9009c1aad9a742fc4b7ca2b9beb90798c8a10fc9e002724cb1088f1ba",
+            "evidence_paths_hash": "sha256:c7d893f45f5bcc7a27352fca043c8e943417b6d05ba979d2775b39b5300eb901"
+          },
+          "attempted_remedy_hash": "sha256:edff6eee6e24fa64258073e8f73cefa66011ad582e614862c40e09d7dc82c79c",
+          "idempotency_key": "loop8-F-020-resolved"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-021",
+      "title": "Single-select gating accidentally removes supported roster-editor walkout bulk selection",
+      "category_hint": "walkout-cardinality-capability-regression",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/AddSound/AddSoundContext.swift",
+      "primary_evidence_lines": [
+        60,
+        65
+      ],
+      "test_failed": "Interface-as-test-surface",
+      "severity": "Serious deduction",
+      "first_seen_loop": 8,
+      "first_seen_sha": "34d63cf53787aec3d580dc690e1a4e97dc76933a",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 8,
+          "loop_local_id": "F1",
+          "status": "open",
+          "sha": "34d63cf53787aec3d580dc690e1a4e97dc76933a",
+          "challenger_break": {
+            "challenger_model": "gpt-5.6-luna",
+            "challenger_isolation": "subagent",
+            "outcome": "broke",
+            "arm": "new_finding",
+            "target": "data_flow",
+            "candidate_commit_sha": "34d63cf53787aec3d580dc690e1a4e97dc76933a",
+            "reason": "The broad isWalkoutArmed single-select gate also disables the established suspended-roster .walkout multi-select flow.",
+            "spt": {
+              "result": "passed",
+              "rationale": "Name the existing .walkoutFromLive capability once, reuse the already-threaded picker input, preserve .walkout bulk behavior, and add no stored state or runtime layer."
+            }
+          }
+        },
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "f94886304ef588301dfc97ae1fb811e1b99b7965"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-022",
+      "title": "BenchHypeStarterSounds compliance-gate types are public with zero cross-module callers",
+      "category_hint": "api-surface-scope",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeStarterSounds/StarterSoundGate.swift",
+      "primary_evidence_lines": [
+        8,
+        57
+      ],
+      "test_failed": "n/a",
+      "severity": "Cosmetic for contest",
+      "first_seen_loop": 1,
+      "first_seen_sha": "9e09fd0891e5d981da404a32db2db4cb727553e0",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:e46497d64bb58257df22f10d4ed460fda13e3c57871758bd0c6f4adbe96a7ece",
+            "evidence_paths_hash": "sha256:acd2349c1186fbbdf5c28dd024d7158dcb7ec145a4c608a472dee3de8fdb548b"
+          },
+          "attempted_remedy_hash": "sha256:da0cb2a7458c10a8f3845be92cc37960e76a24adbf7f17666febab42646363c5"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-023",
+      "title": "CueListView+Rows.swift's sequenceRow/setlistRow/scriptRow are three near-identical row-builder functions",
+      "category_hint": "leaf-view-row-duplication",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeLibraryFeature/CueListView+Rows.swift",
+      "primary_evidence_lines": [
+        88,
+        138
+      ],
+      "test_failed": "n/a",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 2,
+      "first_seen_sha": "f202925966b684c09b3735ebc07d0f62735b9843",
+      "last_seen_loop": 2,
+      "occurrences": [
+        {
+          "loop": 2,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:b89ada2295f1d33f998c3b7fdb1267542de65e71b7a7126996b08af4990e71fc",
+            "evidence_paths_hash": "sha256:25ff0209a5f4b4b63ae3d03f33519d2026369912fc3b14b022665c111614ad37"
+          },
+          "attempted_remedy_hash": "sha256:0f8fe93ad2b98dba57defa25bb6a8d04eba7cc0404a07d0179eda7b5956e1403"
+        }
+      ]
+    },
+    {
+      "stable_id": "F-024",
+      "title": "Seven public declarations across four feature/UI modules still have zero cross-module consumers (re-derived; prior fix attempt was evidence-rejected, not diff-rejected)",
+      "category_hint": "api-surface-scope",
+      "primary_file": "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+      "primary_evidence_lines": [
+        5,
+        21
+      ],
+      "test_failed": "n/a",
+      "severity": "Noticeable weakness",
+      "first_seen_loop": 2,
+      "first_seen_sha": "f202925966b684c09b3735ebc07d0f62735b9843",
+      "last_seen_loop": 1,
+      "occurrences": [
+        {
+          "loop": 2,
+          "loop_local_id": "F2",
+          "status": "open",
+          "sha": "f202925966b684c09b3735ebc07d0f62735b9843",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:ec8f15c984e45169d758b6acb2b7e90eefc2363f6fa5a11bb5cf947e651951f3",
+            "evidence_paths_hash": "sha256:ace051a5eb1c4b1b31ce4facf9738c8efbaf0016dc0f2187aa37cad7c830194b"
+          },
+          "attempted_remedy_hash": "sha256:2e717863db136662d5f12a224e772ade4619812eb0193f048f80a995ac2d70d2"
+        },
+        {
+          "loop": 3,
+          "loop_local_id": "F1",
+          "status": "rejected_attempt",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:ec8f15c984e45169d758b6acb2b7e90eefc2363f6fa5a11bb5cf947e651951f3",
+            "evidence_paths_hash": "sha256:ace051a5eb1c4b1b31ce4facf9738c8efbaf0016dc0f2187aa37cad7c830194b"
+          },
+          "attempted_remedy_hash": "sha256:b0bc6d930575df8f214729ccb544f9148ba378f7c07d01e644eeb57b48a55c8b",
+          "reviewer_reason": "Check 3 (Regression) failed: cross-file visibility narrowing is risk-bearing under method.md Meta-Rule 4; loop_result.risk_boundary_evidence was null and the CLAUDE.md-mandated --targeted gate was never executed, substituted with a grep plus an unattested single-config --quick run."
+        },
+        {
+          "loop": 1,
+          "loop_local_id": "F1",
+          "status": "resolved",
+          "sha": "<pending>",
+          "fingerprint": {
+            "claim_consequence_hash": "sha256:b1efdc6983442bba8ea725a1ba1e44e697cd40b8f8c98c6f690bc5b65a2617d8",
+            "evidence_paths_hash": "sha256:65e06db4f8fffb9152e31cebce8c9b1dc3adde1c57f6a444c9ffe2f77342b82e"
+          },
+          "attempted_remedy_hash": "sha256:2465e1692312c8846d5f7250dbe8d533eb995ad6fdfa9337fa468567d7a153d2",
+          "provider": "opencode",
+          "loop_model": "opencode-go/qwen3.8-flash",
+          "idempotency_key": "loop1-F-024-resolved"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+id = "site-pass-scoped-missing-file"
+purpose = "Report-only diagnostic fixture: same scoped artifact with site_pass covering 9 of 10 roster files. G52 prints a [g52-site-pass ...] diagnostic naming the missing path and returns no Issue, so strict still exits 0 (G48 pattern). Flips to expected_result = fail at W3 promotion."
+expected_result = "pass"
+pair_exception = "report-only: G52 emits diagnostics, never an Issue, until the SITE-PASS plan W2 bar is met; the three site-pass fixtures are a positive/diagnostic/unscoped triple whose expectations flip together at promotion (W3)."
+notes = "Derived from site-pass-scoped-valid by removing the last files[] entry. The diagnostic text is asserted by scripts/_g52_selftest.py; this fixture pins the exit-code contract of report-only."
+
+[[tested_rules]]
+kind = "gate"
+id = "G52"

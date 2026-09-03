@@ -205,3 +205,7 @@ title = "Hotspot triage completeness — discovery_consumption.hotspot_triage ke
 [[validation_gates]]
 id = "G51"
 title = "Markdown System Flag parity — the first `[STATE: <state>]` line in CURRENT_REVIEW.md equals CURRENT_REVIEW.json.state (pre-commit, md-state-parity epoch)"
+
+[[validation_gates]]
+id = "G52"
+title = "Site-pass ledger completeness — scoped runs carry site_pass.files[] covering discovery.site_pass_roster.paths exactly, each partitioning Q1..Q8 with finding ids resolving; unscoped runs carry null (pre-emit, site_pass epoch; REPORT-ONLY until the SITE-PASS plan W2 bar — promotion bar in _artifact_site_pass.py)"
