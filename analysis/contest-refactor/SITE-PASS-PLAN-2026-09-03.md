@@ -189,6 +189,27 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   writing-for-agents pass on the new prose (context pointer in the load matrix, no-op hunt,
   co-location of do-not-flag with the questions).
 
+**W1 result (2026-09-03):** landed as two commits, prose-then-gate. **W1a `1b4ddd5`:**
+`references/site-pass.md`, `method.md` Step 6.5, `startup.md` (`discovery.scope`, roster emission
+at 6c, seed list, preflight flags), `scripts/site_pass_roster.py` + selftest, `preflight.py`
+`--roster-json` + `_roster_failures` (fresh-emission equality; null required when unscoped) with
+six new selftest cases, `candidate_fingerprint.py` binds `site_pass_roster.digest` only when
+present (historical fingerprints unchanged; new `_candidate_fingerprint_selftest.py`), schema rows
+in `output-format-json.md` / `-markdown.md` / `-migrations.md`, load matrix + `token-budget.py`
+step-1 table + golden set. Measured delta **+1,978 tok** on both lens paths; ceilings raised
+**provisionally** 87,800 → 88,700 (apple, now 88,348) and 83,700 → 84,600 (generic, now 84,518,
+82 below — soft warning, not a failure), annotated in `CEILINGS` and keyed to the W2
+disposition. **W1b `fccd950`:** `SITE_PASS` epoch bound to `1b4ddd5`, `_artifact_site_pass.py`
+(report-only, promotion bar in the docstring) + `_g52_selftest.py` (13 diagnostics, never an
+Issue, pre-epoch silent), wired in `validate-artifact.py`, canon G52 + `validation.md` +
+`validation-sources.md`, canon golden regenerated. Fixtures live in `evals/fixtures/` (the
+`fixture.toml` corpus that carries G39/G40/G41 fixtures), **not** `evals/artifact-smoke/` as the
+peer review assumed — that corpus is the eleven-file minimal set with its own `_smoke_check`
+map; recorded as a deviation. The three fixtures are built from the real flash dry-run artifact
+because no committed fixture at a modern epoch passes strict once `skill_rev` is bumped
+(hotspot_scan, run_id, System Flag and history all become owed). Verification: validate-repo,
+105 fixtures, 90/90 selftests, ruff 0.15.6, budget guard OK.
+
 **W2 — Measure (opencode flash; nominal 6 reps + 1 generalization ≈ $2.4, worst case with one full both-arm re-run ≈ $4.5).**
 - Both arms run on the same target tree, `/Users/Shared/git/BenchHype-blind` (`blind-judge` @
   `909164fb`), with the same reset between reps (`git checkout -- . && git clean -fd` restricted
