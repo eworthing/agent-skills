@@ -146,3 +146,19 @@ Critic on planted fixtures. This is the first real-corpus recall figure and it i
 the identical command from Codex, same cost class, same day if possible. If Codex also lands near
 0/29, the gap is the method's question set, not the judge, and a per-file bug pass (OCR's shape)
 becomes a candidate Step-0 aid rather than a lens.
+
+## Codex rerun — contaminated, not a second judge
+
+Same command from Codex (`gpt-5.6-luna`, run `run-2026-09-03-e95d47e7…`, 12.8M tokens) produced
+the four findings **byte-identical** to the flash run: F-025…F-028, similarity 1.000 on title,
+evidence and remedy; scorecard 0.88 similar. The rollout shows why: `findings_registry.json` and
+`REVIEW_HISTORY.json` were read at ordinal 17, the first Settings source file at ordinal 30.
+`--reset` wipes `CURRENT_REVIEW.*` but keeps the registry and the archived history, and the
+Critic is built to carry registry findings forward — so a "fresh" run on the same tree re-emits
+the previous judge's findings verbatim. **`--reset` does not blind the judge.**
+
+Skill lesson: a judge A/B needs a first-install tree. Blind worktree prepared at
+`/Users/Shared/git/BenchHype-blind` (branch `blind-judge` on `909164fb`, bookkeeping files removed
+and committed so the tree is clean). Rerun there with `--dry-run --scope …` and no `--reset`.
+Candidate doc fix: name this in `startup.md`'s `--reset` description or add a `--blind` flag that
+ignores registry/history for one invocation.
