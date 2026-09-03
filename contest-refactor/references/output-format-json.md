@@ -221,6 +221,8 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
     "domain_terms": ["AppState", "InstanceID", "TileCueResolver"],
     "test_scope": "full",                       // (v3+) enum: full | incremental. "incremental" iff --test-filter <pattern> set.
     "test_filter": null,                        // (v3+) null | string. non-null iff test_scope == "incremental".
+    "scope": null,                              // (site_pass epoch+) string | null. The --scope dir exactly as given; null when unscoped. The only scoped-run marker in the artifact; G52 keys on it.
+    "site_pass_roster": null,                   // (site_pass epoch+) object | null; null iff scope is null. Script-emitted by scripts/site_pass_roster.py at Step 0 and assigned unchanged: {"scope": "<dir>", "paths": [sorted repo-relative POSIX paths], "digest": "<sha256 hex of paths joined by \n, UTF-8>"}. Preflight requires equality with a fresh emission. Carried forward verbatim like the rest of discovery; bound into the candidate fingerprint.
     // working_tree_dirty_paths: retired (v3 artifacts may carry []; absent-ok)
     "churn_top20": [],                          // optional; startup.md sub-step 6b.
     "prior_audit_docs": [],                     // optional; startup.md sub-step 5.
@@ -247,6 +249,7 @@ Findings produced here must follow The Evidence Chain from `method.md`: Claim �
       "queue_counts": {"control": 1, "mutation": 1, "navigation": 0}
     }
   },
+  "site_pass": null,                            // (site_pass epoch+) object | null. Required non-null when discovery.scope is non-null; null on unscoped runs (prose-only obligation there). Per loop, never carried forward. Shape: { "files": [ { "path": "<repo-relative>", "reads": "full" | "partial:<line-ranges>", "questions": { "Q1": {"status": "clean"}, "Q2": {"status": "finding", "finding_ids": ["F3"]}, "Q3": {"status": "not_applicable", "reason": "<one clause>"}, … "Q8": {…} } } ] }. G52 (report-only until promoted): files[].path set equals discovery.site_pass_roster.paths exactly; every questions key set equals {Q1..Q8}; finding_ids non-empty iff status == "finding" and every id exists in findings; reason non-empty iff not_applicable; roster digest re-derives. Questions: references/site-pass.md.
   "discovery_consumption": null,                // (hotspot-triage epoch+) object | null. Required non-null when discovery.hotspot_scan.candidates is non-empty AND state ∈ {HALT_SUCCESS_candidate, HALT_SUCCESS}; null/absent otherwise. Shape: { "hotspot_triage": [{"path": "...", "symbol": "...", "disposition": "confirm" | "contextualize" | "dismiss"}] }. The (path, symbol) key set must equal discovery.hotspot_scan.candidates' roster exactly — missing, extra, or duplicate keys fail. Enforced by G50. Evidence-only: a "confirm" row does not itself create a Finding; the canonical Evidence Chain (method.md) still owns findings.
 
   // Verdict (required)

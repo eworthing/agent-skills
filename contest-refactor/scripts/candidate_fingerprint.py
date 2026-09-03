@@ -53,12 +53,19 @@ def _architecture_payload(review: dict) -> dict:
         if isinstance(f, dict)
     ]
     discovery = review.get("discovery") or {}
-    return {
+    payload = {
         "lens": discovery.get("lens"),
         "source_roots": discovery.get("source_roots"),
         "scorecard": scorecard,
         "findings": findings,
     }
+    # Scoped runs (site_pass epoch+): the pinned roster digest rides the fingerprint beside
+    # source_roots, so a roster narrowed at loop 2+ can never match an earlier candidate.
+    # Added only when present -- pre-epoch fingerprints must not change.
+    roster = discovery.get("site_pass_roster")
+    if isinstance(roster, dict) and roster.get("digest"):
+        payload["site_pass_roster_digest"] = roster["digest"]
+    return payload
 
 
 def candidate_fingerprint(review: dict) -> str:

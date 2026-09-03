@@ -67,6 +67,8 @@ prefers under-coverage over falsely invalidating committed history. Closing that
 obligation: `skill_rev` capture is mandatory at schema version 4+, but a copied non-Git skill may
 still emit `null`, which no validator can safely order.
 
+**`site_pass` epoch (2026-09-03, SITE-PASS plan W1).** `discovery.scope`, `discovery.site_pass_roster` and top-level `site_pass` are option-2 fields: required on scoped runs at or after the `SITE_PASS` epoch in `scripts/_ruleset_epoch.py`, absent-ok before it. G52 checks their shape and is report-only until the plan's W2 bar is met; the promotion condition is written in `scripts/_artifact_site_pass.py`.
+
 ## Schema version 4 → 5
 
 Additive. A persisted **v4** candidate finishes under the legacy

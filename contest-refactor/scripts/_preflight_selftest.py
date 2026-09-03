@@ -40,6 +40,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from site_pass_roster import build_roster
+
 PREFLIGHT = Path(__file__).with_name("preflight.py")
 AUDIT = Path(__file__).with_name("audit_hotspots.py")
 
@@ -251,10 +254,14 @@ def main() -> int:
         (multiroot / "tools" / "b.py").write_text("def g():\n    pass\n", encoding="utf-8")
         review = multiroot / "CURRENT_REVIEW.json"
 
-        def _write_review(source_roots: list[str] | None, candidate_path: str) -> None:
+        def _write_review(
+            source_roots: list[str] | None, candidate_path: str, roster: object = "absent"
+        ) -> None:
             discovery: dict = {"hotspot_scan": {"candidates": [{"path": candidate_path}]}}
             if source_roots is not None:
                 discovery["source_roots"] = source_roots
+            if roster != "absent":
+                discovery["site_pass_roster"] = roster
             review.write_text(json.dumps({"discovery": discovery}), encoding="utf-8")
 
         def _run_review(extra: list[str] | None = None):
@@ -341,12 +348,61 @@ def main() -> int:
                 f"multiroot-scope-outside: message should name --scope\n{p.stderr.rstrip()}"
             )
 
-        # Scoped happy path: declared root falls under --scope.
-        _write_review(["src"], "src/a.py")
+        # Scoped happy path: declared root falls under --scope and the persisted
+        # site-pass roster equals a fresh emission (SITE-PASS plan W1).
+        fresh_roster = build_roster(multiroot, "src")
+        _write_review(["src"], "src/a.py", roster=fresh_roster)
         p = _run_review(["--scope", str(multiroot / "src")])
         if p.returncode != 0:
             failures.append(
                 f"multiroot-scope-happy: expected exit 0, got {p.returncode}\n{p.stderr.rstrip()}"
+            )
+
+        # Scoped + --roster-json equal to the persisted object -> exit 0.
+        roster_json = multiroot / "roster.json"
+        roster_json.write_text(json.dumps(fresh_roster), encoding="utf-8")
+        p = _run_review(["--scope", str(multiroot / "src"), "--roster-json", str(roster_json)])
+        if p.returncode != 0:
+            failures.append(
+                f"roster-json-happy: expected exit 0, got {p.returncode}\n{p.stderr.rstrip()}"
+            )
+
+        # Scoped with no roster persisted -> FAIL naming site_pass_roster.
+        _write_review(["src"], "src/a.py")
+        p = _run_review(["--scope", str(multiroot / "src")])
+        if p.returncode == 0:
+            failures.append("roster-missing: expected non-zero exit, got 0")
+        elif "site_pass_roster" not in p.stderr:
+            failures.append(
+                f"roster-missing: message should name site_pass_roster\n{p.stderr.rstrip()}"
+            )
+
+        # Scoped with a hand-edited (narrowed) roster -> FAIL.
+        narrowed = dict(fresh_roster, paths=[], digest="deadbeef")
+        _write_review(["src"], "src/a.py", roster=narrowed)
+        p = _run_review(["--scope", str(multiroot / "src")])
+        if p.returncode == 0:
+            failures.append("roster-narrowed: expected non-zero exit, got 0")
+        elif "site_pass_roster" not in p.stderr:
+            failures.append(
+                f"roster-narrowed: message should name site_pass_roster\n{p.stderr.rstrip()}"
+            )
+
+        # Scoped, persisted matches fresh, but --roster-json differs -> FAIL.
+        _write_review(["src"], "src/a.py", roster=fresh_roster)
+        roster_json.write_text(json.dumps(narrowed), encoding="utf-8")
+        p = _run_review(["--scope", str(multiroot / "src"), "--roster-json", str(roster_json)])
+        if p.returncode == 0:
+            failures.append("roster-json-mismatch: expected non-zero exit, got 0")
+
+        # Unscoped with a roster persisted -> FAIL (there is no unscoped roster).
+        _write_review(["src", "tools"], "src/a.py", roster=fresh_roster)
+        p = _run_review()
+        if p.returncode == 0:
+            failures.append("roster-unscoped: expected non-zero exit, got 0")
+        elif "site_pass_roster" not in p.stderr:
+            failures.append(
+                f"roster-unscoped: message should name site_pass_roster\n{p.stderr.rstrip()}"
             )
 
     if failures:

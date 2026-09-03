@@ -49,6 +49,7 @@ from pathlib import Path
 from _artifact_discovery import validate_hotspot_scan
 from _fs_filters import normalize_roots
 from coverage_ledger import source_roots as _enumerate_source_roots
+from site_pass_roster import build_roster
 
 
 def _test_command_resolves(test_cmd: str) -> tuple[bool, str]:
@@ -277,6 +278,56 @@ def _discovery_failures(
     return failures
 
 
+def _roster_failures(
+    repo_root: Path, current_review: str | None, scope: Path | None, roster_json: str | None
+) -> list[str]:
+    """Site-pass roster tripwire (SITE-PASS plan W1). Scoped: discovery.site_pass_roster must
+    equal a fresh site_pass_roster.py emission (and --roster-json, when given, must equal the
+    persisted object). Unscoped: the field must be null -- there is no unscoped roster."""
+    if not current_review:
+        return []
+    artifact, error = _read_json(current_review, "current review")
+    if error:
+        return []  # already reported by _discovery_failures
+    discovery = artifact.get("discovery") if isinstance(artifact, dict) else None
+    if not isinstance(discovery, dict):
+        return []
+    persisted = discovery.get("site_pass_roster")
+    if scope is None:
+        failures = []
+        if persisted is not None:
+            failures.append(
+                "discovery.site_pass_roster must be null on an unscoped run "
+                "(site_pass_roster.py has no unscoped mode)"
+            )
+        if roster_json:
+            failures.append("--roster-json given without --scope")
+        return failures
+    scope_rel = scope.relative_to(repo_root).as_posix()
+    if persisted is None:
+        return [
+            f"scoped run: discovery.site_pass_roster is missing -- run site_pass_roster.py . "
+            f"--scope {scope_rel} --json at Step 0 and assign its object unchanged (startup.md 6c)"
+        ]
+    try:
+        fresh = build_roster(repo_root, scope_rel)
+    except FileNotFoundError:
+        return [f"--scope {scope_rel} has no enumerable source files"]
+    failures = []
+    if persisted != fresh:
+        failures.append(
+            "persisted discovery.site_pass_roster does not match a fresh site_pass_roster.py "
+            "emission -- assign the script's object unchanged, never hand-edit or trim it"
+        )
+    if roster_json:
+        raw, err = _read_json(roster_json, "site-pass roster output")
+        if err:
+            failures.append(err)
+        elif raw != persisted:
+            failures.append("persisted discovery.site_pass_roster does not match --roster-json")
+    return failures
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Fail-fast precondition gate before subagent dispatch."
@@ -290,6 +341,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--provider", help="detected provider; warns (never fails) when 'unknown'")
     parser.add_argument("--hotspot-json", help="raw audit_hotspots.py --json output")
     parser.add_argument("--current-review", help="CURRENT_REVIEW.json containing hotspot_scan")
+    parser.add_argument("--roster-json", help="raw site_pass_roster.py --json output (scoped runs)")
     args = parser.parse_args(argv)
 
     failures: list[str] = []
@@ -321,6 +373,9 @@ def main(argv: list[str] | None = None) -> int:
     failures.extend(_hotspot_failures(args.hotspot_json, args.current_review))
     if repo_root.is_dir():
         failures.extend(_discovery_failures(repo_root.resolve(), args.current_review, scope_path))
+        failures.extend(
+            _roster_failures(repo_root.resolve(), args.current_review, scope_path, args.roster_json)
+        )
 
     if failures:
         for f in failures:

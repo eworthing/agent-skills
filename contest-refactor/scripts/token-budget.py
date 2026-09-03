@@ -55,6 +55,7 @@ def loaded_set(step: str, lens: str = "apple") -> list[str]:
             "lens-efficiency.md",
             "method.md",
             "method-critic.md",
+            "site-pass.md",
             "architecture-rubric.md",
             "architecture-rubric-scoring.md",
         ],
@@ -307,7 +308,12 @@ CEILINGS = {
     # (unconditional minting), validation.md gained the G48 checklist entry,
     # output-format-json.md's run_id field spec gained the format + lifecycle sentence.
     # Same proactive ~500-margin convention. Measured at 87,330, margin 470.
-    "loop_apple": 87_800,  # per-loop fixed reload, apple lens (measured 87,330, margin 470)
+    # Raised 87,800 -> 88,700 (apple) and 83,700 -> 84,600 (generic) for the site pass
+    # (references/site-pass.md + method.md Step 6.5, +1,978 tok measured): PROVISIONAL, keyed
+    # to the SITE-PASS plan W2 disposition (analysis/contest-refactor/SITE-PASS-PLAN-2026-09-03.md)
+    # -- the revert commit lowers both back to 87,800 / 83,700 on a missed bar; W3 re-annotates
+    # with the measured lift on a passed one. Owner rule 2026-09-03: value gates, not headroom.
+    "loop_apple": 88_700,  # per-loop fixed reload, apple lens (measured 88,348 at W1, margin ~350)
     # Bumped 80,100 -> 80,200 to make the Step-3 mechanical sweep DURABLE: the sweep line
     # gained `--json .contest-refactor/diagnostics/sweep-<N>.json` (+15 tok), because
     # advisory WARNs written only to the loop subagent's stderr die with the subagent and
@@ -331,7 +337,7 @@ CEILINGS = {
     # Bumped 83,400 -> 83,700 (2026-08-21) for the same run_id/G48 pass as loop_apple
     # above (lens-independent prose). Same proactive ~500-margin convention. Measured
     # at 83,252, margin 448.
-    "loop_generic": 83_700,  # per-loop fixed reload, generic lens (measured 83,252, margin 448)
+    "loop_generic": 84_600,  # per-loop fixed reload, generic lens (measured 84,226 at W1, margin ~370; provisional, see loop_apple)
     # Bumped 11,000 -> 12,200 (2026-08-20) for the same loop-ownership P1 pair: the out-of-
     # plan gate, cleanup procedure, sub-step-0 cross-reference, Guardrails bullet, and
     # HALT_STAGNATION `user_decision` cross-reference all land in SKILL.md itself, which is

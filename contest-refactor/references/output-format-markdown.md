@@ -152,6 +152,9 @@ Top 3 structural lessons in plain language for a technically inclined developer 
 
 Practical. Do not repeat every finding. Do not introduce new findings. Do not turn into tutorial.
 
+## Site pass (scoped runs; mirrors `CURRENT_REVIEW.json.site_pass`)
+One row per roster file: `| path | reads | Q1 | Q2 | … | Q8 |`, each cell `clean`, `F<n>` (the finding ids), or `n/a: <reason>`. Omit the section on unscoped runs. The JSON ledger is the source of truth; this table is the human view.
+
 ## Final Judge Narrative
 Short blunt summary. State clearly:
 - win, place, or miss
