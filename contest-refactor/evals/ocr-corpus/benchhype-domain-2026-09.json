@@ -1,0 +1,258 @@
+{
+  "repo_env": "BENCHHYPE_ROOT",
+  "pre_fix_rev": "2b5247e9",
+  "post_fix_rev": "80499e9c",
+  "scope": "BenchHypeKit/Sources/BenchHypeDomain",
+  "notes": "Frozen at W0 (contest-refactor OCR-GAP-REMEDIATION-PLAN-2026-09-03). Immutable after W0 -- no wave after W0 may edit targets/excluded_targets/must_stay_silent. line_start/line_end were read directly from BenchHypeKit at pre_fix_rev (2b5247e9): for `invariant` V targets they span the flagged declaration (init/function/type body per the row's symbol form), not just the OCR comment anchor line. `dead_surface` Z targets are single-declaration spans (a case, a protocol requirement, or a member). Recall bar (7 of 10) counts expected_miss rows as misses.",
+  "targets": [
+    {
+      "fid": 202,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "one_sided_guard",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+      "symbol": "PlaybackSpec.init",
+      "line_start": 9,
+      "line_end": 45
+    },
+    {
+      "fid": 226,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "one_sided_guard",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+      "symbol": "Script.validateSteps",
+      "line_start": 23,
+      "line_end": 32
+    },
+    {
+      "fid": 267,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "one_sided_guard",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+      "symbol": "TrimRange.init",
+      "line_start": 9,
+      "line_end": 25
+    },
+    {
+      "fid": 204,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "clamp_unchecked",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+      "symbol": "Gain.init",
+      "line_start": 111,
+      "line_end": 113
+    },
+    {
+      "fid": 189,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "clamp_unchecked",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+      "symbol": "PlayInstance.applying",
+      "line_start": 132,
+      "line_end": 180
+    },
+    {
+      "fid": 205,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "codable_bypasses_throwing_init",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+      "symbol": "Dropout",
+      "line_start": 121,
+      "line_end": 151,
+      "expected_miss": true,
+      "expected_miss_reason": "Dropout at pre_fix_rev has no throwing or guarded init; codable_bypasses_throwing_init requires has_throwing_init. Kept as a target so the miss is recorded, not hidden."
+    },
+    {
+      "fid": 266,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "codable_bypasses_throwing_init",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+      "symbol": "TrimRange",
+      "line_start": 5,
+      "line_end": 30
+    },
+    {
+      "fid": 224,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "id_collection_no_uniqueness",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Setlist.swift",
+      "symbol": "Setlist.init",
+      "line_start": 9,
+      "line_end": 18
+    },
+    {
+      "fid": 227,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "id_collection_no_uniqueness",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+      "symbol": "Script.validateSteps",
+      "line_start": 23,
+      "line_end": 32
+    },
+    {
+      "fid": 262,
+      "class": "V",
+      "detector": "invariant",
+      "signal": "int_conversion_unbounded",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TimeFormatting.swift",
+      "symbol": "formatTimeMMSS",
+      "line_start": 26,
+      "line_end": 32,
+      "note": "Top-level free function; W1a scanner walk must include top-level function_declaration nodes with an empty TypeContext."
+    },
+    {
+      "fid": 15,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "enum_case",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+      "type_name": "AppleMusicCatalogPortError",
+      "name": "notAuthorized",
+      "line_start": 12,
+      "line_end": 12
+    },
+    {
+      "fid": 195,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "enum_case",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSelection.swift",
+      "type_name": "PlaybackSelection",
+      "name": "groupCue",
+      "line_start": 5,
+      "line_end": 5
+    },
+    {
+      "fid": 221,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "enum_case",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+      "type_name": "OutputDestination",
+      "name": "carPlay",
+      "line_start": 27,
+      "line_end": 27
+    },
+    {
+      "fid": 234,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "enum_case",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+      "type_name": "SessionEventKind",
+      "name": "warning",
+      "line_start": 56,
+      "line_end": 56
+    },
+    {
+      "fid": 82,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "protocol_requirement",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
+      "type_name": "EntitlementService",
+      "name": "currentSnapshot",
+      "line_start": 5,
+      "line_end": 5
+    },
+    {
+      "fid": 97,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "protocol_requirement",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+      "type_name": "LibrarySnapshotPort",
+      "name": "recentSessionEvents",
+      "line_start": 43,
+      "line_end": 43
+    },
+    {
+      "fid": 166,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "declaration",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
+      "type_name": "LiveSurface",
+      "name": "rosterID",
+      "line_start": 14,
+      "line_end": 19
+    },
+    {
+      "fid": 251,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "declaration",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+      "type_name": "TapAction",
+      "name": "displayDescription",
+      "line_start": 30,
+      "line_end": 41
+    },
+    {
+      "fid": 272,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "declaration",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
+      "type_name": "TransitionTiming",
+      "name": "rampFloorFraction",
+      "line_start": 55,
+      "line_end": 55
+    },
+    {
+      "fid": 282,
+      "class": "Z",
+      "detector": "dead_surface",
+      "kind": "declaration",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueFeatureSupport.swift",
+      "type_name": "CueFeatureSupport",
+      "name": "forTransport",
+      "line_start": 40,
+      "line_end": 42
+    }
+  ],
+  "excluded_targets": [
+    {
+      "fid": 138,
+      "reason": "Int one-sided guard, decision 2"
+    },
+    {
+      "fid": 242,
+      "reason": "Int one-sided guard, decision 2"
+    }
+  ],
+  "must_stay_silent": [
+    {
+      "fid": 155,
+      "detector": "invariant",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+      "symbol": "EntitlementSnapshot"
+    },
+    {
+      "fid": 131,
+      "detector": "invariant",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
+      "symbol": "AppSettings.init"
+    },
+    {
+      "fid": 249,
+      "detector": "invariant",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+      "symbol": "DuckingPolicy"
+    },
+    {
+      "fid": 141,
+      "detector": "invariant",
+      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequence.swift",
+      "symbol": "CueSequence.init"
+    }
+  ]
+}

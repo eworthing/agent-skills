@@ -190,7 +190,14 @@ def analyze_type_level(path: str, ctx: TypeContext, type_lines: tuple[int, int])
 `audit_hotspots.py` calls `_ast_grep` for `class_declaration` (tree-sitter-swift uses it for
 struct, class, enum and actor) and, inside each, `init_declaration` and `function_declaration`;
 it builds `TypeContext` once per type and calls `analyze_member` per member and
-`analyze_type_level` once. A file whose ast-grep run fails contributes nothing and the failure
+`analyze_type_level` once. It also walks **top-level** `function_declaration` nodes that sit
+outside any type (W0 found target 262, `formatTimeMMSS`, is a free function) and passes an
+empty `TypeContext` for them.
+
+W0 also established that target 205 (`Dropout`) has no throwing or guarded init at
+`2b5247e9`, so the type-level rule as written cannot fire on it. It stays in the manifest as an
+`expected_miss` row rather than being widened into a rule that would flag every Codable DTO with
+a `Double`; the 7-of-10 bar counts it as a miss. A file whose ast-grep run fails contributes nothing and the failure
 feeds the existing `partial` coverage path. Swift only in this wave; other languages produce no
 invariant candidates.
 
