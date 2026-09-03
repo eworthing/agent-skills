@@ -1,4 +1,4 @@
-# Site pass — a per-file correctness pass for the Critic (plan, 2026-09-03, rev 4 — after peer rounds 1–3, opencode qwen3.8-flash)
+# Site pass — a per-file correctness pass for the Critic (plan, 2026-09-03, rev 5 — after peer rounds 1–4, opencode qwen3.8-flash)
 
 **Goal.** contest-refactor finds, on its own, the class of real defects OCR finds, in files the
 Critic already reads. OCR stays the benchmark, never a component.
@@ -136,8 +136,9 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   rejected site 65 at :14-15). Prints hit/miss per site with the finding id. Selftest with a
   hand-built artifact covering intersect, single-line ± 5, and the exclusion set. Exit 0 always.
   `--json` carries, per artifact: hits/misses with finding ids, the arm/rep label passed via
-  `--label`, and `roster_gap` = manifest site paths ∉ `discovery.site_pass_roster.paths`, which is
-  how a Critic that under-enumerates becomes visible before W3 at zero loop cost.
+  `--label`, and `roster_gap` = manifest site paths ∉ `discovery.site_pass_roster.paths` (emitted as
+  `null` when the artifact has no roster, i.e. every control-arm artifact), which is how a Critic
+  that under-enumerates becomes visible before W3 at zero loop cost.
 - Copy the baseline artifact (the archived flash loop from BenchHype's `REVIEW_HISTORY.json`) into
   `evals/ocr-corpus/baselines/benchhype-settings-flash-2026-09-03.json` so the exclusion set is
   reproducible from this repo alone.
@@ -173,13 +174,14 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   re-annotates them with the measured lift. Budget guard is green at every commit.
 - Fixtures (G48 pattern): one `evals/fixtures/` artifact with a valid `site_pass` (no diagnostic),
   one with a missing scoped file that asserts the **report-only diagnostic prints and no Issue**,
-  one unscoped with `site_pass: null` (allowed). W3's promotion commit flips the second fixture's
-  expectation to a real G52 Issue.
+  one unscoped with `site_pass: null` (allowed), each registered in `_smoke_check.py`'s EXPECTED
+  map and the fixtures README. W3's promotion commit flips the second fixture's expectation to a
+  real G52 Issue.
 - Done when: validate-repo, validate-fixtures, all `_*_selftest.py`, ruff, budget guard green;
   writing-for-agents pass on the new prose (context pointer in the load matrix, no-op hunt,
   co-location of do-not-flag with the questions).
 
-**W2 — Measure (opencode flash; nominal 6 reps + 1 generalization ≈ $2.4, worst case with 3 replacements and one arm re-run ≈ $4).**
+**W2 — Measure (opencode flash; nominal 6 reps + 1 generalization ≈ $2.4, worst case with one full both-arm re-run ≈ $4.5).**
 - Both arms run on the same target tree, `/Users/Shared/git/BenchHype-blind` (`blind-judge` @
   `909164fb`), with the same reset between reps (`git checkout -- . && git clean -fd` restricted
   to the six bookkeeping files) — never the main checkout, whose registry would contaminate the
@@ -190,30 +192,31 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   rep log.
 - Trial validity per `canon/trial-validity.toml`, pre-registered with replacement semantics
   (at n=3 one unreplaced invalid rep is 0.33 > 0.20 and voids the arm by the strict-greater rule,
-  so the semantics matter): a rep classified `rate_limited`, `auth_failure`, `infra_timeout`, or
-  `artifact_lost` is **replaced 1-for-1 immediately**; the void caps (0.20 per arm, 0.10 between
-  arms) are computed over **attempts**, so repeated exogenous failure voids the arm even when
-  every slot eventually scores — at n=3 that means the arm is void on the second invalid attempt
-  (2/5 > 0.20) and a one-sided invalid attempt breaches the 0.10 asymmetry cap unless the other
-  arm also has one; the plan accepts this strictness at n=3 as the price of using the canon
-  unchanged. Void
-  disposition: one re-run of the affected arm (cost line above); if that is void too, W2 is
-  deferred, W1 stays report-only with its provisional ceilings dated, and the DD-18 row records
-  "void, not measured". Every classification is recorded per rep.
+  so the semantics matter): the void caps (0.20 per arm, 0.10 between arms) are computed over
+  **attempts**. At n=3 the honest consequence is: **any invalid attempt in either arm voids the
+  run** — one invalid plus its replacement is 1/4 = 0.25 > 0.20 on that arm's own cap, so neither
+  replacement nor symmetric failure rescues it. There is therefore no in-run replacement. Void
+  disposition: one full re-run of **both** arms (keeps the arms symmetric and the pre-registration
+  simple), classification recorded per attempt; if the re-run is void too, W2 is deferred, W1 stays
+  report-only with its provisional ceilings dated, and the DD-18 row records "void, not measured".
+  Canon is used unchanged; an owner may instead adjudicate n=5 per arm (survives one invalid per
+  arm on the rate cap but not a one-sided one on the asymmetry cap) as a recorded divergence. Every classification is recorded per attempt.
 - **Ship bar:** treat real-site hits ≥ 10/29 on at least 2 of 3 reps; rejected-site hits outside
   the W0 exclusion set = 0 on every treat rep; the four rubric findings F-025…F-028 (or same-site
-  equivalents) present on ≥ 2 treat reps — the pass adds, it must not displace the rubric.
+  equivalents) present on ≥ 2 of 3 scored treat reps — the pass adds, it must not displace the rubric.
 - **Negative disposition, decided now — the one authoritative spec of the revert commit.** If
   the bar is missed, one commit does all of the following: Step 6.5 in `method.md` is reduced to a
   single pointer sentence ("a per-file site pass is described in `references/site-pass.md`;
   measured 2026-09 below its bar, advisory only"); `site-pass.md` stays on disk but is **removed
   from the Critic's per-loop load matrix** and from the `_token_budget_selftest.py` golden set;
-  the G52 canon entry, `_artifact_site_pass.py` and its selftest, the three fixtures, the
+  the G52 canon entry, `_artifact_site_pass.py` and its selftest, the three fixtures (and their
+  `_smoke_check.py` EXPECTED + README rows), the
   `site_pass` / `site_pass_roster` schema rows, `site_pass_roster.py`, the fingerprint binding,
   and the `SITE_PASS` epoch are removed; `discovery.scope` stays (it is useful on its own); the
   ceilings are lowered to their **pre-W1 values** (the pointer sentence's cost is inside the
   pre-W1 soft margin). Budget guard green in that commit. The DD-18 row records the per-rep
-  numbers as the result. Nothing from W1 ships as required on a missed bar.
+  numbers as the result, and the DD-01 row is reconfirmed parked with this measurement cited.
+  Nothing from W1 ships as required on a missed bar.
 - Generalization (report, not gate): 1 scoped dry-run on `BenchHypeKit/Sources/BenchHypeDomain/Values`
   at `2b5247e9` (blind worktree), graded against the Domain sites.
 - Done when: the bar table is in the run-log with per-site hit/miss for every rep.
@@ -222,8 +225,9 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
 - Promote G52 from report-only to Issue at the recorded epoch rev (promotion bar in
   `_artifact_site_pass.py`), flip the diagnostic fixture to an Issue expectation, and re-annotate
   the ceilings from provisional to measured, citing the W2 table in the commit.
-- Run-log section; detection-domains **DD-18 Site pass** row with the bar table and the DD-01
-  reopen rationale; `startup.md` `--reset` description gains "keeps the registry and history —
+- Run-log section; detection-domains **DD-18 Site pass** row with the bar table, and one sentence
+  on the DD-01 row: its reopen condition (quantifier, at-rate, real corpus) was met here and rides
+  the promotion; `startup.md` `--reset` description gains "keeps the registry and history —
   a fresh judge needs a first-install tree (worktree or `--purge`)"; memory.
 - Plan outcome block here.
 
@@ -240,8 +244,7 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
    ceiling OCR reached with a validation pass was 29/29 by construction. Raise the bar after the
    first pass ships, not before.
 
-## Peer-review questions (round 4)
+## Peer-review questions (round 5)
 
-Round-3 answers adopted: roster digest bound into the candidate fingerprint; provisional ceilings
-accepted with the revert now specified once. No open questions; confirm the revert spec and the
-attempts-based caps read as executable.
+Round-4 B1 accepted as stated: under attempts-based caps at n=3 any invalid attempt voids the run;
+the plan now says so and re-runs both arms. No open questions.
