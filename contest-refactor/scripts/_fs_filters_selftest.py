@@ -56,6 +56,15 @@ def main() -> int:
     )
 
     check(
+        ff.is_ignored_path(_parts("TiercadeUITests/Focus+MoreContainment.swift"))
+        and ff.is_ignored_path(_parts("BenchHypeKit/Tests/BenchHypeDomainTests/X.swift")),
+        "a directory component ending in Tests (FooTests, FooUITests) is a test tree",
+    )
+    check(
+        not ff.is_ignored_path(_parts("Sources/Contests/Leaderboard.swift")),
+        "a file literally named *tests* is not a directory signal",
+    )
+    check(
         not ff.is_test_file("PlaybackSpec.swift"),
         "a domain type named *Spec.swift is production source, not a Quick spec -- "
         "Quick specs are excluded by their Tests/ directory, never by this suffix",

@@ -20,6 +20,21 @@ public struct TrimSpan: Hashable, Sendable, Codable {
     public var durationSeconds: Double {
         endSeconds - startSeconds
     }
+
+    // Decoding routes through the throwing init, so `codable_bypasses_throwing_init`
+    // must stay silent here.
+    private enum CodingKeys: String, CodingKey {
+        case startSeconds
+        case endSeconds
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            startSeconds: container.decode(Double.self, forKey: .startSeconds),
+            endSeconds: container.decode(Double.self, forKey: .endSeconds),
+        )
+    }
 }
 
 public enum TrimSpanError: Error, Hashable, Sendable {

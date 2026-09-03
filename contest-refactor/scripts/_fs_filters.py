@@ -74,8 +74,15 @@ def is_ignored_path(parts: Sequence[str]) -> bool:
     repo (a checkout under a path segment literally named "build" or ".cache").
     """
     parts = tuple(parts)
-    for part in parts:
-        if part.lower() in IGNORE_DIRS or part in _EXACT_CASE_IGNORE_DIRS:
+    for part in parts[:-1]:
+        lowered = part.lower()
+        if lowered in IGNORE_DIRS or part in _EXACT_CASE_IGNORE_DIRS:
+            return True
+        # Test targets are conventionally named <Module>Tests / <App>UITests; the exact
+        # "tests" entry above misses them and their split files (`Foo+More.swift`)
+        # carry no test suffix, so the directory is the only signal. Case-sensitive
+        # CamelCase suffix on purpose: `Contests/` is not a test tree.
+        if part.endswith("Tests"):
             return True
     # ponytail: hidden dirs are tooling/build state by convention (.artifacts,
     # .swiftpm, .contest-refactor); deliberately-hidden source would need a
