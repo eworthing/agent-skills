@@ -133,6 +133,8 @@ def _result(status: str, **fields) -> dict:
         "command": None,
         "rev": None,
         "hits": [],
+        "hits_dead": [],
+        "hits_test_only": [],
         "misses": [],
         "flagged_silent": [],
         "candidate_total": 0,
@@ -284,8 +286,17 @@ def run(args: argparse.Namespace, manifest: dict) -> dict:
             )
             match_fn = _match_invariant
             id_fn = _invariant_candidate_id
+            dead_candidates = candidates
+            test_only_candidates: list[dict] = []
         else:
-            candidates = [r for r in doc.get("rows", []) if r.get("status") == "dead"]
+            # dead + test_only both mean "no production caller" -- a symbol
+            # deleted together with its only test (221, 282 in the frozen
+            # manifest) is a legitimate hit, just under a different status.
+            dead_candidates = [r for r in doc.get("rows", []) if r.get("status") == "dead"]
+            test_only_candidates = [
+                r for r in doc.get("rows", []) if r.get("status") == "test_only"
+            ]
+            candidates = dead_candidates + test_only_candidates
             files_scanned = doc.get("coverage", {}).get("files_scanned", 0)
             match_fn = _match_dead_surface
             id_fn = _dead_surface_candidate_id
@@ -296,17 +307,30 @@ def run(args: argparse.Namespace, manifest: dict) -> dict:
         ]
 
         hits: list[int] = []
+        hits_dead: list[int] = []
+        hits_test_only: list[int] = []
         misses: list[int] = []
         target_candidate_ids: dict[str, str] = {}
         for target in targets:
-            match = match_fn(target, candidates)
+            match = match_fn(target, dead_candidates)
+            if match is not None:
+                hits_dead.append(target["fid"])
+            else:
+                match = match_fn(target, test_only_candidates)
+                if match is not None:
+                    hits_test_only.append(target["fid"])
             if match is None:
                 misses.append(target["fid"])
             else:
                 hits.append(target["fid"])
                 target_candidate_ids[str(target["fid"])] = id_fn(match)
 
-        flagged_silent = [s["fid"] for s in silents if match_fn(s, candidates) is not None]
+        flagged_silent = [
+            s["fid"]
+            for s in silents
+            if match_fn(s, dead_candidates) is not None
+            or match_fn(s, test_only_candidates) is not None
+        ]
 
         # A restraint violation (a must-stay-silent row got flagged) is an
         # unambiguous failure regardless of wave-specific recall/budget bars,
@@ -320,6 +344,8 @@ def run(args: argparse.Namespace, manifest: dict) -> dict:
             rev=rev,
             command=command,
             hits=hits,
+            hits_dead=hits_dead,
+            hits_test_only=hits_test_only,
             misses=misses,
             flagged_silent=flagged_silent,
             candidate_total=len(candidates),

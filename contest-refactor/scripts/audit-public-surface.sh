@@ -15,6 +15,10 @@
 # Walks Sources/<Module>/ looking for `public` decls, then greps sibling
 # Sources/ modules for use sites. Reports decls with zero cross-module use sites.
 #
+# For zero-reference enum cases, protocol requirements, and intra-module
+# members (not just cross-module `public` surface), see the companion
+# scripts/audit_dead_surface.py.
+#
 # Stack: Apple / SPM. Output: markdown table to stdout.
 # Portable Bash (macOS 3.2 + Linux 4+). No mapfile/readarray; no GNU-only flags.
 
@@ -175,4 +179,5 @@ done < "$TMP_MODULES"
 # Note: flagged_count is local to the subshell (pipe) on bash 3.2; the table
 # above is the authoritative output. Exit 0 always — this is an audit helper,
 # not a gate.
+echo "audit-public-surface: for enum cases, protocol requirements, and internal/private zero-reference members, see scripts/audit_dead_surface.py" >&2
 exit 0

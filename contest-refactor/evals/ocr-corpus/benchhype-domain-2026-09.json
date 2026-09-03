@@ -128,7 +128,9 @@
       "type_name": "PlaybackSelection",
       "name": "groupCue",
       "line_start": 5,
-      "line_end": 5
+      "line_end": 5,
+      "expected_miss": true,
+      "expected_miss_reason": "Ground-truth correction 2026-09-03 (W2): at 2b5247e9 PlayHistoryEntryRecordMapping.swift constructed .groupCue in a decode arm; the fix commit 99922c4b removed that caller together with the case. Not a zero-reference symbol; kept as a row so the miss is recorded."
     },
     {
       "fid": 221,
