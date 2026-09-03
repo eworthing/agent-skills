@@ -1,4 +1,4 @@
-# Site pass — a per-file correctness pass for the Critic (plan, 2026-09-03, rev 5 — after peer rounds 1–4, opencode qwen3.8-flash)
+# Site pass — a per-file correctness pass for the Critic (plan, 2026-09-03, rev 5 — APPROVED at peer round 5, opencode qwen3.8-flash, review 3f920a3a8c7b)
 
 **Goal.** contest-refactor finds, on its own, the class of real defects OCR finds, in files the
 Critic already reads. OCR stays the benchmark, never a component.
@@ -153,7 +153,8 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
 
 **W1 — Site pass (prose + schema + gate).**
 - `references/site-pass.md` (new, Critic-only). `method.md` Step 6.5. `scripts/site_pass_roster.py`
-  + selftest; `startup.md` Step 0 runs it and preflight checks persisted-equals-fresh. `output-format-json.md`
+  + selftest; `startup.md` Step 0 runs it and preflight checks persisted-equals-fresh (`_preflight_selftest.py`
+  case: a hand-edited roster fails the gate). `output-format-json.md`
   `site_pass` shape; `output-format-markdown.md` `## Site pass` section; `output-format-migrations.md`
   "adding a required field" row.
 - `startup.md` sub-step 2 records `discovery.scope`; `output-format-json.md` documents it and
@@ -248,3 +249,12 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
 
 Round-4 B1 accepted as stated: under attempts-based caps at n=3 any invalid attempt voids the run;
 the plan now says so and re-runs both arms. No open questions.
+
+## Peer review record
+
+Reviewer: opencode `opencode-go/qwen3.8-flash`, effort provider-default (medium), five rounds,
+session-resumed each round. Round verdicts: REVISE (6 blocking), REVISE (5), REVISE (1),
+REVISE (1), **APPROVED** (3 non-blocking, applied). Every blocking claim was verified against source
+before revision; none was wrong. Notable: the reviewer caught the `--reset`-blindness premise,
+the missing scope marker, the budget guard's lack of a ceiling waiver, and the void arithmetic at
+n=3 under attempts-based caps.
