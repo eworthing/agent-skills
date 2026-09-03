@@ -150,6 +150,13 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   null}; `fid` unique per manifest.
 - Done when: both manifests pass the selftest, grader selftest green, baseline graded with its
   exclusion set recorded in this plan.
+- **W0 result (2026-09-03):** manifests landed (settings 29 real / 10 rejected; domain 157 / 126);
+  `grade_site_pass.py` + selftest green; `_ocr_corpus_selftest.py` pins both `sites[]` shapes.
+  Baseline (archived flash dry-run) grades **real 1/29 mechanical, rejected 1/10**: the one real
+  hit is fid 45 (`BackupSettingsView.swift:122-123`) intersected by F-025's `statusMessage` range
+  112-125 — same site, different defect, so the instrument counts it; by reading it is 0/29. The
+  **exclusion set is [65]** (F-026 ↔ rejected site 65). The W2 bar (≥ 10/29) is measured with the
+  same instrument, so the mechanical 1 is inside it, not subtracted.
 
 **W1 — Site pass (prose + schema + gate).**
 - `references/site-pass.md` (new, Critic-only). `method.md` Step 6.5. `scripts/site_pass_roster.py`

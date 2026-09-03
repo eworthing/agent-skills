@@ -119,6 +119,35 @@ def test_manifest_schema_and_fid_uniqueness() -> None:
     assert len(all_fids) == len(set(all_fids)), f"duplicate fid across sections: {all_fids}"
 
 
+SETTINGS_MANIFEST_PATH = CORPUS_DIR / "benchhype-settings-2026-09.json"
+_QUESTION_IDS = {f"Q{i}" for i in range(1, 9)}
+
+
+def _check_sites(m: dict, expect_real: int, expect_rejected: int) -> None:
+    sites = m["sites"]
+    fids = [s["fid"] for s in sites]
+    assert len(fids) == len(set(fids)), "duplicate fid in sites"
+    for s in sites:
+        assert s["verdict"] in ("real", "rejected"), s
+        assert isinstance(s["path"], str) and s["path"].endswith(".swift"), s
+        assert 0 < s["line_start"] <= s["line_end"], s
+        assert isinstance(s["claim"], str) and s["claim"], s
+        assert s["question"] is None or s["question"] in _QUESTION_IDS, s
+    counts = {v: sum(1 for s in sites if s["verdict"] == v) for v in ("real", "rejected")}
+    assert counts == {"real": expect_real, "rejected": expect_rejected}, counts
+
+
+def test_site_manifests_schema() -> None:
+    """SITE-PASS plan W0: `sites[]` shape on both corpora; counts pinned to the validated scans."""
+    _check_sites(_load_manifest(), 157, 126)
+    sm = json.loads(SETTINGS_MANIFEST_PATH.read_text())
+    assert sm["repo_env"] == "BENCHHYPE_ROOT" and sm["pre_fix_rev"] == "909164fb", sm["pre_fix_rev"]
+    assert sm["scope"] == "BenchHypeKit/Sources/BenchHypeSettingsFeature"
+    assert sm["targets"] == [] and sm["must_stay_silent"] == []
+    _check_sites(sm, 29, 10)
+    assert all(s["path"].startswith(sm["scope"] + "/") for s in sm["sites"])
+
+
 def test_tiercade_manifest_shape() -> None:
     m = json.loads(TIERCADE_MANIFEST_PATH.read_text())
     assert m == {"repo_env": "TIERCADE_ROOT", "rev": "92e2347", "scope": "."}, m

@@ -1,0 +1,363 @@
+{
+ "repo_env": "BENCHHYPE_ROOT",
+ "pre_fix_rev": "909164fb",
+ "post_fix_rev": null,
+ "scope": "BenchHypeKit/Sources/BenchHypeSettingsFeature",
+ "notes": "Frozen at SITE-PASS plan W0 (2026-09-03). `sites` are the validated OCR small-4 comments in BenchHypeSettingsFeature at pre_fix_rev 909164fb (scan-small4-validated.json: CONFIRMED/ESCALATE -> real, REJECTED -> rejected); line ranges are the OCR comment anchors at that rev. `question` is the primary Q1-Q8 attribution from references/site-pass.md (null = no question owns it); a site may inform several questions, uniqueness is on fid. Graded by scripts/grade_site_pass.py; no detector targets. Immutable after W0.",
+ "targets": [],
+ "excluded_targets": [],
+ "must_stay_silent": [],
+ "sites": [
+  {
+   "fid": 36,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/AppBuildInfo.swift",
+   "line_start": 10,
+   "line_end": 13,
+   "claim": "Both keys are read with a strict `as?",
+   "question": null
+  },
+  {
+   "fid": 37,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/AppBuildInfo.swift",
+   "line_start": 44,
+   "line_end": 49,
+   "claim": "The documented purpose of this check is to catch \"a binary linked against a newer SDK than the OS it runs on\", but comparing only major versions makes the check blind to the common case: an app built ",
+   "question": null
+  },
+  {
+   "fid": 38,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/AppBuildInfo.swift",
+   "line_start": 68,
+   "line_end": 73,
+   "claim": "Two gaps in the comparison helper that make the diagnostic report the wrong thing at the edges.",
+   "question": null
+  },
+  {
+   "fid": 39,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 30,
+   "line_end": 33,
+   "claim": "The gating predicate here (`isRunning`) does not match the predicate the reducer uses to accept these intents (`BackupState.acceptsPhaseChange == !isRunning && !blocksDurableWrites`).",
+   "question": "Q3"
+  },
+  {
+   "fid": 40,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 35,
+   "line_end": 37,
+   "claim": "Picking a file dispatches `requestBackupRestore` immediately, and restore replaces the entire library/settings on disk.",
+   "question": null
+  },
+  {
+   "fid": 41,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 59,
+   "line_end": 59,
+   "claim": "`UTType(filenameExtension:)` for an unregistered extension resolves to a *dynamic* type conforming to `public.item`, and the explicit `??",
+   "question": null
+  },
+  {
+   "fid": 42,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 44,
+   "line_end": 48,
+   "claim": "Only the `.success` arm is handled, so a `.failure` that is not `userCancelled` (sandbox/permission errors, `.fileImporterError`, or a mover that fails after the user chose a read-only/Full-Access-res",
+   "question": "Q2"
+  },
+  {
+   "fid": 43,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 72,
+   "line_end": 72,
+   "claim": "The button label ends with an ellipsis, which promises a naming dialog, but the display name is always the hard-coded `Self.defaultGamePackageName` (\"Game Package\").",
+   "question": "Q6"
+  },
+  {
+   "fid": 44,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 103,
+   "line_end": 107,
+   "claim": "This destructive action is the only control on the screen with no state gating: it lacks even `.disabled(backup.isRunning || backup.blocksDurableWrites)`, so during an in-flight export/restore or whil",
+   "question": "Q3"
+  },
+  {
+   "fid": 45,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
+   "line_start": 122,
+   "line_end": 123,
+   "claim": "`restoredAwaitingReload(url:summary:error:)` carries an `error` describing why the in-memory rehydration failed after the on-disk restore, and neither the `error` nor the `summary` is ever surfaced fr",
+   "question": "Q2"
+  },
+  {
+   "fid": 46,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+   "line_start": 50,
+   "line_end": 50,
+   "claim": "The upgrade CTA is silently disabled whenever `proDisplayPrice == nil`, but nothing in this view tells the user *why*.",
+   "question": "Q1"
+  },
+  {
+   "fid": 47,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+   "line_start": 47,
+   "line_end": 47,
+   "claim": "The button stays enabled for the whole purchase round-trip: `onPurchase` only dispatches `.purchase(.requestPurchasePro)` (AppReducer line 383) and re-emits `.entitlement(.requestPurchase(...))` on ev",
+   "question": "Q2"
+  },
+  {
+   "fid": 48,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+   "line_start": 25,
+   "line_end": 29,
+   "claim": "The heading `Text` is overloaded with two different identifiers depending on `state.isPro`, and the actual `Section` container (SettingsScreenContent.paywallSection) carries none.",
+   "question": "Q5"
+  },
+  {
+   "fid": 49,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/PaywallView.swift",
+   "line_start": 52,
+   "line_end": 52,
+   "claim": "Because the Pro branch renders only status text, the restore affordance disappears entirely once `isPro` is true.",
+   "question": null
+  },
+  {
+   "fid": 50,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+   "line_start": 179,
+   "line_end": 182,
+   "claim": "Refresh failure states are unreachable in the UI.",
+   "question": "Q1"
+  },
+  {
+   "fid": 51,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+   "line_start": 215,
+   "line_end": 218,
+   "claim": "Same silent-failure gap as the storage section: an integrity-scan error lands in `integrityPhase = .failed(reason:)` (see `DiagnosticsReducer.apply` / `DiagnosticsEffectExecutor.runIntegrity`) and is ",
+   "question": "Q1"
+  },
+  {
+   "fid": 52,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+   "line_start": 52,
+   "line_end": 53,
+   "claim": "The outcome of this irreversible deletion is never observable.",
+   "question": "Q1"
+  },
+  {
+   "fid": 53,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/DiagnosticsView.swift",
+   "line_start": 235,
+   "line_end": 235,
+   "claim": "The disclosure understates what this switch turns on.",
+   "question": "Q6"
+  },
+  {
+   "fid": 54,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 193,
+   "line_end": 197,
+   "claim": "**Inaccurate help copy (safety-critical).** There is no \"Panic Mute\" anywhere in the implementation, and no timed long-press thresholds.",
+   "question": "Q6"
+  },
+  {
+   "fid": 55,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 203,
+   "line_end": 205,
+   "claim": "**Documenting a removed feature.** Drag-to-gain no longer exists: there is no drag gesture in `TileGestureRecognizerHost`/`LiveContent+Board`, and the backlog records it as removed (commit `cd726043`)",
+   "question": "Q6"
+  },
+  {
+   "fid": 56,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 123,
+   "line_end": 126,
+   "claim": "**Shortcut and menu contents don't match the command layer.** `BenchHypeMenuCommands.transportButton` only wires `pause` (\u2325\u2318P) and `stop` (\u2325\u2318S); there is no \u2325\u2318O binding, and `TileQuickAction`/`TapActi",
+   "question": "Q6"
+  },
+  {
+   "fid": 57,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 102,
+   "line_end": 103,
+   "claim": "**Contradicts the shipped File menu.** New Roster is not \"menu-only\" in the sense implied here \u2014 it has a hardware-keyboard shortcut `\u2325\u2318N` (`CommandGroup(replacing: .newItem)` in `BenchHypeMenuCommand",
+   "question": "Q6"
+  },
+  {
+   "fid": 58,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 232,
+   "line_end": 232,
+   "claim": "**Wrong navigation path.** There is no clock icon in the Game Day header: `clock.arrow.circlepath` occurs only on this Help tile, in the history empty state, and on the `Session History` row in `Setti",
+   "question": "Q6"
+  },
+  {
+   "fid": 59,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 297,
+   "line_end": 298,
+   "claim": "**Advice that does not work on the device this section targets.** The setting exists and the label is right (\"Keep Screen Awake During Live\" under Settings \u2192 Live), but the idle-disable side effect is",
+   "question": null
+  },
+  {
+   "fid": 60,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/HelpView.swift",
+   "line_start": 332,
+   "line_end": 333,
+   "claim": "**Two claims here should be re-verified against the mute paths.** (a) \"or use Panic Mute\" refers to the non-existent gesture described above \u2014 the real all-sound controls are Stop All (Playback menu /",
+   "question": "Q6"
+  },
+  {
+   "fid": 61,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/StarterSoundLicensesView.swift",
+   "line_start": 38,
+   "line_end": 42,
+   "claim": "The `.frame(minHeight:)` only grows the *layout* box; `Link`'s hit-test region stays the caption-sized label (~15pt), because the extra vertical space belongs to the enclosing `frame` layout view, not",
+   "question": "Q5"
+  },
+  {
+   "fid": 62,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/StarterSoundLicensesView.swift",
+   "line_start": 38,
+   "line_end": 38,
+   "claim": "Every row renders an identically-labelled \"View source\" link.",
+   "question": null
+  },
+  {
+   "fid": 63,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+   "line_start": 122,
+   "line_end": 123,
+   "claim": "Read-modify-write on a stale value snapshot: `state` here is an immutable `SettingsViewState` captured when the context was built (`SettingsTabContent.body` -> `SettingsViewState.project(from: snapsho",
+   "question": "Q4"
+  },
+  {
+   "fid": 64,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+   "line_start": 124,
+   "line_end": 124,
+   "claim": "Every draft write is immediately persisted with no coalescing.",
+   "question": null
+  },
+  {
+   "fid": 65,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContext.swift",
+   "line_start": 14,
+   "line_end": 15,
+   "claim": "Defaulted no-op closures for actions that must have an effect are a silent-failure trap in a public initializer.",
+   "question": null
+  },
+  {
+   "fid": 66,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+   "line_start": 139,
+   "line_end": 141,
+   "claim": "Duck-fallback removal is a whole-dictionary read-modify-write performed against the view's stale `context.state` snapshot.",
+   "question": null
+  },
+  {
+   "fid": 67,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+   "line_start": 143,
+   "line_end": 145,
+   "claim": "`children: .combine` flattens the row into a single accessibility element whose children are no longer exposed, which drops the Button's own element: `settings.playback.duckFallbackRoute.remove.<finge",
+   "question": "Q5"
+  },
+  {
+   "fid": 68,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+   "line_start": 86,
+   "line_end": 88,
+   "claim": "The refresh affordance has no in-flight, disabled, or failure surface.",
+   "question": "Q1"
+  },
+  {
+   "fid": 69,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+   "line_start": 127,
+   "line_end": 128,
+   "claim": "This list and its caption are rendered on every platform, but the macOS branch immediately above states \"On Mac, Apple Music stops immediately.",
+   "question": "Q5"
+  },
+  {
+   "fid": 70,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent+AppleMusic.swift",
+   "line_start": 175,
+   "line_end": 178,
+   "claim": "Taking a `String` here means `Text(title)` resolves through the `Text(_ verbatim: String)`-style non-localized path, so \"Authorize Apple Music\" / \"Signed in to Apple Music\" are not LocalizedStringKey ",
+   "question": null
+  },
+  {
+   "fid": 71,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+   "line_start": 17,
+   "line_end": 17,
+   "claim": "`simpleMode` is read from canonical `state.appSettings`, but the toggle that controls it (and the multi-tap pickers it gates) is bound through `context.settingBinding(\\.simpleMode)`, which deliberatel",
+   "question": "Q4"
+  },
+  {
+   "fid": 72,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+   "line_start": 38,
+   "line_end": 41,
+   "claim": "`multiTapConfigured` is derived from canonical `state.appSettings`, but the pickers in the same section display `context.settingBinding(\\\u2026)`, i.e.",
+   "question": "Q4"
+  },
+  {
+   "fid": 73,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+   "line_start": 361,
+   "line_end": 361,
+   "claim": "Every fade-slider edit writes straight into the persisting `settingBinding`, whose setter dispatches `updateSettingsDraft` **and** `saveSettingsDraft` \u2014 i.e.",
+   "question": null
+  },
+  {
+   "fid": 74,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/SettingsScreenContent.swift",
+   "line_start": 367,
+   "line_end": 371,
+   "claim": "Because `label` is typed `String`, `Picker(label, selection:)` resolves to the `StringProtocol` overload and the title is rendered verbatim \u2014 no `LocalizedStringKey` lookup.",
+   "question": null
+  }
+ ]
+}

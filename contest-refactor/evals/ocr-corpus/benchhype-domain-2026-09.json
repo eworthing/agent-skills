@@ -1,262 +1,2811 @@
 {
-  "repo_env": "BENCHHYPE_ROOT",
-  "pre_fix_rev": "2b5247e9",
-  "post_fix_rev": "80499e9c",
-  "scope": "BenchHypeKit/Sources/BenchHypeDomain",
-  "notes": "Frozen at W0 (contest-refactor OCR-GAP-REMEDIATION-PLAN-2026-09-03). Immutable after W0 -- no wave after W0 may edit targets/excluded_targets/must_stay_silent. line_start/line_end were read directly from BenchHypeKit at pre_fix_rev (2b5247e9): for `invariant` V targets they span the flagged declaration (init/function/type body per the row's symbol form), not just the OCR comment anchor line. `dead_surface` Z targets are single-declaration spans (a case, a protocol requirement, or a member). Recall bar (7 of 10) counts expected_miss rows as misses.",
-  "targets": [
-    {
-      "fid": 202,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "one_sided_guard",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
-      "symbol": "PlaybackSpec.init",
-      "line_start": 9,
-      "line_end": 45
-    },
-    {
-      "fid": 226,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "one_sided_guard",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
-      "symbol": "Script.validateSteps",
-      "line_start": 23,
-      "line_end": 32
-    },
-    {
-      "fid": 267,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "one_sided_guard",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
-      "symbol": "TrimRange.init",
-      "line_start": 9,
-      "line_end": 25,
-      "expected_miss": true,
-      "expected_miss_reason": "W1a rule decision 2026-09-03: TrimRange.init's checks are lower-bound guard-form (`guard x >= 0`), which reject NaN by comparison semantics; one_sided_guard fires only on upper-only and negated if-throw shapes. Kept as a row so the miss is recorded."
-    },
-    {
-      "fid": 204,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "clamp_unchecked",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
-      "symbol": "Gain.init",
-      "line_start": 111,
-      "line_end": 113
-    },
-    {
-      "fid": 189,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "clamp_unchecked",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
-      "symbol": "PlayInstance.applying",
-      "line_start": 132,
-      "line_end": 180
-    },
-    {
-      "fid": 205,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "codable_bypasses_throwing_init",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
-      "symbol": "Dropout",
-      "line_start": 121,
-      "line_end": 151,
-      "expected_miss": true,
-      "expected_miss_reason": "Dropout at pre_fix_rev has no throwing or guarded init; codable_bypasses_throwing_init requires has_throwing_init. Kept as a target so the miss is recorded, not hidden."
-    },
-    {
-      "fid": 266,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "codable_bypasses_throwing_init",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
-      "symbol": "TrimRange",
-      "line_start": 5,
-      "line_end": 30
-    },
-    {
-      "fid": 224,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "id_collection_no_uniqueness",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Setlist.swift",
-      "symbol": "Setlist.init",
-      "line_start": 9,
-      "line_end": 18
-    },
-    {
-      "fid": 227,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "id_collection_no_uniqueness",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
-      "symbol": "Script.validateSteps",
-      "line_start": 23,
-      "line_end": 32
-    },
-    {
-      "fid": 262,
-      "class": "V",
-      "detector": "invariant",
-      "signal": "int_conversion_unbounded",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TimeFormatting.swift",
-      "symbol": "formatTimeMMSS",
-      "line_start": 26,
-      "line_end": 32,
-      "note": "Top-level free function; W1a scanner walk must include top-level function_declaration nodes with an empty TypeContext."
-    },
-    {
-      "fid": 15,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "enum_case",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
-      "type_name": "AppleMusicCatalogPortError",
-      "name": "notAuthorized",
-      "line_start": 12,
-      "line_end": 12
-    },
-    {
-      "fid": 195,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "enum_case",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSelection.swift",
-      "type_name": "PlaybackSelection",
-      "name": "groupCue",
-      "line_start": 5,
-      "line_end": 5,
-      "expected_miss": true,
-      "expected_miss_reason": "Ground-truth correction 2026-09-03 (W2): at 2b5247e9 PlayHistoryEntryRecordMapping.swift constructed .groupCue in a decode arm; the fix commit 99922c4b removed that caller together with the case. Not a zero-reference symbol; kept as a row so the miss is recorded."
-    },
-    {
-      "fid": 221,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "enum_case",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
-      "type_name": "OutputDestination",
-      "name": "carPlay",
-      "line_start": 27,
-      "line_end": 27
-    },
-    {
-      "fid": 234,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "enum_case",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
-      "type_name": "SessionEventKind",
-      "name": "warning",
-      "line_start": 56,
-      "line_end": 56
-    },
-    {
-      "fid": 82,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "protocol_requirement",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
-      "type_name": "EntitlementService",
-      "name": "currentSnapshot",
-      "line_start": 5,
-      "line_end": 5
-    },
-    {
-      "fid": 97,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "protocol_requirement",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
-      "type_name": "LibrarySnapshotPort",
-      "name": "recentSessionEvents",
-      "line_start": 43,
-      "line_end": 43
-    },
-    {
-      "fid": 166,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "declaration",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
-      "type_name": "LiveSurface",
-      "name": "rosterID",
-      "line_start": 14,
-      "line_end": 19
-    },
-    {
-      "fid": 251,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "declaration",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
-      "type_name": "TapAction",
-      "name": "displayDescription",
-      "line_start": 30,
-      "line_end": 41
-    },
-    {
-      "fid": 272,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "declaration",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
-      "type_name": "TransitionTiming",
-      "name": "rampFloorFraction",
-      "line_start": 55,
-      "line_end": 55
-    },
-    {
-      "fid": 282,
-      "class": "Z",
-      "detector": "dead_surface",
-      "kind": "declaration",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueFeatureSupport.swift",
-      "type_name": "CueFeatureSupport",
-      "name": "forTransport",
-      "line_start": 40,
-      "line_end": 42
-    }
-  ],
-  "excluded_targets": [
-    {
-      "fid": 138,
-      "reason": "Int one-sided guard, decision 2"
-    },
-    {
-      "fid": 242,
-      "reason": "Int one-sided guard, decision 2"
-    }
-  ],
-  "must_stay_silent": [
-    {
-      "fid": 155,
-      "detector": "invariant",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
-      "symbol": "EntitlementSnapshot"
-    },
-    {
-      "fid": 131,
-      "detector": "invariant",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
-      "symbol": "AppSettings.init"
-    },
-    {
-      "fid": 249,
-      "detector": "invariant",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
-      "symbol": "DuckingPolicy"
-    },
-    {
-      "fid": 141,
-      "detector": "invariant",
-      "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequence.swift",
-      "symbol": "CueSequence.init"
-    }
-  ]
+ "repo_env": "BENCHHYPE_ROOT",
+ "pre_fix_rev": "2b5247e9",
+ "post_fix_rev": "80499e9c",
+ "scope": "BenchHypeKit/Sources/BenchHypeDomain",
+ "notes": "Frozen at W0 (contest-refactor OCR-GAP-REMEDIATION-PLAN-2026-09-03). Immutable after W0 -- no wave after W0 may edit targets/excluded_targets/must_stay_silent. line_start/line_end were read directly from BenchHypeKit at pre_fix_rev (2b5247e9): for `invariant` V targets they span the flagged declaration (init/function/type body per the row's symbol form), not just the OCR comment anchor line. `dead_surface` Z targets are single-declaration spans (a case, a protocol requirement, or a member). Recall bar (7 of 10) counts expected_miss rows as misses. `sites` (added at SITE-PASS plan W0, 2026-09-03) list every validated OCR domain comment at pre_fix_rev for scripts/grade_site_pass.py; targets/excluded_targets/must_stay_silent untouched.",
+ "targets": [
+  {
+   "fid": 202,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "one_sided_guard",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "symbol": "PlaybackSpec.init",
+   "line_start": 9,
+   "line_end": 45
+  },
+  {
+   "fid": 226,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "one_sided_guard",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+   "symbol": "Script.validateSteps",
+   "line_start": 23,
+   "line_end": 32
+  },
+  {
+   "fid": 267,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "one_sided_guard",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "symbol": "TrimRange.init",
+   "line_start": 9,
+   "line_end": 25,
+   "expected_miss": true,
+   "expected_miss_reason": "W1a rule decision 2026-09-03: TrimRange.init's checks are lower-bound guard-form (`guard x >= 0`), which reject NaN by comparison semantics; one_sided_guard fires only on upper-only and negated if-throw shapes. Kept as a row so the miss is recorded."
+  },
+  {
+   "fid": 204,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "clamp_unchecked",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "symbol": "Gain.init",
+   "line_start": 111,
+   "line_end": 113
+  },
+  {
+   "fid": 189,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "clamp_unchecked",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "symbol": "PlayInstance.applying",
+   "line_start": 132,
+   "line_end": 180
+  },
+  {
+   "fid": 205,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "codable_bypasses_throwing_init",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "symbol": "Dropout",
+   "line_start": 121,
+   "line_end": 151,
+   "expected_miss": true,
+   "expected_miss_reason": "Dropout at pre_fix_rev has no throwing or guarded init; codable_bypasses_throwing_init requires has_throwing_init. Kept as a target so the miss is recorded, not hidden."
+  },
+  {
+   "fid": 266,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "codable_bypasses_throwing_init",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "symbol": "TrimRange",
+   "line_start": 5,
+   "line_end": 30
+  },
+  {
+   "fid": 224,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "id_collection_no_uniqueness",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Setlist.swift",
+   "symbol": "Setlist.init",
+   "line_start": 9,
+   "line_end": 18
+  },
+  {
+   "fid": 227,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "id_collection_no_uniqueness",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+   "symbol": "Script.validateSteps",
+   "line_start": 23,
+   "line_end": 32
+  },
+  {
+   "fid": 262,
+   "class": "V",
+   "detector": "invariant",
+   "signal": "int_conversion_unbounded",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TimeFormatting.swift",
+   "symbol": "formatTimeMMSS",
+   "line_start": 26,
+   "line_end": 32,
+   "note": "Top-level free function; W1a scanner walk must include top-level function_declaration nodes with an empty TypeContext."
+  },
+  {
+   "fid": 15,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "enum_case",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "type_name": "AppleMusicCatalogPortError",
+   "name": "notAuthorized",
+   "line_start": 12,
+   "line_end": 12
+  },
+  {
+   "fid": 195,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "enum_case",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSelection.swift",
+   "type_name": "PlaybackSelection",
+   "name": "groupCue",
+   "line_start": 5,
+   "line_end": 5,
+   "expected_miss": true,
+   "expected_miss_reason": "Ground-truth correction 2026-09-03 (W2): at 2b5247e9 PlayHistoryEntryRecordMapping.swift constructed .groupCue in a decode arm; the fix commit 99922c4b removed that caller together with the case. Not a zero-reference symbol; kept as a row so the miss is recorded."
+  },
+  {
+   "fid": 221,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "enum_case",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+   "type_name": "OutputDestination",
+   "name": "carPlay",
+   "line_start": 27,
+   "line_end": 27
+  },
+  {
+   "fid": 234,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "enum_case",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+   "type_name": "SessionEventKind",
+   "name": "warning",
+   "line_start": 56,
+   "line_end": 56
+  },
+  {
+   "fid": 82,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "protocol_requirement",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
+   "type_name": "EntitlementService",
+   "name": "currentSnapshot",
+   "line_start": 5,
+   "line_end": 5
+  },
+  {
+   "fid": 97,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "protocol_requirement",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "type_name": "LibrarySnapshotPort",
+   "name": "recentSessionEvents",
+   "line_start": 43,
+   "line_end": 43
+  },
+  {
+   "fid": 166,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "declaration",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
+   "type_name": "LiveSurface",
+   "name": "rosterID",
+   "line_start": 14,
+   "line_end": 19
+  },
+  {
+   "fid": 251,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "declaration",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "type_name": "TapAction",
+   "name": "displayDescription",
+   "line_start": 30,
+   "line_end": 41
+  },
+  {
+   "fid": 272,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "declaration",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
+   "type_name": "TransitionTiming",
+   "name": "rampFloorFraction",
+   "line_start": 55,
+   "line_end": 55
+  },
+  {
+   "fid": 282,
+   "class": "Z",
+   "detector": "dead_surface",
+   "kind": "declaration",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueFeatureSupport.swift",
+   "type_name": "CueFeatureSupport",
+   "name": "forTransport",
+   "line_start": 40,
+   "line_end": 42
+  }
+ ],
+ "excluded_targets": [
+  {
+   "fid": 138,
+   "reason": "Int one-sided guard, decision 2"
+  },
+  {
+   "fid": 242,
+   "reason": "Int one-sided guard, decision 2"
+  }
+ ],
+ "must_stay_silent": [
+  {
+   "fid": 155,
+   "detector": "invariant",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+   "symbol": "EntitlementSnapshot"
+  },
+  {
+   "fid": 131,
+   "detector": "invariant",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
+   "symbol": "AppSettings.init"
+  },
+  {
+   "fid": 249,
+   "detector": "invariant",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "symbol": "DuckingPolicy"
+  },
+  {
+   "fid": 141,
+   "detector": "invariant",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequence.swift",
+   "symbol": "CueSequence.init"
+  }
+ ],
+ "sites": [
+  {
+   "fid": 0,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/IDs/BoardID.swift",
+   "line_start": 9,
+   "line_end": 11,
+   "claim": "**Hard Rule 1 (single owner of a runtime-significant fact): `public init()` is an uncontrolled identity source that bypasses the designated ID-minting seam.**  `ReducerContext` exists precisely to own",
+   "question": null
+  },
+  {
+   "fid": 1,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/DomainInvariantError.swift",
+   "line_start": 271,
+   "line_end": 274,
+   "claim": "DomainInvariantError decoding of duplicate ID cases misattributes or discards the offending ID: `duplicateTileID` prefers the persisted row tileID from a sequence-cycle failure, which may resolve to a",
+   "question": null
+  },
+  {
+   "fid": 2,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/DomainInvariantError.swift",
+   "line_start": 242,
+   "line_end": 244,
+   "claim": "This violates the 'one mapping site per domain enum' rule and is the file's main regression hazard: the discriminator map now lives in three places \u2014 the exhaustive `discriminator` getter, the range g",
+   "question": null
+  },
+  {
+   "fid": 3,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/DomainInvariantError.swift",
+   "line_start": 435,
+   "line_end": 439,
+   "claim": "`parsedTileID` returns the first UUID-shaped token found in arbitrary message text, with no check that the token is actually the payload of the expected case.",
+   "question": null
+  },
+  {
+   "fid": 4,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/DomainInvariantError.swift",
+   "line_start": 550,
+   "line_end": 551,
+   "claim": "`unknownInvariantError` is not idempotent under re-encode, which breaks its forward-compat contract.",
+   "question": null
+  },
+  {
+   "fid": 5,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/IDs/PreflightCheckID.swift",
+   "line_start": 3,
+   "line_end": 8,
+   "claim": "**String-backed struct with a free-form `init(rawValue:)` gives no compile-time uniqueness or typo protection.** Every known ID is hand-written string below, so `PreflightCheckID(rawValue: \"audioRout\"",
+   "question": null
+  },
+  {
+   "fid": 6,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/IDs/PreflightCheckID.swift",
+   "line_start": 10,
+   "line_end": 11,
+   "claim": "**The set and order of check IDs has three implicit copies and no canonical site.** The declaration order in this block is the display/emission order: `PreflightUseCase.runAll` appends in exactly this",
+   "question": null
+  },
+  {
+   "fid": 7,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/IDs/RosterID.swift",
+   "line_start": 9,
+   "line_end": 11,
+   "claim": "The implicit, ambient `RosterID()` (random UUID v4) makes identity regeneration silent and untraceable on a type that is the persistence key for `RosterRecord.id`, `BatterCursorRecord.rosterIDRaw`, `L",
+   "question": null
+  },
+  {
+   "fid": 8,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppSettingsStore.swift",
+   "line_start": 3,
+   "line_end": 4,
+   "claim": "`load()`'s contract cannot express \"no settings have ever been stored\", so the empty store and a store whose contents happen to equal `AppSettings.default` collapse into the same value.",
+   "question": null
+  },
+  {
+   "fid": 9,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppSettingsStore.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "The only write primitive is whole-snapshot replacement, so every field change is a read-modify-write across two separate actor hops (`load()` \u2192 compose \u2192 `save(_:)`) with no atomicity and no fencing t",
+   "question": null
+  },
+  {
+   "fid": 10,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 48,
+   "line_end": 50,
+   "claim": "`NSURLErrorDomain` short-circuits to `.networkUnavailable` before the already-extracted `underlying` is consulted, so an actionable MusicKit failure that surfaces *wrapped in* a URL error (the exact s",
+   "question": null
+  },
+  {
+   "fid": 11,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 59,
+   "line_end": 62,
+   "claim": "The nested-ICError recovery path drops the inner error by passing `underlying: nil`, so only a single `NSUnderlyingErrorKey` level is ever resolved.",
+   "question": null
+  },
+  {
+   "fid": 12,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 89,
+   "line_end": 91,
+   "claim": "The underlying-error fallback here recognizes only `-7007`, and it re-states a code that is already mapped in the switch above.",
+   "question": null
+  },
+  {
+   "fid": 13,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 23,
+   "line_end": 24,
+   "claim": "This case is documented as \"Dev-only\", but `AppleMusicCatalogAdapter` throws it for ordinary end-user conditions: `BoundedReleaseTimeout` (`portError(from:label:)`, line ~161) and the in-flight/cooldo",
+   "question": null
+  },
+  {
+   "fid": 14,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 115,
+   "line_end": 117,
+   "claim": "Grouping these three cases under \"Check Settings \u2192 Music, confirm you're signed in, and try again.\" produces instructions that cannot fix two of them: `.entitlementMisconfigured` is by this file's own",
+   "question": null
+  },
+  {
+   "fid": 15,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 11,
+   "line_end": 12,
+   "claim": "`.notAuthorized` is never constructed anywhere in the codebase \u2014 the auth paths use the distinct `AppleMusicAuthSnapshot.notAuthorized` / entitlement enums, and `diagnosing` never returns this case.",
+   "question": null
+  },
+  {
+   "fid": 16,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicCatalogPort.swift",
+   "line_start": 151,
+   "line_end": 152,
+   "claim": "The empty-query contract is scope-dependent (`.library` + \"\" = first-page browse, `.catalog` + \"\" = undefined) and is enforced only by prose plus a caller-side guard in `AppleMusicSearchState.debounce",
+   "question": null
+  },
+  {
+   "fid": 17,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicEntitlementPort.swift",
+   "line_start": 25,
+   "line_end": 29,
+   "claim": "`Sendable` is asserted here while the only payload is a bare `any Error` existential, which is *not* `Sendable`.",
+   "question": null
+  },
+  {
+   "fid": 18,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicEntitlementPort.swift",
+   "line_start": 33,
+   "line_end": 35,
+   "claim": "The doc on `AppleMusicEntitlementPortError` claims this port lets callers distinguish a *confirmed* \"not subscribed\" state from a *transient* fetch failure, but the untyped `throws` cannot deliver tha",
+   "question": null
+  },
+  {
+   "fid": 19,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicEntitlementPort.swift",
+   "line_start": 14,
+   "line_end": 16,
+   "claim": "This helper is presented as the single subscription-tier test, but the same tier predicate is re-implemented at several other sites (`PlaybackReducer+AppleMusicGate.appleMusicDenial` switches on `.aut",
+   "question": null
+  },
+  {
+   "fid": 20,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicEntitlementPort.swift",
+   "line_start": 44,
+   "line_end": 47,
+   "claim": "`authorized(canPlayCatalog:)` duplicates playback capability \u2014 the field already owned by the canonical `AppleMusicEntitlement` resolved through `AppleMusicEntitlementPort`.",
+   "question": null
+  },
+  {
+   "fid": 21,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicEntitlementPort.swift",
+   "line_start": 44,
+   "line_end": 45,
+   "claim": "The enum has no way to represent \"authorization not yet determined\" / \"restricted\": the only mapping site must collapse MusicKit's distinct `.notDetermined`, `.restricted` and `.denied` into `.notAuth",
+   "question": null
+  },
+  {
+   "fid": 22,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicTransport.swift",
+   "line_start": 30,
+   "line_end": 36,
+   "claim": "The no-op default makes the only ghost-playback recovery path silently optional.",
+   "question": null
+  },
+  {
+   "fid": 23,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicTransport.swift",
+   "line_start": 13,
+   "line_end": 14,
+   "claim": "`Optional<InstanceID>` is being used as a three-way status code (started / preempted / threw), which violates AGENTS.md Hard Rule 3 (discriminated enum over an out-of-band status).",
+   "question": null
+  },
+  {
+   "fid": 24,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicTransport.swift",
+   "line_start": 23,
+   "line_end": 25,
+   "claim": "This comment states a convergence guarantee that does not hold for all callers.",
+   "question": null
+  },
+  {
+   "fid": 25,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicTransport.swift",
+   "line_start": 27,
+   "line_end": 27,
+   "claim": "`isAvailable` is under-specified for a port whose start path can fail independently.",
+   "question": null
+  },
+  {
+   "fid": 26,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicTransport.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "`Sendable` constrains value transfer, not serialized access to the process-global `ApplicationMusicPlayer.shared`.",
+   "question": null
+  },
+  {
+   "fid": 27,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicDuckVeiling.swift",
+   "line_start": 13,
+   "line_end": 13,
+   "claim": "The protocol declares `Sendable` but only isolates `begin()`/`end()` per-member, so the isolation guarantee is not structural: a conformance may be a plain (non-isolated) class marked `@unchecked Send",
+   "question": null
+  },
+  {
+   "fid": 28,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicDuckVeiling.swift",
+   "line_start": 14,
+   "line_end": 18,
+   "claim": "`begin()`'s contract is under-specified in two ways that can strand `.duckOthers` (the very failure mode the type-level comment calls out as unacceptable):  1.",
+   "question": null
+  },
+  {
+   "fid": 29,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicDuckVeiling.swift",
+   "line_start": 20,
+   "line_end": 23,
+   "claim": "`end()` has two contract problems: (a) it is synchronous `@MainActor`, yet the doc mandates it complete teardown \"regardless of task cancellation\".",
+   "question": null
+  },
+  {
+   "fid": 30,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AppleMusicDuckVeiling.swift",
+   "line_start": 35,
+   "line_end": 37,
+   "claim": "Because `NoopAppleMusicDuckVeil` is the executor's default (`TransportEffectExecutor.swift:42`) and behaves identically to \"veil intentionally absent\", a mis-wired assembly (e.g.",
+   "question": null
+  },
+  {
+   "fid": 31,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileImportPort.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "`copyFailed(message: String)` is a stringly-typed failure channel that ends up verbatim in user-facing text: `LocalImportView.friendlyMessage` renders `\"Couldn't import this file.",
+   "question": null
+  },
+  {
+   "fid": 32,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileImportPort.swift",
+   "line_start": 14,
+   "line_end": 14,
+   "claim": "The doc claims \"The adapter deletes the orphan file before throwing\", but the adapter deletes best-effort with `try?",
+   "question": null
+  },
+  {
+   "fid": 33,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileImportPort.swift",
+   "line_start": 43,
+   "line_end": 43,
+   "claim": "The contract statement is self-inconsistent: the header says \"Throws `AudioFileImportError`\", yet pre-move cancellation propagates as plain `CancellationError` (CuesFileStore.swift:330-331) while post",
+   "question": null
+  },
+  {
+   "fid": 34,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileImportPort.swift",
+   "line_start": 51,
+   "line_end": 51,
+   "claim": "`storeArtwork` exposes two failure channels (`nil` *and* `throws`) for the same \"artwork could not be stored\" outcome, and the doc explicitly tells callers to collapse them (\"callers treat a thrown er",
+   "question": null
+  },
+  {
+   "fid": 35,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileMetadataPort.swift",
+   "line_start": 10,
+   "line_end": 11,
+   "claim": "Hard Rule 3 (avoid parallel fields that admit impossible combinations): `sampleRate` / `channelCount` / `formatID` come from a *single* source (the track's `AudioStreamBasicDescription`) and the adapt",
+   "question": null
+  },
+  {
+   "fid": 36,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileMetadataPort.swift",
+   "line_start": 19,
+   "line_end": 19,
+   "claim": "The \"Transient ...",
+   "question": null
+  },
+  {
+   "fid": 37,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileMetadataPort.swift",
+   "line_start": 46,
+   "line_end": 48,
+   "claim": "`async throws -> Data?` conflates four outcomes into one `nil`: no embedded art, container AVFoundation doesn't surface (the FLAC/Opus best-effort case), extraction failure, and (via the default below",
+   "question": null
+  },
+  {
+   "fid": 38,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileMetadataPort.swift",
+   "line_start": 40,
+   "line_end": 41,
+   "claim": "The protocol is `Sendable` and both methods are `async`, but the contract says nothing about (a) re-entrancy/thread-safety of a shared instance or (b) cancellation.",
+   "question": null
+  },
+  {
+   "fid": 39,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioFileMetadataPort.swift",
+   "line_start": 51,
+   "line_end": 55,
+   "claim": "This default makes the exact cost the doc comment above warns about (\"far too expensive to run across a whole seeded library\") the *silent* behaviour for any conformer that forgets to override: `metad",
+   "question": null
+  },
+  {
+   "fid": 40,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 32,
+   "line_end": 32,
+   "claim": "The documented \"exactly once per session\" invariant is not achievable with the contract as written, and the phrase \"tick-detected failure\" makes `.ended` swallow failures.",
+   "question": null
+  },
+  {
+   "fid": 41,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 38,
+   "line_end": 38,
+   "claim": "`ended` conflates normal completion with failure, so the error path is unrepresentable and therefore invisible to consumers \u2014 the opposite of the F4 goal stated above.",
+   "question": null
+  },
+  {
+   "fid": 42,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 58,
+   "line_end": 58,
+   "claim": "The subscription semantics of this property are unspecified, and every real implementation gives you **replay-on-subscribe**: `AppleMusicPreviewAdapter.swift:50-52` and `PreviewPlaybackLoop.swift:32-3",
+   "question": null
+  },
+  {
+   "fid": 43,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 69,
+   "line_end": 69,
+   "claim": "Two gaps in the `start` contract that the adapters already disagree about:  - **Synchronous visibility of `state`.** The doc says nothing about whether `start()` must have published `.progress(isPlayi",
+   "question": null
+  },
+  {
+   "fid": 44,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 70,
+   "line_end": 70,
+   "claim": "\"keeps position\" is false for every reachable consumer path, and the pause \u2192 session-lifecycle relationship is undefined:  - There is no resume affordance, and `start()` is specified only for the \"whi",
+   "question": null
+  },
+  {
+   "fid": 45,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 6,
+   "line_end": 8,
+   "claim": "`AudioPreviewState` admits impossible/invalid states, so the validity work is pushed into every producer and the type can hand a progress UI a NaN or an out-of-range playhead: nothing prevents `durati",
+   "question": null
+  },
+  {
+   "fid": 46,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioPreviewPort.swift",
+   "line_start": 75,
+   "line_end": 75,
+   "claim": "Under-specified for an absolute-time entry point: no contract on non-finite/negative input, on seeking outside the active `range` (clamped into the trim, allowed past it, or ignored?), on seeking whil",
+   "question": null
+  },
+  {
+   "fid": 47,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioRecordingPort.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "**Rule 5 / localization (medium).** `message: String` is an unconstrained diagnostic payload, and the production adapter fills it with framework text (`String(describing: error)` / `NSError.userInfo[N",
+   "question": null
+  },
+  {
+   "fid": 48,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioRecordingPort.swift",
+   "line_start": 13,
+   "line_end": 16,
+   "claim": "**Hard Rule 3 \u2014 parallel fields admit impossible combinations (medium).** `isRecording` + `elapsedSeconds` + `levelDecibels` must be kept in sync by hand: `isRecording: false` with a non-zero elapsed ",
+   "question": null
+  },
+  {
+   "fid": 49,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioRecordingPort.swift",
+   "line_start": 39,
+   "line_end": 40,
+   "claim": "**AsyncStream lifecycle is unspecified at the public seam (medium).** `AsyncStream` is single-consumer and terminal: a second `makeAsyncIterator()` on the same instance returns `nil`, and cancelling t",
+   "question": null
+  },
+  {
+   "fid": 50,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioRecordingPort.swift",
+   "line_start": 42,
+   "line_end": 44,
+   "claim": "**Start contract is under-specified: thrown errors, re-entrancy, and unbounded capture (medium).** 1.",
+   "question": null
+  },
+  {
+   "fid": 51,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioRecordingPort.swift",
+   "line_start": 45,
+   "line_end": 47,
+   "claim": "`stop()` promises a \"finalized\" file it cannot deliver, and has no failure path (high).",
+   "question": null
+  },
+  {
+   "fid": 52,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioRecordingPort.swift",
+   "line_start": 48,
+   "line_end": 50,
+   "claim": "`cancel()`\u2019s two promises are unenforceable as specified, and the first one is a live privacy hole (high).",
+   "question": null
+  },
+  {
+   "fid": 53,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioSessionConfiguring.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "`Sendable` on a class-constrained lease cannot be honoured honestly, so it buys a false compile-time guarantee.",
+   "question": null
+  },
+  {
+   "fid": 54,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioSessionConfiguring.swift",
+   "line_start": 11,
+   "line_end": 15,
+   "claim": "The acquire methods are declared `throws` but the file documents no failure contract, even though the failure path mutates real hardware state.",
+   "question": null
+  },
+  {
+   "fid": 55,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioSessionConfiguring.swift",
+   "line_start": 16,
+   "line_end": 20,
+   "claim": "The ARC fallback is documented as a port guarantee but is encoded nowhere in the type, so it is a per-implementation accident rather than an invariant (Hard Rules 10/12).",
+   "question": null
+  },
+  {
+   "fid": 56,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioSessionConfiguring.swift",
+   "line_start": 22,
+   "line_end": 22,
+   "claim": "`throws` here signals \"failures are reported\", but the port specifies no error for the three cases it must handle, and the production conformer turns all of them into silent success: `AudioSessionConf",
+   "question": null
+  },
+  {
+   "fid": 57,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BatterCursorRepository.swift",
+   "line_start": 3,
+   "line_end": 5,
+   "claim": "The read port is the only persistence seam in this directory with no contract comment (compare `BatterCursorWriter.swift:4-6`, which pins down who stamps `updatedAt`).",
+   "question": null
+  },
+  {
+   "fid": 58,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BackupPort.swift",
+   "line_start": 47,
+   "line_end": 51,
+   "claim": "The documented invariant (\"`entityKind` is never `.playHistory` or `.sessionEvent` here\") lives only in prose: `SkippedEntityKind` (Values/SkippedLibraryRecord.swift) includes those two cases, and thi",
+   "question": null
+  },
+  {
+   "fid": 59,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BackupPort.swift",
+   "line_start": 71,
+   "line_end": 73,
+   "claim": "`UnresolvedArtworkReference` is a byte-for-byte duplicate of `UnresolvedAudioReference` (same two `String` fields, no distinct behavior), which is exactly the parallel-types pattern Hard Rule 2 forbid",
+   "question": null
+  },
+  {
+   "fid": 60,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BackupPort.swift",
+   "line_start": 33,
+   "line_end": 35,
+   "claim": "Defaulting both skip channels to `[]` makes \"backup is complete\" the accidental default: a conformer (or an updated call site in `BackupExportSupport`) that forgets to thread the collected skips throu",
+   "question": null
+  },
+  {
+   "fid": 61,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BackupPort.swift",
+   "line_start": 95,
+   "line_end": 97,
+   "claim": "The partial-success predicate is defined here but production code re-derives it instead of calling it: `BackupEffectExecutor.runRestore` computes `result.unresolvedAudioFiles.count` / `result.unresolv",
+   "question": null
+  },
+  {
+   "fid": 62,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BackupPort.swift",
+   "line_start": 18,
+   "line_end": 19,
+   "claim": "`BackupExportResult` and `BackupRestoreResult` are the only value types in this port family that are neither `Equatable` nor `Hashable` (`SkippedBackupRecord`, `SkippedLibraryRecord` and the sibling `",
+   "question": null
+  },
+  {
+   "fid": 63,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BatterCursorWriter.swift",
+   "line_start": 4,
+   "line_end": 7,
+   "claim": "This contract is defined only by reference to an unnamed \"restore freshness window\", and the window it points at disagrees with the binding QA doc.",
+   "question": null
+  },
+  {
+   "fid": 64,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/BatterCursorWriter.swift",
+   "line_start": 7,
+   "line_end": 7,
+   "claim": "The write side decomposes the persisted fact into loose parameters while the paired read side returns the aggregate: `BatterCursorRepository.loadAll() async throws -> [RosterID: PersistedBatterCursor]",
+   "question": null
+  },
+  {
+   "fid": 65,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioTransport.swift",
+   "line_start": 13,
+   "line_end": 13,
+   "claim": "`AudioTransport.events` and `TransportEventRelay` expose an `AsyncStream` as if it were a broadcast relay, but `AsyncStream` has a single iterator; sharing the stored stream across the bridge, consume",
+   "question": null
+  },
+  {
+   "fid": 66,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioTransport.swift",
+   "line_start": 10,
+   "line_end": 10,
+   "claim": "`throws` **and** `-> [InstanceID]` is an ambiguous contract: the array is only meaningful on success, so a conformer that stops some instances and then throws leaves the caller unable to distinguish \"",
+   "question": null
+  },
+  {
+   "fid": 67,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioTransport.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "`resume` is the odd one out: `pause`/`stop` take the discriminated `TransitionStyle` (`.hard` / `.duck` / `.fade(seconds)`), while resume re-encodes a strict subset of that same enum as a raw optional",
+   "question": null
+  },
+  {
+   "fid": 68,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioTransport.swift",
+   "line_start": 30,
+   "line_end": 30,
+   "claim": "No derived classification on this enum, so the same \"is this a lifecycle transition or an advisory?\" decision is now written at four separate sites outside the domain type: `AppReducer+TransportEvents",
+   "question": null
+  },
+  {
+   "fid": 69,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioTransport.swift",
+   "line_start": 42,
+   "line_end": 42,
+   "claim": "This case does not fit the container it sits in, in two ways:  - **It is not produced by any `AudioTransport`.** Both yield sites are in the application layer (`TransportEffectExecutor+VolumeFade.swif",
+   "question": null
+  },
+  {
+   "fid": 70,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/AudioTransport.swift",
+   "line_start": 6,
+   "line_end": 6,
+   "claim": "The returned `InstanceID` is a second source of truth for a fact the caller already owns: `request.instanceID` is minted upstream, the conformer echoes it back (`AudioTransportImpl.swift:105-106` retu",
+   "question": null
+  },
+  {
+   "fid": 71,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DiagnosticsPort.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "`cleanupOrphanedFiles(filenames:)` takes caller-supplied raw `String`s and the protocol says nothing about what they are (basename?",
+   "question": null
+  },
+  {
+   "fid": 72,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DiagnosticsPort.swift",
+   "line_start": 56,
+   "line_end": 58,
+   "claim": "`CleanupResult` models only the success case, which produces two concrete defects on reachable paths:  1.",
+   "question": null
+  },
+  {
+   "fid": 73,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DiagnosticsPort.swift",
+   "line_start": 40,
+   "line_end": 44,
+   "claim": "Hard Rule 3 violation: `totalCues` / `verifiedCount` / `missingCount` are parallel counters that must be kept manually in sync, and the public init lets any combination through (`verified + missing > ",
+   "question": null
+  },
+  {
+   "fid": 74,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DiagnosticsPort.swift",
+   "line_start": 18,
+   "line_end": 19,
+   "claim": "`totalUsedBytes` is a redundant stored copy of a derived quantity (Hard Rule 3): it can disagree with `audioFilesBytes + cacheBytes + backupBytes` and nothing catches it.",
+   "question": null
+  },
+  {
+   "fid": 75,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DeviceVolumeRamping.swift",
+   "line_start": 25,
+   "line_end": 28,
+   "claim": "The `volume > 0` invariant (line 20 comment) is documentation-only and the initializer is `public`, so any module can build a `DeviceVolumeCapture` with `volume == 0`, a negative value, or NaN.",
+   "question": null
+  },
+  {
+   "fid": 76,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DeviceVolumeRamping.swift",
+   "line_start": 42,
+   "line_end": 42,
+   "claim": "`failed(routeContext: RouteContext?)` packs two behaviourally distinct failures (\"prompt-relevant: stable route, unreadable volume\" vs.",
+   "question": null
+  },
+  {
+   "fid": 77,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DeviceVolumeRamping.swift",
+   "line_start": 54,
+   "line_end": 58,
+   "claim": "`Bool` cannot express the three outcomes the fade state machine must treat differently, and the doc comment (lines 54-55) claims only one of them (\"returns false when the current route no longer match",
+   "question": null
+  },
+  {
+   "fid": 78,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DeviceVolumeRamping.swift",
+   "line_start": 58,
+   "line_end": 58,
+   "claim": "Taking a bare `String` here defeats the stated purpose of the type pair: lines 47-49 assert \"a write can never land on a route it wasn't captured on\", but nothing ties this parameter to `DeviceVolumeC",
+   "question": null
+  },
+  {
+   "fid": 79,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DeviceVolumeRamping.swift",
+   "line_start": 7,
+   "line_end": 9,
+   "claim": "`fingerprint` is the route identity used for every conditional write, but synthesized `Hashable`/`Equatable` (line 7) also compares `name`, which is display-only metadata read from `port.portName` on ",
+   "question": null
+  },
+  {
+   "fid": 80,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/DeviceVolumeRamping.swift",
+   "line_start": 91,
+   "line_end": 97,
+   "claim": "Declared as `static var`, which presents global mutable state in the Domain layer (AGENTS Hard Rule 1) even though the getter-only body makes it a compile-time constant; `DeviceVolumeFadeSupport.isAva",
+   "question": null
+  },
+  {
+   "fid": 81,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
+   "line_start": 4,
+   "line_end": 4,
+   "claim": "The `changes` requirement is an unconstrained, undocumented contract on a **single-iterator** type, which has already caused a shipped bug and still leaves two live hazards:  1.",
+   "question": null
+  },
+  {
+   "fid": 82,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "`currentSnapshot()` has no call site in production code \u2014 the only references are the implementations themselves (`EntitlementServiceImpl.swift:138`, `TestEntitlementService.swift:33`) and tests of th",
+   "question": null
+  },
+  {
+   "fid": 83,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
+   "line_start": 6,
+   "line_end": 6,
+   "claim": "EntitlementService returns a bare `EntitlementSnapshot` from purchase/restore, collapsing distinct StoreKit outcomes into success, throw, or stale snapshot.",
+   "question": null
+  },
+  {
+   "fid": 84,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/EntitlementService.swift",
+   "line_start": 8,
+   "line_end": 9,
+   "claim": "`startListening()` / `stopListening()` are a boolean (non-scoped) lifecycle on a process-wide singleton service (`AppAssembly.swift:216` creates one `EntitlementServiceImpl` shared by the reducer's ef",
+   "question": null
+  },
+  {
+   "fid": 85,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/InterruptionObserver.swift",
+   "line_start": 14,
+   "line_end": 14,
+   "claim": "`InterruptionEvent` models the ended notification as a bare case with no linkage to the `began` it terminates, but the OS does not guarantee that pairing.",
+   "question": null
+  },
+  {
+   "fid": 86,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/InterruptionObserver.swift",
+   "line_start": 26,
+   "line_end": 26,
+   "claim": "`AsyncStream` is single-iterator: a second `for await` over the same stored stream silently steals/loses elements, and once an iterator is cancelled the stream can never be re-consumed.",
+   "question": null
+  },
+  {
+   "fid": 87,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/InterruptionObserver.swift",
+   "line_start": 28,
+   "line_end": 28,
+   "claim": "The start/stop contract is undefined on two axes that both have observable consequences here.",
+   "question": null
+  },
+  {
+   "fid": 88,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 6,
+   "line_end": 6,
+   "claim": "`id` here is the *bundle-declared* `packageID` \u2014 the meaning lives only in a trailing comment, and the same plain `UUID` serves three distinct roles: `Identifiable` row identity in `BackupSettingsView",
+   "question": null
+  },
+  {
+   "fid": 89,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 29,
+   "line_end": 29,
+   "claim": "The game-package export path collects its library with `collectBackupData`, which returns `skippedRecords` for rows whose `toDomain()` failed (`BackupExportSupport.swift:27`, populated at :204).",
+   "question": null
+  },
+  {
+   "fid": 90,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 46,
+   "line_end": 46,
+   "claim": "Two problems with this field.",
+   "question": null
+  },
+  {
+   "fid": 91,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 41,
+   "line_end": 41,
+   "claim": "Hard Rule 3/4: partial success is expressed only as two parallel arrays with no derived state on the type, unlike the sibling backup DTOs which expose `isPartialSuccess` (`BackupPort.swift:27`, `:95`)",
+   "question": null
+  },
+  {
+   "fid": 92,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 45,
+   "line_end": 45,
+   "claim": "`skippedExistingIDs` concatenates six entity kinds into one undifferentiated `[UUID]` bag (`GamePackageImportSupport.swift:236-239`), so a consumer cannot tell whether the skipped records were cues, b",
+   "question": null
+  },
+  {
+   "fid": 93,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 26,
+   "line_end": 26,
+   "claim": "The contract around this URL is unstated and the reachable lifecycle is leaky-plus-stale: `GamePackageService.swift:41-44` writes the bundle into `FileManager.temporaryDirectory`, and unlike the backu",
+   "question": null
+  },
+  {
+   "fid": 94,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/GamePackageResults.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "Dead conformance: there is no encode or decode site for `ImportedGamePackageSummary` anywhere in the repo \u2014 persistence goes through `ImportedGamePackageRecord` (SwiftData, with `@Attribute(.unique) p",
+   "question": null
+  },
+  {
+   "fid": 95,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "line_start": 41,
+   "line_end": 41,
+   "claim": "`loadLibrary()` returns a value that cannot express the lossy reads its own documented implementation performs.",
+   "question": null
+  },
+  {
+   "fid": 96,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "line_start": 42,
+   "line_end": 42,
+   "claim": "`limit` has no stated domain, and the two conformers interpret out-of-range values in opposite ways.",
+   "question": null
+  },
+  {
+   "fid": 97,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "line_start": 43,
+   "line_end": 43,
+   "claim": "No production code calls this requirement.",
+   "question": null
+  },
+  {
+   "fid": 98,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "line_start": 35,
+   "line_end": 35,
+   "claim": "Two inaccuracies in the header, both with behavioural consequences.",
+   "question": null
+  },
+  {
+   "fid": 99,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "line_start": 46,
+   "line_end": 46,
+   "claim": "The `quarantineReport()` contract promises \"Stateless ...",
+   "question": null
+  },
+  {
+   "fid": 100,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibrarySnapshotPort.swift",
+   "line_start": 10,
+   "line_end": 11,
+   "claim": "Defaulting all six collections means `LibrarySnapshot()` is a valid \"the store loaded successfully and contained nothing\" value, which is indistinguishable from an empty/uninitialized library at the A",
+   "question": null
+  },
+  {
+   "fid": 101,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/NetworkReachabilityProviding.swift",
+   "line_start": 3,
+   "line_end": 8,
+   "claim": "`NetworkReachabilityProviding.currentLevelStream()` contract is under-specified for concurrent subscriptions and termination: the adapter can overwrite a prior monitor handler so older streams freeze,",
+   "question": null
+  },
+  {
+   "fid": 102,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibraryPersistenceWriter.swift",
+   "line_start": 11,
+   "line_end": 14,
+   "claim": "The doc asserts a hard invariant (\"collision-free `0\u2026M-1` permutation\") but the protocol never states the input contract that makes it hold, so conformers invent divergent policies and the invariant i",
+   "question": null
+  },
+  {
+   "fid": 103,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibraryPersistenceWriter.swift",
+   "line_start": 48,
+   "line_end": 55,
+   "claim": "This enum is a hand-maintained mirror of the protocol's own write surface, and nothing keeps the two in sync \u2014 the exact failure mode the comment says the type exists to prevent.",
+   "question": null
+  },
+  {
+   "fid": 104,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/LibraryPersistenceWriter.swift",
+   "line_start": 36,
+   "line_end": 38,
+   "claim": "Two semantics the cascade depends on are left unstated, so they are only correct by accident in the current conformer.",
+   "question": null
+  },
+  {
+   "fid": 105,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/SessionLogWriter.swift",
+   "line_start": 3,
+   "line_end": 4,
+   "claim": "The port is the only synchronization boundary for the session log, but it only requires `Sendable` \u2014 it does not require the conformers to serialize their mutable log state.",
+   "question": null
+  },
+  {
+   "fid": 106,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/SessionLogWriter.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "The cutoff comparison is undefined at the boundary and in clock terms, yet two independent implementations must agree on it.",
+   "question": null
+  },
+  {
+   "fid": 107,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/NowPlayingDisplaying.swift",
+   "line_start": 6,
+   "line_end": 9,
+   "claim": "**Invariant not expressed by the port: `clear()` carries no instance identity.** `update(_:)` receives an `instanceID` inside the snapshot, but `clear()` is untargeted even though the concrete surface",
+   "question": null
+  },
+  {
+   "fid": 108,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/NowPlayingDisplaying.swift",
+   "line_start": 14,
+   "line_end": 15,
+   "claim": "**Hidden cross-type invariant: this field list is re-enumerated outside the type.** The push-dedupe path in `NowPlayingEffectExecutor` hand-maintains `equalIgnoringElapsed(_:_:)` (NowPlayingEffectExec",
+   "question": null
+  },
+  {
+   "fid": 109,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/NowPlayingDisplaying.swift",
+   "line_start": 18,
+   "line_end": 20,
+   "claim": "**`elapsed` is an un-anchored, wall-clock point-in-time sample.** The only projection site derives it as `record.instance.elapsedSeconds(at: context.now())` (AppReducer+NowPlaying.swift:36), i.e.",
+   "question": null
+  },
+  {
+   "fid": 110,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/NowPlayingDisplaying.swift",
+   "line_start": 50,
+   "line_end": 56,
+   "claim": "**Asymmetric targeting makes `stop` / `nextTrack` / `previousTrack` un-routable to the displayed instance.** `play`/`pause` carry the `InstanceID` the adapter cached from the last `update`, but the ot",
+   "question": null
+  },
+  {
+   "fid": 111,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/RouteObservationController.swift",
+   "line_start": 7,
+   "line_end": 7,
+   "claim": "`changes` hands out a `AsyncStream`, which is single-iterator, as a freely readable `nonisolated { get }` requirement \u2014 and the port says nothing about the two invariants that actually matter here.",
+   "question": null
+  },
+  {
+   "fid": 112,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/RouteObservationController.swift",
+   "line_start": 9,
+   "line_end": 10,
+   "claim": "`LifecycleActionRunner` drives these from `LifecyclePlan.Row(service: .routeObserver, startOn: [.foreground], stopOn: [.stopped])`, i.e.",
+   "question": null
+  },
+  {
+   "fid": 113,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/RouteObservationController.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "`currentSnapshot()` has no read site in application code \u2014 every caller is a test (`AudioRouteObserverTests`, `AudioRouteObserverIOSTests`, `AudioRouteObserverAdditionalTests`) \u2014 so the port carries t",
+   "question": null
+  },
+  {
+   "fid": 114,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/PlayHistoryWriter.swift",
+   "line_start": 3,
+   "line_end": 3,
+   "claim": "`Sendable` on this port only guarantees the *reference* can cross isolation domains \u2014 it says nothing about the serialization these three mutating operations require.",
+   "question": null
+  },
+  {
+   "fid": 115,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/PlayHistoryWriter.swift",
+   "line_start": 4,
+   "line_end": 4,
+   "claim": "The name says \"append\", but the production conformance implements insert-or-replace keyed by `entry.id` (`PlayHistoryWriterImpl.swift:16-19` deletes any record with the same `id` first).",
+   "question": null
+  },
+  {
+   "fid": 116,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/PlayHistoryWriter.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "This is the only irreversible operation in the domain and it carries no failure contract, so callers already mishandle it.",
+   "question": null
+  },
+  {
+   "fid": 117,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Ports/PlayHistoryWriter.swift",
+   "line_start": 6,
+   "line_end": 6,
+   "claim": "Two unspecified invariants here, both already producing divergent conformances.",
+   "question": null
+  },
+  {
+   "fid": 118,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/TransportEventRelay.swift",
+   "line_start": 14,
+   "line_end": 16,
+   "claim": "Stream termination is coupled to *deallocation of the relay object*, which the consumers do not own: `ExternalEventBridge.swift:145/192` stores only the `AsyncStream` value, and the sole relay owners ",
+   "question": null
+  },
+  {
+   "fid": 119,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/TransportEventRelay.swift",
+   "line_start": 18,
+   "line_end": 20,
+   "claim": "`yield` returns `AsyncStream.Continuation.YieldResult`, and it is discarded here.",
+   "question": null
+  },
+  {
+   "fid": 120,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/TransportEventRelay.swift",
+   "line_start": 9,
+   "line_end": 9,
+   "claim": "No buffering policy is declared, so this process-lifetime bus defaults to `.unbounded`: every event yielded before a consumer exists (the bridge pump is only created at the first `resume()`, and `Appl",
+   "question": null
+  },
+  {
+   "fid": 121,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AlbumArtVisibility.swift",
+   "line_start": 36,
+   "line_end": 36,
+   "claim": "`globalDefault` is a free `Bool` with no canonical source, so each of the three call sites re-anchors the base of the cascade itself.",
+   "question": null
+  },
+  {
+   "fid": 122,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AlbumArtVisibility.swift",
+   "line_start": 9,
+   "line_end": 9,
+   "claim": "The type owns `effectiveShowAlbumArt` but no lenient raw-value decoding, so the decode rules live at four separate call sites outside Domain: `BoardRecordMapping.swift:54` and `:154`, plus `BackupMode",
+   "question": null
+  },
+  {
+   "fid": 123,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCatalogResult.swift",
+   "line_start": 32,
+   "line_end": 34,
+   "claim": "`artworkURL`/`webURL`/`previewURL` come straight from MusicKit/network data and are stored raw; the invariant is only documented (\"consumers must tolerate `nil` and treat non-`https` schemes as unrend",
+   "question": null
+  },
+  {
+   "fid": 124,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCatalogResult.swift",
+   "line_start": 80,
+   "line_end": 82,
+   "claim": "This is the sole gate for \"what is a valid selection\", and it filters only on *presence in the displayed list* \u2014 it ignores the type's own `isPlayable` fact.",
+   "question": null
+  },
+  {
+   "fid": 125,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCatalogResult.swift",
+   "line_start": 76,
+   "line_end": 78,
+   "claim": "The comment asserts \"Playlists carry `isExplicit == false`, so only track results are affected\", but nothing in the type enforces that \u2014 `kind` and `isExplicit` are parallel independent fields, and be",
+   "question": null
+  },
+  {
+   "fid": 126,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCatalogResult.swift",
+   "line_start": 21,
+   "line_end": 21,
+   "claim": "Defaulting an externally-derived capability to the optimistic value inverts the safe-side rule for this field: any construction site that omits the argument (adapters built later, fixtures, test doubl",
+   "question": null
+  },
+  {
+   "fid": 127,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCatalogResult.swift",
+   "line_start": 86,
+   "line_end": 87,
+   "claim": "`Identifiable` here is backed by a plain `String` with no uniqueness or non-empty precondition, yet both helpers treat `id` as a one-to-one selection key.",
+   "question": null
+  },
+  {
+   "fid": 128,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
+   "line_start": 215,
+   "line_end": 217,
+   "claim": "Dual-writer lost update on `duckFallbackRoutes` (violates Hard Rule 1's single-owner intent).",
+   "question": null
+  },
+  {
+   "fid": 129,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
+   "line_start": 216,
+   "line_end": 216,
+   "claim": "No invariant on the key/value written here.",
+   "question": null
+  },
+  {
+   "fid": 130,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
+   "line_start": 199,
+   "line_end": 199,
+   "claim": "`duckFallbackRoutes` only ever grows through this API \u2014 there is no pruning path for fingerprints that can no longer resolve (per-device route fingerprints churn as speakers pair/unpair and ports chan",
+   "question": null
+  },
+  {
+   "fid": 131,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppSettings.swift",
+   "line_start": 24,
+   "line_end": 24,
+   "claim": "Two conflicting sources of truth for the shipped default of this field: the public init defaults it to `false` here, while `AppSettings.default` (`:149`) sets it to `true` (and `AppSettingsRecord.useP",
+   "question": null
+  },
+  {
+   "fid": 132,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicDuplicateDecision.swift",
+   "line_start": 11,
+   "line_end": 11,
+   "claim": "The `cueID` payload is accepted but never honored, making it a second, unenforced source of truth for the same fact already held by `AppleMusicPendingDuplicate.existingCueID` (`State/BulkBoardPlacemen",
+   "question": null
+  },
+  {
+   "fid": 133,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicDuplicateDecision.swift",
+   "line_start": 10,
+   "line_end": 10,
+   "claim": "The type carries a raw `CueID` with no stated precondition that it still resolves to a live library cue at apply time, and no consumer enforces one.",
+   "question": null
+  },
+  {
+   "fid": 134,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCueRef.swift",
+   "line_start": 38,
+   "line_end": 38,
+   "claim": "`durationSeconds` is a public, unvalidated `Double` whose only guarantee comes from an upstream type (`AppleMusicTrack.init` throws for `<= 0`, over-cap, and empty `id`).",
+   "question": null
+  },
+  {
+   "fid": 135,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/AppleMusicCueRef.swift",
+   "line_start": 14,
+   "line_end": 14,
+   "claim": "The synthesized `Hashable`/`Equatable` folds `title`, `artist` and `durationSeconds` into identity, which contradicts the invariant the mirrored source type documents: `AppleMusicTrack` implements cus",
+   "question": null
+  },
+  {
+   "fid": 136,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Support/StateBroadcaster.swift",
+   "line_start": 106,
+   "line_end": 108,
+   "claim": "This drops the removed `AsyncStream.Element.Continuation` reference while `box` is still locked.",
+   "question": null
+  },
+  {
+   "fid": 137,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Support/StateBroadcaster.swift",
+   "line_start": 62,
+   "line_end": 63,
+   "claim": "The continuation is registered immediately when `subscribe()` returns, even if the returned `AsyncStream` is never iterated.",
+   "question": null
+  },
+  {
+   "fid": 138,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Board.swift",
+   "line_start": 24,
+   "line_end": 26,
+   "claim": "`Board` ordering and tile-position guards only check upper bounds: `orderIndex <= maxOrderIndex` and `validatePositionWithinCap` compare against `GridSize.dimensionCap` but do not enforce non-negative",
+   "question": null
+  },
+  {
+   "fid": 139,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Board.swift",
+   "line_start": 239,
+   "line_end": 240,
+   "claim": "The per-cell expansion makes validation cost and memory proportional to covered *area*, not tile count, and the caps here allow an area far beyond the documented policy ceiling.",
+   "question": null
+  },
+  {
+   "fid": 140,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Board.swift",
+   "line_start": 250,
+   "line_end": 254,
+   "claim": "`appending` copies the whole tile array and re-runs the full `validateTiles` pass (ID uniqueness plus the per-cell occupancy expansion) for a single addition.",
+   "question": null
+  },
+  {
+   "fid": 141,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequence.swift",
+   "line_start": 35,
+   "line_end": 35,
+   "claim": "`CueSequence` ordering is not a canonical total order: init only checks cue-ID uniqueness and never validates `orderInGroup`, while `sorted { $0.orderInGroup < $1.orderInGroup }` is unstable for dupli",
+   "question": null
+  },
+  {
+   "fid": 142,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 27,
+   "line_end": 30,
+   "claim": "`Cue.init` bounds cue points against the source duration, but the very same `playback` facet carries dropouts whose `startSeconds`/`endSeconds` are in the same absolute-file-time coordinate space and ",
+   "question": null
+  },
+  {
+   "fid": 143,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 160,
+   "line_end": 163,
+   "claim": "`Cue.durationSeconds` is the *trimmed* playback length while `CueTransport.durationSeconds` (reachable as `cue.transport.durationSeconds`) is the *full* source length \u2014 same property name, different s",
+   "question": null
+  },
+  {
+   "fid": 144,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 135,
+   "line_end": 140,
+   "claim": "This is a second, redundant mapping of the `.local` artwork case: `coverArtworkURL` (declared directly below) already switches `case let .local(audio): audio.artworkURL`, and its doc asserts that \"eve",
+   "question": null
+  },
+  {
+   "fid": 145,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 106,
+   "line_end": 111,
+   "claim": "`isAppleMusic` re-implements the transport discriminator a third time (`playbackTransport == .appleMusic` already answers it, and `sourceLabel`/`appleMusicPreviewURL`/`localContentHash` each add their",
+   "question": null
+  },
+  {
+   "fid": 146,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 321,
+   "line_end": 325,
+   "claim": "The comment justifies excluding \"import-time captured display metadata\" and the link-back URL, but `artworkURL` (and `previewURL`) are also dropped, and that is not symmetric with the other transport:",
+   "question": null
+  },
+  {
+   "fid": 147,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 355,
+   "line_end": 359,
+   "claim": "`Cue` transport value types do not validate external/artwork URLs at construction: `AppleMusicDisplayMetadata` stores artwork/preview URLs without the https validation applied by `AppleMusicTrack`, so",
+   "question": null
+  },
+  {
+   "fid": 148,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Cue.swift",
+   "line_start": 175,
+   "line_end": 177,
+   "claim": "`self.artist` was already normalized through `trimmedOrNil` in `init`, so re-trimming it on every read is a second normalization site for the same field (Hard Rule 4 spirit) and allocates twice per ac",
+   "question": null
+  },
+  {
+   "fid": 149,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/DisplayConfig.swift",
+   "line_start": 5,
+   "line_end": 7,
+   "claim": "The String raw values here are an implicit persistence contract, but nothing in the file says so.",
+   "question": null
+  },
+  {
+   "fid": 150,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/DisplayConfig.swift",
+   "line_start": 3,
+   "line_end": 3,
+   "claim": "This file is named `DisplayConfig.swift`, but it declares only `TileLayoutMode`, and the identifier \"DisplayConfig\" exists nowhere else in the repository (no type, no doc, no README reference in Bench",
+   "question": null
+  },
+  {
+   "fid": 151,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequenceCursor.swift",
+   "line_start": 14,
+   "line_end": 19,
+   "claim": "Hard Rule 3 violation: `storedIndex` and `cueIndex` are parallel, manually-synced fields, and the public memberwise `init(storedIndex:cueIndex:)` lets any caller construct the impossible combinations ",
+   "question": null
+  },
+  {
+   "fid": 152,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequenceCursor.swift",
+   "line_start": 56,
+   "line_end": 59,
+   "claim": "Exhaustion is encoded positionally (`storedIndex == count`) rather than explicitly, so it is not durable across sequence edits.",
+   "question": null
+  },
+  {
+   "fid": 153,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequenceCursor.swift",
+   "line_start": 32,
+   "line_end": 32,
+   "claim": "`count` is used as a divisor here (and at line 63, `(current.storedIndex + 1) % count`) without an empty-sequence guard, so a `CueSequence` with zero placements traps (`x % 0`) inside what is otherwis",
+   "question": null
+  },
+  {
+   "fid": 154,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueSequenceCursor.swift",
+   "line_start": 65,
+   "line_end": 67,
+   "claim": "The `count > 1` guard conflates two different situations: for `count == 1` returning `(0, 0)` is correct, but for `count == 0` it returns `cueIndex: 0`, i.e.",
+   "question": null
+  },
+  {
+   "fid": 155,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+   "line_start": 4,
+   "line_end": 5,
+   "claim": "`isPro` + `lastVerifiedAt` are parallel fields encoding a fact that has (at least) three states: verified-Pro, unverified/never-checked-Pro, and non-Pro.",
+   "question": null
+  },
+  {
+   "fid": 156,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+   "line_start": 11,
+   "line_end": 11,
+   "claim": "The `proDisplayPrice: String?",
+   "question": null
+  },
+  {
+   "fid": 157,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+   "line_start": 17,
+   "line_end": 17,
+   "claim": "`free` conflates two very different facts: \"the store definitively reported no Pro entitlement\" and \"nothing has been determined yet\".",
+   "question": null
+  },
+  {
+   "fid": 158,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+   "line_start": 9,
+   "line_end": 9,
+   "claim": "Storing an already-formatted, store/locale-resolved display string in the domain value couples the entitlement model to presentation and makes it un-verifiable: `\"$9.99\"` is meaningless for currency, ",
+   "question": null
+  },
+  {
+   "fid": 159,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Entitlement.swift",
+   "line_start": 6,
+   "line_end": 8,
+   "claim": "The doc comment states the invariant as a UI requirement (\"the paywall must show the price before purchase\") but nothing in the type enforces it, and the same gap applies to `lastVerifiedAt`, whose ni",
+   "question": null
+  },
+  {
+   "fid": 160,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/DuplicateMatch.swift",
+   "line_start": 10,
+   "line_end": 13,
+   "claim": "The stated display contract is not the one consumers can actually satisfy, and it hides a user-visible defect.",
+   "question": null
+  },
+  {
+   "fid": 161,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/DuplicateMatch.swift",
+   "line_start": 18,
+   "line_end": 18,
+   "claim": "The public initializer accepts `candidateCueIDs: []`, which contradicts the type's documented meaning (\"the existing cues that share its full-file content hash\") and lets a producer create a zero-cand",
+   "question": null
+  },
+  {
+   "fid": 162,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/DuplicateMatch.swift",
+   "line_start": 14,
+   "line_end": 15,
+   "claim": "`id` defaults to a freshly minted `UUID()` yet participates in the synthesized `Equatable`/`Hashable`, so two content-identical matches never compare equal and hashing them is effectively identity-bas",
+   "question": null
+  },
+  {
+   "fid": 163,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/GroupPlacement.swift",
+   "line_start": 9,
+   "line_end": 12,
+   "claim": "`orderInGroup` is an unconstrained `Int` with no invariant owned by the type, and no caller validates it either.",
+   "question": null
+  },
+  {
+   "fid": 164,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/GroupPlacement.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "The type carries the ordering field but not the ordering rule, so every consumer re-implements a comparator on a key that is not guaranteed unique:  - `CueSequence.swift:35` \u2014 `placements.sorted { $0.",
+   "question": null
+  },
+  {
+   "fid": 165,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
+   "line_start": 7,
+   "line_end": 12,
+   "claim": "`boardID` collapses two different facts into the same `nil`: \"this is not a board surface\" (`.roster(_)` and the `return nil` fall-through) and \"this is a board surface whose board has not been resolv",
+   "question": null
+  },
+  {
+   "fid": 166,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
+   "line_start": 14,
+   "line_end": 19,
+   "claim": "This accessor has no read site anywhere in the repository \u2014 every `rosterID` read in production goes through `RosterLiveViewState.rosterID` (its own stored field, set from a hand-written `guard case l",
+   "question": null
+  },
+  {
+   "fid": 167,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
+   "line_start": 4,
+   "line_end": 4,
+   "claim": "The `nil` payload here is load-bearing but undocumented, on a public domain type in a module where every other value type spells out its invariant.",
+   "question": null
+  },
+  {
+   "fid": 168,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LiveSurface.swift",
+   "line_start": 3,
+   "line_end": 3,
+   "claim": "Hard Rule 4 (map each domain enum once, second site as a computed property on the type) is not satisfied for this type: its discriminator is switched on outside `BenchHypeDomain` in `LiveSurfaceColumn",
+   "question": null
+  },
+  {
+   "fid": 169,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LibraryPlaybackResolution.swift",
+   "line_start": 50,
+   "line_end": 50,
+   "claim": "`firstMatchingIndex` treats an empty (or whitespace-only) `targetCatalogID` as a valid identity: any candidate whose recovered catalog ID decoded to `\"\"` matches, and because this is the **exact** bra",
+   "question": null
+  },
+  {
+   "fid": 170,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LibraryPlaybackResolution.swift",
+   "line_start": 114,
+   "line_end": 119,
+   "claim": "Empty-string containment bug: after `normalize`, a candidate with a nil/blank (or punctuation-only) `artistName` yields `\"\"`, and `target.contains(\"\")` is `true` in Swift \u2014 so a candidate with *no* ar",
+   "question": null
+  },
+  {
+   "fid": 171,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LibraryPlaybackResolution.swift",
+   "line_start": 96,
+   "line_end": 96,
+   "claim": "`normalize` folds with `locale: nil`, which makes the fold locale-dependent (e.g.",
+   "question": null
+  },
+  {
+   "fid": 172,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LibraryPlaybackResolution.swift",
+   "line_start": 100,
+   "line_end": 104,
+   "claim": "Bracket stripping is unconditional: an *unmatched* opening bracket (common in malformed/trimmed metadata, e.g.",
+   "question": null
+  },
+  {
+   "fid": 173,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LibraryPlaybackResolution.swift",
+   "line_start": 65,
+   "line_end": 66,
+   "claim": "Two related weaknesses in the fallback contract:  1.",
+   "question": null
+  },
+  {
+   "fid": 174,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/LibraryPlaybackResolution.swift",
+   "line_start": 137,
+   "line_end": 138,
+   "claim": "`candidates` and `candidateIndices` are supplied independently, and `candidates[index]` is a trap: an out-of-range index from a stale/foreign bucket (e.g.",
+   "question": null
+  },
+  {
+   "fid": 175,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlayHistoryEntry.swift",
+   "line_start": 8,
+   "line_end": 9,
+   "claim": "**Hard Rule 3 \u2014 parallel optionals admit impossible/inconsistent states.** `endedAt` and `endReason` are independent, so four combinations are expressible while only two are meaningful:  - `endReason ",
+   "question": null
+  },
+  {
+   "fid": 176,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlayHistoryEntry.swift",
+   "line_start": 17,
+   "line_end": 18,
+   "claim": "The type carries the raw fields but no derived semantics, so every consumer re-derives \"when did this play effectively end\" and re-applies (or forgets) the ordering rule: `endedAt ??",
+   "question": null
+  },
+  {
+   "fid": 177,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/OfflineAvailability.swift",
+   "line_start": 37,
+   "line_end": 39,
+   "claim": "`Index` has no way to distinguish \"the user has not downloaded this\" from \"the downloaded-library scan was empty or truncated\", so a failed/partial scan is reported as an availability verdict for ever",
+   "question": null
+  },
+  {
+   "fid": 178,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/OfflineAvailability.swift",
+   "line_start": 69,
+   "line_end": 73,
+   "claim": "The type's headline invariant (\"the advisory set can never diverge from what the offline playback path would resolve\") is only half structural: the artist/duration step is shared via `firstFallbackMat",
+   "question": null
+  },
+  {
+   "fid": 179,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackMetadata.swift",
+   "line_start": 16,
+   "line_end": 18,
+   "claim": "Hard Rule 3 violation: `boardID`/`boardName`/`boardColorTag` are three independently-optional, independently-defaulted fields describing one fact \u2014 \"which board this playback came from\".",
+   "question": null
+  },
+  {
+   "fid": 180,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackMetadata.swift",
+   "line_start": 14,
+   "line_end": 15,
+   "claim": "Hard Rule 1: these fields are point-in-time copies of facts whose authoritative owner lives elsewhere \u2014 `title` duplicates `request.cue.name`, `transport` duplicates `cue.transport.playbackTransport`,",
+   "question": null
+  },
+  {
+   "fid": 181,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackMetadata.swift",
+   "line_start": 5,
+   "line_end": 8,
+   "claim": "Hard Rule 4: this enum owns the transport vocabulary but exposes no canonical storage mapping, so the mapping was written twice, as inverse hand-maintained switches with duplicated string literals, in",
+   "question": null
+  },
+  {
+   "fid": 182,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackMetadata.swift",
+   "line_start": 13,
+   "line_end": 13,
+   "claim": "Hard Rule 3 signal (\"write `??",
+   "question": null
+  },
+  {
+   "fid": 183,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackPolicy.swift",
+   "line_start": 9,
+   "line_end": 9,
+   "claim": "`maxFadeSeconds` is documented as the global \"longest fade the operator can ask for, in or out\", but the clamp is only applied to `FadeProfile`/`AppSettings` (PlaybackSpec.swift:94-95, AppSettings.swi",
+   "question": null
+  },
+  {
+   "fid": 184,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackPolicy.swift",
+   "line_start": 19,
+   "line_end": 19,
+   "claim": "The stated purpose \u2014 no astronomical `Double` reaches `Int(...)`/`Duration.seconds(...)`/`UInt64(...)` conversions \u2014 is only true for `LocalAudio`/`AppleMusicTrack` (Cue.swift:214, 254).",
+   "question": null
+  },
+  {
+   "fid": 185,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "line_start": 121,
+   "line_end": 126,
+   "claim": "Bug (inconsistent frozen-baseline contract): `.ending` and `.errored` return `0` instead of the elapsed accumulated before teardown, so a progress value that was, say, 38s at the moment `.beginEnding`",
+   "question": null
+  },
+  {
+   "fid": 186,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "line_start": 200,
+   "line_end": 205,
+   "claim": "Same defect on the wall-clock read path, and this is the one the Lock Screen consumes: `AppReducer+NowPlaying` calls `record.instance.elapsedSeconds(at: context.now())`, and because `.ending` is folde",
+   "question": null
+  },
+  {
+   "fid": 187,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "line_start": 172,
+   "line_end": 176,
+   "claim": "Two invariant hazards on the `.ending` \u2192 `.fail` arm.",
+   "question": null
+  },
+  {
+   "fid": 188,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "line_start": 64,
+   "line_end": 68,
+   "claim": "`applying(fadeInSecondsOverride:)` builds the profile through `FadeProfile(_unchecked:)`, which skips the ceiling the public throwing initializer enforces (`min(fadeInSeconds, PlaybackPolicy.maxFadeSe",
+   "question": null
+  },
+  {
+   "fid": 189,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "line_start": 159,
+   "line_end": 159,
+   "claim": "`accumulatedPausedDuration` is grown by the raw wall-clock delta `now - pausedAt` with no lower clamp, while every consumer of the accumulator assumes it is non-negative (`max(0, date - startedAt - ac",
+   "question": "Q7"
+  },
+  {
+   "fid": 190,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Playback.swift",
+   "line_start": 127,
+   "line_end": 128,
+   "claim": "Maintainability / Hard Rule 4: the `.paused` branch re-derives the elapsed formula inline while the `.playing` branch (and `elapsedSeconds(at:)`) already centralize it in `playbackElapsedSeconds`.",
+   "question": null
+  },
+  {
+   "fid": 191,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackRequest+Make.swift",
+   "line_start": 9,
+   "line_end": 9,
+   "claim": "Default `clock: () -> Date = Date.init` silently bypasses the app's single controlled time source.",
+   "question": null
+  },
+  {
+   "fid": 192,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackRequest+Make.swift",
+   "line_start": 7,
+   "line_end": 7,
+   "claim": "`boardID` is a free-floating optional alongside `origin`, which is exactly the Hard Rule 3 \"parallel fields that need manual sync\" shape: an `origin: .tile(tileID)` request is legal with `boardID == n",
+   "question": null
+  },
+  {
+   "fid": 193,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackRequest+Make.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "`overriding spec:` lets a caller produce a request where `spec` and `cue.playback` disagree, with nothing encoding which is authoritative.",
+   "question": null
+  },
+  {
+   "fid": 194,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSelection.swift",
+   "line_start": 4,
+   "line_end": 4,
+   "claim": "Type modeling (Hard Rule 3): `.cue` carries a bare `UUID` even though `CueID` is the domain identity type in this same module (`BenchHypeKit/Sources/BenchHypeDomain/IDs/CueID.swift`).",
+   "question": null
+  },
+  {
+   "fid": 195,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSelection.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "`groupCue` has no producer anywhere in production code: the only construction path is decoding persisted `selectionKind == 2` (`BenchHypePersistence/Mapping/PlayHistoryEntryRecordMapping.swift:195`), ",
+   "question": null
+  },
+  {
+   "fid": 196,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSelection.swift",
+   "line_start": 21,
+   "line_end": 24,
+   "claim": "Hard Rule 4 (map each domain enum once): the case\u2192discriminant mapping exists here as ad-hoc string prefixes, and independently in persistence as magic integers \u2014 `1 = cue`, `2 = groupCue` encoded/dec",
+   "question": null
+  },
+  {
+   "fid": 197,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStartOffset.swift",
+   "line_start": 6,
+   "line_end": 8,
+   "claim": "The header asserts this helper is \"Used by both the local audio transport and the Apple Music transport so the intro semantic lives in one place\", but that invariant does not hold: the only production",
+   "question": null
+  },
+  {
+   "fid": 198,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStartOffset.swift",
+   "line_start": 43,
+   "line_end": 46,
+   "claim": "`hi` is compared with exact floating-point equality semantics, which only excludes an intro sitting *precisely* at the bound \u2014 the case the doc comment says is being protected against.",
+   "question": null
+  },
+  {
+   "fid": 199,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStartOffset.swift",
+   "line_start": 25,
+   "line_end": 25,
+   "claim": "`droppedIntro` is written on every dropped-intro path but has no read site in production code (grep: only `PlaybackStartOffset.swift` and the two test files).",
+   "question": null
+  },
+  {
+   "fid": 200,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStartOffset.swift",
+   "line_start": 40,
+   "line_end": 40,
+   "claim": "`first(where:)` selects the intro by array position, and `cuePoints` is stored in editor mutation order (the editor sorts a copy for display only, `CueCuePointsEditor.sortedCuePoints`), so the resolve",
+   "question": null
+  },
+  {
+   "fid": 201,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreflightReport.swift",
+   "line_start": 12,
+   "line_end": 20,
+   "claim": "`overallSeverity` encodes the severity ordering (failed > warning > ok) by pattern-matching two cases and letting everything else fall through to `.ok`.",
+   "question": null
+  },
+  {
+   "fid": 202,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 21,
+   "line_end": 25,
+   "claim": "Invariant gap: no guard rejects **negative** `dropout.fadeInSeconds` / `fadeOutSeconds`.",
+   "question": "Q7"
+  },
+  {
+   "fid": 203,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 98,
+   "line_end": 101,
+   "claim": "`init(_unchecked:)` skips the `PlaybackPolicy.maxFadeSeconds` clamp as well as the guards, so the ceiling is not actually an invariant of `FadeProfile`.",
+   "question": null
+  },
+  {
+   "fid": 204,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 112,
+   "line_end": 112,
+   "claim": "Silent-garbage-in-the-wrong-direction: with `rawValue = .nan`, Swift's `min(2, nan)` returns `2` (the comparison is false, so the first argument wins) and `max(0, 2)` returns `2`.",
+   "question": "Q7"
+  },
+  {
+   "fid": 205,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 140,
+   "line_end": 142,
+   "claim": "`Dropout` is the only member of this aggregate with a completely unguarded public initializer plus a *synthesized* `Codable` conformance, so it accepts `NaN`, `\u00b1infinity`, negative fades and negative ",
+   "question": "Q7"
+  },
+  {
+   "fid": 206,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 177,
+   "line_end": 180,
+   "claim": "The custom decoder normalizes `label` but leaves `timeSeconds` (and the intro/dup/cap invariants) unvalidated, which is inconsistent with `FadeProfile`/`Gain` normalizing at their own boundary \u2014 and t",
+   "question": null
+  },
+  {
+   "fid": 207,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 210,
+   "line_end": 211,
+   "claim": "This helper is the only public, domain-level mutator for `cuePoints`, but it rebuilds every row through the unguarded `CuePoint` init and returns a bare `[CuePoint]` with no invariants attached: dupli",
+   "question": null
+  },
+  {
+   "fid": 208,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackSpec.swift",
+   "line_start": 127,
+   "line_end": 128,
+   "claim": "Hard Rule 3 (parallel fields / impossible combinations): `volume` and `label` are optionals whose `nil` is collapsed into a concrete value before use \u2014 `AudioPlaybackTiming` reads `Gain(rawValue: drop",
+   "question": null
+  },
+  {
+   "fid": 209,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreflightCheck.swift",
+   "line_start": 3,
+   "line_end": 3,
+   "claim": "**Documented Domain boundary violation (report as code/doc conflict per AGENTS.md Stop/Ask gate).**  `BenchHypeKit/Sources/BenchHypeDomain/README.md:9-11` scopes what display text Domain may own to *v",
+   "question": null
+  },
+  {
+   "fid": 210,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreflightCheck.swift",
+   "line_start": 4,
+   "line_end": 5,
+   "claim": "**Hard Rule 3: parallel `severity` + optional `detail` admit a state the UI cannot act on.**  Nothing in the type prevents `severity: .failed` with `detail: nil`.",
+   "question": null
+  },
+  {
+   "fid": 211,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStatusPresentation.swift",
+   "line_start": 80,
+   "line_end": 82,
+   "claim": "`isControllable` claims `.starting` allows \"pause, resume, stop\", but the domain transition table rejects that: `PlayInstance.applying` (Playback.swift:137-179) accepts `.pausePlayback` only from `.pl",
+   "question": null
+  },
+  {
+   "fid": 212,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStatusPresentation.swift",
+   "line_start": 109,
+   "line_end": 110,
+   "claim": "Hard Rule 4 (one mapping site per domain enum): this five-branch switch on `PlayInstanceStatus` restates the case-for-case mapping already owned by `extension PlayInstanceStatus { var activityStatus: ",
+   "question": null
+  },
+  {
+   "fid": 213,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PlaybackStatusPresentation.swift",
+   "line_start": 40,
+   "line_end": 42,
+   "claim": "The `.ending` \u2192 `.error` severity is deliberate (the now-playing strip renders a fading cue in the error accent), and it is contradicted by the tile, which maps `.ending` to `.playing` in `TilePlaybac",
+   "question": null
+  },
+  {
+   "fid": 214,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreflightSeverity.swift",
+   "line_start": 2,
+   "line_end": 4,
+   "claim": "The enum encodes an order (`ok` < `warning` < `failed`) that the domain depends on, but that order lives nowhere in this type \u2014 it is re-implemented by callers.",
+   "question": null
+  },
+  {
+   "fid": 215,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreflightSeverity.swift",
+   "line_start": 1,
+   "line_end": 1,
+   "claim": "Both extra conformances are unconsumed today: a repo-wide search for `PreflightSeverity` finds no `.rawValue` use and no `.allCases` use (the parameterized tests in `PreflightUseCaseTests`/`PreflightR",
+   "question": null
+  },
+  {
+   "fid": 216,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreviewSource.swift",
+   "line_start": 18,
+   "line_end": 19,
+   "claim": "The two URL cases carry no scheme invariant, yet the doc above states the *case* \u2014 not the URL \u2014 selects the player (confirmed by `BenchHypeKit/Tests/BenchHypeAudioTests/AVAudioPreviewAdapterAdditiona",
+   "question": null
+  },
+  {
+   "fid": 217,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/PreviewSource.swift",
+   "line_start": 20,
+   "line_end": 21,
+   "claim": "Hard Rule 4 (\"map each domain enum once \u2014 put the second site as a computed property on the type\") is violated: the case \u2192 adapter mapping lives in four places, none on this type.",
+   "question": null
+  },
+  {
+   "fid": 218,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/RouteFingerprint.swift",
+   "line_start": 12,
+   "line_end": 14,
+   "claim": "**Identity collapse for external routes contradicts the binding spec and breaks the write-guard invariant.**  `docs/superpowers/specs/2026-07-18-apple-music-fade-primary-design-implemented.md` \u00a73.6 st",
+   "question": null
+  },
+  {
+   "fid": 219,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/RouteFingerprint.swift",
+   "line_start": 15,
+   "line_end": 15,
+   "claim": "**Unescaped, externally-influenced delimiter in a persisted security-relevant key.**  `portUID` is an accessory-supplied string (`AVAudioSessionPort.uid` \u2014 USB DAC UIDs embed the device's advertised n",
+   "question": null
+  },
+  {
+   "fid": 220,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/RouteFingerprint.swift",
+   "line_start": 11,
+   "line_end": 11,
+   "claim": "**`isExternal` is a parallel boolean that duplicates classification already owned elsewhere, and both call sites derive it differently.**  `AudioRouteObserver.swift:123` passes `currentOutput != .buil",
+   "question": null
+  },
+  {
+   "fid": 221,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+   "line_start": 22,
+   "line_end": 22,
+   "claim": "carPlay is declared here but no producer can ever create it.",
+   "question": null
+  },
+  {
+   "fid": 222,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+   "line_start": 36,
+   "line_end": 40,
+   "claim": "This classification fails open in the cases where the warning matters most.",
+   "question": null
+  },
+  {
+   "fid": 223,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Route.swift",
+   "line_start": 11,
+   "line_end": 11,
+   "claim": "The = \\\"\\\" default makes [no endpoint identity] a value that compiles silently at every new call site, while identity here is load-bearing: it is the key of AppSettings.duckFallbackRoutes and the pred",
+   "question": null
+  },
+  {
+   "fid": 224,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Setlist.swift",
+   "line_start": 16,
+   "line_end": 16,
+   "claim": "`boardIDs` is stored verbatim, so a `Setlist` can hold the same `BoardID` twice \u2014 every sibling aggregate in this module guards its child-ID set (`Board` \u2192 `duplicateTileID`, `Roster` \u2192 `duplicatePlay",
+   "question": "Q7"
+  },
+  {
+   "fid": 225,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Setlist.swift",
+   "line_start": 17,
+   "line_end": 17,
+   "claim": "`colorTag` is the only optional free-text field in the domain stored without normalization: `Cue` uses `colorTag?.trimmedOrNil` and `Roster` maps blank `season`/`notes` to `nil` (Roster.swift:27-28).",
+   "question": null
+  },
+  {
+   "fid": 226,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+   "line_start": 28,
+   "line_end": 30,
+   "claim": "The wait guard only rejects negatives, so `Double.nan` and `Double.infinity` pass as valid domain state (`nan < 0` is `false`, and `+inf` is not `< 0`).",
+   "question": "Q7"
+  },
+  {
+   "fid": 227,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+   "line_start": 24,
+   "line_end": 24,
+   "claim": "`validateSteps` never checks step-ID uniqueness, so `Script(steps: [a, a])` (two steps sharing a `UUID`) is accepted even though `ScriptStep.id` is the step's identity throughout the stack: - `ScriptS",
+   "question": "Q7"
+  },
+  {
+   "fid": 228,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+   "line_start": 42,
+   "line_end": 42,
+   "claim": "Invariant enforcement boundary is wrong: `ScriptStep` is `public` and non-throwing, so any caller can mint a step with `orderIndex: -5` or `.wait(seconds: -1)`, and the *only* gate is `Script.init`.",
+   "question": null
+  },
+  {
+   "fid": 229,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Script.swift",
+   "line_start": 20,
+   "line_end": 20,
+   "claim": "`colorTag` is stored verbatim while the sibling aggregate normalizes it: `Cue.swift:40` uses `colorTag?.trimmedOrNil`.",
+   "question": null
+  },
+  {
+   "fid": 230,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+   "line_start": 5,
+   "line_end": 7,
+   "claim": "`SessionEvent` has no monotonic ordering field: `id` (random UUIDv4) + wall-clock `timestamp` are the only keys.",
+   "question": null
+  },
+  {
+   "fid": 231,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+   "line_start": 45,
+   "line_end": 45,
+   "claim": "The payload here is the *whole* `RouteSnapshot`, but `Hashable` equality is not preserved across the persistence boundary: `SessionEventRecordMapping.encode(routeChanged:)` (line 246-252) writes only ",
+   "question": null
+  },
+  {
+   "fid": 232,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+   "line_start": 48,
+   "line_end": 48,
+   "claim": "Same class of defect as `routeChanged`: `EntitlementSnapshot` also carries `proDisplayPrice`, but encode persists only `entitlementIsPro` + `entitlementLastVerifiedAt` (SessionEventRecordMapping.swift",
+   "question": null
+  },
+  {
+   "fid": 233,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+   "line_start": 41,
+   "line_end": 41,
+   "claim": "This structured payload (count + Int64 bytes) is the only case here that has to be smuggled through the shared free-form `messageText` column: encode writes `\"count=\\(count),bytesFreed=\\(bytesFreed)\"`",
+   "question": null
+  },
+  {
+   "fid": 234,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Session.swift",
+   "line_start": 56,
+   "line_end": 57,
+   "claim": "Two problems in this tail block: 1.",
+   "question": null
+  },
+  {
+   "fid": 235,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SkippedLibraryRecord.swift",
+   "line_start": 7,
+   "line_end": 7,
+   "claim": "This enum is shared by two ports with different cardinalities: `LibraryLoadReport` can produce all eight kinds, but `SkippedBackupRecord` (Ports/BackupPort.swift:47-55) can never be `.playHistory` or ",
+   "question": null
+  },
+  {
+   "fid": 236,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SkippedLibraryRecord.swift",
+   "line_start": 24,
+   "line_end": 24,
+   "claim": "`recordID` is documented (via the type comment \"One row \u2026\") as identifying the skipped row, but it is not unique for `.sessionEvent`: `SessionEventRecord.id` deliberately carries no `.unique` constrai",
+   "question": null
+  },
+  {
+   "fid": 237,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SkippedLibraryRecord.swift",
+   "line_start": 25,
+   "line_end": 25,
+   "claim": "`reason` is an untyped, free-form string whose only producer is `String(describing: error)` over `PersistenceError.mappingFailed(...)` (Support/RowValidation.swift:22).",
+   "question": null
+  },
+  {
+   "fid": 238,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SkippedLibraryRecord.swift",
+   "line_start": 39,
+   "line_end": 39,
+   "claim": "Nothing in this type's contract states (or enforces) that `skipped` covers every kind that was scanned, and the only producer builds the array by hand-concatenating eight expressions (LibrarySnapshotI",
+   "question": null
+  },
+  {
+   "fid": 239,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SkippedLibraryRecord.swift",
+   "line_start": 38,
+   "line_end": 38,
+   "claim": "`Hashable` on a value whose array element order is not canonical is a trap: the single producer fetches each record type with no `sortBy` (LibrarySnapshotImpl.swift:84-107), so within a kind the order",
+   "question": null
+  },
+  {
+   "fid": 240,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Roster.swift",
+   "line_start": 48,
+   "line_end": 49,
+   "claim": "`colorTag` is the only optional text field on `Roster` that skips the aggregate's blank-normalization: `season` and `notes` are trimmed and collapsed empty\u2192`nil`, but `colorTag` is stored verbatim.",
+   "question": null
+  },
+  {
+   "fid": 241,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Roster.swift",
+   "line_start": 113,
+   "line_end": 115,
+   "claim": "`Player.init` stores every text field raw.",
+   "question": null
+  },
+  {
+   "fid": 242,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Roster.swift",
+   "line_start": 37,
+   "line_end": 39,
+   "claim": "The order-index guard enforces only the ceiling.",
+   "question": null
+  },
+  {
+   "fid": 243,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Roster.swift",
+   "line_start": 42,
+   "line_end": 43,
+   "claim": "These three lines hand-roll the blank-normalization rule that `StringProtocol.trimmedOrNil` exists to centralize (its doc comment: \"was independently reimplemented at seven sites; this is the one\"), a",
+   "question": null
+  },
+  {
+   "fid": 244,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Roster.swift",
+   "line_start": 177,
+   "line_end": 177,
+   "claim": "`Player.copying(orderIndex:)` is public and non-throwing, so it can produce a `Player` that violates the ceiling the aggregate enforces (and `copying(name:)` can produce a blank name).",
+   "question": null
+  },
+  {
+   "fid": 245,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TileIcon.swift",
+   "line_start": 35,
+   "line_end": 40,
+   "claim": "`normalize` collapses three distinct states into one `nil`: \"no icon chosen\", \"stored value not in current catalog\", and \"empty string\".",
+   "question": null
+  },
+  {
+   "fid": 246,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TileIcon.swift",
+   "line_start": 31,
+   "line_end": 31,
+   "claim": "`knownSymbols` is derived purely from the *current* catalog and is the gate used by the persistence read path, so the catalog has no compatibility story.",
+   "question": null
+  },
+  {
+   "fid": 247,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TileIcon.swift",
+   "line_start": 8,
+   "line_end": 11,
+   "claim": "This namespace models icons as loose `(String, String)` pairs and hands `String` across every boundary, so \"is this a valid icon?\" is an invariant no type enforces and that each consumer must re-deriv",
+   "question": null
+  },
+  {
+   "fid": 248,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 12,
+   "line_end": 13,
+   "claim": "`case none` shadows `Optional.none`, and these enums are already consumed in optional positions, so `.none` at a call site silently means `nil` instead of \"gesture unassigned\".",
+   "question": null
+  },
+  {
+   "fid": 249,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 46,
+   "line_end": 48,
+   "claim": "Same `Optional.none` collision as `TapAction`, but here the two meanings are genuinely distinct in production state: `AudioSessionEffectExecutor` tracks `private(set) var currentPolicy: DuckingPolicy?",
+   "question": null
+  },
+  {
+   "fid": 250,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 33,
+   "line_end": 33,
+   "claim": "This copy states unconditionally that Stop fades over the Fade Out setting, but Stop/Pause follow the global `TransitionMode`, which is right in this same file: `.off` is an \"honest hard cut\" and `.du",
+   "question": null
+  },
+  {
+   "fid": 251,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 30,
+   "line_end": 32,
+   "claim": "`displayDescription` has no production reader.",
+   "question": null
+  },
+  {
+   "fid": 252,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 60,
+   "line_end": 61,
+   "claim": "The doc block is the binding cross-platform contract for this setting, and two claims do not match the shipped code.",
+   "question": null
+  },
+  {
+   "fid": 253,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 71,
+   "line_end": 74,
+   "claim": "These raw values are the persistence key (`AppSettingsRecord.transitionModeRaw` / `duckingPolicyRaw` written directly in AppSettingsRecordMapping.swift:30-31 and read back through `decodedOrDefault`, ",
+   "question": null
+  },
+  {
+   "fid": 254,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/SettingsEnums.swift",
+   "line_start": 17,
+   "line_end": 19,
+   "claim": "The user-visible strings here are hard-coded English returned as `String`.",
+   "question": null
+  },
+  {
+   "fid": 255,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Tile.swift",
+   "line_start": 61,
+   "line_end": 65,
+   "claim": "`replacing(content:)` is the shared mutator for tile re-binding, but it keeps `cueIndex` and `trimOverride` verbatim when the content identity changes, so it can produce a tile that violates the type'",
+   "question": null
+  },
+  {
+   "fid": 256,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Tile.swift",
+   "line_start": 72,
+   "line_end": 79,
+   "claim": "Hard Rule 3 (`cueIndex` is a parallel field to `content`): the cursor only means something for `.sequence`, yet the model admits `.cue`/`.empty` with any `Int`, and nothing enforces it at construction",
+   "question": null
+  },
+  {
+   "fid": 257,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Tile.swift",
+   "line_start": 103,
+   "line_end": 108,
+   "claim": "Applying filesystem path semantics to a display string silently corrupts titles that contain a separator.",
+   "question": null
+  },
+  {
+   "fid": 258,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/Tile.swift",
+   "line_start": 89,
+   "line_end": 91,
+   "claim": "An empty `cue.name` yields an empty display title: `stripAudioExtension(from: \"\")` falls through the `!ext.isEmpty` guard and returns `\"\"`, so the tile label, the board-grid title and the copy payload",
+   "question": null
+  },
+  {
+   "fid": 259,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TileInteraction.swift",
+   "line_start": 29,
+   "line_end": 31,
+   "claim": "`restartImmediate` does **not** perform an \"immediate stop on the prior\".",
+   "question": null
+  },
+  {
+   "fid": 260,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TileInteraction.swift",
+   "line_start": 21,
+   "line_end": 24,
+   "claim": "The claim is stronger than the implementation.",
+   "question": null
+  },
+  {
+   "fid": 261,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TileInteraction.swift",
+   "line_start": 14,
+   "line_end": 14,
+   "claim": "`Codable` is a second, **non-tolerant** decode mapping site for this enum, sitting next to the intended one at line 46 and diverging from it.",
+   "question": null
+  },
+  {
+   "fid": 262,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TimeFormatting.swift",
+   "line_start": 27,
+   "line_end": 28,
+   "claim": "The formatter is not a total function: `Int(clamped)` traps (SIGILL / exit 133) for any finite `time` at or above `Double(Int.max)`, and the `isFinite` branch explicitly lets such values through.",
+   "question": "Q7"
+  },
+  {
+   "fid": 263,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TimeFormatting.swift",
+   "line_start": 24,
+   "line_end": 25,
+   "claim": "The safety argument in this paragraph names only `LocalAudio.durationSeconds` as the ceiling owner, but the values reaching this formatter are broader: `CueTransport.durationSeconds` also returns `App",
+   "question": null
+  },
+  {
+   "fid": 264,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TimeFormatting.swift",
+   "line_start": 31,
+   "line_end": 31,
+   "claim": "Confirmed: the \"only M:SS formatter\" claim holds \u2014 `FormatHelpers.formatDuration` is gone and `TrimEditorTimecode.formatClock` delegates here; `formatTimePrecise` is a distinct `m:ss.t` format and is ",
+   "question": null
+  },
+  {
+   "fid": 265,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionStyle.swift",
+   "line_start": 20,
+   "line_end": 20,
+   "claim": "`TransitionStyle` is documented (lines 6-8) as the *single concrete instruction* that lets adapters stop re-deriving the mode, but `fade(seconds:)` carries a raw, unvalidated `TimeInterval`, so the co",
+   "question": null
+  },
+  {
+   "fid": 266,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "line_start": 5,
+   "line_end": 5,
+   "claim": "`TrimRange` advertises `Codable`, but because the stored properties are plain `Double`s and no `init(from:)` is written, the compiler-synthesized `Decodable` assigns `startSeconds`/`endSeconds` direct",
+   "question": "Q7"
+  },
+  {
+   "fid": 267,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "line_start": 20,
+   "line_end": 22,
+   "claim": "The initializer only compares `endSeconds` against `sourceDurationSeconds`; it never validates that any of the three inputs are finite/positive.",
+   "question": "Q7"
+  },
+  {
+   "fid": 268,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "line_start": 45,
+   "line_end": 49,
+   "claim": "`try?` here converts an invariant violation into a silent `nil`.",
+   "question": null
+  },
+  {
+   "fid": 269,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "line_start": 70,
+   "line_end": 70,
+   "claim": "The self-validating trick makes the returned value indistinguishable from a source-bounds-validated one: `TrimRange(10\u202610000)` compares equal to and hashes the same as a legitimately validated range, ",
+   "question": null
+  },
+  {
+   "fid": 270,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TrimRange.swift",
+   "line_start": 57,
+   "line_end": 57,
+   "claim": "The 'single owner / R1' claim is only partly true, which is exactly the false-confidence problem AGENTS.md Hard Rule 12 warns about.",
+   "question": null
+  },
+  {
+   "fid": 271,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
+   "line_start": 66,
+   "line_end": 68,
+   "claim": "**`restoreVerifyTolerance` (0.04) is smaller than one device step, so it cannot absorb the quantization it exists to absorb.** The doc comment itself states \"16-step device quantization makes exact ro",
+   "question": null
+  },
+  {
+   "fid": 272,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
+   "line_start": 54,
+   "line_end": 55,
+   "claim": "`rampFloorFraction` is dead configuration and its documented semantics are never realised.",
+   "question": null
+  },
+  {
+   "fid": 273,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
+   "line_start": 76,
+   "line_end": 77,
+   "claim": "The device-volume quantum (1/16) has no single source: it is declared here under a watchdog-specific name (\"One device step\") while every other step-derived value in this block re-hardcodes the arithm",
+   "question": null
+  },
+  {
+   "fid": 274,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/TransitionTiming.swift",
+   "line_start": 52,
+   "line_end": 53,
+   "claim": "Two clamp sites for the same quantity, and the upper half of this range is unreachable.",
+   "question": null
+  },
+  {
+   "fid": 275,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/WalkoutPlaylist.swift",
+   "line_start": 89,
+   "line_end": 92,
+   "claim": "Multi-offset removal breaks the documented \"adjacent fallback\": when the armed cue is removed *together with cues before it*, `resolvedIndex(for:)` returns the unadjusted pre-removal `index`, so `init",
+   "question": null
+  },
+  {
+   "fid": 276,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/WalkoutPlaylist.swift",
+   "line_start": 143,
+   "line_end": 148,
+   "claim": "The raw-`index` fallback is only correct when nothing before the armed cue was removed, yet this helper is shared by all three mutators and hard-codes `return index`.",
+   "question": null
+  },
+  {
+   "fid": 277,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/WalkoutPlaylist.swift",
+   "line_start": 108,
+   "line_end": 110,
+   "claim": "`moving(from:to:)` is the only mutator here that trusts its input offsets: `moved[$0]` and `moved.remove(at: sourceIndex)` trap with \"Index out of range\" if `source` contains an offset `>= ids.count` ",
+   "question": null
+  },
+  {
+   "fid": 278,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Support/StringProtocol+TrimmedOrNil.swift",
+   "line_start": 8,
+   "line_end": 8,
+   "claim": "The doc comment states this is the single repo-wide rule (\"Q7 \u2014 was independently reimplemented at seven sites; this is the one\"), but the same trim-then-collapse-to-nil rule is still hand-rolled at s",
+   "question": null
+  },
+  {
+   "fid": 279,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Support/StringProtocol+TrimmedOrNil.swift",
+   "line_start": 7,
+   "line_end": 7,
+   "claim": "This helper normalizes at the persistence/value-type boundary, but it is also used as a per-keystroke text normalizer in `DropoutsEditor.swift:333-338` (`get: { displayDropout.label ??",
+   "question": null
+  },
+  {
+   "fid": 280,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Support/StringProtocol+TrimmedOrNil.swift",
+   "line_start": 10,
+   "line_end": 11,
+   "claim": "`CharacterSet.whitespacesAndNewlines` is deliberately narrow: space, tab, \\n, \\r, \\v, \\f.",
+   "question": null
+  },
+  {
+   "fid": 281,
+   "verdict": "rejected",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueFeatureSupport.swift",
+   "line_start": 11,
+   "line_end": 11,
+   "claim": "`gainAdjustment` is the only axis with a default, and the default is the *most capable* level (`.deterministic`).",
+   "question": null
+  },
+  {
+   "fid": 282,
+   "verdict": "real",
+   "path": "BenchHypeKit/Sources/BenchHypeDomain/Values/CueFeatureSupport.swift",
+   "line_start": 40,
+   "line_end": 42,
+   "claim": "`forTransport(_:)` has no production callers \u2014 a codebase search finds it referenced only from `CueFeatureSupportTests` (lines 29, 50, 56, 69), including the \"agreement\" tests whose sole job is to ass",
+   "question": null
+  }
+ ]
 }
