@@ -93,7 +93,10 @@ def is_test_file(name: str) -> bool:
             "_test.rs",
             "tests.swift",
             "test.swift",
-            "spec.swift",
+            # "spec.swift" deliberately absent: Quick specs live under Tests/ (caught by
+            # IGNORE_DIRS), while domain types named *Spec.swift (BenchHype's
+            # PlaybackSpec.swift) are production source the 2026-09-03 OCR corpus
+            # showed every scanner was silently skipping.
             ".test.ts",
             ".spec.ts",
             ".test.tsx",

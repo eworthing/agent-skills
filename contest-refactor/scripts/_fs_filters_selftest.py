@@ -55,6 +55,16 @@ def main() -> int:
         "exclusion above comes from the Tests/ directory check, not this one",
     )
 
+    check(
+        not ff.is_test_file("PlaybackSpec.swift"),
+        "a domain type named *Spec.swift is production source, not a Quick spec -- "
+        "Quick specs are excluded by their Tests/ directory, never by this suffix",
+    )
+    check(
+        ff.is_test_file("PlaybackSpecTests.swift") and ff.is_test_file("test_ledger.py"),
+        "the Tests.swift suffix and the test_ prefix must still match",
+    )
+
     got = ff.normalize_roots(["b/", "a", "a"])
     check(
         got == ["a", "b"],
