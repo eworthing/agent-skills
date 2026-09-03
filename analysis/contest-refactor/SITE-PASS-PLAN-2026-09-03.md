@@ -1,4 +1,4 @@
-# Site pass — a per-file correctness pass for the Critic (plan, 2026-09-03, rev 2 — after peer round 1, opencode qwen3.8-flash)
+# Site pass — a per-file correctness pass for the Critic (plan, 2026-09-03, rev 3 — after peer rounds 1–2, opencode qwen3.8-flash)
 
 **Goal.** contest-refactor finds, on its own, the class of real defects OCR finds, in files the
 Critic already reads. OCR stays the benchmark, never a component.
@@ -38,9 +38,9 @@ scoped rule only.
 `site_pass` epoch):
 
 ```
-"site_pass": {
-  "roster": {"paths": ["…/AppBuildInfo.swift", "…/BackupSettingsView.swift", …],
-             "digest": "<sha256 of the sorted path list>"},     // pinned at Step-1 emit
+"discovery": { …, "scope": "BenchHypeKit/Sources/BenchHypeSettingsFeature",
+  "site_pass_roster": {"paths": [ "…/AppBuildInfo.swift", … ], "digest": "<sha256 hex>"} },
+"site_pass": {                                   // per loop; never carried forward
   "files": [
     {"path": "BenchHypeKit/Sources/BenchHypeSettingsFeature/BackupSettingsView.swift",
      "reads": "full" | "partial:<line-ranges>",
@@ -54,17 +54,24 @@ scoped rule only.
 }
 ```
 
-The roster is the Critic's own enumeration of first-party source files under
-`discovery.source_roots` with `coverage_ledger.py`'s filter, **pinned into the artifact** the way the
-coverage ledger pins its denominator, so the gate never depends on the live tree at a later phase
-(the Tier-3 hook runs the full battery at `postchallenge-precommit`, after Step 3 may have added or
-renamed in-scope files).
+The roster is **script-emitted, never hand-built**: new `scripts/site_pass_roster.py . --scope
+<dir> --json` reuses `coverage_ledger.py`'s enumerator and `_fs_filters` and prints
+`{"paths": [...], "digest": "..."}` — repo-relative POSIX paths, sorted by byte order,
+`\n`-joined, UTF-8, sha256 hex. Step 0 (main agent) runs it beside the hotspot scan and assigns the
+decoded object unchanged to `discovery.site_pass_roster` (startup sub-step 7 doctrine: never
+reconstruct field-by-field); preflight checks the persisted object equals a fresh emission, the
+same way it checks the hotspot object. The roster is pinned in `discovery`, so G52 never depends
+on the live tree at a later phase (the Tier-3 hook runs the full battery at
+`postchallenge-precommit`, after Step 3 may have added or renamed in-scope files). The ledger
+itself is **per loop**: Step 6.5 runs every loop and `site_pass` is re-emitted, not copied forward
+like `discovery`.
 
-Gate **G52** (pre-emit, epoch `site_pass`, **report-only until W2 passes**): artifact-internal
-only — `files[].path` set equals `roster.paths` exactly (no missing, extra, or duplicate); every
-entry's `questions` key set equals {Q1…Q8}; `finding_ids` non-empty iff `status == "finding"`,
-every id present in `findings`; `reason` non-empty iff `not_applicable`; `roster.digest` matches
-its list. Whether the pinned roster matches the live enumeration is a Step-1 procedure obligation
+Gate **G52** (pre-emit, epoch `site_pass`, **report-only until W2 passes** — diagnostics, never an
+Issue, with the promotion bar written in `_artifact_site_pass.py` per the G48 precedent):
+artifact-internal only — `site_pass.files[].path` set equals `discovery.site_pass_roster.paths`
+exactly (no missing, extra, or duplicate); every entry's `questions` key set equals {Q1…Q8};
+`finding_ids` non-empty iff `status == "finding"`, every id present in `findings`; `reason`
+non-empty iff `not_applicable`; `roster.digest` re-derives from `paths` with the encoding above. Whether the pinned roster matches the live enumeration is a Step-1 procedure obligation
 measured by W2's grader, not a gate. Markdown mirror: `## Site pass` table, one row per file.
 No citation is required on a `clean` row: theater is measured by the grader's recall, not by the
 gate (peer-round-1 N6).
@@ -82,6 +89,9 @@ its corpus provenance so a later reviewer can retire it on evidence):
 | Q6 Copy tells the truth | User-facing copy, help entries and doc comments name symbols, shortcuts, gestures and navigation paths that exist in the command/gesture layer | 54–58, 60, 21, 43; domain tier-3 doc rows fixed in BenchHype `d0a3d1ed` (eight doc comments) |
 | Q7 Construction invariants | Value inits and `validate*`/`make*` bound every numeric and collection field on both sides, NaN/inf included; every `Codable` path goes through the throwing init | domain class V (202, 204, 224, 262, 266); small4 0, 85, 87 |
 | Q8 Runtime, not test-only | An invariant the docs call enforced is enforced on a production path, not only in a test target; `audit_dead_surface.py` `test_only` rows are leads | 80, 81, 83–86 |
+
+A site may inform more than one question (45 appears under Q1 and Q2); the manifest's
+`question` field is the primary attribution and uniqueness is on `fid` only.
 
 **Do-not-flag**, co-located in the same file (the DD-13 form, ten signatures from the 30
 rejections): hardening for infrastructure the repo does not have (localization, plist shapes);
@@ -116,6 +126,12 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   already touch (known today: F-026's evidence `SettingsScreenContext.swift:10-26` intersects
   rejected site 65 at :14-15). Prints hit/miss per site with the finding id. Selftest with a
   hand-built artifact covering intersect, single-line ± 5, and the exclusion set. Exit 0 always.
+  `--json` carries, per artifact: hits/misses with finding ids, the arm/rep label passed via
+  `--label`, and `roster_gap` = manifest site paths ∉ `discovery.site_pass_roster.paths`, which is
+  how a Critic that under-enumerates becomes visible before W3 at zero loop cost.
+- Copy the baseline artifact (the archived flash loop from BenchHype's `REVIEW_HISTORY.json`) into
+  `evals/ocr-corpus/baselines/benchhype-settings-flash-2026-09-03.json` so the exclusion set is
+  reproducible from this repo alone.
 - Grade the archived flash dry-run (`run-2026-09-03-b05b…` in `REVIEW_HISTORY.json`): expected
   0/29 real; the rejected-site hits it produces **are** the exclusion set, pre-registered here
   before any treat rep runs.
@@ -126,7 +142,8 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   exclusion set recorded in this plan.
 
 **W1 — Site pass (prose + schema + gate).**
-- `references/site-pass.md` (new, Critic-only). `method.md` sub-step 6b. `output-format-json.md`
+- `references/site-pass.md` (new, Critic-only). `method.md` Step 6.5. `scripts/site_pass_roster.py`
+  + selftest; `startup.md` Step 0 runs it and preflight checks persisted-equals-fresh. `output-format-json.md`
   `site_pass` shape; `output-format-markdown.md` `## Site pass` section; `output-format-migrations.md`
   "adding a required field" row.
 - `startup.md` sub-step 2 records `discovery.scope`; `output-format-json.md` documents it;
@@ -136,27 +153,37 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
   referenced); `_artifact_site_pass.py` + `_artifact_site_pass_selftest.py`; `_ruleset_epoch.py`
   `SITE_PASS` epoch bound to the landing rev, prose-then-gate. **G52 stays report-only through
   W2** and is promoted to Issue only in W3 on a passed bar.
-- `_token_budget_selftest.py` golden load-set gains `site-pass.md` on the Critic path. The per-loop
-  ceilings are **not** raised in W1: the new file may exceed them, and `token-budget.py --check`
-  will fail; W1's done-when tolerates exactly that one failure, annotated. The raise lands in W3
-  with the measured lift beside it (owner constraint, line 16).
-- Fixtures: one `evals/fixtures/` artifact with a valid `site_pass`, one with a missing scoped file
-  (G52 Issue), one unscoped with `site_pass: null` (allowed).
+- `_token_budget_selftest.py` golden load-set gains `site-pass.md` on the Critic path. **Ceiling
+  rule, one and consistent:** `token-budget.py --check` has no ceiling waiver, so W1 raises the
+  apple and generic per-loop ceilings by the measured delta of `site-pass.md` plus Step 6.5, in
+  the W1 commit, annotated `provisional — keyed to W2 disposition (SITE-PASS plan)`. The loop-path
+  cost is real from W1 even before the lift is. W2's negative disposition reverts the prose and
+  lowers the ceilings back in the same commit; W3's promotion re-annotates them with the measured
+  lift. Budget guard is green at every commit.
+- Fixtures (G48 pattern): one `evals/fixtures/` artifact with a valid `site_pass` (no diagnostic),
+  one with a missing scoped file that asserts the **report-only diagnostic prints and no Issue**,
+  one unscoped with `site_pass: null` (allowed). W3's promotion commit flips the second fixture's
+  expectation to a real G52 Issue.
 - Done when: validate-repo, validate-fixtures, all `_*_selftest.py`, ruff, budget guard green;
   writing-for-agents pass on the new prose (context pointer in the load matrix, no-op hunt,
   co-location of do-not-flag with the questions).
 
-**W2 — Measure (opencode flash, ~$3).**
+**W2 — Measure (opencode flash; nominal 6 reps + 1 generalization ≈ $2.4, worst case with 3 replacements and one arm re-run ≈ $4).**
 - Both arms run on the same target tree, `/Users/Shared/git/BenchHype-blind` (`blind-judge` @
   `909164fb`), with the same reset between reps (`git checkout -- . && git clean -fd` restricted
   to the six bookkeeping files) — never the main checkout, whose registry would contaminate the
   judge (`--reset` does not blind). **3 treat reps, 3 control reps.** Control skill rev = the last
   `main` commit before W1's first prose commit, checked out in an agent-skills worktree with the
   `~/.config/opencode/skills/contest-refactor` symlink swapped for the rep and restored after.
-- Trial validity per `canon/trial-validity.toml`, pre-registered: a rep is invalid on
-  `rate_limited`, `auth_failure`, `infra_timeout`, or `artifact_lost`; invalid reps are re-run;
-  the run is void if either arm exceeds `max_invalid_rate_per_arm` (0.20) or the arms differ by
-  more than `max_between_arm_asymmetry` (0.10). Classification recorded per rep.
+- Trial validity per `canon/trial-validity.toml`, pre-registered with replacement semantics
+  (at n=3 one unreplaced invalid rep is 0.33 > 0.20 and voids the arm by the strict-greater rule,
+  so the semantics matter): a rep classified `rate_limited`, `auth_failure`, `infra_timeout`, or
+  `artifact_lost` is **replaced 1-for-1 immediately**; the void caps (0.20 per arm, 0.10 between
+  arms) are computed over the **final scored reps**, so a clean replacement leaves the arm at
+  rate 0; a replacement that itself fails is fatal for the arm — the run is **void**. Void
+  disposition: one re-run of the affected arm (cost line above); if that is void too, W2 is
+  deferred, W1 stays report-only with its provisional ceilings dated, and the DD-18 row records
+  "void, not measured". Every classification is recorded per rep.
 - **Ship bar:** treat real-site hits ≥ 10/29 on at least 2 of 3 reps; rejected-site hits outside
   the W0 exclusion set = 0 on every treat rep; the four rubric findings F-025…F-028 (or same-site
   equivalents) present on ≥ 2 treat reps — the pass adds, it must not displace the rubric.
@@ -169,8 +196,9 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
 - Done when: the bar table is in the run-log with per-site hit/miss for every rep.
 
 **W3 — Promotion and records (only on a passed bar; otherwise the negative disposition above).**
-- Promote G52 from report-only to Issue at the recorded epoch rev; raise the apple and generic
-  ceilings in `token-budget.py` by the measured delta, citing the W2 table in the commit.
+- Promote G52 from report-only to Issue at the recorded epoch rev (promotion bar in
+  `_artifact_site_pass.py`), flip the diagnostic fixture to an Issue expectation, and re-annotate
+  the ceilings from provisional to measured, citing the W2 table in the commit.
 - Run-log section; detection-domains **DD-18 Site pass** row with the bar table and the DD-01
   reopen rationale; `startup.md` `--reset` description gains "keeps the registry and history —
   a fresh judge needs a first-install tree (worktree or `--purge`)"; memory.
@@ -188,13 +216,12 @@ do-not-flag block; the Critic owns the ledger and the adopt-or-falsify of helper
    ceiling OCR reached with a validation pass was 29/29 by construction. Raise the bar after the
    first pass ships, not before.
 
-## Peer-review questions (round 2)
+## Peer-review questions (round 3)
 
-1. Q5 (sibling parity) is the least crisp question and the largest cluster. Is "name the sibling
-   that is right" a sufficient precision anchor, or should Q5 be split by shape (modifier parity,
-   index-vs-ID, accessibility container)?
-2. Is pinning the roster into the artifact (B4 fix) enough, or does a Step-1 report-only check
-   comparing the pinned roster to the live enumeration also need a home so a Critic that under-
-   enumerates is visible before W2?
-3. With G52 report-only through W2, is there any path by which W1's prose alone changes loop
-   behaviour on a production run before the bar is met? If so, should W1 land behind a flag?
+Round-2 answers adopted: Q5 stays unified until W2's per-site table says otherwise; roster gap is
+a grader output, not a gate; no flag on W1. Remaining:
+
+1. Moving the roster into `discovery` makes preflight the enforcement point for its fidelity, the
+   same as `hotspot_scan`. Is anything lost by having no Step-1-side check at all?
+2. Is a provisional ceiling raise in W1 (reverted on a missed bar) acceptable under the owner's
+   "value first" rule, given the token cost is incurred by the treatment arm regardless?
