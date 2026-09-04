@@ -13192,6 +13192,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -13306,6 +13328,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -13420,6 +13464,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16257,6 +16323,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16319,6 +16407,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16355,6 +16465,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16443,6 +16575,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16661,6 +16815,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16723,6 +16899,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16785,6 +16983,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16847,6 +17067,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16883,6 +17125,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16919,6 +17183,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -16981,6 +17267,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17017,6 +17325,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17053,6 +17383,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17089,6 +17441,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17125,6 +17499,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17161,6 +17557,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17197,6 +17615,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17233,6 +17673,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17269,6 +17731,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17331,6 +17815,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17393,6 +17899,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17455,6 +17983,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17491,6 +18041,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17527,6 +18099,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17589,6 +18183,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17703,6 +18319,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17791,6 +18429,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17827,6 +18487,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17863,6 +18545,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17899,6 +18603,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17961,6 +18687,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -17997,6 +18745,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18059,6 +18829,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18095,6 +18887,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18131,6 +18945,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18217,6 +19053,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18303,6 +19161,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18339,6 +19219,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18375,6 +19277,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18411,6 +19335,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18447,6 +19393,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18561,6 +19529,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18649,6 +19639,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18685,6 +19697,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18773,6 +19807,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18809,6 +19865,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18845,6 +19923,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18881,6 +19981,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18917,6 +20039,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -18953,6 +20097,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19041,6 +20207,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19129,6 +20317,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19191,6 +20401,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19227,6 +20459,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19263,6 +20517,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19351,6 +20627,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19491,6 +20789,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19682,6 +21002,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19717,6 +21059,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19752,6 +21116,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19812,6 +21198,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -19873,6 +21281,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20013,6 +21443,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20049,6 +21501,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20293,6 +21767,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20381,6 +21877,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20469,6 +21987,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20505,6 +22045,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20671,6 +22233,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20733,6 +22317,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20769,6 +22375,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20805,6 +22433,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20841,6 +22491,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -20929,6 +22601,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21017,6 +22711,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21105,6 +22821,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21271,6 +23009,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21359,6 +23119,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21447,6 +23229,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21535,6 +23339,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21571,6 +23397,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21607,6 +23455,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21643,6 +23513,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21731,6 +23623,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21819,6 +23733,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21855,6 +23791,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21917,6 +23875,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -21979,6 +23959,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22015,6 +24017,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22051,6 +24075,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22138,6 +24184,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22174,6 +24242,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22210,6 +24300,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22246,6 +24358,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22282,6 +24416,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22318,6 +24474,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22354,6 +24532,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22390,6 +24590,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22478,6 +24700,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22540,6 +24784,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22576,6 +24842,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22612,6 +24900,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22648,6 +24958,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -22996,6 +25328,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23032,6 +25386,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23068,6 +25444,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23104,6 +25502,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23166,6 +25586,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23202,6 +25644,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23238,6 +25702,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23300,6 +25786,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23336,6 +25844,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23424,6 +25954,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23486,6 +26038,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23522,6 +26096,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23558,6 +26154,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23594,6 +26212,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23630,6 +26270,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23744,6 +26406,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23832,6 +26516,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -23972,6 +26678,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24008,6 +26736,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24070,6 +26820,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24132,6 +26904,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24272,6 +27066,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24412,6 +27228,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24526,6 +27364,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24952,6 +27812,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -24988,6 +27870,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25180,6 +28084,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25268,6 +28194,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25304,6 +28252,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25574,6 +28544,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25610,6 +28602,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 4,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25646,6 +28660,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25812,6 +28848,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25848,6 +28906,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -25962,6 +29042,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26024,6 +29126,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26086,6 +29210,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26200,6 +29346,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26262,6 +29430,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26298,6 +29488,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26464,6 +29676,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26604,6 +29838,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26639,6 +29895,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26724,6 +30002,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26809,6 +30109,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26920,6 +30242,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26956,6 +30300,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -26992,6 +30358,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27054,6 +30442,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27090,6 +30500,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27126,6 +30558,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27162,6 +30616,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27198,6 +30674,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27260,6 +30758,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27322,6 +30842,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27384,6 +30926,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27446,6 +31010,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27482,6 +31068,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27544,6 +31152,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27658,6 +31288,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27694,6 +31346,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27756,6 +31430,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27792,6 +31488,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27906,6 +31624,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -27969,6 +31709,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "RESOLVED_CURRENT_TREE",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28031,6 +31793,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28067,6 +31851,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28103,6 +31909,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28139,6 +31967,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28175,6 +32025,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28263,6 +32135,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28325,6 +32219,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28361,6 +32277,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28397,6 +32335,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28459,6 +32419,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28495,6 +32477,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28531,6 +32535,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28567,6 +32593,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28603,6 +32651,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28639,6 +32709,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28675,6 +32767,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28711,6 +32825,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28773,6 +32909,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28887,6 +33045,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28923,6 +33103,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -28985,6 +33187,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29021,6 +33245,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29057,6 +33303,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29093,6 +33361,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29129,6 +33419,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29165,6 +33477,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29227,6 +33561,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29315,6 +33671,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29429,6 +33807,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29491,6 +33891,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29527,6 +33949,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29563,6 +34007,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29807,6 +34273,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29843,6 +34331,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29931,6 +34441,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -29967,6 +34499,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30107,6 +34661,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 2,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30345,6 +34921,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30532,6 +35130,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30594,6 +35214,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30682,6 +35324,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": true,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30718,6 +35382,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30780,6 +35466,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true
+    },
+    "basis": "Current source still supports the cited code condition; prior validation note retained as corroborating evidence, not treated as a blind reproduction."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -30816,6 +35524,28 @@
    "dedup": {
     "absorbed_by": null,
     "pattern_cluster": null
+   },
+   "reality_check": {
+    "status": "CORROBORATED_GLOBAL_ANCHOR",
+    "confidence": "high",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": false
+    },
+    "basis": "Current file still contains the cited implementation anchor, but not within the recorded line range; treat as corroborated with citation-placement follow-up."
+   },
+   "ponytail_check": {
+    "status": "PASS",
+    "rung": 6,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false
+    },
+    "basis": "Bounded minimal_fix and focused test are present; no new layer or dependency is proposed."
    }
   },
   {
@@ -31000,5 +35730,34 @@
     "pattern_cluster": null
    }
   }
- ]
+ ],
+ "codex_sanity_check": {
+  "checked_at": "2026-09-04",
+  "scope": "comments where validation.verdict != REJECTED",
+  "method": "current-file existence and line-range checks, exact/global source-anchor checks, retained prior validation notes, and Ponytail minimal-fix/test-shape check",
+  "findings": {
+   "non_rejected": 215,
+   "corroborated_at_range": 177,
+   "corroborated_global_anchor": 37,
+   "resolved_current_worktree": 1
+  },
+  "ponytail": {
+   "pass": 215,
+   "rule": "minimal_fix and focused test present; no new layer or dependency proposed"
+  },
+  "selftests": {
+   "count": 90,
+   "failures": 0,
+   "log": "/tmp/contest-refactor-selftests-20260904.log"
+  },
+  "dedup_recheck": {
+   "total": 1112,
+   "unique_ids": 1112,
+   "id_range": "0-1111",
+   "missing_ids": [],
+   "duplicate_content_fingerprints": 0,
+   "absorbed": 0,
+   "pattern_clusters": 0
+  }
+ }
 }
