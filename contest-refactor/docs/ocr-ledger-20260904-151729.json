@@ -13194,28 +13194,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "high",
+    "status": "CONFIRMED_OPEN",
+    "confidence": "medium",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: Source plus IEEE-754 probe establish that Double(Int.max) rounds to 2^63; the Swift runtime probe was blocked by the compiler environment, so runtime trapping remains environment-limited.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 5,
+    "status": "SOUND_WITH_ENV_LIMITATION",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -13332,28 +13324,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "high",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: Malformed manifest with pre_fix_rev but no repo_env exits with KeyError/exit 1 instead of the documented usage error 2.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 6,
+    "status": "SOUND",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -13470,28 +13454,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "medium",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: Malformed manifest JSON exits with an uncaught JSONDecodeError/exit 1 instead of the documented usage error 2.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 2,
+    "status": "SOUND",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -16331,28 +16307,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "medium",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: Top-level JSON list config exits with AttributeError from cfg.setdefault instead of the refusal exit 2.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 2,
+    "status": "SOUND",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -16417,28 +16385,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "medium",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: Installed hook with --dry-run prints already-installed and never renders the documented dry-run output.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 5,
+    "status": "SOUND",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -16477,28 +16437,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "medium",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: Installed hook with an old command path prints already-installed and leaves the stale command unchanged.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 6,
+    "status": "SOUND",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -16917,28 +16869,20 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
+    "basis": "Independent current-tree test/source review reproduced the cited behavior: The selftest reads and parses review_history after a failed write without guarding the read, so a missing output raises instead of aggregating a failure.",
     "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+     "independent_test": true
+    }
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 6,
+    "status": "SOUND",
+    "basis": "The recorded correction is local and testable, with no new layer or dependency.",
     "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+     "minimal_fix_bounded": true,
+     "new_layer_or_dependency": false
+    }
    }
   },
   {
@@ -36028,12 +35972,12 @@
   },
   "method_status": "INVALIDATED_BY_REVIEW",
   "fresh_review": {
-   "reviewed": 20,
-   "confirmed_open": 20,
+   "reviewed": 27,
+   "confirmed_open": 27,
    "confirmed_fixed": 0,
    "rejected": 1,
-   "pending": 195,
-   "method": "blind field selection plus direct current-tree runtime probes and semantic duplicate comparison"
+   "pending": 188,
+   "method": "blind field selection plus direct current-tree tests, source control-flow checks, and semantic duplicate comparison"
   }
  }
 }
