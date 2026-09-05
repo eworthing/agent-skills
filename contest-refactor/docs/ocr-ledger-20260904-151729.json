@@ -25682,16 +25682,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "CONFIRMED_OPEN",
-    "confidence": "high",
-    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
-    "basis": "Independent source review confirmed restraint cases assert only exit 0 despite the module contract saying they must stay silent; violations/noise can therefore pass."
+    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true,
+     "independent_semantic_review": false
+    },
+    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
    },
    "ponytail_check": {
-    "status": "SOUND",
+    "status": "NOT_INDEPENDENTLY_EVALUATED",
     "rung": 4,
-    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
-    "basis": "Add one stderr/no-rule-tag assertion to the existing restraint helper; no new test layer is needed."
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false,
+     "independent_semantic_review": false
+    },
+    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
    }
   },
   {
@@ -26965,16 +26977,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "CONFIRMED_OPEN",
-    "confidence": "high",
-    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
-    "basis": "Independent source review confirmed a non-dict CURRENT_REVIEW reaches .get calls and escapes the controlled error path."
+    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true,
+     "independent_semantic_review": false
+    },
+    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
    },
    "ponytail_check": {
-    "status": "SOUND",
-    "rung": 6,
-    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
-    "basis": "Move validation before the atomic replacement, or stage both artifacts together; this is a local ordering fix with no new dependency."
+    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "rung": 5,
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false,
+     "independent_semantic_review": false
+    },
+    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
    }
   },
   {
@@ -27929,16 +27953,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "CONFIRMED_OPEN",
-    "confidence": "high",
-    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
-    "basis": "Independent source review confirmed RED cases generally assert expected-tag presence plus exit 1, not exclusivity; an over-firing validator can pass the stated exactly-one-rule contract."
+    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "confidence": "medium",
+    "checks": {
+     "path_exists": true,
+     "line_range_valid": true,
+     "exact_existing_code_anchor": false,
+     "current_claim_anchor": true,
+     "cited_range_claim_anchor": true,
+     "independent_semantic_review": false
+    },
+    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
    },
    "ponytail_check": {
-    "status": "SOUND",
+    "status": "NOT_INDEPENDENTLY_EVALUATED",
     "rung": 4,
-    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
-    "basis": "Add a compact unexpected-tag assertion to the existing RED helper; no new framework is needed."
+    "checks": {
+     "minimal_fix_present": true,
+     "focused_test_present": true,
+     "new_layer_or_dependency_detected": false,
+     "independent_semantic_review": false
+    },
+    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
    }
   },
   {
@@ -28599,28 +28635,16 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
-    "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
+    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
+    "basis": "Independent source review confirmed RED cases generally assert expected-tag presence plus exit 1, not exclusivity, so over-firing can pass the exactly-one-rule contract."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 4,
-    "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "status": "SOUND",
+    "rung": 6,
+    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
+    "basis": "The proposed local test/assertion correction is the smallest fix and needs no new dependency."
    }
   },
   {
@@ -28659,28 +28683,16 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
-    "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
+    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
+    "basis": "Independent source review confirmed RED cases generally assert expected-tag presence plus exit 1, not exclusivity, so over-firing can pass the exactly-one-rule contract."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 4,
-    "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
+    "basis": "Add a compact unexpected-tag assertion to the existing RED helper; no new framework is needed."
    }
   },
   {
@@ -28897,28 +28909,16 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
-    "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
+    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
+    "basis": "Independent source review confirmed a non-dict CURRENT_REVIEW reaches .get calls and escapes the controlled error path."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 5,
-    "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "status": "SOUND",
+    "rung": 6,
+    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
+    "basis": "The proposed local test/assertion correction is the smallest fix and needs no new dependency."
    }
   },
   {
