@@ -24939,15 +24939,10 @@
     "basis": "Independent source review confirmed bare substring presence can be satisfied by historical/default mentions rather than the live declaration, so the selftest can miss a default change."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
-    "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
+    "basis": "Anchoring the existing checks with a local regex is the smallest fix and adds no dependency."
    }
   },
   {
@@ -35963,9 +35958,9 @@
     "pending_fresh_review": 87
   },
   "ponytail": {
-    "pass": 123,
+    "pass": 124,
     "rule": "minimal_fix and focused test present; no new layer or dependency proposed",
-    "pending_fresh_review": 88
+    "pending_fresh_review": 87
   },
   "selftests": {
    "count": 90,
