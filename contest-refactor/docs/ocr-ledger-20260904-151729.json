@@ -28760,28 +28760,16 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "high",
-    "checks": {
-     "path_exists": true,
-     "line_range_valid": true,
-     "exact_existing_code_anchor": false,
-     "current_claim_anchor": true,
-     "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "checks": {"path_exists": true, "line_range_valid": true, "exact_existing_code_anchor": true, "current_claim_anchor": true, "cited_range_claim_anchor": true, "independent_semantic_review": true},
+    "basis": "Independent source scan confirmed PHASES_FILE is defined but load_phase_model rebuilds the same path inline and no importer references the constant; it is dead duplicated configuration."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
-    "rung": 5,
-    "checks": {
-     "minimal_fix_present": true,
-     "focused_test_present": true,
-     "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
-    },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "status": "SOUND",
+    "rung": 1,
+    "checks": {"minimal_fix_present": true, "focused_test_present": true, "new_layer_or_dependency_detected": false, "independent_semantic_review": true},
+    "basis": "Delete the unused constant; no replacement abstraction is needed."
    }
   },
   {
@@ -35995,13 +35983,13 @@
    "corroborated_global_anchor": 37,
    "resolved_current_worktree": 1,
     "independent_rejections": 4,
-    "independent_confirmations": 121,
-    "pending_fresh_review": 90
+    "independent_confirmations": 122,
+    "pending_fresh_review": 89
   },
   "ponytail": {
-    "pass": 120,
+    "pass": 121,
     "rule": "minimal_fix and focused test present; no new layer or dependency proposed",
-    "pending_fresh_review": 97
+    "pending_fresh_review": 90
   },
   "selftests": {
    "count": 90,
@@ -36027,11 +36015,11 @@
   },
   "method_status": "INVALIDATED_BY_REVIEW",
     "fresh_review": {
-    "reviewed": 125,
-    "confirmed_open": 121,
+    "reviewed": 126,
+    "confirmed_open": 122,
    "confirmed_fixed": 0,
     "rejected": 4,
-    "pending": 90,
+    "pending": 89,
    "method": "blind field selection plus direct current-tree tests, source control-flow checks, and semantic duplicate comparison"
   }
  }
