@@ -99,7 +99,7 @@ _CREDENTIAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
     (
         "generic API key (key=value)",
-        re.compile(r"(?i)api[_-]?key\s*[:=]\s*['\"][A-Za-z0-9]{16,}['\"]"),
+        re.compile(r"(?i)['\"]?api[_-]?key['\"]?\s*[:=]\s*['\"][A-Za-z0-9]{16,}['\"]"),
         # FP: highest in this table. A finding legitimately discussing *how* a
         # key is assigned can trip this if the discussion quotes a 16+ char
         # alnum-only placeholder value in the key-colon-quoted-value shape (an
@@ -117,14 +117,18 @@ _CREDENTIAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 # to near-random bytes that essentially never pass both checks.
 _BASE64_TOKEN_RE = re.compile(r"\b[A-Za-z0-9+/]{16,}={0,2}\b")
 
-# Concat-split transform: two adjacent quoted string literals joined by `+`
+# Concat-split transform: a run of two-or-more quoted string literals joined by `+`
 # ("simple string-concatenation split" only -- no other join style is attempted).
 # The `\\?` before each quote tolerates a JSON-escaped `\"` -- a JSON sink (e.g.
 # CURRENT_REVIEW.json's evidence[] string) serializes an embedded `"` as `\"`,
 # and without this the pattern only ever matched in the unescaped .md sinks.
-_CONCAT_RE = re.compile(
-    r"""\\?['"]([A-Za-z0-9/+=_.\-]+)\\?['"]\s*\+\s*\\?['"]([A-Za-z0-9/+=_.\-]+)\\?['"]"""
-)
+# Matched in two passes because a repeated capturing group only keeps its last
+# iteration in Python's re -- a 3+-way split needs every part extracted, not
+# just the first and last, so a non-capturing chain locates the run and a
+# capturing per-part regex re-scans just that span.
+_CONCAT_PART = r"""\\?['"][A-Za-z0-9/+=_.\-]+\\?['"]"""
+_CONCAT_PART_RE = re.compile(r"""\\?['"]([A-Za-z0-9/+=_.\-]+)\\?['"]""")
+_CONCAT_CHAIN_RE = re.compile(rf"""{_CONCAT_PART}(?:\s*\+\s*{_CONCAT_PART})+""")
 
 
 def _decode_base64_candidates(line: str) -> list[str]:
@@ -143,7 +147,7 @@ def _decode_base64_candidates(line: str) -> list[str]:
 
 
 def _concat_candidates(line: str) -> list[str]:
-    return [a + b for a, b in _CONCAT_RE.findall(line)]
+    return ["".join(_CONCAT_PART_RE.findall(chain)) for chain in _CONCAT_CHAIN_RE.findall(line)]
 
 
 def _scan_line(text: str) -> list[tuple[str, str]]:
@@ -178,7 +182,15 @@ def check_g44_credential_quarantine(artifact_dir: Path) -> list[Issue]:
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        except (OSError, UnicodeDecodeError) as e:
+            issues.append(
+                Issue(
+                    "G44",
+                    f"[G44-hit type=unreadable-sink sink={sink}] cannot scan sink "
+                    f"({type(e).__name__}) -- quarantine: treat as blocked until readable.",
+                    context=f"{sink}:0",
+                )
+            )
             continue
         for lineno, line in enumerate(text.splitlines(), start=1):
             for name, transform in _scan_line(line):

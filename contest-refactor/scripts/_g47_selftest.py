@@ -313,6 +313,36 @@ def main() -> int:
         if not any("legal only alongside a null" in m for m in got):
             failures.append(f"skip_reason alongside non-null evidence must fail, got {got}")
 
+        # Finding 644 — corrupt trust store on the null path must FAIL, not pass silently.
+        (home / "verify-trust.json").write_text("{not valid json")
+        _artifact_null(repo, POST_EPOCH_REV)
+        got = _g47_issues(home, repo, "pre-commit")
+        if not any("trust store unreadable/malformed" in m for m in got):
+            failures.append(f"corrupt trust store must fail instead of silent pass, got {got}")
+        _wrap(home, repo, "--trust", "--", "echo", "tests-green")  # restore
+
+        # Finding 645 — non-object ledger line must not crash the resolver.
+        ledger.write_text(ledger.read_text() + json.dumps([1, 2]) + "\n")
+        _artifact(repo, "deadbeef" * 4)
+        got = _g47_issues(home, repo, "pre-commit")
+        if not any("does not resolve" in m for m in got):
+            failures.append(f"non-object ledger line must not crash resolution, got {got}")
+
+        # Finding 646 — malformed repo_root (null) must FAIL as invalid path, not crash.
+        r7 = _wrap(home, repo, "--run-id", RUN_ID, "--", "echo", "tests-green")
+        event7 = _event_id(r7)
+        new_lines = []
+        for line in ledger.read_text().splitlines():
+            rec = json.loads(line)
+            if isinstance(rec, dict) and rec.get("event_id") == event7:
+                rec["repo_root"] = None
+            new_lines.append(json.dumps(rec))
+        ledger.write_text("\n".join(new_lines) + "\n")
+        _artifact(repo, event7)
+        got = _g47_issues(home, repo, "pre-commit")
+        if not any("is not a valid path" in m for m in got):
+            failures.append(f"null repo_root must fail as invalid path, no crash, got {got}")
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

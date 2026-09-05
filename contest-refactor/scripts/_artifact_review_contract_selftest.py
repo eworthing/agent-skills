@@ -102,6 +102,22 @@ def main() -> int:
             f"got {[i.message for i in issues]}"
         )
 
+    # --- G29: finding 683 — a blocked panel_certification lookup (e.g. a missing/
+    # malformed canon/panel-certification.toml) must yield a G29 Issue and let the
+    # run complete, not crash and discard every other finding.
+    _real_emit_check = rc._panel_capability.emit_check
+
+    def _boom(*_args, **_kwargs):
+        raise OSError("canon/panel-certification.toml missing")
+
+    rc._panel_capability.emit_check = _boom
+    try:
+        issues = rc.check_g29_schema_version(_art(schema_version=4))
+    finally:
+        rc._panel_capability.emit_check = _real_emit_check
+    if not any(i.rule == "G29-version-equality" for i in issues):
+        failures.append(f"a blocked panel_certification lookup must yield a G29 Issue: {issues}")
+
     # --- G29: LEGACY epoch tolerates every value ------------------------------
     for declared in (1, 2, 3, None, "4", True, 5):
         issues = rc.check_g29_schema_version(_art(schema_version=declared, epoch=_LEGACY))

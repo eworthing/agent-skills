@@ -90,6 +90,7 @@ def _cases():
         ("score_impact absent", _art(...), True),
         ("score_impact blank", _art("   "), True),
         ("score_impact not a string", _art(0.5), True),
+        ("backlog item not an object", _art("unused", backlog=["x"]), True),
         ("one good entry, one prose entry", _art("data_flow +0.5; and some tests"), True),
         # --- BYPASS: the valid shape ---
         ("single dimension", _art("data_flow +0.5"), False),

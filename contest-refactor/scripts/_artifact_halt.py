@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import date
 
 from _artifact_core import SERIOUS_OR_WORSE, Issue, _parse_iso_date
@@ -74,6 +75,14 @@ def check_g21_scorecard(current_review: dict) -> list[Issue]:
             )
         )
         return issues
+    if not scorecard:
+        issues.append(
+            Issue(
+                "G21-scorecard",
+                "HALT_SUCCESS requires a non-empty scorecard (no dimensions to satisfy G21)",
+            )
+        )
+        return issues
     for dim, entry in scorecard.items():
         if not isinstance(entry, dict):
             issues.append(
@@ -84,6 +93,22 @@ def check_g21_scorecard(current_review: dict) -> list[Issue]:
             )
             continue
         score_raw = entry.get("score")
+        if isinstance(score_raw, bool) or not isinstance(score_raw, (int, float)):
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"scorecard {dim!r} score={score_raw!r} is not a number",
+                )
+            )
+            continue
+        if not math.isfinite(score_raw):
+            issues.append(
+                Issue(
+                    "G21-scorecard",
+                    f"scorecard {dim!r} score={score_raw!r} must be finite",
+                )
+            )
+            continue
         # Convert score to float for comparison; accept int and float
         try:
             score = float(score_raw)

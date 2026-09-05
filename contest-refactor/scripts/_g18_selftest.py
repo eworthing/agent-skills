@@ -54,6 +54,16 @@ def main() -> int:
     if not any("must equal CURRENT_REVIEW.json" in issue.message for issue in stale_promotion):
         failures.append(f"a promotion not mirrored into history must fail: {stale_promotion}")
 
+    # Finding 670 — a non-empty but all-non-dict loops[] must not IndexError:
+    # split_runs() skips non-dict entries and can return [] even when loops is truthy.
+    try:
+        malformed = check_g18_review_history_append(current_2, {"loops": ["bad", 123]})
+    except IndexError as exc:
+        failures.append(f"malformed loops[] crashed with IndexError instead of an Issue: {exc!r}")
+    else:
+        if not malformed:
+            failures.append("malformed loops[] (all non-dict) should fail, got no issues")
+
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}")

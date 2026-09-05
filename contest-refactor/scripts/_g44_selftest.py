@@ -115,6 +115,23 @@ def check_transforms_fire() -> list[str]:
             f"JSON-escaped concat-split transform did not fire: hits={json_concat_hits}"
         )
 
+    # Finding 654 — a 3-way split must not evade via pairwise-only reconstruction.
+    three_way_line = 'Config/Secrets.swift:14 -- key = "AKIA" + "IOSF" + "ODNN7EXAMPLE"'
+    three_way_hits = ac._scan_line(three_way_line)
+    if ("AWS access key ID", "concat-split") not in three_way_hits:
+        failures.append(f"3-way concat-split transform did not fire: hits={three_way_hits}")
+
+    return failures
+
+
+def check_json_quoted_generic_key_fires() -> list[str]:
+    """Finding 653 -- the generic api_key pattern must fire on JSON-quoted key names,
+    the exact shape CURRENT_REVIEW.json etc. serialize key/value pairs in."""
+    failures: list[str] = []
+    json_line = '  "api_key": "EXAMPLEFAKEKEY1234567890ABCDEF",'
+    hits = ac._scan_line(json_line)
+    if ("generic API key (key=value)", "plain") not in hits:
+        failures.append(f"JSON-quoted api_key did not fire: hits={hits}")
     return failures
 
 
@@ -160,6 +177,18 @@ def check_never_reproduces_value() -> list[str]:
     return failures
 
 
+def check_unreadable_sink_fails_closed() -> list[str]:
+    """Finding 655 -- an undecodable sink must yield a G44 Issue, not a silent skip."""
+    failures: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        artifact_dir = Path(tmp)
+        (artifact_dir / "CURRENT_REVIEW.md").write_bytes(b"\xff\xfe not valid utf-8 \x80\x81")
+        issues = ac.check_g44_credential_quarantine(artifact_dir)
+        if not any(i.rule == "G44" and "unreadable-sink" in i.message for i in issues):
+            failures.append(f"non-UTF8 sink did not yield a G44 Issue: {issues}")
+    return failures
+
+
 def check_sink_enumeration() -> list[str]:
     failures: list[str] = []
     actual = set(ac.CREDENTIAL_SINKS)
@@ -179,6 +208,8 @@ def main() -> int:
     failures += check_transforms_fire()
     failures += check_fp_guards()
     failures += check_never_reproduces_value()
+    failures += check_json_quoted_generic_key_fires()
+    failures += check_unreadable_sink_fails_closed()
     failures += check_sink_enumeration()
 
     if failures:

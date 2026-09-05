@@ -221,6 +221,27 @@ def main() -> int:
             "HALT_SUCCESS -> HALT_SUCCESS_candidate within run-A must still fire"
         )
 
+    # Finding 693 — an unhashable (list-shaped) state must not crash
+    # observed_transitions/check_transition_report_only; it is skipped here and
+    # left for the state-validity gate to report.
+    malformed_state_history = {
+        "loops": [
+            {"loop": 1, "run_id": "run-A", "state": ["not", "a", "string"]},
+            {"loop": 2, "run_id": "run-A", "state": "CONTINUE"},
+        ]
+    }
+    try:
+        malformed_pairs = trans.observed_transitions(malformed_state_history)
+    except TypeError as exc:
+        failures.append(f"unhashable state crashed observed_transitions: {exc!r}")
+    else:
+        if malformed_pairs:
+            failures.append(f"a malformed state should not produce a pair, got {malformed_pairs}")
+    try:
+        _run_check(_LEGACY_REVIEW, malformed_state_history, canon)
+    except TypeError as exc:
+        failures.append(f"unhashable state crashed check_transition_report_only: {exc!r}")
+
     # G18 replaces a loop's candidate snapshot with its promoted final snapshot,
     # so persisted history reads CONTINUE -> HALT_SUCCESS. For cross-loop legality,
     # that final state represents the candidate edge; G21/G32 own promotion validity.

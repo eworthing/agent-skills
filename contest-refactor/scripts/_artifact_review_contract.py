@@ -57,6 +57,9 @@ per-loop entries.
 
 from __future__ import annotations
 
+import json
+import tomllib
+
 import _panel_capability
 import _ruleset_epoch
 from _artifact_core import Issue
@@ -107,7 +110,23 @@ def check_g29_schema_version(current_review: dict) -> list[Issue]:
         return issues
     provider = current_review.get("provider") or "unknown"
     model = current_review.get("loop_model") or ""
-    result = _panel_capability.emit_check(provider, model)
+    try:
+        result = _panel_capability.emit_check(provider, model)
+    except (
+        OSError,
+        tomllib.TOMLDecodeError,
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+        KeyError,
+    ) as exc:
+        issues.append(
+            Issue(
+                "G29-version-equality",
+                f"panel_certification lookup blocked ({exc!r}); cannot verify "
+                f"schema_version {declared!r}",
+            )
+        )
+        return issues
     required = 5 if result["emit"] == "v5" else 4
     if declared != required:
         issues.append(

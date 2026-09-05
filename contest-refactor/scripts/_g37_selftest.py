@@ -221,6 +221,16 @@ def _cases():
         )
     )
 
+    # --- TRIGGER: finding 678 — unknown residual_blocker_kind token must not
+    # silently excuse a sub-9.5 dimension (fail-closed, not just schema-enum's concern) ---
+    cases.append(
+        (
+            "cap, sub-9.5 with an unknown residual_blocker_kind token",
+            _art("HALT_LOOP_CAP", {"domain_modeling": _dim(7.0, "some_unknown_kind")}),
+            True,
+        )
+    )
+
     # --- BYPASS: version floor — field is additive on v4; pre-v4 never fires ---
     cases.append(
         (

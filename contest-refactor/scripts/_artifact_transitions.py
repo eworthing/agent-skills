@@ -85,6 +85,8 @@ def observed_transitions(review_history: dict | None) -> list[tuple[int, str, in
             loop_b, state_b = b.get("loop"), b.get("state")
             if not isinstance(loop_a, int) or not isinstance(loop_b, int):
                 continue
+            if not isinstance(state_a, str) or not isinstance(state_b, str):
+                continue  # malformed state: let the state-validity gate report it
             if loop_b != loop_a + 1:
                 continue  # numbering gap (e.g. a minimal fixture) -- not a real pair
             transition_state_b = "HALT_SUCCESS_candidate" if state_b == "HALT_SUCCESS" else state_b

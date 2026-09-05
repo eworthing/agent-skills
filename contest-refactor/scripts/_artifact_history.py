@@ -289,7 +289,8 @@ def check_g18_review_history_append(current_review: dict, history: dict | None) 
             )
         )
         return issues
-    active_run = split_runs(history)[-1] if loops else []
+    runs = split_runs(history) if loops else []
+    active_run = runs[-1] if runs else []
     expected_n = current_review.get("loop")
     if isinstance(expected_n, int) and len(active_run) != expected_n:
         issues.append(

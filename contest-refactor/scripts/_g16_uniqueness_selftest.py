@@ -48,6 +48,16 @@ def main() -> int:
     except Exception as exc:
         failures.append(f"id-less entries crashed: {exc!r}")
 
+    # Non-object entry → G16 fires, no crash.
+    bad_entry = {"entries": ["F-007"]}
+    try:
+        bad_rules = [i.rule for i in va.check_g16_registry_uniqueness(bad_entry)]
+    except Exception as exc:
+        failures.append(f"string registry entry crashed: {exc!r}")
+    else:
+        if "G16" not in bad_rules:
+            failures.append("string registry entry did not fire G16")
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

@@ -152,6 +152,11 @@ def _forward_cases():
             _art({"framework_idioms": _dim(9.75)}),
             True,
         ),
+        (
+            "finding 679 — 9.5 with residual_blocking_10 as blank string, not null",
+            _art({"domain_modeling": _dim(9.5, blocking="", rationale="see F-013")}),
+            True,
+        ),
         # --- BYPASS: restraint -- both required fields present ---
         (
             "9.5 with both fields populated -- restraint",

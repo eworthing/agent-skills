@@ -239,6 +239,16 @@ def _cases():
             True,
         ),
         (
+            "finding 682 — candidate with finding_stable_id null must not match a "
+            "findings[] entry that itself lacks stable_id",
+            _art(
+                records=[_candidate("architecture_quality", stable_id=None)],
+                findings=[{"title": "no stable id"}],
+            ),
+            two_priors,
+            True,
+        ),
+        (
             "clean with an empty clean_rationale ('nothing found' is fake-clean)",
             _art(records=[_clean("architecture_quality", rationale="   ")]),
             two_priors,

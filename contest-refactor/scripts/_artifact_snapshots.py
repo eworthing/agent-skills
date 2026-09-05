@@ -215,8 +215,8 @@ def check_g28_loop_state_freshness(
     # loop_result.changed_paths = G28 failure (no restore source recorded).
     loop_result = current_review.get("loop_result") or {}
     changed_paths = loop_result.get("changed_paths") or []
-    blob_shas = loop_state.get("pre_step3_blob_shas") or {}
-    if changed_paths and not blob_shas:
+    blob_shas = loop_state.get("pre_step3_blob_shas")
+    if changed_paths and (not isinstance(blob_shas, dict) or not blob_shas):
         issues.append(
             Issue(
                 "G28",

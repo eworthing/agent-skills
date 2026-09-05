@@ -254,7 +254,7 @@ def check_g50_hotspot_triage(current_review: dict) -> list[Issue]:
     """
     if not _ruleset_epoch.applies("G50_HOTSPOT_TRIAGE", current_review):
         return []
-    if current_review.get("state") not in {"HALT_SUCCESS_candidate", "HALT_SUCCESS"}:
+    if current_review.get("state") not in ("HALT_SUCCESS_candidate", "HALT_SUCCESS"):
         return []
 
     discovery = current_review.get("discovery")
@@ -293,7 +293,7 @@ def check_g50_hotspot_triage(current_review: dict) -> list[Issue]:
         ):
             errors.append(f"hotspot_triage[{index}]: path and symbol must be non-empty strings")
             continue
-        if disposition not in _DISPOSITIONS:
+        if not isinstance(disposition, str) or disposition not in _DISPOSITIONS:
             errors.append(
                 f"hotspot_triage[{index}]: disposition must be one of {sorted(_DISPOSITIONS)}"
             )

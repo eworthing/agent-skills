@@ -162,6 +162,20 @@ def main() -> int:
     if not _run(legacy_bad):
         failures.append("legacy loop-mismatch checkpoint did not fire (regression in the move)")
 
+    # Finding 692 — a non-dict (but truthy) pre_step3_blob_shas must not bypass the
+    # "no restore source recorded" check: neither `not blob_shas` nor
+    # `isinstance(blob_shas, dict)` catches e.g. a list shape.
+    non_dict_blob_shas = copy.deepcopy(legacy)
+    non_dict_blob_shas["pre_step3_blob_shas"] = ["not-a-dict"]
+    review_with_changes = {
+        "schema_version": 4,
+        "loop": 3,
+        "loop_result": {"changed_paths": ["src/a.py"]},
+    }
+    issues = _run(non_dict_blob_shas, review_with_changes)
+    if not any("no restore source recorded" in i for i in issues):
+        failures.append(f"non-dict pre_step3_blob_shas did not fire G28: {issues}")
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

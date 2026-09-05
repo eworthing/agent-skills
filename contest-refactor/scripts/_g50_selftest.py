@@ -193,6 +193,38 @@ def main() -> int:
             if issue.rule != "G50":
                 failures.append(f"{label}: emitted {issue.rule!r}, expected 'G50'")
 
+    # Finding 658 — unhashable persisted state must not crash the membership test.
+    unhashable_state = _artifact(state="HALT_SUCCESS_candidate", candidates=_SIX_CANDIDATES)
+    unhashable_state["state"] = []
+    try:
+        got = check(copy.deepcopy(unhashable_state))
+    except TypeError as exc:
+        failures.append(f"unhashable state crashed instead of returning cleanly: {exc!r}")
+    else:
+        if got:
+            failures.append(f"unhashable state should return no issues (scope check), got {got}")
+
+    # Finding 660 — unhashable disposition must not crash the row check.
+    bad_disposition = _artifact(
+        state="HALT_SUCCESS_candidate",
+        candidates=_SIX_CANDIDATES,
+        triage=[
+            *[_triage_row(c, "confirm") for c in _SIX_CANDIDATES[:5]],
+            {
+                "path": _SIX_CANDIDATES[5]["path"],
+                "symbol": _SIX_CANDIDATES[5]["symbol"],
+                "disposition": [],
+            },
+        ],
+    )
+    try:
+        got = check(copy.deepcopy(bad_disposition))
+    except TypeError as exc:
+        failures.append(f"unhashable disposition crashed instead of yielding an Issue: {exc!r}")
+    else:
+        if not got:
+            failures.append("unhashable disposition should yield a G50 Issue, got none")
+
     if triggers == 0:
         failures.append("vacuity: no G50 trigger cases")
     if failures:

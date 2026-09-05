@@ -130,12 +130,23 @@ def _check_null_evidence_skip_reason(
         return []
     tpath = Path(trust_path) if trust_path else _default_trust_path()
     pin = None
+    pin_error = None
     if tpath.is_file():
         try:
-            pin = json.loads(tpath.read_text(encoding="utf-8")).get(str(toplevel))
-        except (json.JSONDecodeError, PermissionError):
-            pin = None
+            raw = json.loads(tpath.read_text(encoding="utf-8"))
+        except PermissionError:
+            _blind("trust-unreadable-permission", loop)
+            return []
+        except json.JSONDecodeError as e:
+            pin_error = str(e)
+        else:
+            if isinstance(raw, dict):
+                pin = raw.get(str(toplevel))
+            else:
+                pin_error = f"expected object, got {type(raw).__name__}"
     if pin is None:
+        if pin_error is not None:
+            return [_g47(f"trust store unreadable/malformed: {pin_error}")]
         return []
     skip_reason = loop_result.get("execution_evidence_skip_reason")
     if isinstance(skip_reason, str) and skip_reason.strip():
@@ -242,6 +253,8 @@ def check_g47_execution_evidence(
             rec = json.loads(line)
         except json.JSONDecodeError:
             continue  # unmatchable; a claimed-but-malformed record fails as unresolved
+        if not isinstance(rec, dict):
+            continue
         if rec.get("event_id") == event_id:
             records.append(rec)
     if not records:
@@ -250,7 +263,10 @@ def check_g47_execution_evidence(
         return [_g47(f"event {event_id} appears {len(records)} times in the ledger")]
     record = records[0]
 
-    if Path(record.get("repo_root", "")).resolve() != toplevel:
+    repo_root = record.get("repo_root")
+    if not isinstance(repo_root, str) or not repo_root:
+        issues.append(_g47(f"record.repo_root={repo_root!r} is not a valid path"))
+    elif Path(repo_root).resolve() != toplevel:
         issues.append(
             _g47(
                 f"record.repo_root={record.get('repo_root')!r} does not match this "

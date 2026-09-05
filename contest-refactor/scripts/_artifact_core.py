@@ -265,7 +265,13 @@ def check_required_artifacts(
                 )
             )
         else:
-            history = _load_json(history_path)
+            loaded = _load_json(history_path)
+            if loaded is not None and not isinstance(loaded, dict):
+                issues.append(
+                    Issue("required-artifact", "REVIEW_HISTORY.json must contain a JSON object")
+                )
+                loaded = None
+            history = loaded
         if not registry_path.exists():
             issues.append(
                 Issue(
@@ -274,7 +280,13 @@ def check_required_artifacts(
                 )
             )
         else:
-            registry = _load_json(registry_path)
+            loaded = _load_json(registry_path)
+            if loaded is not None and not isinstance(loaded, dict):
+                issues.append(
+                    Issue("required-artifact", "findings_registry.json must contain a JSON object")
+                )
+                loaded = None
+            registry = loaded
         if not history_md_path.exists():
             issues.append(
                 Issue(
@@ -310,7 +322,20 @@ def check_schema_enums(current_review: dict, canon: _canon.Canon) -> list[Issue]
                 context="strictness",
             )
         )
-    for finding in current_review.get("findings") or []:
+    findings = current_review.get("findings") or []
+    if not isinstance(findings, list):
+        issues.append(
+            Issue("schema-enum", f"findings must be a list, got {type(findings).__name__}")
+        )
+        findings = []
+    for finding in findings:
+        if not isinstance(finding, dict):
+            issues.append(
+                Issue(
+                    "schema-enum", f"finding entry must be an object, got {type(finding).__name__}"
+                )
+            )
+            continue
         sev = finding.get("severity")
         fid = finding.get("loop_local_id") or finding.get("id") or "<unknown>"
         if sev is not None and sev not in canon.severity_anchors:
@@ -418,9 +443,17 @@ def check_g16_registry_uniqueness(registry: dict | None) -> list[Issue]:
     """
     if registry is None:
         return []
+    if not isinstance(registry, dict):
+        return [Issue("G16", "findings_registry.json must contain a JSON object")]
     issues: list[Issue] = []
     first_index: dict[str, int] = {}
-    for i, entry in enumerate(registry.get("entries") or []):
+    entries = registry.get("entries") or []
+    if not isinstance(entries, list):
+        return [Issue("G16", f"registry entries must be a list, got {type(entries).__name__}")]
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            issues.append(Issue("G16", f"registry entry at index {i} must be an object"))
+            continue
         sid = entry.get("stable_id")
         if sid is None:
             continue
@@ -481,7 +514,10 @@ def check_g39_backlog_score_impact(current_review: dict, canon) -> list[Issue]:
     scorecard = current_review.get("scorecard") or {}
 
     for idx, item in enumerate(backlog):
-        ctx = f"backlog[{idx}] (priority {item.get('priority')})"
+        ctx = f"backlog[{idx}] (priority {item.get('priority') if isinstance(item, dict) else '?'})"
+        if not isinstance(item, dict):
+            issues.append(Issue("G39", "backlog item must be an object", ctx))
+            continue
         raw = item.get("score_impact")
         if not isinstance(raw, str) or not raw.strip():
             issues.append(

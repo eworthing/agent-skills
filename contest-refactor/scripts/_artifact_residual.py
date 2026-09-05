@@ -186,7 +186,15 @@ def check_g37_terminal_residual_accounting(current_review: dict) -> list[Issue]:
                     f"file it to the backlog, tag the structural blocker, or promote to 9.5-accepted",
                 )
             )
-        # any other non-null value is an unknown enum token -- owned by check_schema_enums
+        else:
+            issues.append(
+                Issue(
+                    "G37",
+                    f"{terminal} dimension {dim!r} score={score} < 9.5 cites unknown "
+                    f"residual_blocker_kind={kind!r}; only 'structural_anchor_unmet' licenses "
+                    f"keeping a dimension below 9.5 at a terminal",
+                )
+            )
     return issues
 
 
@@ -221,7 +229,11 @@ def check_g5_forward_residual_fields(current_review: dict) -> list[Issue]:
     for dim, score, entry in _scored_dimensions(scorecard):
         if not (9.5 <= score < 10):
             continue
-        missing = [f for f in _FORWARD_REQUIRED_FIELDS if entry.get(f) is None]
+        missing = [
+            f
+            for f in _FORWARD_REQUIRED_FIELDS
+            if not isinstance(entry.get(f), str) or not entry.get(f).strip()
+        ]
         if missing:
             issues.append(
                 Issue(
@@ -489,7 +501,7 @@ def _check_record_shape(
         known = {
             f.get("stable_id")
             for f in (current_review.get("findings") or [])
-            if isinstance(f, dict)
+            if isinstance(f, dict) and isinstance(f.get("stable_id"), str)
         }
         if stable_id not in known:
             issues.append(
