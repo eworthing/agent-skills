@@ -34,8 +34,8 @@
     "hard_rule_conflict": null,
     "simplicity_conflict": "No consumer means no behavior to fix; example edit fails the worth-it bar.",
     "prior_audit_ref": null,
-    "validator": "val-04",
-    "status": "hold"
+   "validator": "val-04",
+   "status": "hold"
    },
    "simplify": null,
    "dedup": {
@@ -22276,22 +22276,24 @@
     "drops_from_ocr_suggestion": null
    },
    "dedup": {
-    "absorbed_by": null,
-    "pattern_cluster": null
+    "absorbed_by": 772,
+    "pattern_cluster": "token_usage-null-testkit",
+    "reason": "same sentinel collision and same proposed fix as root-cause helper finding 772"
    },
    "reality_check": {
-    "status": "CONFIRMED_OPEN",
+    "status": "REJECTED_DUPLICATE",
     "confidence": "high",
-    "basis": "Independent runtime probe: _member(2, token_usage=None) returns the default usage dict, so the selftest never supplies null to the validator.",
+    "basis": "Independent comparison shows this downstream selftest symptom is absorbed by root-cause finding 772 in _g32_panel_testkit.py; there is no distinct failure mode.",
     "checks": {
-     "independent_runtime_probe": true
+     "independent_runtime_probe": true,
+     "absorbed_by": 772
     }
    },
    "ponytail_check": {
-    "status": "SOUND",
-    "basis": "A distinct sentinel default plus one focused test is the smallest sound change.",
+    "status": "NOT_APPLICABLE_DUPLICATE",
+    "basis": "Absorbed into root-cause finding 772.",
     "checks": {
-     "minimal_fix_bounded": true,
+     "minimal_fix_bounded": false,
      "new_layer_or_dependency": false
     }
    }
@@ -22328,9 +22330,9 @@
     "drops_from_ocr_suggestion": null
    },
    "dedup": {
-    "absorbed_by": 770,
+    "absorbed_by": 772,
     "pattern_cluster": "token_usage-null-testkit",
-    "reason": "same sentinel collision and same proposed fix"
+     "reason": "same sentinel collision and same proposed fix as root-cause helper finding 772"
    },
    "reality_check": {
     "status": "REJECTED_DUPLICATE",
@@ -22338,12 +22340,13 @@
     "basis": "Independent comparison and the same runtime probe show this is the same token_usage-null sentinel defect as finding 770, with no distinct failure mode.",
     "checks": {
      "independent_runtime_probe": true,
-     "semantic_duplicate_of": 770
+     "semantic_duplicate_of": 772,
+     "absorbed_by": 772
     }
    },
    "ponytail_check": {
     "status": "NOT_APPLICABLE_DUPLICATE",
-    "basis": "Absorbed into finding 770.",
+    "basis": "Absorbed into root-cause finding 772.",
     "checks": {
      "new_layer_or_dependency": false
     }
@@ -22385,28 +22388,29 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
-     "exact_existing_code_anchor": false,
+     "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+     "independent_runtime_probe": true,
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "basis": "Independent runtime probe of _member(2, token_usage=None) returned the default usage dict, confirming the helper's explicit-null sentinel collision at the root cause."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "A distinct sentinel default in the existing helper is the smallest root-cause fix and needs no new layer or dependency."
    }
   },
   {
@@ -35997,24 +36001,24 @@
    "id_range": "0-1111",
    "missing_ids": [],
    "duplicate_content_fingerprints": 0,
-      "absorbed": 1,
+      "absorbed": 2,
       "pattern_clusters": 1,
       "semantic_duplicate_groups": [
         {
-          "retained": 770,
-          "absorbed": 771,
+          "retained": 772,
+          "absorbed": [770, 771],
           "pattern_cluster": "token_usage-null-testkit",
-          "basis": "Both findings identify the same explicit-null token_usage sentinel collision and prescribe the same fix."
+          "basis": "All three findings identify the same explicit-null token_usage sentinel collision; 772 names the shared helper root cause and 770/771 are downstream duplicate descriptions."
         }
       ]
   },
   "method_status": "INVALIDATED_BY_REVIEW",
     "fresh_review": {
-    "reviewed": 74,
+    "reviewed": 75,
     "confirmed_open": 71,
    "confirmed_fixed": 0,
-    "rejected": 3,
-    "pending": 141,
+    "rejected": 4,
+    "pending": 140,
    "method": "blind field selection plus direct current-tree tests, source control-flow checks, and semantic duplicate comparison"
   }
  }
