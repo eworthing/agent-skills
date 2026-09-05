@@ -16541,7 +16541,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
@@ -16549,20 +16549,21 @@
      "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current hook source discards codex exec output and treats any git log failure as ACTIVE; that same failure occurs when no commit was attempted or setup produced no commit, so the activation probe has false-active outcomes."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Comparing commit count/message before and after the existing probe, while retaining command output, is a bounded shell-only correction with no new dependency."
    }
   },
   {
@@ -21038,7 +21039,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -21046,20 +21047,21 @@
      "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current check_golden calls load_canon in-process; _canon.load_canon signals malformed canon with SystemExit(2), which is not caught before later selftest cases or the final failure summary."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Catching SystemExit at this selftest boundary and appending a failure is the smallest local correction; subprocess refactoring is optional, not required."
    }
   },
   {
@@ -21207,7 +21209,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
@@ -21215,20 +21217,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current coverage-ledger selftest continues from a non-zero CLI return into read_text/json.loads without a guard; missing or invalid output therefore raises instead of producing a recorded FAIL."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Guarding the existing sidecar read and retaining the already-captured return code/stderr is a bounded test-only fix with no new layer."
    }
   },
   {
@@ -21371,7 +21374,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -21379,20 +21382,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": false,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current parse_file strips comments but scans every character of the string-intact raw line for braces; a Swift string brace changes type-frame depth and can misattribute declarations."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Blanking string contents before the existing brace loop is a local parser correction; no parser framework or dependency is needed."
    }
   },
   {
@@ -21431,7 +21435,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -21439,20 +21443,21 @@
      "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current count_references excludes the entire declaration (path,line) pair; a same-line declaration plus genuine use therefore removes both occurrences from the production count."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Replacing the set with a per-line exclusion count is a bounded change to the existing reference-count path and needs no new abstraction."
    }
   },
   {
@@ -21923,7 +21928,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -21931,20 +21936,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current flag-effect selftest marks any registered-site line containing the flag as operative after excluding only two lines; incidental prose/comments therefore satisfy the effect check."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Adding an operative-context predicate at the existing line scan is a bounded test hardening change with no dependency."
    }
   },
   {
@@ -21983,7 +21989,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
@@ -21991,20 +21997,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Independent probe of current is_test_file returned True for production-style names Latest.swift and Contest.swift because lowercased names end with test.swift."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Separating case-sensitive CamelCase test suffixes from separator-qualified lowercase suffixes is a local predicate fix with no new layer."
    }
   },
   {
@@ -22173,7 +22180,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -22181,20 +22188,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current isolation code filters only messages starting with provider=, while the provider/model checker emits known provider, loop_model, reviewer_model, and source messages; those are omitted from the comparison."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Classifying non-skill_rev diagnostics by the existing message contract is a bounded assertion fix; no new dependency is needed."
    }
   },
   {
@@ -22950,7 +22958,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -22958,20 +22966,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current g46 selftest iterates canon collections without asserting they are non-empty; an empty canon makes all three acceptance loops vacuous and still permits a green result."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Three non-empty assertions immediately before the existing loops are the smallest vacuity fix and add no abstraction."
    }
   },
   {
@@ -23062,7 +23071,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
@@ -23070,20 +23079,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current g47 selftest ignores validator returncode/stderr and immediately reads/parses the sidecar; a validator crash becomes an uncaught exception rather than a recorded failure."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "Checking the existing CompletedProcess and guarding the sidecar parse is a bounded selftest fix with no new dependency."
    }
   },
   {
@@ -23174,7 +23184,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
@@ -23182,20 +23192,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current g48 selftest reads and parses the sidecar without checking validator status or guarding OSError/JSONDecodeError; malformed output aborts remaining cases with no diagnostic context."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "A guarded parse that includes the already-captured process context, plus the stated timeout, is bounded test hardening."
    }
   },
   {
@@ -23922,7 +23933,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -23930,20 +23941,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current ingress selftest checks envelope labels with independent substring membership rather than one ordered BEGIN/END block, so unrelated prose can satisfy the guard while the envelope is absent or scattered."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "One ordered multiline regex at the existing assertion site is the smallest format-binding fix and adds no dependency."
    }
   },
   {
@@ -24042,7 +24054,7 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+      "status": "CONFIRMED_OPEN",
     "confidence": "medium",
     "checks": {
      "path_exists": true,
@@ -24050,20 +24062,21 @@
      "exact_existing_code_anchor": false,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+        "independent_test": true,
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+      "basis": "Current ingress selftest accepts any occurrence of 'Incidents feed:' in trust-model text; it does not verify that the resolved --incidents path is on the dispatch line."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+      "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+        "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+      "basis": "A narrow line-level forwarding assertion at the existing check is a bounded contract fix with no new layer or dependency."
    }
   },
   {
@@ -35956,9 +35969,9 @@
    "pending_fresh_review": 215
   },
   "ponytail": {
-    "pass": 46,
+    "pass": 59,
     "rule": "minimal_fix and focused test present; no new layer or dependency proposed",
-    "pending_fresh_review": 167
+    "pending_fresh_review": 154
   },
   "selftests": {
    "count": 90,
@@ -35984,11 +35997,11 @@
   },
   "method_status": "INVALIDATED_BY_REVIEW",
     "fresh_review": {
-    "reviewed": 48,
-    "confirmed_open": 46,
+    "reviewed": 61,
+    "confirmed_open": 59,
    "confirmed_fixed": 0,
     "rejected": 2,
-    "pending": 167,
+    "pending": 154,
    "method": "blind field selection plus direct current-tree tests, source control-flow checks, and semantic duplicate comparison"
   }
  }
