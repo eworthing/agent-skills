@@ -284,6 +284,25 @@ def _check_grader_exit_classes(failures: list[str]) -> None:
                 failures.append(
                     f"exec_replay_grade.py exit class: {label} -> exit {rc}, expected {want}"
                 )
+        # Git-grounded gate must not measure when git cannot answer: a non-repo
+        # artifact dir (or bad base-sha) makes every diff/status/show call fail, and
+        # the resulting empty output would vacuously satisfy the revert invariants
+        # ("NO source committed", "source restored", "working tree clean"). That is
+        # plumbing (2), never a measured failure (1).
+        if fixture is not None:
+            unmeas = tmp / "artifact-unmeasurable-git"
+            unmeas.mkdir()
+            (unmeas / "CURRENT_REVIEW.json").write_text("{}\n", encoding="utf-8")
+            rc = subprocess.run(
+                [sys.executable, str(grader), fixture, str(unmeas), "deadbeef-no-such-sha"],
+                capture_output=True,
+                text=True,
+            ).returncode
+            if rc != 2:
+                failures.append(
+                    "exec_replay_grade.py exit class: git unmeasurable (non-repo dir, "
+                    f"bad base-sha) -> exit {rc}, expected 2"
+                )
 
 
 def main(argv: list[str]) -> int:

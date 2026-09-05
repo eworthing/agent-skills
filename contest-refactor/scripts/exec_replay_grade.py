@@ -70,7 +70,16 @@ def evaluate_risk_boundary_evidence(
 
 
 def _git(repo: Path, *args: str) -> str:
-    return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True).stdout
+    # A git failure is plumbing (exit 2), never empty output: empty diffs would
+    # vacuously satisfy the revert tree invariants ("NO source committed",
+    # "source restored", "working tree clean") and corrupt the apply regex count.
+    proc = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
+    if proc.returncode != 0:
+        _plumbing(
+            f"CANNOT MEASURE: git {' '.join(args)} failed "
+            f"(rc={proc.returncode}): {proc.stderr.strip()}"
+        )
+    return proc.stdout
 
 
 def _is_source(path: str) -> bool:

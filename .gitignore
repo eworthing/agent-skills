@@ -26,6 +26,9 @@ findings_registry.json
 contest-refactor/evals/**/__pycache__/
 contest-refactor/evals/**/*.pyc
 
+# OCR scan outputs (see contest-refactor/.artifacts/); local-only, never commit.
+contest-refactor/.artifacts/
+
 # Per-agent skill install dirs (local symlinks / npx-skills artifacts, not repo content).
 # Keep skill-evaluator-1.0.0 — it is tracked and referenced by CLAUDE.md.
 .agents/
