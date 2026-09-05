@@ -28159,12 +28159,12 @@
     "status": "hold"
    },
    "simplify": {
-    "batch": "sim-02",
-    "demote": false,
-    "drops_from_ocr_suggestion": null,
-    "finding_id": 918,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "batch": "sim-02",
+   "demote": false,
+   "drops_from_ocr_suggestion": null,
+  "finding_id": 918,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/_smoke_check.py main (:65-70), fail with return 1 when no fixtures are discovered before the OK path (~3 changed lines). Never simplify away this absent!=clean guard.",
     "rung": 6,
     "test": "harness-run: run python3 scripts/_smoke_check.py against an empty smoke_dir and require exit 1, not OK-0"
@@ -28174,28 +28174,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
-     "exact_existing_code_anchor": false,
+     "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "basis": "Independent source-control-flow review of main shows fixtures may be empty, failures remains zero, and the final branch returns 0 with 'OK (0 fixtures matched...)'; discovery failure is therefore indistinguishable from a valid empty corpus."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "A single non-empty discovery assertion before the loop is the smallest sound fix; no new layer or dependency is needed."
    }
   },
   {
@@ -28334,9 +28334,9 @@
     "batch": "sim-04",
     "demote": false,
     "drops_from_ocr_suggestion": null,
-    "finding_id": 922,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "finding_id": 922,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/_token_budget_selftest.py (:199-202) append a failure naming the dangling (step, name) instead of continue when a DECLARED_DIVERGENCES step is missing from the matrix. Estimated ~2 changed lines.",
     "rung": 4,
     "test": "New case dangling_divergence_fails in scripts/_token_budget_selftest.py: a renamed matrix step yields a named failure instead of silent skip."
@@ -29308,9 +29308,9 @@
     "batch": "sim-02",
     "demote": false,
     "drops_from_ocr_suggestion": "a --since format validator or new date-parsing dependency (stdlib only; rely on git exit status, not date parsing)",
-    "finding_id": 949,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "finding_id": 949,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/audit-churn.sh (:59-64), run git log to a temp file without 2>/dev/null, check its status, and exit 2 on git failure instead of printing zero-churn OK (~6 changed lines).",
     "rung": 6,
     "test": "harness-run: bash scripts/audit-churn.sh <root> --since=foo and require exit 2, not exit 0"
@@ -29320,28 +29320,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
      "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
     "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "Checking git status before the existing pipeline and distinguishing grep's no-match status is the smallest local fix; no abstraction or dependency is needed."
    }
   },
   {
@@ -31432,9 +31432,9 @@
     "batch": "sim-02",
     "demote": false,
     "drops_from_ocr_suggestion": null,
-    "finding_id": 1001,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "finding_id": 1001,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/candidate_fingerprint.py (:172-173,183,218-222), validate dict top level and dict scorecard/discovery shapes raising ValueError, and widen _main's handler to (OSError, ValueError) for exit-2 `error:` (~8 changed lines).",
     "rung": 6,
     "test": "new case `truthy_non_dict_scorecard_exits_2` in scripts/_candidate_fingerprint_selftest.py with scorecard as a string (exit 0)"
@@ -31444,28 +31444,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
-     "exact_existing_code_anchor": false,
+     "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "basis": "Independent CLI probe passed a temporary JSON list to candidate_fingerprint compute; _load_review returned the list and candidate_fingerprint then propagated AttributeError on .get instead of the CLI's documented error/exit-2 path."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "A top-level dict check in the existing loader/CLI error boundary is the smallest sound fix; no new abstraction or dependency is needed."
    }
   },
   {
@@ -33237,9 +33237,9 @@
     "batch": "sim-02",
     "demote": false,
     "drops_from_ocr_suggestion": null,
-    "finding_id": 1039,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "finding_id": 1039,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/paired_arm_blindmap.py main (:108-112), return 2 with a stderr diagnostic when pairs is empty before writing the map (~3 changed lines).",
     "rung": 5,
     "test": "new case `empty_pairs_exits_2` in scripts/_paired_arm_selftest.py with a rung scenario matching nothing (exit 0)"
@@ -33249,28 +33249,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
-     "exact_existing_code_anchor": false,
+     "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "basis": "Independent direct call to build with pairs=[] returned the valid-looking empty map and empty grading_order; main writes that artifact and reports success without a non-empty guard."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 5,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "One non-empty pair guard before build/write is the smallest sound fix; no new layer or dependency is needed."
    }
   },
   {
@@ -33503,9 +33503,9 @@
     "batch": "sim-02",
     "demote": false,
     "drops_from_ocr_suggestion": null,
-    "finding_id": 1044,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "finding_id": 1044,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/paired_arm_record_grades.py load_reply (:31-34), wrap read_text plus json.loads in try/except (OSError, ValueError) raising PlumbingError for exit 2 (~5 changed lines).",
     "rung": 6,
     "test": "new case `unparseable_reply_is_plumbing` in scripts/_paired_arm_selftest.py with a reply lacking JSON (exit 0)"
@@ -33515,28 +33515,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
+    "status": "CONFIRMED_OPEN",
     "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
-     "exact_existing_code_anchor": false,
+     "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
-     "cited_range_claim_anchor": false,
-     "independent_semantic_review": false
+     "cited_range_claim_anchor": true,
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "basis": "Independent load_reply probe passed a temporary malformed reply; json.loads propagated JSONDecodeError, and the shown callers only catch PlumbingError, so the documented exit-2 handling is bypassed."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "Converting the existing loader failure to PlumbingError at the current boundary is the smallest sound fix; no new abstraction or dependency is needed."
    }
   },
   {
@@ -33623,9 +33623,9 @@
     "batch": "sim-02",
     "demote": false,
     "drops_from_ocr_suggestion": "the None-grade rejection and the SystemExit-to-PlumbingError rewrite (None path not producible since cmd_mechanical always emits mechanical_grade; SystemExit(2) already yields the right code)",
-    "finding_id": 1046,
-    "gate_or_reason_if_demoted": null,
-    "merge_with": null,
+   "finding_id": 1046,
+   "gate_or_reason_if_demoted": null,
+   "merge_with": null,
     "minimal_fix": "In contest-refactor/scripts/paired_arm_record_grades.py mechanical (:108-111), guard json.loads(r.stdout) with try/except ValueError raising PlumbingError for exit 2 (~4 changed lines).",
     "rung": 6,
     "test": "new case `corrupt_mechanical_stdout_is_plumbing` in scripts/_paired_arm_selftest.py with empty stdout and rc 1 (exit 0)"
@@ -33635,28 +33635,28 @@
     "pattern_cluster": null
    },
    "reality_check": {
-    "status": "NOT_INDEPENDENTLY_VALIDATED",
-    "confidence": "medium",
+    "status": "CONFIRMED_OPEN",
+    "confidence": "high",
     "checks": {
      "path_exists": true,
      "line_range_valid": true,
-     "exact_existing_code_anchor": false,
+     "exact_existing_code_anchor": true,
      "current_claim_anchor": true,
      "cited_range_claim_anchor": true,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inherited the ledger validation verdict and only checked source anchors; semantic bug status remains unreviewed."
+    "basis": "Independent mechanical probe replaced subprocess.run with a successful result containing non-JSON stdout; mechanical propagated JSONDecodeError instead of the documented plumbing exit-2 path."
    },
    "ponytail_check": {
-    "status": "NOT_INDEPENDENTLY_EVALUATED",
+    "status": "SOUND",
     "rung": 6,
     "checks": {
      "minimal_fix_present": true,
      "focused_test_present": true,
      "new_layer_or_dependency_detected": false,
-     "independent_semantic_review": false
+     "independent_semantic_review": true
     },
-    "basis": "Prior pass inferred approval from simplify fields; it did not independently test whether the proposed change is the smallest sound fix."
+    "basis": "Handling parse failure and rejecting absent mechanical_grade at the existing mechanical boundary is the smallest sound fix; no new layer is needed."
    }
   },
   {
@@ -35995,13 +35995,13 @@
    "corroborated_global_anchor": 37,
    "resolved_current_worktree": 1,
     "independent_rejections": 4,
-    "independent_confirmations": 90,
-    "pending_fresh_review": 121
+    "independent_confirmations": 96,
+    "pending_fresh_review": 115
   },
   "ponytail": {
-    "pass": 90,
+    "pass": 96,
     "rule": "minimal_fix and focused test present; no new layer or dependency proposed",
-    "pending_fresh_review": 121
+    "pending_fresh_review": 115
   },
   "selftests": {
    "count": 90,
@@ -36027,11 +36027,11 @@
   },
   "method_status": "INVALIDATED_BY_REVIEW",
     "fresh_review": {
-    "reviewed": 94,
-    "confirmed_open": 90,
+    "reviewed": 100,
+    "confirmed_open": 96,
    "confirmed_fixed": 0,
     "rejected": 4,
-    "pending": 121,
+    "pending": 115,
    "method": "blind field selection plus direct current-tree tests, source control-flow checks, and semantic duplicate comparison"
   }
  }
