@@ -80,6 +80,31 @@ def _latest_transition_only() -> list[str]:
     return out
 
 
+def _non_dict_history_stays_zero() -> list[str]:
+    """A non-dict top-level JSON (`.get("loops")` -> AttributeError pre-fix) or
+    a non-UTF8-encoded file (UnicodeDecodeError, not a JSONDecodeError/OSError
+    subclass pre-fix) must still honor the advisory-never-fails contract."""
+    out: list[str] = []
+    with tempfile.TemporaryDirectory() as td:
+        list_path = Path(td) / "list-history.json"
+        list_path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+        proc = _run(list_path)
+        if proc.returncode != 0:
+            out.append(
+                f"non-dict top-level history: expected exit 0, got {proc.returncode}\n"
+                f"{proc.stderr.rstrip()}"
+            )
+
+        bad_bytes_path = Path(td) / "bad-bytes-history.json"
+        bad_bytes_path.write_bytes(b"\xff\xfe\x00\x01garbage")
+        proc = _run(bad_bytes_path)
+        if proc.returncode != 0:
+            out.append(
+                f"non-UTF8 history: expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
+            )
+    return out
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit script missing: {AUDIT}")
@@ -87,6 +112,7 @@ def main() -> int:
 
     failures: list[str] = []
     failures.extend(_latest_transition_only())
+    failures.extend(_non_dict_history_stays_zero())
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
 

@@ -81,6 +81,51 @@ def test_enumeration_mode_still_runs() -> None:
     assert p.returncode == 0, (p.returncode, p.stderr)
 
 
+def test_deleted_file_attribution() -> None:
+    repo = Path(tempfile.mkdtemp(prefix="pubcompat-del-"))
+    src = repo / "Sources" / "M"
+    src.mkdir(parents=True)
+    (src / "A.swift").write_text("public func stillHere() {}\n", encoding="utf-8")
+    (src / "B.swift").write_text("public func deletedFunc() {}\n", encoding="utf-8")
+    _git(repo, "init", "-q", ".")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "base")
+    (src / "B.swift").unlink()
+    code, out = _run(repo, "HEAD")
+    assert code == 0, f"audit helper must never gate: exit {code}"
+    # A deleted file (+++ /dev/null) must not inherit the previous file's path.
+    assert "| removed | `deletedFunc` | Sources/M/B.swift |" in out, out
+
+
+def test_enumeration_widened_modifiers() -> None:
+    repo = Path(tempfile.mkdtemp(prefix="pubcompat-enum-"))
+    src = repo / "Sources" / "M"
+    src.mkdir(parents=True)
+    (src / "Foo.swift").write_text(
+        "open class BarThing {}\n"
+        "public final class FinalThing {}\n"
+        "@objc public func annotatedFn() {}\n",
+        encoding="utf-8",
+    )
+    p = subprocess.run(["bash", str(SCRIPT), str(repo)], capture_output=True, text=True)
+    assert p.returncode == 0, (p.returncode, p.stderr)
+    assert "| BarThing |" in p.stdout, p.stdout
+    assert "| FinalThing |" in p.stdout, p.stdout
+    assert "| annotatedFn |" in p.stdout, p.stdout
+
+
+def test_enumeration_symbol_extraction() -> None:
+    repo = Path(tempfile.mkdtemp(prefix="pubcompat-sym-"))
+    src = repo / "Sources" / "M"
+    src.mkdir(parents=True)
+    (src / "Foo.swift").write_text("public static func foo() {}\n", encoding="utf-8")
+    p = subprocess.run(["bash", str(SCRIPT), str(repo)], capture_output=True, text=True)
+    assert p.returncode == 0, (p.returncode, p.stderr)
+    # A multi-keyword decl must extract the real symbol, not the kind keyword.
+    assert "| foo |" in p.stdout, p.stdout
+    assert "| func |" not in p.stdout, p.stdout
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

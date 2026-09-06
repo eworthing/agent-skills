@@ -102,6 +102,25 @@ def test_baseline_counted_and_exit_codes() -> None:
     assert A.main([str(_repo({"clean.py": "import os\n"}))]) == 0, "clean must exit 0"
 
 
+def test_pytest_swallow_detected() -> None:
+    # `\btest` requires a word boundary before `t`; pytest/unittest/pylint have
+    # a word char right before, so they need their own CHECKER_WORDS entries.
+    # Job/step names deliberately avoid any OTHER checker word ("test", "lint",
+    # etc.) so the only candidate word in the scan window is "pytest" itself.
+    r = A.audit(
+        _repo(
+            {
+                ".github/workflows/ci.yml": (
+                    "jobs:\n  ci:\n    steps:\n      - run: pytest || true\n"
+                ),
+            }
+        )
+    )
+    gates = _kinds(r, "swallowed_gate")
+    files = sorted(h["file"] for h in gates)
+    assert files == [".github/workflows/ci.yml"], f"pytest swallow not detected: {files}"
+
+
 def test_promotion_never_allowed() -> None:
     # Every hit is a lead for Method Step 3, never a finding (Meta-Rule 1).
     assert A.audit(_repo({"a.py": "import os  # noqa\n"}))["promotion_allowed"] is False

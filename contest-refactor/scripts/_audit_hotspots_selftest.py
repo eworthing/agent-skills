@@ -814,7 +814,10 @@ def test_scope_restricts_walk_but_paths_stay_repo_relative(base: Path) -> str | 
 
 def test_tracked_fixture_manifests(_: Path) -> str | None:
     fixture_root = SKILL_ROOT / "evals" / "hotspot-fixtures"
-    for manifest_path in sorted(fixture_root.glob("*/manifest.toml")):
+    manifests = sorted(fixture_root.glob("*/manifest.toml"))
+    if not manifests:
+        return f"no manifests found under {fixture_root}"
+    for manifest_path in manifests:
         manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
         out, err, rc = _run(manifest_path.parent / "codebase", ["--json"])
         if rc != 0:
@@ -835,6 +838,21 @@ def test_tracked_fixture_manifests(_: Path) -> str | None:
             expected = manifest["notes"]["expected_candidates_count"]
             if len(candidates) != expected:
                 return f"{manifest['id']} expected {expected} candidates, got {len(candidates)}"
+    return None
+
+
+def test_tracked_fixture_manifests_empty_glob_fails_closed(_: Path) -> str | None:
+    """A missing/renamed hotspot-fixtures dir must fail closed, not vacuously PASS."""
+    global SKILL_ROOT
+    original = SKILL_ROOT
+    with tempfile.TemporaryDirectory() as empty_root:
+        SKILL_ROOT = Path(empty_root)
+        try:
+            result = test_tracked_fixture_manifests(Path(empty_root))
+        finally:
+            SKILL_ROOT = original
+    if result is None:
+        return "empty hotspot-fixtures dir vacuously passed instead of failing closed"
     return None
 
 
@@ -909,6 +927,26 @@ def test_queue_d_invariant_signals(base: Path) -> str | None:
     return None
 
 
+def test_bad_invariant_path_exits_2(base: Path) -> str | None:
+    root = base / "bad_invariant_path"
+    _write(root, {"trivial.py": "x = 1\n"})
+    # A file where a directory is expected makes mkdir(parents=True) raise --
+    # the write must be caught and reported via the exit-2 usage-error contract,
+    # not crash with a traceback.
+    blocker = root / "blocker"
+    blocker.write_text("not a directory", encoding="utf-8")
+    bad_path = blocker / "sub" / "invariant.json"
+    _out, err, rc = _run(
+        root,
+        ["--json", "--experimental-invariant-queue", "--invariant-json", str(bad_path)],
+    )
+    if rc != 2:
+        return f"expected exit 2 for an unwritable --invariant-json path, got {rc}\nstderr: {err}"
+    if "error:" not in err:
+        return f"expected an 'error:' diagnostic on stderr, got: {err}"
+    return None
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory() as tmpdir:
         base = Path(tmpdir)
@@ -938,7 +976,12 @@ def main() -> int:
                 test_ast_grep_failure_is_partial_without_raw_output,
             ),
             ("tracked_fixture_manifests", test_tracked_fixture_manifests),
+            (
+                "tracked_fixture_manifests_empty_glob_fails_closed",
+                test_tracked_fixture_manifests_empty_glob_fails_closed,
+            ),
             ("queue_d_invariant_signals", test_queue_d_invariant_signals),
+            ("bad_invariant_path_exits_2", test_bad_invariant_path_exits_2),
             ("swift_enum_only_counts_as_scanned", test_swift_enum_only_counts_as_scanned),
             (
                 "swift_function_bearing_file_scans_normally",

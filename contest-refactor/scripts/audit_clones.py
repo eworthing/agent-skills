@@ -225,36 +225,49 @@ class ExtractedFunction:
 # Stage 1: tokenizer
 # ---------------------------------------------------------------------------
 
-# Single master regex drives both masking (stage 2's brace/indent search needs
-# comments and string contents blanked out so braces or colons inside a string
-# literal don't corrupt extraction) and normalization (stage 3's token stream).
-_TOKEN_RE = re.compile(
-    r"""
-      (?P<BLOCK_COMMENT>/\*.*?\*/)
-    | (?P<LINE_COMMENT>//[^\n]*|\#[^\n]*)
-    | (?P<TRIPLE_STRING>\"\"\"(?:\\.|[^\\])*?\"\"\"|'''(?:\\.|[^\\])*?''')
-    | (?P<STRING>"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')
-    | (?P<NUMBER>\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)
-    | (?P<IDENT>[A-Za-z_][A-Za-z0-9_]*)
-    | (?P<NEWLINE>\n)
-    | (?P<WS>[ \t]+)
-    | (?P<OP>[^\sA-Za-z0-9_])
-    """,
-    re.VERBOSE | re.DOTALL,
-)
+
+# Single master regex template drives both masking (stage 2's brace/indent
+# search needs comments and string contents blanked out so braces or colons
+# inside a string literal don't corrupt extraction) and normalization (stage
+# 3's token stream). Compiled once per language below: `//` is Swift/Kotlin's
+# line comment and `#` is Python's, and treating either as a comment in the
+# OTHER language corrupts it (a Swift `#if`/`#available` brace gets blanked;
+# a Python `//` floor-division gets eaten as a comment).
+def _token_re(comment: str) -> re.Pattern[str]:
+    return re.compile(
+        r"""
+          (?P<BLOCK_COMMENT>/\*.*?\*/)
+        | (?P<LINE_COMMENT>"""
+        + comment
+        + r""")
+        | (?P<TRIPLE_STRING>\"\"\"(?:\\.|[^\\])*?\"\"\"|'''(?:\\.|[^\\])*?''')
+        | (?P<STRING>"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')
+        | (?P<NUMBER>\b\d+(?:\.\d+)?(?:[eE][+-]?\d+)?\b)
+        | (?P<IDENT>[A-Za-z_][A-Za-z0-9_]*)
+        | (?P<NEWLINE>\n)
+        | (?P<WS>[ \t]+)
+        | (?P<OP>[^\sA-Za-z0-9_])
+        """,
+        re.VERBOSE | re.DOTALL,
+    )
+
+
+_TOKEN_RE_CPP = _token_re(r"//[^\n]*")
+_TOKEN_RE_PY = _token_re(r"\#[^\n]*")
 
 _LITERAL_KINDS = frozenset({"STRING", "TRIPLE_STRING", "NUMBER"})
 _SKIP_KINDS = frozenset({"BLOCK_COMMENT", "LINE_COMMENT", "NEWLINE", "WS"})
 
 
-def _mask(text: str) -> str:
+def _mask(text: str, *, is_python: bool = False) -> str:
     """Blank out comment/string contents (preserving length + newlines).
 
     Used only to make brace/indent structure searches immune to braces, colons,
     or quote characters that happen to appear inside a string literal or comment.
     """
+    token_re = _TOKEN_RE_PY if is_python else _TOKEN_RE_CPP
     out = list(text)
-    for m in _TOKEN_RE.finditer(text):
+    for m in token_re.finditer(text):
         if m.lastgroup in ("BLOCK_COMMENT", "LINE_COMMENT", "STRING", "TRIPLE_STRING"):
             start, end = m.span()
             for i in range(start, end):
@@ -263,10 +276,11 @@ def _mask(text: str) -> str:
     return "".join(out)
 
 
-def _normalize_tokens(text: str) -> list[str]:
+def _normalize_tokens(text: str, *, is_python: bool = False) -> list[str]:
     """Source text -> normalized token stream (ID / LIT / keyword / operator)."""
+    token_re = _TOKEN_RE_PY if is_python else _TOKEN_RE_CPP
     tokens: list[str] = []
-    for m in _TOKEN_RE.finditer(text):
+    for m in token_re.finditer(text):
         kind = m.lastgroup
         if kind in _SKIP_KINDS:
             continue
@@ -294,7 +308,7 @@ _MAX_BODY_LOOKAHEAD = 400
 
 
 def _extract_swift_kotlin_functions(path: Path, text: str) -> list[FunctionBody]:
-    masked = _mask(text)
+    masked = _mask(text, is_python=False)
     n = len(masked)
     functions: list[FunctionBody] = []
 
@@ -343,7 +357,7 @@ def _extract_swift_kotlin_functions(path: Path, text: str) -> list[FunctionBody]
 
 
 def _extract_python_functions(path: Path, text: str) -> list[FunctionBody]:
-    masked = _mask(text)
+    masked = _mask(text, is_python=True)
     lines = text.splitlines()
     masked_lines = masked.splitlines()
     n = len(lines)
@@ -452,7 +466,7 @@ def _jaccard(a: set[int], b: set[int]) -> float:
 def _to_extracted(bodies: list[FunctionBody]) -> list[ExtractedFunction]:
     extracted: list[ExtractedFunction] = []
     for fb in bodies:
-        tokens = _normalize_tokens(fb.text)
+        tokens = _normalize_tokens(fb.text, is_python=fb.file.suffix in _PYTHON_EXTS)
         fp = _fingerprint(tokens)
         if not fp:
             continue

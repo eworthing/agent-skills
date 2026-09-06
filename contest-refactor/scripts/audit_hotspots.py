@@ -983,7 +983,14 @@ def _write_invariant_side_file(
     doc = _invariant_json_document(
         status, coverage, merged_roster, invariant_signals_by_identity, queue_counts
     )
-    Path(invariant_json_path).write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    out = Path(invariant_json_path)
+    try:
+        if out.parent and str(out.parent) not in ("", "."):
+            out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+    except OSError as exc:
+        sys.stderr.write(f"error: cannot write --invariant-json: {exc}\n")
+        raise SystemExit(2) from exc
 
 
 def scan_non_python_file(

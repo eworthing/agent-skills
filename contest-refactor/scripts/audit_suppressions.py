@@ -73,7 +73,7 @@ CI_GLOBS: tuple[str, ...] = (
 
 # A swallow only matters on a step that actually checks something.
 CHECKER_WORDS = re.compile(
-    r"\b(lint|test|typecheck|type-check|mypy|ruff|swiftlint|eslint|audit|check|"
+    r"\b(lint|pylint|test|pytest|unittest|typecheck|type-check|mypy|ruff|swiftlint|eslint|audit|check|"
     r"verify|validate|coverage|clippy|vet|sanitiz)",
     re.I,
 )

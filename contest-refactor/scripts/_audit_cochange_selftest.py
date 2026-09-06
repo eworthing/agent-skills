@@ -142,11 +142,19 @@ def _noise_and_mass_filters(base: Path) -> list[str]:
                 f"chore: run prettier + rustfmt across the tree ({i})",
             )
         proc = _run(root)
-        if "alpha" in proc.stdout and "omega" in proc.stdout:
-            out.append(
-                "pair reported though every co-change was a noise commit; "
-                "_is_noise_commit is not filtering"
-            )
+        if proc.returncode != 0:
+            out.append(f"noise fixture: exit {proc.returncode}: {proc.stderr.rstrip()}")
+        else:
+            try:
+                result = json.loads(proc.stdout)
+            except json.JSONDecodeError as e:
+                out.append(f"noise fixture: invalid JSON: {e}")
+            else:
+                if _pairs_by_files(result):
+                    out.append(
+                        "pair reported though every co-change was a noise commit; "
+                        "_is_noise_commit is not filtering"
+                    )
 
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -158,12 +166,38 @@ def _noise_and_mass_filters(base: Path) -> list[str]:
             bulk[far_b] = f"b = {i}\n"
             _write_and_commit(root, bulk, f"feat: sweeping change {i}")
         proc = _run(root)
-        if "alpha" in proc.stdout and "omega" in proc.stdout:
-            out.append(
-                "pair reported though every co-change was in a >8-file commit; "
-                "the mass-change cap is not applied"
-            )
+        if proc.returncode != 0:
+            out.append(f"mass fixture: exit {proc.returncode}: {proc.stderr.rstrip()}")
+        else:
+            try:
+                result = json.loads(proc.stdout)
+            except json.JSONDecodeError as e:
+                out.append(f"mass fixture: invalid JSON: {e}")
+            else:
+                if _pairs_by_files(result):
+                    out.append(
+                        "pair reported though every co-change was in a >8-file commit; "
+                        "the mass-change cap is not applied"
+                    )
     return out
+
+
+def _noise_and_mass_filters_detect_crash() -> list[str]:
+    """Point AUDIT at a missing script so the subprocess exits non-zero with
+    empty stdout -- the same shape a crash produces. The noise/mass filter
+    checks must surface this via returncode, not silently read an empty
+    pairs list as a passing (unfiltered) fixture."""
+    global AUDIT
+    original = AUDIT
+    AUDIT = original.with_name("does-not-exist.py")
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            detected = _noise_and_mass_filters(Path(td))
+    finally:
+        AUDIT = original
+    if not detected:
+        return ["stubbed crashing audit: noise/mass checks silently passed instead of failing"]
+    return []
 
 
 def main() -> int:
@@ -172,6 +206,7 @@ def main() -> int:
         return 1
 
     failures: list[str] = []
+    failures.extend(_noise_and_mass_filters_detect_crash())
     with tempfile.TemporaryDirectory() as _fb:
         failures.extend(_noise_and_mass_filters(Path(_fb)))
 
@@ -460,6 +495,43 @@ def main() -> int:
         "none",
         failures,
     )
+    # 5e (fabrication guard): a file that co-changed 3x but is deleted at HEAD
+    # must resolve to "unavailable", never a fabricated confident "none".
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "repo5e"
+        root.mkdir()
+        _init(root)
+        lhs, rhs = "src/orders/checkout.py", "src/billing/policy.py"
+        base_files = {lhs: "value = 1\n", rhs: "value = 2\n"}
+        _write_and_commit(root, base_files, "init")
+        for i in range(1, 4):
+            bump = {lhs: base_files[lhs] + f"# v{i}\n", rhs: base_files[rhs] + f"# v{i}\n"}
+            _write_and_commit(root, bump, f"sync v{i}")
+        (root / lhs).unlink()
+        _git(["add", "-A"], cwd=root)
+        _git(["commit", "-m", "remove checkout.py"], cwd=root)
+
+        proc = _run(root)
+        if proc.returncode != 0:
+            failures.append(
+                f"case5e: expected exit 0, got {proc.returncode}\n{proc.stderr.rstrip()}"
+            )
+        else:
+            try:
+                result = json.loads(proc.stdout)
+            except json.JSONDecodeError as e:
+                failures.append(f"case5e: invalid JSON output: {e}\n{proc.stdout[:300]}")
+                result = {}
+            pairs = _pairs_by_files(result)
+            key = tuple(sorted([lhs, rhs]))
+            if key not in pairs:
+                failures.append(f"case5e: expected candidate pair {key}; got {list(pairs.keys())}")
+            else:
+                dep = pairs[key].get("static_dependency")
+                if dep != "unavailable":
+                    failures.append(
+                        f"case5e: deleted-at-HEAD file must be 'unavailable', not fabricated: got {dep!r}"
+                    )
 
     # ------------------------------------------------------------------ #
     # Case 6: directional confidence labels (Bug B)                       #

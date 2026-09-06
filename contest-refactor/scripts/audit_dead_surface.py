@@ -100,9 +100,15 @@ def _discover(repo_root: Path) -> tuple[list[Path], list[Path]]:
 
     tests: list[Path] = []
     for p in repo_root.rglob("*.swift"):
-        if not p.is_file() or not is_test_file(p.name):
+        if not p.is_file():
             continue
-        if _is_ignored_for_test_walk(p.relative_to(repo_root).parts):
+        parts = p.relative_to(repo_root).parts
+        under_test_dir = any(
+            q.lower() in ("tests", "test") or q.endswith("Tests") for q in parts[:-1]
+        )
+        if not (is_test_file(p.name) or under_test_dir):
+            continue
+        if _is_ignored_for_test_walk(parts):
             continue
         tests.append(p)
 

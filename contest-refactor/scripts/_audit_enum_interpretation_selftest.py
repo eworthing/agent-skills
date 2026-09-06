@@ -183,6 +183,7 @@ def case_d_excluded_from_inventory(base: Path) -> str | None:
             ),
             "Package/Sources/ModuleB/User.swift": (
                 "func f() {\n"
+                "    if CodingKeys.id.hashValue > 0 {}\n"
                 "    if true == CodingKeys.id.hashValue > 0 {}\n"
                 "    _ = Namespace.x\n"
                 "    _ = Namespace.x\n"
@@ -271,6 +272,51 @@ def case_g_nested_module_layout(base: Path) -> str | None:
     return None
 
 
+# --- (i) enum body >60 lines + same-line `enum Foo { case a }` -------------
+# Regression for the fixed-60-line window and indent-matched close: a case
+# past line 60 of the body must still be attributed, and a fully same-line
+# declaration must still have its case extracted.
+def case_i_long_enum_and_same_line(base: Path) -> str | None:
+    root = base / "i"
+    long_body = "".join(f"    case c{i}\n" for i in range(64))
+    long_body += "    case tailCase\n"
+    _write(
+        root,
+        {
+            "Package/Sources/ModuleA/Kinds.swift": (
+                f"public enum LongEnum {{\n{long_body}}}\npublic enum Micro {{ case only }}\n"
+            ),
+            "Package/Sources/ModuleB/Consumer.swift": (
+                # Unqualified `.tailCase` only attributes to LongEnum if the
+                # scanner actually recorded tailCase as one of its cases --
+                # which the old fixed-60-line window could miss.
+                "func g(a: LongEnum) -> Bool {\n"
+                "    if a == .tailCase { return true }\n"
+                "    switch a {\n"
+                "    case .tailCase: return false\n"
+                "    default: return false\n"
+                "    }\n"
+                "}\n"
+                "func h(b: Micro) -> Bool {\n"
+                "    if b == Micro.only { return true }\n"
+                "    switch b {\n"
+                "    case Micro.only: return false\n"
+                "    default: return false\n"
+                "    }\n"
+                "}\n"
+            ),
+        },
+    )
+    out, err, rc = _run(root)
+    if rc != 0:
+        return f"expected exit 0, got {rc}\nstderr: {err}"
+    if "| LongEnum |" not in out:
+        return f"expected tailCase past line 60 to still be attributed\n--- stdout ---\n{out}"
+    if "| Micro |" not in out:
+        return f"expected a same-line `enum Foo {{ case a }}` case to be extracted\n--- stdout ---\n{out}"
+    return None
+
+
 CASES = [
     (
         "h: a single outside-home site stays below the >= 2 threshold",
@@ -283,6 +329,7 @@ CASES = [
     ("e: inside-home-only interpretation not flagged", case_e_inside_home_not_flagged),
     ("f: non-Swift tree degrades to empty table, exit 0", case_f_non_swift_unsupported),
     ("g: nested Sources/ModuleA+ModuleB home resolution", case_g_nested_module_layout),
+    ("i: enum body >60 lines + same-line enum decl", case_i_long_enum_and_same_line),
 ]
 
 

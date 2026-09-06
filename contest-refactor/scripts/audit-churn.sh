@@ -55,9 +55,18 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # Gather churn — git log --name-only across source paths. "$@" preserves
-# per-path quoting.
-churn=$(git -C "$ROOT" log --since="$SINCE" --name-only --pretty=format: -- "$@" 2>/dev/null \
-  | grep -E '\.(swift|ts|tsx|js|jsx|py|rs|go|java|kt)$' \
+# per-path quoting. Capture stdout/stderr separately so a git failure (bad
+# --since, corrupt repo) is distinguishable from genuine zero churn.
+GIT_LOG_OUT=$(mktemp -t audit-churn-log.XXXXXX) || exit 2
+GIT_LOG_ERR=$(mktemp -t audit-churn-err.XXXXXX) || exit 2
+trap 'rm -f "$GIT_LOG_OUT" "$GIT_LOG_ERR"' EXIT INT TERM HUP
+if ! git -C "$ROOT" log --since="$SINCE" --name-only --pretty=format: -- "$@" \
+    >"$GIT_LOG_OUT" 2>"$GIT_LOG_ERR"; then
+  echo "audit-churn: git log failed: $(cat "$GIT_LOG_ERR")" >&2
+  exit 2
+fi
+
+churn=$(grep -E '\.(swift|ts|tsx|js|jsx|py|rs|go|java|kt)$' "$GIT_LOG_OUT" \
   | sort \
   | uniq -c \
   | sort -rn \

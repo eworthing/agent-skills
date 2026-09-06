@@ -223,7 +223,7 @@ def _module_tuple(rel: Path) -> tuple[str, ...]:
     return parts
 
 
-def _imported_modules(path: Path, rel: Path) -> set[tuple[str, ...]]:
+def _imported_modules(path: Path, rel: Path) -> set[tuple[str, ...]] | None:
     """Fully-qualified module tuples imported by the file at ``path`` (repo-relative ``rel``).
 
     Absolute and relative imports both resolve to *absolute* tuples so a target module
@@ -239,7 +239,7 @@ def _imported_modules(path: Path, rel: Path) -> set[tuple[str, ...]]:
     try:
         tree = _ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
     except (OSError, SyntaxError, ValueError):
-        return set()
+        return None
 
     pkg = rel.parent.parts  # package directories of this module
     mods: set[tuple[str, ...]] = set()
@@ -274,6 +274,8 @@ def _infer_static_dep_python(repo: Path, lhs: str, rhs: str) -> str:
 
     lhs_imports = _imported_modules(repo / lhs, Path(lhs))
     rhs_imports = _imported_modules(repo / rhs, Path(rhs))
+    if lhs_imports is None or rhs_imports is None:
+        return "unavailable"
 
     if rhs_mod in lhs_imports or lhs_mod in rhs_imports:
         return "present"

@@ -287,6 +287,41 @@ def case_f_below_size_floor(base: Path) -> str | None:
     return None
 
 
+# --- (g) Swift `#available`/`#if` brace must not be blanked as a comment ---
+def case_hash_available_brace_kept(base: Path) -> str | None:
+    audit = _load_audit_module()
+    text = (
+        "func f() {\n"
+        "    if #available(iOS 16, *) {\n"
+        "        doThing()\n"
+        "        doOther()\n"
+        "    }\n"
+        "}\n"
+    )
+    bodies = audit._extract_swift_kotlin_functions(Path("x.swift"), text)
+    if len(bodies) != 1:
+        return f"expected exactly one extracted function, got {len(bodies)}"
+    if bodies[0].end_line != 6:
+        return (
+            f"function body closed early at line {bodies[0].end_line} (expected 6) -- "
+            f"the #available brace was blanked as a comment: {bodies[0].text!r}"
+        )
+    return None
+
+
+# --- (h) Python `//` floor-division must not be eaten as a `#`-comment -----
+def case_py_floordiv_not_comment(base: Path) -> str | None:
+    audit = _load_audit_module()
+    text = "def f():\n    x = a // b\n    return x\n"
+    bodies = audit._extract_python_functions(Path("x.py"), text)
+    if len(bodies) != 1:
+        return f"expected exactly one extracted function, got {len(bodies)}"
+    tokens = audit._normalize_tokens(bodies[0].text, is_python=True)
+    if tokens.count("ID") != 4:
+        return f"floor-division operand 'b' dropped from token stream: {tokens}"
+    return None
+
+
 CASES = [
     (
         "a: byte-identical body duplicated across two files -> ~1.0 similarity",
@@ -300,6 +335,8 @@ CASES = [
         case_c_shallow_resemblance_not_flagged,
     ),
     ("d: unsupported-stack tree -> empty output, exit 0", case_d_unsupported_stack),
+    ("g: Swift #available brace kept, not blanked as a comment", case_hash_available_brace_kept),
+    ("h: Python // floor-division not eaten as a comment", case_py_floordiv_not_comment),
 ]
 
 

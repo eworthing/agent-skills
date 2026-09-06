@@ -86,18 +86,25 @@ def main(argv: list[str] | None = None) -> int:
         print(f"audit_metric_trend: history not found: {history_path}", file=sys.stderr)
         return 0  # advisory tool: a missing history is not a hard failure
     try:
-        loops = list(_load_json(history_path).get("loops") or [])
-    except (json.JSONDecodeError, OSError) as exc:
+        data = _load_json(history_path)
+    except (json.JSONDecodeError, OSError, ValueError) as exc:
         print(f"audit_metric_trend: cannot read history: {exc}", file=sys.stderr)
         return 0
+    raw_loops = data.get("loops") if isinstance(data, dict) else None
+    loops = list(raw_loops) if isinstance(raw_loops, list) else []
 
     if args.current:
         current_path = Path(args.current)
         if current_path.is_file():
-            with contextlib.suppress(json.JSONDecodeError, OSError):
-                loops.append(_load_json(current_path))
+            with contextlib.suppress(json.JSONDecodeError, OSError, ValueError):
+                current = _load_json(current_path)
+                if isinstance(current, dict):
+                    loops.append(current)
 
-    alarms = audit(loops)
+    try:
+        alarms = audit(loops)
+    except (AttributeError, TypeError, ValueError):
+        alarms = []
     if alarms:
         print("audit_metric_trend: advisory metric-regression evidence (NOT a score/gate):")
         for line in alarms:

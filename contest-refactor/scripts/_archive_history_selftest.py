@@ -83,6 +83,34 @@ def main() -> int:
     except ValueError:
         pass
 
+    # --- CLI: a failed write must aggregate a failure, not abort on read ---
+    # A missing current-review makes the CLI exit non-zero and never create
+    # review_history, so an unconditional read after this call would raise
+    # FileNotFoundError and abort the whole suite instead of aggregating.
+
+    with tempfile.TemporaryDirectory(prefix="contest-archive-badwrite-") as tmp:
+        base = Path(tmp)
+        missing_review = base / "MISSING_REVIEW.json"
+        review_history = base / "REVIEW_HISTORY.json"
+
+        p = subprocess.run(
+            [sys.executable, str(SCRIPT), "write", str(missing_review), str(review_history)],
+            capture_output=True,
+            text=True,
+        )
+        sim_failures: list[str] = []
+        if p.returncode != 0:
+            sim_failures.append(f"CLI write (fresh history): exit {p.returncode}\n{p.stderr}")
+        else:
+            try:
+                json.loads(review_history.read_text(encoding="utf-8"))
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                sim_failures.append(f"CLI write (fresh history): unreadable output: {e}")
+        if p.returncode == 0 or len(sim_failures) != 1:
+            failures.append(
+                "stubbed failing write: expected exactly one aggregated failure, no crash"
+            )
+
     # --- CLI: write + verify, against real files --------------------------
 
     with tempfile.TemporaryDirectory(prefix="contest-archive-") as tmp:
@@ -100,9 +128,16 @@ def main() -> int:
         )
         if p.returncode != 0:
             failures.append(f"CLI write (fresh history): exit {p.returncode}\n{p.stderr}")
-        written = json.loads(review_history.read_text(encoding="utf-8"))
-        if written.get("loops") != [review]:
-            failures.append(f"CLI write (fresh history): expected loops == [review], got {written}")
+        else:
+            try:
+                written = json.loads(review_history.read_text(encoding="utf-8"))
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                failures.append(f"CLI write (fresh history): unreadable output: {e}")
+            else:
+                if written.get("loops") != [review]:
+                    failures.append(
+                        f"CLI write (fresh history): expected loops == [review], got {written}"
+                    )
 
         p = subprocess.run(
             [sys.executable, str(SCRIPT), "verify", str(current_review), str(review_history)],
@@ -136,12 +171,19 @@ def main() -> int:
         )
         if p.returncode != 0:
             failures.append(f"CLI write --md (loop divider): exit {p.returncode}\n{p.stderr}")
-        md_text = review_history_md.read_text(encoding="utf-8")
-        if (
-            "--- Loop 1 (UTC 2026-08-24T23:00:00Z) ---" not in md_text
-            or "Loop 1 body." not in md_text
-        ):
-            failures.append(f"CLI write --md (loop divider): expected content missing: {md_text!r}")
+        else:
+            try:
+                md_text = review_history_md.read_text(encoding="utf-8")
+            except FileNotFoundError as e:
+                failures.append(f"CLI write --md (loop divider): unreadable output: {e}")
+            else:
+                if (
+                    "--- Loop 1 (UTC 2026-08-24T23:00:00Z) ---" not in md_text
+                    or "Loop 1 body." not in md_text
+                ):
+                    failures.append(
+                        f"CLI write --md (loop divider): expected content missing: {md_text!r}"
+                    )
 
         p = subprocess.run(
             [
@@ -167,9 +209,16 @@ def main() -> int:
         )
         if p.returncode != 0:
             failures.append(f"CLI write --md (promotion divider): exit {p.returncode}\n{p.stderr}")
-        md_text = review_history_md.read_text(encoding="utf-8")
-        if "--- HALT_SUCCESS promotion (UTC 2026-08-25T02:32:00Z) ---" not in md_text:
-            failures.append(f"CLI write --md (promotion divider): divider missing: {md_text!r}")
+        else:
+            try:
+                md_text = review_history_md.read_text(encoding="utf-8")
+            except FileNotFoundError as e:
+                failures.append(f"CLI write --md (promotion divider): unreadable output: {e}")
+            else:
+                if "--- HALT_SUCCESS promotion (UTC 2026-08-25T02:32:00Z) ---" not in md_text:
+                    failures.append(
+                        f"CLI write --md (promotion divider): divider missing: {md_text!r}"
+                    )
 
         # A same-run same-loop rewrite must replace, not double-append.
         review["narrative"] = "revised"
@@ -181,9 +230,16 @@ def main() -> int:
         )
         if p.returncode != 0:
             failures.append(f"CLI write (replace): exit {p.returncode}\n{p.stderr}")
-        written = json.loads(review_history.read_text(encoding="utf-8"))
-        if written.get("loops") != [review]:
-            failures.append(f"CLI write (replace): expected a single replaced entry, got {written}")
+        else:
+            try:
+                written = json.loads(review_history.read_text(encoding="utf-8"))
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                failures.append(f"CLI write (replace): unreadable output: {e}")
+            else:
+                if written.get("loops") != [review]:
+                    failures.append(
+                        f"CLI write (replace): expected a single replaced entry, got {written}"
+                    )
 
         p = subprocess.run(
             [sys.executable, str(SCRIPT), "verify", str(current_review), str(review_history)],

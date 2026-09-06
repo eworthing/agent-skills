@@ -39,13 +39,13 @@ def _write(root: Path, files: dict[str, str]) -> None:
         p.write_text(body, encoding="utf-8")
 
 
-def _run(root: Path) -> str:
-    proc = subprocess.run(
+def _run(root: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
         [sys.executable, str(AUDIT), str(root)],
         capture_output=True,
         text=True,
+        timeout=60,
     )
-    return proc.stdout
 
 
 # name -> (files, expect_cycle)
@@ -153,6 +153,19 @@ def _filters_independently() -> list[str]:
     return out
 
 
+def _crashing_audit_surfaces_diagnostics() -> list[str]:
+    """A nonexistent root makes the audit exit non-zero with empty stdout --
+    exactly the shape a crash would produce. Must be caught with diagnostics,
+    not misread as a silent restraint pass."""
+    out: list[str] = []
+    proc = _run(Path("/nonexistent-audit-boundaries-root"))
+    if proc.returncode == 0:
+        out.append("crashing audit: expected non-zero exit for a nonexistent root, got 0")
+    elif not proc.stderr:
+        out.append("crashing audit: expected stderr diagnostics on failure, got none")
+    return out
+
+
 def main() -> int:
     if not AUDIT.is_file():
         print(f"FAIL: audit script missing: {AUDIT}")
@@ -160,16 +173,22 @@ def main() -> int:
 
     failures: list[str] = []
     failures.extend(_filters_independently())
+    failures.extend(_crashing_audit_surfaces_diagnostics())
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
         for name, (files, expect_cycle) in FIXTURES.items():
             root = base / name
             _write(root, files)
-            out = _run(root)
-            flagged = "circular" in out
+            proc = _run(root)
+            if proc.returncode != 0:
+                failures.append(
+                    f"{name}: audit exited {proc.returncode}\n--- stderr ---\n{proc.stderr.rstrip()}"
+                )
+                continue
+            flagged = "circular" in proc.stdout
             if flagged != expect_cycle:
                 verb = "expected a cycle, got none" if expect_cycle else "false-positive cycle"
-                failures.append(f"{name}: {verb}\n--- stdout ---\n{out.rstrip()}")
+                failures.append(f"{name}: {verb}\n--- stdout ---\n{proc.stdout.rstrip()}")
 
     if failures:
         for f in failures:

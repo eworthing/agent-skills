@@ -80,6 +80,7 @@ if [ -n "$SINCE" ]; then
       if ($0 ~ /^\+/ && $0 !~ /^\+\+\+/) { added = added " " $0 }
       next
     }
+    /^--- a\// { file = substr($0, 7); next }
     /^\+\+\+ b\// { file = substr($0, 7); next }
     /^-/ && !/^--- / {
       if ($0 !~ /(^|[^A-Za-z_])(public|open|pub|export)[ \t]/) next
@@ -134,7 +135,7 @@ while IFS= read -r module_dir; do
   #   public func, public class, public struct, public enum, public protocol,
   #   public actor, public typealias, public var, public let, public init,
   #   public extension, public static.
-  decls=$(grep -rnE '^[[:space:]]*public[[:space:]]+(func|class|struct|enum|protocol|actor|typealias|var|let|init|extension|static)' \
+  decls=$(grep -rnE '^[[:space:]]*(@[^[:space:]]+[[:space:]]+)*(public|open)[[:space:]]+((final|mutating|override|nonmutating|indirect|private\(set\))[[:space:]]+)*(func|class|struct|enum|protocol|actor|typealias|var|let|init|extension|static)' \
     "$module_dir" 2>/dev/null | grep -v '/\.build/' | grep -v '/Tests/')
 
   if [ -z "$decls" ]; then
@@ -150,7 +151,7 @@ while IFS= read -r module_dir; do
     # Symbol-name heuristic: strip leading whitespace + "public ", then strip
     # the kind keyword (func/class/...), then take the next identifier.
     symbol=$(echo "$decl_text" \
-      | sed -E 's/^[[:space:]]*public[[:space:]]+(func|class|struct|enum|protocol|actor|typealias|var|let|init|extension|static)[[:space:]]+//' \
+      | sed -E 's/^[[:space:]]*(@[^[:space:]]+[[:space:]]+)*(public|open)[[:space:]]+((final|mutating|override|nonmutating|indirect|private\(set\)|static)[[:space:]]+)*(func|class|struct|enum|protocol|actor|typealias|var|let|init|extension|static)[[:space:]]+//' \
       | sed -E 's/^([A-Za-z_][A-Za-z0-9_]*).*/\1/' \
       | head -1)
 

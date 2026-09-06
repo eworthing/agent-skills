@@ -164,27 +164,32 @@ while IFS= read -r rawline; do
     CodingKeys|Never) continue ;;
   esac
 
-  indent=$(printf '%s\n' "$content" | sed -E 's/^([[:space:]]*).*/\1/')
-
-  window_out=$(awk -v start="$el" -v indent="$indent" '
-    NR <= start { next }
-    {
-      if (NR - start > 60) { exit }
-      if (match($0, "^" indent "}")) { print "WEND:" NR; exit }
-      if (match($0, "^[ \t]*case[ \t]+")) {
-        rest = substr($0, RSTART + RLENGTH)
-        depth = 0
-        cur = ""
-        n = length(rest)
-        for (i = 1; i <= n; i++) {
-          c = substr(rest, i, 1)
-          if (c == "(") { depth++; cur = cur c; continue }
-          if (c == ")") { depth--; cur = cur c; continue }
-          if (c == "," && depth == 0) { print "CASE:" cur; cur = ""; continue }
-          cur = cur c
-        }
-        if (cur != "") print "CASE:" cur
+  window_out=$(awk -v start="$el" '
+    function scan_cases(rest,    depth2, cur, n, i, c) {
+      depth2 = 0
+      cur = ""
+      n = length(rest)
+      for (i = 1; i <= n; i++) {
+        c = substr(rest, i, 1)
+        if (c == "(") { depth2++; cur = cur c; continue }
+        if (c == ")") { depth2--; cur = cur c; continue }
+        if (c == "}" && depth2 == 0) { break }
+        if (c == "," && depth2 == 0) { print "CASE:" cur; cur = ""; continue }
+        cur = cur c
       }
+      if (cur != "") print "CASE:" cur
+    }
+    NR < start { next }
+    NR == start {
+      depth = gsub(/\{/, "{") - gsub(/\}/, "}")
+      if (match($0, /\{/)) { scan_cases(substr($0, RSTART + RLENGTH)) }
+      if (depth <= 0) { exit }
+      next
+    }
+    {
+      depth += gsub(/\{/, "{") - gsub(/\}/, "}")
+      if (match($0, /^[ \t]*case[ \t]+/)) { scan_cases(substr($0, RSTART + RLENGTH)) }
+      if (depth <= 0) { exit }
     }
   ' "$ef")
 

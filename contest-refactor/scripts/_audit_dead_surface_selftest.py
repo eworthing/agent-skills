@@ -299,6 +299,36 @@ def test_scope_restricts_files_scanned() -> None:
     assert not any(r["name"] == "dead2" for r in scoped["rows"])
 
 
+def test_helpers_under_tests_dir_are_tests() -> None:
+    # FooTests/Helpers.swift has no test-like filename, so `is_test_file`
+    # misses it, and `is_ignored_path`'s *Tests-dir rule excludes it from
+    # production too -- it must land in the test sweep, not vanish entirely.
+    d = _repo(
+        {
+            "Values/Widget.swift": (
+                "public struct Widget: Sendable {\n"
+                '    public func render() -> String { "x" }\n'
+                "    public func debugDescribe() -> String { self.render() }\n"
+                "}\n"
+            ),
+            "FooTests/Helpers.swift": (
+                "func makeWidget() -> Widget {\n"
+                "    let w = Widget()\n"
+                "    _ = w.debugDescribe()\n"
+                "    return w\n"
+                "}\n"
+            ),
+            "FooTests/WidgetTests.swift": (
+                "import XCTest\nfunc testIt() {\n    _ = makeWidget()\n}\n"
+            ),
+        }
+    )
+    doc = A.audit(d, None, "all")
+    rows = _rows_by_name(doc)
+    assert rows["debugDescribe"]["status"] == "test_only", rows["debugDescribe"]
+    assert doc["coverage"]["test_files_scanned"] >= 2
+
+
 def test_scope_reference_from_outside_scope_silences() -> None:
     # A declaration inside --scope, referenced only from a file OUTSIDE scope,
     # must NOT be flagged dead: the plan requires the reference sweep to cover

@@ -46,7 +46,7 @@ SUFFIXES='(Service|Manager|Helper|Util|Utility|Handler|Provider|Wrapper)'
 # matching the fuzzy suffix. Extract (file, type-name).
 all_hits=""
 for base in "$@"; do
-  hits=$(grep -rnE "^[[:space:]]*(public|internal|fileprivate|private)?[[:space:]]*(final[[:space:]]+)?(class|struct|enum|actor|protocol)[[:space:]]+[A-Z][A-Za-z0-9_]*${SUFFIXES}\b" \
+  hits=$(grep -rnE "^[[:space:]]*(@[^[:space:]]+[[:space:]]+)*((open|public|package|internal|fileprivate|private|final|indirect)[[:space:]]+)*(class|struct|enum|actor|protocol)[[:space:]]+[A-Z][A-Za-z0-9_]*${SUFFIXES}\b" \
     "$base" 2>/dev/null \
     | grep -v '/\.build/' \
     | grep -vE '/(Tests|TestSupport)/')
