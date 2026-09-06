@@ -86,11 +86,16 @@ def load_previous(ref: str) -> dict:
             f"--previous {ref!r} is not a file and not a resolvable git ref: {exc}"
         ) from exc
     try:
-        return json.loads(proc.stdout)
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
         raise PlumbingError(
             f"--previous {ref!r}: git show did not return valid JSON: {exc}"
         ) from exc
+    if not isinstance(data, dict):
+        raise PlumbingError(
+            f"--previous {ref!r}: top-level JSON must be an object, got {type(data).__name__}"
+        )
+    return data
 
 
 def check_regression(previous: dict, current: dict) -> list[str]:

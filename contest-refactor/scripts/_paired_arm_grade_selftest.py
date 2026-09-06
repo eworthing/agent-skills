@@ -101,8 +101,47 @@ def _top_level_triggers() -> None:
     )
 
 
+def _null_assertions_is_note() -> None:
+    """A malformed `assertions` shape (None, or a non-dict entry) must produce an
+    `unusable_grade` note, never crash `check_triggers` with an AttributeError/TypeError."""
+    import paired_arm_grade as pag
+
+    text = "the reviewer said the reducer owns the mutation"
+
+    fired = pag.check_triggers(
+        "principal-invariant-owner-restraint",
+        {
+            "semantic_grade": "pass",
+            "semantic_grade_evidence_span": "the reducer owns the mutation",
+            "assertions": None,
+        },
+        text,
+    )
+    _check(
+        "assertions=None notes unusable_grade instead of crashing",
+        any(f["trigger"] == "unusable_grade" for f in fired),
+        f"fired={fired!r}",
+    )
+
+    fired = pag.check_triggers(
+        "principal-invariant-owner-restraint",
+        {
+            "semantic_grade": "pass",
+            "semantic_grade_evidence_span": "the reducer owns the mutation",
+            "assertions": ["not-a-dict"],
+        },
+        text,
+    )
+    _check(
+        "a non-dict assertion entry notes unusable_grade instead of crashing",
+        any(f["trigger"] == "unusable_grade" for f in fired),
+        f"fired={fired!r}",
+    )
+
+
 def main() -> int:
     _top_level_triggers()
+    _null_assertions_is_note()
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         flag = "principal-invariant-owner-flag"

@@ -385,7 +385,13 @@ def build_attempt(
     try:
         report = grade_structural.grade(out_path, st["scenario_id"])
         verdict = grade_structural._load_candidate(out_path)
-    except Exception as exc:
+    except (
+        grade_structural.Plumbing,
+        ValueError,
+        json.JSONDecodeError,
+        UnicodeDecodeError,
+        FileNotFoundError,
+    ) as exc:
         entry = _eval_entry(st["scenario_id"])
         return {
             **base,
@@ -624,6 +630,8 @@ def cmd_finish(args: argparse.Namespace) -> int:
             and entry["pair_id"] == args.pair
             and entry["attempt_index"] == attempt
         ):
+            if entry["state"] == "finished":
+                raise Guard(f"{args.pair} attempt {attempt} was already finished")
             entry["state"] = "finished"
             entry["usage"] = json.loads(Path(args.usage).read_text()) if args.usage else None
     if args.mode == "pilot":

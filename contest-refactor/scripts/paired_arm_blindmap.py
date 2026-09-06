@@ -107,6 +107,9 @@ def main() -> int:
         return 2
     wanted = set(rung.get("scenarios") or [rung["scenario"]])
     pairs = [e["pair_id"] for e in prereg["frozen_order"] if e["scenario_id"] in wanted]
+    if not pairs:
+        print(f"rung {args.rung}: no pairs match scenarios {sorted(wanted)}", file=sys.stderr)
+        return 2
 
     built = build(prereg, args.rung, pairs, EVALS / "paired-arm-outputs" / "study", record)
     Path(args.out).write_text(json.dumps(built, indent=2) + "\n")

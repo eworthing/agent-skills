@@ -57,16 +57,24 @@ def _attempt_cap(pair_id: Any) -> int:
     if not isinstance(pair_id, str):
         return 2
     try:
-        grants = json.loads(
+        doc = json.loads(
             (SKILL_ROOT / "evals" / "paired-arm-outputs" / "execution.json").read_text()
-        ).get("attempt_grants", [])
+        )
     except (OSError, ValueError):
         return 2
-    return 2 + sum(
-        int(g.get("extra_attempts", 0))
-        for g in grants
-        if isinstance(g, dict) and g.get("pair_id") == pair_id
-    )
+    if not isinstance(doc, dict):
+        return 2
+    grants = doc.get("attempt_grants")
+    if not isinstance(grants, list):
+        return 2
+    extra = 0
+    for g in grants:
+        if not isinstance(g, dict) or g.get("pair_id") != pair_id:
+            continue
+        n = g.get("extra_attempts", 0)
+        if isinstance(n, int) and not isinstance(n, bool) and n >= 0:
+            extra += n
+    return 2 + extra
 
 
 def validate_attempt(
@@ -282,20 +290,22 @@ def validate_complete(record: dict, canon: _canon.Canon) -> list[str]:
     attempts = record.get("attempts")
     if not isinstance(attempts, list):
         return issues
-    terminal_counts: dict[tuple[str, str], int] = {}
+    terminal_slots: dict[tuple[str, str], set[int]] = {}
     for a in attempts:
         if not isinstance(a, dict):
             continue
         if not _terminal(a):
             continue
         key = (a.get("scenario_id"), a.get("arm"))
-        terminal_counts[key] = terminal_counts.get(key, 0) + 1
+        slot = a.get("slot_index")
+        if isinstance(slot, int):
+            terminal_slots.setdefault(key, set()).add(slot)
     for sid in STUDY_SCENARIOS:
         for arm in VALID_ARMS:
-            n = terminal_counts.get((sid, arm), 0)
-            if n != K:
+            slots = terminal_slots.get((sid, arm), set())
+            if slots != set(range(1, K + 1)):
                 issues.append(
-                    f"[record_state=complete] {sid}/{arm}: expected exactly {K} terminal slots, got {n}"
+                    f"[record_state=complete] {sid}/{arm}: expected exactly slots 1..{K}, got {sorted(slots)}"
                 )
     per_scenario = record.get("per_scenario")
     if not isinstance(per_scenario, dict):

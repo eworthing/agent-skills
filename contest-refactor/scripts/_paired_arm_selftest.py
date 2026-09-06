@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# WAIVER: module-size — flat case-per-scenario selftest mechanizing several paired-arm CLIs
+#   (validate-paired-arm.py, paired_arm_blindmap.py, paired_arm_record_grades.py,
+#   paired_arm_run.py) via real subprocess-exec fixtures per backlog item 16's house rule;
+#   splitting would scatter fixtures away from the exact CLI behavior they pin down.
 """Self-test: validate-paired-arm.py mechanizes the paired-arm record_state lifecycle it claims
 to, nothing more.
 
@@ -317,6 +321,43 @@ def main() -> int:
         rc, _, err = _run(tmpdir, "order_bad_arms.json", bad)
         _check("non-permutation arm_order -> exit 1", rc == 1, f"got {rc}")
 
+        # A bad-shaped rep must surface as a structured [frozen_order] issue, never as an
+        # uncaught TypeError from sorting a list that mixes ints with the bad value.
+        bad = copy.deepcopy(real)
+        bad["prereg"]["frozen_order"][0]["rep"] = "2"
+        rc, _, err = _run(tmpdir, "order_rep_str.json", bad)
+        _check("string rep -> exit 1, not a crash", rc == 1, f"got {rc}: {err[:300]}")
+        _check("no TypeError from sorted()", "TypeError" not in err, err[:300])
+
+        print("== RED: material_hashes must be a dict, never crash with AttributeError ==")
+        bad = copy.deepcopy(real)
+        bad["prereg"]["material_hashes"] = []
+        bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+        rc, _, err = _run(tmpdir, "material_hashes_list.json", bad)
+        _check(
+            "material_hashes as a list -> exit 1, not a crash", rc == 1, f"got {rc}: {err[:300]}"
+        )
+        _check(
+            "names material_hashes, no AttributeError",
+            "material_hashes" in err and "AttributeError" not in err,
+            err[:300],
+        )
+
+        print("== RED: execution_ladder scenarios must be a list of strings ==")
+        for bad_val, label in (("not-a-list", "string"), (5, "int")):
+            bad = copy.deepcopy(real)
+            bad["prereg"]["execution_ladder"]["rung_1"]["scenarios"] = bad_val
+            bad["prereg_sha256"] = _prereg_sha256(bad["prereg"])
+            rc, _, err = _run(tmpdir, f"ladder_scenarios_{label}.json", bad)
+            _check(
+                f"execution_ladder scenarios as {label} -> exit 1, no crash",
+                rc == 1,
+                f"got {rc}: {err[:300]}",
+            )
+            _check(
+                f"names the shape issue ({label})", "must be a list of strings" in err, err[:300]
+            )
+
         print("== RED: expected_baseline validity (enum + restraint pin + rationale) ==")
         # A flag may be predicted EITHER way -- that is a hypothesis, not a derived default, and
         # the two core flags are deliberately predicted 'hold' against the principal flags' 'miss'.
@@ -593,6 +634,24 @@ def main() -> int:
         rc, _, err = _run(tmpdir, "complete_short.json", bad)
         _check("109 attempts (one group short) -> exit 1", rc == 1, f"got {rc}")
 
+        # Duplicating one slot_index while another goes missing keeps the terminal COUNT at
+        # exactly K -- a count-only check would miss it. Requiring the distinct slot set to equal
+        # {1..K} catches it.
+        bad = copy.deepcopy(rec_complete)
+        target_sid, target_arm = scenarios[0], "with_skill"
+        group = [
+            a for a in bad["attempts"] if a["scenario_id"] == target_sid and a["arm"] == target_arm
+        ]
+        slot2 = next(a for a in group if a["slot_index"] == 2)
+        slot2["slot_index"] = 1  # now two attempts claim slot 1; none claim slot 2
+        rc, _, err = _run(tmpdir, "complete_duplicate_slot.json", bad)
+        _check(
+            "duplicated slot_index (same count, wrong slots) -> exit 1",
+            rc == 1,
+            f"got {rc}: {err[:300]}",
+        )
+        _check("names the expected slots", "expected exactly slots" in err, err[:300])
+
         bad = copy.deepcopy(rec_complete)
         flag_sid = next(sid for sid in scenarios if sid.endswith("-flag"))
         bad["per_scenario"][flag_sid]["with_skill"]["mechanical"]["count"] = 1
@@ -600,6 +659,263 @@ def main() -> int:
         rc, _, err = _run(tmpdir, "complete_subset_violation.json", bad)
         _check("subset invariant violated on with_skill flag -> exit 1", rc == 1, f"got {rc}")
         _check("names subset_invariant", "subset_invariant" in err, err[:200])
+
+        # ==== _attempt_cap: malformed execution.json fails closed to cap 2 =============
+        print("== _paired_arm_validate._attempt_cap: malformed grants fail closed to cap 2 ==")
+        import _paired_arm_validate as pav
+
+        def _attempt_cap_with(doc: object) -> int:
+            with tempfile.TemporaryDirectory() as td2:
+                root = Path(td2)
+                outdir = root / "evals" / "paired-arm-outputs"
+                outdir.mkdir(parents=True)
+                (outdir / "execution.json").write_text(json.dumps(doc))
+                orig = pav.SKILL_ROOT
+                pav.SKILL_ROOT = root
+                try:
+                    return pav._attempt_cap("pair-001")
+                finally:
+                    pav.SKILL_ROOT = orig
+
+        _check("non-dict top level -> cap 2", _attempt_cap_with([1, 2, 3]) == 2)
+        _check(
+            "non-list attempt_grants -> cap 2", _attempt_cap_with({"attempt_grants": "nope"}) == 2
+        )
+        _check(
+            "str/None/bool/negative extra_attempts ignored, fail closed to cap 2",
+            _attempt_cap_with(
+                {
+                    "attempt_grants": [
+                        {"pair_id": "pair-001", "extra_attempts": "3"},
+                        {"pair_id": "pair-001", "extra_attempts": None},
+                        {"pair_id": "pair-001", "extra_attempts": True},
+                        {"pair_id": "pair-001", "extra_attempts": -5},
+                    ]
+                }
+            )
+            == 2,
+        )
+        _check(
+            "a valid int extra_attempts still adds",
+            _attempt_cap_with({"attempt_grants": [{"pair_id": "pair-001", "extra_attempts": 3}]})
+            == 5,
+        )
+
+        # ==== paired_arm_blindmap: a rung scenario matching nothing must not silently ====
+        # ==== write an empty blind map ==================================================
+        print("== paired_arm_blindmap.main: rung scenario matching nothing -> exit 2 ==")
+        import contextlib
+        import io
+
+        import paired_arm_blindmap as pab
+
+        def _run_blindmap(rung_scenarios: list[str]) -> tuple[int, str]:
+            with tempfile.TemporaryDirectory() as td2:
+                record_path = Path(td2) / "record.json"
+                fixture = {
+                    "prereg": {
+                        "execution_ladder": {"rung_1": {"scenarios": rung_scenarios}},
+                        "frozen_order": [
+                            {"pair_id": "pair-001", "scenario_id": "some-real-scenario"}
+                        ],
+                    },
+                    "attempts": [],
+                }
+                record_path.write_text(json.dumps(fixture))
+                out_path = Path(td2) / "out.json"
+                orig_record, argv_orig = pab.RECORD, sys.argv
+                pab.RECORD = record_path
+                sys.argv = ["paired_arm_blindmap.py", "--rung", "1", "--out", str(out_path)]
+                stderr_buf = io.StringIO()
+                try:
+                    with contextlib.redirect_stderr(stderr_buf):
+                        rc = pab.main()
+                finally:
+                    pab.RECORD, sys.argv = orig_record, argv_orig
+                return rc, stderr_buf.getvalue()
+
+        rc, err = _run_blindmap(["scenario-that-does-not-exist"])
+        _check("rung scenario matching nothing -> exit 2", rc == 2, f"got {rc}: {err[:300]}")
+        _check("names that no pairs matched", "no pairs match" in err, err[:300])
+
+        # ==== paired_arm_record_grades: load_reply / terminal_reply / mechanical =======
+        print("== paired_arm_record_grades: malformed inputs are plumbing, not a crash ==")
+        import paired_arm_record_grades as parg
+
+        with tempfile.TemporaryDirectory() as td3:
+            bad_reply = Path(td3) / "bad.reply.md"
+            bad_reply.write_text("I could not decide, so here is prose with no JSON at all.\n")
+            try:
+                parg.load_reply(bad_reply)
+            except parg.PlumbingError:
+                _check("unparseable reply raises PlumbingError (not a crash)", True)
+            else:
+                _check(
+                    "unparseable reply raises PlumbingError (not a crash)",
+                    False,
+                    "no exception raised",
+                )
+
+        with tempfile.TemporaryDirectory() as td4:
+            grades_dir = Path(td4)
+            oid = "OUT-test"
+            (grades_dir / f"{oid}.reply.md").write_text(json.dumps({"semantic_grade": "held"}))
+            (grades_dir / f"{oid}-g2.reply.md").write_text(json.dumps({"semantic_grade": "held"}))
+            (grades_dir / f"{oid}-g3.reply.md").write_text(json.dumps({"semantic_grade": "held"}))
+            reply_path, notes = parg.terminal_reply(grades_dir, oid)
+            _check(
+                "agreeing grades + stray -g3 -> base reply still wins",
+                reply_path == grades_dir / f"{oid}.reply.md",
+            )
+            _check(
+                "agreeing grades + stray -g3 -> noted (mirrors the abstention branch)",
+                any("never called for one" in n for n in notes),
+                f"notes={notes!r}",
+            )
+
+        class _FakeCompleted:
+            def __init__(self, returncode: int, stdout: str) -> None:
+                self.returncode = returncode
+                self.stdout = stdout
+                self.stderr = ""
+
+        orig_subprocess_run = parg.subprocess.run
+        parg.subprocess.run = lambda *a, **k: _FakeCompleted(1, "")
+        try:
+            try:
+                parg.mechanical("some-scenario", "some-candidate.md")
+            except parg.PlumbingError:
+                _check("corrupt mechanical stdout raises PlumbingError (not a crash)", True)
+            else:
+                _check(
+                    "corrupt mechanical stdout raises PlumbingError (not a crash)",
+                    False,
+                    "no exception raised",
+                )
+        finally:
+            parg.subprocess.run = orig_subprocess_run
+
+        # ==== paired_arm_run.build_attempt: a harness fault is not scored as malformed ==
+        print("== paired_arm_run.build_attempt: a harness fault must not be scored as malformed ==")
+        import paired_arm_run as par
+
+        orig_grade = par.grade_structural.grade
+        par.grade_structural.grade = lambda *a, **k: (_ for _ in ()).throw(
+            RuntimeError("harness bug, not a candidate defect")
+        )
+        try:
+            st = {"pair_id": "p1", "scenario_id": scenarios[0], "rep": 1}
+            out_path = SKILL_ROOT / "evals" / "does-not-need-to-exist.md"
+            try:
+                par.build_attempt(st, "with_skill", 1, out_path, None)
+            except RuntimeError:
+                _check("a harness RuntimeError is not silently scored as malformed", True)
+            else:
+                _check(
+                    "a harness RuntimeError is not silently scored as malformed",
+                    False,
+                    "no exception raised, attempt built instead",
+                )
+        finally:
+            par.grade_structural.grade = orig_grade
+
+        # ==== paired_arm_run.cmd_finish: refuses a double-finish =========================
+        print("== paired_arm_run.cmd_finish: refuses re-finishing an already-finished entry ==")
+        import argparse as _argparse
+
+        with tempfile.TemporaryDirectory() as td5:
+            tmp_root = Path(td5)
+            scratch_root = tmp_root / "scratch"
+            exec_path = tmp_root / "execution.json"
+            resume_path = tmp_root / "RESUME.md"
+
+            fake_sha = "0" * 40
+            base = par.scratch_dir(scratch_root, "pilot", "pilot-p1", 1)
+            base.mkdir(parents=True)
+            (base / "start_commit.txt").write_text(fake_sha)
+
+            exec_doc = {
+                "pilot": {
+                    "order": [
+                        {
+                            "pair_id": "pilot-p1",
+                            "scenario_id": "principal-duplicated-rule-restraint",
+                            "rep": 1,
+                            "arm_order": ["with_skill", "without_skill"],
+                        }
+                    ],
+                    "attempts": [],
+                },
+                "dispatch_log": [
+                    {
+                        "mode": "pilot",
+                        "pair_id": "pilot-p1",
+                        "attempt_index": 1,
+                        "state": "finished",
+                    }
+                ],
+                "attempt_grants": [],
+            }
+            exec_path.write_text(json.dumps(exec_doc))
+
+            orig_exec_path = par.EXEC_PATH
+            orig_resume_path = par.RESUME_PATH
+            orig_head_sha = par.head_sha
+            orig_commit_allowlist = par.commit_allowlist
+            par.EXEC_PATH = exec_path
+            par.RESUME_PATH = resume_path
+            par.head_sha = lambda: fake_sha
+            par.commit_allowlist = lambda paths, message: "deadbeef"
+            try:
+                fin_args = _argparse.Namespace(
+                    mode="pilot",
+                    pair="pilot-p1",
+                    rung=None,
+                    scratch_root=str(scratch_root),
+                    invalid=["with_skill=infra_timeout", "without_skill=infra_timeout"],
+                    usage=None,
+                )
+                try:
+                    par.cmd_finish(fin_args)
+                except par.Guard:
+                    _check("double-finish is refused with Guard", True)
+                else:
+                    _check("double-finish is refused with Guard", False, "no exception raised")
+                _check(
+                    "execution.json is untouched by the refused finish",
+                    json.loads(exec_path.read_text()) == exec_doc,
+                )
+            finally:
+                par.EXEC_PATH = orig_exec_path
+                par.RESUME_PATH = orig_resume_path
+                par.head_sha = orig_head_sha
+                par.commit_allowlist = orig_commit_allowlist
+
+        # ==== validate-paired-arm.load_previous: git-show returning a non-object =======
+        print(
+            "== validate-paired-arm.load_previous: git-show returning a non-object is plumbing =="
+        )
+        from _selftest_lib import load_validator
+
+        vpa = load_validator("validate-paired-arm.py")
+
+        class _FakeProc:
+            def __init__(self, stdout: str) -> None:
+                self.stdout = stdout
+
+        orig_vpa_run = vpa.subprocess.run
+        vpa.subprocess.run = lambda *a, **k: _FakeProc("[]")
+        try:
+            try:
+                vpa.load_previous("fake-git-rev-for-selftest")
+            except vpa.PlumbingError:
+                _check("git-show returning a JSON list -> PlumbingError", True)
+            else:
+                _check(
+                    "git-show returning a JSON list -> PlumbingError", False, "no exception raised"
+                )
+        finally:
+            vpa.subprocess.run = orig_vpa_run
 
         # ==== --check-git-provenance stub ==============================================
         print("== --check-git-provenance: documented Phase-1 stub ==")

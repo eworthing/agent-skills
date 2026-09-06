@@ -158,6 +158,10 @@ def check_triggers(scenario_id: str, grade: dict, candidate_text: str) -> list[d
     def note(trigger_id: str, detail: str) -> None:
         fired.append({"trigger": trigger_id, "detail": detail})
 
+    if not isinstance(grade, dict):
+        note("unusable_grade", f"grade is not an object: {grade!r}")
+        return fired
+
     if grade.get("semantic_grade") == "uncertain":
         note("grader_uncertain", "semantic_grade is 'uncertain'")
     elif not _spans(grade.get("semantic_grade_evidence_span"), candidate_text):
@@ -167,7 +171,15 @@ def check_triggers(scenario_id: str, grade: dict, candidate_text: str) -> list[d
             "not a verbatim substring of the candidate output",
         )
 
-    for a in grade.get("assertions", []):
+    assertions = grade.get("assertions")
+    if not isinstance(assertions, list):
+        note("unusable_grade", f"assertions is not a list: {assertions!r}")
+        assertions = []
+
+    for a in assertions:
+        if not isinstance(a, dict):
+            note("unusable_grade", f"assertion entry is not an object: {a!r}")
+            continue
         idx = a.get("assertion_index")
         if idx not in residue_indices:
             note(
@@ -183,7 +195,7 @@ def check_triggers(scenario_id: str, grade: dict, candidate_text: str) -> list[d
                 "no_cited_span",
                 f"assertion_index {idx}: non-uncertain judgment with no verbatim span",
             )
-    graded = {a.get("assertion_index") for a in grade.get("assertions", [])}
+    graded = {a.get("assertion_index") for a in assertions if isinstance(a, dict)}
     missing = residue_indices - graded
     if missing:
         note("opined_outside_residue", f"semantic assertions left ungraded: {sorted(missing)}")

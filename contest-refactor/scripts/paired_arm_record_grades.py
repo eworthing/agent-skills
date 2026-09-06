@@ -29,9 +29,12 @@ class PlumbingError(RuntimeError):
 
 
 def load_reply(path: Path) -> dict:
-    text = path.read_text()
-    m = re.search(r"```json\s*\n(.*?)```", text, re.S)
-    return json.loads(m.group(1) if m else text)
+    try:
+        text = path.read_text()
+        m = re.search(r"```json\s*\n(.*?)```", text, re.S)
+        return json.loads(m.group(1) if m else text)
+    except (OSError, ValueError) as exc:
+        raise PlumbingError(f"{path}: unparseable reply: {exc}") from exc
 
 
 def terminal_reply(grades_dir: Path, oid: str) -> tuple[Path, list[str]]:
@@ -82,6 +85,11 @@ def terminal_reply(grades_dir: Path, oid: str) -> tuple[Path, list[str]]:
             )
         return winner, notes
     if v1 == v2:
+        if g3.is_file():
+            notes.append(
+                f"{oid}: -g3 exists but the frozen rule never called for one "
+                f"(g1={v1!r} vs g2={v2!r} agree); the agreed grade {v1!r} stands"
+            )
         return base, notes
     if not g3.is_file():
         raise PlumbingError(
@@ -108,7 +116,10 @@ def mechanical(scenario: str, candidate: str) -> str | None:
     if r.returncode not in (0, 1):
         print(f"mechanical failed for {candidate}: {r.stderr[-300:]}", file=sys.stderr)
         raise SystemExit(2)
-    return json.loads(r.stdout).get("mechanical_grade")
+    try:
+        return json.loads(r.stdout).get("mechanical_grade")
+    except ValueError as exc:
+        raise PlumbingError(f"mechanical grading produced unparseable stdout: {exc}") from exc
 
 
 def main() -> int:

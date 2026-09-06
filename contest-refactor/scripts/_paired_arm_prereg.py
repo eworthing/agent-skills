@@ -88,6 +88,11 @@ def _is_hex64(value: Any) -> bool:
     )
 
 
+def _material_hashes(prereg: dict) -> dict:
+    hashes = prereg.get("material_hashes")
+    return hashes if isinstance(hashes, dict) else {}
+
+
 def load_record(path: Path) -> dict:
     if not path.is_file():
         raise PlumbingError(f"not a file: {path}")
@@ -322,7 +327,7 @@ def check_frozen_order(prereg: dict) -> list[str]:
             issues.append(
                 f"[frozen_order] entry {i}: scenario_id {scenario_id!r} not one of the 11 study scenarios"
             )
-        else:
+        elif isinstance(rep, int) and not isinstance(rep, bool):
             reps_by_scenario.setdefault(scenario_id, []).append(rep)
         if not isinstance(rep, int) or not (1 <= rep <= K):
             issues.append(f"[frozen_order] entry {i}: rep must be an int in 1..{K}, got {rep!r}")
@@ -471,7 +476,7 @@ def check_grading(prereg: dict) -> list[str]:
     prompt_hash = g.get("grader_prompt_sha256")
     if not isinstance(prompt_file, str) or not (SKILL_ROOT / prompt_file).is_file():
         issues.append("[grading] grader_prompt_file missing or does not resolve to a file")
-    elif prereg.get("material_hashes", {}).get(prompt_file) != prompt_hash:
+    elif _material_hashes(prereg).get(prompt_file) != prompt_hash:
         # material_hashes is live-verified against disk by _check_hash_map, so agreeing with it
         # is what makes grader_prompt_sha256 a real freeze rather than a second copy that can rot.
         issues.append(
@@ -555,7 +560,7 @@ def check_dispatch_envelope(prereg: dict) -> list[str]:
     path, want = env.get("file"), env.get("sha256")
     if not isinstance(path, str) or not (SKILL_ROOT / path).is_file():
         issues.append("[dispatch_envelope] file missing or does not resolve to a file")
-    elif prereg.get("material_hashes", {}).get(path) != want:
+    elif _material_hashes(prereg).get(path) != want:
         issues.append(
             "[dispatch_envelope] sha256 does not agree with the material_hashes entry for "
             f"{path} -- the envelope's freeze hash is recorded twice and they have drifted"
@@ -588,6 +593,11 @@ def check_execution_ladder(prereg: dict) -> list[str]:
         scenarios = rung.get("scenarios") or ([rung["scenario"]] if rung.get("scenario") else [])
         if not scenarios:
             issues.append(f"[execution_ladder] {key} declares no scenario(s)")
+            continue
+        if not isinstance(scenarios, list) or not all(isinstance(s, str) for s in scenarios):
+            issues.append(
+                f"[execution_ladder] {key}: scenarios must be a list of strings, got {scenarios!r}"
+            )
             continue
         seen += scenarios
         pairs = rung.get("pairs")
@@ -630,7 +640,7 @@ def check_grading_tiering(prereg: dict) -> list[str]:
         path, want = spec.get("authoring_prompt_file"), spec.get("authoring_prompt_sha256")
         if not isinstance(path, str) or not (SKILL_ROOT / path).is_file():
             issues.append("[grading.tiering] spec_first.authoring_prompt_file does not resolve")
-        elif prereg.get("material_hashes", {}).get(path) != want:
+        elif _material_hashes(prereg).get(path) != want:
             issues.append(
                 "[grading.tiering] spec_first.authoring_prompt_sha256 disagrees with its "
                 "material_hashes entry -- recorded twice and drifted"
