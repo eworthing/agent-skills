@@ -337,19 +337,27 @@ def main() -> int:
             p.returncode == 0,
             f"an absolute historical root must not abort the ledger, got {p.returncode}: {p.stderr[:200]}",
         )
-        led_abs = json.loads(out_json.read_text(encoding="utf-8"))
-        check(
-            led_abs["denominator"]["invalid_roots"] == ["/etc"],
-            f"the invalid root must be named, got {led_abs['denominator'].get('invalid_roots')}",
-        )
-        check(
-            led_abs["source_roots"] == ["src"] and led_abs["denominator"]["files"] == ["src/a.py"],
-            f"only the valid root is walked, got {led_abs['source_roots']} / {led_abs['denominator']['files']}",
-        )
-        check(
-            led_abs["denominator"]["excluded_by_reason"].get("invalid_root") == 1,
-            f"the skip must be counted, got {led_abs['denominator']['excluded_by_reason']}",
-        )
+        try:
+            led_abs = json.loads(out_json.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            failures.append(
+                f"ledger JSON unreadable after CLI rc={p.returncode}: {e}: {p.stderr[:200]}"
+            )
+            led_abs = None
+        if led_abs is not None:
+            check(
+                led_abs["denominator"]["invalid_roots"] == ["/etc"],
+                f"the invalid root must be named, got {led_abs['denominator'].get('invalid_roots')}",
+            )
+            check(
+                led_abs["source_roots"] == ["src"]
+                and led_abs["denominator"]["files"] == ["src/a.py"],
+                f"only the valid root is walked, got {led_abs['source_roots']} / {led_abs['denominator']['files']}",
+            )
+            check(
+                led_abs["denominator"]["excluded_by_reason"].get("invalid_root") == 1,
+                f"the skip must be counted, got {led_abs['denominator']['excluded_by_reason']}",
+            )
         check(
             "skipped invalid declared root(s) from history: ['/etc']" in p.stdout,
             f"the CLI must report the skipped root, got {p.stdout!r}",
@@ -383,12 +391,19 @@ def main() -> int:
             p.returncode == 0,
             f"a '..'-escaping source root is skipped, not fatal, got {p.returncode}: {p.stderr[:200]}",
         )
-        led_esc = json.loads(esc_json.read_text(encoding="utf-8"))
-        check(
-            led_esc["denominator"]["invalid_roots"] == ["../evil"]
-            and led_esc["denominator"]["files"] == [],
-            f"the escaping root must be named and nothing walked, got {led_esc['denominator']}",
-        )
+        try:
+            led_esc = json.loads(esc_json.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            failures.append(
+                f"ledger JSON unreadable after CLI rc={p.returncode}: {e}: {p.stderr[:200]}"
+            )
+            led_esc = None
+        if led_esc is not None:
+            check(
+                led_esc["denominator"]["invalid_roots"] == ["../evil"]
+                and led_esc["denominator"]["files"] == [],
+                f"the escaping root must be named and nothing walked, got {led_esc['denominator']}",
+            )
 
     # --- Phase 1: source_roots() enumerator + --list-source-roots ------------
     with tempfile.TemporaryDirectory() as td:

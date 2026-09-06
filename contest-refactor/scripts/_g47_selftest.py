@@ -127,7 +127,7 @@ def _g47_issues(home: Path, repo: Path, phase: str) -> list[str]:
         json_path = Path(tf.name)
     env = dict(os.environ)
     env["CONTEST_REFACTOR_HOME"] = str(home)
-    subprocess.run(
+    proc = subprocess.run(
         [
             sys.executable,
             str(VALIDATOR),
@@ -149,7 +149,10 @@ def _g47_issues(home: Path, repo: Path, phase: str) -> list[str]:
         text=True,
     )
     try:
-        payload = json.loads(json_path.read_text())
+        try:
+            payload = json.loads(json_path.read_text())
+        except (OSError, json.JSONDecodeError) as e:
+            return [f"validator failed rc={proc.returncode} stderr={proc.stderr!r}: {e}"]
     finally:
         json_path.unlink(missing_ok=True)
     return [i.get("message", "") for i in payload.get("issues", []) if i.get("rule") == "G47"]

@@ -63,14 +63,25 @@ ARM_KEY_TYPES = {
 }
 
 
+_CANON_LOAD_ERRORS = (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, KeyError, TypeError)
+
+
 def _load_canon_dimensions() -> set[str]:
-    data = tomllib.loads((CANON_DIR / "scorecard-dimensions.toml").read_text())
-    return {d["id"] for d in data["scorecard_dimensions"]}
+    try:
+        data = tomllib.loads((CANON_DIR / "scorecard-dimensions.toml").read_text(encoding="utf-8"))
+        return {d["id"] for d in data["scorecard_dimensions"]}
+    except _CANON_LOAD_ERRORS as exc:
+        print(f"FAIL: cannot load canon scorecard-dimensions.toml: {exc}")
+        sys.exit(1)
 
 
 def _load_canon_severities() -> set[str]:
-    data = tomllib.loads((CANON_DIR / "severity-anchors.toml").read_text())
-    return set(data["severity_anchors"])
+    try:
+        data = tomllib.loads((CANON_DIR / "severity-anchors.toml").read_text(encoding="utf-8"))
+        return set(data["severity_anchors"])
+    except _CANON_LOAD_ERRORS as exc:
+        print(f"FAIL: cannot load canon severity-anchors.toml: {exc}")
+        sys.exit(1)
 
 
 def _collect_fixture_dirs() -> list[str]:
@@ -114,8 +125,8 @@ def main() -> int:
         print(f"FAIL: manifest not found: {MANIFEST_PATH.relative_to(SKILL_ROOT)}")
         return 1
     try:
-        manifest = json.loads(MANIFEST_PATH.read_text())
-    except json.JSONDecodeError as exc:
+        manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         print(f"FAIL: manifest is not valid JSON: {exc}")
         return 1
 
@@ -123,7 +134,13 @@ def main() -> int:
     canon_sevs = _load_canon_severities()
 
     fixture_dirs = _collect_fixture_dirs()
+    if not isinstance(manifest, dict):
+        print(f"FAIL: manifest root must be an object, got {type(manifest).__name__}")
+        return 1
     entries = manifest.get("fixtures", [])
+    if not isinstance(entries, list):
+        print(f"FAIL: manifest 'fixtures' must be a list, got {type(entries).__name__}")
+        return 1
     registered_ids = {e["id"] for e in entries if isinstance(e, dict) and "id" in e}
 
     # (a) no silent exclusion

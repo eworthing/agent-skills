@@ -105,6 +105,9 @@ check(
     g46({**HONEST_LR, "finding_family": "refactor_vibes"}) == 1,
     "an out-of-canon finding_family must raise one G46 issue (membership)",
 )
+check(
+    bool(canon.finding_families), "canon.finding_families must be non-empty or this loop is vacuous"
+)
 for family in canon.finding_families:
     check(
         g46({**HONEST_LR, "finding_family": family}) == 0,
@@ -120,6 +123,7 @@ check(
     g46({**HONEST_LR, "effort": "gigantic"}) == 1,
     "an out-of-canon effort must raise one G46 issue (membership)",
 )
+check(bool(canon.effort_levels), "canon.effort_levels must be non-empty or this loop is vacuous")
 for level in canon.effort_levels:
     check(
         g46({**HONEST_LR, "effort": level}) == 0,
@@ -149,6 +153,10 @@ check(
     g46({**HONEST_LR, "repair_revalidation": {**HONEST_RV, "outcome": "MOSTLY_FINE"}}) == 1,
     "an out-of-canon outcome must raise one G46 issue (membership only; drift_notes coupling "
     "is not judged against an invalid outcome)",
+)
+check(
+    bool(canon.repair_revalidation_outcomes),
+    "canon.repair_revalidation_outcomes must be non-empty or this loop is vacuous",
 )
 for outcome in canon.repair_revalidation_outcomes:
     rv = {**HONEST_RV, "outcome": outcome}

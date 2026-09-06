@@ -356,6 +356,10 @@ def main() -> int:
                 )
 
     # 5) grader discrimination (only meaningful once the reference fixture exists)
+    check(
+        "stalled-domain-1" in on_disk,
+        "reference fixture 'stalled-domain-1' missing -- grader discrimination untestable",
+    )
     if "stalled-domain-1" in on_disk:
         target = {"priority": 1, "title": "t", "score_impact": "domain_modeling +1.0"}
         decoy = {"priority": 1, "title": "d", "score_impact": "test_strategy +0.5"}
@@ -428,6 +432,10 @@ def main() -> int:
             ),
             ("empty everything is ABSENT, not a pass", {"backlog": [], "findings": []}, 4),
         ]
+        check(
+            "deferred-item-1" in on_disk,
+            "reference fixture 'deferred-item-1' missing -- deferral discrimination untestable",
+        )
         if "deferred-item-1" in on_disk:
             for label, payload, want in deferral_cases:
                 got = _grade_as("deferred-item-1", "--deferral-only", payload)

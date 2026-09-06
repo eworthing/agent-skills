@@ -43,8 +43,13 @@ def _run(td: Path, review: dict, loops: list[dict] | None = None) -> tuple[list[
         [sys.executable, str(VALIDATOR), str(td), "--mode", "strict", "--json", str(sidecar)],
         capture_output=True,
         text=True,
+        timeout=60,
     )
-    payload = json.loads(sidecar.read_text())
+    try:
+        payload = json.loads(sidecar.read_text())
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        crash = f"validator crashed rc={proc.returncode} stdout={proc.stdout!r} stderr={proc.stderr!r}: {e}"
+        return [crash], crash
     g48 = [i["message"] for i in payload.get("issues", []) if i.get("rule") == "G48"]
     diags = "\n".join(ln for ln in proc.stdout.splitlines() if ln.startswith("[g48-run-id"))
     return g48, diags

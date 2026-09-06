@@ -111,7 +111,10 @@ def main() -> int:
         return 1
 
     failures: list[str] = []
-    failures.extend(_auto_engage_both_branches())
+    try:
+        failures.extend(_auto_engage_both_branches())
+    except (ImportError, AttributeError, RuntimeError, json.JSONDecodeError) as exc:
+        failures.append(f"auto-engage: helper raised — {exc}")
 
     # -----------------------------------------------------------------------
     # Fixture A: 3-package DAG (no cycles)

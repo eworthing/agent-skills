@@ -139,7 +139,16 @@ def _guard() -> int:
         return tb.cmd_check(_Args(), count_fn, method)
 
 
-check(_guard() == 0, "budget guard fails at HEAD")
+def _check_guard(rc_want: int, msg: str) -> None:
+    """Ceiling/divergence checks need tiktoken's exact counts: cmd_check returns 2
+    (CANNOT MEASURE) for any other method by design, so skip rather than false-FAIL."""
+    if method != "tiktoken/cl100k_base":
+        print(f"SKIP: {msg} (needs tiktoken/cl100k_base, got {method})")
+        return
+    check(_guard() == rc_want, msg)
+
+
+_check_guard(0, "budget guard fails at HEAD")
 
 # A heuristic tokenizer must refuse to render a verdict, not render a wrong one. The ceilings
 # are hand-set from tiktoken counts, so a heuristic count is not comparable to them in either
@@ -166,7 +175,7 @@ check(
 _real = dict(tb.CEILINGS)
 try:
     tb.CEILINGS["loop_apple"] = 1
-    check(_guard() == 1, "apple-path ceiling breach not detected")
+    _check_guard(1, "apple-path ceiling breach not detected")
 finally:
     tb.CEILINGS.clear()
     tb.CEILINGS.update(_real)
@@ -174,8 +183,8 @@ finally:
 _real = dict(tb.CEILINGS)
 try:
     tb.CEILINGS["loop_generic"] = 1
-    check(
-        _guard() == 1,
+    _check_guard(
+        1,
         "generic-path ceiling breach not detected -- a default --check must police the "
         "generic lens too, or growth there is invisible until it passes the apple number",
     )
@@ -187,7 +196,7 @@ finally:
 _div = dict(tb.DECLARED_DIVERGENCES)
 try:
     tb.DECLARED_DIVERGENCES.pop(("step1", "SKILL.md"), None)
-    check(_guard() == 1, "undeclared load-table divergence not detected")
+    _check_guard(1, "undeclared load-table divergence not detected")
 finally:
     tb.DECLARED_DIVERGENCES.clear()
     tb.DECLARED_DIVERGENCES.update(_div)

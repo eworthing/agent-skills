@@ -75,26 +75,31 @@ def main() -> int:
 
     # --- ISOLATION: skill_rev never perturbs the provider/model verdict. ---
     # Same artifact, three skill_rev values; the non-skill_rev issues must be identical.
-    broken = {"provider": "unknown", "spawn_isolation": "subagent"}  # a real G19 violation
-    baselines = set()
-    for rev in (None, "2b81c10", ""):
-        # Select the provider/model issues POSITIVELY, by the prefix that check
-        # owns, rather than excluding anything whose text happens to contain
-        # "skill_rev". The exclusion form was fragile in the dangerous direction:
-        # a genuine provider/model coupling bug whose message merely mentioned
-        # skill_rev would have been filtered out of the comparison and the
-        # isolation would have looked intact. Every provider/model message starts
-        # `provider=`; every skill_rev message starts `skill_rev=`.
-        issues = va.check_g19_provider_model(_base(skill_rev=rev, **broken))
-        others = tuple(sorted(i.message for i in issues if i.message.startswith("provider=")))
-        if not others:
-            failures.append(
-                f"skill_rev={rev!r}: no provider/model issues selected -- the filter matched "
-                "nothing, so the isolation comparison below is vacuous"
+    # Two distinct violations exercise both message families check_g19_provider_model
+    # emits: the OLD filter (positive match on "provider=") only ever saw the first,
+    # so a skill_rev coupling on the known-provider path could hide undetected.
+    for broken in (
+        {"provider": "unknown", "spawn_isolation": "subagent"},  # "provider='unknown' ..."
+        {"loop_model": None},  # "known provider ... requires ..."
+    ):
+        baselines = set()
+        for rev in (None, "2b81c10", ""):
+            issues = va.check_g19_provider_model(_base(skill_rev=rev, **broken))
+            # Complement of the skill_rev prefix: every non-skill_rev message is a
+            # provider/model issue, whatever its own prefix happens to be.
+            others = tuple(
+                sorted(i.message for i in issues if not i.message.startswith("skill_rev="))
             )
-        baselines.add(others)
-    if len(baselines) != 1:
-        failures.append("skill_rev changed the provider/model verdict; the checks must be disjoint")
+            if not others:
+                failures.append(
+                    f"broken={broken!r} skill_rev={rev!r}: no provider/model issues selected -- "
+                    "the filter matched nothing, so the isolation comparison below is vacuous"
+                )
+            baselines.add(others)
+        if len(baselines) != 1:
+            failures.append(
+                f"skill_rev changed the provider/model verdict for {broken!r}; the checks must be disjoint"
+            )
 
     # --- `inherited`: the honest record for a spawn that chose no model -------
     # Before this, "source == default" REQUIRED the profile's prescribed model, so a

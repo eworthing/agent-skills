@@ -42,6 +42,11 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 
 # flag -> the file(s) that define what it DOES. A flag may act in several places;
 # register the ones that carry the operative instruction, not every mention.
+# --scope's only registered site is prose-dense enough that a bare flag mention
+# is not discriminating (see the deletion-of-the-operative-line case this file's
+# docstring documents): require one of these operative words on the hit line too.
+_OPERATIVE_VERB = re.compile(r"\b(if|when|set|record|filter|narrow|wipes|tunes|points to)\b", re.I)
+
 EFFECT_SITES: dict[str, tuple[str, ...]] = {
     "--cap": ("SKILL.md",),
     "--confirm": ("SKILL.md", "references/startup.md"),
@@ -90,13 +95,20 @@ def main() -> int:
                 failures.append(f"{flag}: registered effect site {site} does not exist")
                 continue
             hit = False
+            in_fence = False
             for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
+                if line.lstrip().startswith("```"):
+                    in_fence = not in_fence
                 if not pattern.search(line):
                     continue
                 if site == "SKILL.md" and i == hint_idx:
                     continue  # the advertisement, not an effect
                 if site == "references/startup.md" and i == parse_idx:
                     continue  # the parse list, not an effect
+                if in_fence or re.search(r"\bappend\b[\s`]*" + re.escape(flag), line):
+                    continue  # example invocation / forwarded verbatim, not an effect
+                if flag == "--scope" and not _OPERATIVE_VERB.search(line):
+                    continue  # incidental mention, not an operative instruction
                 hit = True
                 break
             if not hit:

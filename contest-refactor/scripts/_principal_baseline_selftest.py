@@ -36,8 +36,16 @@ def _load_manifest() -> dict:
     if not MANIFEST_PATH.exists():
         print(f"FAIL: manifest not found: {MANIFEST_PATH.relative_to(SKILL_ROOT)}")
         sys.exit(1)
-    with MANIFEST_PATH.open(encoding="utf-8") as fh:
-        return json.load(fh)
+    try:
+        with MANIFEST_PATH.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"FAIL: manifest is not valid JSON: {e}")
+        sys.exit(1)
+    if not isinstance(data, dict):
+        print(f"FAIL: manifest top-level must be an object, got {type(data).__name__}")
+        sys.exit(1)
+    return data
 
 
 def _collect_principal_dirs() -> list[str]:
@@ -67,8 +75,13 @@ def _check_replication(entries: list, failures: list[str]) -> None:
     if REPLICATION_PATH.exists():
         with REPLICATION_PATH.open(encoding="utf-8") as fh:
             art = json.load(fh)
-        for a in art.get("attempts", []):
-            artifacts_attempts.setdefault(a.get("scenario_id", "?"), []).append(a)
+        attempts = art.get("attempts", []) if isinstance(art, dict) else []
+        if not isinstance(attempts, list):
+            failures.append(f"{REPLICATION_PATH.name}: 'attempts' must be a list")
+            attempts = []
+        for a in attempts:
+            if isinstance(a, dict):
+                artifacts_attempts.setdefault(a.get("scenario_id", "?"), []).append(a)
     else:
         failures.append(
             f"replication recorded in manifest but artifacts file missing: {REPLICATION_PATH.name}"
@@ -78,6 +91,9 @@ def _check_replication(entries: list, failures: list[str]) -> None:
         sid = e.get("id", "<missing id>")
         kind = e.get("kind")
         rep = e["replication"]
+        if not isinstance(rep, dict):
+            failures.append(f"replication '{sid}': block must be an object")
+            continue
         if rep.get("excluded"):
             if not rep.get("reason"):
                 failures.append(f"replication '{sid}': excluded block needs a 'reason'")
@@ -94,7 +110,13 @@ def _check_replication(entries: list, failures: list[str]) -> None:
                 f"replication '{sid}': decision={rep.get('decision')!r} not in {sorted(VALID_DECISIONS)}"
             )
         mech, sem = rep.get("mechanical", {}), rep.get("semantic", {})
+        if not isinstance(mech, dict) or not isinstance(sem, dict):
+            failures.append(f"replication '{sid}': mechanical/semantic must be objects")
+            continue
         inv = rep.get("invalid_slots", 0)
+        if not isinstance(inv, int):
+            failures.append(f"replication '{sid}': invalid_slots must be an int, got {inv!r}")
+            continue
         m, s = mech.get(field), sem.get(field)
         if not isinstance(m, int) or not isinstance(s, int):
             failures.append(f"replication '{sid}': mechanical/semantic missing int '{field}'")
@@ -165,6 +187,9 @@ def main() -> int:
     # (b) Load manifest; fail fast if missing.
     manifest = _load_manifest()
     entries = manifest.get("scenarios", [])
+    if not isinstance(entries, list):
+        failures.append(f"manifest 'scenarios' must be a list, got {type(entries).__name__}")
+        entries = []
 
     # An empty corpus is not a clean corpus. Every check below iterates
     # `principal_dirs` / `entries`, so with the scenario dirs moved aside and the

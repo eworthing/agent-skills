@@ -416,7 +416,11 @@ def _canon_to_json(canon) -> str:
 
 def check_golden(failures: list[str]) -> None:
     print("golden snapshot: loading real shipped canon...")
-    canon = load_canon(SKILL_ROOT)
+    try:
+        canon = load_canon(SKILL_ROOT)
+    except SystemExit as e:
+        failures.append(f"golden: load_canon(SKILL_ROOT) exited: {e}")
+        return
     field_names = {f.name for f in dataclasses.fields(canon)}
     if len(field_names) != 22:
         failures.append(f"golden: expected 22 Canon dataclass fields, found {len(field_names)}")

@@ -78,6 +78,9 @@ def _raw_finding(title="Duplicated dialog wiring"):
     }
 
 
+_MISSING = object()  # distinct from an explicitly-passed token_usage=None
+
+
 def _member(
     index=1,
     outcome="held",
@@ -88,7 +91,7 @@ def _member(
     retry_count=1,
     retry_cause=None,
     retry_attempts=None,
-    token_usage=None,
+    token_usage=_MISSING,
     model="challenger-model",
 ):
     return {
@@ -102,7 +105,7 @@ def _member(
         "retry_count": retry_count,
         "retry_cause": retry_cause,
         "retry_attempts": retry_attempts if retry_attempts is not None else [_retry_attempt(1)],
-        "token_usage": token_usage if token_usage is not None else _usage(),
+        "token_usage": _usage() if token_usage is _MISSING else token_usage,
     }
 
 

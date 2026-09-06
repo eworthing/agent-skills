@@ -83,7 +83,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as td:
         out = Path(td) / "issues.json"
-        subprocess.run(
+        proc = subprocess.run(
             [
                 sys.executable,
                 str(SKILL_ROOT / "scripts" / "validate-artifact.py"),
@@ -98,7 +98,20 @@ def main() -> int:
             text=True,
             check=False,
         )
-        payload = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else {"issues": []}
+        if proc.returncode == 2 or not out.is_file():
+            failures.append(
+                f"validator did not produce issues.json (exit={proc.returncode}): "
+                f"{proc.stderr.strip()[-2000:]}"
+            )
+            payload = {"issues": []}
+        else:
+            try:
+                payload = json.loads(out.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                failures.append(
+                    f"validator --json output unreadable: {exc}: {proc.stderr.strip()[-1000:]}"
+                )
+                payload = {"issues": []}
 
     failing: set[str] = set()
     for issue in payload.get("issues", []):
