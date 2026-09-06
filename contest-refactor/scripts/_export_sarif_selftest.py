@@ -92,6 +92,22 @@ def _review_with_accepted_residual() -> dict:
     }
 
 
+def _review_with_below_95_accepted_residual() -> dict:
+    """Same shape as the g5-accepted-residual-below-95 fixture: a residual accepted
+    below the 9.5 score floor the module docstring promises for export."""
+    return {
+        "state": "CONTINUE",
+        "scorecard": {
+            "test_strategy": {
+                "score": 8.5,
+                "residual_disposition": "accepted",
+                "residual_blocking_10": "coverage gap on the retry path",
+                "residual_rationale_or_backlog_ref": "tracked; see backlog item 12",
+            },
+        },
+    }
+
+
 def _run(args: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(
         [sys.executable, str(EXPORT), *args],
@@ -197,6 +213,25 @@ def main() -> int:
                 elif resid[0].get("level") != "note":
                     failures.append(
                         f"residual: accepted residual must be 'note' (got {resid[0].get('level')!r})"
+                    )
+
+        # --- Case 5 (below_95_accepted_not_exported): an accepted residual below
+        # the 9.5 score floor must not export -- an incoherent scorecard is not a
+        # "reached 9.5 on an accepted carve-out" per the module docstring ---
+        review_low = base / "CURRENT_REVIEW_below95.json"
+        _write_json(review_low, _review_with_below_95_accepted_residual())
+        p = _run([str(reg2), "--review", str(review_low)])
+        if p.returncode != 0:
+            failures.append(f"below-95 residual: non-zero exit\n{p.stderr.rstrip()}")
+        else:
+            sarif = json.loads(p.stdout)
+            if _assert_valid_sarif(sarif, failures, "below-95 residual"):
+                results = sarif["runs"][0]["results"]
+                resid = [r for r in results if str(r.get("ruleId", "")).startswith("residual/")]
+                if resid:
+                    failures.append(
+                        f"below-95 residual: expected 0 residual results, got "
+                        f"{[r.get('ruleId') for r in resid]}"
                     )
 
         # --- Case 4: missing registry file -> non-zero exit, clear message ---

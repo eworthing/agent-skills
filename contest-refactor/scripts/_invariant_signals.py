@@ -28,7 +28,8 @@ FLOATING_TYPES = ("Double", "Float", "TimeInterval", "CGFloat")
 _TYPE_HEADER_RE = re.compile(r"\b(?:class|struct|actor|enum)\s+([A-Za-z_]\w*)")
 _CONFORMANCE_RE = re.compile(r"\b(?:class|struct|actor|enum)\s+\w+(?:<[^>]*>)?\s*:\s*([^{]+)")
 _INIT_FROM_RE = re.compile(r"\binit\s*\(\s*from\b")
-_THROWING_INIT_RE = re.compile(r"\binit\s*\([^)]*\)\s*throws\b")
+_INIT_OPEN_RE = re.compile(r"\binit\s*\(")
+_THROWS_TAIL_RE = re.compile(r"\s*(?:async\s+)?throws\b")
 # ponytail: catches any `var|let name: Double` line anywhere in the type span,
 # including inside a member body that happens to match the same shape (a local
 # with the same declaration form). Over-collecting a local as a "stored
@@ -109,6 +110,19 @@ def _floating_names(param_list_text: str) -> set[str]:
     return set(_FLOATING_PARAM_RE.findall(param_list_text))
 
 
+def _has_throwing_init(text: str) -> bool:
+    """`init(...)  throws` / `init(...) async throws`, with the param list
+    balanced-paren scanned so a closure-typed param (`(Int) -> Void`) can't
+    truncate the match early like a `[^)]*` regex would."""
+    for m in _INIT_OPEN_RE.finditer(text):
+        open_idx = m.end() - 1
+        params = _balanced_content(text, open_idx)
+        after = text[open_idx + 1 + len(params) + 1 :]
+        if _THROWS_TAIL_RE.match(after):
+            return True
+    return False
+
+
 def analyze_type(path: str, type_span: str, type_lines: tuple[int, int]) -> TypeContext:
     del path, type_lines  # identity carried by the caller; not needed here
     header = type_span.split("{", 1)[0]
@@ -119,14 +133,18 @@ def analyze_type(path: str, type_span: str, type_lines: tuple[int, int]) -> Type
     conf_match = _CONFORMANCE_RE.search(header)
     if conf_match:
         clause = conf_match.group(1).split(" where ")[0]
-        conformances = {name.strip() for name in clause.split(",") if name.strip()}
+        conformances = {
+            part.strip().removeprefix("any ").strip()
+            for part in re.split(r"[,&]", clause)
+            if part.strip()
+        }
 
     return TypeContext(
         type_name=type_name,
         stored_floating_properties=set(_STORED_FLOATING_RE.findall(type_span)),
         conformances=conformances,
         has_init_from=bool(_INIT_FROM_RE.search(type_span)),
-        has_throwing_init=bool(_THROWING_INIT_RE.search(type_span)),
+        has_throwing_init=_has_throwing_init(type_span),
     )
 
 
@@ -303,12 +321,18 @@ def _collection_element_scan_regions(span: str, param_list_text: str) -> list[tu
 
 
 def _count_id_collection_no_uniqueness(span: str, param_list_text: str) -> int:
-    if "Set(" in span or "Dictionary(grouping" in span or "allSatisfy" in span or "unique" in span:
-        return 0
     count = 0
     for name in _ID_ARRAY_PARAM_RE.findall(param_list_text):
-        if re.search(rf"self\.\w+\s*=\s*{re.escape(name)}\b", span):
-            count += 1
+        escaped = re.escape(name)
+        if re.search(rf"Set\(\s*{escaped}\b", span):
+            continue
+        if re.search(rf"Dictionary\(grouping\s*:\s*{escaped}\b", span):
+            continue
+        if re.search(rf"\b{escaped}\b\.allSatisfy\s*\(", span):
+            continue
+        if not re.search(rf"self\.\w+\s*=\s*{escaped}\b", span):
+            continue
+        count += 1
     return count
 
 

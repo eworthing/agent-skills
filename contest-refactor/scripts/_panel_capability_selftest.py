@@ -190,6 +190,43 @@ def test_resume_malformed_checkpoint():
     assert "panel_state" in route["reason"], route
 
 
+def test_malformed_manifest_raises():
+    import tempfile
+    from pathlib import Path
+
+    root = Path(tempfile.mkdtemp(prefix="panel-capability-selftest-"))
+    (root / "canon").mkdir()
+    (root / "canon" / "panel-certification.toml").write_text(
+        'schema_version = 1\nentries = "x"\nunsupported_digests = "y"\n'
+    )
+    try:
+        cap.load_manifest(root)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("malformed entries/unsupported_digests must raise ValueError")
+
+
+def test_digest_failure_blocks():
+    checkpoint = _checkpoint([_member(1, "held")])
+    orig = cap._panel_gate_adapter.compute_protocol_digest
+    cap._panel_gate_adapter.compute_protocol_digest = lambda root=None: (_ for _ in ()).throw(
+        KeyError("evals")
+    )
+    try:
+        route = cap.resume_route(checkpoint, "rev-1", "fp-1", manifest=_manifest())
+    finally:
+        cap._panel_gate_adapter.compute_protocol_digest = orig
+    assert route["route"] == "fail_closed_verification_blocked", route
+
+
+def test_binding_missing_fields_blocks():
+    checkpoint = _checkpoint([_member(1, "held")])
+    del checkpoint["panel_state"]["candidate_binding"]["source_rev"]
+    route = cap.resume_route(checkpoint, "rev-1", "fp-1", manifest=_manifest())
+    assert route["route"] == "fail_closed_verification_blocked", route
+
+
 def main() -> int:
     cases = [
         (
@@ -236,6 +273,18 @@ def main() -> int:
         (
             "resume: malformed checkpoint (no panel_state) -> fail_closed",
             test_resume_malformed_checkpoint,
+        ),
+        (
+            "malformed manifest (string entries/unsupported_digests) -> raises ValueError",
+            test_malformed_manifest_raises,
+        ),
+        (
+            "resume: digest-compute failure (KeyError) -> fail_closed",
+            test_digest_failure_blocks,
+        ),
+        (
+            "resume: candidate_binding missing source_rev -> fail_closed",
+            test_binding_missing_fields_blocks,
         ),
     ]
     failures: list[str] = []

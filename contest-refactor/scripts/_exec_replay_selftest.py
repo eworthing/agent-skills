@@ -305,6 +305,38 @@ def _check_grader_exit_classes(failures: list[str]) -> None:
                 )
 
 
+def _check_malformed_expected_toml(failures: list[str]) -> None:
+    """malformed_expected_toml_exits_2: a malformed expected.toml must route through
+    exec_replay_grade.py's own _plumbing() (exit 2), never escape as a traceback (exit 1)
+    -- exec_replay_grade.py resolves its fixtures dir relative to its own script location
+    with no CLI override, so this drives it in-process with FIXTURES_DIR monkeypatched
+    rather than subprocessing."""
+    grader = SCRIPTS / "exec_replay_grade.py"
+    if not grader.exists():
+        failures.append("exec_replay_grade.py missing")
+        return
+    sys.path.insert(0, str(SCRIPTS))
+    import exec_replay_grade as E
+
+    with tempfile.TemporaryDirectory() as td:
+        fixtures_parent = Path(td) / "exec-fixtures"
+        fixdir = fixtures_parent / "bad-toml-fixture"
+        fixdir.mkdir(parents=True)
+        (fixdir / "expected.toml").write_text("this is not [valid toml", encoding="utf-8")
+        orig = E.FIXTURES_DIR
+        E.FIXTURES_DIR = fixtures_parent
+        try:
+            E.main(["bad-toml-fixture", str(Path(td) / "repo"), "HEAD"])
+        except SystemExit as exc:
+            rc = exc.code
+        else:
+            rc = 0
+        finally:
+            E.FIXTURES_DIR = orig
+    if rc != 2:
+        failures.append(f"exec_replay_grade.py malformed expected.toml -> exit {rc}, expected 2")
+
+
 def main(argv: list[str]) -> int:
     canon = load_canon(SKILL_ROOT)
 
@@ -424,6 +456,7 @@ def main(argv: list[str]) -> int:
 
     _check_reviewer_revert(failures)
     _check_grader_exit_classes(failures)
+    _check_malformed_expected_toml(failures)
 
     if failures:
         print(f"_exec_replay_selftest: FAIL ({len(failures)} issue(s))")

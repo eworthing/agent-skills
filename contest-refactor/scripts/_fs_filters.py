@@ -93,13 +93,11 @@ def is_ignored_path(parts: Sequence[str]) -> bool:
 
 def is_test_file(name: str) -> bool:
     lower = name.lower()
-    return lower.startswith("test_") or lower.endswith(
+    if lower.startswith("test_") or lower.endswith(
         (
             "_test.py",
             "_test.go",
             "_test.rs",
-            "tests.swift",
-            "test.swift",
             # "spec.swift" deliberately absent: Quick specs live under Tests/ (caught by
             # IGNORE_DIRS), while domain types named *Spec.swift (BenchHype's
             # PlaybackSpec.swift) are production source the 2026-09-03 OCR corpus
@@ -110,10 +108,28 @@ def is_test_file(name: str) -> bool:
             ".spec.tsx",
             ".test.js",
             ".spec.js",
-            "test.kt",
-            "tests.kt",
-            "test.java",
-            "tests.java",
+        )
+    ):
+        return True
+    # Swift/Kotlin/Java: case-sensitive CamelCase suffix preserves the
+    # Latest.swift vs FooTests.swift / Latest.kt vs MyTest.kt boundary; plus
+    # separator-qualified lowercase forms (_/-/.test.*) below. A bare
+    # lower().endswith("test.swift") would also match Latest.swift/Contest.swift.
+    if name.endswith(
+        ("Test.swift", "Tests.swift", "Test.kt", "Tests.kt", "Test.java", "Tests.java")
+    ):
+        return True
+    return lower.endswith(
+        (
+            "_test.swift",
+            "-test.swift",
+            ".test.swift",
+            "_test.kt",
+            "-test.kt",
+            ".test.kt",
+            "_test.java",
+            "-test.java",
+            ".test.java",
         )
     )
 

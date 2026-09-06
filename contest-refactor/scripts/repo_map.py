@@ -321,6 +321,7 @@ def _format_md(result: dict) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _ab._force_utf8_stdout()
     parser = argparse.ArgumentParser(
         description=(
             "Build an advisory import-graph / public-surface map for first-party Python "

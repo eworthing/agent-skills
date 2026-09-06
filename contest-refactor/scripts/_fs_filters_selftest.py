@@ -74,6 +74,16 @@ def main() -> int:
         "the Tests.swift suffix and the test_ prefix must still match",
     )
 
+    check(
+        not ff.is_test_file("Latest.swift") and not ff.is_test_file("Contest.swift"),
+        "Latest.swift and Contest.swift are production -- a bare "
+        "lower().endswith('test.swift') would false-positive on both",
+    )
+    check(
+        ff.is_test_file("FooTests.swift"),
+        "FooTests.swift must still match the CamelCase Tests.swift suffix",
+    )
+
     got = ff.normalize_roots(["b/", "a", "a"])
     check(
         got == ["a", "b"],

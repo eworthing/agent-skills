@@ -552,6 +552,51 @@ def main() -> int:
             f"expected exit 0, got {r.returncode}: {r.stderr}",
         )
 
+        # --- escaping_visible_path_flagged (check 7): absolute/.. candidate_visible
+        # entries must be flagged, not silently is_file()-skipped ---
+
+        escape_root = root / "visible-path-escape"
+        m = _baseline_manifest()
+        m["candidate_visible_files"] = ["/etc/passwd", "../x"]
+        _write_pack(escape_root, "pack", m)
+        r = _run(escape_root)
+        expect(
+            "escaping_visible_path_flagged",
+            r.returncode == 1,
+            f"expected exit 1, got {r.returncode}: {r.stderr}",
+        )
+        expect(
+            "escaping_visible_path_flagged",
+            "[visible-path-escape]" in r.stderr,
+            r.stderr,
+        )
+
+        # --- missing_roles_no_crash (check 8 call site): missing variant_roles plus
+        # a non-empty candidate_visible_files must not AttributeError on roles.items() ---
+
+        missing_roles_visible_root = root / "missing-roles-visible"
+        m = _baseline_manifest()
+        del m["variant_roles"]
+        m["candidate_visible_files"] = ["fixture.txt"]
+        pack_dir = _write_pack(missing_roles_visible_root, "pack", m, extra_dirs=["red", "gold"])
+        (pack_dir / "fixture.txt").write_text("ordinary code, nothing leaked", encoding="utf-8")
+        r = _run(missing_roles_visible_root)
+        expect(
+            "missing_roles_no_crash",
+            r.returncode == 1,
+            f"expected exit 1, got {r.returncode}: {r.stderr}",
+        )
+        expect(
+            "missing_roles_no_crash",
+            "[missing-variant-roles]" in r.stderr,
+            r.stderr,
+        )
+        expect(
+            "missing_roles_no_crash",
+            "Traceback" not in r.stderr,
+            f"missing variant_roles + visible files must not crash: {r.stderr}",
+        )
+
     if failures:
         for f in failures:
             print(f"FAIL: {f}")

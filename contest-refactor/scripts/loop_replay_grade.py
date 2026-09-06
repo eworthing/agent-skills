@@ -393,6 +393,8 @@ def _deferral_only(fixture_id: str, path: Path) -> int:
     decoy = expected["decoy_dimension"]
     restraint = expected["restraint_dimension"]
     target_file = expected.get("expected_escalated_primary_file", "")
+    if not target_file:
+        sys.exit(f"FAIL: fixture '{fixture_id}' missing expected_escalated_primary_file")
 
     print(
         f"loop_replay_grade --deferral-only: fixture '{fixture_id}' ({len(backlog)} backlog item(s))"

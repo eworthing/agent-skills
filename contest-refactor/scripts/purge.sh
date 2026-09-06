@@ -223,8 +223,11 @@ if [ "$MODE" = "recover" ]; then
       printf '%s\n' "$name"
     done | json_array_from_lines
   )
-  printf '{"event":"purge_partial_recovery","ts":"%s","backup_path":"%s","files_recovered":%s}\n' \
-    "$TS" "$ESC_BACKUP" "$RECOVERED" >> "$LOG_FILE"
+  if ! printf '{"event":"purge_partial_recovery","ts":"%s","backup_path":"%s","files_recovered":%s}\n' \
+    "$TS" "$ESC_BACKUP" "$RECOVERED" >> "$LOG_FILE"; then
+    echo "purge --recover: failed to append audit entry to $LOG_FILE" >&2
+    exit 3
+  fi
 
   echo "# purge --recover"
   echo "Verified no target files remain in CWD."
@@ -314,17 +317,28 @@ fi
 PRIOR_HEAD=$(prior_head_sha)
 
 # Build prior fields as JSON values (null when empty)
-[ -z "$PRIOR_LOOP" ] && PRIOR_LOOP_JSON="null" || PRIOR_LOOP_JSON="$PRIOR_LOOP"
+# loop is expected to be numeric, but prior_field() reads it from a possibly
+# hand-edited/corrupted CURRENT_REVIEW.json -- quote (escaped) rather than
+# interpolate raw whenever it isn't a plain non-negative integer, so a bad
+# value can't emit invalid JSONL.
+case "$PRIOR_LOOP" in
+  "") PRIOR_LOOP_JSON="null" ;;
+  *[!0-9]*) PRIOR_LOOP_JSON="\"$(json_escape "$PRIOR_LOOP")\"" ;;
+  *) PRIOR_LOOP_JSON="$PRIOR_LOOP" ;;
+esac
 [ -z "$PRIOR_STATE" ] && PRIOR_STATE_JSON="null" || PRIOR_STATE_JSON="\"$(json_escape "$PRIOR_STATE")\""
 [ -z "$PRIOR_HEAD" ] && PRIOR_HEAD_JSON="null" || PRIOR_HEAD_JSON="\"$(json_escape "$PRIOR_HEAD")\""
 
 # Append JSONL entry
 TS=$(iso_ts)
 ESC_BACKUP=$(json_escape "$BACKUP_DIR")
-printf '{"event":"purge","ts":"%s","backup_path":"%s","files_moved":%s,"files_failed":%s,"prior_loop":%s,"prior_state":%s,"prior_head_sha":%s}\n' \
+if ! printf '{"event":"purge","ts":"%s","backup_path":"%s","files_moved":%s,"files_failed":%s,"prior_loop":%s,"prior_state":%s,"prior_head_sha":%s}\n' \
   "$TS" "$ESC_BACKUP" "$MOVED_JSON" "$FAILED_JSON" \
   "$PRIOR_LOOP_JSON" "$PRIOR_STATE_JSON" "$PRIOR_HEAD_JSON" \
-  >> "$LOG_FILE"
+  >> "$LOG_FILE"; then
+  echo "purge: failed to append audit entry to $LOG_FILE (files already moved)" >&2
+  exit 3
+fi
 
 # Summary
 echo "# purge"

@@ -349,6 +349,47 @@ def test_scope_reference_from_outside_scope_silences() -> None:
     )
 
 
+def test_string_literal_brace_does_not_corrupt_depth() -> None:
+    # OCR-1013-745: a bare `{` inside a string literal must not push/pop
+    # TypeFrames -- it must be blanked for the brace-depth pass, not counted.
+    d = _repo(
+        {
+            "Values/Curly.swift": (
+                "public struct Curly: Sendable {\n"
+                '    public let marker: String = "{"\n'
+                "    public func deadAfterBrace() -> Int { 1 }\n"
+                "}\n"
+            )
+        }
+    )
+    doc = A.audit(d, None, "all")
+    rows = _rows_by_name(doc)
+    assert "deadAfterBrace" in rows, (
+        "a brace inside a string literal must not corrupt frame depth and "
+        "drop the member declared after it"
+    )
+    assert rows["deadAfterBrace"]["kind"] == "declaration"
+    assert rows["deadAfterBrace"]["status"] == "dead"
+
+
+def test_same_line_declaration_and_use_counts_production() -> None:
+    # OCR-1013-746: `func foo() { foo() }` on one line must not exclude both
+    # the declaration AND the genuine same-line use -- only one occurrence
+    # (the declaration) is excluded, the call must still count as production.
+    d = _repo(
+        {
+            "Values/Recur.swift": "public struct Recur: Sendable {\n    public func foo() { foo() }\n}\n"
+        }
+    )
+    doc = A.audit(d, None, "all")
+    rows = _rows_by_name(doc)
+    assert "foo" not in rows, (
+        "a same-line declaration+use must not zero out the genuine use -- "
+        "foo() calling itself on its own declaration line must count as "
+        "production and silence the row"
+    )
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -93,6 +93,15 @@ class Violation:
         return f"{prefix} {self.message}"
 
 
+def _escapes_pack(rel: str) -> bool:
+    """True when a candidate_visible_files entry would resolve outside pack_dir --
+    an absolute path or a `..` component reads some other file entirely, so the
+    leak checks below would validate the wrong file (or silently skip a
+    nonexistent one) instead of the real fixture."""
+    p = Path(rel)
+    return p.is_absolute() or ".." in p.parts
+
+
 def _check_legacy_aliases(data: dict, manifest_path: Path) -> list[Violation]:
     """Check 3: rejected legacy field names, with migration text."""
     violations: list[Violation] = []
@@ -340,6 +349,15 @@ def _check_hidden_leak(pack_dir: Path, data: dict, manifest_path: Path) -> list[
     for rel in visible:
         if not isinstance(rel, str):
             continue
+        if _escapes_pack(rel):
+            violations.append(
+                Violation(
+                    "visible-path-escape",
+                    f"candidate-visible file {rel!r} escapes pack {pack_dir.name}/",
+                    manifest_path,
+                )
+            )
+            continue
         path = pack_dir / rel
         if not path.is_file():
             continue
@@ -432,6 +450,15 @@ def _check_role_leak(
     for rel in visible:
         if not isinstance(rel, str):
             continue
+        if _escapes_pack(rel):
+            violations.append(
+                Violation(
+                    "visible-path-escape",
+                    f"candidate-visible file {rel!r} escapes pack {pack_dir.name}/",
+                    manifest_path,
+                )
+            )
+            continue
         path = pack_dir / rel
         if not path.is_file():
             continue
@@ -477,6 +504,15 @@ def _check_grader_vocabulary_leak(
     violations: list[Violation] = []
     for rel in visible:
         if not isinstance(rel, str):
+            continue
+        if _escapes_pack(rel):
+            violations.append(
+                Violation(
+                    "visible-path-escape",
+                    f"candidate-visible file {rel!r} escapes pack {pack_dir.name}/",
+                    manifest_path,
+                )
+            )
             continue
         path = pack_dir / rel
         if not path.is_file():
@@ -534,7 +570,7 @@ def _validate_one_pack(pack_dir: Path) -> list[Violation]:
     violations.extend(_check_must_find_if_present(pack_dir, data, manifest_path))
     violations.extend(_check_provenance_visibility(data, manifest_path))
     violations.extend(_check_hidden_leak(pack_dir, data, manifest_path))
-    violations.extend(_check_role_leak(pack_dir, data, roles, manifest_path))
+    violations.extend(_check_role_leak(pack_dir, data, roles or {}, manifest_path))
     violations.extend(_check_grader_vocabulary_leak(pack_dir, data, manifest_path))
     return violations
 

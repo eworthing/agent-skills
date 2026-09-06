@@ -157,7 +157,10 @@ def run(args: argparse.Namespace, manifest: dict) -> dict:
         raise SystemExit(2)
     rev = manifest[rev_field]
 
-    repo_env = manifest["repo_env"]
+    repo_env = manifest.get("repo_env")
+    if not isinstance(repo_env, str) or not repo_env:
+        sys.stderr.write("error: manifest missing/invalid 'repo_env'\n")
+        raise SystemExit(2)
     repo_root_str = os.environ.get(repo_env)
     if not repo_root_str or not Path(repo_root_str).is_dir():
         sys.stderr.write(f"skip: {repo_env} is not set to an existing directory\n")
@@ -373,7 +376,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.manifest.is_file():
         sys.stderr.write(f"error: manifest not found: {args.manifest}\n")
         return 2
-    manifest = json.loads(args.manifest.read_text())
+    try:
+        manifest = json.loads(args.manifest.read_text())
+    except json.JSONDecodeError as exc:
+        sys.stderr.write(f"error: manifest is not valid JSON: {exc}\n")
+        return 2
 
     result = run(args, manifest)
     reason = result.pop("_reason", None)

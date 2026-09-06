@@ -78,7 +78,7 @@ def _score_series(dim: str, current: float | None, history: list[dict]) -> list[
     History entries may be compressed (no scorecard) — those simply contribute no point.
     """
     pts: list[float] = []
-    for entry in sorted(history, key=lambda e: e.get("loop", 0)):
+    for entry in sorted(history, key=lambda e: e.get("loop") or 0):
         cell = (entry.get("scorecard") or {}).get(dim)
         if isinstance(cell, dict) and isinstance(cell.get("score"), (int, float)):
             pts.append(float(cell["score"]))
@@ -250,6 +250,8 @@ def main(argv: list[str] | None = None) -> int:
         review = _load_json(review_path)
     except (json.JSONDecodeError, OSError) as exc:
         return _die(f"cannot read review {review_path}: {exc}")
+    if not isinstance(review, dict):
+        return _die(f"invalid review shape in {review_path}: expected a JSON object")
 
     history: list[dict] = []
     if args.history:
@@ -257,9 +259,15 @@ def main(argv: list[str] | None = None) -> int:
         if not history_path.is_file():
             return _die(f"history not found: {history_path}")
         try:
-            history = _load_json(history_path).get("loops") or []
+            raw_history = _load_json(history_path)
         except (json.JSONDecodeError, OSError) as exc:
             return _die(f"cannot read history {history_path}: {exc}")
+        if not isinstance(raw_history, dict):
+            return _die(f"invalid history shape in {history_path}: expected a JSON object")
+        loops = raw_history.get("loops") or []
+        if not isinstance(loops, list):
+            return _die(f"invalid history shape in {history_path}: expected {{'loops': [...]}}")
+        history = loops
 
     labels = _dimension_labels()
     # Stamp from the artifact when present; this script is invoked by a human, so a wall

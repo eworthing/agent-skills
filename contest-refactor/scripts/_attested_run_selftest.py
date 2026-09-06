@@ -219,6 +219,16 @@ def main() -> int:
         if _records(home3):
             failures.append("after-fingerprint failure must record nothing")
 
+        # spawn_failure_returns_2: a nonexistent command => exit 2, nothing recorded
+        # (pre-spawn failure per the module's own "usage / pre-spawn failure,
+        # nothing recorded" contract -- not the same as a measured child failure).
+        home4 = td / "state-home-4"
+        r = _run(failures, home4, repo, "--run-id", "run-t-1", "--", "/nonexistent/command/xyz")
+        if r.returncode != 2:
+            failures.append(f"spawn failure: exit {r.returncode}, want 2")
+        if _records(home4):
+            failures.append("spawn failure must record nothing")
+
     real_after = _home_snapshot()
     if real_after != real_before:
         failures.append("the real ~/.contest-refactor state must be untouched by this selftest")

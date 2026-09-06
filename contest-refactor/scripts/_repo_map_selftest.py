@@ -105,6 +105,36 @@ def _auto_engage_both_branches() -> list[str]:
     return out
 
 
+def _cp1252_cycle_md_check() -> list[str]:
+    """OCR-1013-1079: `--format md` prints `↔` for a cycle; under a cp1252 console
+    (Windows default) that must not raise UnicodeEncodeError."""
+    import os
+
+    out: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _write(
+            root,
+            {
+                "billing/__init__.py": "from reporting import audit_log\n",
+                "reporting/__init__.py": "from billing import policy\n",
+            },
+        )
+        env = dict(os.environ)
+        env["PYTHONIOENCODING"] = "cp1252"
+        proc = subprocess.run(
+            [sys.executable, str(REPO_MAP), str(root), "--format", "md"],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        if proc.returncode != 0:
+            out.append(f"cp1252 cycle md: exit {proc.returncode} (want 0)\n{proc.stderr.rstrip()}")
+        elif "UnicodeEncodeError" in proc.stderr:
+            out.append(f"cp1252 cycle md: UnicodeEncodeError leaked\n{proc.stderr.rstrip()}")
+    return out
+
+
 def main() -> int:
     if not REPO_MAP.is_file():
         print(f"FAIL: repo_map.py missing: {REPO_MAP}")
@@ -115,6 +145,8 @@ def main() -> int:
         failures.extend(_auto_engage_both_branches())
     except (ImportError, AttributeError, RuntimeError, json.JSONDecodeError) as exc:
         failures.append(f"auto-engage: helper raised — {exc}")
+
+    failures.extend(_cp1252_cycle_md_check())
 
     # -----------------------------------------------------------------------
     # Fixture A: 3-package DAG (no cycles)

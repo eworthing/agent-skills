@@ -117,7 +117,10 @@ def main(argv: list[str]) -> int:
     exp_path = FIXTURES_DIR / fixture_id / "expected.toml"
     if not exp_path.exists():
         _plumbing(f"CANNOT MEASURE: fixture '{fixture_id}' has no expected.toml")
-    exp = tomllib.loads(exp_path.read_text())
+    try:
+        exp = tomllib.loads(exp_path.read_text())
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        _plumbing(f"CANNOT MEASURE: cannot parse {exp_path}: {exc}")
 
     # The dir-exists test is what makes this decidable here rather than deferred to harness
     # dispatch context: an absent artifact dir means the caller pointed us somewhere wrong
@@ -130,7 +133,10 @@ def main(argv: list[str]) -> int:
     if not cr_path.exists():
         print(f"exec_replay_grade: FAIL (no CURRENT_REVIEW.json in {repo})")
         return 1
-    art = json.loads(cr_path.read_text())
+    try:
+        art = json.loads(cr_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        _plumbing(f"CANNOT MEASURE: cannot parse {cr_path}: {exc}")
 
     required: list[tuple[str, bool, str]] = []
     advisory: list[tuple[str, str]] = []
@@ -198,7 +204,10 @@ def main(argv: list[str]) -> int:
         rx = exp.get("resolved_absent_regex", "")
         base_txt = _git(repo, "show", f"{base}:{pf}")
         head_txt = (repo / pf).read_text() if (repo / pf).exists() else ""
-        bc, hc = len(re.findall(rx, base_txt)), len(re.findall(rx, head_txt))
+        try:
+            bc, hc = len(re.findall(rx, base_txt)), len(re.findall(rx, head_txt))
+        except re.error as exc:
+            _plumbing(f"CANNOT MEASURE: invalid resolved_absent_regex {rx!r}: {exc}")
         required.append(
             (
                 "apply: planted pattern occurrences strictly decreased",

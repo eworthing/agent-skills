@@ -58,6 +58,54 @@ def _run(fixture: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
+VALIDATE_FIXTURES = SCRIPTS / "validate-fixtures.py"
+
+
+def _check_malformed_toml_aggregates(failures: list[str]) -> None:
+    """malformed_toml_aggregates (OCR-1013-1095): validate-fixtures.py must convert a
+    single fixture.toml parse failure into an aggregated Violation and keep checking
+    the rest of the corpus, not SystemExit and abort the whole run.
+
+    Note: this exercises validate-fixtures.py, not the --gates selector this file is
+    named for; added here because the finding's own `simplify.test` field names this
+    file -- scripts/_fixture_pairing_selftest.py (which already subprocesses
+    validate-fixtures.py) is the module-correct home.
+    """
+    with tempfile.TemporaryDirectory(prefix="validate-fixtures-malformed-toml-") as td:
+        corpus = Path(td) / "fixtures"
+        good = corpus / "good-one"
+        bad = corpus / "bad-toml-one"
+        good.mkdir(parents=True)
+        bad.mkdir(parents=True)
+        good_src = SCRIPTS.parent / "evals" / "fixtures" / "v3-clean-loop" / "fixture.toml"
+        if good_src.exists():
+            (good / "fixture.toml").write_text(good_src.read_text(encoding="utf-8"))
+        else:
+            (good / "fixture.toml").write_text('id = "good-one"\n')
+        (bad / "fixture.toml").write_text("this is [not valid toml", encoding="utf-8")
+
+        proc = subprocess.run(
+            [sys.executable, str(VALIDATE_FIXTURES), str(corpus)],
+            capture_output=True,
+            text=True,
+        )
+        if "bad-toml-one" not in proc.stdout and "bad-toml-one" not in proc.stderr:
+            failures.append(
+                f"malformed_toml_aggregates: bad-toml-one violation missing from output\n"
+                f"stdout={proc.stdout!r} stderr={proc.stderr!r}"
+            )
+        if "Traceback" in proc.stderr:
+            failures.append(
+                f"malformed_toml_aggregates: aborted with a traceback instead of aggregating\n{proc.stderr}"
+            )
+        combined = proc.stdout + proc.stderr
+        if "good-one" not in combined:
+            failures.append(
+                "malformed_toml_aggregates: good-one was never checked -- the bad TOML "
+                f"aborted the run before reaching it\n{combined}"
+            )
+
+
 def main() -> int:
     failures: list[str] = []
     with tempfile.TemporaryDirectory(prefix="validate-gates-selftest-") as td:
@@ -100,6 +148,8 @@ def main() -> int:
             failures.append(f"case4: expected non-zero exit with no filter, got 0: {r.stdout}")
         if "[G18]" not in r.stderr or "[G22]" not in r.stderr:
             failures.append(f"case4: expected both G18 and G22 unfiltered: {r.stderr}")
+
+    _check_malformed_toml_aggregates(failures)
 
     if failures:
         for f in failures:

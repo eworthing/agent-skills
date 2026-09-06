@@ -133,17 +133,23 @@ def build_sarif(registry: dict, review: dict | None) -> dict:
     if review is not None:
         scorecard = review.get("scorecard") or {}
         for dim, cell in scorecard.items():
-            if isinstance(cell, dict) and cell.get("residual_disposition") == "accepted":
-                rule_id = f"residual/{dim}"
-                rules.append(
-                    {
-                        "id": rule_id,
-                        "name": rule_id,
-                        "shortDescription": {"text": f"Accepted residual on {dim}"},
-                        "defaultConfiguration": {"level": "note"},
-                    }
-                )
-                results.append(_residual_result(dim, cell))
+            if not isinstance(cell, dict) or cell.get("residual_disposition") != "accepted":
+                continue
+            score = cell.get("score")
+            if not isinstance(score, (int, float)) or isinstance(score, bool):
+                continue
+            if not 9.5 <= float(score) < 10:
+                continue
+            rule_id = f"residual/{dim}"
+            rules.append(
+                {
+                    "id": rule_id,
+                    "name": rule_id,
+                    "shortDescription": {"text": f"Accepted residual on {dim}"},
+                    "defaultConfiguration": {"level": "note"},
+                }
+            )
+            results.append(_residual_result(dim, cell))
 
     return {
         "$schema": SARIF_SCHEMA,

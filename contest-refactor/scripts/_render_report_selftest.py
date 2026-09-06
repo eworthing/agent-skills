@@ -157,6 +157,43 @@ def main() -> int:
             if "|" not in md or not names_present:
                 failures.append("markdown: expected a scorecard table mentioning the dimensions")
 
+        # --- list_history_dies_2: a list-top-level history must exit 2, not traceback ---
+        list_hist = base / "LIST_HISTORY.json"
+        list_hist.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
+        p = _run([str(review), "--history", str(list_hist), "--format", "html"])
+        if p.returncode != 2:
+            failures.append(
+                f"list_history_dies_2: list-top-level history -> exit {p.returncode}, want 2"
+            )
+
+        # --- list_history_dies_2: a null loop entry must not crash the sort key ---
+        null_loop_hist = base / "NULL_LOOP_HISTORY.json"
+        _write(
+            null_loop_hist,
+            {
+                "schema_version": 2,
+                "loops": [
+                    {
+                        "loop": None,
+                        "schema_version": 2,
+                        "state": "CONTINUE",
+                        "scorecard": {"architecture_quality": {"score": 8.0}},
+                    },
+                    {
+                        "loop": 1,
+                        "schema_version": 2,
+                        "state": "CONTINUE",
+                        "scorecard": {"architecture_quality": {"score": 9.0}},
+                    },
+                ],
+            },
+        )
+        p = _run([str(review), "--history", str(null_loop_hist), "--format", "html"])
+        if p.returncode != 0:
+            failures.append(
+                f"list_history_dies_2: null loop entry -> exit {p.returncode}\n{p.stderr.rstrip()}"
+            )
+
         # --- compressed history must not crash ---
         _write(hist, _history_compressed())
         p = _run([str(review), "--history", str(hist), "--format", "html"])

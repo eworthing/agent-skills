@@ -36,6 +36,32 @@ def test_roster_digest_binds() -> None:
     assert CF.candidate_fingerprint(_review({"paths": ["a", "b"], "digest": "d-full"})) == full
 
 
+def test_truthy_non_dict_scorecard_exits_2() -> None:
+    import json
+    import subprocess
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as td:
+        artifact = Path(td) / "CURRENT_REVIEW.json"
+        artifact.write_text(
+            json.dumps(
+                {
+                    "schema_version": 4,
+                    "scorecard": "x",
+                    "discovery": {"lens": "Apple", "source_roots": ["src/"]},
+                }
+            )
+        )
+        wrapper = Path(__file__).resolve().parent / "candidate_fingerprint.py"
+        proc = subprocess.run(
+            [sys.executable, str(wrapper), "compute", str(artifact)],
+            capture_output=True,
+            text=True,
+        )
+        assert proc.returncode == 2, (proc.returncode, proc.stdout, proc.stderr)
+        assert "scorecard" in proc.stderr, proc.stderr
+
+
 if __name__ == "__main__":
     for _name, _fn in sorted(globals().items()):
         if _name.startswith("test_") and callable(_fn):

@@ -152,11 +152,8 @@ def _fixture_rule_kinds(canon: _canon.Canon) -> Sequence[str]:
 
 
 def _load_toml(path: Path) -> Any:
-    try:
-        with path.open("rb") as fh:
-            return tomllib.load(fh)
-    except tomllib.TOMLDecodeError as exc:
-        raise SystemExit(f"error: {path}: TOML parse failed: {exc}") from exc
+    with path.open("rb") as fh:
+        return tomllib.load(fh)
 
 
 _METHOD_STEPS_CACHE: set[str] | None = None
@@ -347,7 +344,11 @@ def _validate_one_fixture(
             )
         )
         return violations, None
-    data = _load_toml(toml_path)
+    try:
+        data = _load_toml(toml_path)
+    except (tomllib.TOMLDecodeError, OSError) as exc:
+        violations.append(Violation("schema", f"TOML parse failed: {exc}", toml_path))
+        return violations, None
     if not isinstance(data, dict):
         violations.append(
             Violation("schema", "fixture.toml top-level must be a mapping", toml_path)

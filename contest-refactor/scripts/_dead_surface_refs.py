@@ -85,6 +85,34 @@ def strip_comments(text: str) -> str:
     return "".join(out)
 
 
+def _blank_strings(text: str) -> str:
+    """Blank out Swift string-literal contents (`"..."` and `\"\"\"...\"\"\"`),
+    preserving every other character's offset (including newlines) so line
+    numbers stay exact. Used only for the brace-depth pass, so a literal
+    `{`/`}` inside a string can't corrupt TypeFrame nesting -- ponytail:
+    interpolation (`\\(...)`) is treated as opaque string content, not
+    parsed; full interpolation-aware parsing is out of scope here."""
+    out = list(text)
+    i, n = 0, len(text)
+    while i < n:
+        if text[i : i + 3] == '"""':
+            j = text.find('"""', i + 3)
+            j = n if j == -1 else j + 3
+        elif text[i] == '"':
+            j = i + 1
+            while j < n and text[j] not in ('"', "\n"):
+                j += 2 if text[j] == "\\" and j + 1 < n else 1
+            j = j + 1 if j < n and text[j] == '"' else j
+        else:
+            i += 1
+            continue
+        for k in range(i, j):
+            if out[k] != "\n":
+                out[k] = " "
+        i = j
+    return "".join(out)
+
+
 def _access_of(mods: str, default: str = "internal") -> str:
     for kw in _ACCESS_KEYWORDS:
         if re.search(rf"\b{kw}\b", mods):
@@ -189,7 +217,9 @@ class ParsedFile:
 
 
 def parse_file(path: str, text: str) -> ParsedFile:
-    lines = strip_comments(text).split("\n")
+    stripped = strip_comments(text)
+    lines = stripped.split("\n")
+    depth_lines = _blank_strings(stripped).split("\n")
 
     frames: list[TypeFrame] = []
     preview_spans: list[tuple[int, int]] = []
@@ -201,7 +231,7 @@ def parse_file(path: str, text: str) -> ParsedFile:
     body_depths: list[int] = []
     pending: TypeFrame | None = None
 
-    for lineno, raw in enumerate(lines, start=1):
+    for lineno, (raw, depth_raw) in enumerate(zip(lines, depth_lines, strict=True), start=1):
         m = _TYPE_RE.match(raw)
         if m:
             conformances = _parse_conformances(m.group("rest"))
@@ -255,7 +285,7 @@ def parse_file(path: str, text: str) -> ParsedFile:
                 is_pattern = _is_pattern_position(raw, im.start() - 1, im.end())
                 dot_index.setdefault(word, []).append((lineno, is_pattern))
 
-        for ch in raw:
+        for ch in depth_raw:
             if ch == "{":
                 depth += 1
                 if pending is not None:
@@ -351,9 +381,10 @@ def _in_span(path: str, line: int, spans: dict[str, list[tuple[int, int]]]) -> b
 
 def count_references(decl: RawDecl, corpus: Corpus, test_files: set[str]) -> tuple[int, int, int]:
     """(references_production, references_in_tests, references_in_previews)."""
-    excluded: set[tuple[str, int]] = {(decl.path, decl.line)}
+    excluded: dict[tuple[str, int], int] = {(decl.path, decl.line): 1}
     if decl.kind == "protocol_requirement":
-        excluded |= _protocol_impl_exclusions(decl.type_name, decl.name, corpus.frames)
+        for key in _protocol_impl_exclusions(decl.type_name, decl.name, corpus.frames):
+            excluded[key] = excluded.get(key, 0) + 1
 
     scope = {decl.path} if decl.access in ("private", "fileprivate") else None
 
@@ -364,7 +395,8 @@ def count_references(decl: RawDecl, corpus: Corpus, test_files: set[str]) -> tup
 
     prod = test = preview = 0
     for f, ln in entries:
-        if (f, ln) in excluded:
+        if excluded.get((f, ln), 0) > 0:
+            excluded[(f, ln)] -= 1
             continue
         if scope is not None and f not in scope:
             continue

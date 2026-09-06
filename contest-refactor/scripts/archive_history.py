@@ -127,11 +127,10 @@ def _cmd_write(args: argparse.Namespace) -> int:
     history = _load_history(args.history, current_review.get("schema_version", 1))
     updated = append_or_replace(history, current_review)
 
-    tmp_path = args.history.parent / f"{args.history.name}.tmp"
-    tmp_path.write_text(json.dumps(updated, indent=2) + "\n", encoding="utf-8")
-    tmp_path.replace(args.history)
-    print(f"wrote {len(updated['loops'])} loops[] entries to {args.history}")
-
+    # Validate/materialize the MD block *before* touching history.json: any
+    # failure here (missing --md-body, bad loop field, unreadable body) must
+    # not leave loops[] advanced without its matching divider block.
+    divider = body = None
     if args.md is not None:
         if not args.md_body:
             raise ValueError("--md requires --md-body <path-or-'-'>")
@@ -148,6 +147,13 @@ def _cmd_write(args: argparse.Namespace) -> int:
             if args.md_body == "-"
             else Path(args.md_body).read_text(encoding="utf-8")
         )
+
+    tmp_path = args.history.parent / f"{args.history.name}.tmp"
+    tmp_path.write_text(json.dumps(updated, indent=2) + "\n", encoding="utf-8")
+    tmp_path.replace(args.history)
+    print(f"wrote {len(updated['loops'])} loops[] entries to {args.history}")
+
+    if args.md is not None:
         wrote = append_divider_block(args.md, divider, body)
         print(f"{'wrote' if wrote else 'no-op (already present)'} divider block to {args.md}")
     return 0

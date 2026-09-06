@@ -45,6 +45,10 @@ def main() -> int:
             print(f"FAIL: fixture {f!r} has no expected entry (update EXPECTED + README)")
         return 1
 
+    if not fixtures:
+        print(f"FAIL: no fixtures found under {smoke_dir} (wrong path or wiped tree)")
+        return 1
+
     failures = 0
     for fixture in fixtures:
         proc = subprocess.run(

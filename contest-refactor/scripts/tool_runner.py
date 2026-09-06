@@ -200,7 +200,12 @@ def run_tool(spec: ToolSpec, cwd: Path) -> ToolResult:
     if spec.version_argv and spec.min_version:
         try:
             probe = subprocess.run(
-                list(spec.version_argv), capture_output=True, text=True, timeout=15, cwd=cwd
+                list(spec.version_argv),
+                capture_output=True,
+                text=True,
+                errors="replace",
+                timeout=15,
+                cwd=cwd,
             )
         except (subprocess.TimeoutExpired, OSError) as exc:
             return ToolResult(spec.name, "version_incompatible", f"version probe failed: {exc}")
@@ -218,7 +223,12 @@ def run_tool(spec: ToolSpec, cwd: Path) -> ToolResult:
 
     try:
         proc = subprocess.run(
-            list(spec.argv), capture_output=True, text=True, timeout=spec.timeout_s, cwd=cwd
+            list(spec.argv),
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=spec.timeout_s,
+            cwd=cwd,
         )
     except subprocess.TimeoutExpired:
         # Discard everything. A truncated stream is an unknown fraction of a

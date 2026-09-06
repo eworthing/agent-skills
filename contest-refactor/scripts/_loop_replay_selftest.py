@@ -118,6 +118,63 @@ def _check_arms(fid: str, status: object, arms: object) -> list[str]:
     return failures
 
 
+def _check_deferral_missing_primary_file_fails_loud(failures: list[str]) -> None:
+    """A `--deferral-only` fixture whose expected.toml is missing
+    expected_escalated_primary_file must FAIL loud (OCR-1013-1033), not default
+    the target file to "" -- which matches every finding's evidence string and
+    silently turns ABSENT into ESCALATED-by-dropping.
+
+    Note: `_deferral_only` lives in loop_replay_grade.py but reads from
+    evals/priority-fixtures/ (PRIORITY_FIXTURES_DIR), a different fixture family
+    than this file's own evals/loop-fixtures/ well-formedness checks -- this case
+    is added here because the finding's own `simplify.test` field names this
+    file; scripts/_priority_replay_selftest.py is the module-correct home.
+    """
+    import tempfile
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import loop_replay_grade as L
+
+    with tempfile.TemporaryDirectory() as td:
+        priority_dir = Path(td) / "priority-fixtures"
+        fixdir = priority_dir / "missing-primary-file-1"
+        fixdir.mkdir(parents=True)
+        (fixdir / "expected.toml").write_text(
+            'id = "missing-primary-file-1"\n'
+            'kind = "deferral"\n'
+            'expected_escalated_stable_id = "F-1"\n'
+            'expected_escalated_dimension = "credibility"\n'
+            'decoy_dimension = "architecture_quality"\n'
+            'restraint_dimension = "framework_idioms"\n'
+            # expected_escalated_primary_file deliberately absent
+        )
+        payload_path = Path(td) / "probe.json"
+        payload_path.write_text(
+            json.dumps(
+                {
+                    "backlog": [],
+                    "findings": [
+                        {"id": "F-2", "evidence": ["Sources/Unrelated.swift:1 unrelated"]}
+                    ],
+                }
+            )
+        )
+        orig = L.PRIORITY_FIXTURES_DIR
+        L.PRIORITY_FIXTURES_DIR = priority_dir
+        try:
+            L._deferral_only("missing-primary-file-1", payload_path)
+        except SystemExit as exc:
+            msg = str(exc.code)
+        else:
+            msg = None
+        finally:
+            L.PRIORITY_FIXTURES_DIR = orig
+    if msg is None or "FAIL" not in msg:
+        failures.append(
+            f"deferral fixture missing expected_escalated_primary_file must FAIL loud, got {msg!r}"
+        )
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -227,6 +284,8 @@ def main() -> int:
                 f"fixture '{fid}': efficiency fixture (notes.red_baseline present) is "
                 f"measured without baseline_observed.arms — RED/GREEN arms required"
             )
+
+    _check_deferral_missing_primary_file_fails_loud(failures)
 
     if failures:
         print(f"_loop_replay_selftest: FAIL ({len(failures)} issue(s))")

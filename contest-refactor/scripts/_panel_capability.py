@@ -36,10 +36,20 @@ def load_manifest(root: Path | None = None) -> dict:
     path = (root or _DEFAULT_ROOT) / "canon" / "panel-certification.toml"
     with path.open("rb") as fh:
         data = tomllib.load(fh)
+    entries = data.get("entries", [])
+    unsupported_digests = data.get("unsupported_digests", [])
+    if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
+        raise ValueError("malformed panel-certification.toml: 'entries' must be a list of tables")
+    if not isinstance(unsupported_digests, list) or not all(
+        isinstance(d, str) for d in unsupported_digests
+    ):
+        raise ValueError(
+            "malformed panel-certification.toml: 'unsupported_digests' must be a list of strings"
+        )
     return {
         "schema_version": data.get("schema_version"),
-        "entries": data.get("entries", []),
-        "unsupported_digests": data.get("unsupported_digests", []),
+        "entries": entries,
+        "unsupported_digests": unsupported_digests,
     }
 
 
@@ -111,7 +121,7 @@ def resume_route(
 
     try:
         current_digest = _panel_gate_adapter.compute_protocol_digest(root)
-    except OSError as exc:
+    except (OSError, KeyError, ValueError) as exc:
         return _blocked(f"current protocol digest could not be computed: {exc}")
 
     if stored_digest != current_digest:
@@ -123,9 +133,19 @@ def resume_route(
     if not isinstance(binding, dict):
         return _blocked("malformed checkpoint: missing panel_state.candidate_binding")
 
-    if current_source_rev != binding.get(
-        "source_rev"
-    ) or current_candidate_fingerprint != binding.get("candidate_fingerprint"):
+    source_rev = binding.get("source_rev")
+    candidate_fingerprint = binding.get("candidate_fingerprint")
+    if (
+        not isinstance(source_rev, str)
+        or not source_rev
+        or not isinstance(candidate_fingerprint, str)
+        or not candidate_fingerprint
+    ):
+        return _blocked(
+            "malformed checkpoint: missing panel_state.candidate_binding.source_rev/candidate_fingerprint"
+        )
+
+    if current_source_rev != source_rev or current_candidate_fingerprint != candidate_fingerprint:
         return {
             "route": "drift_fresh_critic",
             "reason": "current source_rev/candidate_fingerprint no longer matches candidate_binding",

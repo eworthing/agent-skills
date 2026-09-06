@@ -134,6 +134,19 @@ def main() -> int:
         )
         check(r.counts.get("findings") == 1, "partial still records what it could parse")
 
+        # --- 5b. undecodable_output_replaced: non-UTF8 analyzer bytes must not
+        # crash the Exit-0-always runner (OCR-1013-1088) ----------------------
+        undecodable = (
+            PY,
+            "-c",
+            "import sys; sys.stdout.buffer.write(b'app/a.py:1:1: E1 \\xff\\xfe bad bytes\\n')",
+        )
+        r = tr.run_tool(_spec("fake-undecodable", undecodable), cwd)
+        check(
+            r.outcome == "ok",
+            f"undecodable analyzer output should still be ok, got {r.outcome!r}",
+        )
+
         # --- 6. redaction: a planted credential never reaches the summary --
         secret = "AK" + "IAIOSFODNN7EXAMPLE"
         r = tr.run_tool(

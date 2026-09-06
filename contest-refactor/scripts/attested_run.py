@@ -188,7 +188,11 @@ def main(argv: list[str]) -> int:
         return 2
 
     started = datetime.now(UTC)
-    child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as exc:
+        print(f"attested-run: spawn failed ({exc}) — nothing recorded", file=sys.stderr)
+        return 2
     # One reader thread per stream: sequential reads deadlock once both pipe buffers fill.
     t_out = _tee_and_digest(child.stdout, sys.stdout.buffer)
     t_err = _tee_and_digest(child.stderr, sys.stderr.buffer)

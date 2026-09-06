@@ -277,6 +277,41 @@ def main() -> int:
         if "runs" not in untouched:
             failures.append("CLI write: refusal must leave the bad file untouched")
 
+    # --- md_failure_leaves_json_untouched: --md without --md-body must not advance
+    # loops[] (OCR-1013-941: MD validation must happen before the JSON commit) ------
+
+    with tempfile.TemporaryDirectory(prefix="contest-archive-mdfail-") as tmp:
+        base = Path(tmp)
+        current_review = base / "CURRENT_REVIEW.json"
+        review_history = base / "REVIEW_HISTORY.json"
+        history_before = {"schema_version": 4, "loops": []}
+        review_history.write_text(json.dumps(history_before), encoding="utf-8")
+        current_review.write_text(json.dumps(_review(run_id="run-Y", loop=1)), encoding="utf-8")
+
+        p = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "write",
+                str(current_review),
+                str(review_history),
+                "--md",
+                str(base / "REVIEW_HISTORY.md"),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if p.returncode == 0:
+            failures.append("md_failure_leaves_json_untouched: --md without --md-body must fail")
+        after = json.loads(review_history.read_text(encoding="utf-8"))
+        if after != history_before:
+            failures.append(
+                "md_failure_leaves_json_untouched: loops[] advanced despite --md-body failure "
+                f"(before={history_before}, after={after})"
+            )
+        if (base / "REVIEW_HISTORY.md").exists():
+            failures.append("md_failure_leaves_json_untouched: MD file must not be created either")
+
     # --- markdown half: divider formatting + append-if-absent (retro #3/#4) --------
 
     if ah.loop_divider(3, "2026-08-24T23:48:09Z") != "--- Loop 3 (UTC 2026-08-24T23:48:09Z) ---":

@@ -321,6 +321,38 @@ def main() -> int:
             "1 semantic residue item (expected_reason_class)", len(report.get("residue", [])) == 1
         )
 
+        # ---- approved_null_regressions_incoherent: null regressions/conditions ----------
+        print("== RED: approved with null regressions/conditions ==")
+        approved_null = {
+            "verdict": "approved",
+            "checks": {"reality": "passed", "honesty": "passed", "regression": "passed"},
+            "regressions": None,
+            "conditions": [],
+        }
+        rc, report = _run(
+            json.dumps(approved_null), "reality-persists-1", tmpdir, "approved_null.json"
+        )
+        _check(
+            "approved_null_regressions_incoherent: boolean_coherence fails",
+            _general(report, "boolean_coherence")["pass"] is False,
+        )
+
+        # ---- conditional_string_conditions_incoherent: non-list conditions --------------
+        print("== RED: conditional with string conditions ==")
+        conditional_str = {
+            "verdict": "conditional",
+            "checks": {"reality": "passed", "honesty": "failed", "regression": "passed"},
+            "regressions": [],
+            "conditions": "fix x",
+        }
+        rc, report = _run(
+            json.dumps(conditional_str), "reality-persists-1", tmpdir, "conditional_str.json"
+        )
+        _check(
+            "conditional_string_conditions_incoherent: boolean_coherence fails",
+            _general(report, "boolean_coherence")["pass"] is False,
+        )
+
         # ---- plumbing: unknown id -------------------------------------------------------
         print("== plumbing: unknown scenario/case id ==")
         rc, report = _run(json.dumps(l3_pass), "not-a-real-id", tmpdir, "unknown_id.json")

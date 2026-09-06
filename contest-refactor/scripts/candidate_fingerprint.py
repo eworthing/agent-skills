@@ -34,8 +34,11 @@ def _architecture_payload(review: dict) -> dict:
     (title + evidence + severity), and the analyzed source identity (lens +
     source roots). Excludes everything volatile by simply not reading it.
     """
+    raw_scorecard = review.get("scorecard") or {}
+    if not isinstance(raw_scorecard, dict):
+        raise ValueError(f"'scorecard' must be an object, got {type(raw_scorecard).__name__}")
     scorecard = {}
-    for dim, entry in (review.get("scorecard") or {}).items():
+    for dim, entry in raw_scorecard.items():
         if isinstance(entry, dict):
             scorecard[dim] = {
                 "score": entry.get("score"),
@@ -53,6 +56,8 @@ def _architecture_payload(review: dict) -> dict:
         if isinstance(f, dict)
     ]
     discovery = review.get("discovery") or {}
+    if not isinstance(discovery, dict):
+        raise ValueError(f"'discovery' must be an object, got {type(discovery).__name__}")
     payload = {
         "lens": discovery.get("lens"),
         "source_roots": discovery.get("source_roots"),
@@ -170,7 +175,10 @@ def _selftest() -> None:
 
 
 def _load_review(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"artifact top-level must be an object, got {type(data).__name__}")
+    return data
 
 
 def _cmd_compute(path: Path) -> int:
@@ -217,7 +225,7 @@ def _main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return args.func(args.artifact)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError) as exc:
         sys.stderr.write(f"error: {exc}\n")
         return 2
 

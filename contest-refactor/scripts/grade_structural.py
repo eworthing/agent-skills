@@ -369,14 +369,23 @@ def _general_checks_layer3(candidate: dict[str, Any], canon) -> list[dict[str, A
     reality, honesty, regression = (checks.get(k) for k in LAYER3_CHECK_NAMES)
     if verdict == "approved":
         coherent = (
-            reality == honesty == regression == "passed" and not regressions and not conditions
+            reality == honesty == regression == "passed"
+            and isinstance(regressions, list)
+            and isinstance(conditions, list)
+            and not regressions
+            and not conditions
         )
         detail = "approved requires reality/honesty/regression all passed and regressions/conditions empty"
     elif verdict == "rejected":
         coherent = "failed" in (reality, honesty, regression)
         detail = "rejected requires at least one check failed"
     elif verdict == "conditional":
-        coherent = reality == "passed" and ("failed" in (honesty, regression)) and bool(conditions)
+        coherent = (
+            reality == "passed"
+            and ("failed" in (honesty, regression))
+            and isinstance(conditions, list)
+            and bool(conditions)
+        )
         detail = "conditional requires reality passed, honesty or regression failed, and a non-empty conditions[]"
     else:
         coherent = False
