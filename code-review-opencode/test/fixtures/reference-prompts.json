@@ -1,0 +1,25 @@
+{
+  "note": "SHA-256 digests of the assembled reference prompts; prompt text is not stored.",
+  "prompts": {
+    "low": {
+      "sha256": "aab0c3accfb83b7fdb28c2a52dbad9aabf8e60e0547519529b8391b870d740a9",
+      "length": 1251
+    },
+    "high": {
+      "sha256": "516ccdfb079072491f3958f209669327f6258a7504ca00a8f68b43eecb0387f0",
+      "length": 5616
+    },
+    "xhigh": {
+      "sha256": "a2562b061214e5b672d77f950758c160bac6328803d791afd057cc5930dc4163",
+      "length": 7101
+    },
+    "medium": {
+      "sha256": "aad0957aa0077bd43aaac1c2a4f6f7c3df19a344636ec6ff73758106c49fde6c",
+      "length": 1630
+    },
+    "max": {
+      "sha256": "e20b273e360f03db08f9399410904a5a66ba88cb80c6278a48405b816fc6356b",
+      "length": 7657
+    }
+  }
+}

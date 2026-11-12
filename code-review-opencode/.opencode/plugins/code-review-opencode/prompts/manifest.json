@@ -1,0 +1,167 @@
+{
+  "reference": "Claude Code 2.1.318 (sha256 677a2ea7bf576cedd20e191d973914ed8a41796f53a63b1923381ddc4d5b5e7d)",
+  "files": [
+    {
+      "file": "altitude.md",
+      "sha256": "f7c5ab6963173a7342ee0f1bb649afa2353518d7d5518ab9da112223bcd9969e",
+      "bytes": 337,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "Clawdipedia capture 2.1.311 (assembled)",
+      "piebald_blob": "n/a",
+      "cc_version": "2.1.311"
+    },
+    {
+      "file": "angle-a.md",
+      "sha256": "382cc83f9d18ee794e51fc26f89c2cba766684c10da496ba49878e557c3c24d7",
+      "bytes": 503,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-correctness-finder-angles.md",
+      "piebald_blob": "d6430d58d48bf175ec44911380103512f6e63845",
+      "cc_version": "2.1.206"
+    },
+    {
+      "file": "angle-b.md",
+      "sha256": "fa0b552498ce1bcf07ca4151621a09342d0c4c8b1e4e26f1f99936cb5c3588a9",
+      "bytes": 350,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-angle-b-removed-behavior-auditor.md",
+      "piebald_blob": "55c4d40c9e50e1b89b5655225ff14c6443da1a6b",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "angle-c.md",
+      "sha256": "901fb174c1fce15b35000c768994245df673b2521b990dccdd6bf6da814f578b",
+      "bytes": 330,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-angle-c-cross-file-tracer.md",
+      "piebald_blob": "aead7fe9d52f40c7fcd7dca93cf96e7c1f34e18d",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "angle-d.md",
+      "sha256": "908124ba58ff4119771206380084cd1861e4bc4949e62a6d903aa5f5ffc9e027",
+      "bytes": 361,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-angle-d-language-pitfall-specialist.md",
+      "piebald_blob": "8e8a601d7053f062d742d81394552ecab4ce07a5",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "angle-e.md",
+      "sha256": "8521b489f223dc9f771f1849fe23f17f65b2fb71854fbf476513fd16fbcc29c5",
+      "bytes": 478,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-angle-e-wrapper-proxy-correctness.md",
+      "piebald_blob": "d088b0ffe5a44886aa8f55672328f2d8c3349c98",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "candidate-precedence.md",
+      "sha256": "8ad3302a000814f5a2cf65d069229962bdb3cb3f3b75e1125d88121737d59a15",
+      "bytes": 351,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "six-ddc/skills CLEANUP_PRECEDENCE (v2.1.221)",
+      "piebald_blob": "b22e695358",
+      "cc_version": "2.1.221"
+    },
+    {
+      "file": "conventions.md",
+      "sha256": "f97aea6180dcbc86a69150002a3e6abffa1f863ba13ffae1ebd1706a7dce5197",
+      "bytes": 693,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-conventions-dimension.md",
+      "piebald_blob": "8d6adce5a3ea0ffec2b841f9157a9ff37444e3c4",
+      "cc_version": "2.1.178"
+    },
+    {
+      "file": "efficiency.md",
+      "sha256": "bb19e1206de146e41758e2512cf9ec0f4fa4e9d0aac8b2045a95deefc2d2d724",
+      "bytes": 468,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-efficiency-dimension.md",
+      "piebald_blob": "4ccd127aa071e24e09a60ff3d22d829195a4ba6c",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "phase-0.md",
+      "sha256": "4dcd96ee524a404f3910577526a57dd0c4c38c256c15b2f0dfaf7476b9a7c3da",
+      "bytes": 487,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-phase-0-gather-the-diff.md",
+      "piebald_blob": "2fa6dc101e9e977ca903aacd2d852da8e36efd73",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "reuse.md",
+      "sha256": "8bd1ed5f73e82e76d83fddb4e26c8470d64f654ad101771c3142171b5db9e98d",
+      "bytes": 287,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "Clawdipedia capture 2.1.311 (assembled)",
+      "piebald_blob": "n/a",
+      "cc_version": "2.1.311"
+    },
+    {
+      "file": "simplification.md",
+      "sha256": "5c5e2db686b7dc0f0f1ba3c874cbfce34dbb5082a70280e685a85a978cdf26a0",
+      "bytes": 210,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "Clawdipedia capture 2.1.311 (assembled)",
+      "piebald_blob": "n/a",
+      "cc_version": "2.1.311"
+    },
+    {
+      "file": "sweep-focus.md",
+      "sha256": "a9700b3f4d457d5cce3806abb7456ac7fa5263757d2b900aebde570427602bd8",
+      "bytes": 252,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "six-ddc/skills SWEEP_GAP_FOCUS (v2.1.221)",
+      "piebald_blob": "b22e695358",
+      "cc_version": "2.1.221"
+    },
+    {
+      "file": "sweep.md",
+      "sha256": "ab971ad8756ff912379c9cf5c9a05e47978783028a93f758d9ff46d17721ae5a",
+      "bytes": 477,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-phase-3-sweep-for-gaps.md",
+      "piebald_blob": "fe3d8976bc20b3dc9798dcfa7b0d33223b17d998",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "verdict-ladder-recall.md",
+      "sha256": "5615447c56fb91481c463178ff7de87b87c1444d0d9ae0264d97cd2ce1a60208",
+      "bytes": 667,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "agent-prompt-code-review-part-5-recall-biased-verification-phase.md",
+      "piebald_blob": "d91d782f725a7e9aa07ee898e6fac7dc8d9a42ba",
+      "cc_version": "2.1.160"
+    },
+    {
+      "file": "verdict-ladder.md",
+      "sha256": "dc8d46ea74ff89aabbe39f1186dc0deb9277f1998a8e2ef594a7af1b85cf1ff8",
+      "bytes": 338,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "agent-prompt-code-review-part-4-three-state-verification-phase.md",
+      "piebald_blob": "851f9b27e2610375826b56a528129371f06edf53",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "verify-3state.md",
+      "sha256": "29582a446a12cded7e323e85a01dc78193089509fdcab92d2034be732beb0868",
+      "bytes": 407,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-phase-2-verify-3-state.md",
+      "piebald_blob": "080e42053dd5375cd4b264f56b3086db002f5b65",
+      "cc_version": "2.1.173"
+    },
+    {
+      "file": "verify-recall.md",
+      "sha256": "f819a16e60ebb7a36a5c8eb412c6f22486db45cc3c558886d63a2638a00cde64",
+      "bytes": 402,
+      "source": "Claude Code 2.1.318 bundle",
+      "piebald_file": "skill-code-review-phase-2-verify-recall-biased.md",
+      "piebald_blob": "cd03d76ffd073fdeef6c53e7920a28be86663fb7",
+      "cc_version": "2.1.173"
+    }
+  ]
+}

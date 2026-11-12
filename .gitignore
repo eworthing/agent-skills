@@ -35,3 +35,7 @@ contest-refactor/.artifacts/
 .claude/skills/*
 !.claude/skills/skill-evaluator-1.0.0/
 skills-lock.json
+
+# Local research captures of third-party projects (Piebald, Anthropic, six-ddc,
+# OpenCode prompts, decoded binaries) — never commit these to the skills repo.
+code-review-opencode/sources/
