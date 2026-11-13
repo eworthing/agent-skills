@@ -1751,7 +1751,7 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings[1].kind, "cleanup")
 })
 
-test("a subset plan without index 0 is not mistaken for a 1-based plan", async () => {
+test("an ambiguous plan without index 0 is ignored rather than shifted", async () => {
   const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
     candidate("src/a.ts", i + 1, `${s} bug`),
   )
@@ -1770,7 +1770,8 @@ test("a subset plan without index 0 is not mistaken for a 1-based plan", async (
           : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
     },
   })
-  // The subset keeps the original indices; it is not shifted down.
-  assert.equal(result.findings[0].summary, "one bug")
-  assert.equal(result.findings[1].summary, "two bug")
+  // A plan without index 0 cannot be distinguished from a 1-based plan, so
+  // the engine keeps every verified finding in deterministic order.
+  assert.equal(result.findings[0].summary, "zero bug")
+  assert.equal(result.findings[1].summary, "one bug")
 })

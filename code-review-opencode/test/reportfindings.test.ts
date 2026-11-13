@@ -251,6 +251,7 @@ test("fix outcomes render a summary and stay silent without outcomes", () => {
 test("a synthesized review summary is shown above the findings", () => {
   const r = result()
   r.summary = "Two related failures share a root cause; merge the guards."
+  r.summarySynthesized = true
   const text = formatHuman(r)
   assert.match(text, /^Two related failures share a root cause/)
 })

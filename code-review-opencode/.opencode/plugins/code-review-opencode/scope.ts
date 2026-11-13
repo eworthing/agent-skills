@@ -1127,7 +1127,11 @@ type Plan = {
 
 /** A bare number is a PR target. Keep the spelling in one place. */
 export function prTargetNumber(target: string | undefined): number | undefined {
-  return positiveLine(target)
+  if (target === undefined) return undefined
+  // Accept a PR number followed by free-form instructions ("123 focus on
+  // auth"), but not a path or identifier that merely starts with digits.
+  const match = target.match(/^#?(\d+)(?:\s|$)/)
+  return match ? positiveLine(match[1]) : undefined
 }
 
 type TargetClassification = {
@@ -1243,6 +1247,21 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let pathScope = classified.pathScope
   const branchCandidate = classified.branchCandidate
   const branchRef = classified.branchRef
+  // A repo-relative path typo (src/authn.ts) is as much a target error as
+  // ./src/authn.ts. Do not silently review the whole default diff. A free-form
+  // instruction contains spaces and keeps its fallback behavior.
+  if (
+    target &&
+    targetPr === undefined &&
+    !branchCandidate &&
+    !pathScope &&
+    !looksLikeRange(target) &&
+    !target.includes(" ") &&
+    (target.includes("/") || /\.[a-z0-9]{1,8}$/i.test(target)) &&
+    resolveTargetPath(cwd, target) === null
+  ) {
+    throw new Error(`Review target path not found: ${target}`)
+  }
   if (
     target &&
     targetPr === undefined &&

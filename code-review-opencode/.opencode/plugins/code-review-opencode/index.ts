@@ -760,7 +760,8 @@ async function resolveAndRun(
     }
     // The fallback prompt calls ReportFindings, so it must respect the host's
     // 32-entry cap even when the deterministic engine was not capped.
-    const fallbackMax = typeof max === "number" ? Math.min(max, HARD_FINDINGS_CAP) : max
+    const fallbackMax =
+      typeof max === "number" ? Math.min(max, HARD_FINDINGS_CAP) : max === "all" ? HARD_FINDINGS_CAP : max
     const base = resolveMulti(kind, effort, fallbackMax)
     let text = decorateReview(base)
     text += await verifyFollowUp(ctx, scope.files)

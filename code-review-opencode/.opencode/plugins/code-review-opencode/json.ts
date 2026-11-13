@@ -467,11 +467,17 @@ export function normalizeFinding(v: unknown, opts: NormalizeFindingOptions = {})
 export function asCandidatesResult(
   value: unknown,
   cap: number,
-): { candidates: RawFinding[]; dropped: number } | null {
+): { candidates: RawFinding[]; dropped: number; truncated?: boolean } | null {
   // Text fallback: a malformed sibling must not discard the valid candidates,
   // because there is no tool response that can ask the child to re-emit.
   const parsed = normalizeCandidatesCall(value, cap, { tolerateDropped: true })
-  return parsed.ok ? { candidates: parsed.value.candidates, dropped: parsed.value.dropped ?? 0 } : null
+  return parsed.ok
+    ? {
+        candidates: parsed.value.candidates,
+        dropped: parsed.value.dropped ?? 0,
+        ...(parsed.value.truncated ? { truncated: true } : {}),
+      }
+    : null
 }
 
 export type Verdict = { verdict: "CONFIRMED" | "PLAUSIBLE" | "REFUTED"; evidence: string }
@@ -504,11 +510,14 @@ export function asGroupVerdicts(
   // of discarding the whole group, and shift a contiguous 1-based list so the
   // verdicts still map to candidates [0..n-1]. A non-contiguous list is kept
   // as-is; the engine drops the missing indices and warns.
-  const usable = parsed.value.verdicts.filter((v) => v.index < count)
-  const sorted = [...usable].sort((a, b) => a.index - b.index)
+  // Shift before filtering: a 1-based list ending at `count` has an index
+  // equal to the group size, which a pre-shift range filter would discard.
+  const raw = parsed.value.verdicts
+  const sorted = [...raw].sort((a, b) => a.index - b.index)
   const contiguousFromOne =
     sorted.length > 0 && sorted.every((v, i) => v.index === i + 1)
-  return contiguousFromOne ? sorted.map((v) => ({ ...v, index: v.index - 1 })) : usable
+  const shifted = contiguousFromOne ? sorted.map((v) => ({ ...v, index: v.index - 1 })) : raw
+  return shifted.filter((v) => v.index >= 0 && v.index < count)
 }
 
 /* -------------------------------------------------------------------------
@@ -571,7 +580,7 @@ export function normalizeCandidatesCall(
   value: unknown,
   cap = 64,
   opts: { tolerateDropped?: boolean } = {},
-): NormalizedCall<{ candidates: RawFinding[]; dropped?: number }> {
+): NormalizedCall<{ candidates: RawFinding[]; dropped?: number; truncated?: boolean }> {
   if (!isRecord(value)) return { ok: false, error: "expected an object with a candidates array" }
   if (!Array.isArray(value.candidates)) return { ok: false, error: "candidates must be an array" }
   const { items: candidates, notes, dropped } = normalizeList<RawFinding>(value.candidates, {
@@ -599,7 +608,8 @@ export function normalizeCandidatesCall(
   }
   if (candidates.length === 0 && value.candidates.length > 0)
     return { ok: false, error: notes[0] ?? "no candidate had the required file, summary, and failure_scenario fields" }
-  return { ok: true, value: { candidates, dropped }, notes }
+  const truncated = notes.some((note) => note.includes("truncated at"))
+  return { ok: true, value: { candidates, dropped, ...(truncated ? { truncated } : {}) }, notes }
 }
 
 type EvidenceResult = {

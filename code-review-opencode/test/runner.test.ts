@@ -200,8 +200,10 @@ test("the retry is skipped after three schema validation failures", async () => 
   const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent", schemaFailures })
   const value = await runner(request())
   assert.equal(value, null)
-  assert.equal(fake.prompts.length, 1)
-  assert.deepEqual(fake.removed, ["ses_1"])
+  // The fresh formatter still gets one chance; the same-session retry is the
+  // one skipped after three schema failures.
+  assert.equal(fake.prompts.length, 2)
+  assert.deepEqual(fake.removed, ["ses_2", "ses_1"])
 })
 
 test("keepSessions keeps the child session for debugging", async () => {

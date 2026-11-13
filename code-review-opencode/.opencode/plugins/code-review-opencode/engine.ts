@@ -38,6 +38,7 @@ import {
   STEP_LIMIT_PLACEHOLDER,
   type Decisions,
   type RawFinding,
+  type Verdict,
 } from "./json.ts"
 import { scopeBlock, unquoteGitPath, type Scope } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
@@ -86,6 +87,8 @@ export type EngineStats = {
 export type EngineResult = {
   level: Level
   summary: string
+  /** The summary came from the synthesizer, not a deterministic fallback. */
+  summarySynthesized?: boolean
   findings: Finding[]
   refuted: Array<{ file: string; line?: number; summary: string }>
   stats: EngineStats
@@ -484,10 +487,12 @@ function applyIndexPlan<T, R>(
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
-  // A zero-based plan must name index 0. Without it, the plan is either
-  // 1-based or a subset, and shifting would silently mis-index one of them.
-  // Ignore the plan and keep every finding in deterministic order instead.
-  const plan = decisions.length > 0 && !decisions.some((d) => d.index === 0) ? [] : decisions
+  // A zero-based plan may name index 0 as a representative or as a merge
+  // target (the top finding was merged into a later survivor). Without either,
+  // the plan is 1-based or a subset, and shifting would silently mis-index one
+  // of them. Ignore it and keep every finding in deterministic order instead.
+  const hasBase = decisions.some((d) => d.index === 0 || d.merge.includes(0))
+  const plan = decisions.length > 0 && !hasBase ? [] : decisions
   for (const d of plan) {
     if (output.length >= cap) {
       if (d.index >= 0 && d.index < items.length && !claimed.has(d.index)) truncated = true
@@ -836,6 +841,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       warnings.push(`${label} dropped ${pluralize(parsed.dropped, "malformed candidate")}`)
       incomplete = true
     }
+    if (parsed.truncated) {
+      warnings.push(`${label} exceeded its candidate cap; the excess was discarded`)
+      incomplete = true
+    }
     const candidates = parsed.candidates.slice(0, cap)
     if (candidates.some((c) => c.failure_scenario === STEP_LIMIT_PLACEHOLDER)) {
       warnings.push(`${label} was recovered from its step-limited summary; some failure scenarios are missing`)
@@ -901,8 +910,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const verifyOne = async (
     c: RawFinding,
     kind: "correctness" | "cleanup",
-    recallBiased: boolean,
-    addRecallSentence: boolean,
   ): Promise<Finding | null> => {
     if (aborted()) return null
     stats.verifierAgents++
@@ -913,11 +920,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       prompt: verifierPrompt({
         scope: block,
         candidate: c,
-        recallBiased,
+        recallBiased: recallLadder,
         // Both deep multi-agent prompts describe a recall-biased 3-state
         // verifier. Omitting the sentence made xhigh verifiers use the strict
         // precision ladder and refute genuine state-dependent bugs.
-        recallSentence: addRecallSentence,
+        recallSentence,
       }),
       agent: AGENT_IDS.verifier,
       schemaName: "verdict",
@@ -1029,9 +1036,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         })
         stats.dupes += deduped.dupes
         const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(f, c) }))
-        const results = await mapLimit(novel, concurrency, (c) =>
-          verifyOne(c, c.kind, recallLadder, recallSentence),
-        )
+        const results = await mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind))
         verified.push(...results.filter((x): x is Finding => x !== null))
       }),
     )
@@ -1087,9 +1092,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         stats.dupes += deduped.dupes
         pooled.push(...deduped.novel)
       }
-      const results = await mapLimit(pooled, concurrency, (c) =>
-        verifyOne(c, c.kind, recallLadder, recallSentence),
-      )
+      const results = await mapLimit(pooled, concurrency, (c) => verifyOne(c, c.kind))
       verified = results.filter((x): x is Finding => x !== null)
     }
   }
@@ -1243,6 +1246,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
 
   let findings: Finding[]
   let summary: string
+  let summarySynthesized = false
   let truncatedByCap = false
 
   /**
@@ -1254,6 +1258,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     findings = ranked.slice(0, Number.isFinite(cap) ? cap : undefined).map((c) => ({ ...c }))
     truncatedByCap = Number.isFinite(cap) && ranked.length > cap
     summary = summaryText
+    summarySynthesized = false
   }
 
   /** Shared by wf221 synthesis and the v2.1.318 semantic-merge equivalent. */
@@ -1309,6 +1314,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     }
     findings = synthesized.findings
     summary = synthesized.summary
+    summarySynthesized = true
     truncatedByCap = synthesized.truncated
   }
 
@@ -1468,6 +1474,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
             partial = true
           }
           summary = report.summary
+          summarySynthesized = true
         }
       }
     }
@@ -1499,6 +1506,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const result: EngineResult = {
     level,
     summary,
+    ...(summarySynthesized ? { summarySynthesized: true } : {}),
     findings: findings.slice(0, Number.isFinite(cap) ? cap : undefined),
     refuted: refuted.map((c) => ({ file: c.file, line: c.line, summary: c.summary })),
     stats: { ...stats, reported: Math.min(findings.length, Number.isFinite(cap) ? cap : findings.length) },

@@ -140,6 +140,7 @@ const SCHEMAS: Record<SchemaName, SchemaSpec> = {
       const parsed = normalizeGroupVerdictsCall(value, 64, {
         tolerateMissingEvidence: true,
         tolerateDropped: true,
+        tolerateOffset: true,
       })
       return parsed.ok ? undefined : parsed.error
     },
@@ -163,7 +164,7 @@ const SCHEMAS: Record<SchemaName, SchemaSpec> = {
       if (!value || typeof value !== "object") return value
       const record = value as Record<string, unknown>
       return !Array.isArray(record.findings) && Array.isArray(record.candidates)
-        ? { findings: record.candidates }
+        ? { ...record, findings: record.candidates }
         : value
     },
   },
@@ -815,12 +816,12 @@ ${text}`
         return null
       }
 
-      const failuresBefore = sessionID ? (opts.schemaFailures?.get(sessionID) ?? 0) : 0
       // Try the small formatter child for every schema, not only candidates
       // and reports: a verifier or synthesizer that answers in prose would
       // otherwise be retried in place and eventually dropped. Formatting costs
-      // one small child only after the original child failed.
-      if (lastText && failuresBefore < 3) {
+      // one small child only after the original child failed; the schema-tool
+      // failure count belongs to the original child and must not suppress it.
+      if (lastText) {
         log(
           `[code-review-opencode] ${req.label}: ${stepLimited ? "step limit reached" : "no structured result"}; trying a fresh formatter`,
         )
