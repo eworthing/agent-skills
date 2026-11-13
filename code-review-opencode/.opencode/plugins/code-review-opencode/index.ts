@@ -385,7 +385,16 @@ async function resolveAndRun(
       ? sessionRecord(await ctx.session.get({ sessionID: inv.sessionID }).catch(() => undefined))
       : undefined)
   const sessionModel = inv.model ?? modelRef(parent?.model)
-  const sessionEffort = inv.sessionEffort ?? sessionModel?.variant
+  // An API-created session can have no selected model. Creating a child
+  // without one makes OpenCode return an empty assistant response, so fall
+  // back to the host's default model rather than silently dropping the whole
+  // finder fan-out.
+  const hostDefault =
+    sessionModel === undefined && typeof ctx.model?.default === "function"
+      ? await ctx.model.default().catch(() => undefined)
+      : undefined
+  const runModel = sessionModel ?? modelRef(hostDefault)
+  const sessionEffort = inv.sessionEffort ?? runModel?.variant
 
   const storedEffort = await ctx.storage.get(STORAGE_EFFORT).catch(() => undefined)
   const storedMax = await ctx.storage.get(STORAGE_MAX).catch(() => undefined)
@@ -407,7 +416,7 @@ async function resolveAndRun(
   const version = asVersion(requestedMode)
   const modelOverride = modelRef(flags.model ?? process.env.CODE_REVIEW_MODEL)
   const family = detectFamily(
-    modelOverride?.id ?? inv.modelID ?? sessionModel?.id,
+    modelOverride?.id ?? inv.modelID ?? runModel?.id,
     flags.family ?? process.env.CODE_REVIEW_FAMILY,
   )
   const cell = resolveCell(version, family, effort)
@@ -546,9 +555,9 @@ async function resolveAndRun(
 
   // Host records expose the model as `{providerID, modelID}` as often as the
   // session API's `{providerID, id}`. Normalize both before passing the ref to
-  // session.create, or every finder/verifier child fails to start. `parent`
-  // and `sessionModel` were resolved once at the top of this function.
-  const baseModel = modelOverride ?? sessionModel ?? modelRef(parent?.model)
+  // session.create, or every finder/verifier child fails to start. `parent`,
+  // `sessionModel`, and the host default were resolved once at the top.
+  const baseModel = modelOverride ?? runModel
   const roleVariants = parseRoleVariants(process.env.CODE_REVIEW_ROLE_VARIANTS)
   const runner: AgentRunner = makeRunner(ctx, {
     parentSessionID: inv.sessionID,

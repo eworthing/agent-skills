@@ -96,9 +96,11 @@ result:
 **Fix:** `resolveAndRun` now resolves the parent session once (the caller may
 pass `inv.session`; otherwise it calls `ctx.session.get`), derives
 `sessionModel` and `sessionEffort`, and uses them for family dispatch, effort
-fallback, and the child-session model. The command handler reads and passes the
-session; the tool handler already had it and now passes it through, removing a
-duplicate lookup.
+fallback, and the child-session model. If the session has no selected model
+(common for sessions created through the API), it falls back to
+`ctx.model.default()` so children are never created model-less and return empty
+responses. The command handler reads and passes the session; the tool handler
+already had it and now passes it through, removing a duplicate lookup.
 
 **Parity:** this restores Claude Code's documented rule that a review with no
 typed level uses the session's current effort, and restores the recovered
