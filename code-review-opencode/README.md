@@ -42,6 +42,7 @@ CODE_REVIEW_PORTS.md               public port catalog + feature matrix
 CODE_REVIEW_HARDENING_PLAN.md      prioritized gap-closing plan
 CODE_REVIEW_PENDING_PLAN.md        remaining fidelity gaps: research + designs
 CODE_REVIEW_SELF18_TRIAGE.md       run-18 finding-by-finding status
+CODE_REVIEW_SELF19_TRIAGE.md       run-19 finding-by-finding status
 ```
 
 ## Global installation
