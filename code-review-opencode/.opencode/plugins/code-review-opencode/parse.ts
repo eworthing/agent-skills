@@ -434,9 +434,22 @@ function editDistance(a: string, b: string): number {
  * free-form target. A typo must also share a meaningful prefix with the level,
  * or ordinary one-edit words ("flow", "slow", "map") look like effort attempts.
  */
+function oneTransposition(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const diffs: number[] = []
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diffs.push(i)
+  return (
+    diffs.length === 2 &&
+    a[diffs[0]] === b[diffs[1]] &&
+    a[diffs[1]] === b[diffs[0]]
+  )
+}
+
 function looksLikeLevel(token: string): boolean {
   const lower = token.toLowerCase()
   return LEVELS.some((level) => {
+    // `hihg` is a transposition, not a one-character substitution.
+    if (oneTransposition(lower, level) && lower[0] === level[0]) return true
     if (editDistance(lower, level) !== 1) return false
     let shared = 0
     while (shared < lower.length && shared < level.length && lower[shared] === level[shared]) shared++
@@ -531,4 +544,4 @@ export function storedMaxFindings(parsed: Parsed): number | "all" | null | undef
   return parsed.maxFindings === "default" ? null : parsed.maxFindings
 }
 
-export const VALID_LEVELS = LEVELS
+

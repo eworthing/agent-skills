@@ -703,33 +703,43 @@ async function resolveAndRun(
     )
   }
 
-  const result = await runReview({
-    level: effort,
-    cell,
-    scope,
-    runner,
-    statedLimit: limit.stated,
-    finderBudget: flags.fullFleet ? undefined : plannedFinderCount(cell, scope.diffLines),
-    // Workflow cells default to `semanticMerge: false` in the cell table, but
-    // their synthesizer is mandatory (`synthesis` is "index"/"text"). Passing
-    // that default through would disable it. Only an explicit
-    // --no-semantic-merge should turn synthesis off; otherwise leave the
-    // engine's undefined default (enabled) and let the cell's synthesis mode
-    // decide.
-    semanticMerge: flags.semanticMerge ?? (cell.semanticMerge ? true : undefined),
-    signal: inv.signal,
-    concurrency: resolveConcurrency(flags.concurrency, process.env.CODE_REVIEW_CONCURRENCY),
-    onEvent: (event) => {
-      if (flags.quiet) return
-      // The host callback may reject or throw synchronously. A floating
-      // failure would terminate the plugin process, so observe both.
-      const report = (status: string): void => {
-        void reportProgress(inv.progress, status)
-      }
-      if (event.type === "finder") report(`${event.label}: ${event.candidates} candidate(s)`)
-      if (event.type === "phase") report(`Phase: ${event.phase}`)
-    },
-  })
+  let result: EngineResult
+  try {
+    result = await runReview({
+      level: effort,
+      cell,
+      scope,
+      runner,
+      statedLimit: limit.stated,
+      finderBudget: flags.fullFleet ? undefined : plannedFinderCount(cell, scope.diffLines),
+      // Workflow cells default to `semanticMerge: false` in the cell table, but
+      // their synthesizer is mandatory (`synthesis` is "index"/"text"). Passing
+      // that default through would disable it. Only an explicit
+      // --no-semantic-merge should turn synthesis off; otherwise leave the
+      // engine's undefined default (enabled) and let the cell's synthesis mode
+      // decide.
+      semanticMerge: flags.semanticMerge ?? (cell.semanticMerge ? true : undefined),
+      signal: inv.signal,
+      concurrency: resolveConcurrency(flags.concurrency, process.env.CODE_REVIEW_CONCURRENCY),
+      onEvent: (event) => {
+        if (flags.quiet) return
+        // The host callback may reject or throw synchronously. A floating
+        // failure would terminate the plugin process, so observe both.
+        const report = (status: string): void => {
+          void reportProgress(inv.progress, status)
+        }
+        if (event.type === "finder") report(`${event.label}: ${event.candidates} candidate(s)`)
+        if (event.type === "phase") report(`Phase: ${event.phase}`)
+      },
+    })
+  } catch (error) {
+    const message = `Code review failed: ${error instanceof Error ? error.message : String(error)}`
+    if (flags.json) {
+      inv.log?.(partialRecord([message]))
+      return { text: "[]", needsModel: false, bare: true }
+    }
+    return { text: message, needsModel: true }
+  }
 
   // A scope-level discovery failure (one of several git diff calls failed)
   // makes the engine result partial even when enough files were listed.

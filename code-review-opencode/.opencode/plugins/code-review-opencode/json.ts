@@ -212,16 +212,16 @@ export function isSchemaEcho(value: unknown): boolean {
     if (
       items.every((item) => {
         if (!isRecord(item)) return false
-        // One placeholder field is not proof of an echo: a real finding in a
-        // repository that contains `path/to/file.ts` would otherwise be
-        // discarded. The generated example carries all three fields; require
-        // at least two before treating the item as the sample.
-        const matches = [
-          item.file === SAMPLE_VALUE.file,
-          item.summary === SAMPLE_VALUE.summary,
-          item.failure_scenario === SAMPLE_VALUE.failure_scenario,
-        ].filter(Boolean).length
-        return matches >= 2
+        // The generated example carries all three placeholder fields. Requiring
+        // all three avoids accepting a lightly edited copy as a real answer;
+        // a real finding in a repository that happens to contain
+        // `path/to/file.ts` will not also carry the sample summary and
+        // failure scenario.
+        return (
+          item.file === SAMPLE_VALUE.file &&
+          item.summary === SAMPLE_VALUE.summary &&
+          item.failure_scenario === SAMPLE_VALUE.failure_scenario
+        )
       })
     ) {
       return true
@@ -366,7 +366,7 @@ export function extractJson(text: string | undefined | null): unknown | null {
     // A pasted source listing can be much larger than a result payload. If it
     // has no result key, parsing it would run the fallback bracket scan over
     // every `[` in the listing for no benefit.
-    if (body.length > 32_000 && !hasResultKey(body)) continue
+    if (body.length > 32_000 && !hasResultKey(body) && !/^\s*\[/.test(body)) continue
     const value = parseCandidate(fence.body)
     if (value !== undefined) parsedFences.push(value)
   }
@@ -375,7 +375,7 @@ export function extractJson(text: string | undefined | null): unknown | null {
   // the final result-shaped object. Skip the whole-body fallback for a large
   // prose blob with no result key: it would only run the quadratic bracket
   // scan.
-  const scanned = body.length > 32_000 && !hasResultKey(body) ? undefined : parseCandidate(body)
+  const scanned = body.length > 32_000 && !hasResultKey(body) && !/^\s*\[/.test(body) ? undefined : parseCandidate(body)
   const scannedIsEcho = scanned !== undefined && isSchemaEcho(scanned)
   if (
     scanned !== undefined &&
@@ -537,7 +537,15 @@ export function asGroupVerdicts(
     parsed.value.zeroDropped !== true &&
     sorted.length > 0 &&
     sorted.every((v, i) => v.index === i + 1)
-  const shifted = contiguousFromOne ? sorted.map((v) => ({ ...v, index: v.index - 1 })) : raw
+  // A full 1-based list covers indices 1..count and is safe to shift. A
+  // partial list starting at 1 is ambiguous: it could be a 1-based subset or a
+  // zero-based subset that omitted index 0. Shifting would attach verdicts to
+  // the wrong candidates, so refuse the list instead of guessing.
+  if (contiguousFromOne && sorted.length < count) return []
+  const shifted =
+    contiguousFromOne && sorted[sorted.length - 1].index === count
+      ? sorted.map((v) => ({ ...v, index: v.index - 1 }))
+      : raw
   return shifted.filter((v) => v.index >= 0 && v.index < count)
 }
 
@@ -697,8 +705,14 @@ export function normalizeGroupVerdictsCall(
   if (!Array.isArray(value.verdicts)) return { ok: false, error: "verdicts must be an array" }
   const seen = new Set<number>()
   let missingEvidence = 0
+  const strictIndex = (value: unknown): number | undefined =>
+    typeof value === "number" && Number.isInteger(value)
+      ? value
+      : typeof value === "string" && /^\d+$/.test(value.trim())
+        ? Number(value.trim())
+        : undefined
   const zeroSubmitted = value.verdicts.some(
-    (item) => isRecord(item) && Number(item.index) === 0,
+    (item) => isRecord(item) && strictIndex(item.index) === 0,
   )
   const { items: verdicts, notes, dropped } = normalizeList<{
     index: number
@@ -710,9 +724,9 @@ export function normalizeGroupVerdictsCall(
     capOrder: "after",
     normalize: (item, i) => {
       if (!isRecord(item)) return { note: `verdicts[${i}] dropped: not an object` }
-      const index = num(item.index)
+      const index = strictIndex(item.index)
       const verdict = normalizeVerdictText(item.verdict)
-      if (index === undefined || !Number.isInteger(index) || index < 0) {
+      if (index === undefined || index < 0) {
         return { note: `verdicts[${i}] dropped: index must be a non-negative integer` }
       }
       if (!verdict) return { note: `verdicts[${i}] dropped: verdict is invalid` }

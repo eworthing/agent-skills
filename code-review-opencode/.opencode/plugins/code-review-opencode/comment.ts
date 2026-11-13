@@ -17,7 +17,7 @@ import {
   type ExecResult,
 } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
-import { envInt, lineOf, pluralWord, positiveLine } from "./finding.ts"
+import { envInt, lineOf, pluralWord, positiveLine, renderedLocation } from "./finding.ts"
 
 export type Host = "github" | "gitlab" | "other"
 
@@ -83,12 +83,7 @@ export function commentBody(finding: { summary: string; failure_scenario: string
 
 /** Hostname from a PR URL. `gh` keys credentials by hostname, so a port is omitted. */
 function hostFromPrUrl(value: string): string | undefined {
-  try {
-    // gh keys credentials by hostname; a `host:port` value would not match.
-    return new URL(value.trim()).hostname || undefined
-  } catch {
-    return undefined
-  }
+  return remoteHostname(value)
 }
 
 /** `owner/repo` from a PR URL; the PR URL always names the base repository. */
@@ -315,6 +310,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     return "`--comment` was ignored: the reviewed diff has no verified base; pass the PR number as the target."
   }
   const pr = prInfo.number
+  // A PR-number review captured the patch at one head. If that head was not
+  // recorded (the metadata call failed), posting against the live head would
+  // attach old line numbers to a new tree. Refuse instead.
+  if (scope.pr !== undefined && !scope.prHeadOid) {
+    return "`--comment` was ignored: the reviewed PR head was not captured; re-run the review with the PR target."
+  }
   /** One `gh pr view` field read; the PR number is already resolved. */
   const prField = (field: string, jq = `.${field}`) =>
     call(["gh", "pr", "view", String(pr), "--json", field, "--jq", jq])
@@ -467,11 +468,11 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   )
   const outcomes = await mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
     const line = lineOf(f)
-    if (line === undefined) return { ok: false, message: `${f.file}: no line to anchor an inline comment` }
+    if (line === undefined) return { ok: false, message: `${renderedLocation(f)}: no line to anchor an inline comment` }
     if (!sides.hasLine(f.file, line)) {
       return {
         ok: false,
-        message: `${f.file}:${line}: line is not part of the reviewed diff; no inline anchor`,
+        message: `${renderedLocation(f)}: line is not part of the reviewed diff; no inline anchor`,
       }
     }
     const r = await call(

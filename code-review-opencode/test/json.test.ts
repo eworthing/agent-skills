@@ -436,11 +436,9 @@ test("asGroupVerdicts shifts a contiguous 1-based list, but not after index 0 wa
     },
     3,
   )
-  // A contiguous [1,2] with no index-0 submission is a 1-based answer.
-  assert.deepEqual(partial, [
-    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
-    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
-  ])
+  // A partial [1,2] is ambiguous (1-based subset vs zero-based subset that
+  // omitted 0). Refuse it rather than attach verdicts to the wrong candidates.
+  assert.deepEqual(partial, [])
   // If index 0 was submitted and dropped (invalid verdict), the survivors are
   // zero-based and must not shift onto the wrong candidates.
   const droppedZero = asGroupVerdicts(

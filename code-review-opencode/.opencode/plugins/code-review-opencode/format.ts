@@ -105,7 +105,7 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
   }
 
   if (result.partial) {
-    out += `\n\nINCOMPLETE REVIEW: at least one review agent failed or was cancelled. Findings above are not the result of a complete run.`
+    out += `\n\nINCOMPLETE REVIEW: at least one review agent failed, was cancelled, or the verifier budget was exhausted. Findings above are not the result of a complete run.`
     for (const w of result.warnings) out += `\n  - ${sanitizeControl(w)}`
   }
 

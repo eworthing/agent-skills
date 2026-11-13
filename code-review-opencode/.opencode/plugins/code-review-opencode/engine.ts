@@ -352,6 +352,7 @@ function applyIndexPlan<T, R>(
   cap: number | undefined,
   combine: (item: T, merged: T[]) => R,
   backfill: (item: T) => R,
+  opts: { allowSubsetBase?: boolean } = {},
 ): { output: R[]; backfilled: number; truncated: boolean; planned: number } {
   const claimed = new Set<number>()
   const output: R[] = []
@@ -369,7 +370,10 @@ function applyIndexPlan<T, R>(
   const indices = decisions.flatMap((d) => [d.index, ...d.merge]).sort((a, b) => a - b)
   const contiguousFromOne =
     indices.length > 0 && indices.every((value, i) => value === i + 1)
-  const oneBased = !hasZero && contiguousFromOne
+  const oneBased =
+    !hasZero &&
+    contiguousFromOne &&
+    (opts.allowSubsetBase === true || indices[indices.length - 1] === items.length)
   const plan = oneBased
     ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
     : decisions
@@ -492,6 +496,7 @@ function applyDecisions(
       }
     },
     (c) => ({ ...c }),
+    { allowSubsetBase: true },
   )
   return { findings: output, backfilled, truncated, truncatedFrom: planned }
 }
@@ -840,13 +845,13 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     })
     const verdict = asVerdict(value)
     if (!verdict) {
-      warnings.push(`verifier for ${location(c)} returned no usable verdict; candidate dropped`)
+      warnings.push(`verifier for ${renderedLocation(c)} returned no usable verdict; candidate dropped`)
       partial = true
-      emit({ type: "warning", message: `verifier failed for ${location(c)}` })
+      emit({ type: "warning", message: `verifier failed for ${renderedLocation(c)}` })
       return null
     }
     if (verdict.evidence === NO_EVIDENCE) {
-      warnings.push(`verifier for ${location(c)} returned a verdict without evidence; kept as ${verdict.verdict}`)
+      warnings.push(`verifier for ${renderedLocation(c)} returned a verdict without evidence; kept as ${verdict.verdict}`)
       partial = true
     }
     return toVerdictFinding(c, kind, verdict.verdict, verdict.evidence)
@@ -882,7 +887,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       })
       const verdicts = asGroupVerdicts(value, group.length)
       if (!verdicts || verdicts.length === 0) {
-        warnings.push(`group verifier for ${location(group[0])} returned no usable verdicts; ${pluralize(group.length, "candidate")} dropped`)
+        warnings.push(`group verifier for ${renderedLocation(group[0])} returned no usable verdicts; ${pluralize(group.length, "candidate")} dropped`)
         partial = true
         return []
       }
@@ -890,7 +895,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       const noEvidence = verdicts.filter((v) => v.evidence === NO_EVIDENCE).length
       if (noEvidence > 0) {
         warnings.push(
-          `group verifier for ${location(group[0])} returned ${pluralize(noEvidence, "verdict")} without evidence; kept with a placeholder`,
+          `group verifier for ${renderedLocation(group[0])} returned ${pluralize(noEvidence, "verdict")} without evidence; kept with a placeholder`,
         )
         partial = true
       }
@@ -899,7 +904,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         // An empty or partially indexed result is an agent failure, not a
         // clean verification: say so instead of silently dropping candidates.
         warnings.push(
-          `group verifier for ${location(group[0])} returned ${verdicts.length}/${group.length} usable verdicts; ${pluralize(missing, "candidate")} dropped`,
+          `group verifier for ${renderedLocation(group[0])} returned ${verdicts.length}/${group.length} usable verdicts; ${pluralize(missing, "candidate")} dropped`,
         )
         partial = true
       }
@@ -1141,7 +1146,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   // synthesizer's decisions and can collapse two distinct defects.
   // --no-semantic-merge must disable the workflow synthesizer too, not only
   // the v2.1.318 merge pass.
+  // One survivor needs no merge or ranking; a synthesizer child would only add
+  // latency and a chance to rewrite the single verified claim.
   const willSynthesize =
+    surviving.length > 1 &&
     shouldSynthesize(cell, opts.semanticMerge) &&
     (cell.synthesis !== "none" || surviving.length > 1)
   // Without a synthesizer, merge only exact claims. The paraphrase heuristic
@@ -1178,9 +1186,13 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
    * truncation flag or the dropped-count handling.
    */
   const unmergedFallback = (summaryText: string): void => {
-    findings = ranked.slice(0, cap).map((c) => ({ ...c }))
-    truncatedByCap = cap !== undefined && ranked.length > cap
-    truncatedFrom = truncatedByCap ? ranked.length : undefined
+    // The synthesizer failed, so its semantic merge never ran. Exact duplicates
+    // that both verifiers confirmed must still be reported once.
+    const deduped = dedupeBy(ranked, dedupKey318)
+    stats.dupes += deduped.dupes
+    findings = deduped.novel.slice(0, cap).map((c) => ({ ...c }))
+    truncatedByCap = cap !== undefined && deduped.novel.length > cap
+    truncatedFrom = truncatedByCap ? deduped.novel.length : undefined
     summary = summaryText
     summarySynthesized = false
   }

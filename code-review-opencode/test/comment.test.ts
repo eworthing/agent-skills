@@ -362,6 +362,18 @@ test("a PR-number review pins the head captured with the patch", async () => {
   assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
 })
 
+test("a PR-number review refuses to post without a captured head", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9, prHeadOid: undefined })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /reviewed PR head was not captured/)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
+})
+
 test("a GHE origin resolves its hostname once and reuses it", async () => {
   const scope = scopeOf(["src/a.ts"], { pr: 9 })
   let remoteCalls = 0

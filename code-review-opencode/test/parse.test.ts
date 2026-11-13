@@ -50,6 +50,12 @@ test("a level-looking typo is reported and consumed, not left in the target", ()
   assert.equal(p.target, "src/a.ts")
 })
 
+test("a transposed effort token is consumed as a typo", () => {
+  const p = parseArgs("hihg src/a.ts")
+  assert.equal(p.unrecognizedLevel, "hihg")
+  assert.equal(p.target, "src/a.ts")
+})
+
 test("ultra is a fallback marker", () => {
   const p = parseArgs("ultra 42")
   assert.equal(p.ultraFallback, true)

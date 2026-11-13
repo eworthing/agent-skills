@@ -43,6 +43,9 @@ export function scopeOf(files: string[], extra: Partial<Scope> = {}): Scope {
     conventions: "(none noted)",
     root: "/repo",
     diffLines: 0,
+    // A PR-number review pins the captured head; tests that exercise posting
+    // get one by default unless they explicitly clear it.
+    ...(extra.pr !== undefined && !("prHeadOid" in extra) ? { prHeadOid: "abc" } : {}),
     ...extra,
   }
 }

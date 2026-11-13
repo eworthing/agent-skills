@@ -14,7 +14,7 @@
 import { execFile } from "node:child_process"
 import { closeSync, existsSync, openSync, readFileSync, readSync, realpathSync, statSync } from "node:fs"
 import { homedir } from "node:os"
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { TextDecoder } from "node:util"
 import { StringDecoder } from "node:string_decoder"
 import { envInt, pluralize, positiveLine, renderPath, truncateText } from "./finding.ts"
@@ -284,7 +284,9 @@ export function resolveDiffScope(cwd: string, target: string | undefined): DiffS
   const rel = relative(root, physical)
   return {
     root,
-    relPath: rel === "" || rel === "." ? null : rel.replaceAll("\\", "/"),
+    // Only the platform separator is a path separator. On POSIX a backslash
+    // is a literal filename character and must not be rewritten.
+    relPath: rel === "" || rel === "." ? null : rel.replaceAll(sep, "/"),
     isPath: true,
   }
 }
@@ -985,11 +987,28 @@ export function discoverConventions(
     }
   }
   const candidates: string[] = []
+  let rootReal: string
+  try {
+    rootReal = realpathSync(root)
+  } catch {
+    rootReal = root
+  }
+  // A repository-provided symlink must not pull an arbitrary local file into
+  // the prompts. Only follow a conventions file whose real path stays inside
+  // the repository; the user-level file is allowed outside by design.
+  const insideRoot = (p: string): boolean => {
+    try {
+      const real = realpathSync(p)
+      return real === rootReal || real.startsWith(`${rootReal}${sep}`)
+    } catch {
+      return false
+    }
+  }
   const ordered = [root, ...[...dirs].filter((d) => d !== root).sort((a, b) => a.length - b.length)]
   for (const dir of ordered) {
     for (const name of ["CLAUDE.md", "CLAUDE.local.md", "AGENTS.md"]) {
       const p = join(dir, name)
-      if (existsSync(p)) candidates.push(p)
+      if (existsSync(p) && insideRoot(p)) candidates.push(p)
     }
   }
   const userClaude = join(home, ".claude", "CLAUDE.md")
@@ -1366,6 +1385,12 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   } else if (target && !isPathTarget && looksLikeRange(target)) {
     range = target
     add({ range, pathspec })
+    // The reference's Phase 0 reviews committed range changes and the
+    // uncommitted working tree together. An explicit range is no exception.
+    const dirtyProbe = await git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts())
+    if (dirtyProbe.aborted) throw new Error("Diff discovery was cancelled.")
+    if (dirtyProbe.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+    if (dirtyProbe.code === 1) add({ range: "HEAD", pathspec })
     scopeKind = "range"
   } else if (target && branchCandidate) {
     // `scope.branch` stays the user's name (the PR head branch), while the
@@ -1379,7 +1404,13 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     // that branch is the checked-out one. A remote-only target must not pull
     // in edits from whichever local branch happens to be current.
     const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
-    if (current.code === 0 && current.stdout.trim() === target) {
+    const currentName = current.stdout.trim()
+    // A remote-tracking or qualified target can name the checked-out branch
+    // without being byte-identical to its abbreviated name.
+    const wanted = (branchRef ?? target).replace(/^refs\/heads\//, "")
+    const sameBranch =
+      currentName === target || currentName === wanted || currentName === branchRef
+    if (current.code === 0 && sameBranch) {
       const [worktree, listed] = await Promise.all([
         git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts()),
         listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts()),
@@ -1511,6 +1542,11 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     }
     if (typeof parsed?.headRefOid === "string" && parsed.headRefOid) prHeadOid = parsed.headRefOid
     if (typeof parsed?.url === "string" && parsed.url) prUrl = parsed.url
+    if (meta?.code !== 0 || prHeadOid === undefined) {
+      // Without the head captured with the patch, inline anchors cannot be
+      // proven to belong to the reviewed tree. --comment refuses in that case.
+      warnings.push(`pull request #${pr}: could not capture the reviewed head; inline comments will be refused`)
+    }
     if (opts.includeDiffLines !== false) {
       if (typeof parsed?.additions === "number" && typeof parsed.deletions === "number") {
         diffLines = parsed.additions + parsed.deletions

@@ -328,14 +328,18 @@ async function review(opts: {
     version: "cc-workflow-2.1.162",
     script: {
       finder: (req) =>
-        req.label === "angle-A" ? { candidates: [candidate("src/a.ts", 10, "real bug")] } : { candidates: [] },
+        req.label === "angle-A"
+          ? { candidates: [candidate("src/a.ts", 10, "real bug")] }
+          : req.label === "angle-B"
+            ? { candidates: [candidate("src/b.ts", 20, "second bug")] }
+            : { candidates: [] },
       verifier: () => CONFIRMED(),
       synthesize: () => ({ summary: "omitted", findings: [] }),
     },
   })
   // With no replacement entry this is not a merge decision: silently returning
   // an empty report would hide a verified defect behind "No findings."
-  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings.length, 2)
   assert.match(result.summary, /empty report/)
   assert.equal(result.partial, true)
 })
@@ -505,7 +509,9 @@ test("text synthesis does not attach a verified verdict to an invented finding",
       finder: (req) =>
         req.label === "angle-A"
           ? { candidates: [candidate("src/a.ts", 10, "missing await on the save path")] }
-          : { candidates: [] },
+          : req.label === "angle-B"
+            ? { candidates: [candidate("src/b.ts", 20, "second bug")] }
+            : { candidates: [] },
       verifier: () => CONFIRMED(),
       synthesize: () => ({
         summary: "invented",
@@ -513,8 +519,8 @@ test("text synthesis does not attach a verified verdict to an invented finding",
       }),
     },
   })
-  // The invented entry is dropped, but the verified survivor must not vanish.
-  assert.equal(result.findings.length, 1)
+  // The invented entry is dropped, but the verified survivors must not vanish.
+  assert.equal(result.findings.length, 2)
   assert.equal(result.findings[0].summary, "missing await on the save path")
   assert.match(result.warnings.join(" "), /did not match any verified finding|did not match a verified candidate/)
   assert.equal(result.partial, true)
@@ -593,7 +599,11 @@ test("text synthesis does not backfill a finding the synthesizer merged away", a
     version: "cc-workflow-2.1.162",
     script: {
       finder: (req) =>
-        req.label === "angle-A" ? { candidates: [candidate("src/a.ts", 1, "real bug")] } : { candidates: [] },
+        req.label === "angle-A"
+          ? { candidates: [candidate("src/a.ts", 1, "real bug")] }
+          : req.label === "angle-B"
+            ? { candidates: [candidate("src/c.ts", 2, "second real bug")] }
+            : { candidates: [] },
       verifier: () => CONFIRMED(),
       synthesize: () => ({
         summary: "synthesized",
@@ -1252,7 +1262,12 @@ test("a synthesis report that dropped a malformed finding marks the run partial"
   const { result } = await review({
     version: "cc-workflow-2.1.162",
     script: {
-      finder: (req) => (req.label === "angle-A" ? { candidates: [real] } : { candidates: [] }),
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [real] }
+          : req.label === "angle-B"
+            ? { candidates: [candidate("src/c.ts", 20, "second real defect")] }
+            : { candidates: [] },
       verifier: () => CONFIRMED(),
       synthesize: () => ({
         summary: "synthesized",
@@ -1656,7 +1671,11 @@ test("a truncated text-synthesis report records truncatedFrom", async () => {
     level: "high",
     script: {
       finder: (req) =>
-        req.label === "angle-A" ? { candidates: [finding] } : { candidates: [] },
+        req.label === "angle-A"
+          ? { candidates: [finding] }
+          : req.label === "angle-B"
+            ? { candidates: [candidate("src/b.ts", 2, "second finding")] }
+            : { candidates: [] },
       verifier: () => CONFIRMED(),
       sweep: () => ({ candidates: [] }),
       synthesize: () => ({ summary: "text report", findings: [finding], truncated: true }),

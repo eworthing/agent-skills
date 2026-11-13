@@ -388,10 +388,14 @@ function startsWithText(m: unknown, prefix: string): boolean {
   if (typeof record?.text === "string") return record.text.trimStart().startsWith(prefix)
   if (!Array.isArray(record?.content)) return false
   let remaining = prefix
+  let first = true
   for (const part of record.content) {
     const p = part as { type?: unknown; text?: unknown }
     if (p?.type !== "text" || typeof p.text !== "string") continue
-    const text = p.text.trimStart()
+    // Trim only the leading whitespace of the message. Trimming every part
+    // would remove a space where the notice was split across text parts.
+    const text = first ? p.text.trimStart() : p.text
+    first = false
     if (text.length >= remaining.length) return text.startsWith(remaining)
     if (!remaining.startsWith(text)) return false
     remaining = remaining.slice(text.length)
