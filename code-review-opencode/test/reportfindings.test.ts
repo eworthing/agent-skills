@@ -210,6 +210,14 @@ test("partial runs are never presented as complete", () => {
   assert.match(text, /finder angle-B returned no usable result/)
 })
 
+test("warnings are control-character escaped", () => {
+  const r = result(true)
+  r.warnings = ["bad\u0007warning"]
+  const text = formatHuman(r)
+  assert.doesNotMatch(text, /\u0007/)
+  assert.match(text, /bad␇warning/)
+})
+
 test("ReportFindings tool result text matches the reference", () => {
   assert.equal(formatToolResult(0), "No findings reported.")
   assert.equal(formatToolResult(1), "1 finding reported.")

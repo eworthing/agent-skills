@@ -140,6 +140,8 @@ export type ScopeOptions = {
   numstatTimeoutMs?: number
   /** Skip the numstat/PR line-count pass when the cell has no finder budget. */
   includeDiffLines?: boolean
+  /** Skip the CLAUDE.md/AGENTS.md reads when no finder renders conventions. */
+  includeConventions?: boolean
 }
 
 /**
@@ -170,7 +172,9 @@ function quote(argv: string[]): string {
     // characters are escaped first: this text is rendered on one prompt line,
     // and a newline in a repo path must not start a forged instruction.
     .map((a) => {
-      const safe = a.replaceAll("\r", "\\r").replaceAll("\n", "\\n")
+      // `renderPath` escapes the full control-character class, not only CR/LF;
+      // a filename with a tab or C1 control must not forge a prompt line.
+      const safe = renderPath(a)
       return /^[\w@./:^=-]+$/.test(safe) ? safe : `'${safe.replaceAll("'", "'\\''")}'`
     })
     .join(" ")
@@ -1593,6 +1597,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // Capture each diff command once. For a PR, the cached patch is the diff.
   const chunks: string[] = []
   let captureFailures = 0
+  /** Plan entries whose diff capture failed, for the numstat fallback. */
+  const failedPlanIndices: number[] = []
   if (pr !== undefined) {
     if (patch && patch.trim()) chunks.push(patch)
   } else {
@@ -1603,6 +1609,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
         if (r.stdout.trim()) chunks.push(r.stdout)
       } else {
         captureFailures++
+        failedPlanIndices.push(i)
         warnings.push(
           `${plan[i].label}: ${r.timedOut ? "timed out" : r.stderr.trim() || `git exited ${r.code}`}`,
         )
@@ -1642,14 +1649,15 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // it. Ask numstat for every plan entry and use its independent total.
   if (opts.includeDiffLines !== false && captureFailures > 0) {
     const counts = await Promise.all(
-      plan.map((p) =>
-        git(
+      failedPlanIndices.map((i) => {
+        const p = plan[i]
+        return git(
           exec,
           gitCwd,
           gitDiffArgs({ range: p.range, staged: p.staged, pathspec: p.pathspec }, "numstat"),
           callOpts(opts.numstatTimeoutMs ?? 30_000),
-        ),
-      ),
+        )
+      }),
     )
     let counted = 0
     let any = false
@@ -1670,7 +1678,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // Nothing to review means nothing to govern: skip the ancestor walk and the
   // CLAUDE.md/AGENTS.md reads the caller will never render.
   const conventions =
-    uniqueFiles.length === 0
+    uniqueFiles.length === 0 || opts.includeConventions === false
       ? { paths: [] as string[], text: "" }
       : discoverConventions(root, uniqueFiles, opts.conventionsBudget)
 

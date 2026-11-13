@@ -363,7 +363,7 @@ export function parseArgs(raw: string): Parsed {
     }
     // Command grammar argv before the target (effort, reference booleans)
     // do not start the free-form target.
-    if (!targetStarted && (isLevelToken(token) || token.toLowerCase() === "ultra" || REFERENCE_BOOL.has(name))) {
+    if (!targetStarted && (isLevelToken(token) || REFERENCE_BOOL.has(name))) {
       continue
     }
     if (targetStarted || !isOptionToken(token)) targetStarted = true

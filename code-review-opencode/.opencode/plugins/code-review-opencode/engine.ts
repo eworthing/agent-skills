@@ -1148,10 +1148,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   // the v2.1.318 merge pass.
   // One survivor needs no merge or ranking; a synthesizer child would only add
   // latency and a chance to rewrite the single verified claim.
-  const willSynthesize =
-    surviving.length > 1 &&
-    shouldSynthesize(cell, opts.semanticMerge) &&
-    (cell.synthesis !== "none" || surviving.length > 1)
+  // `surviving.length > 1` already makes the old third conjunct true; the
+  // synthesis mode is carried by `shouldSynthesize`.
+  const willSynthesize = surviving.length > 1 && shouldSynthesize(cell, opts.semanticMerge)
   // Without a synthesizer, merge only exact claims. The paraphrase heuristic
   // could collapse two verified, distinct same-line defects into one entry.
   const mergeBase = willSynthesize

@@ -53,6 +53,11 @@ export function formatReportFindings(result: EngineResult): {
   }
 }
 
+/** Render a warning list with the same control-character escaping as the report. */
+export function formatWarnings(warnings: string[]): string {
+  return warnings.map((w) => `  - ${sanitizeControl(w)}`).join("\n")
+}
+
 /** jt()'s nM(): render control characters instead of emitting them raw. */
 function sanitizeControl(s: string): string {
   // Normalize CRLF first so a model's Windows line endings stay readable, then
@@ -106,7 +111,7 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
 
   if (result.partial) {
     out += `\n\nINCOMPLETE REVIEW: at least one review agent failed, was cancelled, or the verifier budget was exhausted. Findings above are not the result of a complete run.`
-    for (const w of result.warnings) out += `\n  - ${sanitizeControl(w)}`
+    if (result.warnings.length > 0) out += `\n${formatWarnings(result.warnings)}`
   }
 
   if (opts.verbose) {

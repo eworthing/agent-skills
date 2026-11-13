@@ -447,6 +447,42 @@ test("includeDiffLines false skips the numstat pass", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("includeConventions false skips the CLAUDE.md reads", async () => {
+  const dir = makeRepo()
+  writeFileSync(join(dir, "CLAUDE.md"), "# root\nRULE_NOT_READ\n")
+  writeFileSync(join(dir, "c.ts"), "export const c = 3\n")
+  const scope = await resolveScope({ cwd: dir, includeConventions: false })
+  assert.deepEqual(scope.claudeMdFiles, [])
+  assert.equal(scope.conventions, "(none noted)")
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a failed capture only re-walks the failed plan entry for numstat", async () => {
+  const dir = makeRepo()
+  // A tracked change adds the worktree entry to the plan; the range capture
+  // fails, so only the range entry should be re-walked for numstat.
+  writeFileSync(join(dir, "a.ts"), "export const a = 99\n")
+  const calls: string[][] = []
+  const exec: Exec = async (argv, cwd, opts) => {
+    calls.push(argv)
+    if (
+      argv.includes("main...HEAD") &&
+      argv.includes("diff") &&
+      !argv.includes("--numstat") &&
+      !argv.includes("--name-status") &&
+      !argv.includes("--quiet")
+    ) {
+      return { code: 1, stdout: "", stderr: "boom" }
+    }
+    return defaultExec(argv, cwd, opts)
+  }
+  await resolveScope({ cwd: dir, target: "main...HEAD", exec })
+  const numstat = calls.filter((argv) => argv.includes("--numstat"))
+  assert.equal(numstat.length, 1)
+  assert.ok(numstat[0].includes("main...HEAD"))
+  rmSync(dir, { recursive: true, force: true })
+})
+
 test("a range target with a dotted ref is resolved as a range", async () => {
   const dir = makeRepo()
   git(dir, "tag", "v1.2.3")

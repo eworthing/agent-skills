@@ -594,6 +594,22 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
       // copying that whole context every 2 seconds for an hour-long child.
       let messageDelay = pollMs
       let getFailures = 0
+      const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+      const backoff = async (): Promise<void> => {
+        await sleep(messageDelay)
+        messageDelay = Math.min(messageDelay * 2, 30_000)
+      }
+      const handleGetFailure = async (): Promise<boolean> => {
+        getFailures++
+        if (getFailures >= 3) {
+          if (await settleFromMessages()) return true
+          outcome = "gone"
+          settled = true
+          return true
+        }
+        await sleep(pollMs)
+        return false
+      }
       while (!settled) {
         // Cancellation must work on hosts without `session.interrupt`: the
         // abort listener cannot stop the child there, but it can stop waiting.
@@ -617,34 +633,19 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           } catch {
             // A single RPC hiccup is not proof the child vanished. Only after
             // repeated failures fall back to the transcript/gone decision.
-            getFailures++
-            if (getFailures >= 3) {
-              if (await settleFromMessages()) return
-              outcome = "gone"
-              settled = true
-              return
-            }
-            await new Promise((resolve) => setTimeout(resolve, pollMs))
+            if (await handleGetFailure()) return
             continue
           }
           const data = sessionRecord(info)
           if (!data) {
-            getFailures++
-            if (getFailures >= 3) {
-              if (await settleFromMessages()) return
-              outcome = "gone"
-              settled = true
-              return
-            }
-            await new Promise((resolve) => setTimeout(resolve, pollMs))
+            if (await handleGetFailure()) return
             continue
           }
           getFailures = 0
           const time = data.time
           if (!time) {
             if (await settleFromMessages()) return
-            await new Promise((resolve) => setTimeout(resolve, messageDelay))
-            messageDelay = Math.min(messageDelay * 2, 30_000)
+            await backoff()
             continue
           }
           const updated = typeof time.updated === "number" ? time.updated : 0
@@ -662,8 +663,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
             }
             // This branch reads the full transcript, so it needs the same
             // exponential backoff as the no-time branch above.
-            await new Promise((resolve) => setTimeout(resolve, messageDelay))
-            messageDelay = Math.min(messageDelay * 2, 30_000)
+            await backoff()
             continue
           }
           // Compare against the timestamps read before the prompt. A retry
@@ -700,8 +700,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
               await interrupt()
               return
             }
-            await new Promise((resolve) => setTimeout(resolve, messageDelay))
-            messageDelay = Math.min(messageDelay * 2, 30_000)
+            await backoff()
             continue
           }
           if (stallMs > 0 && Date.now() - lastActivity >= stallMs) {
@@ -710,8 +709,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           }
         } else {
           if (await settleFromMessages()) return
-          await new Promise((resolve) => setTimeout(resolve, messageDelay))
-          messageDelay = Math.min(messageDelay * 2, 30_000)
+          await backoff()
           continue
         }
         await new Promise((resolve) => setTimeout(resolve, pollMs))

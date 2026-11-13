@@ -24,7 +24,14 @@ import {
   VERSIONS,
 } from "./cells.ts"
 import { runReview, isInline, type AgentRunner, type EngineResult } from "./engine.ts"
-import { formatHuman, formatJson, formatOutcomeSummary, formatReportFindings, formatToolResult } from "./format.ts"
+import {
+  formatHuman,
+  formatJson,
+  formatOutcomeSummary,
+  formatReportFindings,
+  formatToolResult,
+  formatWarnings,
+} from "./format.ts"
 import {
   FIX_LATER,
   GITHUB_COMMENT,
@@ -557,19 +564,21 @@ async function resolveAndRun(
     needsModel: true,
   })
 
+  // Neither the inline path nor the single-pass prompt path reaches
+  // resolveScope, so validate an explicit path target before either one. A
+  // typo must not silently turn into a working-tree review.
+  const missingTarget = missingExplicitPathTarget(ctx.location.directory, parsed.target)
+  if (missingTarget !== undefined) {
+    const message = `Code review could not start: Review target path not found: ${missingTarget}`
+    if (flags.json) {
+      inv.log?.(partialRecord([message]))
+      return { text: "[]", needsModel: false, bare: true }
+    }
+    return { text: message, needsModel: true }
+  }
+
   // ---- inline / minimal cells: submit the recovered prompt verbatim ------
   if (isInline(cell)) {
-    // The inline path never reaches resolveScope. Validate an explicit path
-    // target here so a typo cannot silently turn into a working-tree review.
-    const missingTarget = missingExplicitPathTarget(ctx.location.directory, parsed.target)
-    if (missingTarget !== undefined) {
-      const message = `Code review could not start: Review target path not found: ${missingTarget}`
-      if (flags.json) {
-        inv.log?.(partialRecord([message]))
-        return { text: "[]", needsModel: false, bare: true }
-      }
-      return { text: message, needsModel: true }
-    }
     const base = resolveInline(kind, cell.inlineVariant, max)
     let text = decorateReview(base)
     if (!flags.json) text += await verifyFollowUpForTarget(ctx)
@@ -620,6 +629,8 @@ async function resolveAndRun(
       target: parsed.target,
       signal: inv.signal,
       includeDiffLines: cell.finderBudgetHint,
+      // The 2.1.162 recipe has no conventions finder; skip the file reads.
+      includeConventions: cell.cleanupLenses !== "162",
     })
   } catch (error) {
     const message = `Code review could not start: ${error instanceof Error ? error.message : String(error)}`
@@ -685,7 +696,7 @@ async function resolveAndRun(
     const noticePrefix = notices.length > 0 && !flags.json ? `${notices.join("\n")}\n\n` : ""
     const warningBlock =
       !flags.json && empty.warnings.length > 0
-        ? `\n\nWarnings:\n${empty.warnings.map((w) => `  - ${w}`).join("\n")}`
+        ? `\n\nWarnings:\n${formatWarnings(empty.warnings)}`
         : ""
     return {
       text: flags.json ? "[]" : `${noticePrefix}${empty.summary}${warningBlock}`,
@@ -1142,7 +1153,7 @@ export default Plugin.define({
         name: "code-review-opencode",
         description:
           "Review the current diff, or a PR number/branch/path target, for correctness bugs (plus reuse/simplification/efficiency cleanups where the model's recipe covers them) at the effort level given first, before any target (low|medium|high|xhigh|max: from few high-confidence findings to many, some uncertain); with no level given, it reuses the level you typed last. Pass --comment to post findings as inline PR comments, or --fix to apply them to the working tree after the review. Pass --max-findings <n> to report up to n findings, or --max-findings all for every finding. The choice stays until you pass --max-findings default.",
-        execute: async ({ sessionID, prompt, delivery }: AnyCtx) => {
+        execute: async ({ sessionID, prompt, delivery, signal }: AnyCtx) => {
           // A CommandInvocation carries text/files/agents/skills, not the
           // selected model or effort variant. Read the session so the command
           // path chooses the same family/effort cell as the tool path.
@@ -1174,6 +1185,9 @@ export default Plugin.define({
               raw: prompt?.text ?? "",
               model: sessionModel,
               interactive: true,
+              // A command turn may carry a cancellation signal; forward it so
+              // an aborted turn stops the engine and its child sessions.
+              signal,
               log: (m) => console.error(m),
             },
             schemaResults,

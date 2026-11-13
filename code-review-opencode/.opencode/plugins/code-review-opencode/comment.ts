@@ -447,43 +447,41 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // A default branch review falls back to main/upstream when the branch has
     // no upstream. That base can differ from the PR's target branch even when
     // local HEAD is the PR head, so the line anchors belong to another diff.
-    if (scope.diffBase) {
-      let prBase = prInfo.baseRefName
-      if (!prBase) {
-        const base = await prField("baseRefName")
-        if (base.code !== 0 || !base.stdout.trim()) {
-          return "`--comment` was ignored: could not verify the pull request's base branch."
-        }
-        prBase = base.stdout.trim()
+    let prBase = prInfo.baseRefName
+    if (!prBase) {
+      const base = await prField("baseRefName")
+      if (base.code !== 0 || !base.stdout.trim()) {
+        return "`--comment` was ignored: could not verify the pull request's base branch."
       }
-      // Only a real remote-tracking prefix identifies the same base. A local
-      // `release/main` branch must not be mistaken for the PR base `main`.
-      const remotes =
-        remoteList.code === 0 ? remoteList.stdout.split(/\s+/).filter(Boolean) : []
-      if (!samePrBase(scope.diffBase, prBase, remotes)) {
-        return `\`--comment\` was ignored: the reviewed diff is based on ${scope.diffBase}, but PR #${pr} targets ${prBase}; pass the PR number as the target to review that PR's diff.`
-      }
-      // Matching the base *name* is not enough: the local ref can be stale.
-      // Compare the merge-base the review actually captured with the one
-      // GitHub computes from the PR's base commit. If they differ, the line
-      // numbers describe a different diff even though both refs say "main".
-      const prBaseOid =
-        prInfo.baseRefOid ??
-        (await prField("baseRefOid")).stdout.trim()
-      if (!prBaseOid) {
-        return "`--comment` was ignored: could not verify the pull request's base commit."
-      }
-      const [reviewedMergeBase, prMergeBase] = await Promise.all([
-        call(hardenedGit(["git", "merge-base", scope.diffBase, "HEAD"])),
-        call(hardenedGit(["git", "merge-base", prBaseOid, "HEAD"])),
-      ])
-      if (
-        reviewedMergeBase.code !== 0 ||
-        prMergeBase.code !== 0 ||
-        reviewedMergeBase.stdout.trim() !== prMergeBase.stdout.trim()
-      ) {
-        return `\`--comment\` was ignored: the reviewed diff base ${scope.diffBase} does not share the pull request's merge base; fetch the PR base or pass the PR number as the target.`
-      }
+      prBase = base.stdout.trim()
+    }
+    // Only a real remote-tracking prefix identifies the same base. A local
+    // `release/main` branch must not be mistaken for the PR base `main`.
+    const remotes =
+      remoteList.code === 0 ? remoteList.stdout.split(/\s+/).filter(Boolean) : []
+    if (!samePrBase(scope.diffBase, prBase, remotes)) {
+      return `\`--comment\` was ignored: the reviewed diff is based on ${scope.diffBase}, but PR #${pr} targets ${prBase}; pass the PR number as the target to review that PR's diff.`
+    }
+    // Matching the base *name* is not enough: the local ref can be stale.
+    // Compare the merge-base the review actually captured with the one
+    // GitHub computes from the PR's base commit. If they differ, the line
+    // numbers describe a different diff even though both refs say "main".
+    const prBaseOid =
+      prInfo.baseRefOid ??
+      (await prField("baseRefOid")).stdout.trim()
+    if (!prBaseOid) {
+      return "`--comment` was ignored: could not verify the pull request's base commit."
+    }
+    const [reviewedMergeBase, prMergeBase] = await Promise.all([
+      call(hardenedGit(["git", "merge-base", scope.diffBase, "HEAD"])),
+      call(hardenedGit(["git", "merge-base", prBaseOid, "HEAD"])),
+    ])
+    if (
+      reviewedMergeBase.code !== 0 ||
+      prMergeBase.code !== 0 ||
+      reviewedMergeBase.stdout.trim() !== prMergeBase.stdout.trim()
+    ) {
+      return `\`--comment\` was ignored: the reviewed diff base ${scope.diffBase} does not share the pull request's merge base; fetch the PR base or pass the PR number as the target.`
     }
   }
 
@@ -522,7 +520,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     )
     return r.code === 0
       ? { ok: true, message: "" }
-      : { ok: false, message: `${f.file}:${line}: ${r.stderr.trim() || "gh api failed"}` }
+      : { ok: false, message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}` }
   })
   const posted = outcomes.filter((o) => o.ok).length
   const unposted = result.findings.filter((_, i) => !outcomes[i].ok)
