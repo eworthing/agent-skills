@@ -63,7 +63,14 @@ test("role tool permissions are role-specific", () => {
 
 test("installReviewAgentPolicy replaces each review agent's permissions", async () => {
   const agents = new Map(
-    REVIEW_AGENT_IDS.map((id) => [id, { permissions: [] as Array<{ action: string }> }]),
+    REVIEW_AGENT_IDS.map((id) => [
+      id,
+      {
+        permissions: [
+          { action: "shell", resource: "git -c core.hooksPath=/old diff*", effect: "allow" as const },
+        ],
+      },
+    ]),
   )
   let transformed = false
   const ctx = {
@@ -80,11 +87,11 @@ test("installReviewAgentPolicy replaces each review agent's permissions", async 
     },
   }
   await installReviewAgentPolicy(ctx)
+  // A second load must not append a duplicate policy or keep a stale rule.
+  await installReviewAgentPolicy(ctx)
   assert.equal(transformed, true)
   for (const id of REVIEW_AGENT_IDS) {
-    const permissions = agents.get(id)?.permissions ?? []
-    assert.deepEqual(permissions[0], { action: "*", resource: "*", effect: "deny" })
-    assert.ok(permissions.some((rule) => rule.action === "read"))
+    assert.deepEqual(agents.get(id)?.permissions, reviewAgentPermissions(id))
   }
 })
 

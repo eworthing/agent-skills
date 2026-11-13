@@ -101,6 +101,8 @@ type RunnerOptions = {
   activity?: (sessionID: string) => number | undefined
   /** Poll interval for the idle/stall check. Tests set this lower. */
   pollMs?: number
+  /** Best-effort `session.remove` bound. Default 5s. */
+  cleanupTimeoutMs?: number
   keepSessions?: boolean
   onLog?: (message: string) => void
 }
@@ -147,7 +149,10 @@ type ActivityTracker = {
  * reads it at each watchdog poll so a child that is streaming reasoning tokens
  * is never mistaken for a silent one.
  */
-export function trackActivity(ctx: { event?: EventSource }): ActivityTracker {
+export function trackActivity(
+  ctx: { event?: EventSource },
+  options: { shouldTrack?: (sessionID: string) => boolean } = {},
+): ActivityTracker {
   const seen = new Map<string, number>()
   const controller = new AbortController()
   const prune = (): void => {
@@ -172,6 +177,10 @@ export function trackActivity(ctx: { event?: EventSource }): ActivityTracker {
           const record = event as { data?: { sessionID?: unknown } } | undefined
           const sessionID = record?.data?.sessionID
           if (typeof sessionID !== "string" || sessionID.length === 0) continue
+          // Only review children feed the watchdog. Every unrelated session in
+          // the host also streams deltas; indexing them would wake the tracker
+          // constantly and let unrelated traffic evict a live child's reading.
+          if (options.shouldTrack && !options.shouldTrack(sessionID)) continue
           seen.set(sessionID, Date.now())
           if (seen.size > 500) prune()
         }
@@ -348,20 +357,24 @@ function trackWait(wait: Promise<void>, state: { resolved: boolean }): void {
   )
 }
 
-/** Text carried by a transcript message, from either its `text` or its parts. */
-function messageText(m: unknown): string {
+/** Yield the text of one transcript message without stringifying tool parts. */
+function* textParts(m: unknown): Generator<string> {
   const record = m as { text?: unknown; content?: unknown }
-  if (typeof record?.text === "string") return record.text
-  if (!Array.isArray(record?.content)) return ""
+  if (typeof record?.text === "string") {
+    yield record.text
+    return
+  }
+  if (!Array.isArray(record?.content)) return
+  for (const part of record.content) {
+    const p = part as { type?: unknown; text?: unknown }
+    if (p?.type === "text" && typeof p.text === "string") yield p.text
+  }
+}
+
+function messageText(m: unknown): string {
   // Walk text parts only. Stringifying a tool result to search it would
   // serialize the embedded diff or file read on every turn.
-  return record.content
-    .filter((p): p is { type: string; text: string } => {
-      const part = p as { type?: unknown; text?: unknown }
-      return part?.type === "text" && typeof part.text === "string"
-    })
-    .map((p) => p.text)
-    .join("\n")
+  return [...textParts(m)].join("\n")
 }
 
 function assistantText(messages: readonly unknown[]): string {
@@ -384,21 +397,16 @@ function assistantText(messages: readonly unknown[]): string {
  */
 /** Test a text prefix without materializing the whole transcript message. */
 function startsWithText(m: unknown, prefix: string): boolean {
-  const record = m as { text?: unknown; content?: unknown }
-  if (typeof record?.text === "string") return record.text.trimStart().startsWith(prefix)
-  if (!Array.isArray(record?.content)) return false
   let remaining = prefix
   let first = true
-  for (const part of record.content) {
-    const p = part as { type?: unknown; text?: unknown }
-    if (p?.type !== "text" || typeof p.text !== "string") continue
+  for (const text of textParts(m)) {
     // Trim only the leading whitespace of the message. Trimming every part
     // would remove a space where the notice was split across text parts.
-    const text = first ? p.text.trimStart() : p.text
+    const part = first ? text.trimStart() : text
     first = false
-    if (text.length >= remaining.length) return text.startsWith(remaining)
-    if (!remaining.startsWith(text)) return false
-    remaining = remaining.slice(text.length)
+    if (part.length >= remaining.length) return part.startsWith(remaining)
+    if (!remaining.startsWith(part)) return false
+    remaining = remaining.slice(part.length)
   }
   return remaining.length === 0
 }
@@ -745,7 +753,15 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
     if (!id) throw new Error("session.create returned no session id")
     opts.childSessions?.add(id)
     const onAbort = () => {
-      void ctx.session.interrupt?.({ sessionID: id })?.catch(() => {})
+      // `interrupt` may throw synchronously (for example when the session was
+      // just removed). An exception escaping an AbortSignal listener is an
+      // uncaught exception, not a cancelled review.
+      try {
+        const pending = ctx.session.interrupt?.({ sessionID: id })
+        void pending?.catch(() => {})
+      } catch {
+        /* the abort path is already returning a cancelled result */
+      }
     }
     req.signal?.addEventListener("abort", onAbort, { once: true })
     try {
@@ -759,7 +775,28 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
       opts.schemaResults?.delete(id)
       opts.schemaFailures?.delete(id)
       opts.childSessions?.delete(id)
-      if (!keep) await ctx.session.remove?.({ sessionID: id })?.catch(() => {})
+      if (!keep) {
+        const remove = ctx.session.remove
+        if (remove) {
+          let timer: ReturnType<typeof setTimeout> | undefined
+          try {
+            // Cleanup must not replace the child's captured result. A
+            // synchronous throw is caught here; a host `remove` that never
+            // settles is bounded so it cannot hang every later child call.
+            await Promise.race([
+              Promise.resolve(remove({ sessionID: id })),
+              new Promise<void>((resolve) => {
+                timer = setTimeout(resolve, opts.cleanupTimeoutMs ?? 5_000)
+                timer?.unref?.()
+              }),
+            ])
+          } catch {
+            /* best-effort cleanup */
+          } finally {
+            if (timer) clearTimeout(timer)
+          }
+        }
+      }
     }
   }
 

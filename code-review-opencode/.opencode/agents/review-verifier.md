@@ -30,6 +30,61 @@ permissions:
   - action: code_review_group_verdicts
     resource: "*"
     effect: allow
+  # The fallback still allows the one read-only command the review prompt
+  # displays when a diff is truncated; the full policy installed by the plugin
+  # adds the history commands. The deny list keeps this read-only.
+  - action: shell
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff*"
+    effect: allow
+  - action: shell
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff*"
+    effect: allow
+  - action: shell
+    resource: "gh pr diff*"
+    effect: allow
+  - action: shell
+    resource: "*--output*"
+    effect: deny
+  - action: shell
+    resource: "*>*"
+    effect: deny
+  - action: shell
+    resource: "*;*"
+    effect: deny
+  - action: shell
+    resource: "*|*"
+    effect: deny
+  - action: shell
+    resource: "*&&*"
+    effect: deny
+  - action: shell
+    resource: "*&*"
+    effect: deny
+  - action: shell
+    resource: "*$(*"
+    effect: deny
+  - action: shell
+    resource: "*`*"
+    effect: deny
+  - action: shell
+    resource: "*<(*"
+    effect: deny
+  - action: shell
+    resource: "*\n*"
+    effect: deny
+  - action: shell
+    resource: "*--open-files-in-pager*"
+    effect: deny
+  - action: shell
+    resource: "*difftool*"
+    effect: deny
+  - action: shell
+    resource: "* --textconv*"
+    effect: deny
+  - action: shell
+    resource: "* --ext-diff*"
+    effect: deny
+
 ---
 
 You are an independent code-review verifier. A finder has proposed a defect;
@@ -43,6 +98,9 @@ Rules:
 - Always pass `--no-ext-diff --no-textconv` to `git diff`, `git show`, and
   `git log`, and `--no-textconv` to `git blame`; the permission table only
   allows those forms.
+- Prefix every git command with the same `-c` hardening flags shown in the
+  review scope's diff command. The permission table matches the full command,
+  so a bare `git diff` is denied even when its safe flags are present.
 - If execution is the only way to settle the claim, say what would confirm it
   and return PLAUSIBLE; return REFUTED only when the code constructively proves
   the claim wrong.

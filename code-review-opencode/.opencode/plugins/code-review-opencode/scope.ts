@@ -142,6 +142,8 @@ export type ScopeOptions = {
   includeDiffLines?: boolean
   /** Skip the CLAUDE.md/AGENTS.md reads when no finder renders conventions. */
   includeConventions?: boolean
+  /** A target classification already computed for host detection. */
+  classification?: TargetClassification
 }
 
 /**
@@ -191,13 +193,23 @@ async function git(exec: Exec, cwd: string, args: string[], opts?: ExecOptions):
   return exec(["git", ...GIT_HARDENING, ...args], cwd, opts)
 }
 
+/** One failure policy for every scope-discovery command. */
+function assertExec(
+  r: ExecResult,
+  label: string,
+  timeoutSuffix: string,
+  cancelled = "Diff discovery was cancelled.",
+): void {
+  if (r.aborted) throw new Error(cancelled)
+  if (r.timedOut) throw new Error(`${label} timed out${timeoutSuffix}.`)
+}
+
 async function revParse(exec: Exec, cwd: string, ref: string, opts?: ExecOptions): Promise<boolean> {
   const r = await git(exec, cwd, ["rev-parse", "--verify", "--quiet", "--end-of-options", ref], opts)
   // A timed-out or aborted probe says nothing about the ref. Treating it as
   // "not a revision" sent the caller down the fresh-repository branch and
   // silently ignored committed changes.
-  if (r.aborted) throw new Error("Diff discovery was cancelled.")
-  if (r.timedOut) throw new Error("git rev-parse timed out while resolving the diff base.")
+  assertExec(r, "git rev-parse", " while resolving the diff base")
   return r.code === 0 && r.stdout.trim().length > 0
 }
 
@@ -213,8 +225,7 @@ async function resolveRemoteBranch(
   opts?: ExecOptions,
 ): Promise<string | undefined> {
   const remotes = await git(exec, cwd, ["remote"], opts)
-  if (remotes.aborted) throw new Error("Diff discovery was cancelled.")
-  if (remotes.timedOut) throw new Error("git remote timed out while resolving the diff base.")
+  assertExec(remotes, "git remote", " while resolving the diff base")
   if (remotes.code !== 0) return undefined
   const names = remotes.stdout.trim().split(/\s+/).filter(Boolean)
   const ordered = [...names.filter((name) => name === "origin"), ...names.filter((name) => name !== "origin")]
@@ -376,6 +387,16 @@ function sameDir(a: string, b: string): boolean {
 }
 
 /**
+ * Characters the child permission table denies anywhere in a command string
+ * (`;`, `|`, `&`, `$`, `<`, `>`, backtick, and control characters). A path
+ * containing one cannot be placed in a runnable command: the host matches the
+ * raw string, not shell quoting, so the deny rule wins even when the path is
+ * single-quoted. The command then omits the pathspec; the embedded diff is
+ * still scoped, and the review target tells the agent to stay inside it.
+ */
+const SHELL_DENIED = /[;&|$<>`\n\r\t\x00-\x1f\x7f-\x9f\u2028\u2029]/
+
+/**
  * A shell-ready command the model can re-run visibly. Derive it from the same
  * argv builder the engine executes; it carries both the safe
  * `--no-ext-diff`/`--no-textconv` flags and the `-c` config hardening. The
@@ -383,10 +404,15 @@ function sameDir(a: string, b: string): boolean {
  * hooks can execute code during what is advertised as a read-only review.
  */
 function labelFor(spec: DiffSpec, root: string, cwd: string): string {
-  const argv = gitDiffArgs(spec, "diff").map((a) => quote([a]))
-  return sameDir(root, cwd)
+  const omitPathspec = spec.pathspec !== undefined && SHELL_DENIED.test(spec.pathspec)
+  const display = omitPathspec ? { ...spec, pathspec: undefined } : spec
+  const argv = gitDiffArgs(display, "diff").map((a) => quote([a]))
+  const command = sameDir(root, cwd)
     ? ["git", ...GIT_HARDENING, ...argv].join(" ")
     : ["git", "-C", quote([root]), ...GIT_HARDENING, ...argv].join(" ")
+  return omitPathspec
+    ? `${command}  # pathspec omitted: shell metacharacter in the review target`
+    : command
 }
 
 /** Unquote git's C-style path quoting (`"a/foo\\tbar"`). */
@@ -650,29 +676,12 @@ export function walkPatch(patch: string, handlers: PatchHandlers): void {
 }
 
 /**
- * Recover changed paths from a unified diff. Used when `gh pr view --json
- * files` fails but `gh pr diff` succeeded: the patch still names every file.
- * Handles git's quoted path form (`"a/path with \\"quotes\\""`).
+ * Recover changed paths from a unified diff. This is a thin view over the one
+ * patch walker (`scanPatchChurn`), so a quoting/rename change cannot leave a
+ * second parser disagreeing with the file list used by the review.
  */
 export function filesFromDiff(patch: string): string[] {
-  const records: Array<{ a?: string; b?: string }> = []
-  walkPatch(patch, {
-    onFile: (a, b) => {
-      records.push({ a, b })
-    },
-    // Replace the header's guess for this file. A rename with content still
-    // gets a later `---`/`+++` record, which is authoritative too.
-    onRename: (from, to) => {
-      const last = records[records.length - 1]
-      if (last) {
-        last.a = from
-        last.b = to
-      } else {
-        records.push({ a: from, b: to })
-      }
-    },
-  })
-  return uniq(records.flatMap((record) => [record.a, record.b]))
+  return uniq([...scanPatchChurn(patch).paths])
 }
 
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
@@ -913,8 +922,16 @@ function readCapped(path: string, budget: number, knownSize?: number): string {
       // can decode to fewer characters than the budget while the tail was
       // never read, so those bytes must still carry the truncation marker.
       const complete = read < byteBudget || byteBudget >= size
-      if (complete) return text.length <= budget ? text : truncateText(text, budget)
       const marker = "\n…(truncated)"
+      if (complete) {
+        // A file that fits the byte budget can still exceed the character
+        // budget (the byte budget allows up to three bytes per code unit).
+        // Mark the cut instead of presenting a truncated file as complete.
+        if (text.length <= budget) return text
+        return budget <= marker.length
+          ? truncateText(text, budget)
+          : `${truncateText(text, budget - marker.length)}${marker}`
+      }
       // Keep the returned value inside the cap: callers sum lengths to enforce
       // the conventions budget, and appending a marker past the cap made a later
       // source look unaffordable.
@@ -1172,7 +1189,7 @@ export function prTargetNumber(target: string | undefined): number | undefined {
   return match ? positiveLine(match[1]) : undefined
 }
 
-type TargetClassification = {
+export type TargetClassification = {
   pr?: number
   branchCandidate: boolean
   branchRef?: string
@@ -1185,7 +1202,7 @@ type TargetClassification = {
  * always stays a path. Scope discovery and host detection both use this, so
  * they cannot send the review and the comment host to different repositories.
  */
-async function classifyTarget(
+export async function classifyTarget(
   exec: Exec,
   cwd: string,
   target: string | undefined,
@@ -1230,10 +1247,11 @@ export async function resolveReviewRoot(
   target: string | undefined,
   exec: Exec = defaultExec,
   opts?: ExecOptions,
+  classifiedTarget?: TargetClassification,
 ): Promise<string | null> {
   const trimmed = target?.trim() || undefined
   if (!trimmed) return findGitRoot(cwd)
-  const classified = await classifyTarget(exec, cwd, trimmed, opts)
+  const classified = classifiedTarget ?? (await classifyTarget(exec, cwd, trimmed, opts))
   if (classified.pr !== undefined || classified.branchCandidate) return findGitRoot(cwd)
   if (classified.pathScope) return classified.pathScope.root
   const hint = extractPathHint(trimmed, cwd)
@@ -1276,7 +1294,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // A bare number is a PR target. Resolve it as a path only when the user
   // forced path form (`./42`, `42/`); otherwise a same-named directory or
   // submodule would redirect the `gh pr` calls into another repository.
-  const classified = await classifyTarget(exec, cwd, target, callOpts())
+  const classified = opts.classification ?? (await classifyTarget(exec, cwd, target, callOpts()))
   const targetPr = classified.pr
   let pathScope = classified.pathScope
   const branchCandidate = classified.branchCandidate
@@ -1310,8 +1328,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     root = pathScope.root
   } else {
     const top = await git(exec, cwd, ["rev-parse", "--show-toplevel"], callOpts())
-    if (top.aborted) throw new Error("Diff discovery was cancelled.")
-    if (top.timedOut) throw new Error(`git rev-parse timed out${timeoutSuffix}.`)
+    assertExec(top, "git rev-parse", timeoutSuffix)
     if (top.code !== 0 || !top.stdout.trim()) {
       throw new Error("Not a git repository — /code-review-opencode needs one to discover a diff.")
     }
@@ -1353,6 +1370,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let scopeKind = "worktree"
   let patch: string | undefined
   let prMeta: ExecResult | undefined
+  /** The patch was captured between two matching PR-head reads. */
+  let prHeadVerified = false
   let firstFiles: string[] | undefined
   let firstFilesFailed = false
   const warnings: string[] = []
@@ -1363,25 +1382,48 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
 
   if (targetPr !== undefined) {
     pr = targetPr
-    // The patch and metadata calls are independent and keyed by the same PR
-    // number. Run them together. The metadata call is not optional even when
-    // the finder budget is not needed: it is the only reliable file list for a
-    // PR whose patch has no parseable `diff --git` blocks (binary-only or
-    // otherwise patch-less changes).
-    const [gh, meta] = await Promise.all([
-      exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts()),
+    // The patch and metadata are separate live reads. Fetch metadata, then
+    // the patch, then metadata again; only matching head OIDs prove the patch
+    // belongs to the head that --comment will pin. A push during capture is
+    // retried once, and an unverifiable pair leaves `prHeadOid` unset so
+    // posting refuses instead of attaching old line numbers to a new tree.
+    const readMeta = () =>
       exec(
         ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions,headRefOid,url"],
         gitCwd,
         callOpts(),
-      ),
-    ])
+      )
+    const readPatch = () => exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts())
+    const headOf = (result: ExecResult | undefined): string | undefined => {
+      if (!result || result.code !== 0) return undefined
+      try {
+        const value = JSON.parse(result.stdout) as { headRefOid?: unknown }
+        return typeof value.headRefOid === "string" && value.headRefOid ? value.headRefOid : undefined
+      } catch {
+        return undefined
+      }
+    }
+    let meta = await readMeta()
+    let gh = await readPatch()
+    let check = await readMeta()
+    const firstHead = headOf(meta)
+    if (firstHead !== undefined && headOf(check) !== undefined && firstHead !== headOf(check)) {
+      // The head moved while the patch was being fetched; take one fresh pair.
+      meta = await readMeta()
+      gh = await readPatch()
+      check = await readMeta()
+    }
     prMeta = meta
-    if (gh.aborted) throw new Error("PR diff discovery was cancelled.")
-    if (gh.timedOut) throw new Error(`gh pr diff timed out${timeoutSuffix}.`)
+    const reviewedHead = headOf(meta)
+    prHeadVerified = reviewedHead !== undefined && reviewedHead === headOf(check)
+    assertExec(gh, "gh pr diff", timeoutSuffix, "PR diff discovery was cancelled.")
     if (gh.code !== 0) {
       throw new Error(`Could not fetch PR #${pr} with gh: ${gh.stderr.trim() || "gh is unavailable"}`)
     }
+    // A metadata timeout or malformed response is not a review failure: the
+    // patch scan can recover the file list, and --comment refuses because the
+    // head was not verified. Cancellation still stops the whole review.
+    if (meta.aborted) throw new Error("PR metadata discovery was cancelled.")
     // One patch download: this stdout is also the diff text below.
     patch = gh.stdout
     plan.push({ argv: ["gh", "pr", "diff", String(pr)], label: `gh pr diff ${pr}` })
@@ -1392,8 +1434,14 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     // The reference's Phase 0 reviews committed range changes and the
     // uncommitted working tree together. An explicit range is no exception.
     const dirtyProbe = await git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts())
-    if (dirtyProbe.aborted) throw new Error("Diff discovery was cancelled.")
-    if (dirtyProbe.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+    assertExec(dirtyProbe, "git diff", timeoutSuffix)
+    if (dirtyProbe.code > 1) {
+      // A failed probe is not a clean worktree. Treating exit 128 as clean
+      // silently omits uncommitted changes from an explicit-range review.
+      throw new Error(
+        `git diff --quiet failed while checking the working tree (${dirtyProbe.stderr.trim() || `exit ${dirtyProbe.code}`}).`,
+      )
+    }
     if (dirtyProbe.code === 1) add({ range: "HEAD", pathspec })
     scopeKind = "range"
   } else if (target && branchCandidate) {
@@ -1407,20 +1455,47 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     // The reference's branch review also includes uncommitted changes when
     // that branch is the checked-out one. A remote-only target must not pull
     // in edits from whichever local branch happens to be current.
-    const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
+    const [current, fullRef] = await Promise.all([
+      git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts()),
+      git(exec, gitCwd, ["rev-parse", "--symbolic-full-name", branchRef ?? target], callOpts()),
+    ])
+    assertExec(current, "git rev-parse", timeoutSuffix)
+    assertExec(fullRef, "git rev-parse", timeoutSuffix)
     const currentName = current.stdout.trim()
     // A remote-tracking or qualified target can name the checked-out branch
     // without being byte-identical to its abbreviated name.
-    const wanted = (branchRef ?? target).replace(/^refs\/heads\//, "")
-    const sameBranch =
-      currentName === target || currentName === wanted || currentName === branchRef
+    const normalize = (ref: string): string =>
+      ref.replace(/^refs\/heads\//, "").replace(/^refs\/remotes\//, "")
+    const wanted = normalize(branchRef ?? target)
+    let sameBranch = currentName === normalize(target) || currentName === wanted
+    // A remote-tracking target (`origin/main`) names the checked-out branch
+    // without being byte-identical to its abbreviated name. Strip only a
+    // prefix that is a real remote name: a local `release/main` must not be
+    // mistaken for `main`.
+    const full = fullRef.code === 0 ? fullRef.stdout.trim() : ""
+    if (!sameBranch && full.startsWith("refs/remotes/")) {
+      const remoteBranch = full.slice("refs/remotes/".length)
+      const remotes = await git(exec, gitCwd, ["remote"], callOpts())
+      assertExec(remotes, "git remote", timeoutSuffix)
+      sameBranch =
+        remotes.code === 0 &&
+        remotes.stdout
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .some((remote) => remoteBranch === `${remote}/${currentName}`)
+    }
     if (current.code === 0 && sameBranch) {
       const [worktree, listed] = await Promise.all([
         git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts()),
         listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts()),
       ])
-      if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
-      if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+      assertExec(worktree, "git diff", timeoutSuffix)
+      if (worktree.code > 1) {
+        throw new Error(
+          `git diff --quiet failed while checking the working tree (${worktree.stderr.trim() || `exit ${worktree.code}`}).`,
+        )
+      }
       // The range is the first plan entry; reuse this listing instead of
       // running the same name-status command again below.
       firstFiles = listed.files
@@ -1443,8 +1518,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       let probe: string | undefined
       for (const candidate of ["@{upstream}...HEAD", "main...HEAD", "HEAD~1"]) {
         const r = await git(exec, gitCwd, quietArgs({ range: candidate, pathspec }), callOpts())
-        if (r.aborted) throw new Error("Diff discovery was cancelled.")
-        if (r.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+        assertExec(r, "git diff", timeoutSuffix)
         // The ladder is by preference, not by non-emptiness. Once a candidate
         // resolves, it wins even when its range is clean; continuing lets a
         // non-empty HEAD~1 replace an empty upstream range and review the last
@@ -1474,8 +1548,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       else if (probeBase !== undefined && probeBase !== "@{upstream}" && probeBase !== "HEAD~1") {
         diffBase = probeBase
       }
-      if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
-      if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+      assertExec(worktree, "git diff", timeoutSuffix)
       // `--quiet` uses 0 for clean and 1 for differences. Any other status is
       // a failure; treating it as clean silently drops uncommitted changes.
       if (worktree.code > 1) {
@@ -1492,17 +1565,14 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       // uncommitted hunk. Only a multi-commit range (`main...HEAD`) needs the
       // separate worktree entry.
       if (range.includes("..") && (dirty || firstFiles.length === 0)) add({ range: "HEAD", pathspec })
-      // A clean checkout with no explicit target — or with only a free-form
+      // A clean checkout with no explicit target — or with a path/free-form
       // instruction — is still the current branch's review. Record that branch
-      // so --comment can resolve its PR; keep the scopeKind "range" so an
-      // explicit range target remains non-postable.
-      const freeFormTarget =
-        target !== undefined &&
-        targetPr === undefined &&
-        !branchCandidate &&
-        !isPathTarget &&
-        !looksLikeRange(target)
-      if ((!target || freeFormTarget) && !dirty && !isPathTarget) {
+      // so --comment can resolve its PR; keep the scopeKind "path"/"range" so
+      // an explicit range target remains non-postable.
+      const currentCheckoutTarget =
+        target === undefined ||
+        (targetPr === undefined && !branchCandidate && !looksLikeRange(target))
+      if (currentCheckoutTarget && !dirty) {
         const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
         const name = current.stdout.trim()
         if (current.code === 0 && name && name !== "HEAD") branch = name
@@ -1515,11 +1585,6 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let prHeadOid: string | undefined
   let prUrl: string | undefined
   let diffLines = 0
-  // Start the patch captures before the name-status listings: the commands are
-  // independent, and on a large repository the diff read must not wait behind
-  // two probe processes per plan entry.
-  const capturesPromise =
-    pr === undefined ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts()))) : undefined
   if (pr !== undefined) {
     // One metadata call covers the file list and the finder-budget line count.
     // The PR branch above always sets prMeta; this read never needs a second
@@ -1544,13 +1609,17 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     if (parsed?.files && parsed.files.length > 0) {
       files = parsed.files.map((f) => f.path ?? "").filter(Boolean)
     }
-    if (typeof parsed?.headRefOid === "string" && parsed.headRefOid) prHeadOid = parsed.headRefOid
-    if (typeof parsed?.url === "string" && parsed.url) prUrl = parsed.url
-    if (meta?.code !== 0 || prHeadOid === undefined) {
-      // Without the head captured with the patch, inline anchors cannot be
-      // proven to belong to the reviewed tree. --comment refuses in that case.
-      warnings.push(`pull request #${pr}: could not capture the reviewed head; inline comments will be refused`)
+    if (
+      prHeadVerified &&
+      typeof parsed?.headRefOid === "string" &&
+      parsed.headRefOid
+    ) {
+      prHeadOid = parsed.headRefOid
     }
+    if (typeof parsed?.url === "string" && parsed.url) prUrl = parsed.url
+    // A missing or unverified head is a comment-only concern: the patch and
+    // file list may still be complete. `postComments` refuses inline anchors
+    // when `prHeadOid` is unset, so this must not mark the review partial.
     if (opts.includeDiffLines !== false) {
       if (typeof parsed?.additions === "number" && typeof parsed.deletions === "number") {
         diffLines = parsed.additions + parsed.deletions
@@ -1589,6 +1658,13 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       )
     }
   }
+
+  // Start the patch captures only after the file listings have been validated.
+  // Starting them earlier left one full `git diff` child per plan entry
+  // running (and buffering up to 64 MB) when every listing failed and this
+  // function threw before awaiting them.
+  const capturesPromise =
+    pr === undefined ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts()))) : undefined
 
   let uniqueFiles = uniq(files).sort()
   const scopeLabel = describeScope(scopeKind, { pr, branch, range, pathspec })
@@ -1635,8 +1711,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // that really changed files.
   if (pr !== undefined && uniqueFiles.length === 0) {
     const names = await exec(["gh", "pr", "diff", String(pr), "--name-only"], gitCwd, callOpts())
-    if (names.aborted) throw new Error("PR diff discovery was cancelled.")
-    if (names.timedOut) throw new Error(`gh pr diff timed out${timeoutSuffix}.`)
+    assertExec(names, "gh pr diff", timeoutSuffix, "PR diff discovery was cancelled.")
     if (names.code === 0) {
       uniqueFiles = uniq(nameOnlyPaths(names.stdout)).sort()
     } else {

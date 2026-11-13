@@ -25,6 +25,9 @@ function fakeCtx(
     idleGet?: boolean
     waitMs?: number
     agentGetFailures?: number
+    interruptThrows?: boolean
+    removeThrows?: boolean
+    removeHangs?: boolean
   } = {},
 ) {
   let next = 0
@@ -75,9 +78,12 @@ function fakeCtx(
     },
     async interrupt(input: { sessionID: string }) {
       interrupted.push(input.sessionID)
+      if (opts.interruptThrows) throw new Error("session already removed")
     },
     async remove(input: { sessionID: string }) {
       removed.push(input.sessionID)
+      if (opts.removeThrows) throw new Error("session already removed")
+      if (opts.removeHangs) return new Promise<void>(() => {})
     },
     ...(opts.busyGet || opts.idleGet
       ? {
@@ -131,6 +137,22 @@ test("a model ref with no id before the variant is rejected", () => {
   assert.equal(modelRef({ providerID: "p", id: "", variant: "max" }), undefined)
 })
 
+test("trackActivity ignores sessions outside the review child set", async () => {
+  const ctx = {
+    event: {
+      async *subscribe() {
+        yield { type: "session.reasoning.delta", data: { sessionID: "other" } }
+        yield { type: "session.reasoning.delta", data: { sessionID: "ses_child" } }
+      },
+    },
+  }
+  const tracked = new Set(["ses_child"])
+  const tracker = trackActivity(ctx, { shouldTrack: (id) => tracked.has(id) })
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  assert.equal(tracker.last("other"), undefined)
+  assert.ok(tracker.last("ses_child") !== undefined)
+})
+
 test("a captured schema result wins over assistant text", async () => {
   const fake = fakeCtx()
   const schemaResults = new Map<string, unknown>()
@@ -144,6 +166,45 @@ test("a captured schema result wins over assistant text", async () => {
   assert.equal(fake.prompts.length, 1)
   assert.match(fake.prompts[0].text, /If it is not available, put the JSON object in your final text response/)
   assert.deepEqual(fake.removed, ["ses_1"])
+})
+
+test("a synchronous session.remove failure keeps the captured result", async () => {
+  const fake = fakeCtx({}, { removeThrows: true })
+  fake.setOnPrompt((id) =>
+    fake.push(id, '{"candidates":[{"file":"a.ts","summary":"s","failure_scenario":"f"}]}'),
+  )
+  const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent" })
+  const value = (await runner(request())) as { candidates: unknown[] }
+  assert.equal(value.candidates.length, 1)
+  assert.deepEqual(fake.removed, ["ses_1"])
+})
+
+test("a hanging session.remove is bounded", async () => {
+  const fake = fakeCtx({}, { removeHangs: true })
+  fake.setOnPrompt((id) =>
+    fake.push(id, '{"candidates":[{"file":"a.ts","summary":"s","failure_scenario":"f"}]}'),
+  )
+  const runner = makeRunner(fake.ctx, {
+    parentSessionID: "ses_parent",
+    cleanupTimeoutMs: 10,
+  })
+  const value = (await runner(request())) as { candidates: unknown[] }
+  assert.equal(value.candidates.length, 1)
+})
+
+test("a synchronous interrupt failure does not escape cancellation", async () => {
+  const fake = fakeCtx({}, { hangWait: true, interruptThrows: true })
+  fake.setOnPrompt(() => {})
+  const controller = new AbortController()
+  const runner = makeRunner(fake.ctx, {
+    parentSessionID: "ses_parent",
+    pollMs: 1,
+    stallMs: 0,
+  })
+  const pending = runner(request({ signal: controller.signal }))
+  setTimeout(() => controller.abort(), 10)
+  assert.equal(await pending, null)
+  assert.deepEqual(fake.interrupted, ["ses_1"])
 })
 
 test("assistant JSON is salvaged without a retry", async () => {

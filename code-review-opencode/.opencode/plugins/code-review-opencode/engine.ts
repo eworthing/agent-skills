@@ -12,13 +12,13 @@
  * separate, explicit actions in the plugin layer.
  */
 import { existsSync, realpathSync } from "node:fs"
+import { AGENT_IDS } from "./agent-ids.ts"
 import {
-  BASE_ANGLES,
   CLEANUP_ANGLES,
   CLEANUP_ANGLES_162,
   CLEANUP_LENSES,
   CLEANUP_TEXT_221,
-  EXTENDED_ANGLES,
+  CORRECTNESS_LENSES,
   candidateDedupPrompt,
   finderPrompt,
   groupVerifierPrompt,
@@ -128,13 +128,6 @@ type Finder = {
   /** The lens labels inside this finder, used to attribute a candidate's kind. */
   lenses?: Array<{ label: string; kind: "correctness" | "cleanup" }>
 }
-
-const AGENT_IDS = {
-  finder: "review-finder",
-  verifier: "review-verifier",
-  sweep: "review-sweep",
-  synthesize: "review-synth",
-} as const
 
 type FileIndex = {
   files: Set<string>
@@ -267,6 +260,19 @@ function dedupKey318(c: RawFinding): string {
   return `${c.file}:${c.line ?? "?"}:${normalizedSummary(c.summary)}`
 }
 
+/**
+ * A stable order for findings after concurrent verification. Child latency
+ * must not decide the report order, the sweep's known list, or the
+ * synthesizer's input.
+ */
+function compareFindings(a: RawFinding, b: RawFinding): number {
+  if (a.file !== b.file) return a.file < b.file ? -1 : 1
+  const line = (a.line ?? 0) - (b.line ?? 0)
+  if (line !== 0) return line
+  if (a.summary !== b.summary) return a.summary < b.summary ? -1 : 1
+  return a.failure_scenario < b.failure_scenario ? -1 : a.failure_scenario > b.failure_scenario ? 1 : 0
+}
+
 const STOP_WORDS = new Set([
   "the", "and", "for", "that", "this", "with", "from", "into", "when", "then",
   "than", "are", "was", "were", "has", "have", "had", "not", "but", "its",
@@ -352,7 +358,6 @@ function applyIndexPlan<T, R>(
   cap: number | undefined,
   combine: (item: T, merged: T[]) => R,
   backfill: (item: T) => R,
-  opts: { allowSubsetBase?: boolean } = {},
 ): { output: R[]; backfilled: number; truncated: boolean; planned: number } {
   const claimed = new Set<number>()
   const output: R[] = []
@@ -362,18 +367,15 @@ function applyIndexPlan<T, R>(
   // survivors exceed the cap). Treat the plan as 0-based unless its largest
   // index lands exactly at `items.length`: that is the signature of a 1-based
   // full plan and is unambiguous because a 0-based plan can never reach n.
+  //
+  // A contiguous subset that happens to start at 1 is ambiguous. The prompts
+  // number every candidate from 0, so a compliant zero-based subset must not
+  // be shifted onto its neighbors. Only the full-plan signature is safe to
+  // reinterpret; a 1-based partial plan is a protocol violation and is
+  // backfilled as zero-based instead of silently reporting the wrong entries.
   const hasZero = decisions.some((d) => d.index === 0 || d.merge.includes(0))
-  // A plan whose indices are exactly 1..k is 1-based, whether it covers every
-  // item or only the most severe subset. A zero-based subset that happens to
-  // start at 1 is indistinguishable; shifting is the safer failure mode
-  // because discarding or mis-applying a 1-based plan loses every decision.
-  const indices = decisions.flatMap((d) => [d.index, ...d.merge]).sort((a, b) => a - b)
-  const contiguousFromOne =
-    indices.length > 0 && indices.every((value, i) => value === i + 1)
-  const oneBased =
-    !hasZero &&
-    contiguousFromOne &&
-    (opts.allowSubsetBase === true || indices[indices.length - 1] === items.length)
+  const maxIndex = decisions.reduce((max, d) => Math.max(max, d.index, ...d.merge), -1)
+  const oneBased = !hasZero && maxIndex === items.length
   const plan = oneBased
     ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
     : decisions
@@ -496,7 +498,6 @@ function applyDecisions(
       }
     },
     (c) => ({ ...c }),
-    { allowSubsetBase: true },
   )
   return { findings: output, backfilled, truncated, truncatedFrom: planned }
 }
@@ -506,10 +507,17 @@ function deterministicReport(
   ranked: Finding[],
   cap: number | undefined,
   level: Level,
+  sweepGaps = 0,
 ): { findings: Finding[]; summary: string; truncated: boolean; truncatedFrom?: number } {
   const { novel } = dedupeBy(ranked, dedupKey318)
   const findings = novel.slice(0, cap).map((c) => ({ ...c }))
-  const summary = `${pluralize(findings.length, "finding")} survived verification (${level}-effort review).`
+  // Sweep gaps are surfaced after verification and are never independently
+  // verified. Claiming every finding "survived verification" overstates the
+  // evidence for those entries.
+  const summary =
+    sweepGaps > 0
+      ? `${pluralize(findings.length, "finding")} from verification and the gap sweep (${level}-effort review).`
+      : `${pluralize(findings.length, "finding")} survived verification (${level}-effort review).`
   return {
     findings,
     summary,
@@ -628,22 +636,17 @@ function kindForCategory(category: string | undefined): "correctness" | "cleanup
 }
 
 function buildFinders(cell: Cell, budget?: number): Finder[] {
-  // Read and split the base corpus lazily: the merged wf221 cleanup finder uses
-  // its own corpus, so an extended correctness cell would otherwise load and
-  // split the base angles only to discard them.
-  let baseTexts: string[] | undefined
-  const base = (): string[] =>
-    (baseTexts ??= BASE_ANGLES().split(/\n(?=### )/))
-  const extended = cell.correctnessAngles >= 5
-  const angleTexts = extended ? EXTENDED_ANGLES().split(/\n(?=### )/) : base()
-  const correctnessTexts = angleTexts.slice(0, extended ? 5 : 3)
-  const labels = ["angle-A", "angle-B", "angle-C", "angle-D", "angle-E"]
-  const correctnessFinders: Finder[] = correctnessTexts.map((text, i) => ({
-    label: labels[i] ?? `angle-${i}`,
+  // The labeled correctness lenses are the single source for both the angle
+  // text and the finder label; slicing a joined corpus by position silently
+  // paired `angle-A` with another angle's text when the corpus changed.
+  const correctnessLenses =
+    cell.correctnessAngles >= 5 ? CORRECTNESS_LENSES : CORRECTNESS_LENSES.slice(0, 3)
+  const correctnessFinders: Finder[] = correctnessLenses.map((lens) => ({
+    label: lens.label,
     kind: "correctness",
-    text,
+    text: lens.text(),
     cap: cell.perAngle,
-    lenses: [{ label: labels[i] ?? `angle-${i}`, kind: "correctness" }],
+    lenses: [{ label: lens.label, kind: "correctness" }],
   }))
 
   if (cell.cleanupMode === "merged") {
@@ -920,6 +923,8 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   // ---------------------------------------------------------------- find
   emit({ type: "phase", phase: "Find" })
   let verified: Finding[] = []
+  /** Sweep candidates are surfaced after verification, not independently verified. */
+  let sweepGaps = 0
 
   if (cell.streaming) {
     // v2.1.162: no barrier. Each finder's candidates are deduped against the
@@ -942,11 +947,19 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       )
       partial = true
     }
-    await Promise.all(
-      finders.map(async (f, finderIndex) => {
-        let verifySlots = share + (finderIndex < remainder ? 1 : 0)
-        const candidates = await runFinder(f)
-        stats.candidates += candidates.length
+    // Dedup in finder order even when the children finish out of order. The
+    // shared `seen` set must not let latency decide which duplicate becomes
+    // the representative; a later finder's result waits until every earlier
+    // finder has flushed. Verification still overlaps the remaining finders.
+    const pending = new Map<number, RawFinding[]>()
+    const verifications: Array<Promise<void>> = []
+    let nextFinder = 0
+    const flush = (): void => {
+      while (pending.has(nextFinder)) {
+        const finder = finders[nextFinder]
+        const candidates = pending.get(nextFinder) ?? []
+        pending.delete(nextFinder)
+        let verifySlots = share + (nextFinder < remainder ? 1 : 0)
         const deduped = dedupeBy(candidates, dedupKey162, seen, () => {
           if (verifySlots <= 0) {
             warnBudget()
@@ -956,11 +969,24 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           return true
         })
         stats.dupes += deduped.dupes
-        const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(f, c) }))
-        const results = await mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind))
-        verified.push(...results.filter((x): x is Finding => x !== null))
+        const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(finder, c) }))
+        verifications.push(
+          mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind)).then((results) => {
+            verified.push(...results.filter((x): x is Finding => x !== null))
+          }),
+        )
+        nextFinder++
+      }
+    }
+    await Promise.all(
+      finders.map(async (f, finderIndex) => {
+        const candidates = await runFinder(f)
+        stats.candidates += candidates.length
+        pending.set(finderIndex, candidates)
+        flush()
       }),
     )
+    await Promise.all(verifications)
   } else {
     const finderOutputs = await mapLimit(finders, concurrency, async (f) => ({ finder: f, candidates: await runFinder(f) }))
     for (const o of finderOutputs) stats.candidates += o.candidates.length
@@ -1018,6 +1044,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     }
   }
 
+  // Concurrent verifiers complete in child-latency order. Sort before the
+  // sweep and synthesis so the report, the sweep's known list, and the
+  // synthesizer's input are independent of completion timing.
+  verified.sort(compareFindings)
   const kept = verified.filter((c) => c.verdict !== undefined)
   const refuted = verified.filter((c) => c.verdict === undefined)
   stats.verified = verified.length
@@ -1109,6 +1139,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           ...toFinding(c, c.kind),
           verdict: "PLAUSIBLE" as const,
         }))
+        sweepGaps = swept.length
         kept.push(...swept)
       }
     }
@@ -1186,12 +1217,14 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
    */
   const unmergedFallback = (summaryText: string): void => {
     // The synthesizer failed, so its semantic merge never ran. Exact duplicates
-    // that both verifiers confirmed must still be reported once.
-    const deduped = dedupeBy(ranked, dedupKey318)
-    stats.dupes += deduped.dupes
-    findings = deduped.novel.slice(0, cap).map((c) => ({ ...c }))
-    truncatedByCap = cap !== undefined && deduped.novel.length > cap
-    truncatedFrom = truncatedByCap ? deduped.novel.length : undefined
+    // that both verifiers confirmed must still be reported once. Reuse the
+    // deterministic report's dedupe/cap/truncation accounting so the two
+    // fallback paths cannot disagree on the pre-cap count.
+    const report = deterministicReport(ranked, cap, level, sweepGaps)
+    stats.dupes += ranked.length - (report.truncatedFrom ?? report.findings.length)
+    findings = report.findings
+    truncatedByCap = report.truncated
+    truncatedFrom = report.truncatedFrom
     summary = summaryText
     summarySynthesized = false
   }
@@ -1209,6 +1242,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         ranked,
         maxFindings: cap ?? ranked.length,
         diffText: scope.diffText,
+        sweepGaps,
       }),
       agent: AGENT_IDS.synthesize,
       schemaName: "decisions",
@@ -1273,6 +1307,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         ranked,
         maxFindings: cap ?? ranked.length,
         diffText: scope.diffText,
+        sweepGaps,
       }),
       agent: AGENT_IDS.synthesize,
       schemaName: "report",
@@ -1400,9 +1435,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           // truncatedFrom instead of presenting a shortened list as complete.
           truncatedByCap = report.truncated === true || (cap !== undefined && emitted.length > cap)
           if (report.truncated === true) {
-            // The normalizer cut the report tail, so the original count is not
-            // available. Disclose a lower bound instead of claiming N of N.
-            truncatedFrom = Math.max(truncatedFrom ?? 0, emitted.length + 1)
+            // The normalizer cut the re-emitted tail, so the synthesizer's
+            // pre-cap count is unknown. The verified survivor count is the
+            // only known upper bound; using the already-truncated length would
+            // understate the cut (for example "5 of 6" when 20 survived).
+            truncatedFrom = Math.max(truncatedFrom ?? 0, ranked.length, emitted.length + 1)
             warnings.push("synthesis report was truncated at the tool cap; the pre-cap count is a lower bound")
           } else if (cap !== undefined && emitted.length > cap) {
             truncatedFrom = emitted.length
@@ -1429,7 +1466,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       "semantic merge returned no usable decisions; deterministic merge used",
       () => {
         // Only exact claims are safe to merge without a semantic judge.
-        const fallback = deterministicReport(ranked, cap, level)
+        const fallback = deterministicReport(ranked, cap, level, sweepGaps)
         findings = fallback.findings
         summary = fallback.summary
         truncatedByCap = fallback.truncated
@@ -1439,7 +1476,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   } else {
     // v2.1.318 without the synthesizer: the deterministic equivalent keeps the
     // verified order and merges exact duplicates only.
-    const fallback = deterministicReport(ranked, cap, level)
+    const fallback = deterministicReport(ranked, cap, level, sweepGaps)
     findings = fallback.findings
     summary = fallback.summary
     truncatedByCap = fallback.truncated

@@ -87,7 +87,7 @@ export type ReportedFinding = {
   category?: string
   verdict?: "CONFIRMED" | "PLAUSIBLE"
   evidence?: string
-  outcome?: "fixed" | "skipped" | "no_change_needed"
+  outcome?: Outcome
 }
 
 export type ReportFindingsResult =
@@ -123,7 +123,8 @@ type FindingProperty = {
 const FINDING_SCHEMA = REPORT_FINDINGS_SCHEMA.properties.findings.items
 const FINDING_PROPERTIES = FINDING_SCHEMA.properties as unknown as Record<string, FindingProperty>
 const FINDING_REQUIRED: readonly string[] = FINDING_SCHEMA.required
-const OUTCOMES = ["fixed", "skipped", "no_change_needed"] as const
+/** The outcome enum is owned by the advertised schema; do not copy it. */
+const OUTCOMES = FINDING_SCHEMA.properties.outcome.enum
 type Outcome = (typeof OUTCOMES)[number]
 const isOutcome = (value: string): value is Outcome =>
   (OUTCOMES as readonly string[]).includes(value)
@@ -221,20 +222,11 @@ export function normalizeReportFindings(input: unknown): ReportFindingsResult {
     }
 
     const rawOutcome = (raw as Record<string, unknown>).outcome
-    let outcome: ReportedFinding["outcome"] | undefined
+    let outcome: Outcome | undefined
     if (rawOutcome !== undefined) {
-      // Models often capitalize the enum (`FIXED`). Normalize case, but do
-      // not coerce an unknown value: turning a successfully applied fix into
-      // `skipped` reports the opposite of what happened.
-      const normalized =
-        typeof rawOutcome === "string" ? rawOutcome.trim().toLowerCase() : undefined
-      if (normalized === undefined || !isOutcome(normalized)) {
-        return {
-          ok: false,
-          error: `findings[${i}].outcome "${String(rawOutcome)}" is invalid; use fixed, skipped, or no_change_needed`,
-        }
-      }
-      outcome = normalized
+      // `reportFindingError` already validated the case-normalized value
+      // against the schema enum; do not validate it a second time here.
+      outcome = String(rawOutcome).trim().toLowerCase() as Outcome
     }
 
     findings.push({

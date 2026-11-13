@@ -180,6 +180,9 @@ const RESULT_KEY = new RegExp(RESULT_KEY_PATTERN, "g")
  */
 export function isSchemaEcho(value: unknown): boolean {
   if (!isRecord(value)) return false
+  // Every generated example carries this sentinel, so a new result kind is
+  // covered without adding another placeholder branch below.
+  if (value.__example === true) return true
   // The decisions example has no finding placeholders, so the per-item check
   // below cannot see it. Match the generated example exactly.
   if (
@@ -529,23 +532,20 @@ export function asGroupVerdicts(
   // equal to the group size, which a pre-shift range filter would discard.
   const raw = parsed.value.verdicts
   const sorted = [...raw].sort((a, b) => a.index - b.index)
-  // A contiguous list starting at 1 is a 1-based answer. It is not one when
-  // the child actually submitted index 0 and that entry was dropped for a
-  // malformed field: then the list is zero-based and shifting would attach
-  // every remaining verdict to the wrong candidate.
-  const contiguousFromOne =
+  // A list that starts at 1 and never exceeds the group size is a 1-based
+  // answer, whether it covers every candidate or only a subset. A list with
+  // index 0 is zero-based, and a list whose index 0 was submitted but dropped
+  // for a malformed field is still zero-based. Shift before filtering: a
+  // 1-based list ending at `count` has an index equal to the group size, which
+  // a pre-shift range filter would discard.
+  const oneBased =
     parsed.value.zeroDropped !== true &&
     sorted.length > 0 &&
-    sorted.every((v, i) => v.index === i + 1)
-  // A full 1-based list covers indices 1..count and is safe to shift. A
-  // partial list starting at 1 is ambiguous: it could be a 1-based subset or a
-  // zero-based subset that omitted index 0. Shifting would attach verdicts to
-  // the wrong candidates, so refuse the list instead of guessing.
-  if (contiguousFromOne && sorted.length < count) return []
-  const shifted =
-    contiguousFromOne && sorted[sorted.length - 1].index === count
-      ? sorted.map((v) => ({ ...v, index: v.index - 1 }))
-      : raw
+    sorted[0].index === 1 &&
+    sorted.every((v) => v.index <= count)
+  const shifted = oneBased
+    ? sorted.map((v) => ({ ...v, index: v.index - 1 }))
+    : raw
   return shifted.filter((v) => v.index >= 0 && v.index < count)
 }
 

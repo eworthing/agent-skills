@@ -7,6 +7,7 @@
  * patterns are generated from `GIT_HARDENING` and cannot drift from the
  * commands `scope.ts` renders.
  */
+import { AGENT_IDS } from "./agent-ids.ts"
 import { GIT_HARDENING } from "./scope.ts"
 
 export type AgentPermission = {
@@ -88,9 +89,9 @@ export const READ_ONLY_POLICY: AgentPermission[] = [
 
 /** The structured-output tool each role may call. */
 const ROLE_TOOLS: Record<string, readonly string[]> = {
-  "review-finder": ["code_review_candidates"],
-  "review-verifier": ["code_review_verdict", "code_review_group_verdicts"],
-  "review-sweep": ["code_review_candidates"],
+  [AGENT_IDS.finder]: ["code_review_candidates"],
+  [AGENT_IDS.verifier]: ["code_review_verdict", "code_review_group_verdicts"],
+  [AGENT_IDS.sweep]: ["code_review_candidates"],
 }
 
 export const REVIEW_AGENT_IDS = Object.keys(ROLE_TOOLS)
@@ -119,18 +120,11 @@ export async function installReviewAgentPolicy(ctx: {
   await ctx.agent.transform((editor) => {
     for (const id of REVIEW_AGENT_IDS) {
       editor.update(id, (agent) => {
-        const existing = agent.permissions ?? []
-        // The plugin can be loaded more than once (global plus project
-        // discovery). A policy already installed by another instance must not
-        // be appended again: the rule list would grow on every load.
-        if (existing.some((rule) => rule.action === "shell" && rule.resource.includes("core.hooksPath=/dev/null"))) {
-          return
-        }
-        // Replace the Markdown fallback rules rather than stacking on them.
-        // The full policy carries the same read/glob/grep/tool allows.
-        const shared = new Set(["*", "read", "glob", "grep", ...(ROLE_TOOLS[id] ?? [])])
-        const kept = existing.filter((rule) => !shared.has(rule.action))
-        agent.permissions = [...kept, ...reviewAgentPermissions(id)]
+        // Replace the whole list. Assigning the policy is idempotent by
+        // construction: a second load cannot append duplicates, and a rule
+        // from an older GIT_HARDENING version cannot survive behind a
+        // hardcoded sentinel.
+        agent.permissions = reviewAgentPermissions(id)
       })
     }
   })

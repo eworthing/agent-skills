@@ -180,6 +180,7 @@ export async function detectHostDetails(
   cwd: string,
   exec: Exec = defaultExec,
   opts?: ExecOptions,
+  options: { probeEnterprise?: boolean } = {},
 ): Promise<HostDetails> {
   const remote = await exec(hardenedGit(["git", "remote", "get-url", "origin"]), cwd, opts)
   if (remote.code !== 0) return { host: "other" }
@@ -191,8 +192,9 @@ export async function detectHostDetails(
   }
   // GitHub Enterprise uses an arbitrary hostname, so the URL alone cannot
   // identify it. Ask gh whether it is authenticated to that host; a plain
-  // non-GitHub remote fails this probe and stays "other".
-  if (!hostname) return { host: "other" }
+  // non-GitHub remote fails this probe and stays "other". Callers that only
+  // need GitLab-vs-not (for a notice) can skip this network probe.
+  if (!hostname || options.probeEnterprise === false) return { host: "other" }
   const auth = await exec(["gh", "auth", "status", "--hostname", hostname], cwd, opts)
   return auth.code === 0 ? { host: "github", ...(hostname ? { hostname } : {}) } : { host: "other" }
 }
@@ -316,12 +318,19 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     ...(timeoutMs !== undefined && timeoutMs > 0 ? { timeoutMs } : {}),
   }
   const call = (argv: string[]) => exec(argv, deps.cwd, execOpts)
+  // A PR-number review captured the PR's own URL. It is authoritative for the
+  // host even when the local origin is a mirror or absent: `gh pr diff`
+  // already succeeded against that PR.
+  const prUrlRepo = scope.prUrl ? repoFromPrUrl(scope.prUrl) : undefined
+  const prUrlHostname = scope.prUrl ? hostFromPrUrl(scope.prUrl) : undefined
   // Resolve the host and its hostname together. Calling detectHost() and then
   // re-reading the remote to recover the hostname doubles the probe and can
   // disagree if the remote changes between calls.
   const hostDetails =
-    deps.host === undefined ? await detectHostDetails(deps.cwd, exec, execOpts) : undefined
-  const host = deps.host ?? hostDetails?.host ?? "other"
+    deps.host === undefined && !prUrlRepo
+      ? await detectHostDetails(deps.cwd, exec, execOpts)
+      : undefined
+  const host = prUrlRepo ? "github" : (deps.host ?? hostDetails?.host ?? "other")
   if (host === "gitlab") {
     return "`--comment` was ignored: GitLab merge requests are out of scope for this port."
   }
@@ -355,7 +364,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // GHE comment to github.com (or fails auth there). The caller can pass the
   // hostname it already resolved; otherwise resolve it once here. If the
   // lookup fails, refuse rather than silently targeting github.com.
-  const resolvedHostname = deps.githubHostname ?? hostDetails?.hostname
+  const resolvedHostname = deps.githubHostname ?? prUrlHostname ?? hostDetails?.hostname
   let githubHostname = enterpriseHost(resolvedHostname)
   if (resolvedHostname === undefined) {
     const remote = await call(hardenedGit(["git", "remote", "get-url", "origin"]))
@@ -394,17 +403,26 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // origin hostname would send the comment request to the wrong instance.
   if (prHost) githubHostname = enterpriseHost(prHost)
   if (!repoName) {
-    // Older gh versions/tests may not return a URL. Ask the PR for its base
-    // repository before falling back to the local checkout: `gh repo view` in
-    // a fork clone names the fork, not the base repository the PR belongs to.
-    const base = await prField("baseRepository", ".baseRepository.nameWithOwner")
+    // Older gh versions/tests may not return a URL. `gh pr view --json
+    // baseRepository` is not a supported field, so ask the repository that
+    // `gh pr view` resolved the PR against. This is safe here because the
+    // fallback only runs when the PR URL is missing: the PR was resolved from
+    // the current repository (or GH_REPO), not from a cross-repository URL.
+    const base = await call([
+      "gh",
+      "repo",
+      "view",
+      "--json",
+      "nameWithOwner",
+      "--jq",
+      ".nameWithOwner",
+    ])
     const baseName = base.stdout.trim()
     if (baseName.includes("/")) {
       repoName = baseName
     } else {
-      // Never fall back to `gh repo view`: in a fork clone it names the fork,
-      // so the comment would land on a different repository (or the fork's own
-      // PR with the same number). Refuse instead.
+      // The PR was resolved locally, but gh could not name its repository.
+      // Refuse rather than guess at a different fork or mirror.
       repoError = base.stderr.trim() || repoError || "could not resolve the PR base repository"
     }
   }

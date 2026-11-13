@@ -332,6 +332,16 @@ test("detectHostDetails keeps the GitHub Enterprise hostname", async () => {
   })
 })
 
+test("detectHostDetails can skip the enterprise auth probe", async () => {
+  const { exec, calls } = fake((argv) =>
+    argv.includes("get-url") ? { stdout: "git@ghe.corp.example:acme/app.git" } : { code: 0 },
+  )
+  assert.deepEqual(await detectHostDetails("/repo", exec, undefined, { probeEnterprise: false }), {
+    host: "other",
+  })
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "auth"), false)
+})
+
 test("detectHostDetails returns the github.com hostname so callers do not re-read the remote", async () => {
   const { exec } = fake((argv) => (argv.includes("get-url") ? { stdout: "git@github.com:acme/app.git" } : {}))
   assert.deepEqual(await detectHostDetails("/repo", exec), {
@@ -415,6 +425,56 @@ test("a PR-number review pins the head captured with the patch", async () => {
   const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
   assert.ok(api?.some((arg) => arg === "commit_id=pinned123"))
   assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
+})
+
+test("a missing PR URL falls back to the repository gh resolved", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9, prHeadOid: "pinned123" })
+  const { exec, calls } = fake((argv) => {
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
+      if (argv.includes("url")) return { code: 0, stdout: "" }
+      if (argv.includes("headRefOid")) return { stdout: "pinned123\n" }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({
+    cwd: "/repo",
+    scope,
+    result: result(),
+    exec,
+    host: "github",
+    githubHostname: "github.com",
+  })
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
+  assert.equal(
+    calls.some((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view" && c.includes("baseRepository")),
+    false,
+  )
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
+})
+
+test("a PR-number review posts when the local origin is not GitHub", async () => {
+  const scope = scopeOf(["src/a.ts"], {
+    pr: 9,
+    prHeadOid: "pinned123",
+    prUrl: "https://github.com/acme/app/pull/9",
+  })
+  const { exec, calls } = fake((argv) => {
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({
+    cwd: "/repo",
+    scope,
+    result: result(),
+    exec,
+    host: "other",
+  })
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
+  // The captured PR URL is authoritative; no origin probe is needed.
+  assert.equal(calls.some((c) => c[0] === "git" && c[1] === "remote"), false)
 })
 
 test("a PR-number review refuses to post without a captured head", async () => {

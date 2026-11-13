@@ -65,6 +65,7 @@ import {
 } from "./parse.ts"
 import { makeRunner, modelRef, trackActivity } from "./runner.ts"
 import { installReviewAgentPolicy } from "./agent-policy.ts"
+import { pluralize, pluralWord } from "./finding.ts"
 import {
   hasRuntimeSurface,
   hasSkill,
@@ -73,12 +74,15 @@ import {
   type SessionRecord,
 } from "./host.ts"
 import {
+  classifyTarget,
+  defaultExec,
   extractPathHint,
   missingExplicitPathTarget,
   prTargetNumber,
   resolveReviewRoot,
   resolveScope,
   type Scope,
+  type TargetClassification,
 } from "./scope.ts"
 import { postComments, detectHostDetails, type Host } from "./comment.ts"
 import { writeReportArtifact } from "./artifact.ts"
@@ -305,7 +309,7 @@ function maxFindingsNotice(
     notes.push(
       limit.asked === "all"
         ? "Reporting every finding, as the user chose last time with `--max-findings all`."
-        : `Reporting up to ${limit.asked} ${limit.asked === 1 ? "finding" : "findings"}, the limit the user set last time with \`--max-findings\`.`,
+        : `Reporting up to ${pluralize(limit.asked, "finding")}, the limit the user set last time with \`--max-findings\`.`,
     )
   }
   return notes.length > 0 ? notes.join(" ") : undefined
@@ -458,10 +462,13 @@ async function resolveAndRun(
   const childSessions = supportsChildSessions(ctx)
   const usesEngine = flags.driver !== "prompt" && cell.engine === "multi" && childSessions
   const kind: OutputKind = flags.json ? "json" : "reportfindings"
+  // `fixAction` is the single predicate for whether --fix runs. Reuse its
+  // result instead of spelling the same dry-run/json gates again.
+  const fixMode = fixAction(parsed.fix, flags.dryRun, flags.json)
+  const applyFix = fixMode === "apply"
   // An engine report is text, but --fix re-reports through ReportFindings, so
   // that path still needs the host's 32-entry cap.
-  const willApplyFix = parsed.fix && !flags.dryRun && !flags.json
-  const hasReportFindings = kind === "reportfindings" && (!usesEngine || willApplyFix)
+  const hasReportFindings = kind === "reportfindings" && (!usesEngine || applyFix)
   // The reference's `fo` caps `--max-findings all` at 32 on the fork path
   // regardless of output mode. The engine path is the fork equivalent here, so
   // `--json` keeps the same ceiling instead of exposing the uncapped tail.
@@ -481,7 +488,6 @@ async function resolveAndRun(
   // included even under --quiet: silently ignoring --fix/--comment is worse
   // than one extra line.
   const actionNotices: string[] = []
-  const fixMode = fixAction(parsed.fix, flags.dryRun, flags.json)
   if (fixMode === "dry-run") {
     actionNotices.push("--fix ignored: --dry-run was requested; the working tree was not modified.")
   } else if (fixMode === "json") {
@@ -489,7 +495,6 @@ async function resolveAndRun(
       "--fix ignored with --json: the JSON contract is a bare array. Run without --json to apply fixes.",
     )
   }
-  const applyFix = fixMode === "apply"
   const comment = parsed.comment && !flags.dryRun
   if (parsed.comment && flags.dryRun) {
     actionNotices.push("--comment ignored: --dry-run was requested; no comments were posted.")
@@ -514,18 +519,40 @@ async function resolveAndRun(
   // Use the same target classifier as scope discovery. Re-deriving the root
   // from the raw target as a path let a directory that shares a branch name
   // send the comments to a different repository than the one reviewed.
+  // Classify once here and reuse the result in resolveScope: the engine path
+  // would otherwise repeat every branch/remote probe for the same target.
+  const hostClassification: TargetClassification | undefined =
+    needsHost && hostTarget !== undefined
+      ? await classifyTarget(defaultExec, ctx.location.directory, hostTarget.trim(), {
+          ...(inv.signal ? { signal: inv.signal } : {}),
+          timeoutMs: 10_000,
+        }).catch(() => undefined)
+      : undefined
   const hostRoot = needsHost
-    ? ((await resolveReviewRoot(ctx.location.directory, hostTarget, undefined, {
-        ...(inv.signal ? { signal: inv.signal } : {}),
-        timeoutMs: 10_000,
-      }).catch(() => null)) ?? ctx.location.directory)
+    ? ((await resolveReviewRoot(
+        ctx.location.directory,
+        hostTarget,
+        undefined,
+        {
+          ...(inv.signal ? { signal: inv.signal } : {}),
+          timeoutMs: 10_000,
+        },
+        hostClassification,
+      ).catch(() => null)) ?? ctx.location.directory)
     : undefined
   const hostDetails =
     hostRoot !== undefined
-      ? await detectHostDetails(hostRoot, undefined, {
-          ...(inv.signal ? { signal: inv.signal } : {}),
-          timeoutMs: 10_000,
-        })
+      ? await detectHostDetails(
+          hostRoot,
+          undefined,
+          {
+            ...(inv.signal ? { signal: inv.signal } : {}),
+            timeoutMs: 10_000,
+          },
+          // `--post` without `--comment` only needs the GitLab-vs-not answer
+          // for its notice; skip the gh auth network probe.
+          { probeEnterprise: comment },
+        )
       : { host: "other" as Host }
   const host: Host = hostDetails.host
 
@@ -631,6 +658,11 @@ async function resolveAndRun(
       includeDiffLines: cell.finderBudgetHint,
       // The 2.1.162 recipe has no conventions finder; skip the file reads.
       includeConventions: cell.cleanupLenses !== "162",
+      // Host detection already classified this exact target; reuse it so a
+      // --comment review does not repeat every branch/remote probe.
+      ...(hostClassification && hostTarget?.trim() === parsed.target?.trim()
+        ? { classification: hostClassification }
+        : {}),
     })
   } catch (error) {
     const message = `Code review could not start: ${error instanceof Error ? error.message : String(error)}`
@@ -711,7 +743,7 @@ async function resolveAndRun(
     // abort a review that can still complete.
     await reportProgress(
       inv.progress,
-      `Reviewing ${scope.files.length} changed file(s) at ${effort} effort (${cell.id})`,
+      `Reviewing ${pluralize(scope.files.length, "changed file")} at ${effort} effort (${cell.id})`,
     )
   }
 
@@ -740,7 +772,7 @@ async function resolveAndRun(
         const report = (status: string): void => {
           void reportProgress(inv.progress, status)
         }
-        if (event.type === "finder") report(`${event.label}: ${event.candidates} candidate(s)`)
+        if (event.type === "finder") report(`${event.label}: ${pluralWord(event.candidates, "candidate")}`)
         if (event.type === "phase") report(`Phase: ${event.phase}`)
       },
     })
@@ -838,31 +870,44 @@ async function resolveAndRun(
   // A completed engine report needs no model turn unless the fix block or the
   // /verify suggestion still has to run. `--json` is the output itself, so it
   // is displayed verbatim rather than with the completion note.
-  const needsModel = fixMode === "apply" || followUp.length > 0
+  const needsModel = applyFix || followUp.length > 0
 
   if (comment) {
-    // The reviewed root may be a submodule or a free-form path hint; its origin
-    // remote owns the PR. Re-detect only when that root differs from the one
-    // already used for the notice, so the normal case stays a single call.
-    const scopeHostDetails =
-      scope.root === (hostRoot ?? scope.root)
-        ? hostDetails
-        : await detectHostDetails(scope.root, undefined, {
-            ...(inv.signal ? { signal: inv.signal } : {}),
-            timeoutMs: 10_000,
-          })
-    const posted = await postComments({
-      cwd: scope.root,
-      scope,
-      result,
-      log: inv.log,
-      host: scopeHostDetails.host,
-      ...(scopeHostDetails.hostname ? { githubHostname: scopeHostDetails.hostname } : {}),
-      signal: inv.signal,
-    })
-    if (posted && flags.json) inv.log?.(posted)
-    const extra = posted && !flags.json ? `\n\n${posted}` : ""
-    return { text: prefix + body + extra, engine: result, needsModel, ...(flags.json ? { bare: true } : {}) }
+    try {
+      // The reviewed root may be a submodule or a free-form path hint; its
+      // origin remote owns the PR. Re-detect only when that root differs from
+      // the one already used for the notice, so the normal case stays a single
+      // call.
+      const scopeHostDetails =
+        scope.root === (hostRoot ?? scope.root)
+          ? hostDetails
+          : await detectHostDetails(scope.root, undefined, {
+              ...(inv.signal ? { signal: inv.signal } : {}),
+              timeoutMs: 10_000,
+            })
+      const posted = await postComments({
+        cwd: scope.root,
+        scope,
+        result,
+        log: inv.log,
+        host: scopeHostDetails.host,
+        ...(scopeHostDetails.hostname ? { githubHostname: scopeHostDetails.hostname } : {}),
+        signal: inv.signal,
+      })
+      if (posted && flags.json) inv.log?.(posted)
+      const extra = posted && !flags.json ? `\n\n${posted}` : ""
+      return { text: prefix + body + extra, engine: result, needsModel, ...(flags.json ? { bare: true } : {}) }
+    } catch (error) {
+      // A failed gh/exec call must not discard a completed review. The report
+      // is still displayed (and --json still emits its bare array); the posting
+      // failure is appended or logged.
+      const message = `Posting comments failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+      if (flags.json) inv.log?.(message)
+      else body += `\n\n${message}`
+      return { text: prefix + body, engine: result, needsModel, ...(flags.json ? { bare: true } : {}) }
+    }
   }
 
   return { text: prefix + body, engine: result, needsModel, ...(flags.json ? { bare: true } : {}) }
@@ -877,11 +922,24 @@ export default Plugin.define({
     /** Child sessions created by this review engine; only these are recursion-guarded. */
     const reviewChildSessions = new Set<string>()
     /** Stream deltas keep a long single-step reasoning turn live for the watchdog. */
-    const activity = trackActivity(ctx)
+    const activity = trackActivity(ctx, {
+      shouldTrack: (sessionID) => reviewChildSessions.has(sessionID),
+    })
     // One shared read-only policy for all three review agents. Keeping it here
     // rather than in three Markdown frontmatters lets the git hardening flags
-    // and the allowed command shapes stay in sync with scope.ts.
-    await installReviewAgentPolicy(ctx)
+    // and the allowed command shapes stay in sync with scope.ts. A host that
+    // exposes the transform but rejects one update must not abort plugin
+    // registration: the Markdown fallback keeps the agents read-only, and the
+    // command/tool registrations below still need to run.
+    try {
+      await installReviewAgentPolicy(ctx)
+    } catch (error) {
+      console.error(
+        `[code-review-opencode] could not install the shared agent policy: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      )
+    }
     /** Last outcome list posted per session, so a repeated re-report is quiet. */
     const reportedOutcomeHashes = new Map<string, string>()
     const MAX_OUTCOME_HASHES = 200

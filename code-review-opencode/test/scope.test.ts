@@ -116,6 +116,57 @@ test("an explicit branch diffs branch...HEAD", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("a failed worktree probe in an explicit range is an error", async () => {
+  const dir = makeRepo()
+  writeFileSync(join(dir, "a.ts"), "export const a = 9\n")
+  const exec: Exec = async (argv, cwd, opts) => {
+    if (argv.includes("diff") && argv.includes("--quiet") && argv.includes("HEAD")) {
+      return { code: 128, stdout: "", stderr: "fatal: index file corrupt" }
+    }
+    return defaultExec(argv, cwd, opts)
+  }
+  await assert.rejects(
+    () => resolveScope({ cwd: dir, target: "main...HEAD", exec }),
+    /git diff --quiet failed/,
+  )
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a remote-prefixed current branch includes uncommitted changes", async () => {
+  const dir = makeRepo()
+  git(dir, "remote", "add", "origin", "https://example.com/acme/app.git")
+  git(dir, "update-ref", "refs/remotes/origin/main", "HEAD")
+  writeFileSync(join(dir, "a.ts"), "export const a = 42\n")
+  const scope = await resolveScope({ cwd: dir, target: "origin/main" })
+  assert.equal(scope.diffBase, "origin/main")
+  assert.match(scope.diffText ?? "", /a = 42/)
+  assert.ok(scope.diffCommands?.some((command) => command.includes("HEAD")))
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a path with a shell metacharacter omits the pathspec from the runnable command", async () => {
+  const dir = makeRepo()
+  writeFileSync(join(dir, "a&b.ts"), "export const amp = 1\n")
+  git(dir, "add", "a&b.ts")
+  const scope = await resolveScope({ cwd: dir, target: "a&b.ts" })
+  assert.deepEqual(scope.files, ["a&b.ts"])
+  // The host permission table matches the raw command string, so a quoted
+  // `&` would still be denied. The runnable command omits the pathspec; the
+  // captured diff remains scoped to the target.
+  assert.doesNotMatch(scope.diffCommand, /&/)
+  assert.match(scope.diffCommand, /pathspec omitted/)
+  assert.match(scope.diffText ?? "", /amp = 1/)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a clean path target records the checked-out branch", async () => {
+  const dir = makeRepo()
+  const scope = await resolveScope({ cwd: dir, target: "a.ts" })
+  assert.equal(scope.scopeKind, "path")
+  assert.equal(scope.branch, "main")
+  rmSync(dir, { recursive: true, force: true })
+})
+
 test("a path target restricts the diff", async () => {
   const dir = makeRepo()
   writeFileSync(join(dir, "a.ts"), "export const a = 3\n")
@@ -270,7 +321,7 @@ test("an aborted scope discovery fails with a cancellation error", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-test("a PR review downloads the patch and metadata once", async () => {
+test("a PR review downloads the patch once and verifies the head", async () => {
   const dir = mkdtempSync(join(tmpdir(), "code-review-pr-"))
   mkdirSync(join(dir, ".git"))
   const calls: string[][] = []
@@ -291,7 +342,13 @@ test("a PR review downloads the patch and metadata once", async () => {
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
       return {
         code: 0,
-        stdout: JSON.stringify({ files: [{ path: "src/a.ts" }], additions: 4, deletions: 3 }),
+        stdout: JSON.stringify({
+          files: [{ path: "src/a.ts" }],
+          additions: 4,
+          deletions: 3,
+          headRefOid: "abc123",
+          url: "https://github.com/o/r/pull/42",
+        }),
         stderr: "",
       }
     }
@@ -301,8 +358,12 @@ test("a PR review downloads the patch and metadata once", async () => {
   assert.deepEqual(scope.files, ["src/a.ts"])
   assert.equal(scope.diffLines, 7)
   assert.equal(scope.diffText, patch)
+  assert.equal(scope.prHeadOid, "abc123")
+  assert.equal(scope.prUrl, "https://github.com/o/r/pull/42")
   assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "diff").length, 1)
-  assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view").length, 1)
+  // One metadata read before the patch and one after it prove the patch and
+  // the pinned head describe the same commit.
+  assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view").length, 2)
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -324,7 +385,34 @@ test("a failed PR metadata call still uses the cached patch", async () => {
   assert.deepEqual(scope.files, ["src/a.ts"])
   assert.equal(scope.diffLines, 2)
   assert.equal(scope.diffText, patch)
+  // A missing head only affects --comment posting; the patch and file list
+  // were fully recovered, so the review must not be marked partial.
+  assert.equal(scope.prHeadOid, undefined)
+  assert.equal(scope.warnings?.some((w) => w.includes("could not capture")) ?? false, false)
   assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "diff").length, 1)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a failed file listing does not start full diff captures", async () => {
+  const dir = makeRepo()
+  writeFileSync(join(dir, "a.ts"), "export const a = 2\n")
+  const calls: string[][] = []
+  const exec: Exec = async (argv, cwd, opts) => {
+    calls.push(argv)
+    if (argv.includes("--name-status")) {
+      return { code: 128, stdout: "", stderr: "bad revision" }
+    }
+    return defaultExec(argv, cwd, opts)
+  }
+  await assert.rejects(() => resolveScope({ cwd: dir, exec }), /Could not list changed files/)
+  const captures = calls.filter(
+    (argv) =>
+      argv.includes("diff") &&
+      !argv.includes("--name-status") &&
+      !argv.includes("--quiet") &&
+      !argv.includes("--numstat"),
+  )
+  assert.deepEqual(captures, [])
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -346,6 +434,15 @@ test("user-level conventions come last and each source gets a fair budget", () =
   assert.match(text, /User rule/)
   rmSync(root, { recursive: true, force: true })
   rmSync(home, { recursive: true, force: true })
+})
+
+test("a fully read conventions file over the character budget carries the truncation marker", () => {
+  const root = mkdtempSync(join(tmpdir(), "code-review-conv-cut-"))
+  writeFileSync(join(root, "CLAUDE.md"), "x".repeat(50_000))
+  const { text } = discoverConventions(root, ["a.ts"], 20_000)
+  assert.ok(text.length <= 20_000)
+  assert.match(text, /…\(truncated\)$/)
+  rmSync(root, { recursive: true, force: true })
 })
 
 test("a path target outside any repository is an error", async () => {

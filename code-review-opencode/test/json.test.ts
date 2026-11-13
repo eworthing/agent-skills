@@ -7,12 +7,21 @@ import {
   asReport,
   asVerdict,
   extractJson,
+  isSchemaEcho,
   normalizeCandidatesCall,
   normalizeDecisionsCall,
   normalizeGroupVerdictsCall,
   normalizeReportCall,
   normalizeVerdictCall,
 } from "../.opencode/plugins/code-review-opencode/json.ts"
+import { schemaExample } from "../.opencode/plugins/code-review-opencode/schemas.ts"
+
+test("every generated schema example is detected as an echo", () => {
+  for (const name of ["candidates", "verdict", "groupVerdicts", "report", "decisions"]) {
+    const example = JSON.parse(schemaExample(name)) as unknown
+    assert.equal(isSchemaEcho(example), true, name)
+  }
+})
 
 test("extractJson prefers a JSON fence over an earlier code fence", () => {
   const text =
@@ -411,7 +420,7 @@ test("extractJson keeps a real payload that precedes an echoed schema example", 
   assert.equal(parsed.candidates[0].file, "real.ts")
 })
 
-test("asGroupVerdicts shifts a contiguous 1-based list, but not after index 0 was dropped", () => {
+test("asGroupVerdicts shifts 1-based lists, including partial ones, but not after index 0 was dropped", () => {
   const offset = asGroupVerdicts(
     {
       verdicts: [
@@ -436,9 +445,12 @@ test("asGroupVerdicts shifts a contiguous 1-based list, but not after index 0 wa
     },
     3,
   )
-  // A partial [1,2] is ambiguous (1-based subset vs zero-based subset that
-  // omitted 0). Refuse it rather than attach verdicts to the wrong candidates.
-  assert.deepEqual(partial, [])
+  // A partial list that starts at 1 and never exceeds the group size is a
+  // 1-based answer. Shift it instead of discarding the confirmed verdicts.
+  assert.deepEqual(partial, [
+    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
+  ])
   // If index 0 was submitted and dropped (invalid verdict), the survivors are
   // zero-based and must not shift onto the wrong candidates.
   const droppedZero = asGroupVerdicts(

@@ -52,8 +52,18 @@ export const VERDICT_LADDER = () => frag("verdict-ladder").trimEnd()
 export const VERDICT_LADDER_RECALL = () => frag("verdict-ladder-recall").trimEnd()
 export const SWEEP_FOCUS = () => frag("sweep-focus").trimEnd()
 
-/** The one list of correctness fragments, in angle order. */
-const CORRECTNESS_FRAGMENTS = [ANGLE_A, ANGLE_B, ANGLE_C, ANGLE_D, ANGLE_E]
+/** The one labeled list of correctness fragments, in angle order. */
+export type CorrectnessLens = { label: string; text: () => string }
+
+export const CORRECTNESS_LENSES: readonly CorrectnessLens[] = [
+  { label: "angle-A", text: ANGLE_A },
+  { label: "angle-B", text: ANGLE_B },
+  { label: "angle-C", text: ANGLE_C },
+  { label: "angle-D", text: ANGLE_D },
+  { label: "angle-E", text: ANGLE_E },
+]
+
+const CORRECTNESS_FRAGMENTS = CORRECTNESS_LENSES.map((lens) => lens.text)
 
 export type CleanupLens = { label: string; text: () => string }
 
@@ -880,10 +890,14 @@ export function synthPromptText(opts: {
   ranked: RankedFinding[]
   maxFindings: number
   diffText?: string
+  sweepGaps?: number
 }): string {
+  const gaps = opts.sweepGaps ?? 0
   return synthReport(
     opts,
-    `${opts.ranked.length} findings survived independent verification (${opts.level}-effort review).`,
+    gaps > 0
+      ? `${opts.ranked.length} findings (${opts.ranked.length - gaps} verified, ${pluralWord(gaps, "sweep gap")}) (${opts.level}-effort review).`
+      : `${opts.ranked.length} findings survived independent verification (${opts.level}-effort review).`,
     `1. Merge findings that describe the same defect (same root cause) — combine their evidence.
 2. Rank most-severe first. Correctness bugs always outrank cleanup findings.
 3. Keep at most ${opts.maxFindings} findings; drop the least severe beyond the cap.
@@ -930,10 +944,16 @@ export function synthPromptIndex(opts: {
   ranked: RankedFinding[]
   maxFindings: number
   diffText?: string
+  sweepGaps?: number
 }): string {
+  const gaps = opts.sweepGaps ?? 0
+  const intro =
+    gaps > 0
+      ? `${opts.ranked.length} findings (${opts.ranked.length - gaps} verified, ${pluralWord(gaps, "sweep gap")}) (${opts.level}-effort review). They are numbered [0]-[${opts.ranked.length - 1}] below.`
+      : `${opts.ranked.length} findings survived independent verification (${opts.level}-effort review). They are numbered [0]-[${opts.ranked.length - 1}] below.`
   return synthReport(
     opts,
-    `${opts.ranked.length} findings survived independent verification (${opts.level}-effort review). They are numbered [0]-[${opts.ranked.length - 1}] below.`,
+    intro,
     `Return decisions about findings BY INDEX — never re-emit finding text.
 1. Dedup findings that point at the same line/mechanism, keeping the one with the most concrete failure scenario. When several findings describe the same defect, keep one entry and list the others in its merge array.
 2. Rank most-severe first. Correctness bugs always outrank cleanup, altitude, and conventions findings when the output cap forces a cut.

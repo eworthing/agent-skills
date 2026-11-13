@@ -158,5 +158,12 @@ function exampleValue(schema: unknown, key?: string): unknown {
 /** One JSON example generated from the same schema the child tool validates. */
 export function schemaExample(schemaName: string): string {
   const schema = SCHEMAS[schemaName as SchemaName]
-  return schema ? JSON.stringify(exampleValue(schema)) : "{}"
+  if (!schema) return "{}"
+  const example = exampleValue(schema)
+  // A sentinel makes every generated example recognizable, including a new
+  // result kind that has no hand-written placeholder branch in `isSchemaEcho`.
+  if (example && typeof example === "object" && !Array.isArray(example)) {
+    ;(example as Record<string, unknown>).__example = true
+  }
+  return JSON.stringify(example)
 }

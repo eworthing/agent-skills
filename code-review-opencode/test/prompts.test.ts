@@ -604,13 +604,19 @@ test("the synth agent prompt matches the runner's schema-tool instruction", () =
 
 test("the three review agents share one read-only policy module", () => {
   // The full shell table lives in agent-policy.ts and is installed by setup.
-  // The Markdown files keep only a safe read-only fallback; duplicating the
-  // table there is what let the three copies drift.
+  // The Markdown files keep a minimal fallback: the one diff command the
+  // prompt displays plus the deny list, so a host without `agent.transform`
+  // can still inspect a truncated diff without duplicating the full table.
   const agents = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
   for (const file of ["review-finder.md", "review-verifier.md", "review-sweep.md"]) {
     const text = readFileSync(join(agents, file), "utf8")
     assert.match(text, /agent-policy\.ts/)
-    assert.doesNotMatch(text, /resource: "git /, `${file} still duplicates the git table`)
+    assert.match(
+      text,
+      /resource: "git -c core\.hooksPath=\/dev\/null .* diff\*"/,
+      `${file} does not allow the displayed diff command`,
+    )
+    assert.doesNotMatch(text, /resource: "git -c .* (?:log|show|blame)/, `${file} duplicates the history table`)
     assert.match(text, /- action: "\*"[\s\S]*effect: deny/)
   }
   const policies = REVIEW_AGENT_IDS.map((id) => reviewAgentPermissions(id))

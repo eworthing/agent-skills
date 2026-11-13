@@ -997,6 +997,37 @@ test("a current-mode sweep keeps a reworded gap at a known line", async () => {
   assert.ok(verifyA.at < finderB.at + 120, "verification of angle-A should start before angle-B finishes")
 })
 
+test("v2.1.162 dedupes in finder order even when a later finder finishes first", async () => {
+  const firstClaim = candidate("src/a.ts", 1, "same claim", "first scenario")
+  const secondClaim = candidate("src/a.ts", 1, "same claim", "second scenario")
+  const run = async (delays: Record<string, number>) => {
+    const { result } = await review({
+      version: "cc-workflow-2.1.162",
+      level: "high",
+      script: {
+        delay: (req) => (req.role === "finder" ? (delays[req.label] ?? 0) : 0),
+        finder: (req) =>
+          req.label === "angle-A"
+            ? { candidates: [firstClaim] }
+            : req.label === "angle-B"
+              ? { candidates: [secondClaim] }
+              : { candidates: [] },
+        verifier: () => CONFIRMED(),
+      },
+    })
+    return result.findings
+  }
+  const aFirst = await run({ "angle-A": 0, "angle-B": 20 })
+  const bFirst = await run({ "angle-A": 20, "angle-B": 0 })
+  // The representative must be the earlier finder's claim, not whichever
+  // child happened to finish first.
+  assert.deepEqual(
+    aFirst.map((f) => f.failure_scenario),
+    bFirst.map((f) => f.failure_scenario),
+  )
+  assert.equal(aFirst[0]?.failure_scenario, "first scenario")
+})
+
 /* 22 */ test("v2.1.318 waits at a barrier before verifying", async () => {
   const { calls } = await review({
     version: "cc-2.1.318",
@@ -1687,6 +1718,36 @@ test("a truncated text-synthesis report records truncatedFrom", async () => {
   assert.match(result.warnings.join(" "), /truncated at the tool cap/)
 })
 
+test("a truncated text-synthesis report uses the verified survivor count", async () => {
+  const a = candidate("src/a.ts", 1, "first bug")
+  const b = candidate("src/b.ts", 2, "second bug")
+  const c = candidate("src/c.ts", 3, "third bug")
+  const d = candidate("src/d.ts", 4, "fourth bug")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    limit: 2,
+    script: {
+      finder: (req) => {
+        const byLabel: Record<string, typeof a> = {
+          "angle-A": a,
+          "angle-B": b,
+          "angle-C": c,
+          reuse: d,
+        }
+        const found = byLabel[req.label]
+        return { candidates: found ? [found] : [] }
+      },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+      synthesize: () => ({ summary: "text report", findings: [a, b, c], truncated: true }),
+    },
+  })
+  // Three findings were re-emitted and the normalizer cut them to two. The
+  // report must not claim the pre-cap count was three when four survived.
+  assert.equal(result.truncatedFrom, 4)
+})
+
 test("a 1-based synthesis plan is shifted before ranking", async () => {
   const a = candidate("src/a.ts", 1, "first bug")
   const b = candidate("src/b.ts", 2, "second bug")
@@ -1757,6 +1818,21 @@ test("an exhausted v2.1.162 verifier budget marks the run partial", async () => 
   assert.match(result.warnings.join(" "), /verifier budget/)
 })
 
+test("a sweep gap is not presented as independently verified", async () => {
+  const { result } = await review({
+    level: "max",
+    script: {
+      finder: () => ({ candidates: [] }),
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [candidate("src/a.ts", 1, "sweep-only gap")] }),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].verdict, "PLAUSIBLE")
+  assert.doesNotMatch(result.summary, /survived verification/)
+  assert.match(result.summary, /gap sweep/)
+})
+
 test("an invented sweep category cannot claim correctness priority", async () => {
   const { result } = await review({
     level: "max",
@@ -1775,7 +1851,7 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings[1].kind, "cleanup")
 })
 
-test("a contiguous plan without index 0 is treated as 1-based", async () => {
+test("a contiguous subset without index 0 stays zero-based", async () => {
   const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
     candidate("src/a.ts", i + 1, `${s} bug`),
   )
@@ -1794,8 +1870,9 @@ test("a contiguous plan without index 0 is treated as 1-based", async () => {
           : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
     },
   })
-  // Indices 1..2 are a 1-based subset. Shifting is the safer reading; the
-  // previous behavior discarded the plan entirely.
-  assert.equal(result.findings[0].summary, "zero bug")
-  assert.equal(result.findings[1].summary, "one bug")
+  // Indices 1..2 are a zero-based subset that omitted index 0, not a 1-based
+  // plan: the prompt numbers findings from 0. Shifting would apply the
+  // synthesizer's merge/rank decisions to the wrong findings.
+  assert.equal(result.findings[0].summary, "one bug")
+  assert.equal(result.findings[1].summary, "two bug")
 })
