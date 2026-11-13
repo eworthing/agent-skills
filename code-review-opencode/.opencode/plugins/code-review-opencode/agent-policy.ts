@@ -119,7 +119,18 @@ export async function installReviewAgentPolicy(ctx: {
   await ctx.agent.transform((editor) => {
     for (const id of REVIEW_AGENT_IDS) {
       editor.update(id, (agent) => {
-        agent.permissions = reviewAgentPermissions(id)
+        const existing = agent.permissions ?? []
+        // The plugin can be loaded more than once (global plus project
+        // discovery). A policy already installed by another instance must not
+        // be appended again: the rule list would grow on every load.
+        if (existing.some((rule) => rule.action === "shell" && rule.resource.includes("core.hooksPath=/dev/null"))) {
+          return
+        }
+        // Replace the Markdown fallback rules rather than stacking on them.
+        // The full policy carries the same read/glob/grep/tool allows.
+        const shared = new Set(["*", "read", "glob", "grep", ...(ROLE_TOOLS[id] ?? [])])
+        const kept = existing.filter((rule) => !shared.has(rule.action))
+        agent.permissions = [...kept, ...reviewAgentPermissions(id)]
       })
     }
   })
