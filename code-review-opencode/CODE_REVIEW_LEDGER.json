@@ -1,0 +1,548 @@
+{
+  "skill": "code-review-opencode",
+  "baseline": {
+    "run": 28,
+    "reviewedSha": "045df69",
+    "findingCount": 40,
+    "note": "Run 28 is the baseline audit. Counts are samples; this ledger is the source of truth."
+  },
+  "lastReviewedSha": "630436e",
+  "gate": {
+    "openCorrectness": 0,
+    "openCleanup": 0,
+    "unclassified": 0,
+    "truncated": false,
+    "acceptedWithoutReason": 0
+  },
+  "dispositions": [
+    "fixed",
+    "invalid",
+    "accepted",
+    "open"
+  ],
+  "findings": [
+    {
+      "id": "CR-28-01",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 582,
+      "claim": "The missing-review-target validation is re-established only on the inline branch (and there only for explicitly prefixed paths); the `--driver prompt` / host-without-child-sessions branch and the engine path's repo-relative typo check are not applied to the prompt route.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "394b177",
+      "test": "test/scope.test.ts",
+      "reason": "Explicit path targets are validated on the prompt path as well as the inline path."
+    },
+    {
+      "id": "CR-28-02",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 376,
+      "claim": "The shared index-plan adapter treats any 0-based decision subset whose indices start at 1 as 1-based and shifts it, applying the synthesizer's merge/rank decisions to the wrong findings.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts::a contiguous subset without index 0 stays zero-based",
+      "reason": "Only a full 1-based plan is shifted; a compliant 0-based subset is no longer applied to its neighbors."
+    },
+    {
+      "id": "CR-28-03",
+      "file": ".opencode/plugins/code-review-opencode/json.ts",
+      "line": 546,
+      "claim": "The grouped-verdict text fallback only shifts a contiguous 1-based list, so a sparse 1-based verdict list is mapped onto the wrong candidates and the rest are dropped.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/json.test.ts::asGroupVerdicts shifts 1-based lists, including partial ones, but not after index 0 was dropped",
+      "reason": "A sparse 1-based verdict list is shifted as a unit instead of dropping out-of-range entries and misattaching the rest."
+    },
+    {
+      "id": "CR-28-04",
+      "file": ".opencode/agents/review-finder.md",
+      "line": 16,
+      "claim": "The fallback permission table used when `ctx.agent.transform` is unavailable grants no shell action, even though every prompt tells the agent to run git commands when the diff is truncated.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/prompts.test.ts::the three review agents share one read-only policy module",
+      "reason": "The Markdown fallback now allows the exact diff command the prompt displays, so a truncated diff can still be inspected without agent.transform."
+    },
+    {
+      "id": "CR-28-05",
+      "file": ".opencode/plugins/code-review-opencode/agent-policy.ts",
+      "line": 57,
+      "claim": "The shell deny rules match control characters anywhere in the command string, including inside the sanctioned, quoted diff command, so a review of a path whose name contains `&`/`;`/`>`/`|` is blocked even when the child runs exactly the command the prompt displays.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a path with a shell metacharacter omits the pathspec from the runnable command",
+      "reason": "A path containing a denied shell character omits the pathspec from the runnable command; the captured diff stays scoped."
+    },
+    {
+      "id": "CR-28-06",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1393,
+      "claim": "An explicit-range review treats a failed `git diff --quiet HEAD` worktree probe as clean and silently reviews only committed changes.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a failed worktree probe in an explicit range is an error",
+      "reason": "Exit >1 from git diff --quiet is a discovery failure, not a clean worktree."
+    },
+    {
+      "id": "CR-28-07",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1412,
+      "claim": "The same-branch check never strips a remote prefix, so targeting `origin/<current-branch>` omits uncommitted changes.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a remote-prefixed current branch includes uncommitted changes",
+      "reason": "A remote-tracking target is matched to the checked-out branch through real remote names."
+    },
+    {
+      "id": "CR-28-08",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 912,
+      "claim": "A conventions file that is fully read but longer than its character budget is truncated without the `\u2026(truncated)` marker, so the prompt silently omits rules.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a fully read conventions file over the character budget carries the truncation marker",
+      "reason": "A fully read file cut by the character budget now carries the truncation marker."
+    },
+    {
+      "id": "CR-28-09",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1501,
+      "claim": "A path or path-hinted review never records the checked-out branch, so `--comment` is refused even when the anchors are in the PR diff.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a clean path target records the checked-out branch",
+      "reason": "Clean path and free-form reviews record the current branch so --comment can resolve the PR."
+    },
+    {
+      "id": "CR-28-10",
+      "file": ".opencode/plugins/code-review-opencode/comment.ts",
+      "line": 370,
+      "claim": "The documented fallback for a PR response without a `url` asks `gh pr view --json baseRepository`, a field `gh pr view` does not support, so the base-repository fallback can never succeed and `--comment` aborts instead of resolving the repository.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/comment.test.ts::a missing PR URL falls back to the repository gh resolved",
+      "reason": "The unsupported gh pr view --json baseRepository fallback is replaced with gh repo view."
+    },
+    {
+      "id": "CR-28-11",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 950,
+      "claim": "Concurrent streaming finders share a dedupe set, so the cached representative and report order depend on finder completion timing.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts::v2.1.162 dedupes in finder order even when a later finder finishes first",
+      "reason": "Streaming dedup flushes in finder order and verified findings are sorted before the sweep/synthesis."
+    },
+    {
+      "id": "CR-28-12",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 1406,
+      "claim": "When the text synthesizer over-emits and the normalizer truncates the report, the engine records `truncatedFrom = emitted.length + 1` instead of the known survivor count, so the renderer claims the report was cut from a number that is far too low.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts::a truncated text-synthesis report uses the verified survivor count",
+      "reason": "A truncated synthesis report reports the verified survivor count as the pre-cap lower bound."
+    },
+    {
+      "id": "CR-28-13",
+      "file": ".opencode/plugins/code-review-opencode/agent-policy.ts",
+      "line": 33,
+      "claim": "The generated git allow-rules require the full `-c` hardening prefix, while the spawned agents' contracts tell them to run only `git diff/log/show/blame` plus `--no-ext-diff/--no-textconv`, so the commands the children actually construct are denied.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/prompts.test.ts::the three review agents share one read-only policy module",
+      "reason": "The agent contract now tells children to prefix git commands with the same -c hardening the permission table requires."
+    },
+    {
+      "id": "CR-28-14",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 872,
+      "claim": "The shared read-only policy is installed by awaiting `ctx.agent.transform` during setup with no error handling, so one rejecting agent update aborts the whole plugin registration instead of falling back to the Markdown permissions.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/agent-policy.test.ts::installReviewAgentPolicy replaces each review agent's permissions",
+      "reason": "A rejected agent.transform no longer aborts plugin registration; the Markdown fallback remains."
+    },
+    {
+      "id": "CR-28-15",
+      "file": ".opencode/plugins/code-review-opencode/runner.ts",
+      "line": 750,
+      "claim": "The abort listener dispatches `interrupt?.(...)?.catch(...)`, which does not catch a synchronous throw, so an interrupt failure escapes the AbortSignal listener.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/runner.test.ts::a synchronous interrupt failure does not escape cancellation",
+      "reason": "A synchronous session.interrupt throw is caught inside the abort listener."
+    },
+    {
+      "id": "CR-28-16",
+      "file": ".opencode/plugins/code-review-opencode/runner.ts",
+      "line": 764,
+      "claim": "`session.remove` is awaited inside `finally` with only `.catch` on the returned promise, so a synchronous throw there replaces the child's already-captured result.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/runner.test.ts::a synchronous session.remove failure keeps the captured result",
+      "reason": "session.remove sync throws are caught and a never-settling remove is bounded."
+    },
+    {
+      "id": "CR-28-17",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1367,
+      "claim": "PR patch and head metadata are fetched in parallel, so a push during discovery can pair stale line anchors with the new head when `--comment` posts.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a PR review downloads the patch once and verifies the head",
+      "reason": "The PR patch is captured between two matching head reads; an unverified pair refuses inline comments."
+    },
+    {
+      "id": "CR-28-18",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 842,
+      "claim": "The `--comment` posting call is awaited outside the review's try/catch, so a rejected gh/exec call turns a completed review into a command failure and discards the report.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/comment.test.ts",
+      "reason": "Comment posting is inside the review error boundary, so a failed gh/exec call still returns the report."
+    },
+    {
+      "id": "CR-28-19",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1548,
+      "claim": "A failed PR `gh pr view` metadata call pushes a comment-only warning into `scope.warnings`, which the plugin turns into `result.partial`, so a PR review whose diff and file list were fully recovered is reported as an incomplete review.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a failed PR metadata call still uses the cached patch",
+      "reason": "A missing PR head is a comment-only concern and no longer marks the review partial."
+    },
+    {
+      "id": "CR-28-20",
+      "file": ".opencode/plugins/code-review-opencode/comment.ts",
+      "line": 298,
+      "claim": "The host gate refuses `--comment` for a PR-number review whenever the local `origin` remote is absent or not GitHub, even though the PR's own GitHub URL was already captured in `scope.prUrl`.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/comment.test.ts::a PR-number review posts when the local origin is not GitHub",
+      "reason": "A captured PR URL is authoritative for the comment host even when the local origin is absent or a mirror."
+    },
+    {
+      "id": "CR-28-21",
+      "file": ".opencode/plugins/code-review-opencode/json.ts",
+      "line": 544,
+      "claim": "A contiguous 1-based grouped-verdict list shorter than the group is discarded entirely instead of being shifted, so a verifier that covers only part of the group loses every verdict, including CONFIRMED ones.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/json.test.ts::asGroupVerdicts shifts 1-based lists, including partial ones, but not after index 0 was dropped",
+      "reason": "A partial contiguous 1-based verdict list is shifted instead of being discarded."
+    },
+    {
+      "id": "CR-28-22",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 512,
+      "claim": "Sweep gaps are pushed into `kept`/`surviving` and then counted by the deterministic summary (and the synthesizer prompt) as findings that \"survived verification\", even though sweep candidates are explicitly never verified and are marked PLAUSIBLE with no evidence.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts::a sweep gap is not presented as independently verified",
+      "reason": "Sweep gaps are labeled as gap-sweep findings, not as findings that survived verification."
+    },
+    {
+      "id": "CR-28-23",
+      "file": ".opencode/plugins/code-review-opencode/comment.ts",
+      "line": 495,
+      "claim": "The gh-api failure branch formats the anchor itself instead of reusing renderedLocation, which the same loop already uses for its other two failure messages.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "394b177",
+      "test": "test/comment.test.ts",
+      "reason": "gh-api failure messages use renderedLocation like the sibling failure branches."
+    },
+    {
+      "id": "CR-28-24",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1517,
+      "claim": "The full-diff capture promises are started before the file listings are validated and are never awaited when every listing fails, so a failed discovery leaves full `git diff` children running and buffering output nobody reads.",
+      "severity": "correctness",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts::a failed file listing does not start full diff captures",
+      "reason": "Diff captures start only after the file listings are validated, so a failed discovery does not leave full diff children running."
+    },
+    {
+      "id": "CR-28-25",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 510,
+      "claim": "For a --comment/--post run the review root is resolved with `resolveReviewRoot` (which calls `classifyTarget`) and then `resolveScope` classifies the same target a second time, repeating every git probe.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts",
+      "reason": "Host detection passes its target classification into resolveScope instead of classifying twice."
+    },
+    {
+      "id": "CR-28-26",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 517,
+      "claim": "`--post` without `--comment` triggers `detectHostDetails`, including the `gh auth status --hostname` network probe, although the only consumer of the result (`postNotice`) branches solely on GitLab.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/comment.test.ts::detectHostDetails can skip the enterprise auth probe",
+      "reason": "--post without --comment skips the gh auth network probe."
+    },
+    {
+      "id": "CR-28-27",
+      "file": ".opencode/plugins/code-review-opencode/runner.ts",
+      "line": 175,
+      "claim": "`trackActivity` keeps a process-wide subscription to high-frequency stream event types and mutates a shared map for every delta of every session, review or not, for the plugin's whole lifetime.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/runner.test.ts::trackActivity ignores sessions outside the review child set",
+      "reason": "Activity tracking filters to review child sessions, so unrelated traffic cannot evict a live reading."
+    },
+    {
+      "id": "CR-28-28",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 1154,
+      "claim": "The third conjunct of `willSynthesize` is entailed by the first (`surviving.length > 1`) and can never be false.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "394b177",
+      "test": "test/engine.test.ts",
+      "reason": "The entailed willSynthesize conjunct is removed."
+    },
+    {
+      "id": "CR-28-29",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 1188,
+      "claim": "`unmergedFallback` duplicates `deterministicReport`'s dedupe/cap/truncation accounting with only a different summary.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts",
+      "reason": "unmergedFallback reuses deterministicReport's dedupe/cap/truncation accounting."
+    },
+    {
+      "id": "CR-28-30",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 731,
+      "claim": "The progress and max-findings notices hand-roll singular/plural forms (`candidate(s)`, `changed file(s)`, `=== 1 ?`) instead of calling the shared pluralize/pluralWord helpers.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts",
+      "reason": "Progress and limit notices use the shared pluralize/pluralWord helpers."
+    },
+    {
+      "id": "CR-28-31",
+      "file": ".opencode/plugins/code-review-opencode/parse.ts",
+      "line": 366,
+      "claim": "`token.toLowerCase() === \"ultra\"` is redundant because `isLevelToken` already accepts `ultra`.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "394b177",
+      "test": "test/parse.test.ts",
+      "reason": "The redundant ultra spelling check is removed; isLevelToken owns the rule."
+    },
+    {
+      "id": "CR-28-32",
+      "file": ".opencode/plugins/code-review-opencode/engine.ts",
+      "line": 640,
+      "claim": "buildFinders hardcodes angle-A..E and slices the joined corpus by position, while prompts.ts owns the angle fragments and already exports labeled lens lists for cleanup.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts",
+      "reason": "buildFinders zips the exported labeled correctness lenses instead of slicing joined prompt text by position."
+    },
+    {
+      "id": "CR-28-33",
+      "file": ".opencode/plugins/code-review-opencode/agent-policy.ts",
+      "line": 90,
+      "claim": "ROLE_TOOLS/REVIEW_AGENT_IDS hardcodes the same review agent IDs that engine.ts declares in AGENT_IDS, with no shared source.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/agent-policy.test.ts",
+      "reason": "Agent IDs come from one shared agent-ids module used by the engine and the policy installer."
+    },
+    {
+      "id": "CR-28-34",
+      "file": ".opencode/plugins/code-review-opencode/agent-policy.ts",
+      "line": 126,
+      "claim": "Policy installation is made idempotent by searching for a hardcoded hardening substring instead of replacing the permission list.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/agent-policy.test.ts::installReviewAgentPolicy replaces each review agent's permissions",
+      "reason": "Policy installation assigns the full permission list, which is idempotent and drops stale rules."
+    },
+    {
+      "id": "CR-28-35",
+      "file": ".opencode/plugins/code-review-opencode/index.ts",
+      "line": 458,
+      "claim": "`willApplyFix` re-implements `fixAction`'s predicate and duplicates the later `applyFix` value.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/engine.test.ts",
+      "reason": "hasReportFindings reuses fixAction's applyFix result instead of duplicating its predicate."
+    },
+    {
+      "id": "CR-28-36",
+      "file": ".opencode/plugins/code-review-opencode/reportfindings.ts",
+      "line": 126,
+      "claim": "OUTCOMES/isOutcome is a second hand-maintained copy of the outcome enum declared in REPORT_FINDINGS_SCHEMA, which reportFindingError otherwise walks programmatically.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/reportfindings.test.ts",
+      "reason": "The accepted outcome list is derived from REPORT_FINDINGS_SCHEMA and validated once."
+    },
+    {
+      "id": "CR-28-37",
+      "file": ".opencode/plugins/code-review-opencode/runner.ts",
+      "line": 320,
+      "claim": "Every child prompt embeds a valid result as the `Expected shape` example, so the parser has to hand-detect schema echoes at five call sites instead of making the example un-echoable.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/json.test.ts::every generated schema example is detected as an echo",
+      "reason": "Generated schema examples carry a sentinel, so a new result kind is detected without another hand-written branch."
+    },
+    {
+      "id": "CR-28-38",
+      "file": ".opencode/plugins/code-review-opencode/runner.ts",
+      "line": 386,
+      "claim": "startsWithText repeats the text-part extraction logic of messageText instead of sharing one transcript-part walker.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/runner.test.ts",
+      "reason": "messageText and startsWithText share one text-part walker."
+    },
+    {
+      "id": "CR-28-39",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 1309,
+      "claim": "Every exec in `resolveScope` repeats the same two-line aborted/timedOut guard instead of one shared helper.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts",
+      "reason": "Scope discovery uses one assertExec failure policy instead of repeated aborted/timedOut guards."
+    },
+    {
+      "id": "CR-28-40",
+      "file": ".opencode/plugins/code-review-opencode/scope.ts",
+      "line": 653,
+      "claim": "`filesFromDiff` is exported but has no caller; the PR file-list recovery its comment documents is implemented by `scanPatchChurn` and `gh pr diff --name-only`, leaving a second patch parser that is never exercised.",
+      "severity": "cleanup",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts",
+      "reason": "filesFromDiff is a thin view over the one patch walker instead of a second parser."
+    }
+  ],
+  "pastReviewItems": [
+    {
+      "id": "SELF16-27",
+      "source": "CODE_REVIEW_SELF16_TRIAGE.md",
+      "claim": "--comment classifies the target twice (resolveReviewRoot + resolveScope)",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/scope.test.ts",
+      "reason": "Host detection classifies once and passes the result into resolveScope."
+    },
+    {
+      "id": "SELF16-26",
+      "source": "CODE_REVIEW_SELF16_TRIAGE.md",
+      "claim": "A commented PR re-fetches URL/head with two gh pr view calls",
+      "disposition": "accepted",
+      "commit": null,
+      "test": "test/comment.test.ts",
+      "reason": "PR-number reviews use the URL/head captured with the patch; branch reviews fetch number, head, and base in one call. A missing field still needs a fallback read, which is not a correctness defect."
+    },
+    {
+      "id": "SELF19-16",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "Displayed diff command omits the orchestrator's -c hardening flags",
+      "disposition": "fixed",
+      "commit": "630436e",
+      "test": "test/prompts.test.ts::the three review agents share one read-only policy module",
+      "reason": "The displayed command carries the -c flags; the agent contract tells children to use them, and the fallback policy allows that command."
+    },
+    {
+      "id": "SELF19-20",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "Permission table duplicated across three agent files",
+      "disposition": "accepted",
+      "commit": null,
+      "test": "test/prompts.test.ts::the three review agents share one read-only policy module",
+      "reason": "The full table is installed from agent-policy.ts. The Markdown fallback repeats only the displayed diff command and the deny list, which is the minimum needed on a host without agent.transform; the test checks it stays in sync."
+    },
+    {
+      "id": "SELF19-22",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "scope.branch has two meanings",
+      "disposition": "accepted",
+      "commit": null,
+      "test": "test/comment.test.ts",
+      "reason": "For scopeKind=branch it is the user's diff base; otherwise it is the checked-out head. resolvePrInfo already re-reads the current branch for the branch kind. A headBranch field would be a larger scope-model change with no observed wrong output."
+    },
+    {
+      "id": "SELF19-24",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "if (scope.diffBase) is unreachable after the earlier guard",
+      "disposition": "fixed",
+      "commit": "394b177",
+      "test": "test/comment.test.ts",
+      "reason": "The dead branch is removed; the base checks run unconditionally for a branch-shaped review."
+    },
+    {
+      "id": "SELF19-26",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "waitForChild repeats its settle/stall blocks",
+      "disposition": "fixed",
+      "commit": "394b177",
+      "test": "test/runner.test.ts",
+      "reason": "The get-failure and backoff blocks are shared helpers."
+    },
+    {
+      "id": "SELF19-30",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "gitlabComment is exported but unused",
+      "disposition": "invalid",
+      "commit": null,
+      "test": null,
+      "reason": "gitlabComment is absent from the plugin; only the recovered-corpus research notes still mention it. The live path refuses GitLab comments."
+    },
+    {
+      "id": "SELF19-33",
+      "source": "CODE_REVIEW_SELF19_TRIAGE.md",
+      "claim": "multiHigh repeats multiMedium scaffolding",
+      "disposition": "accepted",
+      "commit": null,
+      "test": "test/prompts.test.ts",
+      "reason": "The prompts differ in angle count, cap, intro, and verifier fragment, and must stay byte-exact to the recovered corpus."
+    }
+  ]
+}
