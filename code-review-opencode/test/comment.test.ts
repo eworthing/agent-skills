@@ -312,17 +312,18 @@ test("a fork clone posts to the PR's base repository", async () => {
   assert.ok(api?.includes("repos/upstream/app/pulls/9/comments"))
 })
 
-test("a failed origin lookup refuses instead of posting to github.com", async () => {
+test("a GHE origin resolves its hostname once and reuses it", async () => {
   const scope = scopeOf(["src/a.ts"], { pr: 9 })
   let remoteCalls = 0
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") {
       remoteCalls++
-      return remoteCalls === 1
-        ? { stdout: "git@ghe.corp.example:acme/app.git" }
-        : { code: 1, stderr: "remote lookup failed" }
+      return { stdout: "git@ghe.corp.example:acme/app.git" }
     }
     if (argv[0] === "gh" && argv[1] === "auth") return { code: 0 }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv.includes("url")) {
+      return { stdout: "https://ghe.corp.example/acme/app/pull/9\n" }
+    }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
       return { stdout: "abc\n" }
     }
@@ -331,8 +332,11 @@ test("a failed origin lookup refuses instead of posting to github.com", async ()
     return { code: 1 }
   })
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
-  assert.match(text, /could not resolve the origin remote/)
-  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
+  assert.equal(remoteCalls, 1)
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  assert.ok(api?.includes("--hostname"))
+  assert.ok(api?.includes("ghe.corp.example"))
 })
 
 test("a GitHub Enterprise remote is recognized when gh is authenticated to it", async () => {

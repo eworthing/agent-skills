@@ -597,6 +597,36 @@ export function normalizeCandidatesCall(
   return { ok: true, value: { candidates, dropped }, notes }
 }
 
+type EvidenceResult = {
+  verdict: Verdict["verdict"]
+  evidence: string
+  /** The verdict was kept despite missing evidence. */
+  missing: boolean
+}
+
+/**
+ * Both the single and grouped verifier accept `reason`/`justification` as
+ * aliases for `evidence`, and both downgrade an unevidenced CONFIRMED verdict
+ * in the tolerant text path. Keep that policy in one place.
+ */
+function verdictWithEvidence(
+  verdict: Verdict["verdict"],
+  value: Record<string, unknown>,
+  tolerateMissing: boolean,
+): EvidenceResult | undefined {
+  const evidence = str(value.evidence) ?? str(value.reason) ?? str(value.justification)
+  if (evidence) return { verdict, evidence, missing: false }
+  if (!tolerateMissing) return undefined
+  // A CONFIRMED verdict without evidence is not auditable. The text fallback
+  // keeps the candidate for recall, but downgrades it to PLAUSIBLE so an
+  // unverified claim is never reported or posted as confirmed.
+  return {
+    verdict: verdict === "CONFIRMED" ? "PLAUSIBLE" : verdict,
+    evidence: NO_EVIDENCE,
+    missing: true,
+  }
+}
+
 export function normalizeVerdictCall(
   value: unknown,
   opts: { tolerateMissingEvidence?: boolean } = {},
@@ -604,22 +634,17 @@ export function normalizeVerdictCall(
   if (!isRecord(value)) return { ok: false, error: "expected an object with verdict and evidence" }
   const verdict = normalizeVerdictText(value.verdict)
   if (!verdict) return { ok: false, error: "verdict must be CONFIRMED, PLAUSIBLE, or REFUTED" }
-  const evidence = str(value.evidence) ?? str(value.reason) ?? str(value.justification)
-  if (!evidence) {
-    if (!opts.tolerateMissingEvidence) return { ok: false, error: "evidence is required for a verdict" }
-    // A CONFIRMED verdict without evidence is not auditable. The text fallback
-    // keeps the candidate for recall, but downgrades it to PLAUSIBLE so an
-    // unverified claim is never reported or posted as confirmed.
-    const safe = verdict === "CONFIRMED" ? "PLAUSIBLE" : verdict
-    return {
-      ok: true,
-      value: { verdict: safe, evidence: NO_EVIDENCE },
-      notes: [
-        `evidence was missing; recorded as (no evidence provided)${safe !== verdict ? " and downgraded to PLAUSIBLE" : ""}`,
-      ],
-    }
+  const safe = verdictWithEvidence(verdict, value, opts.tolerateMissingEvidence === true)
+  if (!safe) return { ok: false, error: "evidence is required for a verdict" }
+  return {
+    ok: true,
+    value: { verdict: safe.verdict, evidence: safe.evidence },
+    notes: safe.missing
+      ? [
+          `evidence was missing; recorded as (no evidence provided)${safe.verdict !== verdict ? " and downgraded to PLAUSIBLE" : ""}`,
+        ]
+      : [],
   }
-  return { ok: true, value: { verdict, evidence }, notes: [] }
 }
 
 export function normalizeGroupVerdictsCall(
@@ -647,26 +672,27 @@ export function normalizeGroupVerdictsCall(
         return { note: `verdicts[${i}] dropped: index must be a non-negative integer` }
       }
       if (!verdict) return { note: `verdicts[${i}] dropped: verdict is invalid` }
-      const evidence = str(item.evidence) ?? str(item.reason) ?? str(item.justification)
-      if (!evidence) {
+      const safe = verdictWithEvidence(verdict, item, opts.tolerateMissingEvidence === true)
+      if (!safe) {
         // A verdict without evidence cannot be audited; the strict tool
-        // boundary rejects it so the verifier re-emits. The text fallback keeps
-        // it with a placeholder so the candidate is not lost.
+        // boundary rejects it so the verifier re-emits.
+        missingEvidence++
+        return { note: `verdicts[${i}] dropped: evidence is required`, dropped: true }
+      }
+      if (safe.missing) {
+        // The text fallback keeps the candidate with a placeholder so it is
+        // not lost; it is still counted as a missing-evidence repair.
         missingEvidence++
         const note = `verdicts[${i}] dropped: evidence is required`
-        if (opts.tolerateMissingEvidence && !seen.has(index)) {
+        if (!seen.has(index)) {
           seen.add(index)
-          return {
-            value: { index, verdict: verdict === "CONFIRMED" ? "PLAUSIBLE" : verdict, evidence: NO_EVIDENCE },
-            note,
-            dropped: true,
-          }
+          return { value: { index, verdict: safe.verdict, evidence: safe.evidence }, note, dropped: true }
         }
         return { note, dropped: true }
       }
       if (seen.has(index)) return { note: `verdicts[${i}] dropped: duplicate index ${index}` }
       seen.add(index)
-      return { value: { index, verdict, evidence } }
+      return { value: { index, verdict: safe.verdict, evidence: safe.evidence } }
     },
   })
   if (missingEvidence > 0 && !opts.tolerateMissingEvidence) {

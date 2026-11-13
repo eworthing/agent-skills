@@ -220,7 +220,14 @@ const OTHER_COMMENT_IGNORED = `
 
 function decorate(
   text: string,
-  opts: { target?: string; kind: OutputKind; fix: boolean; comment: boolean; cellID: string; host?: Host },
+  opts: {
+    target?: string
+    kind: OutputKind
+    fix: boolean
+    comment: boolean
+    suppressFixLater?: boolean
+    host?: Host
+  },
 ): string {
   let out = text
   if (opts.target) out = `Review target: \`${opts.target}\`\n\n${out}`
@@ -235,7 +242,7 @@ function decorate(
           : OTHER_COMMENT_IGNORED
   }
   if (opts.fix) out += fixBlock(opts.kind)
-  if (opts.kind === "reportfindings" && opts.cellID !== "o5-bmin") out += FIX_LATER
+  if (opts.kind === "reportfindings" && !opts.suppressFixLater) out += FIX_LATER
   return out
 }
 
@@ -499,7 +506,7 @@ async function resolveAndRun(
       kind,
       fix: applyFix,
       comment,
-      cellID: cell.id,
+      suppressFixLater: cell.suppressFixLater,
       host,
     })
 
@@ -814,6 +821,30 @@ export default Plugin.define({
     /** Last outcome list posted per session, so a repeated re-report is quiet. */
     const reportedOutcomeHashes = new Map<string, string>()
     const MAX_OUTCOME_HASHES = 200
+    /** Show a completed list in the session, trying the inbox before a turn. */
+    const deliverToSession = async (
+      sessionID: string,
+      text: string,
+    ): Promise<string | undefined> => {
+      let failure: string | undefined
+      if (typeof ctx.session.synthetic === "function") {
+        try {
+          await ctx.session.synthetic({ sessionID, text, resume: false })
+          return undefined
+        } catch (error) {
+          failure = error instanceof Error ? error.message : String(error)
+        }
+      }
+      if (typeof ctx.session.prompt === "function") {
+        try {
+          await ctx.session.prompt({ sessionID, text })
+          return undefined
+        } catch (error) {
+          failure = error instanceof Error ? error.message : String(error)
+        }
+      }
+      return failure ?? "host has no synthetic or prompt delivery"
+    }
     // The schema tools are registered globally, so a stray call from a
     // non-review session would otherwise pin its payload for the process
     // lifetime. Current review children are removed by the runner.
@@ -924,25 +955,7 @@ export default Plugin.define({
               // Post first, then remember the list. Caching before delivery
               // skipped the model's identical re-report after one transient
               // host failure, so the per-finding outcomes never appeared.
-              if (typeof ctx.session.synthetic === "function") {
-                try {
-                  await ctx.session.synthetic({
-                    sessionID: context.sessionID,
-                    text: outcomeSummary,
-                    resume: false,
-                  })
-                } catch (error) {
-                  deliveryError = error instanceof Error ? error.message : String(error)
-                }
-              } else if (typeof ctx.session.prompt === "function") {
-                // Hosts without synthetic still need the outcome list in the
-                // transcript; otherwise --fix leaves every finding unresolved.
-                try {
-                  await ctx.session.prompt({ sessionID: context.sessionID, text: outcomeSummary })
-                } catch (error) {
-                  deliveryError = error instanceof Error ? error.message : String(error)
-                }
-              }
+              deliveryError = await deliverToSession(context.sessionID, outcomeSummary)
               if (deliveryError === undefined) {
                 // Bound the map: a long-lived process must not retain one entry
                 // per session that ever used --fix.

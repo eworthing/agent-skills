@@ -8,6 +8,7 @@
  * Code parses identically here.
  */
 import { HARD_FINDINGS_CAP, LEVELS, coerceLevel, normalizeLevel, type Cell, type Level } from "./cells.ts"
+import { positiveLine } from "./finding.ts"
 
 export type Parsed = {
   explicit?: Level
@@ -68,8 +69,7 @@ export function fixAction(fix: boolean, dryRun: boolean, json: boolean): "none" 
  * healthy.
  */
 export function resolveConcurrency(explicit: number | undefined, env: string | undefined): number {
-  const raw = explicit ?? Number(env ?? 4)
-  return Number.isFinite(raw) && raw >= 1 ? Math.trunc(raw) : 4
+  return positiveLine(explicit) ?? positiveLine(env) ?? 4
 }
 
 const EXTENSION_BOOL = new Set([
@@ -92,6 +92,40 @@ function isOptionToken(token: string): boolean {
 
 function isLevelToken(token: string): boolean {
   return normalizeLevel(token) !== undefined || token.toLowerCase() === "ultra"
+}
+
+/** Assign one extension value; false means the token is not an option. */
+function assignExtensionValue(
+  flags: ExtensionFlags,
+  name: string,
+  value: string | undefined,
+): boolean {
+  switch (name) {
+    case "mode":
+      if (!value) return false
+      if (flags.mode === undefined) flags.mode = value
+      return true
+    case "driver":
+      if (value !== "engine" && value !== "prompt") return false
+      flags.driver = value
+      return true
+    case "family":
+      if (!value) return false
+      if (!flags.family) flags.family = value
+      return true
+    case "model":
+      if (!value) return false
+      if (!flags.model) flags.model = value
+      return true
+    case "concurrency": {
+      const n = positiveLine(value)
+      if (n === undefined) return false
+      flags.concurrency = n
+      return true
+    }
+    default:
+      return false
+  }
 }
 
 export function parseExtensions(input: string): { rest: string; flags: ExtensionFlags } {
@@ -144,16 +178,9 @@ export function parseExtensions(input: string): { rest: string; flags: Extension
     }
     if (attached && EXTENSION_VALUE.has(name)) {
       if (canStripBoolean(i)) {
-        // `--mode=` is an empty assignment, not a value. Storing "" would
-        // bypass the env fallback (`??` does not treat "" as absent) and would
-        // also block a later valid flag, so leave the slot untouched.
-        if (name === "mode" && attachedValue && flags.mode === undefined) flags.mode = attachedValue
-        else if (name === "driver" && (attachedValue === "engine" || attachedValue === "prompt")) flags.driver = attachedValue
-        else if (name === "family" && attachedValue && !flags.family) flags.family = attachedValue
-        else if (name === "model" && attachedValue && !flags.model) flags.model = attachedValue
-        else if (name === "concurrency" && attachedValue && /^\d+$/.test(attachedValue)) {
-          flags.concurrency = Math.max(1, Number(attachedValue))
-        }
+        // `--mode=` is an empty assignment, not a value. assignExtensionValue
+        // leaves the slot untouched so the env fallback still applies.
+        assignExtensionValue(flags, name, attachedValue)
       } else {
         push(token)
       }
@@ -195,27 +222,11 @@ export function parseExtensions(input: string): { rest: string; flags: Extension
       const hasValue = next !== undefined && !isOptionToken(next)
       if (canStripValue(i, hasValue)) {
         const value = hasValue ? next : undefined
-        let accepted = false
         // `mode`/`family`/`model` accept any non-empty value; a repeated flag
         // is still consumed (the first value wins) rather than leaking its
         // value into the target. `driver` and `concurrency` have a closed
         // grammar, so an invalid value stays in the command text.
-        if (name === "mode" && value) {
-          if (flags.mode === undefined) flags.mode = value
-          accepted = true
-        } else if (name === "driver" && (value === "engine" || value === "prompt")) {
-          flags.driver = value
-          accepted = true
-        } else if (name === "family" && value) {
-          if (!flags.family) flags.family = value
-          accepted = true
-        } else if (name === "model" && value) {
-          if (!flags.model) flags.model = value
-          accepted = true
-        } else if (name === "concurrency" && value && /^\d+$/.test(value)) {
-          flags.concurrency = Math.max(1, Number(value))
-          accepted = true
-        }
+        const accepted = assignExtensionValue(flags, name, value)
         // Consume the value only when it was accepted. An invalid
         // `--driver high` must leave `high` in the command grammar so it can
         // still be read as the effort level instead of silently disappearing.
@@ -252,19 +263,10 @@ export type StructuredInvocation = {
 
 /** Normalize a typed `maxFindings` the same way the CLI parser does. */
 function structuredMaxFindings(value: unknown): number | "all" | undefined {
-  if (value === "all") return "all"
-  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return value
-  // Models routinely stringify integers ("5"); accepting it here keeps the
-  // value numeric, so the engine's Number.isFinite caps still apply.
-  if (typeof value === "string") {
-    const text = value.trim().toLowerCase()
-    if (text === "all") return "all"
-    if (/^\d+$/.test(text)) {
-      const n = Number(text)
-      if (Number.isSafeInteger(n) && n > 0) return n
-    }
-  }
-  return undefined
+  if (typeof value === "string" && value.trim().toLowerCase() === "all") return "all"
+  // Reuse the shared positive-integer grammar: models routinely stringify
+  // integers ("5"), and the value must stay numeric for the engine caps.
+  return positiveLine(value)
 }
 
 /**
@@ -365,9 +367,8 @@ export function parseArgs(raw: string): Parsed {
   if (rawValue !== undefined) {
     if (rawValue === "all" || rawValue === "default") {
       maxFindings = rawValue
-    } else if (/^\d+$/.test(rawValue)) {
-      const n = Number(rawValue)
-      maxFindings = Number.isSafeInteger(n) && n > 0 ? n : undefined
+    } else {
+      maxFindings = positiveLine(rawValue)
     }
   }
   const maxFindingsIgnored = rawValue !== undefined && maxFindings === undefined
@@ -485,7 +486,7 @@ export function resolveMaxFindings(
     parsed.maxFindings === undefined &&
     cell.id !== "low-sonnet5" &&
     lastUsed !== undefined &&
-    (lastUsed === "all" || (typeof lastUsed === "number" && Number.isSafeInteger(lastUsed) && lastUsed > 0))
+    (lastUsed === "all" || positiveLine(lastUsed) !== undefined)
 
   // `--max-findings default` explicitly clears the stored choice; it must not
   // fall back to `lastUsed`.

@@ -277,7 +277,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     ...(timeoutMs !== undefined && timeoutMs > 0 ? { timeoutMs } : {}),
   }
   const call = (argv: string[]) => exec(argv, deps.cwd, execOpts)
-  const host = deps.host ?? (await detectHost(deps.cwd, exec, execOpts))
+  // Resolve the host and its hostname together. Calling detectHost() and then
+  // re-reading the remote to recover the hostname doubles the probe and can
+  // disagree if the remote changes between calls.
+  const hostDetails =
+    deps.host === undefined ? await detectHostDetails(deps.cwd, exec, execOpts) : undefined
+  const host = deps.host ?? hostDetails?.host ?? "other"
   if (host === "gitlab") {
     return "`--comment` was ignored: GitLab merge requests are out of scope for this port."
   }
@@ -302,11 +307,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // GHE comment to github.com (or fails auth there). The caller can pass the
   // hostname it already resolved; otherwise resolve it once here. If the
   // lookup fails, refuse rather than silently targeting github.com.
+  const resolvedHostname = deps.githubHostname ?? hostDetails?.hostname
   let githubHostname =
-    deps.githubHostname && deps.githubHostname.toLowerCase() !== "github.com"
-      ? deps.githubHostname
+    resolvedHostname && resolvedHostname.toLowerCase() !== "github.com"
+      ? resolvedHostname
       : undefined
-  if (deps.githubHostname === undefined) {
+  if (resolvedHostname === undefined) {
     const remote = await call(["git", "remote", "get-url", "origin"])
     if (remote.code !== 0 || !remote.stdout.trim()) {
       return "`--comment` was ignored: could not resolve the origin remote."

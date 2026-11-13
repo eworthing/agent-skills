@@ -240,6 +240,23 @@ function retryInstruction(schemaName: SchemaName): string {
 Expected shape: \`${schemaExample(schemaName)}\``
 }
 
+/**
+ * Record a host `wait` hint without closing over the polling activation. A
+ * local `.then(() => (waitResolved = true))` keeps the whole waitForChild
+ * scope, including the settled transcript with the embedded diff, alive for as
+ * long as the host leaves the wait pending.
+ */
+function trackWait(wait: Promise<void>, state: { resolved: boolean }): void {
+  void wait.then(
+    () => {
+      state.resolved = true
+    },
+    () => {
+      /* a rejected wait is not a gone child; keep polling */
+    },
+  )
+}
+
 function assistantText(messages: readonly unknown[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i] as { type?: string; content?: unknown }
@@ -423,15 +440,8 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
     // queued, before the child's turn starts. A rejection is not proof the
     // child vanished either. Settle only from a new transcript message or a
     // real busy/idle edge; the stall watchdog bounds the wait.
-    let waitResolved = false
-    void ctx.session.wait({ sessionID }).then(
-      () => {
-        waitResolved = true
-      },
-      () => {
-        /* keep polling; a rejected wait is not a gone child */
-      },
-    )
+    const waitState = { resolved: false }
+    trackWait(ctx.session.wait({ sessionID }), waitState)
     // Fallback for hosts whose session.get omits `time`: use the message
     // stream instead of declaring the live child gone.
     const settleFromMessages = async (): Promise<boolean> => {
@@ -566,7 +576,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           // pre-prompt baseline. Each check reads the full transcript (the
           // prompt embeds the diff), so use the same exponential backoff as
           // the other transcript-reading branches.
-          if (waitResolved) {
+          if (waitState.resolved) {
             if (await settleFromMessages()) return
             if (stallMs > 0 && Date.now() - lastActivity >= stallMs) {
               await interrupt()
@@ -709,7 +719,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         if (!text) return null
         const preservation =
           req.schemaName === "candidates" || req.schemaName === "report"
-            ? `Preserve every finding. Each candidate must include \`file\`, \`summary\`, and \`failure_scenario\`; when the text does not state a failure scenario, use the closest concrete consequence it implies (or "not stated in the step-limited summary") rather than omitting the field.`
+            ? `Preserve every finding. Each candidate must include \`file\`, \`summary\`, and \`failure_scenario\`; when the text does not state a failure scenario, use the closest concrete consequence it implies (or "${STEP_LIMIT_PLACEHOLDER}") rather than omitting the field.`
             : req.schemaName === "verdict" || req.schemaName === "groupVerdicts"
               ? "Preserve every verdict and its evidence; do not omit a verdict whose evidence is quoted in the text."
               : "Preserve every decision and its merge list; do not drop an index the text names."

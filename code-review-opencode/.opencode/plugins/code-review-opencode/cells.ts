@@ -44,6 +44,8 @@ export type Cell = {
   finderBudgetHint: boolean
   /** Set when a workflow version has no recipe for the requested level. */
   fallbackNotice?: string
+  /** The reference's minimal prompt does not carry the FIX_LATER block. */
+  suppressFixLater?: boolean
 }
 
 const cell = (c: Partial<Cell> & Pick<Cell, "id" | "engine">): Cell => ({
@@ -65,6 +67,19 @@ const cell = (c: Partial<Cell> & Pick<Cell, "id" | "engine">): Cell => ({
 /* ------------------------------------------------------------------ */
 /* Claude Code v2.1.318 (current)                                     */
 /* ------------------------------------------------------------------ */
+
+const v318XhighMax = (id: string): Cell =>
+  cell({
+    id,
+    engine: "multi",
+    correctnessAngles: 5,
+    cleanupMode: "per-angle",
+    perAngle: 8,
+    maxFindings: 15,
+    verify: "3state",
+    sweep: true,
+    semanticMerge: true,
+  })
 
 const V318_CELLS: Record<string, Cell> = {
   low: cell({
@@ -99,28 +114,8 @@ const V318_CELLS: Record<string, Cell> = {
     maxFindings: 10,
     verify: "recall",
   }),
-  xhigh: cell({
-    id: "xhigh",
-    engine: "multi",
-    correctnessAngles: 5,
-    cleanupMode: "per-angle",
-    perAngle: 8,
-    maxFindings: 15,
-    verify: "3state",
-    sweep: true,
-    semanticMerge: true,
-  }),
-  max: cell({
-    id: "max",
-    engine: "multi",
-    correctnessAngles: 5,
-    cleanupMode: "per-angle",
-    perAngle: 8,
-    maxFindings: 15,
-    verify: "3state",
-    sweep: true,
-    semanticMerge: true,
-  }),
+  xhigh: v318XhighMax("xhigh"),
+  max: v318XhighMax("max"),
   "o48-low-v1": cell({
     id: "o48-low-v1",
     engine: "inline",
@@ -158,6 +153,7 @@ const V318_CELLS: Record<string, Cell> = {
     inlineVariant: "minimal",
     maxFindings: 15,
     verify: "none",
+    suppressFixLater: true,
   }),
 }
 
@@ -196,6 +192,23 @@ export const V318_FAMILIES: Record<string, Record<string, string>> = {
 /* Extracted workflow v2.1.162                                        */
 /* ------------------------------------------------------------------ */
 
+const v162XhighMax = (id: string): Cell =>
+  cell({
+    id,
+    engine: "multi",
+    correctnessAngles: 5,
+    cleanupMode: "per-angle",
+    cleanupAngles: 4,
+    perAngle: 8,
+    maxFindings: 15,
+    verify: "3state",
+    synthesis: "text",
+    cleanupLenses: "162",
+    verifyBudget: 25,
+    streaming: true,
+    sweep: true,
+  })
+
 const V162_CELLS: Record<string, Cell> = {
   high: cell({
     id: "wf162-high",
@@ -211,41 +224,26 @@ const V162_CELLS: Record<string, Cell> = {
     verifyBudget: 25,
     streaming: true,
   }),
-  xhigh: cell({
-    id: "wf162-xhigh",
-    engine: "multi",
-    correctnessAngles: 5,
-    cleanupMode: "per-angle",
-    cleanupAngles: 4,
-    perAngle: 8,
-    maxFindings: 15,
-    verify: "3state",
-    synthesis: "text",
-    cleanupLenses: "162",
-    verifyBudget: 25,
-    streaming: true,
-    sweep: true,
-  }),
-  max: cell({
-    id: "wf162-max",
-    engine: "multi",
-    correctnessAngles: 5,
-    cleanupMode: "per-angle",
-    cleanupAngles: 4,
-    perAngle: 8,
-    maxFindings: 15,
-    verify: "3state",
-    synthesis: "text",
-    cleanupLenses: "162",
-    verifyBudget: 25,
-    streaming: true,
-    sweep: true,
-  }),
+  xhigh: v162XhighMax("wf162-xhigh"),
+  max: v162XhighMax("wf162-max"),
 }
 
 /* ------------------------------------------------------------------ */
 /* Extracted workflow v2.1.221                                        */
 /* ------------------------------------------------------------------ */
+
+const v221XhighMax = (id: string): Cell =>
+  cell({
+    id,
+    engine: "multi",
+    correctnessAngles: 5,
+    cleanupMode: "merged",
+    perAngle: 8,
+    maxFindings: 15,
+    verify: "grouped",
+    synthesis: "index",
+    sweep: true,
+  })
 
 const V221_CELLS: Record<string, Cell> = {
   high: cell({
@@ -258,28 +256,8 @@ const V221_CELLS: Record<string, Cell> = {
     verify: "grouped",
     synthesis: "index",
   }),
-  xhigh: cell({
-    id: "wf221-xhigh",
-    engine: "multi",
-    correctnessAngles: 5,
-    cleanupMode: "merged",
-    perAngle: 8,
-    maxFindings: 15,
-    verify: "grouped",
-    synthesis: "index",
-    sweep: true,
-  }),
-  max: cell({
-    id: "wf221-max",
-    engine: "multi",
-    correctnessAngles: 5,
-    cleanupMode: "merged",
-    perAngle: 8,
-    maxFindings: 15,
-    verify: "grouped",
-    synthesis: "index",
-    sweep: true,
-  }),
+  xhigh: v221XhighMax("wf221-xhigh"),
+  max: v221XhighMax("wf221-max"),
 }
 
 /* ------------------------------------------------------------------ */

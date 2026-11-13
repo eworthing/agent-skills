@@ -708,6 +708,27 @@ function diffSource(scope: ScopeBlock): string {
   return "The diff is included below. Use it directly; do not re-run the diff command."
 }
 
+// A max-effort fan-out renders the same scope for every finder. Cache both
+// convention variants per ScopeBlock; the WeakMap releases them with the run.
+const finderScopeCache = new WeakMap<
+  ScopeBlock,
+  { withConventions?: string; withoutConventions?: string }
+>()
+
+function finderScope(scope: ScopeBlock, includeConventions: boolean): string {
+  let entry = finderScopeCache.get(scope)
+  if (!entry) {
+    entry = {}
+    finderScopeCache.set(scope, entry)
+  }
+  const key = includeConventions ? "withConventions" : "withoutConventions"
+  const cached = entry[key]
+  if (cached !== undefined) return cached
+  const rendered = renderScope(scope, { includeConventions })
+  entry[key] = rendered
+  return rendered
+}
+
 export function finderPrompt(opts: {
   label: string
   scope: ScopeBlock
@@ -730,9 +751,7 @@ export function finderPrompt(opts: {
     : opts.label === "conventions"
   return `## Code-review finder — ${opts.label}
 
-${renderScope(opts.scope, {
-  includeConventions: includesConventions,
-})}
+${finderScope(opts.scope, includesConventions)}
 ${diffSource(opts.scope)}
 
 ${lead}${opts.angleText}

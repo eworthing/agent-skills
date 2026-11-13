@@ -42,11 +42,32 @@ duplication/efficiency cleanups.
 | 16 | Non-JSON runs apply the 32-entry cap even though the engine renders text | The 32-entry cap is the reference `ReportFindings` host-schema contract; the engine result is still the same report, and the cap is required when a host renders the typed payload. |
 | 20 | Unknown `session.context` envelopes become `[]` | There is no recoverable transcript shape to parse. The runner logs the empty response and retries; inventing a mapping would risk reading an unrelated array. |
 
-## Pending: cleanup findings 21-47
+## Fixed in batch 2
 
-The duplication/efficiency group is being handled in a separate batch. It
-includes repeated agent permission tables (format-level constraint), sweep
-candidate ingestion, scope re-rendering, unused `filesOnly` plumbing,
-duplicated cell definitions, sequential git/numstat calls, duplicated comment
-guidance, verdict/decision normalizers, prompt-block duplication, synthesis
-branch duplication, and the wait-reaction retention leak.
+| # | Finding | Fix |
+|---|---|---|
+| 23 | Finder prompts re-rendered the scope for every finder | Added a per-`ScopeBlock` cache for both convention variants, matching the verifier cache. |
+| 24 | Unused `filesOnly` plumbing | Removed the option, its early return, and its duplicate PR-name fallback; the full-review fallback remains. |
+| 25 | xhigh/max cells duplicated field-for-field | Table-local `v318XhighMax`, `v162XhighMax`, and `v221XhighMax` builders. |
+| 26 | Branch target re-ran its name-status listing | The first listing is reused by the plan. |
+| 27 | Conventions files were read twice (size, then content) | Each source is read once at the total budget and reused for sizing and rendering. |
+| 28 | Numstat fallback ran sequentially | Independent numstat calls now run with `Promise.all`. |
+| 31 | Grouped verdict normalizer duplicated the single-verdict policy | Shared `verdictWithEvidence()` fallback/downgrade helper. |
+| 33 | Positive-integer grammar duplicated in max-findings parsing | Reuses `positiveLine()` at all three sites. |
+| 34 | Concurrency parsing duplicated with different invalid handling | Reuses `positiveLine()` and `resolveConcurrency()`. |
+| 35 | Attached/separate extension value assignment repeated | Shared `assignExtensionValue()` switch. |
+| 39 | Semantic-merge branch duplicated index-synthesis application | Shared `applyIndexSynthesis()` with per-branch fallbacks. |
+| 40 | Formatter prompt hard-coded the step-limit placeholder | Uses `STEP_LIMIT_PLACEHOLDER`. |
+| 41 | Duplicate `gh pr diff --name-only` fallback | Removed with the files-only path; one full-review fallback remains. |
+| 42 | Outcome delivery lacked the prompt fallback | Shared `deliverToSession()` tries synthetic, then prompt. |
+| 44 | FIX_LATER suppression keyed on the literal `o5-bmin` | Added `Cell.suppressFixLater`. |
+| 45 | Sequential storage reads | `Promise.all`. |
+| 46 | Comment posting re-read the origin to recover its hostname | `detectHostDetails()` now supplies both host and hostname. |
+| 47 | A pending host wait retained the polling activation | The wait hint writes into a small state object outside the activation. |
+
+## Remaining cleanup findings
+
+21, 22, 29, 30, 32, 36, 37, 38 are duplication/efficiency observations that
+need either a larger refactor or a prompt-fidelity decision. They are low
+severity; none changes observed behavior. Run 19 will decide whether the
+remaining set is small enough to close the gate or needs another batch.

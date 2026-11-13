@@ -581,17 +581,6 @@ test("an existing path whose name contains .. is reviewed as a path, not a range
   rmSync(dir, { recursive: true, force: true })
 })
 
-test("filesOnly discovers the changed file list without capturing a diff", async () => {
-  const dir = makeRepo()
-  writeFileSync(join(dir, "a.ts"), "export const a = 22\n")
-  const scope = await resolveScope({ cwd: dir, filesOnly: true })
-  assert.deepEqual(scope.files, ["a.ts"])
-  assert.equal(scope.diffText, "")
-  assert.equal(scope.diffLines, 0)
-  assert.equal(scope.conventions, "(none noted)")
-  rmSync(dir, { recursive: true, force: true })
-})
-
 test("diffSideForLine prefers the head side when a replacement reuses the number", () => {
   const patch = [
     "diff --git a/src/a.ts b/src/a.ts",
@@ -811,33 +800,6 @@ test("a rename whose new path contains ' b/' keeps both real paths", () => {
     "rename to y b/z",
   ].join("\n")
   assert.deepEqual(filesFromDiff(patch), ["x", "y b/z"])
-})
-
-test("a files-only PR probe falls back to gh pr diff --name-only when metadata fails", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "code-review-pr-filesonly-"))
-  mkdirSync(join(dir, ".git"))
-  const calls: string[][] = []
-  const exec: Exec = async (argv) => {
-    calls.push(argv)
-    if (argv[0] === "git" && argv.includes("rev-parse") && argv.includes("--show-toplevel")) {
-      return { code: 0, stdout: `${dir}\n`, stderr: "" }
-    }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
-      return { code: 1, stdout: "", stderr: "api error" }
-    }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "diff" && argv.includes("--name-only")) {
-      return { code: 0, stdout: "src/a.ts\nsrc/b.ts\n", stderr: "" }
-    }
-    return { code: 0, stdout: "", stderr: "" }
-  }
-  const scope = await resolveScope({ cwd: dir, target: "42", exec, filesOnly: true })
-  assert.deepEqual(scope.files, ["src/a.ts", "src/b.ts"])
-  assert.equal(scope.diffText, "")
-  assert.equal(
-    calls.some((argv) => argv[0] === "gh" && argv[1] === "pr" && argv[2] === "diff" && argv.includes("--name-only")),
-    true,
-  )
-  rmSync(dir, { recursive: true, force: true })
 })
 
 test("a timed-out HEAD probe is a discovery failure, not an unborn repository", async () => {

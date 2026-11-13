@@ -1246,19 +1246,31 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     }
   }
 
-  if (synthesisEnabled && cell.synthesis === "index") {
-    const synthesized = await runIndexSynthesis("synthesize")
+  const applyIndexSynthesis = (
+    synthesized: { findings: Finding[]; summary: string; truncated: boolean } | null,
+    warning: string,
+    fallback: () => void,
+  ): void => {
     if (!synthesized) {
-      warnings.push("synthesis returned no usable decisions; returning ranked findings unmerged")
+      warnings.push(warning)
       partial = true
-      unmergedFallback(
-        "Synthesis step was skipped or its decisions were unusable — returning verified findings ranked, unmerged.",
-      )
-    } else {
-      findings = synthesized.findings
-      summary = synthesized.summary
-      truncatedByCap = synthesized.truncated
+      fallback()
+      return
     }
+    findings = synthesized.findings
+    summary = synthesized.summary
+    truncatedByCap = synthesized.truncated
+  }
+
+  if (synthesisEnabled && cell.synthesis === "index") {
+    applyIndexSynthesis(
+      await runIndexSynthesis("synthesize"),
+      "synthesis returned no usable decisions; returning ranked findings unmerged",
+      () =>
+        unmergedFallback(
+          "Synthesis step was skipped or its decisions were unusable — returning verified findings ranked, unmerged.",
+        ),
+    )
   } else if (synthesisEnabled && cell.synthesis === "text") {
     emit({ type: "phase", phase: "Synthesize" })
     const value = await runner({
@@ -1400,19 +1412,16 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   } else if (opts.semanticMerge && ranked.length > 1) {
     // Platform equivalent of the reference model's in-context semantic merge
     // and ranking: a synthesizer child returns merge/rank decisions by index.
-    const synthesized = await runIndexSynthesis("merge")
-    if (!synthesized) {
-      warnings.push("semantic merge returned no usable decisions; deterministic merge used")
-      partial = true
-      const fallback = deterministicReport(ranked, cap, level)
-      findings = fallback.findings
-      summary = fallback.summary
-      truncatedByCap = fallback.truncated
-    } else {
-      findings = synthesized.findings
-      summary = synthesized.summary
-      truncatedByCap = synthesized.truncated
-    }
+    applyIndexSynthesis(
+      await runIndexSynthesis("merge"),
+      "semantic merge returned no usable decisions; deterministic merge used",
+      () => {
+        const fallback = deterministicReport(ranked, cap, level)
+        findings = fallback.findings
+        summary = fallback.summary
+        truncatedByCap = fallback.truncated
+      },
+    )
   } else {
     // v2.1.318 without the synthesizer: the deterministic equivalent keeps the
     // verified order and merges exact duplicates only.

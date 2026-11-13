@@ -136,8 +136,6 @@ export type ScopeOptions = {
   numstatTimeoutMs?: number
   /** Skip the numstat/PR line-count pass when the cell has no finder budget. */
   includeDiffLines?: boolean
-  /** Discover the changed file list only: no patch capture, churn, or conventions. */
-  filesOnly?: boolean
 }
 
 /**
@@ -987,13 +985,17 @@ export function discoverConventions(
   const rootPaths = paths.filter((p) => dirname(p) === root)
   const userPath = paths.find((p) => p === userClaude)
   const otherPaths = paths.filter((p) => dirname(p) !== root && p !== userPath)
-  // Size each source in the same unit readCapped uses: UTF-16 code units.
-  // statSync reports bytes, which charges non-ASCII text up to three times its
-  // real character cost and can strand most of the character budget.
+  // Read each source once, at the total budget, and reuse that text for both
+  // sizing and rendering. Measuring with a full read and then reading the file
+  // again doubled the I/O on every review; measuring with statSync would count
+  // bytes and overcharge non-ASCII text by up to three times.
+  const contents = new Map<string, string>()
   const sizes = new Map<string, number>()
   for (const p of paths) {
     try {
-      sizes.set(p, readFileSync(p, "utf8").length)
+      const text = readCapped(p, budget)
+      contents.set(p, text)
+      sizes.set(p, text.length)
     } catch {
       sizes.set(p, 0)
     }
@@ -1077,11 +1079,10 @@ export function discoverConventions(
     if (used >= budget) break
     const header = headers[i] ?? headerFor(p)
     const cap = caps.get(p) ?? 0
-    const text = readCapped(
-      p,
-      Math.max(0, Math.min(cap, contentBudget - contentUsed)),
-      sizeOf(p),
-    )
+    const cached = contents.get(p)
+    if (cached === undefined) continue
+    const limit = Math.max(0, Math.min(cap, contentBudget - contentUsed))
+    const text = cached.length <= limit ? cached : truncateText(cached, limit)
     if (!text) continue
     chunks.push(header + text)
     used += header.length + text.length
@@ -1295,31 +1296,27 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
 
   if (targetPr !== undefined) {
     pr = targetPr
-    // A files-only probe (the /verify follow-up) needs the PR file list, not
-    // the patch; skipping this download avoids a second large fetch.
-    if (!opts.filesOnly) {
-      // The patch and metadata calls are independent and keyed by the same PR
-      // number. Run them together. The metadata call is not optional even
-      // when the finder budget is not needed: it is the only reliable file
-      // list for a PR whose patch has no parseable `diff --git` blocks
-      // (binary-only or otherwise patch-less changes).
-      const [gh, meta] = await Promise.all([
-        exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts()),
-        exec(
-          ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions"],
-          gitCwd,
-          callOpts(),
-        ),
-      ])
-      prMeta = meta
-      if (gh.aborted) throw new Error("PR diff discovery was cancelled.")
-      if (gh.timedOut) throw new Error(`gh pr diff timed out${timeoutSuffix}.`)
-      if (gh.code !== 0) {
-        throw new Error(`Could not fetch PR #${pr} with gh: ${gh.stderr.trim() || "gh is unavailable"}`)
-      }
-      // One patch download: this stdout is also the diff text below.
-      patch = gh.stdout
+    // The patch and metadata calls are independent and keyed by the same PR
+    // number. Run them together. The metadata call is not optional even when
+    // the finder budget is not needed: it is the only reliable file list for a
+    // PR whose patch has no parseable `diff --git` blocks (binary-only or
+    // otherwise patch-less changes).
+    const [gh, meta] = await Promise.all([
+      exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts()),
+      exec(
+        ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions"],
+        gitCwd,
+        callOpts(),
+      ),
+    ])
+    prMeta = meta
+    if (gh.aborted) throw new Error("PR diff discovery was cancelled.")
+    if (gh.timedOut) throw new Error(`gh pr diff timed out${timeoutSuffix}.`)
+    if (gh.code !== 0) {
+      throw new Error(`Could not fetch PR #${pr} with gh: ${gh.stderr.trim() || "gh is unavailable"}`)
     }
+    // One patch download: this stdout is also the diff text below.
+    patch = gh.stdout
     plan.push({ argv: ["gh", "pr", "diff", String(pr)], label: `gh pr diff ${pr}` })
     scopeKind = "pr"
   } else if (target && !isPathTarget && looksLikeRange(target)) {
@@ -1343,6 +1340,10 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
       if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
       const listed = await listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts())
+      // The range is the first plan entry; reuse this listing instead of
+      // running the same name-status command again below.
+      firstFiles = listed.files
+      firstFilesFailed = !listed.ok
       if (worktree.code === 1 || listed.files.length === 0) add({ range: "HEAD", pathspec })
     }
     scopeKind = "branch"
@@ -1416,13 +1417,10 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // independent, and on a large repository the diff read must not wait behind
   // two probe processes per plan entry.
   const capturesPromise =
-    pr === undefined && !opts.filesOnly
-      ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts())))
-      : undefined
+    pr === undefined ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts()))) : undefined
   if (pr !== undefined) {
     // One metadata call covers the file list and the finder-budget line count.
-    // A files-only probe needs the list, and a full review needs it even when
-    // the patch scan finds no file blocks, so always fetch it.
+    // Fetch it even when the patch scan finds no file blocks.
     const meta =
       prMeta ??
       (await exec(
@@ -1440,20 +1438,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     }
     if (parsed?.files && parsed.files.length > 0) {
       files = parsed.files.map((f) => f.path ?? "").filter(Boolean)
-    } else if (opts.filesOnly && (meta.code !== 0 || parsed === undefined)) {
-      // The files-only probe skipped the patch download, so a failed metadata
-      // call used to look like an empty PR. Ask gh for just the names instead
-      // of silencing the /verify follow-up for a diff we could not inspect.
-      const names = await exec(["gh", "pr", "diff", String(pr), "--name-only"], gitCwd, callOpts())
-      if (names.aborted) throw new Error("PR diff discovery was cancelled.")
-      if (names.timedOut) throw new Error(`gh pr diff timed out${timeoutSuffix}.`)
-      if (names.code === 0) {
-        files = nameOnlyPaths(names.stdout)
-      } else {
-        warnings.push(`PR #${pr}: could not list changed files (${names.stderr.trim() || "gh is unavailable"})`)
-      }
     }
-    if (!opts.filesOnly && opts.includeDiffLines !== false) {
+    if (opts.includeDiffLines !== false) {
       if (typeof parsed?.additions === "number" && typeof parsed.deletions === "number") {
         diffLines = parsed.additions + parsed.deletions
       }
@@ -1495,30 +1481,6 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let uniqueFiles = uniq(files).sort()
   const scopeLabel = describeScope(scopeKind, { pr, branch, range, pathspec })
   const diffCommands = plan.map((p) => p.label)
-  if (opts.filesOnly) {
-    // Enough for the /verify surface check: the changed file list without a
-    // patch download, churn scan, or conventions read.
-    return {
-      diffCommand: diffCommands.join(" ; "),
-      diffCommands,
-      files: uniqueFiles,
-      claudeMdFiles: [],
-      summary:
-        uniqueFiles.length === 0
-          ? "No changes found."
-          : `${pluralize(uniqueFiles.length, "changed file")} (${scopeLabel}).`,
-      conventions: "(none noted)",
-      target,
-      root,
-      pr,
-      branch,
-      diffLines: 0,
-      diffText: "",
-      scopeKind,
-      ...(diffBase ? { diffBase } : {}),
-      ...(warnings.length > 0 ? { warnings } : {}),
-    }
-  }
 
   // Capture each diff command once. For a PR, the cached patch is the diff.
   const chunks: string[] = []
@@ -1556,7 +1518,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // assets), and its metadata call can fail. When both file sources are empty,
   // ask gh for the names rather than reporting "No changes found" for a PR
   // that really changed files.
-  if (pr !== undefined && !opts.filesOnly && uniqueFiles.length === 0) {
+  if (pr !== undefined && uniqueFiles.length === 0) {
     const names = await exec(["gh", "pr", "diff", String(pr), "--name-only"], gitCwd, callOpts())
     if (names.aborted) throw new Error("PR diff discovery was cancelled.")
     if (names.timedOut) throw new Error(`gh pr diff timed out${timeoutSuffix}.`)
@@ -1571,15 +1533,19 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // shrinking the finder budget for exactly the large change set that needs
   // it. Ask numstat for every plan entry and use its independent total.
   if (opts.includeDiffLines !== false && captureFailures > 0) {
+    const counts = await Promise.all(
+      plan.map((p) =>
+        git(
+          exec,
+          gitCwd,
+          gitDiffArgs({ range: p.range, staged: p.staged, pathspec: p.pathspec }, "numstat"),
+          callOpts(opts.numstatTimeoutMs ?? 30_000),
+        ),
+      ),
+    )
     let counted = 0
     let any = false
-    for (const p of plan) {
-      const r = await git(
-        exec,
-        gitCwd,
-        gitDiffArgs({ range: p.range, staged: p.staged, pathspec: p.pathspec }, "numstat"),
-        callOpts(opts.numstatTimeoutMs ?? 30_000),
-      )
+    for (const r of counts) {
       if (r.code !== 0) continue
       any = true
       counted += numstatTotal(r.stdout)
