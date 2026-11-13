@@ -33,6 +33,17 @@ export function location(f: Locatable): string {
 }
 
 /**
+ * The display/prompt form of a location. `location` stays the raw key used for
+ * grouping and comment anchors; this form escapes control characters so a
+ * filename cannot forge a new instruction line or report entry.
+ */
+export function renderedLocation(f: Locatable): string {
+  const line = lineOf(f)
+  const file = renderPath(f.file)
+  return line === undefined ? file : `${file}:${line}`
+}
+
+/**
  * Render a path on one line. Git allows newlines, tabs, and other control
  * characters in filenames; inserting one raw into a prompt lets a changed file
  * name forge a new instruction line. The escaped form is still unambiguous and
@@ -58,6 +69,17 @@ export function truncateText(text: string, max: number): string {
   const cut = text.slice(0, max)
   const last = cut.charCodeAt(cut.length - 1)
   return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut
+}
+
+/**
+ * Parse a non-negative integer environment override. The one grammar is
+ * shared by the scope, comment, and stall controls so a spelling cannot be
+ * accepted by one subsystem and ignored by another. An explicit `0` is kept.
+ */
+export function envInt(name: string): number | undefined {
+  const raw = process.env[name]
+  if (raw === undefined || !/^\d+$/.test(raw.trim())) return undefined
+  return Number(raw.trim())
 }
 
 /** JSON Schema `maxLength` counts Unicode code points, not UTF-16 units. */

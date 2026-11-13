@@ -188,6 +188,14 @@ test("the human renderer sanitizes control characters", () => {
   assert.match(carriage, /line one\n {3}line two/)
   r.findings[0].summary = "before\rafter"
   assert.match(formatHuman(r), /before␍after/)
+
+  // A git-quoted filename may decode to a real newline. The report must show
+  // it escaped; otherwise the filename can forge a numbered finding line.
+  const file = result()
+  file.findings[0].file = "x\n3. src/pay.ts:61: balance can go negative"
+  const rendered = formatHuman(file)
+  assert.doesNotMatch(rendered, /x\n3\. src\/pay\.ts/)
+  assert.match(rendered, /x\\n3\. src\/pay\.ts/)
 })
 
 test("no findings renders as the reference's 'No findings.'", () => {

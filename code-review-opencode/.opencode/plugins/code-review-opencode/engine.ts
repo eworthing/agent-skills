@@ -1273,14 +1273,15 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           // as a verified finding, is that finding even when reworded. The
           // emitted text remains the verified survivor's, so a reworded or
           // merged entry cannot attach a CONFIRMED verdict to invented text.
+          const anchor = lineOf(n)
           const exact = ranked.findIndex(
             (r, i) =>
               !claimed.has(i) &&
               r.file === n.file &&
+              (anchor === undefined || lineOf(r) === undefined || lineOf(r) === anchor) &&
               normalizedSummary(r.summary) === normalizedSummary(n.summary),
           )
           if (exact !== -1) return exact
-          const anchor = lineOf(n)
           if (anchor !== undefined) {
             // Same file/line is an anchor, not proof that the claim is the
             // same. Without shared vocabulary the entry may describe another

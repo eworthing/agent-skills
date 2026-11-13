@@ -9,7 +9,7 @@
  */
 import type { EngineResult } from "./engine.ts"
 import type { ReportedFinding } from "./reportfindings.ts"
-import { lineOf, location, pluralize, shortSummary } from "./finding.ts"
+import { lineOf, renderedLocation, pluralize, shortSummary } from "./finding.ts"
 
 export function formatJson(result: EngineResult): string {
   return JSON.stringify(
@@ -75,7 +75,7 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
     const suffix = n > 1 ? ", most severe first" : ""
     const body = result.findings
       .map((f, i) => {
-        const loc = location(f)
+        const loc = renderedLocation(f)
         const prefix = `${i + 1}. `
         const scenario = f.failure_scenario ? `\n\nFailure scenario: ${f.failure_scenario}` : ""
         return sanitizeControl(`${prefix}${loc}: ${f.summary}${scenario}`).replace(
@@ -99,7 +99,7 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
   if (opts.includeRefuted && result.refuted.length > 0) {
     out += `\n\nRefuted (for transparency):`
     for (const r of result.refuted) {
-      out += `\n  - ${sanitizeControl(`${location(r)} — ${r.summary}`)}`
+      out += `\n  - ${sanitizeControl(`${renderedLocation(r)} — ${r.summary}`)}`
     }
   }
 
@@ -135,7 +135,7 @@ export function formatOutcomeSummary(findings: ReportedFinding[]): string {
         : f.outcome === "no_change_needed"
           ? "no change needed"
           : f.outcome
-    return `- ${location(f)} — ${outcome}`
+    return `- ${renderedLocation(f)} — ${outcome}`
   })
   return `${header}\n${lines.join("\n")}`
 }

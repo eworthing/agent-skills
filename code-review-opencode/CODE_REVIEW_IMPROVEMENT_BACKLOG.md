@@ -51,6 +51,7 @@ Status legend: **DONE**, **READY**, **DESIGN**, **REJECTED**.
 | C8 | Document the effort precedence | Explicit > last used > session effort > medium; a non-interactive run is not remembered; `--model` selects the model, not the review level. | READY — document the chain and add tests; no behavior change. §3.5. |
 | C9 | Document host concurrency | The reference Agent tool allows 20; our default is 8 for provider limits. | READY — document `--concurrency 20` as the reference-equivalent opt-in. §3.6. |
 | C10 | `ReportFindings` output schema | The host renders a typed findings list and outcomes. | DESIGN / deferred — the Promise tool API has no declared output schema; metadata is the equivalent. Revisit only if the plugin moves to the Effect API. §3.7. |
+| C11 | Full-set fix mode (`--fix-all`) | `--json` bypasses the 32-entry `ReportFindings` cap, but `--fix` is ignored with `--json`; default report mode fixes at most 32 per pass. A large review therefore needs a capture-then-fix loop. | DESIGN — explicit opt-in that captures every verified finding without the host cap, then applies them in bounded batches. Keep the default `--json` contract and the reference 32-entry `ReportFindings` contract unchanged. §3.10. |
 
 ## V. Validation — planned
 

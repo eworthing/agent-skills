@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   asCandidatesResult,
+  asDecisions,
   asGroupVerdicts,
   asReport,
   asVerdict,
@@ -54,6 +55,13 @@ test("extractJson rejects a whole-body schema echo with no real payload", () => 
     "\n```json\n{\"candidates\":[{\"file\":\"src/a.ts\",\"summary\":\"real\",\"failure_scenario\":\"f\"}]}\n```"
   const parsed = extractJson(withReal) as { candidates: Array<{ file: string }> }
   assert.equal(parsed.candidates[0].file, "src/a.ts")
+})
+
+test("extractJson keeps a real finding that happens to use the sample file", () => {
+  const text =
+    '{"candidates":[{"file":"path/to/file.ts","summary":"real bug in the reviewer","failure_scenario":"the parser drops it"}]}'
+  const parsed = extractJson(text) as { candidates: Array<{ summary: string }> }
+  assert.equal(parsed.candidates[0].summary, "real bug in the reviewer")
 })
 
 test("extractJson ignores an unlabeled decisions schema echo", () => {
@@ -347,6 +355,17 @@ test("asReport preserves the dropped count recorded at the tool boundary", () =>
     dropped: 1,
   })
   assert.equal(report?.dropped, 1)
+})
+
+test("asReport and asDecisions preserve the tool boundary's truncation flag", () => {
+  const report = asReport({
+    summary: "s",
+    findings: [{ file: "a.ts", summary: "s", failure_scenario: "f" }],
+    truncated: true,
+  })
+  assert.equal(report?.truncated, true)
+  const decisions = asDecisions({ summary: "s", decisions: [{ index: 0 }], truncated: true })
+  assert.equal(decisions?.truncated, true)
 })
 
 test("short_summary truncation never splits a surrogate pair", () => {

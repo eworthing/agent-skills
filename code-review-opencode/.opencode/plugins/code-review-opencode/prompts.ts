@@ -11,7 +11,7 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { location, pluralWord, renderPath, truncateText } from "./finding.ts"
+import { pluralWord, renderPath, renderedLocation, truncateText } from "./finding.ts"
 import { CONTEXT_PACKAGE_MAX_FILES, type ScopeBlock } from "./scope.ts"
 
 const DIR = fileURLToPath(new URL("./prompts/", import.meta.url))
@@ -745,6 +745,20 @@ ${opts.kind === "cleanup" || opts.multiLens ? `${CANDIDATE_PRECEDENCE()}\n` : ""
 Structured output only.`
 }
 
+// The verifier/sweep preamble is identical for every child in one review.
+// Cache it per ScopeBlock (a stable object for the run) so a max-effort fan-out
+// does not rebuild the same 120k-character diff for every candidate. WeakMap
+// keeps the rendering alive only while the review still references its scope.
+const verifierScopeCache = new WeakMap<ScopeBlock, string>()
+
+function verifierScope(scope: ScopeBlock): string {
+  const cached = verifierScopeCache.get(scope)
+  if (cached !== undefined) return cached
+  const rendered = renderScope(scope, { includeConventions: false })
+  verifierScopeCache.set(scope, rendered)
+  return rendered
+}
+
 export function verifierPrompt(opts: {
   scope: ScopeBlock
   candidate: { file: string; line?: number; summary: string; failure_scenario: string }
@@ -755,11 +769,11 @@ export function verifierPrompt(opts: {
   const c = opts.candidate
   return `## Code-review verifier
 
-${renderScope(opts.scope, { includeConventions: false })}
+${verifierScope(opts.scope)}
 ${diffSource(opts.scope)}
 
 ## Candidate finding
-File: ${location(c)}
+File: ${renderedLocation(c)}
 Summary: ${c.summary}
 Failure scenario: ${c.failure_scenario}
 
@@ -781,13 +795,13 @@ export function groupVerifierPrompt(opts: {
   recallSentence?: boolean
 }): string {
   const g = opts.group
-  const loc = location(g[0])
+  const loc = renderedLocation(g[0])
   const list = g
     .map((c, i) => `[${i}] Summary: ${c.summary}\n    Failure scenario: ${c.failure_scenario}`)
     .join("\n")
   return `## Code-review verifier
 
-${renderScope(opts.scope, { includeConventions: false })}
+${verifierScope(opts.scope)}
 ${diffSource(opts.scope)}
 
 ## Candidate findings at ${loc}
@@ -807,7 +821,7 @@ export function sweepPrompt(opts: { scope: ScopeBlock; known: string[]; cap: num
   const known = opts.known.length > 0 ? opts.known.map((k) => `- ${k}`).join("\n") : "(none)"
   return `## Code-review sweep — gaps only
 
-${renderScope(opts.scope, { includeConventions: false })}
+${verifierScope(opts.scope)}
 ${diffSource(opts.scope)}
 
 ## Already-found candidates (do NOT re-derive or re-confirm these)
@@ -835,7 +849,7 @@ function renderRankedBlock(ranked: RankedFinding[]): string {
   return ranked
     .map(
       (c, i) =>
-        `### [${i}] ${location(c)} (${c.verdict}${c.kind === "cleanup" ? ", cleanup" : ""})\n${c.summary}\nFailure scenario: ${c.failure_scenario}\nVerifier evidence: ${c.evidence ?? "(none — sweep gap, not independently verified)"}\n`,
+        `### [${i}] ${renderedLocation(c)} (${c.verdict}${c.kind === "cleanup" ? ", cleanup" : ""})\n${c.summary}\nFailure scenario: ${c.failure_scenario}\nVerifier evidence: ${c.evidence ?? "(none — sweep gap, not independently verified)"}\n`,
     )
     .join("\n")
 }
@@ -891,7 +905,7 @@ export function candidateDedupPrompt(opts: {
   const block = opts.candidates
     .map(
       (c, i) =>
-        `### [${i}] ${location(c)}\n${c.summary}\nFailure scenario: ${c.failure_scenario}`,
+        `### [${i}] ${renderedLocation(c)}\n${c.summary}\nFailure scenario: ${c.failure_scenario}`,
     )
     .join("\n\n")
   return `## Candidate dedup

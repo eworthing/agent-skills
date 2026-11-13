@@ -10,7 +10,7 @@ import type { EngineResult } from "./engine.ts"
 import type { Scope } from "./scope.ts"
 import { defaultExec, diffSideMap, type Exec, type ExecOptions, type ExecResult } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
-import { lineOf, pluralWord } from "./finding.ts"
+import { envInt, lineOf, pluralWord } from "./finding.ts"
 
 export type Host = "github" | "gitlab" | "other"
 
@@ -68,6 +68,15 @@ export function buildGitHubCommentArgs(opts: {
 
 export function commentBody(finding: { summary: string; failure_scenario: string }): string {
   return `${finding.summary}\n\nFailure scenario: ${finding.failure_scenario}`
+}
+
+/** Hostname from a PR URL, including GitHub Enterprise instances. */
+function hostFromPrUrl(value: string): string | undefined {
+  try {
+    return new URL(value.trim()).hostname || undefined
+  } catch {
+    return undefined
+  }
 }
 
 /** `owner/repo` from a PR URL; the PR URL always names the base repository. */
@@ -258,12 +267,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   const exec = deps.exec ?? defaultExec
   // A 10s hard cap killed an otherwise successful post on slow GHE links. No
   // timeout by default; an explicit dependency or env value can bound it.
-  const envTimeout = (() => {
-    const raw = process.env.CODE_REVIEW_COMMENT_TIMEOUT_MS
-    if (raw === undefined) return undefined
-    return /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : undefined
-  })()
-  const timeoutMs = deps.timeoutMs ?? envTimeout
+  const timeoutMs = deps.timeoutMs ?? envInt("CODE_REVIEW_COMMENT_TIMEOUT_MS")
   const execOpts: ExecOptions = {
     ...(deps.signal ? { signal: deps.signal } : {}),
     ...(timeoutMs !== undefined && timeoutMs > 0 ? { timeoutMs } : {}),
@@ -280,6 +284,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   const prInfo = await resolvePrInfo(deps.cwd, scope, exec, execOpts)
   if (!prInfo) {
     return "`--comment` was ignored: no pull request found for this branch; pass the PR number as the target."
+  }
+  // A branch-shaped diff without a recorded base (the HEAD~1/HEAD ladder in a
+  // clone with no upstream/main) cannot prove its line numbers describe the
+  // PR's diff. Refuse rather than submitting anchors to an unrelated tree.
+  if (scope.pr === undefined && scope.branch && !scope.diffBase) {
+    return "`--comment` was ignored: the reviewed diff has no verified base; pass the PR number as the target."
   }
   const pr = prInfo.number
 
@@ -316,6 +326,11 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   ])
   let repoName = repoFromPrUrl(repo.stdout) ?? ""
   let repoError = repo.stderr.trim()
+  // The PR URL is authoritative for the host as well as the repository. A
+  // fork clone can have an origin on a different GitHub Enterprise instance
+  // than the upstream PR it is reviewing.
+  const prHost = hostFromPrUrl(repo.stdout)
+  if (prHost && prHost.toLowerCase() !== "github.com") githubHostname = prHost
   if (!repoName) {
     // Older gh versions/tests may not return a URL. Keep the local lookup as a
     // fallback, but only after the PR-scoped answer failed.
@@ -384,6 +399,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   const outcomes = await mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
     const line = lineOf(f)
     if (line === undefined) return { ok: false, message: `${f.file}: no line to anchor an inline comment` }
+    if (!sides.hasLine(f.file, line)) {
+      return {
+        ok: false,
+        message: `${f.file}:${line}: line is not part of the reviewed diff; no inline anchor`,
+      }
+    }
     const r = await call(
       buildGitHubCommentArgs({
         owner,

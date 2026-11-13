@@ -61,7 +61,15 @@ import {
   supportsChildSessions,
   type SessionRecord,
 } from "./host.ts"
-import { extractPathHint, prTargetNumber, resolveReviewRoot, resolveScope, type Scope } from "./scope.ts"
+import {
+  explicitPathTarget,
+  extractPathHint,
+  prTargetNumber,
+  resolveReviewRoot,
+  resolveScope,
+  resolveTargetPath,
+  type Scope,
+} from "./scope.ts"
 import { postComments, detectHostDetails, type Host } from "./comment.ts"
 import { writeReportArtifact } from "./artifact.ts"
 import { REPORT_FINDINGS_SCHEMA, normalizeReportFindings } from "./reportfindings.ts"
@@ -182,11 +190,24 @@ async function reportProgress(
   }
 }
 
-/** Keep a long-lived payload map from growing one entry per session forever. */
-function setCapped<K, V>(map: Map<K, V>, key: K, value: V, max: number): void {
+/**
+ * Keep a long-lived payload map from growing one entry per session forever.
+ * Live review children are protected: their schema result may still be the
+ * value the runner is about to read, so FIFO eviction must skip them.
+ */
+function setCapped<K, V>(
+  map: Map<K, V>,
+  key: K,
+  value: V,
+  max: number,
+  protect?: ReadonlySet<string>,
+): void {
   if (!map.has(key) && map.size >= max) {
-    const oldest = map.keys().next().value
-    if (oldest !== undefined) map.delete(oldest)
+    for (const candidate of map.keys()) {
+      if (protect?.has(String(candidate))) continue
+      map.delete(candidate)
+      break
+    }
   }
   map.set(key, value)
 }
@@ -381,7 +402,9 @@ async function resolveAndRun(
     if (stored !== undefined) await ctx.storage.set(STORAGE_MAX, stored).catch(() => {})
   }
 
-  const version = asVersion(flags.mode ?? process.env.CODE_REVIEW_MODE)
+  const requestedMode = flags.mode ?? process.env.CODE_REVIEW_MODE
+  const invalidMode = requestedMode !== undefined && !Object.hasOwn(VERSIONS, requestedMode)
+  const version = asVersion(requestedMode)
   const modelOverride = modelRef(flags.model ?? process.env.CODE_REVIEW_MODEL)
   const family = detectFamily(
     modelOverride?.id ?? inv.modelID ?? sessionModel?.id,
@@ -466,18 +489,44 @@ async function resolveAndRun(
     ? []
     : [
         ultraNotice(parsed, effort, applyFix),
+        invalidMode
+          ? `Ignoring unrecognized ${flags.mode !== undefined ? "--mode" : "CODE_REVIEW_MODE"} "${requestedMode}"; valid: ${Object.keys(VERSIONS).join(", ")}. Using ${version}.`
+          : undefined,
         cell.fallbackNotice,
         effortNotice(parsed, typeof storedEffort === "string" ? storedEffort : undefined, effort),
         maxFindingsNotice(limit, parsed.maxFindingsIgnored),
         postNotice(parsed, host),
       ].filter((n): n is string => Boolean(n))
 
+  // Every prompt-driven path returns the same shape: optional notices, the
+  // recovered prompt, and a model turn to execute it. Keeping one assembly
+  // point prevents a new decoration from landing in only one fallback.
+  const promptOutcome = (text: string, allNotices: string[] = notices): Outcome => ({
+    text: allNotices.length > 0 ? `${allNotices.join("\n")}\n\n${text}` : text,
+    needsModel: true,
+  })
+
   // ---- inline / minimal cells: submit the recovered prompt verbatim ------
   if (isInline(cell)) {
+    // The inline path never reaches resolveScope. Validate an explicit path
+    // target here so a typo cannot silently turn into a working-tree review.
+    if (
+      parsed.target &&
+      prTargetNumber(parsed.target) === undefined &&
+      explicitPathTarget(parsed.target) &&
+      resolveTargetPath(ctx.location.directory, parsed.target) === null
+    ) {
+      const message = `Code review could not start: Review target path not found: ${parsed.target}`
+      if (flags.json) {
+        inv.log?.(partialRecord([message]))
+        return { text: "[]", needsModel: false, bare: true }
+      }
+      return { text: message, needsModel: true }
+    }
     const base = resolveInline(kind, cell.inlineVariant, max)
     let text = decorateReview(base)
     if (!flags.json) text += await verifyFollowUpForTarget(ctx)
-    return { text: notices.length > 0 ? `${notices.join("\n")}\n\n${text}` : text, needsModel: true }
+    return promptOutcome(text)
   }
 
   // ---- multi-agent cells ------------------------------------------------
@@ -492,7 +541,7 @@ async function resolveAndRun(
     const allNotices = childSessions
       ? notices
       : [...notices, "Subagent sessions are unavailable in this host; running the single-pass review prompt instead."]
-    return { text: allNotices.length > 0 ? `${allNotices.join("\n")}\n\n${text}` : text, needsModel: true }
+    return promptOutcome(text, allNotices)
   }
 
   // Host records expose the model as `{providerID, modelID}` as often as the
@@ -670,7 +719,7 @@ async function resolveAndRun(
     let text = decorateReview(base)
     text += await verifyFollowUp(ctx, scope.files)
     const allNotices = [...notices, warning]
-    return { text: allNotices.length > 0 ? `${allNotices.join("\n")}\n\n${text}` : text, needsModel: true }
+    return promptOutcome(text, allNotices)
   }
 
   await writeArtifact(result)
@@ -694,9 +743,9 @@ async function resolveAndRun(
   // reaches that path; those notices were emitted before the review started.
   if (fixMode === "apply") body += fixBlock(kind)
   // The prompt paths decorate every review with FIX_LATER. The engine report
-  // skipped that decoration, so a later "fix these" left every finding
-  // unresolved in the host UI.
-  if (kind === "reportfindings") body += FIX_LATER
+  // is shown to the user, so it must not include model-facing instructions;
+  // the ReportFindings tool description carries the same outcome contract for
+  // a later fix turn.
   let followUp = ""
   if (!flags.json) {
     followUp = await verifyFollowUp(ctx, scope.files)
@@ -767,7 +816,13 @@ export default Plugin.define({
             const result = normalize(value)
             if (!result.ok) {
               const failures = (schemaFailures.get(context.sessionID) ?? 0) + 1
-              setCapped(schemaFailures, context.sessionID, failures, MAX_SCHEMA_ENTRIES)
+              setCapped(
+                schemaFailures,
+                context.sessionID,
+                failures,
+                MAX_SCHEMA_ENTRIES,
+                reviewChildSessions,
+              )
               if (failures >= 3) {
                 return {
                   content: `Structured output rejected: ${result.error}. Retry limit reached; end your turn without a result.`,
@@ -776,7 +831,13 @@ export default Plugin.define({
               return { content: `Structured output rejected: ${result.error}. Fix the shape and call once more.` }
             }
             schemaFailures.delete(context.sessionID)
-            setCapped(schemaResults, context.sessionID, result.value, MAX_SCHEMA_ENTRIES)
+            setCapped(
+              schemaResults,
+              context.sessionID,
+              result.value,
+              MAX_SCHEMA_ENTRIES,
+              reviewChildSessions,
+            )
             const noteText = result.notes.length > 0 ? ` ${summarizeNotes(result.notes)}` : ""
             const content =
               result.notes.length > 0
@@ -866,11 +927,7 @@ export default Plugin.define({
               if (deliveryError === undefined) {
                 // Bound the map: a long-lived process must not retain one entry
                 // per session that ever used --fix.
-                if (!reportedOutcomeHashes.has(context.sessionID) && reportedOutcomeHashes.size >= MAX_OUTCOME_HASHES) {
-                  const oldest = reportedOutcomeHashes.keys().next().value
-                  if (oldest !== undefined) reportedOutcomeHashes.delete(oldest)
-                }
-                reportedOutcomeHashes.set(context.sessionID, hash)
+                setCapped(reportedOutcomeHashes, context.sessionID, hash, MAX_OUTCOME_HASHES)
               }
             }
           }

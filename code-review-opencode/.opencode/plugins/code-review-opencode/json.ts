@@ -202,13 +202,19 @@ function isSchemaEcho(value: unknown): boolean {
     const items = value[key]
     if (!Array.isArray(items) || items.length === 0) continue
     if (
-      items.every(
-        (item) =>
-          isRecord(item) &&
-          (item.file === SAMPLE_VALUE.file ||
-            item.summary === SAMPLE_VALUE.summary ||
-            item.failure_scenario === SAMPLE_VALUE.failure_scenario),
-      )
+      items.every((item) => {
+        if (!isRecord(item)) return false
+        // One placeholder field is not proof of an echo: a real finding in a
+        // repository that contains `path/to/file.ts` would otherwise be
+        // discarded. The generated example carries all three fields; require
+        // at least two before treating the item as the sample.
+        const matches = [
+          item.file === SAMPLE_VALUE.file,
+          item.summary === SAMPLE_VALUE.summary,
+          item.failure_scenario === SAMPLE_VALUE.failure_scenario,
+        ].filter(Boolean).length
+        return matches >= 2
+      })
     ) {
       return true
     }
@@ -808,7 +814,14 @@ export function asReport(value: unknown, cap = 64): Report | null {
       ? Math.max(0, Math.trunc(value.dropped))
       : 0
   const dropped = (parsed.value.dropped ?? 0) + priorDropped
-  return dropped > 0 ? { ...parsed.value, dropped } : parsed.value
+  // The tool boundary also records that it truncated a too-long report. A
+  // re-normalization of the already-shortened array cannot see that fact.
+  const priorTruncated = isRecord(value) && value.truncated === true
+  return {
+    ...parsed.value,
+    ...(dropped > 0 ? { dropped } : {}),
+    ...(priorTruncated ? { truncated: true } : {}),
+  }
 }
 
 export type Decisions = {
@@ -820,5 +833,9 @@ export type Decisions = {
 
 export function asDecisions(value: unknown): Decisions | null {
   const parsed = normalizeDecisionsCall(value, MAX_DECISIONS, { tolerateDropped: true })
-  return parsed.ok ? parsed.value : null
+  if (!parsed.ok) return null
+  // Preserve the tool boundary's truncation flag; re-normalizing the valid
+  // remainder cannot discover that decisions were cut from the tail.
+  const priorTruncated = isRecord(value) && value.truncated === true
+  return priorTruncated ? { ...parsed.value, truncated: true } : parsed.value
 }

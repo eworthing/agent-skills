@@ -1514,6 +1514,31 @@ test("text synthesis does not attach a reworded same-line entry to the wrong fin
   assert.equal(result.partial, true)
 })
 
+test("text synthesis matches the same summary at the reported line, not the first line", async () => {
+  const first = candidate("src/a.ts", 10, "the same defect")
+  const second = candidate("src/a.ts", 40, "the same defect")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "max",
+    files: ["src/a.ts"],
+    script: {
+      finder: (req) => {
+        if (req.label === "angle-A") return { candidates: [first] }
+        if (req.label === "angle-B") return { candidates: [second] }
+        return { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+      synthesize: () => ({
+        summary: "line-specific",
+        findings: [candidate("src/a.ts", 40, "the same defect")],
+      }),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].line, 40)
+})
+
 test("a git-quoted diff-header path is canonicalized before verification", async () => {
   const { result } = await review({
     files: ["src/café.ts"],

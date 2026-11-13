@@ -1,6 +1,14 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { hasRuntimeSurface, hasSkill, isChildSession, sessionRecord, skillEntries, supportsChildSessions } from "../.opencode/plugins/code-review-opencode/host.ts"
+import {
+  hasRuntimeSurface,
+  hasSkill,
+  isChildSession,
+  sessionMessages,
+  sessionRecord,
+  skillEntries,
+  supportsChildSessions,
+} from "../.opencode/plugins/code-review-opencode/host.ts"
 
 test("skillEntries accepts a bare array and the {location, data} envelope", () => {
   assert.deepEqual(skillEntries([{ id: "verify" }]), [{ id: "verify" }])
@@ -59,6 +67,15 @@ test("session data unwraps the {location, data} envelope", () => {
   assert.equal(sessionRecord({ location: {}, data: session }), session)
   assert.equal(sessionRecord({ data: null }), undefined)
   assert.equal(sessionRecord(undefined), undefined)
+})
+
+test("sessionMessages unwraps bare, data, and nested message envelopes", () => {
+  const messages = [{ type: "assistant" }]
+  assert.equal(sessionMessages(messages), messages)
+  assert.equal(sessionMessages({ data: messages }), messages)
+  assert.equal(sessionMessages({ location: {}, data: { messages } }), messages)
+  assert.equal(sessionMessages({ data: null }), undefined)
+  assert.equal(sessionMessages(undefined), undefined)
 })
 
 test("isChildSession sees a parent through the session envelope", () => {

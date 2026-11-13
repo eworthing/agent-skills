@@ -17,6 +17,7 @@ import {
 } from "./json.ts"
 import { SCHEMA_TOOL_NAMES, schemaExample } from "./schemas.ts"
 import { sessionMessages, sessionRecord } from "./host.ts"
+import { envInt } from "./finding.ts"
 
 type AnyCtx = {
   session: {
@@ -296,14 +297,13 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
   const stallMs =
     opts.stallMs ??
     (() => {
-      const raw = process.env.CODE_REVIEW_STALL_MS
-      const n = raw !== undefined && /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : Number.NaN
+      const n = envInt("CODE_REVIEW_STALL_MS")
       // Keep an explicit 0: it is the documented way to disable the watchdog.
       // `time.updated` changes per turn, not per streamed token, so a max-effort
       // final answer can legitimately be silent for minutes. 180s interrupted
       // healthy finders in self-review 5 and 6; 10 minutes still catches a
       // provider that has genuinely stopped responding.
-      return Number.isFinite(n) ? n : 600_000
+      return n === undefined ? 600_000 : n
     })()
   // A stall is measured in minutes, so a seconds-scale poll is enough. A
   // 500ms poll fetched the child's full context twice a second on hosts

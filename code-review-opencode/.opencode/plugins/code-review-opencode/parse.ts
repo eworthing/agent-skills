@@ -219,6 +219,8 @@ export function parseExtensions(input: string): { rest: string; flags: Extension
         // Consume the value only when it was accepted. An invalid
         // `--driver high` must leave `high` in the command grammar so it can
         // still be read as the effort level instead of silently disappearing.
+        // A recognised extension token is deliberately not re-added to the
+        // target: it is an option, not prose.
         if (accepted && hasValue) i++
       } else {
         push(token)

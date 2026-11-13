@@ -14,10 +14,10 @@
 import { execFile } from "node:child_process"
 import { closeSync, existsSync, openSync, readFileSync, readSync, realpathSync, statSync } from "node:fs"
 import { homedir } from "node:os"
-import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { TextDecoder } from "node:util"
 import { StringDecoder } from "node:string_decoder"
-import { pluralize, renderPath, truncateText } from "./finding.ts"
+import { envInt, pluralize, renderPath, truncateText } from "./finding.ts"
 
 export type ExecOptions = { signal?: AbortSignal; timeoutMs?: number }
 
@@ -282,7 +282,7 @@ export function resolveDiffScope(cwd: string, target: string | undefined): DiffS
  * also a valid branch prefix, so an `@name` target is resolved as a branch
  * when one exists and as a path otherwise.
  */
-function explicitPathTarget(target: string): boolean {
+export function explicitPathTarget(target: string): boolean {
   return target.startsWith("./") || target.startsWith("../") || target.startsWith("/") || target.endsWith("/")
 }
 
@@ -725,6 +725,12 @@ export type DiffSideMap = {
   sideFor(file: string, line: number): "RIGHT" | "LEFT"
   /** The head-side path for a finding, including when it names a renamed-from file. */
   pathFor(file: string, line: number): string
+  /**
+   * Whether the line appears in the reviewed patch. With no patch available
+   * the answer is optimistic: posting can still proceed, but a known-missing
+   * anchor is rejected before GitHub returns a 422.
+   */
+  hasLine(file: string, line: number): boolean
 }
 
 type SideRequest = {
@@ -775,6 +781,7 @@ export function diffSideMap(
   }
   const resolved = new Map<string, "RIGHT" | "LEFT">()
   const headPaths = new Map<string, string>()
+  const matched = new Set<string>()
 
   if (patch && states.length > 0) {
     let active: SideRequest[] = []
@@ -797,11 +804,23 @@ export function diffSideMap(
     ) => {
       for (const state of active) {
         if (state.oldOnly) {
-          if (op !== "+" && oldLine === state.line) state.left = true
-          if (op === "+" && newLine === state.line) state.right = true
+          if (op !== "+" && oldLine === state.line) {
+            state.left = true
+            matched.add(state.key)
+          }
+          if (op === "+" && newLine === state.line) {
+            state.right = true
+            matched.add(state.key)
+          }
         } else {
-          if (op === "-" && oldLine === state.line) state.left = true
-          if (op !== "-" && newLine === state.line) state.right = true
+          if (op === "-" && oldLine === state.line) {
+            state.left = true
+            matched.add(state.key)
+          }
+          if (op !== "-" && newLine === state.line) {
+            state.right = true
+            matched.add(state.key)
+          }
         }
       }
     }
@@ -831,6 +850,10 @@ export function diffSideMap(
     },
     pathFor(file: string, line: number): string {
       return headPaths.get(`${file}\0${line}`) ?? file
+    },
+    hasLine(file: string, line: number): boolean {
+      if (!patch) return true
+      return matched.has(`${file}\0${line}`)
     },
   }
 }
@@ -964,22 +987,34 @@ export function discoverConventions(
   const rootPaths = paths.filter((p) => dirname(p) === root)
   const userPath = paths.find((p) => p === userClaude)
   const otherPaths = paths.filter((p) => dirname(p) !== root && p !== userPath)
-  // Stat each source once. The water-fill, the reserve calculation, and the
-  // final read all need the size; on a network-mounted checkout each stat is
-  // a round trip.
+  // Size each source in the same unit readCapped uses: UTF-16 code units.
+  // statSync reports bytes, which charges non-ASCII text up to three times its
+  // real character cost and can strand most of the character budget.
   const sizes = new Map<string, number>()
   for (const p of paths) {
     try {
-      sizes.set(p, statSync(p).size)
+      sizes.set(p, readFileSync(p, "utf8").length)
     } catch {
       sizes.set(p, 0)
     }
   }
   const sizeOf = (p: string): number => sizes.get(p) ?? 0
   // Headers are part of the budget. Reserve them up front so content caps
-  // cannot overrun the total and truncate the last source's text.
-  const headerBudget = paths.reduce((sum, p) => sum + headerFor(p).length, 0)
-  const contentBudget = Math.max(0, budget - headerBudget)
+  // cannot overrun the total and truncate the last source's text. If many
+  // per-directory headers would consume the whole budget, fall back to
+  // basenames and keep at least a small content share so project rules are
+  // never silently reduced to zero.
+  const fullHeaders = paths.map(headerFor)
+  let headers = fullHeaders
+  let headerBudget = fullHeaders.reduce((sum, header) => sum + header.length, 0)
+  if (headerBudget > Math.floor(budget / 2)) {
+    headers = paths.map((p) => `### ${basename(p)}\n`)
+    headerBudget = headers.reduce((sum, header) => sum + header.length, 0)
+  }
+  const contentBudget = Math.max(
+    Math.min(1024, Math.floor(budget / 2)),
+    budget - headerBudget,
+  )
   const rootNeeded = rootPaths.reduce((sum, p) => sum + sizeOf(p), 0)
   const otherNeeded = otherPaths.reduce((sum, p) => sum + sizeOf(p), 0)
   const userNeeded = userPath ? sizeOf(userPath) : 0
@@ -1038,9 +1073,9 @@ export function discoverConventions(
   otherPathsForBudget.forEach((p, i) => caps.set(p, otherCaps[i] ?? 0))
   let used = 0
   let contentUsed = 0
-  for (const p of paths) {
+  for (const [i, p] of paths.entries()) {
     if (used >= budget) break
-    const header = headerFor(p)
+    const header = headers[i] ?? headerFor(p)
     const cap = caps.get(p) ?? 0
     const text = readCapped(
       p,
@@ -1165,12 +1200,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   const target = opts.target?.trim() || undefined
   // No wall-clock cap by default: a large PR diff on a slow connection must be
   // allowed to finish. Set CODE_REVIEW_SCOPE_TIMEOUT_MS to bound discovery.
-  const envTimeout = (() => {
-    const raw = process.env.CODE_REVIEW_SCOPE_TIMEOUT_MS
-    if (raw === undefined) return undefined
-    return /^\d+$/.test(raw.trim()) ? Number(raw.trim()) : undefined
-  })()
-  const scopeTimeout = opts.scopeTimeoutMs ?? envTimeout
+  const scopeTimeout = opts.scopeTimeoutMs ?? envInt("CODE_REVIEW_SCOPE_TIMEOUT_MS")
   const timeoutSuffix = scopeTimeout !== undefined ? ` after ${scopeTimeout}ms` : ""
   const callOpts = (timeoutMs = scopeTimeout): ExecOptions => ({
     ...(opts.signal ? { signal: opts.signal } : {}),
@@ -1220,7 +1250,10 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     // Strip only the line terminator git adds. A repository path may legally
     // end (or begin) with a space, and trimming would run later commands in a
     // different directory.
-    root = top.stdout.replace(/[\r\n]+$/, "")
+    // Strip exactly the one line terminator git appends. A legal directory
+    // name may itself end in a newline; deleting the whole trailing run would
+    // silently run every later command in a different directory.
+    root = top.stdout.replace(/\r?\n$/, "")
   }
   let gitCwd = root
   let isPathTarget = pathScope?.isPath === true
@@ -1301,6 +1334,17 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     range = `${baseRef}...HEAD`
     diffBase = baseRef
     add({ range, pathspec })
+    // The reference's branch review also includes uncommitted changes when
+    // that branch is the checked-out one. A remote-only target must not pull
+    // in edits from whichever local branch happens to be current.
+    const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
+    if (current.code === 0 && current.stdout.trim() === target) {
+      const worktree = await git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts())
+      if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
+      if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+      const listed = await listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts())
+      if (worktree.code === 1 || listed.files.length === 0) add({ range: "HEAD", pathspec })
+    }
     scopeKind = "branch"
   } else {
     const hasHead = await revParse(exec, gitCwd, "HEAD", callOpts())

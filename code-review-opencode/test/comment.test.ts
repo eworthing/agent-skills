@@ -69,13 +69,15 @@ test("detectHost reads the origin remote", async () => {
 })
 
 test("a checked-out PR branch resolves its PR and posts inline comments", async () => {
-  const scope = scopeOf(["src/a.ts"], { branch: "feature" })
+  const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
+      return { stdout: argv.includes("baseRefName") ? "main\n" : "abc\n" }
+    }
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
   })
@@ -87,7 +89,7 @@ test("a checked-out PR branch resolves its PR and posts inline comments", async 
 })
 
 test("a branch review refuses to post when local HEAD is not the PR head", async () => {
-  const scope = scopeOf(["src/a.ts"], { branch: "feature" })
+  const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "local\n" }
@@ -169,13 +171,15 @@ test("a range review does not post to the current branch's PR", async () => {
 })
 
 test("a clean branch range with a recorded current branch resolves its PR", async () => {
-  const scope = scopeOf(["src/a.ts"], { scopeKind: "range", branch: "feature" })
+  const scope = scopeOf(["src/a.ts"], { scopeKind: "range", branch: "feature", diffBase: "main" })
   const { exec } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
+      return { stdout: argv.includes("baseRefName") ? "main\n" : "abc\n" }
+    }
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
   })

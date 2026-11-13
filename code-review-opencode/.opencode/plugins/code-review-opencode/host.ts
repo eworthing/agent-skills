@@ -78,8 +78,17 @@ export function isChildSession(session: unknown): boolean {
  * message counts or the final message.
  */
 export function sessionMessages(value: unknown): readonly unknown[] | undefined {
-  if (Array.isArray(value)) return value
-  if (!value || typeof value !== "object") return undefined
-  const data = (value as { data?: unknown }).data
-  return Array.isArray(data) ? data : undefined
+  // Hosts have returned the bare array, `{ data: [...] }`, and
+  // `{ data: { messages: [...] } }` across versions. Unwrap the known
+  // envelopes instead of treating an unfamiliar one as an empty transcript.
+  let current: unknown = value
+  for (let depth = 0; depth < 3; depth++) {
+    if (Array.isArray(current)) return current
+    if (!current || typeof current !== "object") return undefined
+    const record = current as { data?: unknown; messages?: unknown }
+    const next = record.data ?? record.messages
+    if (next === undefined) return undefined
+    current = next
+  }
+  return Array.isArray(current) ? current : undefined
 }

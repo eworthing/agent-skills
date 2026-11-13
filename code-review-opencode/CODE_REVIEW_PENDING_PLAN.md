@@ -281,6 +281,43 @@ public judge and runner. Use it for a broader run after the Martian subset.
 prompts. There is no pass/fail target initially; the benchmark is a quality
 signal, not a fidelity gate.
 
+### 3.10 C11 — full-set fix mode (`--fix-all`)
+
+**Problem.** The two contracts disagree on purpose:
+
+- `--json` returns the complete verified set because it bypasses the host
+  findings schema, but it deliberately ignores `--fix`.
+- Default report mode can apply fixes, but `ReportFindings` caps the list at 32,
+  so a 48-finding review needs a capture-then-fix loop.
+
+**Proposed extension.** Add an explicit `--fix-all` flag rather than changing
+`--json --fix` semantics.
+
+1. **Capture without the host cap.** Run the engine with the full survivor set
+   (the same path `--json` uses), then render the complete list once. With
+   `--json`, the first and only machine-readable output remains the bare array;
+   without it, use the human renderer.
+2. **Apply in bounded batches.** Split the captured findings into batches sized
+   for the model's step/context budget (start at 12–16). Each batch gets only
+   its own findings plus the apply contract, and runs sequentially so a later
+   batch sees earlier edits. Do not ask one turn to apply 48 findings.
+3. **Report outcomes without the 32 cap.** A batch result is a synthetic
+   per-batch summary (`fixed`/`skipped`/`no_change_needed` counts and any
+   failures), not a 48-entry `ReportFindings` call. If a batch contains 32 or
+   fewer findings, it may reuse `ReportFindings` for host rendering.
+4. **Failure behavior.** A failed or cancelled batch marks only that batch
+   unresolved and continues; the final line names the unapplied findings and
+   sets the partial warning. A failed capture applies nothing.
+5. **Options interaction.** `--fix-all` implies no 32-cap. An explicit
+   `--max-findings n` limits the captured/fixed set; `--dry-run` captures only;
+   `--comment` remains independent; `--json --fix-all` still prints the full
+   array before the fix batches run.
+
+**Acceptance.** A fixture with more than 32 verified findings produces the full
+array (or human list), applies every batch, preserves finding order, emits no
+duplicate fixes, and leaves the default `--json` and `ReportFindings` contracts
+unchanged.
+
 ## 4. Sequencing
 
 1. **C3** — DONE (runner wiring, agent comments, tests).
@@ -289,9 +326,11 @@ signal, not a fidelity gate.
 4. **C1 background** — next; flags, map, detached promise, tests. Do this
    after the next clean run and a green suite.
 5. **C4 suggestions** — internal fields, comment body, args, tests.
-6. **Role-prompt benchmark** — harness + e2e smoke test.
-7. **Known-defect benchmark** — 10-PR Martian subset; expand if useful.
-8. **`ReportFindings` output schema** — defer until an Effect migration.
+6. **C11 full-set fix** — capture path, batch loop, partial-failure tests; keep
+   the default `--json` and `ReportFindings` contracts unchanged.
+7. **Role-prompt benchmark** — harness + e2e smoke test.
+8. **Known-defect benchmark** — 10-PR Martian subset; expand if useful.
+9. **`ReportFindings` output schema** — defer until an Effect migration.
 
 ## 5. Resolved open questions
 

@@ -225,6 +225,9 @@ designs, and acceptance criteria:
 - **C4** `--comment` suggestion blocks: optional `suggestion`/`start_line`
   internal fields.
 - **C10** `ReportFindings` output schema: deferred until an Effect migration.
+- **C11** `--fix-all`: capture every verified finding without the 32-entry host
+  cap, then apply it in bounded batches while keeping the default `--json`
+  contract unchanged.
 - **V1/V2** role-prompt and known-defect benchmarks (Martian, ReviewBench).
 
 ## Documents
