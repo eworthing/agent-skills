@@ -519,3 +519,15 @@ test("cancelling the request stops the wait even when interrupt is unavailable",
   assert.equal(value, null)
   assert.ok(Date.now() - started < 2000, "the runner kept polling after cancellation")
 })
+
+test("a {location,data} session.create envelope is unwrapped", async () => {
+  const fake = fakeCtx()
+  fake.ctx.session.create = async () => ({ location: {}, data: { id: "ses_env" } })
+  fake.ctx.session.context = async () => [
+    { type: "assistant", content: [{ type: "text", text: '{"candidates":[]}' }], finish: "stop" },
+  ]
+  const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent" })
+  const value = await runner(request())
+  assert.deepEqual(value, { candidates: [] })
+  assert.deepEqual(fake.removed, ["ses_env"])
+})

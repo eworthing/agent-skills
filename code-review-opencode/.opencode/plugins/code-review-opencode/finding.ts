@@ -79,7 +79,10 @@ export function truncateText(text: string, max: number): string {
 export function envInt(name: string): number | undefined {
   const raw = process.env[name]
   if (raw === undefined || !/^\d+$/.test(raw.trim())) return undefined
-  return Number(raw.trim())
+  // Node clamps a timer/execFile timeout above 2^31-1 ms to 1 ms, which turns
+  // a deliberate "no timeout" value into an immediate abort. Clamp to the
+  // largest usable delay instead.
+  return Math.min(Number(raw.trim()), 2_147_483_647)
 }
 
 /** JSON Schema `maxLength` counts Unicode code points, not UTF-16 units. */

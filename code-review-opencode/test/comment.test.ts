@@ -72,6 +72,8 @@ test("a checked-out PR branch resolves its PR and posts inline comments", async 
   const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
@@ -92,6 +94,7 @@ test("a branch review refuses to post when local HEAD is not the PR head", async
   const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "local\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
@@ -174,6 +177,8 @@ test("a clean branch range with a recorded current branch resolves its PR", asyn
   const scope = scopeOf(["src/a.ts"], { scopeKind: "range", branch: "feature", diffBase: "main" })
   const { exec } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
@@ -259,10 +264,17 @@ test("a branch review fetches the PR number, head, and base in one call", async 
   const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
       return {
-        stdout: JSON.stringify({ number: 9, headRefOid: "abc", baseRefName: "main" }),
+        stdout: JSON.stringify({
+          number: 9,
+          headRefOid: "abc",
+          baseRefName: "main",
+          baseRefOid: "base123",
+        }),
       }
     }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
@@ -278,7 +290,7 @@ test("a branch review fetches the PR number, head, and base in one call", async 
   assert.deepEqual(views[0].slice(3), [
     "feature",
     "--json",
-    "number,headRefOid,baseRefName",
+    "number,headRefOid,baseRefName,baseRefOid",
   ])
 })
 
@@ -401,6 +413,8 @@ test("a branch review refuses to post when the reviewed base is not the PR base"
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote" && argv[2] !== "get-url") return { stdout: "origin\n" }
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
       return { stdout: "9\n" }
@@ -423,6 +437,8 @@ test("a branch review posts when its reviewed base matches the PR base", async (
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote" && argv[2] !== "get-url") return { stdout: "origin\n" }
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
       return { stdout: "9\n" }
@@ -438,4 +454,72 @@ test("a branch review posts when its reviewed base matches the PR base", async (
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
   assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), true)
+})
+
+test("a dirty branch worktree refuses to post its uncommitted lines to the PR", async () => {
+  const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: " M src/a.ts\n" }
+    if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
+      return { stdout: "9\n" }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /working tree has uncommitted changes/)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
+})
+
+test("a branch review refuses to post when the local base merge-base is stale", async () => {
+  const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote" && argv[2] !== "get-url") return { stdout: "origin\n" }
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
+    if (argv[0] === "git" && argv[1] === "merge-base") {
+      return { stdout: argv[2] === "main" ? "localbase\n" : "remotebase\n" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
+      return {
+        stdout: JSON.stringify({
+          number: 9,
+          headRefOid: "abc",
+          baseRefName: "main",
+          baseRefOid: "base123",
+        }),
+      }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /does not share the pull request's merge base/)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
+})
+
+test("a github.com PR URL clears a GitHub Enterprise origin hostname", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@ghe.corp.example:me/fork.git" }
+    if (argv[0] === "gh" && argv[1] === "auth") return { code: 0 }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv.includes("url")) {
+      return { stdout: "https://github.com/upstream/app/pull/9\n" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  assert.ok(api?.includes("repos/upstream/app/pulls/9/comments"))
+  assert.equal(api?.includes("--hostname"), false)
 })

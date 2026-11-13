@@ -1567,3 +1567,118 @@ test("a line-scoped refutation does not suppress a file-level sweep gap", async 
   assert.equal(result.findings[0].verdict, "PLAUSIBLE")
   assert.equal(result.findings[0].line, undefined)
 })
+
+test("the sweep known list escapes control characters in a file path", async () => {
+  const path = "src/a\nb.ts"
+  const { calls } = await review({
+    level: "max",
+    family: "default",
+    files: [path],
+    script: {
+      finder: (req) =>
+        req.label === "angle-A" ? { candidates: [candidate(path, 1, "bad guard")] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+    },
+  })
+  const prompt = calls.find((c) => c.role === "sweep")?.prompt ?? ""
+  assert.match(prompt, /src\/a\\nb\.ts/)
+  assert.doesNotMatch(prompt, /src\/a\nb\.ts/)
+})
+
+test("pre-verify dedup keeps a correctness representative over a longer cleanup claim", async () => {
+  const cleanup = candidate(
+    "src/a.ts",
+    1,
+    "duplicate helper",
+    "a much longer cleanup scenario that would win a raw length comparison ".repeat(4),
+  )
+  const correctness = candidate("src/a.ts", 1, "missing guard", "short scenario")
+  const { result } = await review({
+    semanticMerge: true,
+    script: {
+      finder: (req) => {
+        if (req.label === "reuse") return { candidates: [cleanup] }
+        if (req.label === "angle-A") return { candidates: [correctness] }
+        return { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      synthesize: (req) =>
+        req.label === "dedup"
+          ? { summary: "deduped", decisions: [{ index: 0, merge: [1] }] }
+          : { summary: "ranked", decisions: [{ index: 0 }] },
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].kind, "correctness")
+  assert.equal(result.findings[0].summary, "missing guard")
+})
+
+test("a sweep candidate with no category ranks as cleanup", async () => {
+  const { result } = await review({
+    level: "max",
+    family: "default",
+    script: {
+      finder: (req) =>
+        req.label === "angle-A" ? { candidates: [candidate("src/b.ts", 2, "real bug")] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [candidate("src/a.ts", 1, "unattributed sweep gap")] }),
+    },
+  })
+  assert.equal(result.findings.length, 2)
+  assert.equal(result.findings[0].kind, "correctness")
+  assert.equal(result.findings[1].kind, "cleanup")
+})
+
+test("a quoted POSIX path with a literal backslash is preserved", async () => {
+  const path = "src/a\\b.ts"
+  const quoted = '"src/a\\\\b.ts"'
+  const { result } = await review({
+    files: [path],
+    script: {
+      finder: () => ({ candidates: [candidate(quoted, 1, "bad guard")] }),
+      verifier: () => CONFIRMED(),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].file, path)
+})
+
+test("a truncated text-synthesis report records truncatedFrom", async () => {
+  const finding = candidate("src/a.ts", 1, "bad guard")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    script: {
+      finder: (req) =>
+        req.label === "angle-A" ? { candidates: [finding] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+      synthesize: () => ({ summary: "text report", findings: [finding], truncated: true }),
+    },
+  })
+  assert.equal(result.truncatedFrom, 1)
+})
+
+test("a 1-based synthesis plan is shifted before ranking", async () => {
+  const a = candidate("src/a.ts", 1, "first bug")
+  const b = candidate("src/b.ts", 2, "second bug")
+  const { result } = await review({
+    semanticMerge: true,
+    limit: 1,
+    script: {
+      finder: (req) => {
+        if (req.label === "angle-A") return { candidates: [a] }
+        if (req.label === "angle-B") return { candidates: [b] }
+        return { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      synthesize: (req) =>
+        req.label === "dedup"
+          ? { summary: "deduped", decisions: [{ index: 0 }, { index: 1 }] }
+          : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].summary, "first bug")
+})

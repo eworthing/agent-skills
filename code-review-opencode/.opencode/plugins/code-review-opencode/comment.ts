@@ -173,9 +173,10 @@ export type PrInfo = {
   number: number
   headRefOid?: string
   baseRefName?: string
+  baseRefOid?: string
 }
 
-/** Parse `gh pr view --json number,headRefOid,baseRefName`; tolerate a bare number. */
+/** Parse `gh pr view --json number,headRefOid,baseRefName,baseRefOid`; tolerate a bare number. */
 function parsePrInfo(result: ExecResult): PrInfo | undefined {
   if (result.code !== 0) return undefined
   try {
@@ -191,6 +192,9 @@ function parsePrInfo(result: ExecResult): PrInfo | undefined {
         : {}),
       ...(typeof data?.baseRefName === "string" && data.baseRefName
         ? { baseRefName: data.baseRefName }
+        : {}),
+      ...(typeof data?.baseRefOid === "string" && data.baseRefOid
+        ? { baseRefOid: data.baseRefOid }
         : {}),
     }
   } catch {
@@ -226,7 +230,7 @@ export async function resolvePrInfo(
   // must not post to an unrelated PR.
   if (!branch || branch === "HEAD") return undefined
   const found = await exec(
-    ["gh", "pr", "view", branch, "--json", "number,headRefOid,baseRefName"],
+    ["gh", "pr", "view", branch, "--json", "number,headRefOid,baseRefName,baseRefOid"],
     cwd,
     opts,
   )
@@ -330,7 +334,10 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // fork clone can have an origin on a different GitHub Enterprise instance
   // than the upstream PR it is reviewing.
   const prHost = hostFromPrUrl(repo.stdout)
-  if (prHost && prHost.toLowerCase() !== "github.com") githubHostname = prHost
+  // The PR URL is authoritative for the host in both directions. A fork clone
+  // can have an origin on GHE while the PR itself is on github.com; keeping the
+  // origin hostname would send the comment request to the wrong instance.
+  if (prHost) githubHostname = prHost.toLowerCase() === "github.com" ? undefined : prHost
   if (!repoName) {
     // Older gh versions/tests may not return a URL. Keep the local lookup as a
     // fallback, but only after the PR-scoped answer failed.
@@ -350,6 +357,17 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // reviewed diff base is the PR's base; otherwise the anchors describe a
   // different tree (often the inverse diff).
   if (scope.pr === undefined && scope.branch) {
+    // A branch-shaped review includes uncommitted worktree changes. Those
+    // lines do not exist at the PR head, so an inline anchor is either
+    // rejected or attached to a different line. Refuse instead of posting a
+    // review that describes a tree the PR does not contain.
+    const dirty = await call(["git", "status", "--porcelain"])
+    if (dirty.code !== 0) {
+      return "`--comment` was ignored: could not verify the working tree is clean."
+    }
+    if (dirty.stdout.trim()) {
+      return "`--comment` was ignored: the working tree has uncommitted changes; commit them or pass the PR number as the target."
+    }
     const local = await call(["git", "rev-parse", "HEAD"])
     const localHead = local.stdout.trim()
     if (local.code !== 0 || localHead !== commit) {
@@ -383,6 +401,36 @@ export async function postComments(deps: CommentDeps): Promise<string> {
         remoteList.code === 0 ? remoteList.stdout.split(/\s+/).filter(Boolean) : []
       if (!samePrBase(scope.diffBase, prBase, remotes)) {
         return `\`--comment\` was ignored: the reviewed diff is based on ${scope.diffBase}, but PR #${pr} targets ${prBase}; pass the PR number as the target to review that PR's diff.`
+      }
+      // Matching the base *name* is not enough: the local ref can be stale.
+      // Compare the merge-base the review actually captured with the one
+      // GitHub computes from the PR's base commit. If they differ, the line
+      // numbers describe a different diff even though both refs say "main".
+      const prBaseOid =
+        prInfo.baseRefOid ??
+        (
+          await call([
+            "gh",
+            "pr",
+            "view",
+            String(pr),
+            "--json",
+            "baseRefOid",
+            "--jq",
+            ".baseRefOid",
+          ])
+        ).stdout.trim()
+      if (!prBaseOid) {
+        return "`--comment` was ignored: could not verify the pull request's base commit."
+      }
+      const reviewedMergeBase = await call(["git", "merge-base", scope.diffBase, "HEAD"])
+      const prMergeBase = await call(["git", "merge-base", prBaseOid, "HEAD"])
+      if (
+        reviewedMergeBase.code !== 0 ||
+        prMergeBase.code !== 0 ||
+        reviewedMergeBase.stdout.trim() !== prMergeBase.stdout.trim()
+      ) {
+        return `\`--comment\` was ignored: the reviewed diff base ${scope.diffBase} does not share the pull request's merge base; fetch the PR base or pass the PR number as the target.`
       }
     }
   }

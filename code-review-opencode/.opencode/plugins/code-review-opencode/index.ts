@@ -396,8 +396,10 @@ async function resolveAndRun(
   const runModel = sessionModel ?? modelRef(hostDefault)
   const sessionEffort = inv.sessionEffort ?? runModel?.variant
 
-  const storedEffort = await ctx.storage.get(STORAGE_EFFORT).catch(() => undefined)
-  const storedMax = await ctx.storage.get(STORAGE_MAX).catch(() => undefined)
+  const [storedEffort, storedMax] = await Promise.all([
+    ctx.storage.get(STORAGE_EFFORT).catch(() => undefined),
+    ctx.storage.get(STORAGE_MAX).catch(() => undefined),
+  ])
   const effort = resolveEffort(parsed, typeof storedEffort === "string" ? storedEffort : undefined, sessionEffort)
 
   // A level or --max-findings typed in a non-interactive run is not remembered
@@ -435,16 +437,23 @@ async function resolveAndRun(
   // `--fix` is an edit action, not a prompt decoration. A dry run or the JSON
   // contract must never append the apply block, on either the inline/prompt
   // path or the engine path.
+  // A requested action that the selected output mode cannot perform must be
+  // visible in the session, not only in the server log. These notices are
+  // included even under --quiet: silently ignoring --fix/--comment is worse
+  // than one extra line.
+  const actionNotices: string[] = []
   const fixMode = fixAction(parsed.fix, flags.dryRun, flags.json)
   if (fixMode === "dry-run") {
-    inv.log?.("--fix ignored: --dry-run was requested; the working tree was not modified.")
+    actionNotices.push("--fix ignored: --dry-run was requested; the working tree was not modified.")
   } else if (fixMode === "json") {
-    inv.log?.("--fix ignored with --json: the JSON contract is a bare array. Run without --json to apply fixes.")
+    actionNotices.push(
+      "--fix ignored with --json: the JSON contract is a bare array. Run without --json to apply fixes.",
+    )
   }
   const applyFix = fixMode === "apply"
   const comment = parsed.comment && !flags.dryRun
   if (parsed.comment && flags.dryRun) {
-    inv.log?.("--comment ignored: --dry-run was requested; no comments were posted.")
+    actionNotices.push("--comment ignored: --dry-run was requested; no comments were posted.")
   }
   // The prompt path chooses GitHub/GitLab from the reviewed target's origin,
   // not the session cwd: a path or submodule can point at a different host.
@@ -495,8 +504,9 @@ async function resolveAndRun(
     })
 
   const notices = flags.quiet
-    ? []
+    ? [...actionNotices]
     : [
+        ...actionNotices,
         ultraNotice(parsed, effort, applyFix),
         invalidMode
           ? `Ignoring unrecognized ${flags.mode !== undefined ? "--mode" : "CODE_REVIEW_MODE"} "${requestedMode}"; valid: ${Object.keys(VERSIONS).join(", ")}. Using ${version}.`

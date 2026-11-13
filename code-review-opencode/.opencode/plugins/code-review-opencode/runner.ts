@@ -610,7 +610,10 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
       agent: req.agent,
       ...(model ? { model } : {}),
     })
-    const id = created.id
+    // `session.create` may return the record directly or the host's
+    // `{location, data}` envelope, like every other session read.
+    const id = sessionRecord(created)?.id
+    if (!id) throw new Error("session.create returned no session id")
     opts.childSessions?.add(id)
     const onAbort = () => {
       void ctx.session.interrupt?.({ sessionID: id })?.catch(() => {})

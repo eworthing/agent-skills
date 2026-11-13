@@ -21,8 +21,13 @@ permissions:
   - action: grep
     resource: "*"
     effect: allow
+  # `diff` and `diff *` are separate patterns: `git diff*` also matched
+  # `git difftool`, which executes an external program.
   - action: shell
-    resource: "git -C * diff*"
+    resource: "git -C * diff"
+    effect: allow
+  - action: shell
+    resource: "git -C * diff *"
     effect: allow
   - action: shell
     resource: "git -C * log*"
@@ -46,7 +51,10 @@ permissions:
     resource: "git -C * grep*"
     effect: allow
   - action: shell
-    resource: "git diff*"
+    resource: "git diff"
+    effect: allow
+  - action: shell
+    resource: "git diff *"
     effect: allow
   - action: shell
     resource: "git log*"
@@ -126,6 +134,9 @@ permissions:
   # turn an allowed read-only command into arbitrary code execution.
   - action: shell
     resource: "*--open-files-in-pager*"
+    effect: deny
+  - action: shell
+    resource: "*difftool*"
     effect: deny
   - action: shell
     resource: "*--ext-diff*"

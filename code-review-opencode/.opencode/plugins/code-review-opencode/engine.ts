@@ -41,7 +41,7 @@ import {
 } from "./json.ts"
 import { scopeBlock, unquoteGitPath, type Scope } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
-import { location, lineOf, pluralize, shortSummary } from "./finding.ts"
+import { location, lineOf, pluralize, renderedLocation, shortSummary } from "./finding.ts"
 
 export type Role = "finder" | "verifier" | "sweep" | "synthesize"
 
@@ -167,8 +167,12 @@ function canonFile(raw: string, index: FileIndex): string {
   if (index.files.has(raw)) return raw
   // A finder can copy a git-quoted diff header (`"b/caf\303\251.ts"`).
   // Replacing its backslashes directly would turn the octal escapes into
-  // path separators, so unquote first, then normalize separators.
-  const p = unquoteGitPath(raw).replaceAll("\\", "/").replace(/^\.\//, "")
+  // path separators, so unquote first, then normalize separators. A POSIX
+  // filename may itself contain a literal backslash; check the unquoted form
+  // against the changed-file list before treating backslashes as separators.
+  const unquoted = unquoteGitPath(raw)
+  if (index.files.has(unquoted)) return unquoted
+  const p = unquoted.replaceAll("\\", "/").replace(/^\.\//, "")
   if (index.files.has(p)) return p
   // Only strip a real repository-root prefix. Suffix matching alone turns a
   // report about unchanged `lib/src/a.ts` into the changed `src/a.ts`.
@@ -443,6 +447,24 @@ function toFinding(c: RawFinding, kind: "correctness" | "cleanup"): Finding {
  * synthesis differ only in how they combine a representative with its merged
  * entries; the claim/backfill mechanics are the same.
  */
+/** Tolerate a 1-based plan when every index is one past the valid range. */
+function normalizeDecisionBase(
+  decisions: Decisions["decisions"],
+  itemCount: number,
+): Decisions["decisions"] {
+  if (decisions.length === 0 || itemCount === 0) return decisions
+  const indices = decisions.flatMap((d) => [d.index, ...d.merge])
+  if (indices.length === 0) return decisions
+  // Only shift an unambiguous 1-based plan: no zero index, every index >= 1,
+  // and the maximum index is exactly itemCount (the out-of-range sentinel).
+  if (indices.some((i) => i === 0) || indices.some((i) => i < 1)) return decisions
+  if (Math.max(...indices) !== itemCount) return decisions
+  return decisions.map((d) => ({
+    index: d.index - 1,
+    merge: d.merge.map((i) => i - 1),
+  }))
+}
+
 function applyIndexPlan<T, R>(
   items: T[],
   decisions: Decisions["decisions"],
@@ -453,7 +475,8 @@ function applyIndexPlan<T, R>(
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
-  for (const d of decisions) {
+  const plan = normalizeDecisionBase(decisions, items.length)
+  for (const d of plan) {
     if (output.length >= cap) {
       if (d.index >= 0 && d.index < items.length && !claimed.has(d.index)) truncated = true
       continue
@@ -482,19 +505,28 @@ function applyIndexPlan<T, R>(
 }
 
 /**
- * Apply index-based dedup decisions before verification. The representative is
- * the entry with the most concrete failure scenario; unclaimed candidates are
- * backfilled so the synthesizer cannot silently drop a non-duplicate.
+ * Apply index-based dedup decisions before verification. The representative
+ * keeps correctness priority, then prefers the most concrete failure scenario;
+ * unclaimed candidates are backfilled so the synthesizer cannot silently drop
+ * a non-duplicate.
  */
-function applyCandidateDedup<T extends RawFinding>(items: T[], report: Decisions): T[] {
+function applyCandidateDedup<T extends RawFinding & { kind: "correctness" | "cleanup" }>(
+  items: T[],
+  report: Decisions,
+): T[] {
   const { output } = applyIndexPlan(
     items,
     report.decisions,
     Number.POSITIVE_INFINITY,
     (item, merged) => {
       const candidates = [item, ...merged]
+      // A cleanup candidate must never absorb a correctness candidate just
+      // because its scenario is longer: that would downgrade the merged claim
+      // before verification and let the report cap cut a real bug first.
       const representative = candidates.sort(
-        (a, b) => (b.failure_scenario?.length ?? 0) - (a.failure_scenario?.length ?? 0),
+        (a, b) =>
+          (a.kind === "correctness" ? 0 : 1) - (b.kind === "correctness" ? 0 : 1) ||
+          (b.failure_scenario?.length ?? 0) - (a.failure_scenario?.length ?? 0),
       )[0]
       if (representative.line !== undefined) return representative
       const line = candidates.find((c) => c.line !== undefined)?.line
@@ -653,7 +685,10 @@ function kindFor(f: Finder, c: RawFinding): "correctness" | "cleanup" {
 
 /** A sweep candidate has only its category slug, not a producing Finder. */
 function kindForCategory(category: string | undefined): "correctness" | "cleanup" {
-  if (category === undefined) return "correctness"
+  // A sweep candidate without a category has no lens attribution. Treating it
+  // as correctness lets an unattributed cleanup claim outrank a real bug under
+  // the report cap; mirror kindFor()'s unattributed fallback instead.
+  if (category === undefined) return "cleanup"
   const slug = categorySlug(category)
   return slug === "cleanup" || CLEANUP_LABELS.includes(slug) ? "cleanup" : "correctness"
 }
@@ -1013,8 +1048,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     // Refuted claims must stay visible to the sweep. Omitting them lets a
     // false positive return as a fresh PLAUSIBLE finding with no new evidence.
     const known = [
-      ...kept.map((c) => `${location(c)} — ${c.summary}`),
-      ...refuted.map((c) => `${location(c)} — ${c.summary} (refuted — do not re-report without new evidence)`),
+      ...kept.map((c) => `${renderedLocation(c)} — ${c.summary}`),
+      ...refuted.map(
+        (c) => `${renderedLocation(c)} — ${c.summary} (refuted — do not re-report without new evidence)`,
+      ),
     ]
     const value = await runner({
       role: "sweep",
@@ -1143,12 +1180,15 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const mergeBase = willSynthesize ? surviving : mergeNearDuplicates(surviving)
   stats.dupes += surviving.length - mergeBase.length
   const rank = (c: Finding) => (c.kind === "cleanup" ? 2 : 0) + (c.verdict === "PLAUSIBLE" ? 1 : 0)
+  // Code-unit comparison, not localeCompare: the report order must not change
+  // with the host's locale or ICU build.
+  const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
   const ranked = mergeBase.slice().sort(
     (a, b) =>
       rank(a) - rank(b) ||
-      location(a).localeCompare(location(b)) ||
-      a.summary.localeCompare(b.summary) ||
-      a.failure_scenario.localeCompare(b.failure_scenario),
+      compare(location(a), location(b)) ||
+      compare(a.summary, b.summary) ||
+      compare(a.failure_scenario, b.failure_scenario),
   )
 
   let findings: Finding[]
@@ -1341,7 +1381,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         // half of a merged pair. Returning only the synthesizer's list is what
         // the reference does; an omitted finding is a model decision, not a
         // defect the orchestrator can safely reconstruct.
-        truncatedByCap = Number.isFinite(cap) && emitted.length > cap
+        // A text report can be truncated by the normalizer before the final
+        // cap is applied. Preserve that fact so the engine can record
+        // truncatedFrom instead of presenting a shortened list as complete.
+        truncatedByCap = report.truncated === true || (Number.isFinite(cap) && emitted.length > cap)
         findings = emitted.slice(0, Number.isFinite(cap) ? cap : undefined)
         if (unmatched > 0) {
           // A reworded or merged entry is indistinguishable from an invented
