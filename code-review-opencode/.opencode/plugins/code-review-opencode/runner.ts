@@ -89,8 +89,15 @@ type RunnerOptions = {
   childSessions?: Set<string>
   /** Abort a child that produces no session activity for this long. 0 disables.
    *  This is a stall watchdog, not a wall-clock cap: healthy long work keeps
-   *  re-arming it. Default 120s (pi-subagents uses 60s for subprocesses). */
+   *  re-arming it. Default 600s, matching Claude Code's foreground Agent
+   *  watchdog. A max-effort step can reason for many minutes without a new
+   *  transcript message, so a caller should also pass `activity`. */
   stallMs?: number
+  /** Last observed stream event time for a child, in epoch milliseconds.
+   *  `session.get().time.updated` only moves at turn boundaries, which makes a
+   *  long single-step reasoning turn look stalled; the event stream moves on
+   *  every reasoning/text/tool delta. */
+  activity?: (sessionID: string) => number | undefined
   /** Poll interval for the idle/stall check. Tests set this lower. */
   pollMs?: number
   keepSessions?: boolean
@@ -98,6 +105,86 @@ type RunnerOptions = {
 }
 
 type SchemaName = AgentRequest["schemaName"]
+
+/**
+ * Child sessions emit stream events continuously while the model reasons, but
+ * `session.get().time.updated` only moves when a turn starts or ends. A
+ * max-effort child can spend far longer than any reasonable watchdog inside a
+ * single step, so liveness must come from the event stream: reasoning, text,
+ * tool progress, step transitions, and usage updates. Without this, a healthy
+ * 25-minute reasoning turn is indistinguishable from a hung provider and gets
+ * interrupted at 10 minutes.
+ */
+const ACTIVITY_EVENTS = [
+  "session.execution.started",
+  "session.reasoning.delta",
+  "session.text.delta",
+  "session.step.started",
+  "session.step.streamed",
+  "session.step.ended",
+  "session.tool.called",
+  "session.tool.input.delta",
+  "session.tool.progress",
+  "session.tool.success",
+  "session.tool.failed",
+  "session.usage.updated",
+]
+
+type EventSource = {
+  subscribe(options?: { types?: string[]; signal?: AbortSignal }): AsyncIterable<unknown>
+}
+
+type ActivityTracker = {
+  /** Receipt time of the newest event for this session, if any. */
+  last(sessionID: string): number | undefined
+  /** Stop the subscription (plugin unload). */
+  stop(): void
+}
+
+/**
+ * Shared, process-wide activity index fed by the host event stream. The runner
+ * reads it at each watchdog poll so a child that is streaming reasoning tokens
+ * is never mistaken for a silent one.
+ */
+export function trackActivity(ctx: { event?: EventSource }): ActivityTracker {
+  const seen = new Map<string, number>()
+  const controller = new AbortController()
+  const prune = (): void => {
+    const cutoff = Date.now() - 60 * 60_000
+    for (const [id, at] of seen) if (at < cutoff) seen.delete(id)
+    // A long-lived server can outlive any plausible number of review children.
+    // Keep the map bounded even if every entry is recent.
+    while (seen.size > 500) {
+      const oldest = seen.keys().next().value
+      if (oldest === undefined) break
+      seen.delete(oldest)
+    }
+  }
+  const subscribe = ctx.event?.subscribe
+  if (typeof subscribe === "function") {
+    void (async () => {
+      try {
+        for await (const event of ctx.event!.subscribe({
+          types: ACTIVITY_EVENTS,
+          signal: controller.signal,
+        })) {
+          const record = event as { data?: { sessionID?: unknown } } | undefined
+          const sessionID = record?.data?.sessionID
+          if (typeof sessionID !== "string" || sessionID.length === 0) continue
+          seen.set(sessionID, Date.now())
+          if (seen.size > 500) prune()
+        }
+      } catch {
+        // A host without the event stream, or a stream closed on unload, is
+        // not a review failure: the watchdog falls back to session timestamps.
+      }
+    })()
+  }
+  return {
+    last: (sessionID) => seen.get(sessionID),
+    stop: () => controller.abort(),
+  }
+}
 
 type SchemaSpec = {
   tool: string
@@ -499,6 +586,11 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           settled = true
           return
         }
+        // Stream deltas are the real liveness signal for a long reasoning
+        // step. `time.updated` only changes at turn boundaries, so on its own
+        // it reports a healthy max-effort child as stalled after 10 minutes.
+        const streamed = opts.activity?.(sessionID)
+        if (streamed !== undefined && streamed > lastActivity) lastActivity = streamed
         if (ctx.session.get) {
           let info: unknown
           try {

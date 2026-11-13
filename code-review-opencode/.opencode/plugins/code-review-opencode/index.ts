@@ -54,7 +54,7 @@ import {
   storedMaxFindings,
   type StructuredInvocation,
 } from "./parse.ts"
-import { makeRunner, modelRef } from "./runner.ts"
+import { makeRunner, modelRef, trackActivity } from "./runner.ts"
 import {
   hasRuntimeSurface,
   hasSkill,
@@ -379,6 +379,8 @@ async function resolveAndRun(
   schemaResults?: Map<string, unknown>,
   schemaFailures?: Map<string, number>,
   reviewChildSessions?: Set<string>,
+  /** Stream-event liveness index for child sessions (see trackActivity). */
+  activity?: (sessionID: string) => number | undefined,
 ): Promise<Outcome> {
   const structured = inv.structured ? parseStructured(inv.structured) : undefined
   const raw = structured ? undefined : parseExtensions(inv.raw)
@@ -608,6 +610,7 @@ async function resolveAndRun(
     schemaResults,
     schemaFailures,
     childSessions: reviewChildSessions,
+    activity,
     keepSessions: flags.keepSessions ?? process.env.CODE_REVIEW_KEEP_SESSIONS === "true",
     onLog: inv.log,
   })
@@ -846,6 +849,8 @@ export default Plugin.define({
     const schemaFailures = new Map<string, number>()
     /** Child sessions created by this review engine; only these are recursion-guarded. */
     const reviewChildSessions = new Set<string>()
+    /** Stream deltas keep a long single-step reasoning turn live for the watchdog. */
+    const activity = trackActivity(ctx)
     /** Last outcome list posted per session, so a repeated re-report is quiet. */
     const reportedOutcomeHashes = new Map<string, string>()
     const MAX_OUTCOME_HASHES = 200
@@ -1092,6 +1097,7 @@ export default Plugin.define({
             schemaResults,
             schemaFailures,
             reviewChildSessions,
+            activity.last,
           )
           // The reference's host findings list is the ReportFindings payload.
           // The command path renders text; the tool path also exposes the typed
@@ -1147,6 +1153,7 @@ export default Plugin.define({
             schemaResults,
             schemaFailures,
             reviewChildSessions,
+            activity.last,
           )
           // Engine --json is the command's output, not a prompt. Display it
           // without a model turn so the visible result stays the bare array.
@@ -1201,5 +1208,8 @@ export default Plugin.define({
         },
       })
     })
+    // The event subscription outlives individual reviews; tie it to the
+    // plugin instance so a reload does not leave a second reader running.
+    return () => activity.stop()
   },
 })

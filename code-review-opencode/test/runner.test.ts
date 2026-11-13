@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { makeRunner, modelRef } from "../.opencode/plugins/code-review-opencode/runner.ts"
+import { makeRunner, modelRef, trackActivity } from "../.opencode/plugins/code-review-opencode/runner.ts"
 import type { AgentRequest } from "../.opencode/plugins/code-review-opencode/engine.ts"
 
 type Msg = { type: string; content: Array<{ type: string; text: string }>; finish?: string }
@@ -331,6 +331,44 @@ test("a bare candidate array is salvaged as a candidates result", async () => {
   const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent" })
   const value = (await runner(request())) as { candidates: Array<{ file: string }> }
   assert.equal(value.candidates[0].file, "a.ts")
+})
+
+test("stream activity re-arms the watchdog for a long reasoning step", async () => {
+  const fake = fakeCtx({}, { hangWait: true, busyGet: true })
+  fake.setOnPrompt(() => {})
+  let reads = 0
+  const runner = makeRunner(fake.ctx, {
+    parentSessionID: "ses_parent",
+    stallMs: 40,
+    pollMs: 5,
+    // Six live readings then silence: the first attempt outlives the raw
+    // timeout, so only the event-driven re-arm can explain the delay.
+    activity: () => (++reads <= 6 ? Date.now() : undefined),
+  })
+  const value = await runner(request())
+  assert.equal(value, null)
+  assert.deepEqual(fake.interrupted, ["ses_1", "ses_2"])
+  assert.ok(reads >= 12, `expected repeated activity reads, got ${reads}`)
+})
+
+test("trackActivity indexes stream events by child session", async () => {
+  const types: string[][] = []
+  const ctx = {
+    event: {
+      async *subscribe(options?: { types?: string[] }) {
+        types.push(options?.types ?? [])
+        yield { type: "session.reasoning.delta", data: { sessionID: "ses_child" } }
+        yield { type: "session.usage.updated", data: { sessionID: "ses_child" } }
+        yield { type: "session.reasoning.delta", data: {} }
+      },
+    },
+  }
+  const tracker = trackActivity(ctx)
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  assert.ok(tracker.last("ses_child") !== undefined)
+  assert.equal(tracker.last("ses_other"), undefined)
+  assert.ok(types[0].includes("session.reasoning.delta"))
+  tracker.stop()
 })
 
 test("a silent child is interrupted by the stall watchdog and retried once fresh", async () => {
