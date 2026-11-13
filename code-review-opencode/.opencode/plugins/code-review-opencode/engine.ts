@@ -456,6 +456,20 @@ function toFinding(c: RawFinding, kind: "correctness" | "cleanup"): Finding {
   }
 }
 
+/** One mapping from a verifier verdict to a kept finding or a refutation. */
+function toVerdictFinding(
+  c: RawFinding,
+  kind: "correctness" | "cleanup",
+  verdict: Verdict["verdict"],
+  evidence: string,
+): Finding {
+  return {
+    ...toFinding(c, kind),
+    verdict: verdict === "REFUTED" ? undefined : verdict,
+    evidence,
+  } as Finding
+}
+
 /**
  * Shared index-plan applier. The candidate dedup and the post-verify
  * synthesis differ only in how they combine a representative with its merged
@@ -947,7 +961,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       warnings.push(`verifier for ${location(c)} returned a verdict without evidence; kept as ${verdict.verdict}`)
       partial = true
     }
-    return { ...toFinding(c, kind), verdict: verdict.verdict === "REFUTED" ? undefined : verdict.verdict, evidence: verdict.evidence } as Finding
+    return toVerdictFinding(c, kind, verdict.verdict, verdict.evidence)
   }
 
   const verifyGroups = async (candidates: Array<RawFinding & { kind: "correctness" | "cleanup" }>): Promise<Finding[]> => {
@@ -1005,7 +1019,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       return group.flatMap((c, i) => {
         const v = byIdx.get(i)
         if (!v) return []
-        return [{ ...toFinding(c, c.kind), verdict: v.verdict === "REFUTED" ? undefined : v.verdict, evidence: v.evidence } as Finding]
+        return [toVerdictFinding(c, c.kind, v.verdict, v.evidence)]
       })
     })
     return out.flat()

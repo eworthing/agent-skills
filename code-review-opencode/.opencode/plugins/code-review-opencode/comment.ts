@@ -33,6 +33,11 @@ export type CommentDeps = {
   timeoutMs?: number
 }
 
+/** A hostname worth passing to `gh --hostname`; github.com is the default. */
+function enterpriseHost(host: string | undefined): string | undefined {
+  return host && host.toLowerCase() !== "github.com" ? host : undefined
+}
+
 export function buildGitHubCommentArgs(opts: {
   owner: string
   repo: string
@@ -46,12 +51,11 @@ export function buildGitHubCommentArgs(opts: {
   /** GitHub Enterprise hostname; omitted for github.com. */
   hostname?: string
 }): string[] {
+  const hostname = enterpriseHost(opts.hostname)
   return [
     "gh",
     "api",
-    ...(opts.hostname && opts.hostname.toLowerCase() !== "github.com"
-      ? ["--hostname", opts.hostname]
-      : []),
+    ...(hostname ? ["--hostname", hostname] : []),
     `repos/${opts.owner}/${opts.repo}/pulls/${opts.pr}/comments`,
     "-f",
     `body=${opts.body}`,
@@ -310,17 +314,13 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // hostname it already resolved; otherwise resolve it once here. If the
   // lookup fails, refuse rather than silently targeting github.com.
   const resolvedHostname = deps.githubHostname ?? hostDetails?.hostname
-  let githubHostname =
-    resolvedHostname && resolvedHostname.toLowerCase() !== "github.com"
-      ? resolvedHostname
-      : undefined
+  let githubHostname = enterpriseHost(resolvedHostname)
   if (resolvedHostname === undefined) {
     const remote = await call(["git", "remote", "get-url", "origin"])
     if (remote.code !== 0 || !remote.stdout.trim()) {
       return "`--comment` was ignored: could not resolve the origin remote."
     }
-    const remoteHost = remoteHostname(remote.stdout.trim())
-    githubHostname = remoteHost && remoteHost.toLowerCase() !== "github.com" ? remoteHost : undefined
+    githubHostname = enterpriseHost(remoteHostname(remote.stdout.trim()))
   }
 
   // Resolve the repository from the PR itself, not the local checkout:
@@ -345,13 +345,37 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // The PR URL is authoritative for the host in both directions. A fork clone
   // can have an origin on GHE while the PR itself is on github.com; keeping the
   // origin hostname would send the comment request to the wrong instance.
-  if (prHost) githubHostname = prHost.toLowerCase() === "github.com" ? undefined : prHost
+  if (prHost) githubHostname = enterpriseHost(prHost)
   if (!repoName) {
-    // Older gh versions/tests may not return a URL. Keep the local lookup as a
-    // fallback, but only after the PR-scoped answer failed.
-    const fallback = await call(["gh", "repo", "view", "--json", "owner,name", "--jq", '.owner.login + "/" + .name'])
-    repoName = fallback.stdout.trim()
-    repoError = fallback.stderr.trim() || repoError
+    // Older gh versions/tests may not return a URL. Ask the PR for its base
+    // repository before falling back to the local checkout: `gh repo view` in
+    // a fork clone names the fork, not the base repository the PR belongs to.
+    const base = await call([
+      "gh",
+      "pr",
+      "view",
+      String(pr),
+      "--json",
+      "baseRepository",
+      "--jq",
+      ".baseRepository.nameWithOwner",
+    ])
+    const baseName = base.stdout.trim()
+    if (baseName.includes("/")) {
+      repoName = baseName
+    } else {
+      const fallback = await call([
+        "gh",
+        "repo",
+        "view",
+        "--json",
+        "owner,name",
+        "--jq",
+        '.owner.login + "/" + .name',
+      ])
+      repoName = fallback.stdout.trim()
+      repoError = fallback.stderr.trim() || repoError
+    }
   }
   const [owner, name] = repoName.split("/")
   const commit = head.stdout.trim()
