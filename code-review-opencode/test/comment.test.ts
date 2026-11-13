@@ -2,13 +2,12 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   buildGitHubCommentArgs,
-  detectHost,
   detectHostDetails,
   hostFromRemote,
   isGitHubRemote,
   isGitLabRemote,
   postComments,
-  resolvePrNumber,
+  resolvePrInfo,
   samePrBase,
 } from "../.opencode/plugins/code-review-opencode/comment.ts"
 import type { Exec, ExecOptions } from "../.opencode/plugins/code-review-opencode/scope.ts"
@@ -65,7 +64,7 @@ test("hostFromRemote distinguishes GitHub, GitLab, and other hosts", () => {
 
 test("detectHost reads the origin remote", async () => {
   const { exec } = fake((argv) => (argv.includes("get-url") ? { stdout: "git@gitlab.com:acme/app.git" } : {}))
-  assert.equal(await detectHost("/repo", exec), "gitlab")
+  assert.equal((await detectHostDetails("/repo", exec)).host, "gitlab")
 })
 
 test("a checked-out PR branch resolves its PR and posts inline comments", async () => {
@@ -87,7 +86,7 @@ test("a checked-out PR branch resolves its PR and posts inline comments", async 
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
   const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
   assert.ok(api?.includes("repos/acme/app/pulls/9/comments"))
-  assert.equal(await resolvePrNumber("/repo", scope, exec), 9)
+  assert.equal((await resolvePrInfo("/repo", scope, exec))?.number, 9)
 })
 
 test("a branch review refuses to post when local HEAD is not the PR head", async () => {
@@ -220,7 +219,7 @@ test("a dirty worktree does not post to its branch's PR", async () => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     return { code: 1 }
   })
-  assert.equal(await resolvePrNumber("/repo", scope, exec), undefined)
+  assert.equal(await resolvePrInfo("/repo", scope, exec), undefined)
   assert.equal(calls.some((c) => c[0] === "gh"), false)
 })
 
@@ -345,7 +344,7 @@ test("a GitHub Enterprise remote is recognized when gh is authenticated to it", 
     if (argv[0] === "gh" && argv[1] === "auth") return { code: 0, stdout: "" }
     return { code: 1 }
   })
-  assert.equal(await detectHost("/repo", exec), "github")
+  assert.equal((await detectHostDetails("/repo", exec)).host, "github")
 })
 
 test("a deleted line is anchored with side=LEFT", async () => {

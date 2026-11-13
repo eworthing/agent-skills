@@ -165,13 +165,6 @@ export async function detectHostDetails(
   return auth.code === 0 ? { host: "github", ...(hostname ? { hostname } : {}) } : { host: "other" }
 }
 
-export async function detectHost(
-  cwd: string,
-  exec: Exec = defaultExec,
-  opts?: ExecOptions,
-): Promise<Host> {
-  return (await detectHostDetails(cwd, exec, opts)).host
-}
 
 /**
  * A numeric target sets `scope.pr`; a checked-out PR branch does not. Resolve
@@ -246,14 +239,6 @@ export async function resolvePrInfo(
   return parsePrInfo(found)
 }
 
-export async function resolvePrNumber(
-  cwd: string,
-  scope: Scope,
-  exec: Exec = defaultExec,
-  opts?: ExecOptions,
-): Promise<number | undefined> {
-  return (await resolvePrInfo(cwd, scope, exec, opts))?.number
-}
 
 /**
  * A PR baseRefName is a short branch name. `release/main` is a different
