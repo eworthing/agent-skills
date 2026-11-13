@@ -56,6 +56,7 @@ import {
   type StructuredInvocation,
 } from "./parse.ts"
 import { makeRunner, modelRef, trackActivity } from "./runner.ts"
+import { installReviewAgentPolicy } from "./agent-policy.ts"
 import {
   hasRuntimeSurface,
   hasSkill,
@@ -855,6 +856,10 @@ export default Plugin.define({
     const reviewChildSessions = new Set<string>()
     /** Stream deltas keep a long single-step reasoning turn live for the watchdog. */
     const activity = trackActivity(ctx)
+    // One shared read-only policy for all three review agents. Keeping it here
+    // rather than in three Markdown frontmatters lets the git hardening flags
+    // and the allowed command shapes stay in sync with scope.ts.
+    await installReviewAgentPolicy(ctx)
     /** Last outcome list posted per session, so a repeated re-report is quiet. */
     const reportedOutcomeHashes = new Map<string, string>()
     const MAX_OUTCOME_HASHES = 200

@@ -16,6 +16,7 @@ import {
   BASE_ANGLES,
   CLEANUP_ANGLES,
   CLEANUP_ANGLES_162,
+  CLEANUP_LENSES,
   CLEANUP_TEXT_221,
   EXTENDED_ANGLES,
   candidateDedupPrompt,
@@ -348,7 +349,7 @@ function toVerdictFinding(
 function applyIndexPlan<T, R>(
   items: T[],
   decisions: Decisions["decisions"],
-  cap: number,
+  cap: number | undefined,
   combine: (item: T, merged: T[]) => R,
   backfill: (item: T) => R,
 ): { output: R[]; backfilled: number; truncated: boolean; planned: number } {
@@ -387,7 +388,7 @@ function applyIndexPlan<T, R>(
   }
   for (let i = 0; i < items.length; i++) if (!plannedClaimed.has(i)) planned++
   for (const d of plan) {
-    if (output.length >= cap) {
+    if (cap !== undefined && output.length >= cap) {
       if (d.index >= 0 && d.index < items.length && !claimed.has(d.index)) truncated = true
       continue
     }
@@ -404,7 +405,7 @@ function applyIndexPlan<T, R>(
   let backfilled = 0
   for (let i = 0; i < items.length; i++) {
     if (claimed.has(i)) continue
-    if (output.length >= cap) {
+    if (cap !== undefined && output.length >= cap) {
       truncated = true
       break
     }
@@ -427,7 +428,7 @@ function applyCandidateDedup<T extends RawFinding & { kind: "correctness" | "cle
   const { output } = applyIndexPlan(
     items,
     report.decisions,
-    Number.POSITIVE_INFINITY,
+    undefined,
     (item, merged) => {
       const candidates = [item, ...merged]
       // A cleanup candidate must never absorb a correctness candidate just
@@ -455,7 +456,7 @@ function applyCandidateDedup<T extends RawFinding & { kind: "correctness" | "cle
 function applyDecisions(
   ranked: Finding[],
   report: Decisions,
-  cap: number,
+  cap: number | undefined,
 ): { findings: Finding[]; backfilled: number; truncated: boolean; truncatedFrom: number } {
   const { output, backfilled, truncated, planned } = applyIndexPlan(
     ranked,
@@ -498,17 +499,17 @@ function applyDecisions(
 /** The deterministic fallback: exact-claim dedup, keep verified order, cap. */
 function deterministicReport(
   ranked: Finding[],
-  cap: number,
+  cap: number | undefined,
   level: Level,
 ): { findings: Finding[]; summary: string; truncated: boolean; truncatedFrom?: number } {
   const { novel } = dedupeBy(ranked, dedupKey318)
-  const findings = novel.slice(0, Number.isFinite(cap) ? cap : undefined).map((c) => ({ ...c }))
+  const findings = novel.slice(0, cap).map((c) => ({ ...c }))
   const summary = `${pluralize(findings.length, "finding")} survived verification (${level}-effort review).`
   return {
     findings,
     summary,
-    truncated: Number.isFinite(cap) && novel.length > cap,
-    ...(Number.isFinite(cap) && novel.length > cap ? { truncatedFrom: novel.length } : {}),
+    truncated: cap !== undefined && novel.length > cap,
+    ...(cap !== undefined && novel.length > cap ? { truncatedFrom: novel.length } : {}),
   }
 }
 
@@ -559,12 +560,9 @@ function categoryFor(f: Finder): string {
   return f.label
 }
 
-const CLEANUP_LABELS = [
-  "reuse",
-  "simplification",
-  "efficiency",
-  "altitude",
-  "conventions",
+/** Cleanup vocabulary accepted in a finding's category, including legacy slugs. */
+const CLEANUP_VOCABULARY = [
+  ...CLEANUP_LENSES.map((lens) => lens.label),
   "dead-code",
   "duplication",
   "readability",
@@ -604,7 +602,7 @@ function kindFor(f: Finder, c: RawFinding): "correctness" | "cleanup" {
   if (c.category) {
     const slug = categorySlug(c.category)
     if (slug === "correctness") return "correctness"
-    if (slug === "cleanup" || CLEANUP_LABELS.includes(slug)) return "cleanup"
+    if (slug === "cleanup" || CLEANUP_VOCABULARY.includes(slug)) return "cleanup"
   }
   // No attribution on a mixed-lens candidate. Defaulting to the aggregate kind
   // is always "correctness" for a mixed group, which lets a cleanup finding
@@ -652,7 +650,7 @@ function buildFinders(cell: Cell, budget?: number): Finder[] {
         text: CLEANUP_TEXT_221(),
         cap: finderCap(cell),
         merged: true,
-        lenses: CLEANUP_LABELS.slice(0, cell.cleanupAngles).map((label) => ({ label, kind: "cleanup" as const })),
+        lenses: CLEANUP_LENSES.slice(0, cell.cleanupAngles).map(({ label }) => ({ label, kind: "cleanup" as const })),
       },
     ]
   }
@@ -662,7 +660,7 @@ function buildFinders(cell: Cell, budget?: number): Finder[] {
   // list so the labels below cannot drift from the texts by position.
   const cleanupTexts = cell.cleanupLenses === "162" ? CLEANUP_ANGLES_162() : CLEANUP_ANGLES()
   const cleanupFinders: Finder[] = cleanupTexts.map((text, i) => {
-    const label = CLEANUP_LABELS[i] ?? `cleanup-${i}`
+    const label = CLEANUP_LENSES[i]?.label ?? `cleanup-${i}`
     return {
       label,
       kind: "cleanup",
@@ -926,9 +924,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     // whichever finder finished first consume every slot, so two runs of the
     // same commit verified different candidates. A deterministic quota makes
     // the verified subset independent of child latency.
-    const budget = cell.verifyBudget ?? Number.POSITIVE_INFINITY
-    const share = Number.isFinite(budget) ? Math.floor(budget / finders.length) : Number.POSITIVE_INFINITY
-    const remainder = Number.isFinite(budget) ? budget % finders.length : 0
+    const budget = cell.verifyBudget
+    const share = budget === undefined ? Number.POSITIVE_INFINITY : Math.floor(budget / finders.length)
+    const remainder = budget === undefined ? 0 : budget % finders.length
     let budgetWarning = false
     const warnBudget = (): void => {
       stats.budgetDropped++
@@ -1117,7 +1115,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     .map((c) => ({ ...c, verdict: c.verdict as "CONFIRMED" | "PLAUSIBLE" }))
 
   const limit = opts.statedLimit ?? cell.maxFindings
-  const cap = limit === "all" ? Number.POSITIVE_INFINITY : limit
+  const cap = limit === "all" ? undefined : limit
 
   if (surviving.length === 0) {
     const result: EngineResult = {
@@ -1143,10 +1141,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   // synthesizer's decisions and can collapse two distinct defects.
   // --no-semantic-merge must disable the workflow synthesizer too, not only
   // the v2.1.318 merge pass.
-  const synthesisEnabled = opts.semanticMerge !== false
   const willSynthesize =
-    synthesisEnabled &&
-    (cell.synthesis !== "none" || (opts.semanticMerge === true && surviving.length > 1))
+    shouldSynthesize(cell, opts.semanticMerge) &&
+    (cell.synthesis !== "none" || surviving.length > 1)
   // Without a synthesizer, merge only exact claims. The paraphrase heuristic
   // could collapse two verified, distinct same-line defects into one entry.
   const mergeBase = willSynthesize
@@ -1181,8 +1178,8 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
    * truncation flag or the dropped-count handling.
    */
   const unmergedFallback = (summaryText: string): void => {
-    findings = ranked.slice(0, Number.isFinite(cap) ? cap : undefined).map((c) => ({ ...c }))
-    truncatedByCap = Number.isFinite(cap) && ranked.length > cap
+    findings = ranked.slice(0, cap).map((c) => ({ ...c }))
+    truncatedByCap = cap !== undefined && ranked.length > cap
     truncatedFrom = truncatedByCap ? ranked.length : undefined
     summary = summaryText
     summarySynthesized = false
@@ -1199,7 +1196,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       prompt: synthPromptIndex({
         level,
         ranked,
-        maxFindings: Number.isFinite(cap) ? cap : ranked.length,
+        maxFindings: cap ?? ranked.length,
         diffText: scope.diffText,
       }),
       agent: AGENT_IDS.synthesize,
@@ -1246,7 +1243,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     truncatedFrom = synthesized.truncatedFrom
   }
 
-  if (synthesisEnabled && cell.synthesis === "index") {
+  if (willSynthesize && cell.synthesis === "index") {
     applyIndexSynthesis(
       await runIndexSynthesis("synthesize"),
       "synthesis returned no usable decisions; returning ranked findings unmerged",
@@ -1255,7 +1252,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           "Synthesis step was skipped or its decisions were unusable — returning verified findings ranked, unmerged.",
         ),
     )
-  } else if (synthesisEnabled && cell.synthesis === "text") {
+  } else if (willSynthesize && cell.synthesis === "text") {
     emit({ type: "phase", phase: "Synthesize" })
     const value = await runner({
       role: "synthesize",
@@ -1263,7 +1260,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       prompt: synthPromptText({
         level,
         ranked,
-        maxFindings: Number.isFinite(cap) ? cap : ranked.length,
+        maxFindings: cap ?? ranked.length,
         diffText: scope.diffText,
       }),
       agent: AGENT_IDS.synthesize,
@@ -1272,7 +1269,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     })
     // "all" means the synthesizer was asked for every survivor, so the
     // normalizer must not silently cap the report below that asked-for count.
-    const report = asReport(value, Number.isFinite(cap) ? cap : ranked.length)
+    const report = asReport(value, cap ?? ranked.length)
     if (!report) {
       warnings.push("synthesis returned no usable report; returning ranked findings unmerged")
       partial = true
@@ -1390,16 +1387,16 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           // A text report can be truncated by the normalizer before the final
           // cap is applied. Preserve that fact so the engine can record
           // truncatedFrom instead of presenting a shortened list as complete.
-          truncatedByCap = report.truncated === true || (Number.isFinite(cap) && emitted.length > cap)
+          truncatedByCap = report.truncated === true || (cap !== undefined && emitted.length > cap)
           if (report.truncated === true) {
             // The normalizer cut the report tail, so the original count is not
             // available. Disclose a lower bound instead of claiming N of N.
             truncatedFrom = Math.max(truncatedFrom ?? 0, emitted.length + 1)
             warnings.push("synthesis report was truncated at the tool cap; the pre-cap count is a lower bound")
-          } else if (Number.isFinite(cap) && emitted.length > cap) {
+          } else if (cap !== undefined && emitted.length > cap) {
             truncatedFrom = emitted.length
           }
-          findings = emitted.slice(0, Number.isFinite(cap) ? cap : undefined)
+          findings = emitted.slice(0, cap)
           if (unmatched > 0) {
             // A reworded or merged entry is indistinguishable from an invented
             // one, so the matching failure may have dropped verified findings.
@@ -1437,15 +1434,15 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     truncatedByCap = fallback.truncated
     truncatedFrom = fallback.truncatedFrom
   }
-  if (Number.isFinite(cap) && findings.length > cap) truncatedByCap = true
+  if (cap !== undefined && findings.length > cap) truncatedByCap = true
 
   const result: EngineResult = {
     level,
     summary,
     ...(summarySynthesized ? { summarySynthesized: true } : {}),
-    findings: findings.slice(0, Number.isFinite(cap) ? cap : undefined),
+    findings: findings.slice(0, cap),
     refuted: refuted.map((c) => ({ file: c.file, line: c.line, summary: c.summary })),
-    stats: { ...stats, reported: Math.min(findings.length, Number.isFinite(cap) ? cap : findings.length) },
+    stats: { ...stats, reported: Math.min(findings.length, cap ?? findings.length) },
     partial,
     warnings,
     cell: cell.id,
@@ -1453,12 +1450,23 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     // more candidates entered synthesis: a synthesizer that merged 20
     // survivors into 12 under a 15 cap dropped nothing. The path that produced
     // the list reports its own pre-cap size; `findings.length` is the fallback.
-    ...(truncatedByCap && Number.isFinite(cap)
+    ...(truncatedByCap && cap !== undefined
       ? { truncatedFrom: truncatedFrom ?? findings.length }
       : {}),
   }
   emit({ type: "stats", stats: result.stats })
   return result
+}
+
+/**
+ * Whether the workflow's merge/rank synthesizer should run. `false` from the
+ * caller disables it; `true` forces the platform equivalent even when the cell
+ * has no synthesis step; `undefined` follows the cell's own recipe.
+ */
+export function shouldSynthesize(cell: Cell, override: boolean | undefined): boolean {
+  if (override === false) return false
+  if (cell.synthesis !== "none") return true
+  return override === true
 }
 
 /** Inline cells produce a prompt, not an engine run. */

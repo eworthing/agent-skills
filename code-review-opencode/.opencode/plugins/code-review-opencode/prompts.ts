@@ -54,8 +54,23 @@ export const SWEEP_FOCUS = () => frag("sweep-focus").trimEnd()
 
 /** The one list of correctness fragments, in angle order. */
 const CORRECTNESS_FRAGMENTS = [ANGLE_A, ANGLE_B, ANGLE_C, ANGLE_D, ANGLE_E]
+
+export type CleanupLens = { label: string; text: () => string }
+
+/**
+ * The cleanup lenses, with the label that names the same lens in a finding's
+ * category. Engine and prompt assembly both read this list, so a label cannot
+ * drift from its fragment by position.
+ */
+export const CLEANUP_LENSES: readonly CleanupLens[] = [
+  { label: "reuse", text: REUSE },
+  { label: "simplification", text: SIMPLIFICATION },
+  { label: "efficiency", text: EFFICIENCY },
+  { label: "altitude", text: ALTITUDE },
+  { label: "conventions", text: CONVENTIONS },
+]
 /** The one list of cleanup fragments, in lens order. */
-const CLEANUP_FRAGMENTS = [REUSE, SIMPLIFICATION, EFFICIENCY, ALTITUDE, CONVENTIONS]
+const CLEANUP_FRAGMENTS = CLEANUP_LENSES.map((lens) => lens.text)
 
 /** 3 correctness angles (A/B/C) + 3 cleanup + altitude + conventions. */
 export const BASE_ANGLES = () =>
@@ -65,14 +80,14 @@ export const BASE_ANGLES = () =>
 export const EXTENDED_ANGLES = () =>
   [...CORRECTNESS_FRAGMENTS, ...CLEANUP_FRAGMENTS].map((f) => f()).join("\n")
 
-/** The cleanup lenses as separate finder texts, one per fragment. */
-export const CLEANUP_ANGLES = () => CLEANUP_FRAGMENTS.map((f) => f())
+/** The cleanup lenses as separate finder texts, one per lens. */
+export const CLEANUP_ANGLES = () => CLEANUP_LENSES.map((lens) => lens.text())
 
 /** The 4 cleanup lenses as used by the v2.1.162 workflow's cleanup finders. */
-export const CLEANUP_ANGLES_162 = () => CLEANUP_FRAGMENTS.slice(0, 4).map((f) => f())
+export const CLEANUP_ANGLES_162 = () => CLEANUP_LENSES.slice(0, 4).map((lens) => lens.text())
 
 /** The 5 cleanup lenses merged into one finder by the v2.1.221 workflow. */
-export const CLEANUP_TEXT_221 = () => CLEANUP_FRAGMENTS.map((f) => f()).join("\n\n")
+export const CLEANUP_TEXT_221 = () => CLEANUP_LENSES.map((lens) => lens.text()).join("\n\n")
 
 /**
  * Interpolate a recovered fragment. The fragment files use the reference's

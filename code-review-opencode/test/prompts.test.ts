@@ -4,6 +4,7 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
+import { REVIEW_AGENT_IDS, reviewAgentPermissions } from "../.opencode/plugins/code-review-opencode/agent-policy.ts"
 import {
   BASE_ANGLES,
   CONVENTIONS,
@@ -601,20 +602,21 @@ test("the synth agent prompt matches the runner's schema-tool instruction", () =
   assert.match(agent, /final text response/)
 })
 
-test("the three review agents share one read-only shell policy", () => {
-  // Each role gets a different final schema tool, but the shell allow/deny
-  // block before it must stay identical. A new helper-executing git option
-  // added to only one copy would leave the other agents writable.
+test("the three review agents share one read-only policy module", () => {
+  // The full shell table lives in agent-policy.ts and is installed by setup.
+  // The Markdown files keep only a safe read-only fallback; duplicating the
+  // table there is what let the three copies drift.
   const agents = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
-  const shellPolicy = (file: string): string => {
+  for (const file of ["review-finder.md", "review-verifier.md", "review-sweep.md"]) {
     const text = readFileSync(join(agents, file), "utf8")
-    const start = text.indexOf("\npermissions:")
-    const end = text.indexOf("\n  - action: code_review_", start)
-    assert.ok(start !== -1 && end !== -1, `${file} has no shell policy`)
-    return text.slice(start, end)
+    assert.match(text, /agent-policy\.ts/)
+    assert.doesNotMatch(text, /resource: "git /, `${file} still duplicates the git table`)
+    assert.match(text, /- action: "\*"[\s\S]*effect: deny/)
   }
-  const finder = shellPolicy("review-finder.md")
-  assert.match(finder, /resource: "\* -O\*"/)
-  assert.equal(shellPolicy("review-verifier.md"), finder)
-  assert.equal(shellPolicy("review-sweep.md"), finder)
+  const policies = REVIEW_AGENT_IDS.map((id) => reviewAgentPermissions(id))
+  const shell = (rules: ReturnType<typeof reviewAgentPermissions>) =>
+    JSON.stringify(rules.filter((rule) => rule.action === "shell"))
+  assert.equal(shell(policies[1]), shell(policies[0]))
+  assert.equal(shell(policies[2]), shell(policies[0]))
+  assert.ok(policies[0].some((rule) => rule.resource === "* -O*" && rule.effect === "deny"))
 })
