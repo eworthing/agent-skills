@@ -143,7 +143,7 @@ export type ScopeOptions = {
  * during a read-only review. `quotePath=false` keeps ordinary paths readable;
  * the parsers still handle the quoted form for tabs/newlines and non-ASCII.
  */
-const GIT_HARDENING = [
+export const GIT_HARDENING = [
   "-c",
   "core.hooksPath=/dev/null",
   "-c",
@@ -153,6 +153,11 @@ const GIT_HARDENING = [
   "-c",
   "core.quotePath=false",
 ]
+
+/** Prefix a `git` argv with the read-only config hardening. */
+export function hardenedGit(argv: string[]): string[] {
+  return ["git", ...GIT_HARDENING, ...argv.slice(1)]
+}
 
 function quote(argv: string[]): string {
   return argv
@@ -889,6 +894,9 @@ function readCapped(path: string, budget: number, knownSize?: number): string {
       // withholds an incomplete trailing sequence instead of emitting U+FFFD,
       // so the conventions block never ends with a corrupted character.
       const text = new StringDecoder("utf8").write(buffer.subarray(0, read))
+      // Bytes can exceed the character budget while the decoded text still
+      // fits; a marker there would falsely report a complete file as cut.
+      if (text.length <= budget) return text
       const marker = "\n…(truncated)"
       // Keep the returned value inside the cap: callers sum lengths to enforce
       // the conventions budget, and appending a marker past the cap made a later
@@ -1250,7 +1258,6 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     target &&
     targetPr === undefined &&
     !branchCandidate &&
-    !pathScope &&
     !looksLikeRange(target) &&
     !target.includes(" ") &&
     (target.includes("/") || /\.[a-z0-9]{1,8}$/i.test(target)) &&

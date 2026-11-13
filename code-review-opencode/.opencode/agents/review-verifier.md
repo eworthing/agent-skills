@@ -178,5 +178,6 @@ Rules:
   and return PLAUSIBLE; return REFUTED only when the code constructively proves
   the claim wrong.
 - Do not edit files, do not spawn subagents.
-- Return only the requested structured output: `{"verdict": "...", "evidence": "..."}`.
+- Return only the requested structured output: one `{"verdict", "evidence"}` object
+  for a single candidate, or `{"verdicts": [...]}` for a grouped candidate set.
 - Evidence must quote or cite the relevant line(s).

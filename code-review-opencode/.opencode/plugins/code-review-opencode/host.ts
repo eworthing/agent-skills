@@ -38,7 +38,6 @@ export function supportsChildSessions(ctx: unknown): boolean {
   // for the child turn. Interrupt and cleanup are optional: the runner calls
   // them only when the host exposes them.
   return (
-    typeof session?.get === "function" &&
     typeof session?.create === "function" &&
     typeof session?.prompt === "function" &&
     typeof session?.wait === "function" &&

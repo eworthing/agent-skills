@@ -221,7 +221,9 @@ function withSchemaInstruction(prompt: string, schemaName: SchemaName, role?: st
       ? "- Do not explore, read files, or run commands; use only the review material above and return the object."
       : role === "format"
         ? "- Do not explore, read files, or run commands; convert only the text above into the object."
-        : "- Do your work (read files, run commands, etc.), then return the object."
+        : role === "verifier" || role === "sweep"
+          ? "- Use read-only inspection (read, glob, grep, git diff/log/show/blame), then return the object."
+          : "- Do your work (read files, run commands, etc.), then return the object."
   return `${prompt}
 
 ## Structured output
@@ -653,7 +655,11 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
     if (req.signal?.aborted) return null
     const startedAt = Date.now()
     try {
-      return await runInChild(req, req.label, async (sessionID) => {
+      const runAttempt = async (
+        label: string,
+      ): Promise<{ value: unknown | null; stalled: boolean }> => {
+        let stalled = false
+        const value = await runInChild(req, label, async (sessionID) => {
         // A session created above has no pre-prompt messages; skip the
         // transcript RPC that would only confirm the known zero.
         const baseline = await sessionBaseline(sessionID, { messages: 0 })
@@ -667,6 +673,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           req.signal,
         )
         const waitOutcome = waited.outcome
+        if (waitOutcome === "stalled") stalled = true
         if (req.signal?.aborted) return null
         let cachedMessages = waited.messages
         // The transcript we already read is the pre-prompt baseline for the
@@ -859,6 +866,7 @@ ${text}`
         const recovered = await fromText()
         if (recovered !== null) return recovered
         if (retriedWait.outcome === "stalled") {
+          stalled = true
           log(`[code-review-opencode] ${req.label}: retry stalled; giving up on this child`)
           break
         }
@@ -873,7 +881,15 @@ ${text}`
         const failures = opts.schemaFailures?.get(sessionID) ?? 0
         log(`[code-review-opencode] ${req.label}: unusable structured output (${failures} validation failure(s))`)
         return null
-      })
+        })
+        return { value, stalled }
+      }
+      const first = await runAttempt(req.label)
+      if (first.value !== null || !first.stalled) return first.value
+      // A stall is a provider/session failure, not a schema decision. One
+      // fresh child can still complete the same work.
+      log(`[code-review-opencode] ${req.label}: stalled; retrying once with a fresh child`)
+      return (await runAttempt(`${req.label} retry`)).value
     } catch (error) {
       log(`[code-review-opencode] ${req.label}: ${error instanceof Error ? error.message : String(error)}`)
       return null

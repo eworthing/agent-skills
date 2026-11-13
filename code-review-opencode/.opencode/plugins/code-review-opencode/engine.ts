@@ -585,6 +585,7 @@ function applyDecisions(
         summary: source.summary + also,
         failure_scenario: source.failure_scenario,
         ...(source.short_summary !== undefined ? { short_summary: source.short_summary } : {}),
+        ...(source.evidence !== undefined ? { evidence: source.evidence } : {}),
         verdict,
       }
     },

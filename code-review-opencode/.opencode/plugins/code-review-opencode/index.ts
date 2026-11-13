@@ -250,6 +250,11 @@ function partialRecord(warnings: string[]): string {
   return `CODE_REVIEW_PARTIAL ${JSON.stringify({ partial: true, warnings })}`
 }
 
+/** Preserve the bare-array contract while disclosing a capped report. */
+function truncatedRecord(truncatedFrom: number): string {
+  return `CODE_REVIEW_TRUNCATED ${JSON.stringify({ truncated_from: truncatedFrom })}`
+}
+
 /** ei(): the reference's one-line effort notice. */
 function effortNotice(
   parsed: ReturnType<typeof parseArgs>,
@@ -754,6 +759,7 @@ async function resolveAndRun(
       inv.log?.(
         partialRecord([...result.warnings, warning]),
       )
+      if (result.truncatedFrom !== undefined) inv.log?.(truncatedRecord(result.truncatedFrom))
       return { text: formatJson(result), engine: result, needsModel: false, bare: true }
     }
     // The fallback prompt calls ReportFindings, so it must respect the host's
@@ -778,6 +784,9 @@ async function resolveAndRun(
     inv.log?.(
       partialRecord(result.warnings),
     )
+  }
+  if (result.truncatedFrom !== undefined && flags.json) {
+    inv.log?.(truncatedRecord(result.truncatedFrom))
   }
   let body = flags.json
     ? formatJson(result)

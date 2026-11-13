@@ -8,7 +8,14 @@
  */
 import type { EngineResult } from "./engine.ts"
 import type { Scope } from "./scope.ts"
-import { defaultExec, diffSideMap, type Exec, type ExecOptions, type ExecResult } from "./scope.ts"
+import {
+  defaultExec,
+  diffSideMap,
+  hardenedGit,
+  type Exec,
+  type ExecOptions,
+  type ExecResult,
+} from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
 import { envInt, lineOf, pluralWord } from "./finding.ts"
 
@@ -77,8 +84,8 @@ export function commentBody(finding: { summary: string; failure_scenario: string
 /** Host from a PR URL, including a GitHub Enterprise port when present. */
 function hostFromPrUrl(value: string): string | undefined {
   try {
-    // `.host` keeps a non-standard port; `.hostname` would silently drop it.
-    return new URL(value.trim()).host || undefined
+    // gh keys credentials by hostname; a `host:port` value would not match.
+    return new URL(value.trim()).hostname || undefined
   } catch {
     return undefined
   }
@@ -130,8 +137,8 @@ function remoteHostname(url: string): string | undefined {
     url.match(/^([^@/:\s]+):(?!\/\/)/)
   if (scp) return scp[1]
   try {
-    // Keep a non-standard port so a GHE instance served on one is detected.
-    return new URL(url).host || undefined
+    // gh keys credentials by hostname; a `host:port` value would not match.
+    return new URL(url).hostname || undefined
   } catch {
     return undefined
   }
@@ -149,7 +156,7 @@ export async function detectHostDetails(
   exec: Exec = defaultExec,
   opts?: ExecOptions,
 ): Promise<HostDetails> {
-  const remote = await exec(["git", "remote", "get-url", "origin"], cwd, opts)
+  const remote = await exec(hardenedGit(["git", "remote", "get-url", "origin"]), cwd, opts)
   if (remote.code !== 0) return { host: "other" }
   const url = remote.stdout.trim()
   const host = hostFromRemote(url)
@@ -223,7 +230,7 @@ export async function resolvePrInfo(
   // default review already recorded the current branch in `scope.branch`.
   let branch = scope.branch
   if (scope.scopeKind === "branch") {
-    const current = await exec(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd, opts)
+    const current = await exec(hardenedGit(["git", "rev-parse", "--abbrev-ref", "HEAD"]), cwd, opts)
     branch = current.code === 0 ? current.stdout.trim() : undefined
   }
   // A dirty worktree is deliberately excluded: its findings may anchor to
@@ -305,7 +312,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   const resolvedHostname = deps.githubHostname ?? hostDetails?.hostname
   let githubHostname = enterpriseHost(resolvedHostname)
   if (resolvedHostname === undefined) {
-    const remote = await call(["git", "remote", "get-url", "origin"])
+    const remote = await call(hardenedGit(["git", "remote", "get-url", "origin"]))
     if (remote.code !== 0 || !remote.stdout.trim()) {
       return "`--comment` was ignored: could not resolve the origin remote."
     }
@@ -385,9 +392,9 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // Untracked files are not part of the reviewed diff; only tracked changes
     // can make an inline anchor stale.
     const [dirty, local, remoteList] = await Promise.all([
-      call(["git", "status", "--porcelain", "--untracked-files=no"]),
-      call(["git", "rev-parse", "HEAD"]),
-      call(["git", "remote"]),
+      call(hardenedGit(["git", "status", "--porcelain", "--untracked-files=no"])),
+      call(hardenedGit(["git", "rev-parse", "HEAD"])),
+      call(hardenedGit(["git", "remote"])),
     ])
     if (dirty.code !== 0) {
       return "`--comment` was ignored: could not verify the working tree is clean."
@@ -452,8 +459,8 @@ export async function postComments(deps: CommentDeps): Promise<string> {
         return "`--comment` was ignored: could not verify the pull request's base commit."
       }
       const [reviewedMergeBase, prMergeBase] = await Promise.all([
-        call(["git", "merge-base", scope.diffBase, "HEAD"]),
-        call(["git", "merge-base", prBaseOid, "HEAD"]),
+        call(hardenedGit(["git", "merge-base", scope.diffBase, "HEAD"])),
+        call(hardenedGit(["git", "merge-base", prBaseOid, "HEAD"])),
       ])
       if (
         reviewedMergeBase.code !== 0 ||

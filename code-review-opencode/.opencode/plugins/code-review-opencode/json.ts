@@ -269,7 +269,9 @@ function scanAnchored(body: string): unknown | undefined {
 
 function scanBalanced(body: string): unknown | undefined {
   const anchored = scanAnchored(body)
-  if (anchored !== undefined) return anchored
+  // An echoed schema example is not an answer. Keep scanning the body for a
+  // real payload that follows it; fall back to the echo only if none exists.
+  if (anchored !== undefined && !isSchemaEcho(anchored)) return anchored
   let attempts = 0
   let work = 0
   const values: unknown[] = []
@@ -294,6 +296,7 @@ function scanBalanced(body: string): unknown | undefined {
     }
   }
   for (let i = values.length - 1; i >= 0; i--) if (isResultShape(values[i])) return values[i]
+  if (anchored !== undefined) return anchored
   // A bare array of finding/verdict objects is the payload for the array
   // schemas. Prefer it over a prose bracket like `[0]` and over an unrelated
   // record; normalizeShape wraps it in the expected key.

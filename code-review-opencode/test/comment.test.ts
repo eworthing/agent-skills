@@ -20,10 +20,25 @@ function fake(script: (argv: string[]) => Reply) {
   const opts: Array<ExecOptions | undefined> = []
   let active = 0
   let maxActive = 0
+  // Production prefixes git with -c hardening flags; the test scripts match
+  // the logical subcommand, so strip those pairs before dispatching.
+  const logical = (argv: string[]): string[] => {
+    if (argv[0] !== "git") return argv
+    const out = ["git"]
+    for (let i = 1; i < argv.length; i++) {
+      if (argv[i] === "-c") {
+        i++
+        continue
+      }
+      out.push(argv[i])
+    }
+    return out
+  }
   const exec: Exec = async (argv, _cwd, o) => {
-    calls.push(argv)
+    const normalized = logical(argv)
+    calls.push(normalized)
     opts.push(o)
-    const r = script(argv)
+    const r = script(normalized)
     if (r.active) {
       active++
       maxActive = Math.max(maxActive, active)

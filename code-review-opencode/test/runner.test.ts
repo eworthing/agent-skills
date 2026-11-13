@@ -333,7 +333,7 @@ test("a bare candidate array is salvaged as a candidates result", async () => {
   assert.equal(value.candidates[0].file, "a.ts")
 })
 
-test("a silent child is interrupted by the stall watchdog and not retried", async () => {
+test("a silent child is interrupted by the stall watchdog and retried once fresh", async () => {
   const fake = fakeCtx({}, { hangWait: true, busyGet: true })
   fake.setOnPrompt(() => {})
   const runner = makeRunner(fake.ctx, {
@@ -343,9 +343,9 @@ test("a silent child is interrupted by the stall watchdog and not retried", asyn
   })
   const value = await runner(request())
   assert.equal(value, null)
-  assert.deepEqual(fake.interrupted, ["ses_1"])
-  // The watchdog is a timeout, not a schema retry: one prompt only.
-  assert.equal(fake.prompts.length, 1)
+  assert.deepEqual(fake.interrupted, ["ses_1", "ses_2"])
+  // One attempt, then one fresh-child retry; the retry also stalls.
+  assert.equal(fake.prompts.length, 2)
 })
 
 test("a step-limited finder is recovered by a fresh formatter child", async () => {
@@ -441,10 +441,10 @@ test("a stale idle timestamp does not settle a retry before the new turn finishe
   })
   const value = await runner(request())
   assert.equal(value, null)
-  // The stale idle must not be mistaken for a completed turn: one prompt,
-  // then the watchdog, not a cascade of retries.
-  assert.equal(fake.prompts.length, 1)
-  assert.deepEqual(fake.interrupted, ["ses_1"])
+  // The stale idle must not be mistaken for a completed turn: one attempt,
+  // then one fresh-child retry after the watchdog.
+  assert.equal(fake.prompts.length, 2)
+  assert.deepEqual(fake.interrupted, ["ses_1", "ses_2"])
 })
 
 test("a live child whose session record omits time is not treated as gone", async () => {
