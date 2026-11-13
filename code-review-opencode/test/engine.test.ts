@@ -103,7 +103,7 @@ async function review(opts: {
   assert.equal(calls.filter((c) => c.role === "verifier").length, 1)
 })
 
-/* 5b */ test("paraphrased findings at the same line merge; a distinct claim stays", async () => {
+/* 5b */ test("paraphrased findings are not merged by token overlap; distinct claims stay", async () => {
   const a = candidate(
     "src/a.ts",
     11,
@@ -128,11 +128,13 @@ async function review(opts: {
       verifier: () => CONFIRMED(),
     },
   })
-  assert.equal(result.findings.length, 2)
-  assert.equal(result.stats.dupes, 1)
+  // A token-overlap merge here could delete one of two different defects. The
+  // fallback merges exact claims only; a semantic synthesizer judges the rest.
+  assert.equal(result.findings.length, 3)
+  assert.equal(result.stats.dupes, 0)
 })
 
-/* 5c */ test("a cleanup helper and its adjacent-line paraphrase merge; a convention claim stays", async () => {
+/* 5c */ test("a cleanup helper and its adjacent-line paraphrase stay separate; a convention claim stays", async () => {
   const helper = candidate(
     "src/format.ts",
     1,
@@ -161,8 +163,8 @@ async function review(opts: {
       verifier: () => CONFIRMED(),
     },
   })
-  assert.equal(result.findings.length, 2)
-  assert.equal(result.stats.dupes, 1)
+  assert.equal(result.findings.length, 3)
+  assert.equal(result.stats.dupes, 0)
 })
 
 /* 5d */ test("semantic merge applies the synthesizer's index decisions", async () => {
@@ -221,7 +223,7 @@ async function review(opts: {
   assert.equal(result.findings.length, 1)
 })
 
-/* 5h4 */ test("failed semantic pre-dedup falls back to the paraphrase merge", async () => {
+/* 5h4 */ test("failed semantic pre-dedup falls back to exact-claim dedup", async () => {
   const a = candidate(
     "src/a.ts",
     11,
@@ -241,8 +243,8 @@ async function review(opts: {
       synthesize: () => null,
     },
   })
-  assert.equal(calls.filter((c) => c.role === "verifier").length, 1)
-  assert.equal(result.findings.length, 1)
+  assert.equal(calls.filter((c) => c.role === "verifier").length, 2)
+  assert.equal(result.findings.length, 2)
   assert.match(result.warnings.join(" "), /candidate dedup/)
 })
 
@@ -469,7 +471,7 @@ test("a failed finder is counted separately from a finder that found nothing", a
   assert.equal(result.stats.finders > 1, true)
 })
 
-test("paraphrased candidates are verified before the post-verify merge", async () => {
+test("paraphrased candidates are both verified and kept without a semantic merge", async () => {
   const a = candidate("src/a.ts", 11, "the discount subtracts percent as an absolute amount")
   const b = candidate("src/a.ts", 11, "replaced percentage-based discount with absolute subtraction")
   const { result, calls } = await review({
@@ -480,7 +482,7 @@ test("paraphrased candidates are verified before the post-verify merge", async (
     },
   })
   assert.equal(calls.filter((c) => c.role === "verifier").length, 2)
-  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings.length, 2)
 })
 
 test("a b/-prefixed candidate path maps to the changed file", async () => {
@@ -555,7 +557,7 @@ test("text synthesis does not backfill a finding the synthesizer merged away", a
   assert.equal(result.findings.length, 2)
 })
 
-/* 5k */ test("a paraphrase that matches two clusters merges both", async () => {
+/* 5k */ test("overlapping paraphrase clusters are not merged without a semantic judge", async () => {
   const a = candidate("src/a.ts", 10, "missing await on the save path")
   const b = candidate("src/a.ts", 10, "currency symbol is wrong in the formatter")
   const c = candidate("src/a.ts", 10, "missing await on the save path and currency symbol is wrong")
@@ -570,7 +572,7 @@ test("text synthesis does not backfill a finding the synthesizer merged away", a
       verifier: () => CONFIRMED(),
     },
   })
-  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings.length, 3)
 })
 
 /* 5l */ test("an empty grouped verdict list is a partial run, not a clean one", async () => {
@@ -1370,7 +1372,7 @@ test("synthesis merging survivors down to the cap is not reported as cap truncat
   assert.equal(result.truncatedFrom, undefined)
 })
 
-test("a strong same-line paraphrase merges even when the consequences differ", async () => {
+test("a strong same-line paraphrase is kept when no semantic judge runs", async () => {
   const a = candidate(
     "src/discount.ts",
     10,
@@ -1390,8 +1392,8 @@ test("a strong same-line paraphrase merges even when the consequences differ", a
       verifier: () => CONFIRMED(),
     },
   })
-  assert.equal(result.findings.length, 1)
-  assert.equal(result.stats.dupes, 1)
+  assert.equal(result.findings.length, 2)
+  assert.equal(result.stats.dupes, 0)
 })
 
 test("an unattributed candidate from a mixed grouped finder ranks as cleanup", async () => {
@@ -1704,7 +1706,7 @@ test("a capped 1-based synthesis plan is shifted before the cap is applied", asy
       synthesize: (req) =>
         req.label === "dedup"
           ? { summary: "deduped", decisions: [{ index: 0 }, { index: 1 }, { index: 2 }] }
-          : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
+          : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }, { index: 3 }] },
     },
   })
   assert.equal(result.findings.length, 2)
@@ -1751,7 +1753,7 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings[1].kind, "cleanup")
 })
 
-test("an ambiguous plan without index 0 is ignored rather than shifted", async () => {
+test("a zero-based subset plan without index 0 is applied rather than discarded", async () => {
   const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
     candidate("src/a.ts", i + 1, `${s} bug`),
   )
@@ -1770,8 +1772,8 @@ test("an ambiguous plan without index 0 is ignored rather than shifted", async (
           : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
     },
   })
-  // A plan without index 0 cannot be distinguished from a 1-based plan, so
-  // the engine keeps every verified finding in deterministic order.
-  assert.equal(result.findings[0].summary, "zero bug")
-  assert.equal(result.findings[1].summary, "one bug")
+  // The plan's largest index (2) is below the item count, so it is a
+  // zero-based subset: apply its rank/merge decisions instead of discarding it.
+  assert.equal(result.findings[0].summary, "one bug")
+  assert.equal(result.findings[1].summary, "two bug")
 })

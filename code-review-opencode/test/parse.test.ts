@@ -43,11 +43,11 @@ test("flags are stripped and combined", () => {
   assert.equal(p.fix, true)
 })
 
-test("a level-looking typo is reported and left in the target", () => {
+test("a level-looking typo is reported and consumed, not left in the target", () => {
   const p = parseArgs("highh src/a.ts")
   assert.equal(p.explicit, undefined)
   assert.equal(p.unrecognizedLevel, "highh")
-  assert.equal(p.target, "highh src/a.ts")
+  assert.equal(p.target, "src/a.ts")
 })
 
 test("ultra is a fallback marker", () => {

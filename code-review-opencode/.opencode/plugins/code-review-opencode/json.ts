@@ -21,6 +21,8 @@ export type RawFinding = {
   /** Producing lens class, carried in the candidate schema (v2.1.221+). */
   kind?: "correctness" | "cleanup"
   verdict?: "CONFIRMED" | "PLAUSIBLE"
+  /** Verifier evidence, when the finding was reported with one. */
+  evidence?: string
 }
 
 const VERDICTS = new Set(["CONFIRMED", "PLAUSIBLE", "REFUTED"])
@@ -108,9 +110,12 @@ const RESULT_ARRAY_KEYS = ["candidates", "verdicts", "findings", "decisions"] as
 /** One spelling of the structured-result vocabulary for every scanner. */
 const RESULT_KEY_PATTERN = `"(?:${RESULT_ARRAY_KEYS.join("|")}|verdict)"\\s*:`
 
+/** Compiled once without `g`: the salvage path calls this for every scan candidate. */
+const RESULT_KEY_TEST = new RegExp(RESULT_KEY_PATTERN)
+
 /** The result keys a structured payload must contain. */
 function hasResultKey(body: string): boolean {
-  return new RegExp(RESULT_KEY_PATTERN).test(body)
+  return RESULT_KEY_TEST.test(body)
 }
 
 /** The result objects the child tools are supposed to return. */
@@ -173,7 +178,7 @@ const RESULT_KEY = new RegExp(RESULT_KEY_PATTERN, "g")
  * or last result-shaped object unconditionally: the example may be quoted
  * before or after the answer.
  */
-function isSchemaEcho(value: unknown): boolean {
+export function isSchemaEcho(value: unknown): boolean {
   if (!isRecord(value)) return false
   // The decisions example has no finding placeholders, so the per-item check
   // below cannot see it. Match the generated example exactly.
@@ -462,6 +467,8 @@ export function normalizeFinding(v: unknown, opts: NormalizeFindingOptions = {})
     opts.notes?.push(`${prefix} dropped: verdict "${String(v.verdict)}" is invalid`)
     return null
   }
+  const evidence = str(v.evidence)
+  if (evidence !== undefined) out.evidence = evidence
   return out
 }
 
@@ -517,8 +524,14 @@ export function asGroupVerdicts(
   // equal to the group size, which a pre-shift range filter would discard.
   const raw = parsed.value.verdicts
   const sorted = [...raw].sort((a, b) => a.index - b.index)
+  // A 1-based full list ends at `count` (indices 1..count). A zero-based
+  // subset that happens to be contiguous from 1 (for example [1,2] for three
+  // candidates) must not shift: that would attach each verdict to the wrong
+  // candidate and discard the real last verdict.
   const contiguousFromOne =
-    sorted.length > 0 && sorted.every((v, i) => v.index === i + 1)
+    sorted.length > 0 &&
+    sorted.every((v, i) => v.index === i + 1) &&
+    sorted[sorted.length - 1].index === count
   const shifted = contiguousFromOne ? sorted.map((v) => ({ ...v, index: v.index - 1 })) : raw
   return shifted.filter((v) => v.index >= 0 && v.index < count)
 }

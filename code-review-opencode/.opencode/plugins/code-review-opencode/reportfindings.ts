@@ -54,6 +54,10 @@ export const REPORT_FINDINGS_SCHEMA = {
             description:
               'Short kebab-case slug of the finding type, e.g. "correctness", "simplification", "efficiency", "test-coverage"',
           },
+          evidence: {
+            type: "string",
+            description: "Verifier evidence: the line(s) or citation that prove the claim",
+          },
           verdict: {
             type: "string",
             enum: ["CONFIRMED", "PLAUSIBLE"],
@@ -82,6 +86,7 @@ export type ReportedFinding = {
   failure_scenario: string
   category?: string
   verdict?: "CONFIRMED" | "PLAUSIBLE"
+  evidence?: string
   outcome?: "fixed" | "skipped" | "no_change_needed"
 }
 

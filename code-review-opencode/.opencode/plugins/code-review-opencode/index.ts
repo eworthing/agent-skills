@@ -63,12 +63,11 @@ import {
   type SessionRecord,
 } from "./host.ts"
 import {
-  explicitPathTarget,
   extractPathHint,
+  missingExplicitPathTarget,
   prTargetNumber,
   resolveReviewRoot,
   resolveScope,
-  resolveTargetPath,
   type Scope,
 } from "./scope.ts"
 import { postComments, detectHostDetails, type Host } from "./comment.ts"
@@ -429,12 +428,6 @@ async function resolveAndRun(
   // (official /code-review behavior). --json is our non-interactive proxy.
   const remember = inv.interactive === true && !flags.json
   if (remember && parsed.explicit) await storeValue(STORAGE_EFFORT, parsed.explicit)
-  if (remember) {
-    // Only a valid value is persisted. An invalid --max-findings is ignored,
-    // so it must not wipe the limit the user set earlier.
-    const stored = storedMaxFindings(parsed)
-    if (stored !== undefined) await storeValue(STORAGE_MAX, stored)
-  }
 
   const requestedMode = flags.mode ?? process.env.CODE_REVIEW_MODE
   const invalidMode = requestedMode !== undefined && !Object.hasOwn(VERSIONS, requestedMode)
@@ -445,6 +438,14 @@ async function resolveAndRun(
     flags.family ?? process.env.CODE_REVIEW_FAMILY,
   )
   const cell = resolveCell(version, family, effort)
+  if (remember && !cell.suppressMaxFindings) {
+    // Only a valid value is persisted. An invalid --max-findings is ignored,
+    // so it must not wipe the limit the user set earlier. A cell that suppresses
+    // the limit (low-sonnet5) must not persist it either: its contract says it
+    // neither reuses nor stores the value.
+    const stored = storedMaxFindings(parsed)
+    if (stored !== undefined) await storeValue(STORAGE_MAX, stored)
+  }
   // The engine renders its own text report and never calls ReportFindings.
   // Only the prompt paths (inline/minimal cells, --driver prompt, or a host
   // without child sessions) go through the 32-entry host schema, so only they
@@ -559,13 +560,9 @@ async function resolveAndRun(
   if (isInline(cell)) {
     // The inline path never reaches resolveScope. Validate an explicit path
     // target here so a typo cannot silently turn into a working-tree review.
-    if (
-      parsed.target &&
-      prTargetNumber(parsed.target) === undefined &&
-      explicitPathTarget(parsed.target) &&
-      resolveTargetPath(ctx.location.directory, parsed.target) === null
-    ) {
-      const message = `Code review could not start: Review target path not found: ${parsed.target}`
+    const missingTarget = missingExplicitPathTarget(ctx.location.directory, parsed.target)
+    if (missingTarget !== undefined) {
+      const message = `Code review could not start: Review target path not found: ${missingTarget}`
       if (flags.json) {
         inv.log?.(partialRecord([message]))
         return { text: "[]", needsModel: false, bare: true }
@@ -769,7 +766,10 @@ async function resolveAndRun(
     // 32-entry cap even when the deterministic engine was not capped.
     const fallbackMax =
       typeof max === "number" ? Math.min(max, HARD_FINDINGS_CAP) : max === "all" ? HARD_FINDINGS_CAP : max
-    const base = resolveMulti(kind, effort, fallbackMax)
+    // All finders failed. Do not hand back a multi-agent prompt that tells the
+    // model to spawn the same finder subagents that just failed; run the
+    // recovered single-pass prompt instead.
+    const base = resolveInline(kind, cell.inlineVariant, fallbackMax)
     let text = decorateReview(base)
     text += await verifyFollowUp(ctx, scope.files)
     const allNotices = [...notices, warning]
@@ -855,28 +855,34 @@ export default Plugin.define({
     const reportedOutcomeHashes = new Map<string, string>()
     const MAX_OUTCOME_HASHES = 200
     /** Show a completed list in the session, trying the inbox before a turn. */
+    /** Post without starting a model turn. Returns the failure, if any. */
+    const deliverSynthetic = async (
+      sessionID: string,
+      text: string,
+    ): Promise<string | undefined> => {
+      if (typeof ctx.session.synthetic !== "function") return "host has no synthetic delivery"
+      try {
+        await ctx.session.synthetic({ sessionID, text, resume: false })
+        return undefined
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error)
+      }
+    }
     const deliverToSession = async (
       sessionID: string,
       text: string,
     ): Promise<string | undefined> => {
-      let failure: string | undefined
-      if (typeof ctx.session.synthetic === "function") {
-        try {
-          await ctx.session.synthetic({ sessionID, text, resume: false })
-          return undefined
-        } catch (error) {
-          failure = error instanceof Error ? error.message : String(error)
-        }
-      }
+      const syntheticFailure = await deliverSynthetic(sessionID, text)
+      if (syntheticFailure === undefined) return undefined
       if (typeof ctx.session.prompt === "function") {
         try {
           await ctx.session.prompt({ sessionID, text })
           return undefined
         } catch (error) {
-          failure = error instanceof Error ? error.message : String(error)
+          return error instanceof Error ? error.message : String(error)
         }
       }
-      return failure ?? "host has no synthetic or prompt delivery"
+      return syntheticFailure
     }
     // The schema tools are registered globally, so a stray call from a
     // non-review session would otherwise pin its payload for the process
@@ -1158,15 +1164,9 @@ export default Plugin.define({
           // Engine --json is the command's output, not a prompt. Display it
           // without a model turn so the visible result stays the bare array.
           if (outcome.bare) {
-            if (typeof ctx.session.synthetic === "function") {
-              try {
-                await ctx.session.synthetic({ sessionID, text: outcome.text, resume: false })
-                return
-              } catch {
-                // A transient synthetic failure must not drop the JSON the
-                // engine just produced; fall through to the constrained turn.
-              }
-            }
+            // A transient synthetic failure must not drop the JSON the engine
+            // just produced; fall through to the constrained turn.
+            if ((await deliverSynthetic(sessionID, outcome.text)) === undefined) return
             // The host has no way to display a message without a model turn.
             // Constrain that turn to echoing the JSON verbatim; otherwise the
             // bare-array contract breaks in the one environment the fallback
@@ -1182,15 +1182,9 @@ export default Plugin.define({
           // model so the recovered instructions actually run. A completed
           // engine report needs no model turn at all: display it with
           // synthetic and avoid paying for a no-op acknowledgement.
-          if (!outcome.needsModel && typeof ctx.session.synthetic === "function") {
-            try {
-              await ctx.session.synthetic({ sessionID, text: outcome.text, resume: false })
-              return
-            } catch {
-              // A transient synthetic failure must not drop a completed
-              // engine report; fall through to the constrained turn below.
-            }
-          }
+          // A transient synthetic failure must not drop a completed engine
+          // report; fall through to the constrained turn below.
+          if (!outcome.needsModel && (await deliverSynthetic(sessionID, outcome.text)) === undefined) return
           // A host without synthetic still needs a turn to show the report.
           // Constrain it to a short acknowledgement rather than a re-review.
           const text = outcome.needsModel

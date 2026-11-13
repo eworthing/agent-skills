@@ -7,7 +7,6 @@ import { join } from "node:path"
 import {
   buildContextPackage,
   defaultExec,
-  diffSideForLine,
   diffSideMap,
   discoverConventions,
   filesFromDiff,
@@ -16,6 +15,12 @@ import {
   unquoteGitPath,
   type Exec,
 } from "../.opencode/plugins/code-review-opencode/scope.ts"
+
+/** Test-only convenience wrapper; production uses diffSideMap directly. */
+function diffSideForLine(patch: string | undefined, file: string, line: number): "RIGHT" | "LEFT" {
+  if (!patch || !Number.isFinite(line)) return "RIGHT"
+  return diffSideMap(patch, [{ file, line }]).sideFor(file, line)
+}
 
 function scanPatchChurnForTest(patch: string) {
   return new Map(
@@ -67,7 +72,7 @@ test("uncommitted working-tree changes are in scope", async () => {
   writeFileSync(join(dir, "a.ts"), "export const a = 2\n")
   const scope = await resolveScope({ cwd: dir })
   assert.deepEqual(scope.files, ["a.ts"])
-  assert.match(scope.diffCommand, /git diff .*HEAD/)
+  assert.match(scope.diffCommand, /git .*diff .*--end-of-options HEAD/)
   assert.match(scope.diffText ?? "", /export const a = 2/)
   rmSync(dir, { recursive: true, force: true })
 })
@@ -359,7 +364,7 @@ test("a single-commit repository with no upstream or main falls back to HEAD", a
   // valid base. The clean checkout must report no changes, not a failed review.
   assert.deepEqual(scope.files, [])
   assert.equal(scope.warnings, undefined)
-  assert.match(scope.diffCommand, /git diff .*HEAD/)
+  assert.match(scope.diffCommand, /git .*diff .*--end-of-options HEAD/)
   rmSync(dir, { recursive: true, force: true })
 })
 

@@ -8,6 +8,7 @@
 import type { AgentRequest, AgentRunner } from "./engine.ts"
 import {
   extractJson,
+  isSchemaEcho,
   normalizeCandidatesCall,
   normalizeDecisionsCall,
   normalizeGroupVerdictsCall,
@@ -160,11 +161,11 @@ export function trackActivity(ctx: { event?: EventSource }): ActivityTracker {
       seen.delete(oldest)
     }
   }
-  const subscribe = ctx.event?.subscribe
-  if (typeof subscribe === "function") {
+  const events = ctx.event
+  if (events && typeof events.subscribe === "function") {
     void (async () => {
       try {
-        for await (const event of ctx.event!.subscribe({
+        for await (const event of events.subscribe({
           types: ACTIVITY_EVENTS,
           signal: controller.signal,
         })) {
@@ -347,18 +348,27 @@ function trackWait(wait: Promise<void>, state: { resolved: boolean }): void {
   )
 }
 
+/** Text carried by a transcript message, from either its `text` or its parts. */
+function messageText(m: unknown): string {
+  const record = m as { text?: unknown; content?: unknown }
+  if (typeof record?.text === "string") return record.text
+  if (!Array.isArray(record?.content)) return ""
+  // Walk text parts only. Stringifying a tool result to search it would
+  // serialize the embedded diff or file read on every turn.
+  return record.content
+    .filter((p): p is { type: string; text: string } => {
+      const part = p as { type?: unknown; text?: unknown }
+      return part?.type === "text" && typeof part.text === "string"
+    })
+    .map((p) => p.text)
+    .join("\n")
+}
+
 function assistantText(messages: readonly unknown[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i] as { type?: string; content?: unknown }
     if (m?.type !== "assistant" || !Array.isArray(m.content)) continue
-    const text = m.content
-      .filter((p): p is { type: string; text: string } => {
-        const part = p as { type?: string; text?: unknown }
-        return part?.type === "text" && typeof part.text === "string"
-      })
-      .map((p) => p.text)
-      .join("\n")
-      .trim()
+    const text = messageText(m).trim()
     if (text) return text
   }
   return ""
@@ -371,25 +381,11 @@ function assistantText(messages: readonly unknown[]): string {
  * spending two more turns on the same session.
  */
 function hitStepLimit(messages: readonly unknown[]): boolean {
-  const textOf = (m: unknown): string => {
-    const record = m as { text?: unknown; content?: unknown }
-    if (typeof record?.text === "string") return record.text
-    if (!Array.isArray(record?.content)) return ""
-    // Walk text parts only. Stringifying a tool result to search it would
-    // serialize the embedded diff or file read on every turn.
-    return record.content
-      .filter((p): p is { type: string; text: string } => {
-        const part = p as { type?: unknown; text?: unknown }
-        return part?.type === "text" && typeof part.text === "string"
-      })
-      .map((p) => p.text)
-      .join("\n")
-  }
   // The injected notice stays in context, so a retry can see it many messages
   // later. Scan the whole transcript; `startsWith` prevents a diff that merely
   // quotes the literal from counting as the injected notice.
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (textOf(messages[i]).trimStart().startsWith("CRITICAL - MAXIMUM STEPS REACHED")) return true
+    if (messageText(messages[i]).trimStart().startsWith("CRITICAL - MAXIMUM STEPS REACHED")) return true
   }
   return false
 }
@@ -712,7 +708,10 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
     label: string,
     run: (sessionID: string) => Promise<T | null>,
   ): Promise<T | null> => {
-    const model = await modelFor({ ...req, label })
+    // The attempt label (`reuse retry`, `reuse (format)`) must not reach the
+    // label-keyed role-variant lookup: a retry has to run at the same effort as
+    // the attempt it replaces.
+    const model = await modelFor(req)
     const created = await ctx.session.create({
       parentID: opts.parentSessionID,
       title: `code-review-opencode · ${label}`,
@@ -777,7 +776,10 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         if (!sessionID) return undefined
         const value = opts.schemaResults?.get(sessionID)
         if (value !== undefined) opts.schemaResults?.delete(sessionID)
-        return value
+        // A tool call can echo the prompt's `Expected shape` example. The text
+        // path already rejects that echo; the tool path must not accept it as
+        // a real result, or a placeholder merge becomes the report.
+        return value === undefined || isSchemaEcho(value) ? undefined : value
       }
       let lastText = ""
       let stepLimited = false

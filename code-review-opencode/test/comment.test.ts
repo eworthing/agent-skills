@@ -304,7 +304,7 @@ test("a branch review fetches the PR number, head, and base in one call", async 
   assert.deepEqual(views[0].slice(3), [
     "feature",
     "--json",
-    "number,headRefOid,baseRefName,baseRefOid",
+    "number,headRefOid,baseRefName,baseRefOid,url",
   ])
 })
 
@@ -324,6 +324,30 @@ test("a fork clone posts to the PR's base repository", async () => {
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
   const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
   assert.ok(api?.includes("repos/upstream/app/pulls/9/comments"))
+})
+
+test("a PR-number review pins the head captured with the patch", async () => {
+  const scope = scopeOf(["src/a.ts"], {
+    pr: 9,
+    prHeadOid: "pinned123",
+    prUrl: "https://github.com/acme/app/pull/9",
+  })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:me/fork.git" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
+  // The captured URL avoids a second `gh pr view`; the captured OID is the
+  // commit the reviewed patch belongs to, even if a push moved the branch.
+  assert.equal(
+    calls.some((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view" && c[3] === "9"),
+    false,
+  )
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  assert.ok(api?.some((arg) => arg === "commit_id=pinned123"))
+  assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
 })
 
 test("a GHE origin resolves its hostname once and reuses it", async () => {

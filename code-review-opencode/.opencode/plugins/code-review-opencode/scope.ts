@@ -83,6 +83,10 @@ export type Scope = {
   target?: string
   root: string
   pr?: number
+  /** PR head captured with the patch, so comments pin the reviewed commit. */
+  prHeadOid?: string
+  /** PR URL captured with the patch; authoritative for the base repository. */
+  prUrl?: string
   branch?: string
   /** Added + deleted lines in the primary diff (Qs finder-budget input). */
   diffLines: number
@@ -162,8 +166,13 @@ export function hardenedGit(argv: string[]): string[] {
 function quote(argv: string[]): string {
   return argv
     // `{}` and `~` expand in a shell even without whitespace; a changed file
-    // named `{a,b}.ts` or `~/x` must stay one literal argument.
-    .map((a) => (/^[\w@./:^=-]+$/.test(a) ? a : `'${a.replaceAll("'", "'\\''")}'`))
+    // named `{a,b}.ts` or `~/x` must stay one literal argument. Control
+    // characters are escaped first: this text is rendered on one prompt line,
+    // and a newline in a repo path must not start a forged instruction.
+    .map((a) => {
+      const safe = a.replaceAll("\r", "\\r").replaceAll("\n", "\\n")
+      return /^[\w@./:^=-]+$/.test(safe) ? safe : `'${safe.replaceAll("'", "'\\''")}'`
+    })
     .join(" ")
 }
 
@@ -289,6 +298,16 @@ export function explicitPathTarget(target: string): boolean {
   return target.startsWith("./") || target.startsWith("../") || target.startsWith("/") || target.endsWith("/")
 }
 
+/**
+ * The target was written as a path but does not exist. Shared by the inline
+ * path (which never calls resolveScope) and scope discovery so the two cannot
+ * drift on which typos are rejected.
+ */
+export function missingExplicitPathTarget(cwd: string, target?: string): string | undefined {
+  if (!target || prTargetNumber(target) !== undefined || !explicitPathTarget(target)) return undefined
+  return resolveTargetPath(cwd, target) === null ? target : undefined
+}
+
 /** Extract a path-looking token from free-form instructions. */
 export function extractPathHint(target: string, cwd: string): string | undefined {
   const tokens = target.split(/\s+/).map((t) =>
@@ -352,17 +371,16 @@ function sameDir(a: string, b: string): boolean {
 
 /**
  * A shell-ready command the model can re-run visibly. Derive it from the same
- * argv builder the engine executes; it already carries the safe
- * `--no-ext-diff`/`--no-textconv` flags the agent permission table requires.
- * The orchestrator also applies its `-c` config hardening when it runs the
- * command; those flags are omitted here because the child's permission table
- * denies `-c`, and they do not change the patch.
+ * argv builder the engine executes; it carries both the safe
+ * `--no-ext-diff`/`--no-textconv` flags and the `-c` config hardening. The
+ * hardening matters in the child too: a repository's `core.fsmonitor` or
+ * hooks can execute code during what is advertised as a read-only review.
  */
 function labelFor(spec: DiffSpec, root: string, cwd: string): string {
   const argv = gitDiffArgs(spec, "diff").map((a) => quote([a]))
   return sameDir(root, cwd)
-    ? ["git", ...argv].join(" ")
-    : ["git", "-C", quote([root]), ...argv].join(" ")
+    ? ["git", ...GIT_HARDENING, ...argv].join(" ")
+    : ["git", "-C", quote([root]), ...GIT_HARDENING, ...argv].join(" ")
 }
 
 /** Unquote git's C-style path quoting (`"a/foo\\tbar"`). */
@@ -864,16 +882,6 @@ export function diffSideMap(
   }
 }
 
-/** Convenience wrapper for a single line; see diffSideMap. */
-export function diffSideForLine(
-  patch: string | undefined,
-  file: string,
-  line: number,
-): "RIGHT" | "LEFT" {
-  if (!patch || !Number.isFinite(line)) return "RIGHT"
-  return diffSideMap(patch, [{ file, line }]).sideFor(file, line)
-}
-
 function readCapped(path: string, budget: number, knownSize?: number): string {
   try {
     if (budget <= 0) return ""
@@ -894,9 +902,12 @@ function readCapped(path: string, budget: number, knownSize?: number): string {
       // withholds an incomplete trailing sequence instead of emitting U+FFFD,
       // so the conventions block never ends with a corrupted character.
       const text = new StringDecoder("utf8").write(buffer.subarray(0, read))
-      // Bytes can exceed the character budget while the decoded text still
-      // fits; a marker there would falsely report a complete file as cut.
-      if (text.length <= budget) return text
+      // A short read, or a byte budget that covers the whole file, proves the
+      // file ended. A full read only proves the buffer filled: multi-byte text
+      // can decode to fewer characters than the budget while the tail was
+      // never read, so those bytes must still carry the truncation marker.
+      const complete = read < byteBudget || byteBudget >= size
+      if (complete) return text.length <= budget ? text : truncateText(text, budget)
       const marker = "\n…(truncated)"
       // Keep the returned value inside the cap: callers sum lengths to enforce
       // the conventions budget, and appending a marker past the cap made a later
@@ -1234,13 +1245,9 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // An explicit path that does not exist must not silently fall back to the
   // whole working-tree diff. A typo is a target error, not a review of every
   // changed file.
-  if (
-    target &&
-    prTargetNumber(target) === undefined &&
-    explicitPathTarget(target) &&
-    resolveTargetPath(cwd, target) === null
-  ) {
-    throw new Error(`Review target path not found: ${target}`)
+  const missingExplicit = missingExplicitPathTarget(cwd, target)
+  if (missingExplicit !== undefined) {
+    throw new Error(`Review target path not found: ${missingExplicit}`)
   }
 
   // A bare number is a PR target. Resolve it as a path only when the user
@@ -1341,7 +1348,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     const [gh, meta] = await Promise.all([
       exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts()),
       exec(
-        ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions"],
+        ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions,headRefOid,url"],
         gitCwd,
         callOpts(),
       ),
@@ -1416,19 +1423,22 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       // still a valid revision and is the only available diff base; using the
       // rejected literal would turn a clean checkout into a failed review.
       range = probe ?? "HEAD"
-      if (probe && probe.includes("...")) {
-        const base = probe.split("...")[0]
-        if (base === "@{upstream}") {
-          const upstream = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "@{upstream}"], callOpts())
-          if (upstream.code === 0) diffBase = upstream.stdout.trim()
-        } else if (base !== "HEAD~1") {
-          diffBase = base
-        }
-      }
-      const [worktree, listed] = await Promise.all([
+      const probeBase = probe?.includes("...") ? probe.split("...")[0] : undefined
+      // The upstream name does not depend on the worktree probe; run it in the
+      // same batch instead of paying a serial git round-trip first.
+      const upstreamPromise =
+        probeBase === "@{upstream}"
+          ? git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "@{upstream}"], callOpts())
+          : undefined
+      const [upstream, worktree, listed] = await Promise.all([
+        upstreamPromise ?? Promise.resolve(undefined),
         git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts()),
         listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts()),
       ])
+      if (upstream && upstream.code === 0) diffBase = upstream.stdout.trim()
+      else if (probeBase !== undefined && probeBase !== "@{upstream}" && probeBase !== "HEAD~1") {
+        diffBase = probeBase
+      }
       if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
       if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
       const dirty = worktree.code === 1
@@ -1460,6 +1470,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   }
 
   let files: string[] = []
+  let prHeadOid: string | undefined
+  let prUrl: string | undefined
   let diffLines = 0
   // Start the patch captures before the name-status listings: the commands are
   // independent, and on a large repository the diff read must not wait behind
@@ -1472,11 +1484,19 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     const meta =
       prMeta ??
       (await exec(
-        ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions"],
+        ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions,headRefOid,url"],
         gitCwd,
         callOpts(),
       ))
-    let parsed: { files?: Array<{ path?: string }>; additions?: number; deletions?: number } | undefined
+    let parsed:
+      | {
+          files?: Array<{ path?: string }>
+          additions?: number
+          deletions?: number
+          headRefOid?: string
+          url?: string
+        }
+      | undefined
     if (meta?.code === 0) {
       try {
         parsed = JSON.parse(meta.stdout) as typeof parsed
@@ -1487,6 +1507,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     if (parsed?.files && parsed.files.length > 0) {
       files = parsed.files.map((f) => f.path ?? "").filter(Boolean)
     }
+    if (typeof parsed?.headRefOid === "string" && parsed.headRefOid) prHeadOid = parsed.headRefOid
+    if (typeof parsed?.url === "string" && parsed.url) prUrl = parsed.url
     if (opts.includeDiffLines !== false) {
       if (typeof parsed?.additions === "number" && typeof parsed.deletions === "number") {
         diffLines = parsed.additions + parsed.deletions
@@ -1624,6 +1646,8 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     target,
     root,
     pr,
+    ...(prHeadOid ? { prHeadOid } : {}),
+    ...(prUrl ? { prUrl } : {}),
     branch,
     diffLines,
     diffText,

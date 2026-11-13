@@ -396,12 +396,15 @@ export function parseArgs(raw: string): Parsed {
     return { ...common, explicit, target: cleanTarget(tokens.slice(1)), ultraFallback: false }
   }
 
-  // qs: a token that is one typo away from a level ("highh", "medum").
+  // qs: a token that is one typo away from a level ("highh", "medum"). It is
+  // consumed as a failed effort token, not forwarded as part of the target:
+  // otherwise "hihg src/a.ts" reviews a path named "hihg src/a.ts".
+  const typo = looksLikeLevel(first) ? first : undefined
   return {
     ...common,
-    target: cleanTarget(tokens),
+    target: cleanTarget(typo === undefined ? tokens : tokens.slice(1)),
     ultraFallback: false,
-    unrecognizedLevel: looksLikeLevel(first) ? first : undefined,
+    ...(typo !== undefined ? { unrecognizedLevel: typo } : {}),
   }
 }
 

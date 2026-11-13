@@ -279,6 +279,48 @@ test("a transient agent lookup failure is retried instead of cached", async () =
   assert.deepEqual(fake.createdInputs[1].model, agentModel)
 })
 
+test("a retried child keeps its original role label for model lookup", async () => {
+  const fake = fakeCtx()
+  let calls = 0
+  fake.setOnPrompt((id) => {
+    calls++
+    if (calls === 1) fake.push(id, '{"verdict":"MAYBE"}')
+    else fake.push(id, '{"verdict":"CONFIRMED","evidence":"retried"}')
+  })
+  const labels: string[] = []
+  const runner = makeRunner(fake.ctx, {
+    parentSessionID: "ses_parent",
+    modelFor: (req) => {
+      labels.push(req.label)
+      return { providerID: "p", id: "m", variant: "low" }
+    },
+  })
+  const value = await runner(request({ role: "verifier", schemaName: "verdict" }))
+  assert.deepEqual(value, { verdict: "CONFIRMED", evidence: "retried" })
+  assert.ok(labels.length >= 2)
+  assert.ok(labels.every((label) => label === "angle-A"))
+})
+
+test("a tool payload that echoes the schema example is not captured", async () => {
+  const fake = fakeCtx()
+  const schemaResults = new Map<string, unknown>()
+  let calls = 0
+  fake.setOnPrompt((id) => {
+    calls++
+    if (calls === 1) {
+      schemaResults.set(id, { summary: "one sentence", decisions: [{ index: 0, merge: [1] }] })
+      fake.push(id, "Decisions submitted.")
+    } else {
+      schemaResults.set(id, { summary: "real", decisions: [{ index: 0 }] })
+      fake.push(id, "Decisions submitted.")
+    }
+  })
+  const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent", schemaResults })
+  const value = await runner(request({ role: "synthesize", schemaName: "decisions", label: "merge" }))
+  assert.deepEqual(value, { summary: "real", decisions: [{ index: 0 }] })
+  assert.equal(fake.prompts.length, 2)
+})
+
 test("a role variant is applied to the parent model", async () => {
   const fake = fakeCtx()
   fake.setOnPrompt((id) => fake.push(id, '{"candidates":[]}'))

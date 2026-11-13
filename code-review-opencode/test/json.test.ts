@@ -436,9 +436,11 @@ test("asGroupVerdicts shifts a contiguous 1-based list and keeps a partial list"
     },
     3,
   )
+  // A subset [1,2] for three candidates is zero-based: shifting it would
+  // attach each verdict to the wrong candidate and drop the real index-2 one.
   assert.deepEqual(partial, [
-    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
-    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
+    { index: 1, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 2, verdict: "CONFIRMED", evidence: "e2" },
   ])
   // A complete list is still accepted.
   const complete = asGroupVerdicts(

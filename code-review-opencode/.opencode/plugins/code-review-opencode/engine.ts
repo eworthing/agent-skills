@@ -14,6 +14,7 @@
 import { existsSync, realpathSync } from "node:fs"
 import {
   BASE_ANGLES,
+  CLEANUP_ANGLES,
   CLEANUP_ANGLES_162,
   CLEANUP_TEXT_221,
   EXTENDED_ANGLES,
@@ -273,20 +274,6 @@ const STOP_WORDS = new Set([
   "it", "is", "be", "as", "at", "by", "on", "or", "of", "to", "in", "a", "an",
 ])
 
-/** Words too generic to prove two adjacent-line cleanup claims are one defect. */
-const GENERIC_WORDS = new Set([
-  "new", "use", "used", "uses", "add", "added", "adds", "existing", "still",
-  "two", "place", "places", "instead", "through", "one", "mechanism", "rule",
-  "call", "site", "code", "line", "lines", "value", "values", "case", "cases",
-  "make", "makes", "made", "change", "changes", "changed", "also", "same",
-  // Generic cleanup vocabulary: two adjacent "unused parameter" findings are
-  // distinct defects, but the shared words cannot prove they are one.
-  "unused", "parameter", "parameters", "duplicate", "duplicated", "helper",
-  "function", "functions", "variable", "variables", "dead", "redundant",
-  "simplify", "simplification", "reuse", "complexity", "inline", "inlined",
-  "inlines", "implements", "implemented", "implementation", "foo", "bar",
-])
-
 function summaryTokens(s: string): Set<string> {
   const cached = TOKEN_CACHE.get(s)
   if (cached !== undefined) return cached
@@ -333,121 +320,9 @@ function sameClaim(a: string, b: string, policy: ClaimPolicy = {}): boolean {
 
 /** Per-stage policies. Keep every threshold here, not at the call sites. */
 const CLAIM_POLICY = {
-  fileLevel: { jaccard: 0.5 } satisfies ClaimPolicy,
-  sameLine: { jaccard: 0.3, containment: 0.4 } satisfies ClaimPolicy,
-  /** Strong same-line summary paraphrase: same defect even with different consequences. */
-  paraphrase: { jaccard: 0.52 } satisfies ClaimPolicy,
-  /** Weaker summary overlap needs the failure mechanisms to agree. */
-  failureScenario: { jaccard: 0.2, containment: 0.3 } satisfies ClaimPolicy,
   refuted: { jaccard: 0.7 } satisfies ClaimPolicy,
   synthAnchor: { anyToken: true } satisfies ClaimPolicy,
   synth: { jaccard: 0.6 } satisfies ClaimPolicy,
-}
-
-/**
- * The reference's Phase 2 dedup is semantic, performed by the main model.
- * The deterministic engine approximates it: same file, compatible line, and
- * a paraphrase-level token overlap. The thresholds are calibrated against
- * observed finder paraphrases (0.17–0.43 Jaccard at the same line), which are
- * the same defect worded differently. A claim at the same line with almost no
- * shared vocabulary stays separate.
- */
-function sameDefect(a: RawFinding, b: RawFinding): boolean {
-  if (a.file !== b.file) return false
-  // A cleanup claim and a correctness claim at the same location are not the
-  // same defect. Merging them lets one absorb the other's rank and text.
-  const ka = (a as { kind?: string }).kind
-  const kb = (b as { kind?: string }).kind
-  if (ka !== undefined && kb !== undefined && ka !== kb) return false
-  const la = lineOf(a) ?? -1
-  const lb = lineOf(b) ?? -1
-
-  if (la === -1 || lb === -1) {
-    // A file-level claim can describe the same defect as a line claim, but it
-    // also covers every line in the file. Only merge when the wording is
-    // nearly identical; otherwise a second real defect would disappear before
-    // verification.
-    return sameClaim(a.summary, b.summary, CLAIM_POLICY.fileLevel)
-  }
-
-  if (la !== lb) {
-    // Only a cleanup helper declared at line N and used at line N+1 may merge
-    // across lines. Require two shared non-generic tokens and cleanup on both
-    // sides so a convention violation or a correctness bug stays separate.
-    const adjacent = Math.abs(la - lb) === 1
-    if (!adjacent || (ka !== undefined && ka !== "cleanup") || (kb !== undefined && kb !== "cleanup")) return false
-    const ta = summaryTokens(a.summary)
-    const tb = summaryTokens(b.summary)
-    let specific = 0
-    for (const t of ta) if (tb.has(t) && !GENERIC_WORDS.has(t)) specific++
-    // The shared tokens must be specific. Generic cleanup vocabulary
-    // ("unused", "parameter", "helper") is excluded above, so two domain
-    // tokens are enough to recognize a reworded helper.
-    return specific >= 2
-  }
-
-  if (!sameClaim(a.summary, b.summary, CLAIM_POLICY.sameLine)) return false
-  // A strong summary paraphrase is the same defect even when the two finders
-  // describe different downstream consequences ("the render throws" vs "the
-  // handler returns 500"). Weaker summary overlap still needs the failure
-  // mechanisms to agree, or two distinct bugs at the same line ("missing
-  // response check" vs "missing response await", Jaccard exactly 0.5) would
-  // merge. Keep this threshold just above that boundary so 0.5-0.55
-  // paraphrases of one defect still merge.
-  if (sameClaim(a.summary, b.summary, CLAIM_POLICY.paraphrase)) return true
-  if (a.failure_scenario && b.failure_scenario) {
-    return sameClaim(a.failure_scenario, b.failure_scenario, CLAIM_POLICY.failureScenario)
-  }
-  return true
-}
-
-/**
- * Merge near-duplicate findings transitively: a new item joins a cluster when
- * it matches any member, not only the representative. The representative keeps
- * the longest failure scenario and the strongest verdict.
- */
-function mergeNearDuplicates<T extends RawFinding>(items: T[]): T[] {
-  const clusters: T[][] = []
-  const verdictStrength = (v: RawFinding["verdict"]): number =>
-    v === "CONFIRMED" ? 2 : v === "PLAUSIBLE" ? 1 : 0
-  const absorb = (target: T[], item: T) => {
-    const rep = target[0]
-    target.push(item)
-    // A weaker entry must not rewrite a stronger one's claim text: the sweep
-    // returns PLAUSIBLE gaps, and its reworded scenario must not be presented
-    // under a CONFIRMED verdict. Equal or stronger entries may replace text.
-    const upgrades = item.verdict === "CONFIRMED" && rep.verdict !== "CONFIRMED"
-    const canReplace =
-      upgrades ||
-      (verdictStrength(item.verdict) >= verdictStrength(rep.verdict) &&
-        (item.failure_scenario?.length ?? 0) > (rep.failure_scenario?.length ?? 0))
-    if (canReplace) {
-      rep.failure_scenario = item.failure_scenario
-      rep.summary = item.summary
-      if (item.short_summary) rep.short_summary = item.short_summary
-    }
-    // A file-level representative otherwise erases the only anchor.
-    if (rep.line === undefined && item.line !== undefined) rep.line = item.line
-    if (upgrades) rep.verdict = item.verdict
-    if (item.category && !rep.category) rep.category = item.category
-  }
-  for (const item of items) {
-    // A paraphrase can match more than one existing cluster. Merge every
-    // matching cluster, not only the first, or the same root cause survives
-    // twice and consumes two report slots.
-    const hits = clusters.filter((group) => group.some((existing) => sameDefect(existing, item)))
-    if (hits.length === 0) {
-      clusters.push([{ ...item }])
-      continue
-    }
-    const [target, ...rest] = hits
-    absorb(target, item)
-    for (const other of rest) {
-      for (const existing of other) absorb(target, existing)
-      clusters.splice(clusters.indexOf(other), 1)
-    }
-  }
-  return clusters.map((group) => group[0])
 }
 
 function toFinding(c: RawFinding, kind: "correctness" | "cleanup"): Finding {
@@ -487,12 +362,34 @@ function applyIndexPlan<T, R>(
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
-  // A zero-based plan may name index 0 as a representative or as a merge
-  // target (the top finding was merged into a later survivor). Without either,
-  // the plan is 1-based or a subset, and shifting would silently mis-index one
-  // of them. Ignore it and keep every finding in deterministic order instead.
-  const hasBase = decisions.some((d) => d.index === 0 || d.merge.includes(0))
-  const plan = decisions.length > 0 && !hasBase ? [] : decisions
+  // A zero-based plan may name index 0, but a valid plan may also be a subset
+  // that omits it (the synthesis prompt asks for the most severe findings when
+  // survivors exceed the cap). Treat the plan as 0-based unless its largest
+  // index lands exactly at `items.length`: that is the signature of a 1-based
+  // full plan and is unambiguous because a 0-based plan can never reach n.
+  const hasZero = decisions.some((d) => d.index === 0 || d.merge.includes(0))
+  const maxIndex = decisions.reduce(
+    (max, d) => Math.max(max, d.index, ...d.merge),
+    Number.NEGATIVE_INFINITY,
+  )
+  const oneBased = !hasZero && maxIndex === items.length
+  const plan = oneBased
+    ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
+    : decisions
+  // The report size the plan would produce without the cap. Counting the
+  // capped `output` instead would report the cap itself as the pre-cap count
+  // and attribute merged-away findings to truncation.
+  const plannedClaimed = new Set<number>()
+  let planned = 0
+  for (const d of plan) {
+    if (d.index < 0 || d.index >= items.length || plannedClaimed.has(d.index)) continue
+    plannedClaimed.add(d.index)
+    for (const i of d.merge) {
+      if (i >= 0 && i < items.length && !plannedClaimed.has(i)) plannedClaimed.add(i)
+    }
+    planned++
+  }
+  for (let i = 0; i < items.length; i++) if (!plannedClaimed.has(i)) planned++
   for (const d of plan) {
     if (output.length >= cap) {
       if (d.index >= 0 && d.index < items.length && !claimed.has(d.index)) truncated = true
@@ -518,7 +415,7 @@ function applyIndexPlan<T, R>(
     output.push(backfill(items[i]))
     backfilled++
   }
-  return { output, backfilled, truncated }
+  return { output, backfilled, truncated, planned }
 }
 
 /**
@@ -559,26 +456,30 @@ function applyDecisions(
   ranked: Finding[],
   report: Decisions,
   cap: number,
-): { findings: Finding[]; backfilled: number; truncated: boolean } {
-  const { output, backfilled, truncated } = applyIndexPlan(
+): { findings: Finding[]; backfilled: number; truncated: boolean; truncatedFrom: number } {
+  const { output, backfilled, truncated, planned } = applyIndexPlan(
     ranked,
     report.decisions,
     cap,
     (c, merged) => {
       // If a merged duplicate is the one the verifier confirmed, its text is
       // the verified claim. Upgrading the representative's text while keeping
-      // the representative's unverified wording presents unverified prose as
-      // confirmed, so use the confirmed entry's claim.
+      // the representative's unverified anchor presents one entry's claim at
+      // another entry's location, so move the anchor with the claim.
       const confirmed = merged.find((m) => m.verdict === "CONFIRMED")
       const source = c.verdict === "CONFIRMED" || !confirmed ? c : confirmed
       const verdict = confirmed ? "CONFIRMED" : c.verdict
-      // A file-level representative would otherwise erase the only anchor a
-      // merged finding carried. Resolve the anchor before computing the
-      // "also at" list, or the inherited line is both the finding's own
-      // location and an additional location.
-      const line = c.line ?? merged.find((m) => m.file === c.file && m.line !== undefined)?.line
-      const anchored = line === undefined ? c : { ...c, line }
-      const alsoLocations = [...new Set(merged.map(location).filter((l) => l !== location(anchored)))]
+      // A file-level claim would otherwise erase the only anchor a merged
+      // finding carried. Resolve the anchor before computing the "also at"
+      // list, or the inherited line is both the finding's own location and an
+      // additional location.
+      const line =
+        source.line ??
+        (source.file === c.file ? c.line : undefined) ??
+        merged.find((m) => m.file === source.file && m.line !== undefined)?.line
+      const anchored = line === undefined ? source : { ...source, line }
+      const allLocations = [c, ...merged].map(location)
+      const alsoLocations = [...new Set(allLocations.filter((l) => l !== location(anchored)))]
       const also = alsoLocations.length > 0 ? ` [same root cause also at: ${alsoLocations.join(", ")}]` : ""
       return {
         ...anchored,
@@ -591,7 +492,7 @@ function applyDecisions(
     },
     (c) => ({ ...c }),
   )
-  return { findings: output, backfilled, truncated }
+  return { findings: output, backfilled, truncated, truncatedFrom: planned }
 }
 
 /** The deterministic fallback: exact-claim dedup, keep verified order, cap. */
@@ -599,11 +500,16 @@ function deterministicReport(
   ranked: Finding[],
   cap: number,
   level: Level,
-): { findings: Finding[]; summary: string; truncated: boolean } {
+): { findings: Finding[]; summary: string; truncated: boolean; truncatedFrom?: number } {
   const { novel } = dedupeBy(ranked, dedupKey318)
   const findings = novel.slice(0, Number.isFinite(cap) ? cap : undefined).map((c) => ({ ...c }))
   const summary = `${pluralize(findings.length, "finding")} survived verification (${level}-effort review).`
-  return { findings, summary, truncated: Number.isFinite(cap) && novel.length > cap }
+  return {
+    findings,
+    summary,
+    truncated: Number.isFinite(cap) && novel.length > cap,
+    ...(Number.isFinite(cap) && novel.length > cap ? { truncatedFrom: novel.length } : {}),
+  }
 }
 
 /**
@@ -752,9 +658,9 @@ function buildFinders(cell: Cell, budget?: number): Finder[] {
   }
 
   // v2.1.162's cleanup set is four lenses (no conventions finder); the
-  // current recipes add a fifth conventions finder.
-  const cleanupTexts =
-    cell.cleanupLenses === "162" ? CLEANUP_ANGLES_162().split(/\n(?=### )/) : base().slice(3)
+  // current recipes add a fifth conventions finder. Use the shared fragment
+  // list so the labels below cannot drift from the texts by position.
+  const cleanupTexts = cell.cleanupLenses === "162" ? CLEANUP_ANGLES_162() : CLEANUP_ANGLES()
   const cleanupFinders: Finder[] = cleanupTexts.map((text, i) => {
     const label = CLEANUP_LABELS[i] ?? `cleanup-${i}`
     return {
@@ -793,6 +699,11 @@ function buildFinders(cell: Cell, budget?: number): Finder[] {
 
 export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const { cell, scope, level } = opts
+  // These memos only need to survive one review. Clearing at the start keeps a
+  // long-lived plugin process from retaining every review's summary text and
+  // token sets; concurrent reviews merely rebuild a cache, never lose a claim.
+  NORMALIZED_CACHE.clear()
+  TOKEN_CACHE.clear()
   const concurrency = Number.isFinite(opts.concurrency)
     ? Math.max(1, Math.trunc(opts.concurrency as number))
     : 8
@@ -1014,22 +925,31 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     // v2.1.162: no barrier. Each finder's candidates are deduped against the
     // shared `seen` map and verified immediately, while other finders run.
     const seen = new Set<string>()
-    let verifySlots = cell.verifyBudget ?? Number.POSITIVE_INFINITY
+    // Reserve a per-finder share of the budget. A single shared counter let
+    // whichever finder finished first consume every slot, so two runs of the
+    // same commit verified different candidates. A deterministic quota makes
+    // the verified subset independent of child latency.
+    const budget = cell.verifyBudget ?? Number.POSITIVE_INFINITY
+    const share = Number.isFinite(budget) ? Math.floor(budget / finders.length) : Number.POSITIVE_INFINITY
+    const remainder = Number.isFinite(budget) ? budget % finders.length : 0
     let budgetWarning = false
+    const warnBudget = (): void => {
+      stats.budgetDropped++
+      if (budgetWarning) return
+      budgetWarning = true
+      warnings.push(
+        `verifier budget of ${cell.verifyBudget} exhausted; remaining candidates were left unverified`,
+      )
+      partial = true
+    }
     await Promise.all(
-      finders.map(async (f) => {
+      finders.map(async (f, finderIndex) => {
+        let verifySlots = share + (finderIndex < remainder ? 1 : 0)
         const candidates = await runFinder(f)
         stats.candidates += candidates.length
         const deduped = dedupeBy(candidates, dedupKey162, seen, () => {
           if (verifySlots <= 0) {
-            stats.budgetDropped++
-            if (!budgetWarning) {
-              budgetWarning = true
-              warnings.push(
-                `verifier budget of ${cell.verifyBudget} exhausted; remaining candidates were left unverified`,
-              )
-              partial = true
-            }
+            warnBudget()
             return false
           }
           verifySlots--
@@ -1079,14 +999,15 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           // reference.
           pooled.push(...candidatePool)
         } else {
-          // The semantic merge was explicitly requested; when its child fails,
-          // fall back to the same paraphrase merge the deterministic path uses
-          // instead of verifying the same defect once per finder.
-          warnings.push("candidate dedup returned no usable decisions; deterministic merge used")
+          // The semantic merge was explicitly requested. When its child fails,
+          // merge only exact claims: a token-overlap paraphrase merge before
+          // verification can collapse two distinct same-line defects, and the
+          // merged-away bug is then never verified or reported.
+          warnings.push("candidate dedup returned no usable decisions; only exact duplicates were merged")
           partial = true
-          const merged = mergeNearDuplicates(candidatePool)
-          stats.dupes += candidatePool.length - merged.length
-          pooled.push(...merged)
+          const deduped = dedupeBy(candidatePool, dedupKey318)
+          stats.dupes += deduped.dupes
+          pooled.push(...deduped.novel)
         }
       } else {
         const deduped = dedupeBy(candidatePool, dedupKey318)
@@ -1231,7 +1152,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const willSynthesize =
     synthesisEnabled &&
     (cell.synthesis !== "none" || (opts.semanticMerge === true && surviving.length > 1))
-  const mergeBase = willSynthesize ? surviving : mergeNearDuplicates(surviving)
+  // Without a synthesizer, merge only exact claims. The paraphrase heuristic
+  // could collapse two verified, distinct same-line defects into one entry.
+  const mergeBase = willSynthesize
+    ? surviving
+    : dedupeBy(surviving, dedupKey318).novel
   stats.dupes += surviving.length - mergeBase.length
   const rank = (c: Finding) => (c.kind === "cleanup" ? 2 : 0) + (c.verdict === "PLAUSIBLE" ? 1 : 0)
   // Code-unit comparison, not localeCompare: the report order must not change
@@ -1240,7 +1165,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const ranked = mergeBase.slice().sort(
     (a, b) =>
       rank(a) - rank(b) ||
-      compare(location(a), location(b)) ||
+      // Compare file and line separately: `file:line` as a string orders line
+      // 10 before line 9 and ignores the numeric anchor.
+      compare(a.file, b.file) ||
+      (a.line ?? 0) - (b.line ?? 0) ||
       compare(a.summary, b.summary) ||
       compare(a.failure_scenario, b.failure_scenario),
   )
@@ -1249,6 +1177,8 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   let summary: string
   let summarySynthesized = false
   let truncatedByCap = false
+  /** Report size before the cap, from the path that produced the list. */
+  let truncatedFrom: number | undefined
 
   /**
    * Every synthesis-failure path returns the same ranked, unmerged list. Keep
@@ -1258,6 +1188,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const unmergedFallback = (summaryText: string): void => {
     findings = ranked.slice(0, Number.isFinite(cap) ? cap : undefined).map((c) => ({ ...c }))
     truncatedByCap = Number.isFinite(cap) && ranked.length > cap
+    truncatedFrom = truncatedByCap ? ranked.length : undefined
     summary = summaryText
     summarySynthesized = false
   }
@@ -1265,7 +1196,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   /** Shared by wf221 synthesis and the v2.1.318 semantic-merge equivalent. */
   const runIndexSynthesis = async (
     label: "synthesize" | "merge",
-  ): Promise<{ findings: Finding[]; summary: string; truncated: boolean } | null> => {
+  ): Promise<{ findings: Finding[]; summary: string; truncated: boolean; truncatedFrom: number } | null> => {
     emit({ type: "phase", phase: "Synthesize" })
     const value = await runner({
       role: "synthesize",
@@ -1299,11 +1230,12 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           ? ` (${pluralize(applied.backfilled, "additional verified finding")} appended unmerged.)`
           : ""),
       truncated: applied.truncated || report.truncated === true,
+      truncatedFrom: applied.truncatedFrom,
     }
   }
 
   const applyIndexSynthesis = (
-    synthesized: { findings: Finding[]; summary: string; truncated: boolean } | null,
+    synthesized: { findings: Finding[]; summary: string; truncated: boolean; truncatedFrom: number } | null,
     warning: string,
     fallback: () => void,
   ): void => {
@@ -1317,6 +1249,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     summary = synthesized.summary
     summarySynthesized = true
     truncatedByCap = synthesized.truncated
+    truncatedFrom = synthesized.truncatedFrom
   }
 
   if (synthesisEnabled && cell.synthesis === "index") {
@@ -1486,12 +1419,12 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       await runIndexSynthesis("merge"),
       "semantic merge returned no usable decisions; deterministic merge used",
       () => {
-        // The warning promises a deterministic merge; applying only the
-        // exact-key report would leave paraphrases unmerged.
-        const fallback = deterministicReport(mergeNearDuplicates(ranked), cap, level)
+        // Only exact claims are safe to merge without a semantic judge.
+        const fallback = deterministicReport(ranked, cap, level)
         findings = fallback.findings
         summary = fallback.summary
         truncatedByCap = fallback.truncated
+        truncatedFrom = fallback.truncatedFrom
       },
     )
   } else {
@@ -1501,6 +1434,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     findings = fallback.findings
     summary = fallback.summary
     truncatedByCap = fallback.truncated
+    truncatedFrom = fallback.truncatedFrom
   }
   if (Number.isFinite(cap) && findings.length > cap) truncatedByCap = true
 
@@ -1516,8 +1450,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     cell: cell.id,
     // Truncation means the cap cut the emitted report short, not merely that
     // more candidates entered synthesis: a synthesizer that merged 20
-    // survivors into 12 under a 15 cap dropped nothing.
-    ...(truncatedByCap && Number.isFinite(cap) ? { truncatedFrom: surviving.length } : {}),
+    // survivors into 12 under a 15 cap dropped nothing. The path that produced
+    // the list reports its own pre-cap size; `findings.length` is the fallback.
+    ...(truncatedByCap && Number.isFinite(cap)
+      ? { truncatedFrom: truncatedFrom ?? findings.length }
+      : {}),
   }
   emit({ type: "stats", stats: result.stats })
   return result

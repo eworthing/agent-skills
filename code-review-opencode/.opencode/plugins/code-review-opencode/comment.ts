@@ -81,7 +81,7 @@ export function commentBody(finding: { summary: string; failure_scenario: string
   return `${finding.summary}\n\nFailure scenario: ${finding.failure_scenario}`
 }
 
-/** Host from a PR URL, including a GitHub Enterprise port when present. */
+/** Hostname from a PR URL. `gh` keys credentials by hostname, so a port is omitted. */
 function hostFromPrUrl(value: string): string | undefined {
   try {
     // gh keys credentials by hostname; a `host:port` value would not match.
@@ -183,6 +183,8 @@ export type PrInfo = {
   headRefOid?: string
   baseRefName?: string
   baseRefOid?: string
+  /** Base repository URL; authoritative for the host and `owner/repo`. */
+  url?: string
 }
 
 /** Parse `gh pr view --json number,headRefOid,baseRefName,baseRefOid`; tolerate a bare number. */
@@ -205,6 +207,7 @@ function parsePrInfo(result: ExecResult): PrInfo | undefined {
       ...(typeof data?.baseRefOid === "string" && data.baseRefOid
         ? { baseRefOid: data.baseRefOid }
         : {}),
+      ...(typeof data?.url === "string" && data.url ? { url: data.url } : {}),
     }
   } catch {
     // Older tests/hosts returned the `--jq .number` scalar; accept it.
@@ -223,7 +226,16 @@ export async function resolvePrInfo(
   exec: Exec = defaultExec,
   opts?: ExecOptions,
 ): Promise<PrInfo | undefined> {
-  if (scope.pr !== undefined) return { number: scope.pr }
+  if (scope.pr !== undefined) {
+    // A PR-number review already captured the patch and head together. Pin
+    // that head instead of re-reading whatever the branch points at minutes
+    // later, or a push during the review anchors comments to the wrong code.
+    return {
+      number: scope.pr,
+      ...(scope.prHeadOid ? { headRefOid: scope.prHeadOid } : {}),
+      ...(scope.prUrl ? { url: scope.prUrl } : {}),
+    }
+  }
   // An explicit branch target makes `scope.branch` the diff base, not the
   // checked-out head. Ask git for the current branch instead of looking up the
   // base's PR (which is usually a different PR, or none at all). A clean
@@ -239,7 +251,7 @@ export async function resolvePrInfo(
   // must not post to an unrelated PR.
   if (!branch || branch === "HEAD") return undefined
   const found = await exec(
-    ["gh", "pr", "view", branch, "--json", "number,headRefOid,baseRefName,baseRefOid"],
+    ["gh", "pr", "view", branch, "--json", "number,headRefOid,baseRefName,baseRefOid,url"],
     cwd,
     opts,
   )
@@ -325,7 +337,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // GitHub then rejects the comment (or attaches it to the fork's own PR with
   // the same number).
   const [repo, head] = await Promise.all([
-    call(["gh", "pr", "view", String(pr), "--json", "url", "--jq", ".url"]),
+    // The PR metadata already returned its URL for a branch/PR target. Only
+    // re-read it when that lookup did not run (for example a bare number was
+    // passed straight to postComments).
+    prInfo.url
+      ? Promise.resolve({ stdout: prInfo.url, stderr: "", code: 0 })
+      : call(["gh", "pr", "view", String(pr), "--json", "url", "--jq", ".url"]),
     // A branch-shaped review already fetched the head with the number/base in
     // one call; only fall back when the host/tests did not supply it.
     prInfo.headRefOid

@@ -52,32 +52,27 @@ export const VERDICT_LADDER = () => frag("verdict-ladder").trimEnd()
 export const VERDICT_LADDER_RECALL = () => frag("verdict-ladder-recall").trimEnd()
 export const SWEEP_FOCUS = () => frag("sweep-focus").trimEnd()
 
+/** The one list of correctness fragments, in angle order. */
+const CORRECTNESS_FRAGMENTS = [ANGLE_A, ANGLE_B, ANGLE_C, ANGLE_D, ANGLE_E]
+/** The one list of cleanup fragments, in lens order. */
+const CLEANUP_FRAGMENTS = [REUSE, SIMPLIFICATION, EFFICIENCY, ALTITUDE, CONVENTIONS]
+
 /** 3 correctness angles (A/B/C) + 3 cleanup + altitude + conventions. */
 export const BASE_ANGLES = () =>
-  [ANGLE_A(), ANGLE_B(), ANGLE_C(), REUSE(), SIMPLIFICATION(), EFFICIENCY(), ALTITUDE(), CONVENTIONS()].join("\n")
+  [...CORRECTNESS_FRAGMENTS.slice(0, 3), ...CLEANUP_FRAGMENTS].map((f) => f()).join("\n")
 
 /** 5 correctness angles (A-E) + 3 cleanup + altitude + conventions. */
 export const EXTENDED_ANGLES = () =>
-  [
-    ANGLE_A(),
-    ANGLE_B(),
-    ANGLE_C(),
-    ANGLE_D(),
-    ANGLE_E(),
-    REUSE(),
-    SIMPLIFICATION(),
-    EFFICIENCY(),
-    ALTITUDE(),
-    CONVENTIONS(),
-  ].join("\n")
+  [...CORRECTNESS_FRAGMENTS, ...CLEANUP_FRAGMENTS].map((f) => f()).join("\n")
+
+/** The cleanup lenses as separate finder texts, one per fragment. */
+export const CLEANUP_ANGLES = () => CLEANUP_FRAGMENTS.map((f) => f())
 
 /** The 4 cleanup lenses as used by the v2.1.162 workflow's cleanup finders. */
-export const CLEANUP_ANGLES_162 = () =>
-  [REUSE(), SIMPLIFICATION(), EFFICIENCY(), ALTITUDE()].join("\n\n")
+export const CLEANUP_ANGLES_162 = () => CLEANUP_FRAGMENTS.slice(0, 4).map((f) => f())
 
 /** The 5 cleanup lenses merged into one finder by the v2.1.221 workflow. */
-export const CLEANUP_TEXT_221 = () =>
-  [REUSE(), SIMPLIFICATION(), EFFICIENCY(), ALTITUDE(), CONVENTIONS()].join("\n\n")
+export const CLEANUP_TEXT_221 = () => CLEANUP_FRAGMENTS.map((f) => f()).join("\n\n")
 
 /**
  * Interpolate a recovered fragment. The fragment files use the reference's
@@ -763,7 +758,7 @@ Read the relevant file(s) and return exactly one verdict:
 ${opts.recallBiased ? VERDICT_LADDER_RECALL() : VERDICT_LADDER()}
 ${opts.recallBiased || opts.recallSentence ? "\nThis is recall mode — a single non-REFUTED vote carries the finding. Do NOT drop on uncertainty." : ""}
 
-Use only read-only inspection: read, glob, grep, and git diff/log/show/blame. Do not run node, python, tests, builds, or arbitrary shell commands. If execution is the only way to settle the claim, state what would confirm it and return PLAUSIBLE under recall bias; under precision, return REFUTED only when the code constructively proves the claim wrong.
+Use only read-only inspection: read, glob, grep, and git diff/log/show/blame with the read-only -c flags shown in the Diff command. Do not run node, python, tests, builds, or arbitrary shell commands. If execution is the only way to settle the claim, state what would confirm it and return PLAUSIBLE under recall bias; under precision, return REFUTED only when the code constructively proves the claim wrong.
 
 Structured output only. Evidence must quote or cite the relevant line(s).`
 }
@@ -793,7 +788,7 @@ Read the relevant file(s) and return one verdict per candidate. Judge EACH candi
 ${opts.recallBiased ? VERDICT_LADDER_RECALL() : VERDICT_LADDER()}
 ${opts.recallBiased || opts.recallSentence ? "\nThis is recall mode — a single non-REFUTED vote carries the finding. Do NOT drop on uncertainty." : ""}
 
-Use only read-only inspection: read, glob, grep, and git diff/log/show/blame. Do not run node, python, tests, builds, or arbitrary shell commands. If execution is the only way to settle a claim, state what would confirm it and return PLAUSIBLE; return REFUTED only when the code constructively proves the claim wrong.
+Use only read-only inspection: read, glob, grep, and git diff/log/show/blame with the read-only -c flags shown in the Diff command. Do not run node, python, tests, builds, or arbitrary shell commands. If execution is the only way to settle a claim, state what would confirm it and return PLAUSIBLE; return REFUTED only when the code constructively proves the claim wrong.
 
 Structured output only. Evidence must quote or cite the relevant line(s).`
 }

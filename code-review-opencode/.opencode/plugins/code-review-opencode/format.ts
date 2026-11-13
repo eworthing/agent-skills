@@ -48,6 +48,7 @@ export function formatReportFindings(result: EngineResult): {
       failure_scenario: f.failure_scenario,
       category: f.category ?? (f.kind === "cleanup" ? "cleanup" : "correctness"),
       ...(f.verdict ? { verdict: f.verdict } : {}),
+      ...(f.evidence ? { evidence: f.evidence } : {}),
     })),
   }
 }

@@ -22,6 +22,15 @@ permissions:
   - action: grep
     resource: "*"
     effect: allow
+  # The orchestrator's diff command carries the read-only -c hardening.
+  # Allow exactly that form, with and without -C, so a repository hook or
+  # fsmonitor cannot execute during a child's review commands.
+  - action: shell
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false*"
+    effect: allow
+  - action: shell
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false*"
+    effect: allow
   # Require the no-textconv/no-ext-diff forms: a plain diff/show/log can run
   # a textconv or external diff driver configured for the repository.
   - action: shell
