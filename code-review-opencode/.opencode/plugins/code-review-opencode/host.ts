@@ -63,15 +63,6 @@ export function sessionRecord(session: unknown): SessionRecord | undefined {
 }
 
 /**
- * A review child must not start another review. The engine creates one child
- * per role; without this guard a child that can call `code_review` could fan
- * out unboundedly.
- */
-export function isChildSession(session: unknown): boolean {
-  return Boolean(sessionRecord(session)?.parentID)
-}
-
-/**
  * `ctx.session.context` may return the bare message array or the same
  * `{location, data}` envelope as `session.get`. Unwrap both before reading
  * message counts or the final message.

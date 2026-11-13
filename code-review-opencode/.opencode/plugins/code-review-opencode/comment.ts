@@ -17,7 +17,7 @@ import {
   type ExecResult,
 } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
-import { envInt, lineOf, pluralWord } from "./finding.ts"
+import { envInt, lineOf, pluralWord, positiveLine } from "./finding.ts"
 
 export type Host = "github" | "gitlab" | "other"
 
@@ -194,8 +194,8 @@ function parsePrInfo(result: ExecResult): PrInfo | undefined {
     const parsed = JSON.parse(result.stdout) as unknown
     const data =
       parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : undefined
-    const number = typeof parsed === "number" ? parsed : Number(data?.number)
-    if (!Number.isSafeInteger(number) || number <= 0) return undefined
+    const number = positiveLine(parsed) ?? positiveLine(data?.number)
+    if (number === undefined) return undefined
     return {
       number,
       ...(typeof data?.headRefOid === "string" && data.headRefOid
@@ -211,8 +211,8 @@ function parsePrInfo(result: ExecResult): PrInfo | undefined {
     }
   } catch {
     // Older tests/hosts returned the `--jq .number` scalar; accept it.
-    const number = Number(result.stdout.trim())
-    return Number.isSafeInteger(number) && number > 0 ? { number } : undefined
+    const number = positiveLine(result.stdout.trim())
+    return number === undefined ? undefined : { number }
   }
 }
 
@@ -315,6 +315,9 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     return "`--comment` was ignored: the reviewed diff has no verified base; pass the PR number as the target."
   }
   const pr = prInfo.number
+  /** One `gh pr view` field read; the PR number is already resolved. */
+  const prField = (field: string, jq = `.${field}`) =>
+    call(["gh", "pr", "view", String(pr), "--json", field, "--jq", jq])
 
   // detectHost identifies GitHub Enterprise by probing gh auth, but the host
   // name itself is needed for the comment request. Discarding it sends every
@@ -342,12 +345,12 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // passed straight to postComments).
     prInfo.url
       ? Promise.resolve({ stdout: prInfo.url, stderr: "", code: 0 })
-      : call(["gh", "pr", "view", String(pr), "--json", "url", "--jq", ".url"]),
+      : prField("url"),
     // A branch-shaped review already fetched the head with the number/base in
     // one call; only fall back when the host/tests did not supply it.
     prInfo.headRefOid
       ? Promise.resolve({ stdout: prInfo.headRefOid, stderr: "", code: 0 })
-      : call(["gh", "pr", "view", String(pr), "--json", "headRefOid", "--jq", ".headRefOid"]),
+      : prField("headRefOid"),
   ])
   let repoName = repoFromPrUrl(repo.stdout) ?? ""
   let repoError = repo.stderr.trim()
@@ -363,31 +366,15 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // Older gh versions/tests may not return a URL. Ask the PR for its base
     // repository before falling back to the local checkout: `gh repo view` in
     // a fork clone names the fork, not the base repository the PR belongs to.
-    const base = await call([
-      "gh",
-      "pr",
-      "view",
-      String(pr),
-      "--json",
-      "baseRepository",
-      "--jq",
-      ".baseRepository.nameWithOwner",
-    ])
+    const base = await prField("baseRepository", ".baseRepository.nameWithOwner")
     const baseName = base.stdout.trim()
     if (baseName.includes("/")) {
       repoName = baseName
     } else {
-      const fallback = await call([
-        "gh",
-        "repo",
-        "view",
-        "--json",
-        "owner,name",
-        "--jq",
-        '.owner.login + "/" + .name',
-      ])
-      repoName = fallback.stdout.trim()
-      repoError = fallback.stderr.trim() || repoError
+      // Never fall back to `gh repo view`: in a fork clone it names the fork,
+      // so the comment would land on a different repository (or the fork's own
+      // PR with the same number). Refuse instead.
+      repoError = base.stderr.trim() || repoError || "could not resolve the PR base repository"
     }
   }
   const [owner, name] = repoName.split("/")
@@ -432,16 +419,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     if (scope.diffBase) {
       let prBase = prInfo.baseRefName
       if (!prBase) {
-        const base = await call([
-          "gh",
-          "pr",
-          "view",
-          String(pr),
-          "--json",
-          "baseRefName",
-          "--jq",
-          ".baseRefName",
-        ])
+        const base = await prField("baseRefName")
         if (base.code !== 0 || !base.stdout.trim()) {
           return "`--comment` was ignored: could not verify the pull request's base branch."
         }
@@ -460,18 +438,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       // numbers describe a different diff even though both refs say "main".
       const prBaseOid =
         prInfo.baseRefOid ??
-        (
-          await call([
-            "gh",
-            "pr",
-            "view",
-            String(pr),
-            "--json",
-            "baseRefOid",
-            "--jq",
-            ".baseRefOid",
-          ])
-        ).stdout.trim()
+        (await prField("baseRefOid")).stdout.trim()
       if (!prBaseOid) {
         return "`--comment` was ignored: could not verify the pull request's base commit."
       }

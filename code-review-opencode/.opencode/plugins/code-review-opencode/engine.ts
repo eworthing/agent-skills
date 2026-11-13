@@ -21,7 +21,6 @@ import {
   candidateDedupPrompt,
   finderPrompt,
   groupVerifierPrompt,
-  renderScope,
   sweepPrompt,
   synthPromptIndex,
   synthPromptText,
@@ -50,7 +49,6 @@ export type Role = "finder" | "verifier" | "sweep" | "synthesize"
 export type AgentRequest = {
   role: Role
   label: string
-  phase: string
   prompt: string
   agent: string
   schemaName: "candidates" | "verdict" | "groupVerdicts" | "report" | "decisions"
@@ -295,8 +293,6 @@ function summaryTokens(s: string): Set<string> {
 type ClaimPolicy = {
   /** Jaccard overlap at or above this is the same claim. */
   jaccard?: number
-  /** Shared tokens / smaller token set at or above this is the same claim. */
-  containment?: number
   /** Any shared non-stop token is enough (same-anchor synthesis match). */
   anyToken?: boolean
 }
@@ -310,9 +306,6 @@ function sameClaim(a: string, b: string, policy: ClaimPolicy = {}): boolean {
   for (const t of ta) if (tb.has(t)) intersection++
   if (policy.anyToken && intersection > 0) return true
   if (policy.jaccard !== undefined && intersection / (ta.size + tb.size - intersection) >= policy.jaccard) {
-    return true
-  }
-  if (policy.containment !== undefined && intersection / Math.max(1, Math.min(ta.size, tb.size)) >= policy.containment) {
     return true
   }
   return false
@@ -358,7 +351,7 @@ function applyIndexPlan<T, R>(
   cap: number,
   combine: (item: T, merged: T[]) => R,
   backfill: (item: T) => R,
-): { output: R[]; backfilled: number; truncated: boolean } {
+): { output: R[]; backfilled: number; truncated: boolean; planned: number } {
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
@@ -368,11 +361,14 @@ function applyIndexPlan<T, R>(
   // index lands exactly at `items.length`: that is the signature of a 1-based
   // full plan and is unambiguous because a 0-based plan can never reach n.
   const hasZero = decisions.some((d) => d.index === 0 || d.merge.includes(0))
-  const maxIndex = decisions.reduce(
-    (max, d) => Math.max(max, d.index, ...d.merge),
-    Number.NEGATIVE_INFINITY,
-  )
-  const oneBased = !hasZero && maxIndex === items.length
+  // A plan whose indices are exactly 1..k is 1-based, whether it covers every
+  // item or only the most severe subset. A zero-based subset that happens to
+  // start at 1 is indistinguishable; shifting is the safer failure mode
+  // because discarding or mis-applying a 1-based plan loses every decision.
+  const indices = decisions.flatMap((d) => [d.index, ...d.merge]).sort((a, b) => a - b)
+  const contiguousFromOne =
+    indices.length > 0 && indices.every((value, i) => value === i + 1)
+  const oneBased = !hasZero && contiguousFromOne
   const plan = oneBased
     ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
     : decisions
@@ -443,7 +439,11 @@ function applyCandidateDedup<T extends RawFinding & { kind: "correctness" | "cle
           (b.failure_scenario?.length ?? 0) - (a.failure_scenario?.length ?? 0),
       )[0]
       if (representative.line !== undefined) return representative
-      const line = candidates.find((c) => c.line !== undefined)?.line
+      // Only inherit an anchor from the representative's own file; a line from
+      // a different file would attach this claim to unrelated code.
+      const line = candidates.find(
+        (c) => c.file === representative.file && c.line !== undefined,
+      )?.line
       return line === undefined ? representative : { ...representative, line }
     },
     (item) => item,
@@ -770,7 +770,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     const value = await runner({
       role: "finder",
       label: f.label,
-      phase: "Find",
       prompt: finderPrompt({
         label: f.label,
         scope: block,
@@ -828,7 +827,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     const value = await runner({
       role: "verifier",
       label: `verify:${c.file.split("/").pop()}`,
-      phase: "Verify",
       prompt: verifierPrompt({
         scope: block,
         candidate: c,
@@ -871,8 +869,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       const value = await runner({
         role: "verifier",
         label: `verify:${group[0].file.split("/").pop()}(${group.length})`,
-        phase: "Verify",
-        prompt: groupVerifierPrompt({
+          prompt: groupVerifierPrompt({
           scope: block,
           group,
           recallBiased: recallLadder,
@@ -984,8 +981,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         const value = await runner({
           role: "synthesize",
           label: "dedup",
-          phase: "Dedup",
-          prompt: candidateDedupPrompt({ level, candidates: candidatePool, diffText: scope.diffText }),
+              prompt: candidateDedupPrompt({ level, candidates: candidatePool, diffText: scope.diffText }),
           agent: AGENT_IDS.synthesize,
           schemaName: "decisions",
           signal: opts.signal,
@@ -1039,7 +1035,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     const value = await runner({
       role: "sweep",
       label: "sweep",
-      phase: "Sweep",
       prompt: sweepPrompt({ scope: block, known, cap: cell.sweepCap }),
       agent: AGENT_IDS.sweep,
       schemaName: "candidates",
@@ -1201,7 +1196,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     const value = await runner({
       role: "synthesize",
       label,
-      phase: "Synthesize",
       prompt: synthPromptIndex({
         level,
         ranked,
@@ -1266,7 +1260,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     const value = await runner({
       role: "synthesize",
       label: "synthesize",
-      phase: "Synthesize",
       prompt: synthPromptText({
         level,
         ranked,
@@ -1398,6 +1391,14 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           // cap is applied. Preserve that fact so the engine can record
           // truncatedFrom instead of presenting a shortened list as complete.
           truncatedByCap = report.truncated === true || (Number.isFinite(cap) && emitted.length > cap)
+          if (report.truncated === true) {
+            // The normalizer cut the report tail, so the original count is not
+            // available. Disclose a lower bound instead of claiming N of N.
+            truncatedFrom = Math.max(truncatedFrom ?? 0, emitted.length + 1)
+            warnings.push("synthesis report was truncated at the tool cap; the pre-cap count is a lower bound")
+          } else if (Number.isFinite(cap) && emitted.length > cap) {
+            truncatedFrom = emitted.length
+          }
           findings = emitted.slice(0, Number.isFinite(cap) ? cap : undefined)
           if (unmatched > 0) {
             // A reworded or merged entry is indistinguishable from an invented

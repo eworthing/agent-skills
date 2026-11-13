@@ -234,6 +234,8 @@ test("an invalid --max-findings does not clear the stored limit", () => {
 })
 
 test("structured tool input is not reinterpreted as a level or flag", () => {
+  // The typed tool accepts the same aliases as the CLI.
+  assert.equal(parseStructured({ level: "med" }).parsed.explicit, "medium")
   const { parsed, flags } = parseStructured({ target: "high", level: "low", maxFindings: 5, json: true })
   assert.equal(parsed.explicit, "low")
   assert.equal(parsed.target, "high")

@@ -281,8 +281,12 @@ export const DEFAULT_MODE: VersionID = "cc-2.1.318"
  * Validate a `--mode`/`CODE_REVIEW_MODE` value. `Object.hasOwn` rather than
  * `in`: inherited keys such as `constructor` must not pass as versions.
  */
+export function isVersion(value: string | undefined): value is VersionID {
+  return value !== undefined && Object.hasOwn(VERSIONS, value)
+}
+
 export function asVersion(value: string | undefined): VersionID {
-  return value !== undefined && Object.hasOwn(VERSIONS, value) ? (value as VersionID) : DEFAULT_MODE
+  return isVersion(value) ? value : DEFAULT_MODE
 }
 
 export const LEVELS = ["low", "medium", "high", "xhigh", "max"] as const

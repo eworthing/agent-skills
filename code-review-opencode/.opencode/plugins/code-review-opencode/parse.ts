@@ -284,9 +284,16 @@ export function parseStructured(input: StructuredInvocation): { parsed: Parsed; 
     typeof input.target === "string" ? input.target : input.target == null ? "" : String(input.target)
   const target = cleanTarget(rawTarget.split(/\s+/).filter(Boolean))
   const maxFindings = structuredMaxFindings(input.maxFindings)
+  // The typed tool accepts the same aliases as the CLI (`med`, padded or
+  // mixed-case values). `coerceLevel` alone maps every unrecognized spelling
+  // to high, so normalize first.
+  const explicit =
+    input.level === undefined
+      ? undefined
+      : (normalizeLevel(String(input.level)) ?? coerceLevel(String(input.level)))
   return {
     parsed: {
-      explicit: input.level,
+      explicit,
       target,
       comment: input.comment === true,
       fix: input.fix === true,

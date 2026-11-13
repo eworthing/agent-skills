@@ -22,64 +22,58 @@ permissions:
   - action: grep
     resource: "*"
     effect: allow
-  # The orchestrator's diff command carries the read-only -c hardening.
-  # Allow exactly that form, with and without -C, so a repository hook or
-  # fsmonitor cannot execute during a child's review commands.
-  - action: shell
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false*"
-    effect: allow
-  - action: shell
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false*"
-    effect: allow
+  # Read-only git. Every allowed command carries the same -c hardening the
+  # orchestrator uses, so a repository's hooks/fsmonitor cannot execute
+  # during a review. The unhardened forms are deliberately absent.
   # Require the no-textconv/no-ext-diff forms: a plain diff/show/log can run
   # a textconv or external diff driver configured for the repository.
   - action: shell
-    resource: "git -C * diff --no-ext-diff --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * log --no-ext-diff --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false log --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * show --no-ext-diff --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false show --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * blame --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false blame --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * status*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false status*"
     effect: allow
   - action: shell
-    resource: "git -C * rev-parse*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false rev-parse*"
     effect: allow
   - action: shell
-    resource: "git -C * ls-files*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false ls-files*"
     effect: allow
   - action: shell
-    resource: "git -C * grep*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false grep*"
     effect: allow
   - action: shell
-    resource: "git diff --no-ext-diff --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git log --no-ext-diff --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false log --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git show --no-ext-diff --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false show --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git blame --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false blame --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git status*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false status*"
     effect: allow
   - action: shell
-    resource: "git rev-parse*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false rev-parse*"
     effect: allow
   - action: shell
-    resource: "git ls-files*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false ls-files*"
     effect: allow
   - action: shell
-    resource: "git grep*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false grep*"
     effect: allow
   - action: shell
     resource: "gh pr diff*"
@@ -150,12 +144,9 @@ permissions:
   - action: shell
     resource: "* --ext-diff*"
     effect: deny
-  # Git config flags can point a read-only command at an external helper or
-  # pager that executes arbitrary code. Deny `-c`/`--config-env` and the short
-  # pager option outright; the allow rules cannot distinguish their payload.
-  - action: shell
-    resource: "* -c*"
-    effect: deny
+  # A config-env flag can point a read-only command at an external helper or
+  # pager that executes arbitrary code. The hardened `-c` form is allowed above;
+  # every other config-env spelling and the short pager option stay denied.
   - action: shell
     resource: "*--config-env*"
     effect: deny

@@ -367,7 +367,9 @@ function messageText(m: unknown): string {
 function assistantText(messages: readonly unknown[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i] as { type?: string; content?: unknown }
-    if (m?.type !== "assistant" || !Array.isArray(m.content)) continue
+    if (m?.type !== "assistant") continue
+    // `messageText` accepts both a top-level `text` field and text parts; the
+    // old content-array guard skipped valid top-level answers.
     const text = messageText(m).trim()
     if (text) return text
   }
@@ -380,12 +382,29 @@ function assistantText(messages: readonly unknown[]): string {
  * prompt is ignored and the model keeps answering in prose. Detect it before
  * spending two more turns on the same session.
  */
+/** Test a text prefix without materializing the whole transcript message. */
+function startsWithText(m: unknown, prefix: string): boolean {
+  const record = m as { text?: unknown; content?: unknown }
+  if (typeof record?.text === "string") return record.text.trimStart().startsWith(prefix)
+  if (!Array.isArray(record?.content)) return false
+  let remaining = prefix
+  for (const part of record.content) {
+    const p = part as { type?: unknown; text?: unknown }
+    if (p?.type !== "text" || typeof p.text !== "string") continue
+    const text = p.text.trimStart()
+    if (text.length >= remaining.length) return text.startsWith(remaining)
+    if (!remaining.startsWith(text)) return false
+    remaining = remaining.slice(text.length)
+  }
+  return remaining.length === 0
+}
+
 function hitStepLimit(messages: readonly unknown[]): boolean {
   // The injected notice stays in context, so a retry can see it many messages
   // later. Scan the whole transcript; `startsWith` prevents a diff that merely
   // quotes the literal from counting as the injected notice.
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messageText(messages[i]).trimStart().startsWith("CRITICAL - MAXIMUM STEPS REACHED")) return true
+    if (startsWithText(messages[i], "CRITICAL - MAXIMUM STEPS REACHED")) return true
   }
   return false
 }
@@ -771,6 +790,10 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         // next retry. Reusing its count avoids transferring the diff-sized
         // context again merely to learn how many messages preceded the retry.
         let messageCount = waited.messages?.length ?? 0
+        // A result submitted through the tool can settle the wait without a
+        // transcript read. If the later text fallback also cannot read the
+        // context, 0 is not a baseline: the session may already have messages.
+        let messageCountKnown = waited.messages !== undefined
 
       const captured = (): unknown | undefined => {
         if (!sessionID) return undefined
@@ -805,6 +828,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           return null
         }
         messageCount = messages.length
+        messageCountKnown = true
         stepLimited = stepLimited || hitStepLimit(messages)
         const text = assistantText(messages)
         lastText = text
@@ -870,7 +894,9 @@ ${text}`
           const direct = opts.schemaResults?.get(id)
           if (direct !== undefined) {
             opts.schemaResults?.delete(id)
-            return direct
+            // The formatter is the last chance to recover a result; do not let
+            // it "recover" the prompt's schema example.
+            if (!isSchemaEcho(direct)) return direct
           }
           // A `gone` wait outcome can still leave a readable transcript (a
           // transient get/wait miss). Only a watchdog stall proves there is no
@@ -943,7 +969,9 @@ ${text}`
         const failures = sessionID ? (opts.schemaFailures?.get(sessionID) ?? 0) : 0
         if (req.signal?.aborted || failures >= 3) break
         log(`[code-review-opencode] ${req.label}: no structured result captured; retrying the tool call (attempt ${attempt + 1})`)
-        const retryBaseline = await sessionBaseline(sessionID, { messages: messageCount })
+        const retryBaseline = messageCountKnown
+          ? await sessionBaseline(sessionID, { messages: messageCount })
+          : await sessionBaseline(sessionID)
         await ctx.session.prompt({ sessionID, text: retryInstruction(req.schemaName) })
         const retriedWait = await waitForChild(
           sessionID,

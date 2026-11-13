@@ -18,6 +18,7 @@ import {
   plannedFinderCount,
   resolveCell,
   LEVELS,
+  isVersion,
   type InlineVariant,
   type Level,
   VERSIONS,
@@ -261,7 +262,7 @@ function effortNotice(
   level: Level,
 ): string | undefined {
   if (parsed.unrecognizedLevel) {
-    return `Ignoring unrecognized effort "${parsed.unrecognizedLevel}"; valid: low, medium, high, xhigh, max. Using ${level}${
+    return `Ignoring unrecognized effort "${parsed.unrecognizedLevel}"; valid: ${LEVELS.join(", ")}. Using ${level}${
       lastUsed === level ? ", the level you typed last time" : ""
     }.`
   }
@@ -277,7 +278,6 @@ function effortNotice(
 function maxFindingsNotice(
   limit: ReturnType<typeof resolveMaxFindings>,
   ignored: boolean,
-  speaker: "the user" | "you" = "the user",
 ): string | undefined {
   const notes: string[] = []
   if (ignored) {
@@ -291,13 +291,12 @@ function maxFindingsNotice(
   if (limit.asked !== undefined && limit.stated === undefined) {
     notes.push("`--max-findings` does not change this review: low effort here has no maximum.")
   } else if (limit.stated !== limit.asked) {
-    const who = speaker === "you" ? "You" : "The user"
-    notes.push(limit.reused ? `${who} set \`--max-findings ${limit.asked}\` last time. ${capNote}` : capNote)
+    notes.push(limit.reused ? `The user set \`--max-findings ${limit.asked}\` last time. ${capNote}` : capNote)
   } else if (limit.reused && limit.asked !== undefined) {
     notes.push(
       limit.asked === "all"
-        ? `Reporting every finding, as ${speaker} chose last time with \`--max-findings all\`.`
-        : `Reporting up to ${limit.asked} ${limit.asked === 1 ? "finding" : "findings"}, the limit ${speaker} set last time with \`--max-findings\`.`,
+        ? "Reporting every finding, as the user chose last time with `--max-findings all`."
+        : `Reporting up to ${limit.asked} ${limit.asked === 1 ? "finding" : "findings"}, the limit the user set last time with \`--max-findings\`.`,
     )
   }
   return notes.length > 0 ? notes.join(" ") : undefined
@@ -430,7 +429,7 @@ async function resolveAndRun(
   if (remember && parsed.explicit) await storeValue(STORAGE_EFFORT, parsed.explicit)
 
   const requestedMode = flags.mode ?? process.env.CODE_REVIEW_MODE
-  const invalidMode = requestedMode !== undefined && !Object.hasOwn(VERSIONS, requestedMode)
+  const invalidMode = requestedMode !== undefined && !isVersion(requestedMode)
   const version = asVersion(requestedMode)
   const modelOverride = modelRef(flags.model ?? process.env.CODE_REVIEW_MODEL)
   const family = detectFamily(
@@ -768,8 +767,13 @@ async function resolveAndRun(
       typeof max === "number" ? Math.min(max, HARD_FINDINGS_CAP) : max === "all" ? HARD_FINDINGS_CAP : max
     // All finders failed. Do not hand back a multi-agent prompt that tells the
     // model to spawn the same finder subagents that just failed; run the
-    // recovered single-pass prompt instead.
-    const base = resolveInline(kind, cell.inlineVariant, fallbackMax)
+    // recovered single-pass prompt instead. Multi cells have no inlineVariant,
+    // so map the requested effort to the matching single-pass prompt rather
+    // than silently degrading every level to high.
+    const fallbackVariant =
+      cell.inlineVariant ??
+      (effort === "medium" ? "inline-medium" : effort === "high" ? "inline-high" : "inline-xhigh")
+    const base = resolveInline(kind, fallbackVariant, fallbackMax)
     let text = decorateReview(base)
     text += await verifyFollowUp(ctx, scope.files)
     const allNotices = [...notices, warning]

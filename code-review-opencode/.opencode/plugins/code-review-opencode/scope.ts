@@ -1103,7 +1103,7 @@ export function discoverConventions(
     const cap = caps.get(p) ?? 0
     const limit = Math.max(0, Math.min(cap, contentBudget - contentUsed))
     if (limit <= 0) continue
-    const text = readCapped(p, limit)
+    const text = readCapped(p, limit, sizeOf(p))
     if (!text) continue
     chunks.push(header + text)
     used += header.length + text.length
@@ -1441,6 +1441,13 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       }
       if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
       if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
+      // `--quiet` uses 0 for clean and 1 for differences. Any other status is
+      // a failure; treating it as clean silently drops uncommitted changes.
+      if (worktree.code > 1) {
+        throw new Error(
+          `git diff --quiet failed while checking the working tree (${worktree.stderr.trim() || `exit ${worktree.code}`}).`,
+        )
+      }
       const dirty = worktree.code === 1
       firstFiles = listed.files
       firstFilesFailed = !listed.ok
@@ -1480,14 +1487,9 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     pr === undefined ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts()))) : undefined
   if (pr !== undefined) {
     // One metadata call covers the file list and the finder-budget line count.
-    // Fetch it even when the patch scan finds no file blocks.
-    const meta =
-      prMeta ??
-      (await exec(
-        ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions,headRefOid,url"],
-        gitCwd,
-        callOpts(),
-      ))
+    // The PR branch above always sets prMeta; this read never needs a second
+    // `gh pr view`.
+    const meta = prMeta
     let parsed:
       | {
           files?: Array<{ path?: string }>

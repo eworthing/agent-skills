@@ -50,6 +50,17 @@ function fake(script: (argv: string[]) => Reply) {
   return { exec, calls, opts, maxActive: () => maxActive }
 }
 
+
+/** Reply to the `gh pr view` field probes postComments makes. */
+function ghPrViewReply(argv: string[]): Reply {
+  if (argv.includes("url")) return { stdout: "https://github.com/acme/app/pull/9\n" }
+  if (argv.includes("headRefOid")) return { stdout: "abc\n" }
+  if (argv.includes("baseRefName")) return { stdout: "main\n" }
+  if (argv.includes("baseRefOid")) return { stdout: "base123\n" }
+  if (argv.includes("baseRepository")) return { stdout: "acme/app\n" }
+  return { stdout: "9\n" }
+}
+
 const finding = engineFinding
 
 function result(findings = [finding()]) {
@@ -89,7 +100,7 @@ test("a checked-out PR branch resolves its PR and posts inline comments", async 
     if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
     if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
       return { stdout: argv.includes("baseRefName") ? "main\n" : "abc\n" }
@@ -110,7 +121,7 @@ test("a branch review refuses to post when local HEAD is not the PR head", async
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "local\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") return { stdout: "remote\n" }
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
@@ -148,7 +159,7 @@ test("inline posting is bounded and failures keep finding order", async () => {
   const { exec, maxActive } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
-    if (argv[0] === "gh" && argv[1] === "pr") return { stdout: "abc" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") {
       const path = argv.find((a) => a.startsWith("path=")) ?? ""
       return path.includes("bad-") ? { code: 1, stderr: "boom", delay: 10, active: true } : { code: 0, delay: 10, active: true }
@@ -166,7 +177,7 @@ test("a finding without a positive line is not posted", async () => {
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
-    if (argv[0] === "gh" && argv[1] === "pr") return { stdout: "abc" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1 }
   })
@@ -194,7 +205,7 @@ test("a clean branch range with a recorded current branch resolves its PR", asyn
     if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
     if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: "9\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
       return { stdout: argv.includes("baseRefName") ? "main\n" : "abc\n" }
@@ -212,7 +223,7 @@ test("postComments forwards cancellation and a timeout to git/gh", async () => {
   const { exec, opts } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
-    if (argv[0] === "gh" && argv[1] === "pr") return { stdout: "abc" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1 }
   })
@@ -288,6 +299,7 @@ test("a branch review fetches the PR number, head, and base in one call", async 
           headRefOid: "abc",
           baseRefName: "main",
           baseRefOid: "base123",
+          url: "https://github.com/acme/app/pull/9",
         }),
       }
     }
@@ -315,7 +327,7 @@ test("a fork clone posts to the PR's base repository", async () => {
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv.includes("url")) {
       return { stdout: "https://github.com/upstream/app/pull/9\n" }
     }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "me/fork\n" }
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
@@ -400,7 +412,7 @@ test("a deleted line is anchored with side=LEFT", async () => {
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
-    if (argv[0] === "gh" && argv[1] === "pr") return { stdout: "abc" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1 }
   })
@@ -440,7 +452,7 @@ test("a renamed-file finding posts on the head path with side=LEFT", async () =>
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
-    if (argv[0] === "gh" && argv[1] === "pr") return { stdout: "abc" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1 }
   })
@@ -459,7 +471,7 @@ test("a branch review refuses to post when the reviewed base is not the PR base"
     if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
-      return { stdout: "9\n" }
+      return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
     }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
@@ -483,7 +495,7 @@ test("a branch review posts when its reviewed base matches the PR base", async (
     if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
-      return { stdout: "9\n" }
+      return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
     }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
@@ -505,10 +517,10 @@ test("a dirty branch worktree refuses to post its uncommitted lines to the PR", 
     if (argv[0] === "git" && argv[1] === "status") return { stdout: " M src/a.ts\n" }
     if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
-      return { stdout: "9\n" }
+      return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
     }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
   })
@@ -534,11 +546,12 @@ test("a branch review refuses to post when the local base merge-base is stale", 
           headRefOid: "abc",
           baseRefName: "main",
           baseRefOid: "base123",
+          url: "https://github.com/acme/app/pull/9",
         }),
       }
     }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
   })
@@ -555,7 +568,7 @@ test("a github.com PR URL clears a GitHub Enterprise origin hostname", async () 
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv.includes("url")) {
       return { stdout: "https://github.com/upstream/app/pull/9\n" }
     }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
   })
@@ -580,11 +593,12 @@ test("an untracked file does not block posting a branch review", async () => {
           headRefOid: "abc",
           baseRefName: "main",
           baseRefOid: "base123",
+          url: "https://github.com/acme/app/pull/9",
         }),
       }
     }
     if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
-    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
     return { code: 1, stderr: "unexpected" }
   })

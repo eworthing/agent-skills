@@ -411,7 +411,7 @@ test("extractJson keeps a real payload that precedes an echoed schema example", 
   assert.equal(parsed.candidates[0].file, "real.ts")
 })
 
-test("asGroupVerdicts shifts a contiguous 1-based list and keeps a partial list", () => {
+test("asGroupVerdicts shifts a contiguous 1-based list, but not after index 0 was dropped", () => {
   const offset = asGroupVerdicts(
     {
       verdicts: [
@@ -436,9 +436,24 @@ test("asGroupVerdicts shifts a contiguous 1-based list and keeps a partial list"
     },
     3,
   )
-  // A subset [1,2] for three candidates is zero-based: shifting it would
-  // attach each verdict to the wrong candidate and drop the real index-2 one.
+  // A contiguous [1,2] with no index-0 submission is a 1-based answer.
   assert.deepEqual(partial, [
+    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
+  ])
+  // If index 0 was submitted and dropped (invalid verdict), the survivors are
+  // zero-based and must not shift onto the wrong candidates.
+  const droppedZero = asGroupVerdicts(
+    {
+      verdicts: [
+        { index: 0, verdict: "MAYBE", evidence: "e0" },
+        { index: 1, verdict: "CONFIRMED", evidence: "e1" },
+        { index: 2, verdict: "CONFIRMED", evidence: "e2" },
+      ],
+    },
+    3,
+  )
+  assert.deepEqual(droppedZero, [
     { index: 1, verdict: "CONFIRMED", evidence: "e1" },
     { index: 2, verdict: "CONFIRMED", evidence: "e2" },
   ])

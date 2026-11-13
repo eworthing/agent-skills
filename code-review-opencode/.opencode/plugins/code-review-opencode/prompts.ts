@@ -735,6 +735,13 @@ function verifierScope(scope: ScopeBlock): string {
   return finderScope(scope, false)
 }
 
+
+/** Shared verifier preamble: the recall instruction and the read-only rule. */
+const RECALL_SENTENCE =
+  "This is recall mode — a single non-REFUTED vote carries the finding. Do NOT drop on uncertainty."
+const READ_ONLY_PREFIX =
+  "Use only read-only inspection: read, glob, grep, and git diff/log/show/blame with the read-only -c flags shown in the Diff command. Do not run node, python, tests, builds, or arbitrary shell commands."
+
 export function verifierPrompt(opts: {
   scope: ScopeBlock
   candidate: { file: string; line?: number; summary: string; failure_scenario: string }
@@ -756,9 +763,9 @@ Failure scenario: ${c.failure_scenario}
 Read the relevant file(s) and return exactly one verdict:
 
 ${opts.recallBiased ? VERDICT_LADDER_RECALL() : VERDICT_LADDER()}
-${opts.recallBiased || opts.recallSentence ? "\nThis is recall mode — a single non-REFUTED vote carries the finding. Do NOT drop on uncertainty." : ""}
+${opts.recallBiased || opts.recallSentence ? `\n${RECALL_SENTENCE}` : ""}
 
-Use only read-only inspection: read, glob, grep, and git diff/log/show/blame with the read-only -c flags shown in the Diff command. Do not run node, python, tests, builds, or arbitrary shell commands. If execution is the only way to settle the claim, state what would confirm it and return PLAUSIBLE under recall bias; under precision, return REFUTED only when the code constructively proves the claim wrong.
+${READ_ONLY_PREFIX} If execution is the only way to settle the claim, state what would confirm it and return PLAUSIBLE under recall bias; under precision, return REFUTED only when the code constructively proves the claim wrong.
 
 Structured output only. Evidence must quote or cite the relevant line(s).`
 }
@@ -786,9 +793,9 @@ ${list}
 Read the relevant file(s) and return one verdict per candidate. Judge EACH candidate independently on its own claim — candidates at the same location may describe distinct issues, the same issue, or a mix. Reference each by its [i] index.
 
 ${opts.recallBiased ? VERDICT_LADDER_RECALL() : VERDICT_LADDER()}
-${opts.recallBiased || opts.recallSentence ? "\nThis is recall mode — a single non-REFUTED vote carries the finding. Do NOT drop on uncertainty." : ""}
+${opts.recallBiased || opts.recallSentence ? `\n${RECALL_SENTENCE}` : ""}
 
-Use only read-only inspection: read, glob, grep, and git diff/log/show/blame with the read-only -c flags shown in the Diff command. Do not run node, python, tests, builds, or arbitrary shell commands. If execution is the only way to settle a claim, state what would confirm it and return PLAUSIBLE; return REFUTED only when the code constructively proves the claim wrong.
+${READ_ONLY_PREFIX} If execution is the only way to settle a claim, state what would confirm it and return PLAUSIBLE; return REFUTED only when the code constructively proves the claim wrong.
 
 Structured output only. Evidence must quote or cite the relevant line(s).`
 }

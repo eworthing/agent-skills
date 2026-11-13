@@ -3,7 +3,6 @@ import assert from "node:assert/strict"
 import {
   hasRuntimeSurface,
   hasSkill,
-  isChildSession,
   sessionMessages,
   sessionRecord,
   skillEntries,
@@ -54,13 +53,6 @@ test("supportsChildSessions requires every session method the runner and engine 
   assert.equal(supportsChildSessions(undefined), false)
 })
 
-test("isChildSession recognizes a linked review child", () => {
-  assert.equal(isChildSession({ id: "ses_child", parentID: "ses_parent" }), true)
-  assert.equal(isChildSession({ id: "ses_root", parentID: null }), false)
-  assert.equal(isChildSession({ id: "ses_root" }), false)
-  assert.equal(isChildSession(undefined), false)
-})
-
 test("session data unwraps the {location, data} envelope", () => {
   const session = { id: "ses_root", model: { providerID: "p", id: "m" } }
   assert.equal(sessionRecord(session), session)
@@ -76,9 +68,4 @@ test("sessionMessages unwraps bare, data, and nested message envelopes", () => {
   assert.equal(sessionMessages({ location: {}, data: { messages } }), messages)
   assert.equal(sessionMessages({ data: null }), undefined)
   assert.equal(sessionMessages(undefined), undefined)
-})
-
-test("isChildSession sees a parent through the session envelope", () => {
-  assert.equal(isChildSession({ location: {}, data: { id: "ses_child", parentID: "ses_parent" } }), true)
-  assert.equal(isChildSession({ location: {}, data: { id: "ses_root" } }), false)
 })

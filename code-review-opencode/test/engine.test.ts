@@ -1662,7 +1662,10 @@ test("a truncated text-synthesis report records truncatedFrom", async () => {
       synthesize: () => ({ summary: "text report", findings: [finding], truncated: true }),
     },
   })
-  assert.equal(result.truncatedFrom, 1)
+  // The normalizer cut the tail, so the exact pre-cap count is unknown; the
+  // engine reports a lower bound instead of claiming "1 of 1".
+  assert.equal(result.truncatedFrom, 2)
+  assert.match(result.warnings.join(" "), /truncated at the tool cap/)
 })
 
 test("a 1-based synthesis plan is shifted before ranking", async () => {
@@ -1753,7 +1756,7 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings[1].kind, "cleanup")
 })
 
-test("a zero-based subset plan without index 0 is applied rather than discarded", async () => {
+test("a contiguous plan without index 0 is treated as 1-based", async () => {
   const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
     candidate("src/a.ts", i + 1, `${s} bug`),
   )
@@ -1772,8 +1775,8 @@ test("a zero-based subset plan without index 0 is applied rather than discarded"
           : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
     },
   })
-  // The plan's largest index (2) is below the item count, so it is a
-  // zero-based subset: apply its rank/merge decisions instead of discarding it.
-  assert.equal(result.findings[0].summary, "one bug")
-  assert.equal(result.findings[1].summary, "two bug")
+  // Indices 1..2 are a 1-based subset. Shifting is the safer reading; the
+  // previous behavior discarded the plan entirely.
+  assert.equal(result.findings[0].summary, "zero bug")
+  assert.equal(result.findings[1].summary, "one bug")
 })

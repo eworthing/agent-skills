@@ -14,7 +14,7 @@
  *   }
  *   level?: "low" | "medium" | "high" | "xhigh" | "max"
  */
-import { normalizeFinding } from "./json.ts"
+import { isRecord, normalizeFinding } from "./json.ts"
 import { HARD_FINDINGS_CAP, LEVELS, normalizeLevel } from "./cells.ts"
 import { codePointLength } from "./finding.ts"
 
@@ -134,10 +134,10 @@ const isOutcome = (value: string): value is Outcome =>
  * REPORT_FINDINGS_SCHEMA automatically changes what this validator accepts.
  */
 function reportFindingError(raw: unknown, i: number): string | undefined {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+  if (!isRecord(raw)) {
     return `findings[${i}] must be an object`
   }
-  const rec = raw as Record<string, unknown>
+  const rec = raw
   for (const key of Object.keys(rec)) {
     if (!Object.hasOwn(FINDING_PROPERTIES, key)) {
       return `findings[${i}].${key} is not allowed by the ReportFindings schema`

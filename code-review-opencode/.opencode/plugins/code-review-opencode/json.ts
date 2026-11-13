@@ -35,7 +35,7 @@ export const NO_EVIDENCE = "(no evidence provided)"
  *  failure scenario. The engine uses it to mark the recovered run partial. */
 export const STEP_LIMIT_PLACEHOLDER = "not stated in the step-limited summary"
 
-function isRecord(v: unknown): v is Record<string, unknown> {
+export function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v)
 }
 
@@ -265,8 +265,9 @@ function scanAnchored(body: string): unknown | undefined {
     // when it is the only result-shaped object.
     if (balanced?.parsed !== undefined && isResultShape(balanced.parsed)) {
       ranges.push({ start: brace, end: balanced.end })
-      const echo = isSchemaEcho(balanced.parsed) || isLabeledExample(body, brace)
-      if (!echo || found === undefined) found = balanced.parsed
+      // Never accept an echoed schema example as the answer. A real payload
+      // that follows it will overwrite; if none follows, the caller retries.
+      if (!isSchemaEcho(balanced.parsed) && !isLabeledExample(body, brace)) found = balanced.parsed
     }
   }
   return found
@@ -293,7 +294,11 @@ function scanBalanced(body: string): unknown | undefined {
       // prose), and the attempt budget bounds the extra scanning.
       continue
     }
-    if (match.parsed !== undefined) {
+    if (
+      match.parsed !== undefined &&
+      !isSchemaEcho(match.parsed) &&
+      !isLabeledExample(body, start)
+    ) {
       values.push(match.parsed)
       // Ignore nested starts inside a valid value; only independent
       // top-level fragments can be the child's final result.
@@ -524,14 +529,14 @@ export function asGroupVerdicts(
   // equal to the group size, which a pre-shift range filter would discard.
   const raw = parsed.value.verdicts
   const sorted = [...raw].sort((a, b) => a.index - b.index)
-  // A 1-based full list ends at `count` (indices 1..count). A zero-based
-  // subset that happens to be contiguous from 1 (for example [1,2] for three
-  // candidates) must not shift: that would attach each verdict to the wrong
-  // candidate and discard the real last verdict.
+  // A contiguous list starting at 1 is a 1-based answer. It is not one when
+  // the child actually submitted index 0 and that entry was dropped for a
+  // malformed field: then the list is zero-based and shifting would attach
+  // every remaining verdict to the wrong candidate.
   const contiguousFromOne =
+    parsed.value.zeroDropped !== true &&
     sorted.length > 0 &&
-    sorted.every((v, i) => v.index === i + 1) &&
-    sorted[sorted.length - 1].index === count
+    sorted.every((v, i) => v.index === i + 1)
   const shifted = contiguousFromOne ? sorted.map((v) => ({ ...v, index: v.index - 1 })) : raw
   return shifted.filter((v) => v.index >= 0 && v.index < count)
 }
@@ -683,11 +688,18 @@ export function normalizeGroupVerdictsCall(
   value: unknown,
   cap = 64,
   opts: { tolerateMissingEvidence?: boolean; tolerateDropped?: boolean; tolerateOffset?: boolean } = {},
-): NormalizedCall<{ verdicts: Array<{ index: number; verdict: Verdict["verdict"]; evidence: string }> }> {
+): NormalizedCall<{
+  verdicts: Array<{ index: number; verdict: Verdict["verdict"]; evidence: string }>
+  /** Index 0 was submitted but dropped; the survivors are still zero-based. */
+  zeroDropped?: boolean
+}> {
   if (!isRecord(value)) return { ok: false, error: "expected an object with a verdicts array" }
   if (!Array.isArray(value.verdicts)) return { ok: false, error: "verdicts must be an array" }
   const seen = new Set<number>()
   let missingEvidence = 0
+  const zeroSubmitted = value.verdicts.some(
+    (item) => isRecord(item) && Number(item.index) === 0,
+  )
   const { items: verdicts, notes, dropped } = normalizeList<{
     index: number
     verdict: Verdict["verdict"]
@@ -751,7 +763,16 @@ export function normalizeGroupVerdictsCall(
   }
   if (verdicts.length === 0 && value.verdicts.length > 0)
     return { ok: false, error: "no verdict had a valid index and verdict" }
-  return { ok: true, value: { verdicts }, notes }
+  return {
+    ok: true,
+    value: {
+      verdicts,
+      // The text fallback needs to know whether index 0 was submitted and
+      // dropped, or never present. The surviving indices alone cannot tell.
+      ...(zeroSubmitted && !seen.has(0) ? { zeroDropped: true } : {}),
+    },
+    notes,
+  }
 }
 
 export function normalizeReportCall(value: unknown, cap = 64): NormalizedCall<Report> {
