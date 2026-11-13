@@ -988,17 +988,14 @@ export function discoverConventions(
   const rootPaths = paths.filter((p) => dirname(p) === root)
   const userPath = paths.find((p) => p === userClaude)
   const otherPaths = paths.filter((p) => dirname(p) !== root && p !== userPath)
-  // Read each source once, at the total budget, and reuse that text for both
-  // sizing and rendering. Measuring with a full read and then reading the file
-  // again doubled the I/O on every review; measuring with statSync would count
-  // bytes and overcharge non-ASCII text by up to three times.
-  const contents = new Map<string, string>()
+  // Size each source without reading it in full. The bytes are an upper bound
+  // on the character count (UTF-8 never uses fewer bytes than UTF-16 units),
+  // so water-filling may allocate a little extra to non-ASCII files; the read
+  // below is capped to the final allocation and the total is still enforced.
   const sizes = new Map<string, number>()
   for (const p of paths) {
     try {
-      const text = readCapped(p, budget)
-      contents.set(p, text)
-      sizes.set(p, text.length)
+      sizes.set(p, statSync(p).size)
     } catch {
       sizes.set(p, 0)
     }
@@ -1085,10 +1082,9 @@ export function discoverConventions(
     if (used >= budget) break
     const header = headers[i] ?? headerFor(p)
     const cap = caps.get(p) ?? 0
-    const cached = contents.get(p)
-    if (cached === undefined) continue
     const limit = Math.max(0, Math.min(cap, contentBudget - contentUsed))
-    const text = cached.length <= limit ? cached : truncateText(cached, limit)
+    if (limit <= 0) continue
+    const text = readCapped(p, limit)
     if (!text) continue
     chunks.push(header + text)
     used += header.length + text.length

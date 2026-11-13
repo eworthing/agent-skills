@@ -104,8 +104,6 @@ type Invocation = {
   signal?: AbortSignal
   /** The parent session record, when the caller already read it. */
   session?: SessionRecord
-  modelID?: string
-  sessionEffort?: string
   /**
    * The session's model, already read by the caller. A failed parent-session
    * lookup must not drop a model the caller already had: a child created
@@ -402,7 +400,7 @@ async function resolveAndRun(
       ? await ctx.model.default().catch(() => undefined)
       : undefined
   const runModel = sessionModel ?? modelRef(hostDefault)
-  const sessionEffort = inv.sessionEffort ?? runModel?.variant
+  const sessionEffort = runModel?.variant
 
   const storage = ctx.storage
   const readStored = (key: string): Promise<unknown> =>
@@ -436,7 +434,7 @@ async function resolveAndRun(
   const version = asVersion(requestedMode)
   const modelOverride = modelRef(flags.model ?? process.env.CODE_REVIEW_MODEL)
   const family = detectFamily(
-    modelOverride?.id ?? inv.modelID ?? runModel?.id,
+    modelOverride?.id ?? runModel?.id,
     flags.family ?? process.env.CODE_REVIEW_FAMILY,
   )
   const cell = resolveCell(version, family, effort)
@@ -1029,11 +1027,12 @@ export default Plugin.define({
           // start another review. The runner registers the exact session id,
           // so use it directly: a failed session.get lookup must not disable
           // the guard and let a child fan out another review.
+          const childRejection = {
+            content:
+              "code_review cannot run from a review child session. Return your result to the parent review instead of starting another review.",
+          }
           if (reviewChildSessions.has(context.sessionID)) {
-            return {
-              content:
-                "code_review cannot run from a review child session. Return your result to the parent review instead of starting another review.",
-            }
+            return childRejection
           }
           const rawSession =
             typeof ctx.session?.get === "function"
@@ -1058,10 +1057,7 @@ export default Plugin.define({
             return false
           }
           if (await insideReview()) {
-            return {
-              content:
-                "code_review cannot run from a review child session. Return your result to the parent review instead of starting another review.",
-            }
+            return childRejection
           }
           const session = sessionRecord(rawSession)
           const outcome = await resolveAndRun(
@@ -1080,8 +1076,6 @@ export default Plugin.define({
               },
               signal: context.signal,
               session,
-              modelID: modelRef(session?.model)?.id,
-              sessionEffort: modelRef(session?.model)?.variant,
               model: modelRef(session?.model),
               progress: (status) => context.progress?.({ status }),
               log: (m) => console.error(m),
@@ -1137,8 +1131,6 @@ export default Plugin.define({
               sessionID,
               session,
               raw: prompt?.text ?? "",
-              modelID: sessionModel?.id,
-              sessionEffort: sessionModel?.variant,
               model: sessionModel,
               interactive: true,
               log: (m) => console.error(m),

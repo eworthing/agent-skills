@@ -399,7 +399,11 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // review that describes a tree the PR does not contain.
     // Untracked files are not part of the reviewed diff; only tracked changes
     // can make an inline anchor stale.
-    const dirty = await call(["git", "status", "--porcelain", "--untracked-files=no"])
+    const [dirty, local, remoteList] = await Promise.all([
+      call(["git", "status", "--porcelain", "--untracked-files=no"]),
+      call(["git", "rev-parse", "HEAD"]),
+      call(["git", "remote"]),
+    ])
     if (dirty.code !== 0) {
       return "`--comment` was ignored: could not verify the working tree is clean."
     }
@@ -409,7 +413,6 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     if (trackedChanges) {
       return "`--comment` was ignored: the working tree has uncommitted changes; commit them or pass the PR number as the target."
     }
-    const local = await call(["git", "rev-parse", "HEAD"])
     const localHead = local.stdout.trim()
     if (local.code !== 0 || localHead !== commit) {
       return `\`--comment\` was ignored: local HEAD ${localHead || "(unknown)"} is not the PR head ${commit}; check out the PR branch or pass the PR number as the target.`
@@ -437,7 +440,6 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       }
       // Only a real remote-tracking prefix identifies the same base. A local
       // `release/main` branch must not be mistaken for the PR base `main`.
-      const remoteList = await call(["git", "remote"])
       const remotes =
         remoteList.code === 0 ? remoteList.stdout.split(/\s+/).filter(Boolean) : []
       if (!samePrBase(scope.diffBase, prBase, remotes)) {

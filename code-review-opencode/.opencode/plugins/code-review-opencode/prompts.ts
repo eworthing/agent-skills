@@ -530,23 +530,6 @@ If the target is not a PR, print the findings to the terminal and note that
 // prompt-only path can post to GHE; it does not change the review prompt or
 // the findings, and the engine path already passes --hostname.
 
-export function gitlabComment(mrIID?: string, options?: string): string {
-  const ref = options ? ` -R ${options}` : ""
-  return `
-## Posting to GitLab (--comment)
-
-The \`--comment\` flag was passed. After producing the findings list, if the
-review target is a GitLab merge request, post the findings as one general MR
-note via \`${`glab mr note${mrIID ? ` ${mrIID}` : ""}${ref} -m "<body>"`}\`${options ? "" : " from inside that project's checkout"}
-(every finding with its file:line, the issue, and the suggested fix). glab has no single verb for line-anchored
-comments; those require \`glab api projects/:id/merge_requests/:iid/discussions\`,
-so post the general note unless the user asks for inline threads. If glab is
-not available in this session, print the findings instead. If the target is
-not an MR, print the findings to the terminal and note that \`--comment\` was
-ignored.
-`
-}
-
 export function fixBlock(kind: OutputKind): string {
   return `
 ## Applying fixes (--fix)
