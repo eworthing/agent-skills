@@ -59,6 +59,7 @@ import {
   hasSkill,
   sessionRecord,
   supportsChildSessions,
+  type SessionRecord,
 } from "./host.ts"
 import { extractPathHint, prTargetNumber, resolveReviewRoot, resolveScope, type Scope } from "./scope.ts"
 import { postComments, detectHostDetails, type Host } from "./comment.ts"
@@ -92,6 +93,8 @@ type Invocation = {
   /** When set, `resolveAndRun` uses these values instead of re-parsing `raw`. */
   structured?: StructuredInvocation
   signal?: AbortSignal
+  /** The parent session record, when the caller already read it. */
+  session?: SessionRecord
   modelID?: string
   sessionEffort?: string
   /**
@@ -350,9 +353,22 @@ async function resolveAndRun(
   const parsed = structured ? structured.parsed : parseArgs(raw!.rest)
   const flags = structured ? structured.flags : raw!.flags
 
+  // The command invocation's `prompt` carries text/files/agents/skills, not
+  // the selected model or effort variant (OpenCode V2 CommandInvocation).
+  // Read the parent session once here so the command path chooses the same
+  // family/effort cell as the tool path. Callers that already read it pass
+  // `inv.session`; otherwise this is the single lookup used for the whole run.
+  const parent =
+    inv.session ??
+    (typeof ctx.session?.get === "function"
+      ? sessionRecord(await ctx.session.get({ sessionID: inv.sessionID }).catch(() => undefined))
+      : undefined)
+  const sessionModel = inv.model ?? modelRef(parent?.model)
+  const sessionEffort = inv.sessionEffort ?? sessionModel?.variant
+
   const storedEffort = await ctx.storage.get(STORAGE_EFFORT).catch(() => undefined)
   const storedMax = await ctx.storage.get(STORAGE_MAX).catch(() => undefined)
-  const effort = resolveEffort(parsed, typeof storedEffort === "string" ? storedEffort : undefined, inv.sessionEffort)
+  const effort = resolveEffort(parsed, typeof storedEffort === "string" ? storedEffort : undefined, sessionEffort)
 
   // A level or --max-findings typed in a non-interactive run is not remembered
   // (official /code-review behavior). --json is our non-interactive proxy.
@@ -367,7 +383,10 @@ async function resolveAndRun(
 
   const version = asVersion(flags.mode ?? process.env.CODE_REVIEW_MODE)
   const modelOverride = modelRef(flags.model ?? process.env.CODE_REVIEW_MODEL)
-  const family = detectFamily(modelOverride?.id ?? inv.modelID, flags.family ?? process.env.CODE_REVIEW_FAMILY)
+  const family = detectFamily(
+    modelOverride?.id ?? inv.modelID ?? sessionModel?.id,
+    flags.family ?? process.env.CODE_REVIEW_FAMILY,
+  )
   const cell = resolveCell(version, family, effort)
   const kind: OutputKind = flags.json ? "json" : "reportfindings"
   // The adapter is always registered, but the JSON contract deliberately
@@ -476,11 +495,11 @@ async function resolveAndRun(
     return { text: allNotices.length > 0 ? `${allNotices.join("\n")}\n\n${text}` : text, needsModel: true }
   }
 
-  const parent = sessionRecord(await ctx.session.get({ sessionID: inv.sessionID }).catch(() => undefined))
   // Host records expose the model as `{providerID, modelID}` as often as the
   // session API's `{providerID, id}`. Normalize both before passing the ref to
-  // session.create, or every finder/verifier child fails to start.
-  const baseModel = modelOverride ?? inv.model ?? modelRef(parent?.model)
+  // session.create, or every finder/verifier child fails to start. `parent`
+  // and `sessionModel` were resolved once at the top of this function.
+  const baseModel = modelOverride ?? sessionModel ?? modelRef(parent?.model)
   const roleVariants = parseRoleVariants(process.env.CODE_REVIEW_ROLE_VARIANTS)
   const runner: AgentRunner = makeRunner(ctx, {
     parentSessionID: inv.sessionID,
@@ -950,6 +969,7 @@ export default Plugin.define({
                 comment: input?.comment === true,
               },
               signal: context.signal,
+              session,
               modelID: modelRef(session?.model)?.id,
               sessionEffort: modelRef(session?.model)?.variant,
               model: modelRef(session?.model),
@@ -977,16 +997,39 @@ export default Plugin.define({
         name: "code-review-opencode",
         description:
           "Review the current diff, or a PR number/branch/path target, for correctness bugs (plus reuse/simplification/efficiency cleanups where the model's recipe covers them) at the effort level given first, before any target (low|medium|high|xhigh|max: from few high-confidence findings to many, some uncertain); with no level given, it reuses the level you typed last. Pass --comment to post findings as inline PR comments, or --fix to apply them to the working tree after the review. Pass --max-findings <n> to report up to n findings, or --max-findings all for every finding. The choice stays until you pass --max-findings default.",
-        argumentHint: "[low|medium|high|xhigh|max] [--fix] [--comment] [<pr#>|<branch>|<path>] [--max-findings <n>|all]",
         execute: async ({ sessionID, prompt, delivery }: AnyCtx) => {
+          // A CommandInvocation carries text/files/agents/skills, not the
+          // selected model or effort variant. Read the session so the command
+          // path chooses the same family/effort cell as the tool path.
+          const rawSession =
+            typeof ctx.session?.get === "function"
+              ? await ctx.session.get({ sessionID }).catch(() => undefined)
+              : undefined
+          const session = sessionRecord(rawSession)
+          const sessionModel = modelRef(session?.model)
+          // The command's text is replaced by the recovered review prompt, so
+          // the original mention offsets no longer address it. Keep the
+          // attachments themselves and drop only those offsets.
+          const attachments = {
+            ...(Array.isArray(prompt?.files) && prompt.files.length > 0
+              ? { files: prompt.files.map(({ mention: _mention, ...file }: AnyCtx) => file) }
+              : {}),
+            ...(Array.isArray(prompt?.agents) && prompt.agents.length > 0
+              ? { agents: prompt.agents.map(({ mention: _mention, ...agent }: AnyCtx) => agent) }
+              : {}),
+            ...(Array.isArray(prompt?.skills) && prompt.skills.length > 0
+              ? { skills: prompt.skills.map(({ mention: _mention, ...skill }: AnyCtx) => skill) }
+              : {}),
+          }
           const outcome = await resolveAndRun(
             ctx,
             {
               sessionID,
+              session,
               raw: prompt?.text ?? "",
-              modelID: modelRef(prompt?.model)?.id,
-              sessionEffort: prompt?.effort,
-              model: modelRef(prompt?.model),
+              modelID: sessionModel?.id,
+              sessionEffort: sessionModel?.variant,
+              model: sessionModel,
               interactive: true,
               log: (m) => console.error(m),
             },
@@ -1022,15 +1065,28 @@ export default Plugin.define({
           // engine report needs no model turn at all: display it with
           // synthetic and avoid paying for a no-op acknowledgement.
           if (!outcome.needsModel && typeof ctx.session.synthetic === "function") {
-            await ctx.session.synthetic({ sessionID, text: outcome.text, resume: false })
-            return
+            try {
+              await ctx.session.synthetic({ sessionID, text: outcome.text, resume: false })
+              return
+            } catch {
+              // A transient synthetic failure must not drop a completed
+              // engine report; fall through to the constrained turn below.
+            }
           }
           // A host without synthetic still needs a turn to show the report.
           // Constrain it to a short acknowledgement rather than a re-review.
           const text = outcome.needsModel
             ? outcome.text
             : `${outcome.text}\n\n---\nThe review above is complete and was produced by the deterministic /code-review-opencode engine. Do not re-run the review, do not re-derive findings, and do not restate the list. Reply with one short line confirming completion.`
-          await ctx.session.prompt({ sessionID, text, delivery })
+          // Attachments belong on the model-driven review turn. The bare --json
+          // echo and the completion acknowledgement must stay exact and should
+          // not gain review context.
+          await ctx.session.prompt({
+            sessionID,
+            text,
+            delivery,
+            ...(outcome.needsModel ? attachments : {}),
+          })
         },
       })
     })

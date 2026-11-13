@@ -6,9 +6,10 @@ v2.1.318**
 (`677a2ea7bf576cedd20e191d973914ed8a41796f53a63b1923381ddc4d5b5e7d`).
 
 The plugin id is `code-review-opencode`; the user-facing command is
-`/code-review-opencode`. The reconstruction is **read-only by default**. It
-does not edit, commit, push, or post comments unless the invocation explicitly
-asks for `--fix` or `--comment`.
+`/code-review-opencode`. It targets the OpenCode V2 plugin API
+(`@opencode/plugin`; tested on OpenCode 2.2.5). The reconstruction is
+**read-only by default**. It does not edit, commit, push, or post comments
+unless the invocation explicitly asks for `--fix` or `--comment`.
 
 ## What is here
 
@@ -209,7 +210,7 @@ node --test test/*.test.ts
 ```
 
 The suite covers the argument grammar, dispatch table, prompt assembly
-(including a byte-for-byte comparison with the captured skill variants),
+(including byte-for-byte checks against committed reference-prompt digests),
 engine phases, dedup, ranking, caps, ReportFindings, failure behavior, and
 diff discovery.
 
@@ -246,6 +247,9 @@ designs, and acceptance criteria:
 - [`CODE_REVIEW_PENDING_PLAN.md`](CODE_REVIEW_PENDING_PLAN.md) — the remaining
   fidelity gaps: research evidence, designs, sequencing, and acceptance
   criteria.
+- [`CODE_REVIEW_OPENCODE_AUDIT.md`](CODE_REVIEW_OPENCODE_AUDIT.md) — the
+  OpenCode V2 plugin audit: API contracts, lifecycle, permissions, parity, and
+  the fixes applied for command model/effort and attachments.
 - `sources/` — local-only captures of the reference implementations. The
   directory is gitignored; populate it locally if you need to re-run the
   capture-vs-fixture checks.
@@ -253,7 +257,8 @@ designs, and acceptance criteria:
 ## Deliberate omissions
 
 Host-only Claude Code features with no OpenCode equivalent are omitted rather
-than invented: ultra cloud review, the `/verify` follow-up suggestion, the
-message-mode outcome note, the end-of-response marker, and the skill-preload
-family override. `ultra` is accepted and falls back to a local max-effort
-review, matching the reference's non-cloud fallback branch.
+than invented: ultra cloud review, the bundled `/verify` follow-up (the port
+only suggests it when a `/verify` skill is installed), the message-mode outcome
+note, the end-of-response marker, and the skill-preload family override.
+`ultra` is accepted and falls back to a local max-effort review, matching the
+reference's non-cloud fallback branch.
