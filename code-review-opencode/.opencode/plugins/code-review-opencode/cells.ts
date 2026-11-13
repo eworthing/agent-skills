@@ -46,6 +46,8 @@ export type Cell = {
   fallbackNotice?: string
   /** The reference's minimal prompt does not carry the FIX_LATER block. */
   suppressFixLater?: boolean
+  /** This cell does not reuse or persist the last --max-findings value. */
+  suppressMaxFindings?: boolean
 }
 
 const cell = (c: Partial<Cell> & Pick<Cell, "id" | "engine">): Cell => ({
@@ -95,6 +97,7 @@ const V318_CELLS: Record<string, Cell> = {
     inlineVariant: "low-min",
     maxFindings: "all",
     verify: "none",
+    suppressMaxFindings: true,
   }),
   medium: cell({
     id: "medium",

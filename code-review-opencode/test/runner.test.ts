@@ -168,8 +168,11 @@ test("a missing structured result triggers one retry and uses the captured value
   const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent", schemaResults })
   const value = await runner(request({ role: "verifier", schemaName: "verdict" }))
   assert.deepEqual(value, { verdict: "CONFIRMED", evidence: "retried" })
+  // The prose verifier now gets a small formatter child before the same-session
+  // retry; the formatter prompt contains "did not submit", so the fake answers
+  // it with the captured verdict.
   assert.equal(fake.prompts.length, 2)
-  assert.deepEqual(fake.removed, ["ses_1"])
+  assert.deepEqual(fake.removed, ["ses_2", "ses_1"])
 })
 
 test("JSON with the wrong shape triggers the retry instead of counting as a result", async () => {

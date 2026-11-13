@@ -34,13 +34,14 @@ unless the invocation explicitly asks for `--fix` or `--comment`.
     prompts/            hashed prompt fragments + manifest.json
   agents/               read-only finder/verifier/sweep/synth agents
 sources/                local-only third-party captures (gitignored)
-test/                   338 tests (node --test)
+test/                   360 tests (node --test)
 scripts/install-global.sh          global symlink installer for this account
 CODE_REVIEW_ORCHESTRATION_MAP.md   full mechanism map
 CODE_REVIEW_RECONSTRUCTION_RESEARCH.md
 CODE_REVIEW_PORTS.md               public port catalog + feature matrix
 CODE_REVIEW_HARDENING_PLAN.md      prioritized gap-closing plan
 CODE_REVIEW_PENDING_PLAN.md        remaining fidelity gaps: research + designs
+CODE_REVIEW_SELF18_TRIAGE.md       run-18 finding-by-finding status
 ```
 
 ## Global installation

@@ -274,7 +274,7 @@ test("normalizeDecisionsCall rejects a malformed merge plan so the child re-emit
   assert.equal(badIndex.ok, false)
 })
 
-test("asGroupVerdicts keeps a no-evidence verdict with a placeholder", () => {
+test("asGroupVerdicts keeps an evidence-free refutation as PLAUSIBLE", () => {
   const verdicts = asGroupVerdicts(
     {
       verdicts: [
@@ -288,7 +288,7 @@ test("asGroupVerdicts keeps a no-evidence verdict with a placeholder", () => {
   assert.deepEqual(verdicts, [
     { index: 0, verdict: "CONFIRMED", evidence: "line 1" },
     { index: 1, verdict: "PLAUSIBLE", evidence: "line 2" },
-    { index: 2, verdict: "REFUTED", evidence: "(no evidence provided)" },
+    { index: 2, verdict: "PLAUSIBLE", evidence: "(no evidence provided)" },
   ])
 })
 
@@ -411,7 +411,7 @@ test("extractJson keeps a real payload that precedes an echoed schema example", 
   assert.equal(parsed.candidates[0].file, "real.ts")
 })
 
-test("asGroupVerdicts rejects an offset list even when it stays in range", () => {
+test("asGroupVerdicts shifts a contiguous 1-based list and keeps a partial list", () => {
   const offset = asGroupVerdicts(
     {
       verdicts: [
@@ -422,9 +422,10 @@ test("asGroupVerdicts rejects an offset list even when it stays in range", () =>
     },
     3,
   )
-  assert.equal(offset, null)
-  // A partial list that omits index 0 is still an offset submission: keeping
-  // it would map every verdict to the wrong candidate.
+  assert.deepEqual(offset, [
+    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
+  ])
   const partial = asGroupVerdicts(
     {
       verdicts: [
@@ -434,7 +435,10 @@ test("asGroupVerdicts rejects an offset list even when it stays in range", () =>
     },
     3,
   )
-  assert.equal(partial, null)
+  assert.deepEqual(partial, [
+    { index: 0, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 1, verdict: "CONFIRMED", evidence: "e2" },
+  ])
   // A complete list is still accepted.
   const complete = asGroupVerdicts(
     {

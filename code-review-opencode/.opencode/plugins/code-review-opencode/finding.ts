@@ -50,7 +50,7 @@ export function renderedLocation(f: Locatable): string {
  * searchable.
  */
 export function renderPath(value: string): string {
-  return value.replace(/[\u0000-\u001F\u007F-\u009F]/g, (c) => {
+  return value.replace(/[\u0000-\u001F\u007F-\u009F\u2028\u2029]/g, (c) => {
     // A tab stays readable inside a filename; only line breaks can forge a
     // new instruction line in the prompt.
     if (c === "\t") return c

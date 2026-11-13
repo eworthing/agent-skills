@@ -57,13 +57,15 @@ function sanitizeControl(s: string): string {
   // Normalize CRLF first so a model's Windows line endings stay readable, then
   // render a lone CR. Leaving it raw lets a child overwrite earlier terminal
   // lines (or the indentation added below).
-  return s.replace(/\r\n/g, "\n").replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F]/g, (c) => {
-    const code = c.codePointAt(0) ?? 0
-    if (code === 27) return "␛"
-    if (code < 32) return String.fromCodePoint(0x2400 + code)
-    if (code === 127) return "␡"
-    return `\\u{${code.toString(16).toUpperCase()}}`
-  })
+  return s
+    .replace(/\r\n/g, "\n")
+    .replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u2028\u2029]/g, (c) => {
+      const code = c.codePointAt(0) ?? 0
+      if (code === 27) return "␛"
+      if (code < 32) return String.fromCodePoint(0x2400 + code)
+      if (code === 127) return "␡"
+      return `\\u{${code.toString(16).toUpperCase()}}`
+    })
 }
 
 /**
@@ -91,6 +93,12 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
       })
       .join("\n\n")
     out = `${pluralize(n, "finding")}${suffix}:\n\n${body}`
+  }
+
+  // The deterministic fallback summaries are bookkeeping ("N findings
+  // survived verification"); only show a synthesizer's actual review summary.
+  if (result.findings.length > 0 && !/^(?:\d+|No) finding/.test(result.summary)) {
+    out = `${sanitizeControl(result.summary)}\n\n${out}`
   }
 
   if (result.truncatedFrom !== undefined) {

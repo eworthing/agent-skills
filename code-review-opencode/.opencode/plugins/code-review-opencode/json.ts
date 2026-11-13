@@ -494,16 +494,18 @@ export function asGroupVerdicts(
   const parsed = normalizeGroupVerdictsCall(value, 64, {
     tolerateMissingEvidence: true,
     tolerateDropped: true,
+    tolerateOffset: true,
   })
   if (!parsed.ok) return null
-  // Indices are positions in the candidate group and are always zero-based.
-  // An offset list (1..n) cannot be mapped safely: shifting it assumes the
-  // model intended 1-based indices, while keeping it attributes every verdict
-  // to the wrong candidate. Reject it and let the verifier re-emit zero-based
-  // indices; a partial list that includes 0 is still usable and the engine
-  // warns about the missing siblings.
-  if (count > 0 && !parsed.value.verdicts.some((v) => v.index === 0)) return null
-  return parsed.value.verdicts.filter((v) => v.index < count)
+  // A text fallback cannot re-prompt the child. Keep partial verdicts instead
+  // of discarding the whole group, and shift a contiguous 1-based list so the
+  // verdicts still map to candidates [0..n-1]. A non-contiguous list is kept
+  // as-is; the engine drops the missing indices and warns.
+  const usable = parsed.value.verdicts.filter((v) => v.index < count)
+  const sorted = [...usable].sort((a, b) => a.index - b.index)
+  const contiguousFromOne =
+    sorted.length > 0 && sorted.every((v, i) => v.index === i + 1)
+  return contiguousFromOne ? sorted.map((v) => ({ ...v, index: v.index - 1 })) : usable
 }
 
 /* -------------------------------------------------------------------------
@@ -617,11 +619,12 @@ function verdictWithEvidence(
   const evidence = str(value.evidence) ?? str(value.reason) ?? str(value.justification)
   if (evidence) return { verdict, evidence, missing: false }
   if (!tolerateMissing) return undefined
-  // A CONFIRMED verdict without evidence is not auditable. The text fallback
-  // keeps the candidate for recall, but downgrades it to PLAUSIBLE so an
-  // unverified claim is never reported or posted as confirmed.
+  // A verdict without evidence is not auditable. The text fallback keeps the
+  // candidate for recall and downgrades both CONFIRMED and REFUTED to
+  // PLAUSIBLE: an unevidenced refutation must not silently delete a finding
+  // the verifier could not justify.
   return {
-    verdict: verdict === "CONFIRMED" ? "PLAUSIBLE" : verdict,
+    verdict: "PLAUSIBLE",
     evidence: NO_EVIDENCE,
     missing: true,
   }
@@ -650,7 +653,7 @@ export function normalizeVerdictCall(
 export function normalizeGroupVerdictsCall(
   value: unknown,
   cap = 64,
-  opts: { tolerateMissingEvidence?: boolean; tolerateDropped?: boolean } = {},
+  opts: { tolerateMissingEvidence?: boolean; tolerateDropped?: boolean; tolerateOffset?: boolean } = {},
 ): NormalizedCall<{ verdicts: Array<{ index: number; verdict: Verdict["verdict"]; evidence: string }> }> {
   if (!isRecord(value)) return { ok: false, error: "expected an object with a verdicts array" }
   if (!Array.isArray(value.verdicts)) return { ok: false, error: "verdicts must be an array" }
@@ -711,7 +714,7 @@ export function normalizeGroupVerdictsCall(
   // then the engine discarded every candidate because index 0 was absent. The
   // text fallback has its own guard, but the runner's shared validator must
   // reject an offset list too, or it never re-prompts the child.
-  if (verdicts.length > 0 && !seen.has(0)) {
+  if (verdicts.length > 0 && !seen.has(0) && !opts.tolerateOffset) {
     return {
       ok: false,
       error: "verdict indices must be zero-based: include index 0 for the first candidate.",

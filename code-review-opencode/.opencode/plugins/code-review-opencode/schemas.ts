@@ -45,7 +45,7 @@ function childFindingSchema(): unknown {
       },
       verdict: {
         type: "string",
-        description: "CONFIRMED or PLAUSIBLE; invalid values drop that finding at the tool boundary",
+        description: "CONFIRMED or PLAUSIBLE; an unrecognized value is omitted, not the finding",
       },
     },
     required: ["file", "summary", "failure_scenario"],

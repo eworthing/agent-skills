@@ -484,7 +484,7 @@ export function resolveMaxFindings(
 ): LimitResolution {
   const reused =
     parsed.maxFindings === undefined &&
-    cell.id !== "low-sonnet5" &&
+    !cell.suppressMaxFindings &&
     lastUsed !== undefined &&
     (lastUsed === "all" || positiveLine(lastUsed) !== undefined)
 
@@ -494,7 +494,7 @@ export function resolveMaxFindings(
   const asked: number | "all" | undefined = reused ? lastUsed : explicit
 
   let stated: number | "all" | undefined = asked
-  if (cell.id === "low-sonnet5") {
+  if (cell.suppressMaxFindings) {
     stated = undefined
   } else if (
     hasReportFindings &&

@@ -247,3 +247,10 @@ test("fix outcomes render a summary and stay silent without outcomes", () => {
   assert.match(text, /src\/c\.ts:2 — no change needed/)
   assert.equal(formatOutcomeSummary([base]), "")
 })
+
+test("a synthesized review summary is shown above the findings", () => {
+  const r = result()
+  r.summary = "Two related failures share a root cause; merge the guards."
+  const text = formatHuman(r)
+  assert.match(text, /^Two related failures share a root cause/)
+})

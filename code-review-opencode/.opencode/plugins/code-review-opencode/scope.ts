@@ -345,9 +345,11 @@ function sameDir(a: string, b: string): boolean {
 
 /**
  * A shell-ready command the model can re-run visibly. Derive it from the same
- * argv builder the engine executes: hand-writing the label drops hardening
- * flags (--no-ext-diff, --no-textconv) and makes the child review a different
- * patch than the one the orchestrator captured.
+ * argv builder the engine executes; it already carries the safe
+ * `--no-ext-diff`/`--no-textconv` flags the agent permission table requires.
+ * The orchestrator also applies its `-c` config hardening when it runs the
+ * command; those flags are omitted here because the child's permission table
+ * denies `-c`, and they do not change the patch.
  */
 function labelFor(spec: DiffSpec, root: string, cwd: string): string {
   const argv = gitDiffArgs(spec, "diff").map((a) => quote([a]))
@@ -806,7 +808,11 @@ export function diffSideMap(
             state.left = true
             matched.add(state.key)
           }
-          if (op === "+" && newLine === state.line) {
+          // An old-path request may only use the head side when the added line
+          // is the replacement at the same old/new number. A pure addition
+          // elsewhere that happens to reuse the number must not move the
+          // anchor to unrelated code.
+          if (op === "+" && newLine === state.line && oldLine === state.line) {
             state.right = true
             matched.add(state.key)
           }
@@ -1068,11 +1074,14 @@ export function discoverConventions(
   const rootCaps = waterFill(rootPaths.map(sizeOf), Math.min(rootShare, rootNeeded))
   const rootAlloc = rootCaps.reduce((sum, cap) => sum + cap, 0)
   const otherShare = Math.max(0, contentBudget - rootAlloc)
-  const otherPathsForBudget = paths.filter((p) => !rootPaths.includes(p))
-  const otherCaps = waterFill(otherPathsForBudget.map(sizeOf), otherShare)
+  const otherPathsForBudget = otherPaths
+  const userCap = userPath ? Math.min(userNeeded, userReserve, otherShare) : 0
+  const nestedShare = Math.max(0, otherShare - userCap)
+  const otherCaps = waterFill(otherPathsForBudget.map(sizeOf), nestedShare)
   const caps = new Map<string, number>()
   rootPaths.forEach((p, i) => caps.set(p, rootCaps[i] ?? 0))
   otherPathsForBudget.forEach((p, i) => caps.set(p, otherCaps[i] ?? 0))
+  if (userPath) caps.set(userPath, userCap)
   let used = 0
   let contentUsed = 0
   for (const [i, p] of paths.entries()) {
@@ -1399,10 +1408,17 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       // uncommitted hunk. Only a multi-commit range (`main...HEAD`) needs the
       // separate worktree entry.
       if (range.includes("..") && (dirty || firstFiles.length === 0)) add({ range: "HEAD", pathspec })
-      // A clean checkout with no explicit target is still the current branch's
-      // review. Record that branch so --comment can resolve its PR; keep the
-      // scopeKind "range" so an explicit range target remains non-postable.
-      if (!target && !dirty && !isPathTarget) {
+      // A clean checkout with no explicit target — or with only a free-form
+      // instruction — is still the current branch's review. Record that branch
+      // so --comment can resolve its PR; keep the scopeKind "range" so an
+      // explicit range target remains non-postable.
+      const freeFormTarget =
+        target !== undefined &&
+        targetPr === undefined &&
+        !branchCandidate &&
+        !isPathTarget &&
+        !looksLikeRange(target)
+      if ((!target || freeFormTarget) && !dirty && !isPathTarget) {
         const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
         const name = current.stdout.trim()
         if (current.code === 0 && name && name !== "HEAD") branch = name

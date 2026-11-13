@@ -527,3 +527,30 @@ test("a github.com PR URL clears a GitHub Enterprise origin hostname", async () 
   assert.ok(api?.includes("repos/upstream/app/pulls/9/comments"))
   assert.equal(api?.includes("--hostname"), false)
 })
+
+test("an untracked file does not block posting a branch review", async () => {
+  const scope = scopeOf(["src/a.ts"], { branch: "feature", diffBase: "main" })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "?? scratch.txt\n" }
+    if (argv[0] === "git" && argv[1] === "merge-base") return { stdout: "base123\n" }
+    if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
+      return {
+        stdout: JSON.stringify({
+          number: 9,
+          headRefOid: "abc",
+          baseRefName: "main",
+          baseRefOid: "base123",
+        }),
+      }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return { stdout: "abc\n" }
+    if (argv[0] === "gh" && argv[1] === "api") return { code: 0 }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), true)
+})

@@ -581,6 +581,19 @@ test("an existing path whose name contains .. is reviewed as a path, not a range
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("an unrelated added line does not move an old-path anchor to the head side", () => {
+  const patch = [
+    "diff --git a/src/old.ts b/src/new.ts",
+    "similarity index 100%",
+    "rename from src/old.ts",
+    "rename to src/new.ts",
+    "@@ -1,0 +10,1 @@",
+    "+unrelated addition",
+  ].join("\n")
+  const sides = diffSideMap(patch, [{ file: "src/old.ts", line: 10 }])
+  assert.equal(sides.hasLine("src/old.ts", 10), false)
+})
+
 test("diffSideForLine prefers the head side when a replacement reuses the number", () => {
   const patch = [
     "diff --git a/src/a.ts b/src/a.ts",

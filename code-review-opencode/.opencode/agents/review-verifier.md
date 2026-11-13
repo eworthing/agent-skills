@@ -21,22 +21,19 @@ permissions:
   - action: grep
     resource: "*"
     effect: allow
-  # `diff` and `diff *` are separate patterns: `git diff*` also matched
-  # `git difftool`, which executes an external program.
+  # Require the no-textconv/no-ext-diff forms: a plain diff/show/log can run
+  # a textconv or external diff driver configured for the repository.
   - action: shell
-    resource: "git -C * diff"
+    resource: "git -C * diff --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * diff *"
+    resource: "git -C * log --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * log*"
+    resource: "git -C * show --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git -C * show*"
-    effect: allow
-  - action: shell
-    resource: "git -C * blame*"
+    resource: "git -C * blame --no-textconv*"
     effect: allow
   - action: shell
     resource: "git -C * status*"
@@ -51,19 +48,16 @@ permissions:
     resource: "git -C * grep*"
     effect: allow
   - action: shell
-    resource: "git diff"
+    resource: "git diff --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git diff *"
+    resource: "git log --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git log*"
+    resource: "git show --no-ext-diff --no-textconv*"
     effect: allow
   - action: shell
-    resource: "git show*"
-    effect: allow
-  - action: shell
-    resource: "git blame*"
+    resource: "git blame --no-textconv*"
     effect: allow
   - action: shell
     resource: "git status*"
@@ -130,19 +124,13 @@ permissions:
   - action: shell
     resource: "*\n*"
     effect: deny
-  # Git options that execute a pager, external diff, or textconv filter would
-  # turn an allowed read-only command into arbitrary code execution.
+  # A pager option would turn an allowed read-only command into arbitrary
+  # code execution. The allowlist already requires --no-ext-diff/--no-textconv.
   - action: shell
     resource: "*--open-files-in-pager*"
     effect: deny
   - action: shell
     resource: "*difftool*"
-    effect: deny
-  - action: shell
-    resource: "*--ext-diff*"
-    effect: deny
-  - action: shell
-    resource: "*--textconv*"
     effect: deny
   # Git config flags can point a read-only command at an external helper or
   # pager that executes arbitrary code. Deny `-c`/`--config-env` and the short
@@ -175,6 +163,9 @@ Rules:
 - Trace a concrete path from input/state to wrong output or crash.
 - Use only read-only inspection: read, glob, grep, and git diff/log/show/blame.
   Do not run node, python, tests, builds, or arbitrary shell commands.
+- Always pass `--no-ext-diff --no-textconv` to `git diff`, `git show`, and
+  `git log`, and `--no-textconv` to `git blame`; the permission table only
+  allows those forms.
 - If execution is the only way to settle the claim, say what would confirm it
   and return PLAUSIBLE; return REFUTED only when the code constructively proves
   the claim wrong.

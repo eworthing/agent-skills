@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { envInt } from "../.opencode/plugins/code-review-opencode/finding.ts"
+import { envInt, renderedLocation } from "../.opencode/plugins/code-review-opencode/finding.ts"
 
 test("envInt clamps above Node's maximum timer delay", () => {
   process.env.CODE_REVIEW_TEST_INT = "999999999999999"
@@ -9,6 +9,11 @@ test("envInt clamps above Node's maximum timer delay", () => {
   } finally {
     delete process.env.CODE_REVIEW_TEST_INT
   }
+})
+
+test("renderedLocation escapes line and paragraph separators", () => {
+  assert.equal(renderedLocation({ file: "src/a\u2028b.ts" }), "src/a\\u{2028}b.ts")
+  assert.equal(renderedLocation({ file: "src/a\u2029b.ts" }), "src/a\\u{2029}b.ts")
 })
 
 test("envInt keeps zero and rejects invalid spellings", () => {

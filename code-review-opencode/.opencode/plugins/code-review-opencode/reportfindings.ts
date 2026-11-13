@@ -28,7 +28,7 @@ export const REPORT_FINDINGS_SCHEMA = {
     },
     findings: {
       type: "array",
-      maxItems: 32,
+      maxItems: HARD_FINDINGS_CAP,
       description: "Verified findings, most-severe first; empty if none survived",
       items: {
         type: "object",

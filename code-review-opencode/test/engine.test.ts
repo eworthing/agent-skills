@@ -1684,3 +1684,68 @@ test("a 1-based synthesis plan is shifted before ranking", async () => {
   assert.equal(result.findings.length, 1)
   assert.equal(result.findings[0].summary, "first bug")
 })
+
+test("a capped 1-based synthesis plan is shifted before the cap is applied", async () => {
+  const a = candidate("src/a.ts", 1, "first bug")
+  const b = candidate("src/b.ts", 2, "second bug")
+  const c = candidate("src/c.ts", 3, "third bug")
+  const { result } = await review({
+    semanticMerge: true,
+    limit: 2,
+    script: {
+      finder: (req) => {
+        if (req.label === "angle-A") return { candidates: [a] }
+        if (req.label === "angle-B") return { candidates: [b] }
+        if (req.label === "angle-C") return { candidates: [c] }
+        return { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      synthesize: (req) =>
+        req.label === "dedup"
+          ? { summary: "deduped", decisions: [{ index: 0 }, { index: 1 }, { index: 2 }] }
+          : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
+    },
+  })
+  assert.equal(result.findings.length, 2)
+  assert.deepEqual(result.findings.map((f) => f.summary), ["first bug", "second bug"])
+})
+
+test("an exhausted v2.1.162 verifier budget marks the run partial", async () => {
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    script: {
+      finder: (req) =>
+        req.label.startsWith("angle") || req.label === "reuse" || req.label === "simplification" ||
+        req.label === "efficiency" || req.label === "conventions"
+          ? {
+              candidates: Array.from({ length: 5 }, (_, i) =>
+                candidate("src/a.ts", i + 1, `${req.label} bug ${i}`),
+              ),
+            }
+          : { candidates: [] },
+      verifier: () => CONFIRMED(),
+    },
+  })
+  assert.equal(result.stats.budgetDropped > 0, true)
+  assert.equal(result.partial, true)
+  assert.match(result.warnings.join(" "), /verifier budget/)
+})
+
+test("an invented sweep category cannot claim correctness priority", async () => {
+  const { result } = await review({
+    level: "max",
+    family: "default",
+    script: {
+      finder: (req) =>
+        req.label === "angle-A" ? { candidates: [candidate("src/b.ts", 2, "real bug")] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({
+        candidates: [{ ...candidate("src/a.ts", 1, "invented cleanup"), category: "invented-slug" }],
+      }),
+    },
+  })
+  assert.equal(result.findings.length, 2)
+  assert.equal(result.findings[0].kind, "correctness")
+  assert.equal(result.findings[1].kind, "cleanup")
+})

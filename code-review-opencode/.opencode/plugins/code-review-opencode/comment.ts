@@ -367,11 +367,16 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // lines do not exist at the PR head, so an inline anchor is either
     // rejected or attached to a different line. Refuse instead of posting a
     // review that describes a tree the PR does not contain.
-    const dirty = await call(["git", "status", "--porcelain"])
+    // Untracked files are not part of the reviewed diff; only tracked changes
+    // can make an inline anchor stale.
+    const dirty = await call(["git", "status", "--porcelain", "--untracked-files=no"])
     if (dirty.code !== 0) {
       return "`--comment` was ignored: could not verify the working tree is clean."
     }
-    if (dirty.stdout.trim()) {
+    const trackedChanges = dirty.stdout
+      .split("\n")
+      .some((line) => line.trim().length > 0 && !line.startsWith("??"))
+    if (trackedChanges) {
       return "`--comment` was ignored: the working tree has uncommitted changes; commit them or pass the PR number as the target."
     }
     const local = await call(["git", "rev-parse", "HEAD"])

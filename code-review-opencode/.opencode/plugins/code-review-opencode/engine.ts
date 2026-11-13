@@ -276,6 +276,12 @@ const GENERIC_WORDS = new Set([
   "two", "place", "places", "instead", "through", "one", "mechanism", "rule",
   "call", "site", "code", "line", "lines", "value", "values", "case", "cases",
   "make", "makes", "made", "change", "changes", "changed", "also", "same",
+  // Generic cleanup vocabulary: two adjacent "unused parameter" findings are
+  // distinct defects, but the shared words cannot prove they are one.
+  "unused", "parameter", "parameters", "duplicate", "duplicated", "helper",
+  "function", "functions", "variable", "variables", "dead", "redundant",
+  "simplify", "simplification", "reuse", "complexity", "inline", "inlined",
+  "inlines", "implements", "implemented", "implementation", "foo", "bar",
 ])
 
 function summaryTokens(s: string): Set<string> {
@@ -371,6 +377,9 @@ function sameDefect(a: RawFinding, b: RawFinding): boolean {
     const tb = summaryTokens(b.summary)
     let specific = 0
     for (const t of ta) if (tb.has(t) && !GENERIC_WORDS.has(t)) specific++
+    // The shared tokens must be specific. Generic cleanup vocabulary
+    // ("unused", "parameter", "helper") is excluded above, so two domain
+    // tokens are enough to recognize a reworded helper.
     return specific >= 2
   }
 
@@ -454,12 +463,20 @@ function normalizeDecisionBase(
   itemCount: number,
 ): Decisions["decisions"] {
   if (decisions.length === 0 || itemCount === 0) return decisions
-  const indices = decisions.flatMap((d) => [d.index, ...d.merge])
-  if (indices.length === 0) return decisions
-  // Only shift an unambiguous 1-based plan: no zero index, every index >= 1,
-  // and the maximum index is exactly itemCount (the out-of-range sentinel).
-  if (indices.some((i) => i === 0) || indices.some((i) => i < 1)) return decisions
-  if (Math.max(...indices) !== itemCount) return decisions
+  let maxIndex = 0
+  let hasZero = false
+  for (const d of decisions) {
+    for (const index of [d.index, ...d.merge]) {
+      if (index < 0) return decisions
+      if (index === 0) hasZero = true
+      if (index > maxIndex) maxIndex = index
+    }
+  }
+  // A zero-based plan must name index 0 somewhere; otherwise it is either a
+  // 1-based plan or malformed. Shift only when every index is in range, so an
+  // out-of-range extra cannot turn a 0-based plan into a different one. Do not
+  // use Math.max(...indices): a child-supplied merge array is unbounded.
+  if (hasZero || maxIndex === 0 || maxIndex > itemCount) return decisions
   return decisions.map((d) => ({
     index: d.index - 1,
     merge: d.merge.map((i) => i - 1),
@@ -694,12 +711,14 @@ function kindFor(f: Finder, c: RawFinding): "correctness" | "cleanup" {
 
 /** A sweep candidate has only its category slug, not a producing Finder. */
 function kindForCategory(category: string | undefined): "correctness" | "cleanup" {
-  // A sweep candidate without a category has no lens attribution. Treating it
-  // as correctness lets an unattributed cleanup claim outrank a real bug under
-  // the report cap; mirror kindFor()'s unattributed fallback instead.
+  // A sweep candidate has no producing lens. Only an explicit `correctness`
+  // slug may claim bug priority; an unattributed or invented slug falls back
+  // to cleanup, mirroring kindFor().
   if (category === undefined) return "cleanup"
   const slug = categorySlug(category)
-  return slug === "cleanup" || CLEANUP_LABELS.includes(slug) ? "cleanup" : "correctness"
+  if (slug === "correctness") return "correctness"
+  if (slug === "cleanup" || CLEANUP_LABELS.includes(slug)) return "cleanup"
+  return "cleanup"
 }
 
 function buildFinders(cell: Cell, budget?: number): Finder[] {
@@ -880,7 +899,18 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     return capped
   }
 
-  const verifyOne = async (c: RawFinding, kind: "correctness" | "cleanup", recallBiased: boolean): Promise<Finding | null> => {
+  // One source for each verifier bias: the ladder follows the cell's verify
+  // mode; the recall sentence is added for xhigh/max even though those cells
+  // keep the 3-state ladder.
+  const recallLadder = cell.verify === "recall"
+  const recallSentence = level === "xhigh" || level === "max"
+
+  const verifyOne = async (
+    c: RawFinding,
+    kind: "correctness" | "cleanup",
+    recallBiased: boolean,
+    addRecallSentence: boolean,
+  ): Promise<Finding | null> => {
     if (aborted()) return null
     stats.verifierAgents++
     const value = await runner({
@@ -894,7 +924,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         // Both deep multi-agent prompts describe a recall-biased 3-state
         // verifier. Omitting the sentence made xhigh verifiers use the strict
         // precision ladder and refute genuine state-dependent bugs.
-        recallSentence: level === "xhigh" || level === "max",
+        recallSentence: addRecallSentence,
       }),
       agent: AGENT_IDS.verifier,
       schemaName: "verdict",
@@ -933,11 +963,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         prompt: groupVerifierPrompt({
           scope: block,
           group,
-          recallBiased: cell.verify === "recall",
+          recallBiased: recallLadder,
           // xhigh/max grouped verifiers must carry the same recall sentence as
           // the per-candidate path, or the strict ladder refutes reachable
           // state-dependent bugs only in grouped mode.
-          recallSentence: level === "xhigh" || level === "max",
+          recallSentence,
         }),
         agent: AGENT_IDS.verifier,
         schemaName: "groupVerdicts",
@@ -984,6 +1014,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     // shared `seen` map and verified immediately, while other finders run.
     const seen = new Set<string>()
     let verifySlots = cell.verifyBudget ?? Number.POSITIVE_INFINITY
+    let budgetWarning = false
     await Promise.all(
       finders.map(async (f) => {
         const candidates = await runFinder(f)
@@ -991,6 +1022,13 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         const deduped = dedupeBy(candidates, dedupKey162, seen, () => {
           if (verifySlots <= 0) {
             stats.budgetDropped++
+            if (!budgetWarning) {
+              budgetWarning = true
+              warnings.push(
+                `verifier budget of ${cell.verifyBudget} exhausted; remaining candidates were left unverified`,
+              )
+              partial = true
+            }
             return false
           }
           verifySlots--
@@ -998,7 +1036,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         })
         stats.dupes += deduped.dupes
         const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(f, c) }))
-        const results = await mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind, cell.verify === "recall"))
+        const results = await mapLimit(novel, concurrency, (c) =>
+          verifyOne(c, c.kind, recallLadder, recallSentence),
+        )
         verified.push(...results.filter((x): x is Finding => x !== null))
       }),
     )
@@ -1054,7 +1094,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         stats.dupes += deduped.dupes
         pooled.push(...deduped.novel)
       }
-      const results = await mapLimit(pooled, concurrency, (c) => verifyOne(c, c.kind, cell.verify === "recall"))
+      const results = await mapLimit(pooled, concurrency, (c) =>
+        verifyOne(c, c.kind, recallLadder, recallSentence),
+      )
       verified = results.filter((x): x is Finding => x !== null)
     }
   }
@@ -1431,7 +1473,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       await runIndexSynthesis("merge"),
       "semantic merge returned no usable decisions; deterministic merge used",
       () => {
-        const fallback = deterministicReport(ranked, cap, level)
+        // The warning promises a deterministic merge; applying only the
+        // exact-key report would leave paraphrases unmerged.
+        const fallback = deterministicReport(mergeNearDuplicates(ranked), cap, level)
         findings = fallback.findings
         summary = fallback.summary
         truncatedByCap = fallback.truncated

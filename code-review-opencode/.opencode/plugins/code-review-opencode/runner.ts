@@ -681,7 +681,17 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         if (!sessionID) return null
         // waitForChild may already have read the transcript to detect
         // completion. Reuse it instead of paying a second full-context RPC.
-        const read = cachedMessages ?? (await ctx.session.context({ sessionID }))
+        let read = cachedMessages
+        if (read === undefined) {
+          try {
+            read = await ctx.session.context({ sessionID })
+          } catch (error) {
+            log(
+              `[code-review-opencode] ${req.label}: transcript read failed (${error instanceof Error ? error.message : String(error)})`,
+            )
+            return null
+          }
+        }
         const messages = sessionMessages(read)
         cachedMessages = undefined
         if (messages === undefined) {
@@ -760,7 +770,17 @@ ${text}`
           // transient get/wait miss). Only a watchdog stall proves there is no
           // answer; otherwise try the context before discarding the child.
           if (waited.outcome === "stalled") return null
-          const read = waited.messages ?? (await ctx.session.context({ sessionID: id }))
+          let read = waited.messages
+          if (read === undefined) {
+            try {
+              read = await ctx.session.context({ sessionID: id })
+            } catch (error) {
+              log(
+                `[code-review-opencode] ${req.label}: formatter transcript read failed (${error instanceof Error ? error.message : String(error)})`,
+              )
+              return null
+            }
+          }
           const messages = sessionMessages(read)
           if (messages === undefined) {
             log(`[code-review-opencode] ${req.label}: unrecognized formatter transcript envelope`)
@@ -792,9 +812,11 @@ ${text}`
       }
 
       const failuresBefore = sessionID ? (opts.schemaFailures?.get(sessionID) ?? 0) : 0
-      const formatterFirst =
-        stepLimited || req.schemaName === "candidates" || req.schemaName === "report"
-      if (lastText && failuresBefore < 3 && formatterFirst) {
+      // Try the small formatter child for every schema, not only candidates
+      // and reports: a verifier or synthesizer that answers in prose would
+      // otherwise be retried in place and eventually dropped. Formatting costs
+      // one small child only after the original child failed.
+      if (lastText && failuresBefore < 3) {
         log(
           `[code-review-opencode] ${req.label}: ${stepLimited ? "step limit reached" : "no structured result"}; trying a fresh formatter`,
         )
