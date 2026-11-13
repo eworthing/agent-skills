@@ -168,6 +168,27 @@ function outputFor(kind: OutputKind, max: number | "all"): string {
 /* Inline cells (single context, no subagents)                         */
 /* ------------------------------------------------------------------ */
 
+const LOW_TURN1_WITH_SKIP = `## Turn 1 — read
+
+One tool call: read the unified diff (\`git diff @{upstream}...HEAD; git diff HEAD\`
+to cover both committed and uncommitted changes, or \`git diff main...HEAD\` /
+the target passed as an argument). Skip test/fixture
+hunks (\`test/\`, \`spec/\`, \`__tests__/\`, \`*_test.*\`, \`*.test.*\`,
+\`fixtures/\`, \`testdata/\`) — test-file changes are not reviewed at this level.
+No subagents, no full-file reads.`
+
+const LOW_TURN2 = `## Turn 2 — findings
+
+Flag runtime-correctness bugs visible from the hunk alone: inverted/wrong
+condition, off-by-one, null/undefined deref where adjacent lines show the value
+can be absent, removed guard, falsy-zero check, missing \`await\`,
+wrong-variable copy-paste, error swallowed in a catch that should propagate.
+Also flag — still from the hunk alone — new code that duplicates an existing
+helper visible in the diff context, and dead code the diff leaves behind.
+
+Do **not** flag style, naming, perf, missing tests, or anything outside the
+hunk.`
+
 /** Kt(hasReportFindings, max): low effort, hunk-only, one diff read. */
 export function lowPrompt(kind: OutputKind, max: number | "all" = 4): string {
   const out =
@@ -185,26 +206,9 @@ ${REPORT_FINDINGS_TOOL} tool even if it is available.
 `
   return `\`low effort → 1 diff pass → no verify → ${limitLabel(max)}\`
 
-## Turn 1 — read
+${LOW_TURN1_WITH_SKIP}
 
-One tool call: read the unified diff (\`git diff @{upstream}...HEAD; git diff HEAD\`
-to cover both committed and uncommitted changes, or \`git diff main...HEAD\` /
-the target passed as an argument). Skip test/fixture
-hunks (\`test/\`, \`spec/\`, \`__tests__/\`, \`*_test.*\`, \`*.test.*\`,
-\`fixtures/\`, \`testdata/\`) — test-file changes are not reviewed at this level.
-No subagents, no full-file reads.
-
-## Turn 2 — findings
-
-Flag runtime-correctness bugs visible from the hunk alone: inverted/wrong
-condition, off-by-one, null/undefined deref where adjacent lines show the value
-can be absent, removed guard, falsy-zero check, missing \`await\`,
-wrong-variable copy-paste, error swallowed in a catch that should propagate.
-Also flag — still from the hunk alone — new code that duplicates an existing
-helper visible in the diff context, and dead code the diff leaves behind.
-
-Do **not** flag style, naming, perf, missing tests, or anything outside the
-hunk.
+${LOW_TURN2}
 
 ${out}`
 }
@@ -229,26 +233,9 @@ trivially correct after that pass.
 `
   return `\`low effort → 1 diff pass → no verify → ≥min(files,4) findings\`
 
-## Turn 1 — read
+${LOW_TURN1_WITH_SKIP}
 
-One tool call: read the unified diff (\`git diff @{upstream}...HEAD; git diff HEAD\`
-to cover both committed and uncommitted changes, or \`git diff main...HEAD\` /
-the target passed as an argument). Skip test/fixture
-hunks (\`test/\`, \`spec/\`, \`__tests__/\`, \`*_test.*\`, \`*.test.*\`,
-\`fixtures/\`, \`testdata/\`) — test-file changes are not reviewed at this level.
-No subagents, no full-file reads.
-
-## Turn 2 — findings
-
-Flag runtime-correctness bugs visible from the hunk alone: inverted/wrong
-condition, off-by-one, null/undefined deref where adjacent lines show the value
-can be absent, removed guard, falsy-zero check, missing \`await\`,
-wrong-variable copy-paste, error swallowed in a catch that should propagate.
-Also flag — still from the hunk alone — new code that duplicates an existing
-helper visible in the diff context, and dead code the diff leaves behind.
-
-Do **not** flag style, naming, perf, missing tests, or anything outside the
-hunk.
+${LOW_TURN2}
 
 ${out}`
 }
@@ -276,17 +263,7 @@ One tool call: read the unified diff (\`git diff @{upstream}...HEAD; git diff HE
 to cover both committed and uncommitted changes, or \`git diff main...HEAD\` /
 the target passed as an argument). No subagents, no full-file reads.
 
-## Turn 2 — findings
-
-Flag runtime-correctness bugs visible from the hunk alone: inverted/wrong
-condition, off-by-one, null/undefined deref where adjacent lines show the value
-can be absent, removed guard, falsy-zero check, missing \`await\`,
-wrong-variable copy-paste, error swallowed in a catch that should propagate.
-Also flag — still from the hunk alone — new code that duplicates an existing
-helper visible in the diff context, and dead code the diff leaves behind.
-
-Do **not** flag style, naming, perf, missing tests, or anything outside the
-hunk.
+${LOW_TURN2}
 
 ${out}`
 }
@@ -408,10 +385,7 @@ Pool all candidates. Dedup near-duplicates only (same defect, same location, sam
 Take one more pass (same context — no subagent) as a fresh reviewer who has the deduplicated list. Re-read
 the diff and enclosing functions looking ONLY for defects not already listed.
 Do not re-derive or re-confirm anything already there — the job is gaps. Focus
-on what the first pass tends to miss: moved/extracted code that dropped a guard
-or anchor; second-tier footguns (dataclass default evaluated once, \`hash()\`
-non-determinism, lock-scope shrink, predicate methods with side effects);
-setup/teardown asymmetry in tests; config defaults flipped.
+on what the first pass tends to miss: ${SWEEP_FOCUS()}
 
 Surface **up to 8 additional candidates**, each naming a defect not already on
 the list. If nothing new, return nothing from this phase — do not pad.

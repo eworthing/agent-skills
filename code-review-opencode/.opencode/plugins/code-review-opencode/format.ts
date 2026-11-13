@@ -26,14 +26,20 @@ export function formatJson(result: EngineResult): string {
 
 export function formatReportFindings(result: EngineResult): {
   level: string
+  summary: string
   findings: Array<Record<string, unknown>>
   partial: boolean
   warnings?: string[]
 } {
+  const warnings = [...result.warnings]
+  if (result.truncatedFrom !== undefined) {
+    warnings.push(`report truncated from ${result.truncatedFrom} verified findings`)
+  }
   return {
     level: result.level,
+    summary: result.summary,
     partial: result.partial,
-    ...(result.warnings.length > 0 ? { warnings: result.warnings } : {}),
+    ...(warnings.length > 0 ? { warnings } : {}),
     findings: result.findings.map((f) => ({
       file: f.file,
       line: lineOf(f),
@@ -85,6 +91,10 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
       })
       .join("\n\n")
     out = `${pluralize(n, "finding")}${suffix}:\n\n${body}`
+  }
+
+  if (result.truncatedFrom !== undefined) {
+    out += `\n\nShowing ${result.findings.length} of ${result.truncatedFrom} verified findings; the rest were cut by the report cap.`
   }
 
   if (result.partial) {

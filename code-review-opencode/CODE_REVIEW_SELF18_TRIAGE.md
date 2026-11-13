@@ -35,12 +35,24 @@ duplication/efficiency cleanups.
 
 | # | Finding | Reason |
 |---|---|---|
-| 5 | v2.1.162 dedup key uses a 5-line bucket | This is the reference workflow's dedup contract; changing it would stop being v2.1.162. |
-| 8 | Merged entry upgrades a PLAUSIBLE representative to CONFIRMED | The strongest verified verdict for the same root cause wins; the representative text is retained. |
-| 14 | `readCapped` truncates non-ASCII files | The implementation already reads `budget * 3` bytes and decodes with `StringDecoder`; the byte budget is intentionally larger than the UTF-16 budget. |
-| 15 | Human/ReportFindings renderers omit `summary` and `truncatedFrom` | The captured v2.1.318 renderer (`jt`) renders only the findings list and count. The synthesis summary is an artifact field. |
-| 16 | Non-JSON runs apply the 32-entry cap even though the engine renders text | The 32-entry cap is the reference `ReportFindings` host-schema contract; the engine result is still the same report, and the cap is required when a host renders the typed payload. |
-| 20 | Unknown `session.context` envelopes become `[]` | There is no recoverable transcript shape to parse. The runner logs the empty response and retries; inventing a mapping would risk reading an unrelated array. |
+| 14 | `readCapped` truncates non-ASCII files | The implementation reads `budget * 3` bytes and decodes with `StringDecoder`; three is the maximum UTF-8 bytes per UTF-16 code unit, so the character budget is filled rather than truncated. This is a false positive. |
+
+## Fixed in batch 3
+
+These were initially treated as deliberate reference behavior, but validation
+showed the findings describe real recall/output defects. They are now fixed,
+with the divergence from the captured reference noted in the code comments.
+
+| # | Finding | Fix |
+|---|---|---|
+| 5 | v2.1.162 dedup bucket dropped distinct nearby defects | The full normalized claim is now part of the key; only the same claim in the same bucket merges. |
+| 8 | Merged entry upgraded a PLAUSIBLE representative using unverified text | When a merged duplicate is the confirmed entry, its claim text and failure scenario are used for the upgrade. |
+| 15 | `summary`/`truncatedFrom` never reached the user | Human output shows the cap notice; typed report metadata carries `summary` and a truncation warning. |
+| 16 | Engine text reports were capped at 32 though they never call ReportFindings | The 32-entry host cap now applies only to prompt paths; deterministic engine reports honor `--max-findings` above 32. |
+| 20 | Unknown transcript envelopes were coerced to `[]` | `sessionMessages` recognizes more envelopes; an unrecognized one is logged and retried, not treated as an empty answer. |
+| 22 | Sweep re-implemented finder candidate ingestion | Shared `acceptCandidates()` handles the cap, dropped candidates, and step-limit warnings. |
+| 36 | Low/low-minimum prompts duplicated two whole blocks | Shared `LOW_TURN1_WITH_SKIP`/`LOW_TURN2` constants (byte-identical prompts). |
+| 37 | Inline xhigh retyped the sweep focus prose | Uses `SWEEP_FOCUS()`; prompt snapshots unchanged. |
 
 ## Fixed in batch 2
 
@@ -67,7 +79,7 @@ duplication/efficiency cleanups.
 
 ## Remaining cleanup findings
 
-21, 22, 29, 30, 32, 36, 37, 38 are duplication/efficiency observations that
-need either a larger refactor or a prompt-fidelity decision. They are low
-severity; none changes observed behavior. Run 19 will decide whether the
+21, 29, 30, 32, 38 are duplication/efficiency observations that need either a
+larger refactor or are constrained by the agent-file/prompt formats. They are
+low severity; none changes observed behavior. Run 19 will decide whether the
 remaining set is small enough to close the gate or needs another batch.

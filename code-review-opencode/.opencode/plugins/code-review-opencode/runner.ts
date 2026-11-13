@@ -682,8 +682,12 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         // waitForChild may already have read the transcript to detect
         // completion. Reuse it instead of paying a second full-context RPC.
         const read = cachedMessages ?? (await ctx.session.context({ sessionID }))
-        const messages = sessionMessages(read) ?? []
+        const messages = sessionMessages(read)
         cachedMessages = undefined
+        if (messages === undefined) {
+          log(`[code-review-opencode] ${req.label}: unrecognized transcript envelope`)
+          return null
+        }
         messageCount = messages.length
         stepLimited = stepLimited || hitStepLimit(messages)
         const text = assistantText(messages)
@@ -757,7 +761,11 @@ ${text}`
           // answer; otherwise try the context before discarding the child.
           if (waited.outcome === "stalled") return null
           const read = waited.messages ?? (await ctx.session.context({ sessionID: id }))
-          const messages = sessionMessages(read) ?? []
+          const messages = sessionMessages(read)
+          if (messages === undefined) {
+            log(`[code-review-opencode] ${req.label}: unrecognized formatter transcript envelope`)
+            return null
+          }
           const answer = assistantText(messages)
           if (!answer) return null
           const parsed = withFailurePlaceholders(

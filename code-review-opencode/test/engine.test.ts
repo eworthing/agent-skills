@@ -632,7 +632,7 @@ test("text synthesis does not backfill a finding the synthesizer merged away", a
   assert.equal(result.findings[0].category, "reuse")
 })
 
-/* 6 */ test("two distinct defects on nearby lines: kept in 2.1.318, collapsed by the 2.1.162 line bucket", async () => {
+/* 6 */ test("two distinct defects on nearby lines survive the 2.1.162 line bucket", async () => {
   const a = candidate("src/a.ts", 10, "first defect")
   const b = candidate("src/a.ts", 12, "second defect")
   const finder = (req: { label: string }) =>
@@ -646,8 +646,10 @@ test("text synthesis does not backfill a finding the synthesizer merged away", a
     level: "high",
     script: { finder, verifier: () => CONFIRMED() },
   })
-  assert.equal(legacy.result.findings.length, 1)
-  assert.equal(legacy.result.stats.dupes, 1)
+  // The claim is part of the dedup key: a nearby line alone must not collapse
+  // a different defect.
+  assert.equal(legacy.result.findings.length, 2)
+  assert.equal(legacy.result.stats.dupes, 0)
 })
 
 /* 7 */ test("a deleted validation guard is found by Angle B", async () => {

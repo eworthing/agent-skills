@@ -82,11 +82,11 @@ export function sessionMessages(value: unknown): readonly unknown[] | undefined 
   // `{ data: { messages: [...] } }` across versions. Unwrap the known
   // envelopes instead of treating an unfamiliar one as an empty transcript.
   let current: unknown = value
-  for (let depth = 0; depth < 3; depth++) {
+  for (let depth = 0; depth < 5; depth++) {
     if (Array.isArray(current)) return current
     if (!current || typeof current !== "object") return undefined
-    const record = current as { data?: unknown; messages?: unknown }
-    const next = record.data ?? record.messages
+    const record = current as { data?: unknown; messages?: unknown; items?: unknown }
+    const next = record.data ?? record.messages ?? record.items
     if (next === undefined) return undefined
     current = next
   }

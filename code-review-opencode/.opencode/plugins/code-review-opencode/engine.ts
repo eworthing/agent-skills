@@ -225,12 +225,13 @@ function normalizedSummary(s: string): string {
   return result
 }
 
-/** v2.1.162 dedup key: file + 5-line bucket, or file + summary prefix. */
+/** v2.1.162 dedup key: file + 5-line bucket + the full normalized claim. */
 function dedupKey162(c: RawFinding): string {
-  // A file-level claim has no line. Key it by the full normalized summary:
-  // two unrelated defects can share the first 40 characters, and the earlier
-  // prefix key silently discarded the second before verification.
-  return `${c.file}:${c.line != null ? Math.round(c.line / 5) * 5 : `x:${normalizedSummary(c.summary)}`}`
+  // The reference buckets by file and five lines. That alone drops two
+  // distinct defects that happen to land in the same bucket, so the claim is
+  // part of the key: only the same claim at a nearby line is a duplicate.
+  const bucket = c.line != null ? Math.round(c.line / 5) * 5 : "x"
+  return `${c.file}:${bucket}:${normalizedSummary(c.summary)}`
 }
 
 /**
@@ -548,7 +549,13 @@ function applyDecisions(
     report.decisions,
     cap,
     (c, merged) => {
-      const verdict = merged.some((m) => m.verdict === "CONFIRMED") ? "CONFIRMED" : c.verdict
+      // If a merged duplicate is the one the verifier confirmed, its text is
+      // the verified claim. Upgrading the representative's text while keeping
+      // the representative's unverified wording presents unverified prose as
+      // confirmed, so use the confirmed entry's claim.
+      const confirmed = merged.find((m) => m.verdict === "CONFIRMED")
+      const source = c.verdict === "CONFIRMED" || !confirmed ? c : confirmed
+      const verdict = confirmed ? "CONFIRMED" : c.verdict
       // A file-level representative would otherwise erase the only anchor a
       // merged finding carried. Resolve the anchor before computing the
       // "also at" list, or the inherited line is both the finding's own
@@ -559,7 +566,9 @@ function applyDecisions(
       const also = alsoLocations.length > 0 ? ` [same root cause also at: ${alsoLocations.join(", ")}]` : ""
       return {
         ...anchored,
-        summary: c.summary + also,
+        summary: source.summary + also,
+        failure_scenario: source.failure_scenario,
+        ...(source.short_summary !== undefined ? { short_summary: source.short_summary } : {}),
         verdict,
       }
     },
@@ -802,6 +811,27 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     return opts.signal?.aborted === true
   }
 
+  /** Shared finder/sweep candidate normalisation and truncation warnings. */
+  const acceptCandidates = (
+    value: unknown,
+    cap: number,
+    label: string,
+  ): { candidates: RawFinding[]; partial: boolean } | null => {
+    const parsed = asCandidatesResult(value, cap)
+    if (parsed === null) return null
+    let incomplete = false
+    if (parsed.dropped > 0) {
+      warnings.push(`${label} dropped ${pluralize(parsed.dropped, "malformed candidate")}`)
+      incomplete = true
+    }
+    const candidates = parsed.candidates.slice(0, cap)
+    if (candidates.some((c) => c.failure_scenario === STEP_LIMIT_PLACEHOLDER)) {
+      warnings.push(`${label} was recovered from its step-limited summary; some failure scenarios are missing`)
+      incomplete = true
+    }
+    return { candidates, partial: incomplete }
+  }
+
   const runFinder = async (f: Finder): Promise<RawFinding[]> => {
     if (aborted()) return []
     const value = await runner({
@@ -822,19 +852,16 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       schemaName: "candidates",
       signal: opts.signal,
     })
-    const parsed = asCandidatesResult(value, f.cap)
-    if (parsed === null) {
+    const accepted = acceptCandidates(value, f.cap, `finder ${f.label}`)
+    if (accepted === null) {
       stats.finderFailures = (stats.finderFailures ?? 0) + 1
       warnings.push(`finder ${f.label} returned no usable structured result; treated as zero candidates`)
       partial = true
       emit({ type: "warning", message: `finder ${f.label} returned no usable result` })
       return []
     }
-    if (parsed.dropped > 0) {
-      warnings.push(`finder ${f.label} dropped ${pluralize(parsed.dropped, "malformed candidate")}`)
-      partial = true
-    }
-    const capped = parsed.candidates.slice(0, f.cap).map((c) => {
+    if (accepted.partial) partial = true
+    const capped = accepted.candidates.map((c) => {
       // A grouped finder mixes lenses, so its aggregate kind cannot stand in
       // for a candidate's missing category. Prefer the candidate's own kind;
       // leave a mixed finder's category unset rather than mislabelling a
@@ -849,10 +876,6 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         ...(category ? { category } : {}),
       }
     })
-    if (capped.some((c) => c.failure_scenario === STEP_LIMIT_PLACEHOLDER)) {
-      warnings.push(`finder ${f.label} was recovered from its step-limited summary; some failure scenarios are missing`)
-      partial = true
-    }
     emit({ type: "finder", label: f.label, candidates: capped.length })
     return capped
   }
@@ -1062,26 +1085,18 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       schemaName: "candidates",
       signal: opts.signal,
     })
-    const parsed = asCandidatesResult(value, cell.sweepCap)
-    if (parsed === null) {
+    const accepted = acceptCandidates(value, cell.sweepCap, "sweep")
+    if (accepted === null) {
       warnings.push("sweep returned no usable structured result; no gap candidates added")
       partial = true
     } else {
-      if (parsed.dropped > 0) {
-        warnings.push(`sweep dropped ${pluralize(parsed.dropped, "malformed candidate")}`)
-        partial = true
-      }
-      if (parsed.candidates.some((c) => c.failure_scenario === STEP_LIMIT_PLACEHOLDER)) {
-        warnings.push("sweep was recovered from its step-limited summary; some failure scenarios are missing")
-        partial = true
-      }
+      if (accepted.partial) partial = true
       const knownFindings = [...kept, ...refuted]
       // Compare the exact claim only. A reworded sweep gap at a known line is
       // often a distinct defect, so the paraphrase heuristic can silently
       // discard the gap the sweep exists to surface.
       const exactKnown = new Set(knownFindings.map(dedupKey318))
-      const novel = parsed.candidates
-        .slice(0, cell.sweepCap)
+      const novel = accepted.candidates
         .map((c) => {
           const kind = c.kind ?? kindForCategory(c.category)
           const category = c.category ?? (kind === "cleanup" ? "cleanup" : "correctness")
@@ -1124,7 +1139,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           exactKnown.add(key)
           return true
         })
-      stats.candidates += parsed.candidates.length
+      stats.candidates += accepted.candidates.length
       emit({ type: "sweep", candidates: novel.length })
       if (novel.length > 0) {
         // The reference's Phase 3 sweep runs after verification and its

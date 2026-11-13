@@ -429,10 +429,14 @@ async function resolveAndRun(
     flags.family ?? process.env.CODE_REVIEW_FAMILY,
   )
   const cell = resolveCell(version, family, effort)
+  // The engine renders its own text report and never calls ReportFindings.
+  // Only the prompt paths (inline/minimal cells, --driver prompt, or a host
+  // without child sessions) go through the 32-entry host schema, so only they
+  // need the cap. A deterministic engine report may legitimately exceed 32.
+  const childSessions = supportsChildSessions(ctx)
+  const usesEngine = flags.driver !== "prompt" && cell.engine === "multi" && childSessions
   const kind: OutputKind = flags.json ? "json" : "reportfindings"
-  // The adapter is always registered, but the JSON contract deliberately
-  // bypasses ReportFindings, so the 32-entry cap must not apply there.
-  const hasReportFindings = kind === "reportfindings"
+  const hasReportFindings = kind === "reportfindings" && !usesEngine
   const limit = resolveMaxFindings(
     parsed,
     cell,
@@ -559,7 +563,6 @@ async function resolveAndRun(
   // A host without child sessions cannot run the deterministic fan-out. Use
   // the recovered single-pass prompt for the selected effort instead of
   // returning an empty, partial engine result.
-  const childSessions = supportsChildSessions(ctx)
   if (flags.driver === "prompt" || !childSessions) {
     const base = resolveMulti(kind, effort, max)
     let text = decorateReview(base)
