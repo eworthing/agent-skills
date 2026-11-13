@@ -17,6 +17,7 @@ import {
   detectFamily,
   plannedFinderCount,
   resolveCell,
+  LEVELS,
   type InlineVariant,
   type Level,
   VERSIONS,
@@ -403,21 +404,31 @@ async function resolveAndRun(
   const runModel = sessionModel ?? modelRef(hostDefault)
   const sessionEffort = inv.sessionEffort ?? runModel?.variant
 
+  const storage = ctx.storage
+  const readStored = (key: string): Promise<unknown> =>
+    storage && typeof storage.get === "function"
+      ? storage.get(key).catch(() => undefined)
+      : Promise.resolve(undefined)
+  const storeValue = async (key: string, value: unknown): Promise<void> => {
+    if (storage && typeof storage.set === "function") {
+      await storage.set(key, value as never).catch(() => {})
+    }
+  }
   const [storedEffort, storedMax] = await Promise.all([
-    ctx.storage.get(STORAGE_EFFORT).catch(() => undefined),
-    ctx.storage.get(STORAGE_MAX).catch(() => undefined),
+    readStored(STORAGE_EFFORT),
+    readStored(STORAGE_MAX),
   ])
   const effort = resolveEffort(parsed, typeof storedEffort === "string" ? storedEffort : undefined, sessionEffort)
 
   // A level or --max-findings typed in a non-interactive run is not remembered
   // (official /code-review behavior). --json is our non-interactive proxy.
   const remember = inv.interactive === true && !flags.json
-  if (remember && parsed.explicit) await ctx.storage.set(STORAGE_EFFORT, parsed.explicit).catch(() => {})
+  if (remember && parsed.explicit) await storeValue(STORAGE_EFFORT, parsed.explicit)
   if (remember) {
     // Only a valid value is persisted. An invalid --max-findings is ignored,
     // so it must not wipe the limit the user set earlier.
     const stored = storedMaxFindings(parsed)
-    if (stored !== undefined) await ctx.storage.set(STORAGE_MAX, stored).catch(() => {})
+    if (stored !== undefined) await storeValue(STORAGE_MAX, stored)
   }
 
   const requestedMode = flags.mode ?? process.env.CODE_REVIEW_MODE
@@ -436,7 +447,10 @@ async function resolveAndRun(
   const childSessions = supportsChildSessions(ctx)
   const usesEngine = flags.driver !== "prompt" && cell.engine === "multi" && childSessions
   const kind: OutputKind = flags.json ? "json" : "reportfindings"
-  const hasReportFindings = kind === "reportfindings" && !usesEngine
+  // An engine report is text, but --fix re-reports through ReportFindings, so
+  // that path still needs the host's 32-entry cap.
+  const willApplyFix = parsed.fix && !flags.dryRun && !flags.json
+  const hasReportFindings = kind === "reportfindings" && (!usesEngine || willApplyFix)
   const limit = resolveMaxFindings(
     parsed,
     cell,
@@ -744,7 +758,10 @@ async function resolveAndRun(
       )
       return { text: formatJson(result), engine: result, needsModel: false, bare: true }
     }
-    const base = resolveMulti(kind, effort, max)
+    // The fallback prompt calls ReportFindings, so it must respect the host's
+    // 32-entry cap even when the deterministic engine was not capped.
+    const fallbackMax = typeof max === "number" ? Math.min(max, HARD_FINDINGS_CAP) : max
+    const base = resolveMulti(kind, effort, fallbackMax)
     let text = decorateReview(base)
     text += await verifyFollowUp(ctx, scope.files)
     const allNotices = [...notices, warning]
@@ -993,7 +1010,7 @@ export default Plugin.define({
         input: {
           type: "object",
           properties: {
-            level: { type: "string", enum: ["low", "medium", "high", "xhigh", "max"] },
+            level: { type: "string", enum: LEVELS },
             target: { type: "string", description: "PR number, branch, ref range, path, or free-form scope instructions" },
             mode: { type: "string", enum: Object.keys(VERSIONS) },
             maxFindings: { anyOf: [{ type: "integer", minimum: 1 }, { type: "string", enum: ["all"] }] },

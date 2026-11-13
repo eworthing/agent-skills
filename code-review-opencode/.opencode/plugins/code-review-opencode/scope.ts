@@ -312,6 +312,10 @@ type DiffMode = "diff" | "name-status" | "numstat" | "quiet"
 function gitDiffArgs(spec: DiffSpec, mode: DiffMode): string[] {
   return [
     "diff",
+    // Safe flags first, so the displayed command matches the agent
+    // permission pattern even for `--staged` or a mode flag.
+    "--no-ext-diff",
+    "--no-textconv",
     ...(spec.staged ? ["--staged"] : []),
     ...(mode === "quiet"
       ? ["--quiet"]
@@ -320,8 +324,6 @@ function gitDiffArgs(spec: DiffSpec, mode: DiffMode): string[] {
         : mode === "numstat"
           ? ["--numstat"]
           : []),
-    "--no-ext-diff",
-    "--no-textconv",
     "--end-of-options",
     ...(spec.range ? [spec.range] : []),
     ...(spec.pathspec ? ["--", spec.pathspec] : []),
@@ -804,16 +806,11 @@ export function diffSideMap(
     ) => {
       for (const state of active) {
         if (state.oldOnly) {
+          // A finding that named the old side of a rename stays on that side.
+          // An added line in the new file that happens to reuse the number is
+          // not evidence that the old line moved.
           if (op !== "+" && oldLine === state.line) {
             state.left = true
-            matched.add(state.key)
-          }
-          // An old-path request may only use the head side when the added line
-          // is the replacement at the same old/new number. A pure addition
-          // elsewhere that happens to reuse the number must not move the
-          // anchor to unrelated code.
-          if (op === "+" && newLine === state.line && oldLine === state.line) {
-            state.right = true
             matched.add(state.key)
           }
         } else {
@@ -1154,6 +1151,15 @@ async function classifyTarget(
 ): Promise<TargetClassification> {
   const pr = prTargetNumber(target)
   let pathScope = target && pr === undefined ? resolveDiffScope(cwd, target) : undefined
+  // HEAD is the current checkout, not a branch to diff against itself. Treat
+  // it as the default range so uncommitted changes are reviewed.
+  if (target && target.toUpperCase() === "HEAD") {
+    return {
+      ...(pr !== undefined ? { pr } : {}),
+      branchCandidate: false,
+      ...(pathScope ? { pathScope } : {}),
+    }
+  }
   if (target && !explicitPathTarget(target) && pr === undefined && !looksLikeRange(target)) {
     const branchRoot = findGitRoot(cwd) ?? cwd
     if (await revParse(exec, branchRoot, target, opts)) {
@@ -1528,7 +1534,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // context package. A successful patch capture with an empty (or partially
   // failed) name-status listing still names every changed file; a large diff is
   // walked once instead of once per consumer.
-  const patchScan = diffText.trim() ? scanPatchChurn(diffText) : undefined
+  const patchScan = /\S/.test(diffText) ? scanPatchChurn(diffText) : undefined
   if (patchScan) uniqueFiles = uniq([...uniqueFiles, ...patchScan.paths]).sort()
   // A PR can have changes that produce no parseable patch blocks (binary-only
   // assets), and its metadata call can fail. When both file sources are empty,

@@ -15,7 +15,7 @@
  *   level?: "low" | "medium" | "high" | "xhigh" | "max"
  */
 import { normalizeFinding } from "./json.ts"
-import { HARD_FINDINGS_CAP, normalizeLevel } from "./cells.ts"
+import { HARD_FINDINGS_CAP, LEVELS, normalizeLevel } from "./cells.ts"
 import { codePointLength } from "./finding.ts"
 
 export const REPORT_FINDINGS_SCHEMA = {
@@ -23,7 +23,7 @@ export const REPORT_FINDINGS_SCHEMA = {
   properties: {
     level: {
       type: "string",
-      enum: ["low", "medium", "high", "xhigh", "max"],
+      enum: [...LEVELS],
       description: "Effort level the review ran at",
     },
     findings: {

@@ -70,10 +70,11 @@ export function commentBody(finding: { summary: string; failure_scenario: string
   return `${finding.summary}\n\nFailure scenario: ${finding.failure_scenario}`
 }
 
-/** Hostname from a PR URL, including GitHub Enterprise instances. */
+/** Host from a PR URL, including a GitHub Enterprise port when present. */
 function hostFromPrUrl(value: string): string | undefined {
   try {
-    return new URL(value.trim()).hostname || undefined
+    // `.host` keeps a non-standard port; `.hostname` would silently drop it.
+    return new URL(value.trim()).host || undefined
   } catch {
     return undefined
   }
@@ -122,7 +123,8 @@ function remoteHostname(url: string): string | undefined {
   const scp = url.match(/^[^@/\s]+@([^:/\s]+):/)
   if (scp) return scp[1]
   try {
-    return new URL(url).hostname || undefined
+    // Keep a non-standard port so a GHE instance served on one is detected.
+    return new URL(url).host || undefined
   } catch {
     return undefined
   }
@@ -434,8 +436,10 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       if (!prBaseOid) {
         return "`--comment` was ignored: could not verify the pull request's base commit."
       }
-      const reviewedMergeBase = await call(["git", "merge-base", scope.diffBase, "HEAD"])
-      const prMergeBase = await call(["git", "merge-base", prBaseOid, "HEAD"])
+      const [reviewedMergeBase, prMergeBase] = await Promise.all([
+        call(["git", "merge-base", scope.diffBase, "HEAD"]),
+        call(["git", "merge-base", prBaseOid, "HEAD"]),
+      ])
       if (
         reviewedMergeBase.code !== 0 ||
         prMergeBase.code !== 0 ||

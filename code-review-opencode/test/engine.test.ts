@@ -511,10 +511,10 @@ test("text synthesis does not attach a verified verdict to an invented finding",
       }),
     },
   })
-  assert.equal(result.findings.length, 0)
-  assert.match(result.warnings.join(" "), /did not match a verified candidate/)
-  // The synthesizer may have reworded a real finding; the dropped entry means
-  // the remainder cannot be presented as a complete review.
+  // The invented entry is dropped, but the verified survivor must not vanish.
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].summary, "missing await on the save path")
+  assert.match(result.warnings.join(" "), /did not match any verified finding|did not match a verified candidate/)
   assert.equal(result.partial, true)
 })
 
@@ -1511,8 +1511,9 @@ test("text synthesis does not attach a reworded same-line entry to the wrong fin
     },
   })
   // Two verified findings share the line. The any-token anchor must not claim
-  // the first one; the entry is ambiguous, so the run is marked partial.
-  assert.equal(result.findings.length, 0)
+  // the first one; the entry is ambiguous, so both survivors are returned
+  // unmerged and the run is marked partial.
+  assert.equal(result.findings.length, 2)
   assert.equal(result.partial, true)
 })
 
@@ -1748,4 +1749,28 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings.length, 2)
   assert.equal(result.findings[0].kind, "correctness")
   assert.equal(result.findings[1].kind, "cleanup")
+})
+
+test("a subset plan without index 0 is not mistaken for a 1-based plan", async () => {
+  const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
+    candidate("src/a.ts", i + 1, `${s} bug`),
+  )
+  const { result } = await review({
+    semanticMerge: true,
+    limit: 5,
+    script: {
+      finder: (req) => {
+        const index = ["angle-A", "angle-B", "angle-C", "angle-D", "angle-E"].indexOf(req.label)
+        return index >= 0 ? { candidates: [items[index]] } : { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      synthesize: (req) =>
+        req.label === "dedup"
+          ? { summary: "deduped", decisions: items.map((_, i) => ({ index: i })) }
+          : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
+    },
+  })
+  // The subset keeps the original indices; it is not shifted down.
+  assert.equal(result.findings[0].summary, "one bug")
+  assert.equal(result.findings[1].summary, "two bug")
 })

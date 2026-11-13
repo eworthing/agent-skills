@@ -192,7 +192,9 @@ hunk.`
 /** Kt(hasReportFindings, max): low effort, hunk-only, one diff read. */
 export function lowPrompt(kind: OutputKind, max: number | "all" = 4): string {
   const out =
-    kind === "reportfindings"
+    kind === "json"
+      ? outputJson(max)
+      : kind === "reportfindings"
       ? `Report ${limitPhrase(max)}, most-severe first, in one
 ${REPORT_FINDINGS_TOOL} call with \`{level, findings}\` — each entry has
 \`file\`, \`line\`, \`summary\`, \`short_summary\` (≤60 characters), and
@@ -216,7 +218,9 @@ ${out}`
 /** Xt(hasReportFindings): low effort on sonnet-5, minimum-findings mode. */
 export function lowMinimumPrompt(kind: OutputKind): string {
   const out =
-    kind === "reportfindings"
+    kind === "json"
+      ? outputJson("all")
+      : kind === "reportfindings"
       ? `Target **min(files_changed, 4) findings**, most-severe first, reported
 in one ${REPORT_FINDINGS_TOOL} call with \`{level, findings}\` — each
 entry has \`file\`, \`line\`, \`summary\`, \`short_summary\` (≤60 characters),
@@ -244,7 +248,9 @@ ${out}`
 export function lowExpandedPrompt(kind: OutputKind, max: number | "all" = 8): string {
   const target = max === "all" ? 4 : Math.min(4, max)
   const out =
-    kind === "reportfindings"
+    kind === "json"
+      ? outputJson(max)
+      : kind === "reportfindings"
       ? `Report ${limitPhrase(max)}, most-severe first, in one
 ${REPORT_FINDINGS_TOOL} call with \`{level, findings}\` — each entry has
 \`file\`, \`line\`, \`summary\`, \`short_summary\` (≤60 characters), and
@@ -673,13 +679,19 @@ The target above is scope guidance and takes precedence over your angle's defaul
  * command can return hundreds of KB while the included diff is already the
  * intended 120k-character budget.
  */
+const diffSourceCache = new WeakMap<ScopeBlock, string>()
+
 function diffSource(scope: ScopeBlock): string {
+  const cached = diffSourceCache.get(scope)
+  if (cached !== undefined) return cached
   const diff = (scope.diffText ?? "").trim()
-  if (!diff) return "Run the diff command above."
-  if (diff.length > DIFF_BUDGET) {
-    return `The diff is included below, truncated at ${DIFF_BUDGET / 1000}k characters. Use it directly; run the diff command only if you need the omitted remainder.`
-  }
-  return "The diff is included below. Use it directly; do not re-run the diff command."
+  const rendered = !diff
+    ? "Run the diff command above."
+    : diff.length > DIFF_BUDGET
+      ? `The diff is included below, truncated at ${DIFF_BUDGET / 1000}k characters. Use it directly; run the diff command only if you need the omitted remainder.`
+      : "The diff is included below. Use it directly; do not re-run the diff command."
+  diffSourceCache.set(scope, rendered)
+  return rendered
 }
 
 // A max-effort fan-out renders the same scope for every finder. Cache both
@@ -738,18 +750,11 @@ ${opts.kind === "cleanup" || opts.multiLens ? `${CANDIDATE_PRECEDENCE()}\n` : ""
 Structured output only.`
 }
 
-// The verifier/sweep preamble is identical for every child in one review.
-// Cache it per ScopeBlock (a stable object for the run) so a max-effort fan-out
-// does not rebuild the same 120k-character diff for every candidate. WeakMap
-// keeps the rendering alive only while the review still references its scope.
-const verifierScopeCache = new WeakMap<ScopeBlock, string>()
-
+// The verifier/sweep preamble is identical for every child in one review and
+// is the same no-conventions scope the finders use. Share the finder cache so a
+// max-effort fan-out renders the 120k-character diff only once.
 function verifierScope(scope: ScopeBlock): string {
-  const cached = verifierScopeCache.get(scope)
-  if (cached !== undefined) return cached
-  const rendered = renderScope(scope, { includeConventions: false })
-  verifierScopeCache.set(scope, rendered)
-  return rendered
+  return finderScope(scope, false)
 }
 
 export function verifierPrompt(opts: {

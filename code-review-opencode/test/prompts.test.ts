@@ -112,11 +112,14 @@ test("xhigh inline runs 10 angles, dedups, sweeps, and floors at 7", () => {
   assert.match(p, /Target \*\*at least 7 findings\*\*/)
 })
 
-test("low effort skips test hunks and never reads whole files", () => {
+test("low effort skips test hunks and emits the JSON contract", () => {
   const p = lowPrompt("json", 4)
   assert.match(p, /Skip test\/fixture/)
   assert.match(p, /No subagents, no full-file reads/)
-  assert.match(p, /output exactly `\(none\)`/)
+  // --json is a port extension; the reference low prompt's plain-text branch
+  // would break the bare-array contract.
+  assert.match(p, /Return findings as a JSON array/)
+  assert.doesNotMatch(p, /output exactly `\(none\)`/)
 })
 
 test("minimal mode always uses ReportFindings", () => {
@@ -432,7 +435,9 @@ function assertReferenceDigest(name: string, text: string): void {
 test("assembled prompts match the recorded reference digests", () => {
   // The digest manifest proves byte-for-byte parity without storing the
   // third-party prompt text in this repository.
-  assertReferenceDigest("low", lowPrompt("json", 4))
+  // The low --json variant is a port extension (the reference low prompt
+  // prints text when ReportFindings is unavailable), so it is not part of the
+  // reference digest set.
   assertReferenceDigest("high", inlineHigh("json", 10))
   assertReferenceDigest("xhigh", inlineXhigh("json", 15))
   assertReferenceDigest("medium", minimalPrompt(15))

@@ -133,6 +133,14 @@ permissions:
   - action: shell
     resource: "*difftool*"
     effect: deny
+  # Space-prefixed patterns match a separate unsafe flag but not the safe
+  # `--no-textconv` / `--no-ext-diff` spellings.
+  - action: shell
+    resource: "* --textconv*"
+    effect: deny
+  - action: shell
+    resource: "* --ext-diff*"
+    effect: deny
   # Git config flags can point a read-only command at an external helper or
   # pager that executes arbitrary code. Deny `-c`/`--config-env` and the short
   # pager option outright; the allow rules cannot distinguish their payload.

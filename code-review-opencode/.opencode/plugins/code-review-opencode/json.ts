@@ -491,7 +491,7 @@ export function asGroupVerdicts(
 ): Array<{ index: number; verdict: Verdict["verdict"]; evidence: string }> | null {
   // Text fallback: keep the auditable verdicts instead of dropping the whole
   // group because one sibling omitted its evidence.
-  const parsed = normalizeGroupVerdictsCall(value, 64, {
+  const parsed = normalizeGroupVerdictsCall(value, Math.max(1, count), {
     tolerateMissingEvidence: true,
     tolerateDropped: true,
     tolerateOffset: true,

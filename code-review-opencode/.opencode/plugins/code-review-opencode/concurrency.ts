@@ -13,8 +13,11 @@ export async function mapLimit<T, R>(
   // worker before rethrowing. Otherwise a rejection leaves already-started
   // child sessions running after the caller has moved on.
   let failed = false
+  // A NaN limit must not produce zero workers: the caller would receive an
+  // array of undefined results while no work ran.
+  const workerCount = Number.isFinite(limit) ? Math.max(1, Math.trunc(limit)) : 1
   const workers = Array.from(
-    { length: Math.min(Math.max(1, limit), Math.max(1, items.length)) },
+    { length: Math.min(workerCount, Math.max(1, items.length)) },
     async () => {
       while (!failed) {
         const index = cursor++

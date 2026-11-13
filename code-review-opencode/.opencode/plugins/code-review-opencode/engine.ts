@@ -230,7 +230,7 @@ function dedupKey162(c: RawFinding): string {
   // The reference buckets by file and five lines. That alone drops two
   // distinct defects that happen to land in the same bucket, so the claim is
   // part of the key: only the same claim at a nearby line is a duplicate.
-  const bucket = c.line != null ? Math.round(c.line / 5) * 5 : "x"
+  const bucket = c.line != null ? Math.floor(c.line / 5) * 5 : "x"
   return `${c.file}:${bucket}:${normalizedSummary(c.summary)}`
 }
 
@@ -414,15 +414,19 @@ function mergeNearDuplicates<T extends RawFinding>(items: T[]): T[] {
     // A weaker entry must not rewrite a stronger one's claim text: the sweep
     // returns PLAUSIBLE gaps, and its reworded scenario must not be presented
     // under a CONFIRMED verdict. Equal or stronger entries may replace text.
-    const canReplace = verdictStrength(item.verdict) >= verdictStrength(rep.verdict)
-    if (canReplace && (item.failure_scenario?.length ?? 0) > (rep.failure_scenario?.length ?? 0)) {
+    const upgrades = item.verdict === "CONFIRMED" && rep.verdict !== "CONFIRMED"
+    const canReplace =
+      upgrades ||
+      (verdictStrength(item.verdict) >= verdictStrength(rep.verdict) &&
+        (item.failure_scenario?.length ?? 0) > (rep.failure_scenario?.length ?? 0))
+    if (canReplace) {
       rep.failure_scenario = item.failure_scenario
       rep.summary = item.summary
       if (item.short_summary) rep.short_summary = item.short_summary
     }
     // A file-level representative otherwise erases the only anchor.
     if (rep.line === undefined && item.line !== undefined) rep.line = item.line
-    if (item.verdict === "CONFIRMED" && rep.verdict !== "CONFIRMED") rep.verdict = item.verdict
+    if (upgrades) rep.verdict = item.verdict
     if (item.category && !rep.category) rep.category = item.category
   }
   for (const item of items) {
@@ -461,6 +465,7 @@ function toFinding(c: RawFinding, kind: "correctness" | "cleanup"): Finding {
 function normalizeDecisionBase(
   decisions: Decisions["decisions"],
   itemCount: number,
+  cap: number,
 ): Decisions["decisions"] {
   if (decisions.length === 0 || itemCount === 0) return decisions
   let maxIndex = 0
@@ -472,11 +477,15 @@ function normalizeDecisionBase(
       if (index > maxIndex) maxIndex = index
     }
   }
-  // A zero-based plan must name index 0 somewhere; otherwise it is either a
-  // 1-based plan or malformed. Shift only when every index is in range, so an
-  // out-of-range extra cannot turn a 0-based plan into a different one. Do not
-  // use Math.max(...indices): a child-supplied merge array is unbounded.
-  if (hasZero || maxIndex === 0 || maxIndex > itemCount) return decisions
+  // A zero-based plan must name index 0 somewhere. A plan without it is
+  // 1-based only when it is full-length or fills the output cap; a legitimate
+  // subset plan can start above 0 and must not be shifted. Do not use
+  // Math.max(...indices): a child-supplied merge array is unbounded.
+  const fullPlan = maxIndex === itemCount
+  const cappedPlan = Number.isFinite(cap) && decisions.length >= cap && maxIndex === cap
+  if (hasZero || maxIndex === 0 || maxIndex > itemCount || (!fullPlan && !cappedPlan)) {
+    return decisions
+  }
   return decisions.map((d) => ({
     index: d.index - 1,
     merge: d.merge.map((i) => i - 1),
@@ -493,7 +502,7 @@ function applyIndexPlan<T, R>(
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
-  const plan = normalizeDecisionBase(decisions, items.length)
+  const plan = normalizeDecisionBase(decisions, items.length, cap)
   for (const d of plan) {
     if (output.length >= cap) {
       if (d.index >= 0 && d.index < items.length && !claimed.has(d.index)) truncated = true
@@ -577,7 +586,7 @@ function applyDecisions(
       // merged finding carried. Resolve the anchor before computing the
       // "also at" list, or the inherited line is both the finding's own
       // location and an additional location.
-      const line = c.line ?? merged.find((m) => m.line !== undefined)?.line
+      const line = c.line ?? merged.find((m) => m.file === c.file && m.line !== undefined)?.line
       const anchored = line === undefined ? c : { ...c, line }
       const alsoLocations = [...new Set(merged.map(location).filter((l) => l !== location(anchored)))]
       const also = alsoLocations.length > 0 ? ` [same root cause also at: ${alsoLocations.join(", ")}]` : ""
@@ -715,10 +724,7 @@ function kindForCategory(category: string | undefined): "correctness" | "cleanup
   // slug may claim bug priority; an unattributed or invented slug falls back
   // to cleanup, mirroring kindFor().
   if (category === undefined) return "cleanup"
-  const slug = categorySlug(category)
-  if (slug === "correctness") return "correctness"
-  if (slug === "cleanup" || CLEANUP_LABELS.includes(slug)) return "cleanup"
-  return "cleanup"
+  return categorySlug(category) === "correctness" ? "correctness" : "cleanup"
 }
 
 function buildFinders(cell: Cell, budget?: number): Finder[] {
@@ -1450,20 +1456,32 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         // half of a merged pair. Returning only the synthesizer's list is what
         // the reference does; an omitted finding is a model decision, not a
         // defect the orchestrator can safely reconstruct.
-        // A text report can be truncated by the normalizer before the final
-        // cap is applied. Preserve that fact so the engine can record
-        // truncatedFrom instead of presenting a shortened list as complete.
-        truncatedByCap = report.truncated === true || (Number.isFinite(cap) && emitted.length > cap)
-        findings = emitted.slice(0, Number.isFinite(cap) ? cap : undefined)
-        if (unmatched > 0) {
-          // A reworded or merged entry is indistinguishable from an invented
-          // one, so the matching failure may have dropped verified findings.
-          // Mark the run incomplete instead of presenting the remainder as a
-          // complete review.
-          warnings.push(`synthesis reported ${pluralize(unmatched, "finding")} that did not match a verified candidate; dropped`)
+        if (emitted.length === 0 && ranked.length > 0) {
+          // Every re-emitted entry failed the match. An empty report would
+          // render as "No findings." even though verified survivors exist.
+          warnings.push(
+            "synthesis report did not match any verified finding; returning verified findings unmerged",
+          )
           partial = true
+          unmergedFallback(
+            "Synthesis could not match any verified finding — returning verified findings unmerged.",
+          )
+        } else {
+          // A text report can be truncated by the normalizer before the final
+          // cap is applied. Preserve that fact so the engine can record
+          // truncatedFrom instead of presenting a shortened list as complete.
+          truncatedByCap = report.truncated === true || (Number.isFinite(cap) && emitted.length > cap)
+          findings = emitted.slice(0, Number.isFinite(cap) ? cap : undefined)
+          if (unmatched > 0) {
+            // A reworded or merged entry is indistinguishable from an invented
+            // one, so the matching failure may have dropped verified findings.
+            // Mark the run incomplete instead of presenting the remainder as a
+            // complete review.
+            warnings.push(`synthesis reported ${pluralize(unmatched, "finding")} that did not match a verified candidate; dropped`)
+            partial = true
+          }
+          summary = report.summary
         }
-        summary = report.summary
       }
     }
   } else if (opts.semanticMerge && ranked.length > 1) {

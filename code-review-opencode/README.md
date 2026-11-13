@@ -34,7 +34,7 @@ unless the invocation explicitly asks for `--fix` or `--comment`.
     prompts/            hashed prompt fragments + manifest.json
   agents/               read-only finder/verifier/sweep/synth agents
 sources/                local-only third-party captures (gitignored)
-test/                   360 tests (node --test)
+test/                   362 tests (node --test)
 scripts/install-global.sh          global symlink installer for this account
 CODE_REVIEW_ORCHESTRATION_MAP.md   full mechanism map
 CODE_REVIEW_RECONSTRUCTION_RESEARCH.md

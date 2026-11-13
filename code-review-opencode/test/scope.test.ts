@@ -862,3 +862,20 @@ test("a numeric PR target is resolved in the session repository, not a same-name
   assert.equal(calls.every((c) => c.argv[0] !== "gh" || realpathSync(c.cwd) === realpathSync(parent)), true)
   rmSync(parent, { recursive: true, force: true })
 })
+
+test("an old-path anchor stays on the old side for a same-number replacement", () => {
+  const patch = [
+    "diff --git a/src/old.ts b/src/new.ts",
+    "similarity index 90%",
+    "rename from src/old.ts",
+    "rename to src/new.ts",
+    "--- a/src/old.ts",
+    "+++ b/src/new.ts",
+    "@@ -10,1 +10,1 @@",
+    "-old guard",
+    "+new guard",
+  ].join("\n")
+  const sides = diffSideMap(patch, [{ file: "src/old.ts", line: 10 }])
+  assert.equal(sides.hasLine("src/old.ts", 10), true)
+  assert.equal(sides.sideFor("src/old.ts", 10), "LEFT")
+})
