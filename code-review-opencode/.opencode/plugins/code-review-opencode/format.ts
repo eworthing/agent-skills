@@ -97,7 +97,7 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
 
   // The deterministic fallback summaries are bookkeeping ("N findings
   // survived verification"); only show a synthesizer's actual review summary.
-  if (result.findings.length > 0 && !/^(?:\d+|No) finding/.test(result.summary)) {
+  if (result.findings.length > 0 && !/^(?:\d+ findings? survived|No findings survived)/.test(result.summary)) {
     out = `${sanitizeControl(result.summary)}\n\n${out}`
   }
 

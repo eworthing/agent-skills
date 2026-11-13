@@ -124,7 +124,10 @@ export function hostFromRemote(url: string): Host {
 
 /** Hostname from an scp-like (`git@host:org/repo`) or URL remote. */
 function remoteHostname(url: string): string | undefined {
-  const scp = url.match(/^[^@/\s]+@([^:/\s]+):/)
+  const scp =
+    url.match(/^[^@/\s]+@([^:/\s]+):/) ??
+    // user-less scp form: `host:org/repo` (but not `https://` or `ssh://`)
+    url.match(/^([^@/:\s]+):(?!\/\/)/)
   if (scp) return scp[1]
   try {
     // Keep a non-standard port so a GHE instance served on one is detected.
@@ -275,9 +278,10 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   const { scope, result } = deps
   if (result.findings.length === 0) return ""
   const exec = deps.exec ?? defaultExec
-  // A 10s hard cap killed an otherwise successful post on slow GHE links. No
-  // timeout by default; an explicit dependency or env value can bound it.
-  const timeoutMs = deps.timeoutMs ?? envInt("CODE_REVIEW_COMMENT_TIMEOUT_MS")
+  // A 10s hard cap killed an otherwise successful post on slow GHE links, so
+  // use a generous default; an explicit dependency/env value can override it,
+  // and `0` disables the timeout.
+  const timeoutMs = deps.timeoutMs ?? envInt("CODE_REVIEW_COMMENT_TIMEOUT_MS") ?? 120_000
   const execOpts: ExecOptions = {
     ...(deps.signal ? { signal: deps.signal } : {}),
     ...(timeoutMs !== undefined && timeoutMs > 0 ? { timeoutMs } : {}),

@@ -116,6 +116,9 @@ function hasResultKey(body: string): boolean {
 /** The result objects the child tools are supposed to return. */
 function isResultShape(value: unknown): boolean {
   if (!isRecord(value)) return false
+  // A grouped-verdict item carries an `index`; it is an element of the
+  // `verdicts` array, not a top-level verdict result.
+  if ("index" in value) return false
   // A verdict result needs evidence. A finding inside a bare array can also
   // carry a `verdict` field; treating it as a top-level result would return
   // that one item instead of the array the child actually submitted.

@@ -384,7 +384,6 @@ function sameDefect(a: RawFinding, b: RawFinding): boolean {
   }
 
   if (!sameClaim(a.summary, b.summary, CLAIM_POLICY.sameLine)) return false
-  if (normalizedSummary(a.summary) === normalizedSummary(b.summary)) return true
   // A strong summary paraphrase is the same defect even when the two finders
   // describe different downstream consequences ("the render throws" vs "the
   // handler returns 500"). Weaker summary overlap still needs the failure
@@ -475,37 +474,6 @@ function toVerdictFinding(
  * synthesis differ only in how they combine a representative with its merged
  * entries; the claim/backfill mechanics are the same.
  */
-/** Tolerate a 1-based plan when every index is one past the valid range. */
-function normalizeDecisionBase(
-  decisions: Decisions["decisions"],
-  itemCount: number,
-  cap: number,
-): Decisions["decisions"] {
-  if (decisions.length === 0 || itemCount === 0) return decisions
-  let maxIndex = 0
-  let hasZero = false
-  for (const d of decisions) {
-    for (const index of [d.index, ...d.merge]) {
-      if (index < 0) return decisions
-      if (index === 0) hasZero = true
-      if (index > maxIndex) maxIndex = index
-    }
-  }
-  // A zero-based plan must name index 0 somewhere. A plan without it is
-  // 1-based only when it is full-length or fills the output cap; a legitimate
-  // subset plan can start above 0 and must not be shifted. Do not use
-  // Math.max(...indices): a child-supplied merge array is unbounded.
-  const fullPlan = maxIndex === itemCount
-  const cappedPlan = Number.isFinite(cap) && decisions.length >= cap && maxIndex === cap
-  if (hasZero || maxIndex === 0 || maxIndex > itemCount || (!fullPlan && !cappedPlan)) {
-    return decisions
-  }
-  return decisions.map((d) => ({
-    index: d.index - 1,
-    merge: d.merge.map((i) => i - 1),
-  }))
-}
-
 function applyIndexPlan<T, R>(
   items: T[],
   decisions: Decisions["decisions"],
@@ -516,7 +484,10 @@ function applyIndexPlan<T, R>(
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
-  const plan = normalizeDecisionBase(decisions, items.length, cap)
+  // A zero-based plan must name index 0. Without it, the plan is either
+  // 1-based or a subset, and shifting would silently mis-index one of them.
+  // Ignore the plan and keep every finding in deterministic order instead.
+  const plan = decisions.length > 0 && !decisions.some((d) => d.index === 0) ? [] : decisions
   for (const d of plan) {
     if (output.length >= cap) {
       if (d.index >= 0 && d.index < items.length && !claimed.has(d.index)) truncated = true
@@ -816,7 +787,9 @@ function buildFinders(cell: Cell, budget?: number): Finder[] {
 
 export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   const { cell, scope, level } = opts
-  const concurrency = Math.max(1, opts.concurrency ?? 8)
+  const concurrency = Number.isFinite(opts.concurrency)
+    ? Math.max(1, Math.trunc(opts.concurrency as number))
+    : 8
   // Every role shares this gate; mapLimit below is only a scheduling hint.
   const runner = limitRunner(opts.runner, concurrency)
   const block = scopeBlock(scope)

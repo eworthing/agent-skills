@@ -577,6 +577,10 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           // prompt embeds the diff), so use the same exponential backoff as
           // the other transcript-reading branches.
           if (waitState.resolved) {
+            // The hint triggered one transcript read; clear it so later
+            // iterations use the backoff path instead of re-reading the full
+            // transcript every poll.
+            waitState.resolved = false
             if (await settleFromMessages()) return
             if (stallMs > 0 && Date.now() - lastActivity >= stallMs) {
               await interrupt()

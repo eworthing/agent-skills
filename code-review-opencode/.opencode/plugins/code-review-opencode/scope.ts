@@ -17,7 +17,7 @@ import { homedir } from "node:os"
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
 import { TextDecoder } from "node:util"
 import { StringDecoder } from "node:string_decoder"
-import { envInt, pluralize, renderPath, truncateText } from "./finding.ts"
+import { envInt, pluralize, positiveLine, renderPath, truncateText } from "./finding.ts"
 
 export type ExecOptions = { signal?: AbortSignal; timeoutMs?: number }
 
@@ -1127,7 +1127,7 @@ type Plan = {
 
 /** A bare number is a PR target. Keep the spelling in one place. */
 export function prTargetNumber(target: string | undefined): number | undefined {
-  return target !== undefined && /^\d+$/.test(target) ? Number(target) : undefined
+  return positiveLine(target)
 }
 
 type TargetClassification = {
@@ -1351,10 +1351,12 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     // in edits from whichever local branch happens to be current.
     const current = await git(exec, gitCwd, ["rev-parse", "--abbrev-ref", "HEAD"], callOpts())
     if (current.code === 0 && current.stdout.trim() === target) {
-      const worktree = await git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts())
+      const [worktree, listed] = await Promise.all([
+        git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts()),
+        listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts()),
+      ])
       if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
       if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
-      const listed = await listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts())
       // The range is the first plan entry; reuse this listing instead of
       // running the same name-status command again below.
       firstFiles = listed.files
@@ -1401,11 +1403,13 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
           diffBase = base
         }
       }
-      const worktree = await git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts())
+      const [worktree, listed] = await Promise.all([
+        git(exec, gitCwd, quietArgs({ range: "HEAD", pathspec }), callOpts()),
+        listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts()),
+      ])
       if (worktree.aborted) throw new Error("Diff discovery was cancelled.")
       if (worktree.timedOut) throw new Error(`git diff timed out${timeoutSuffix}.`)
       const dirty = worktree.code === 1
-      const listed = await listFiles(exec, gitCwd, nameArgv({ range, pathspec }), callOpts())
       firstFiles = listed.files
       firstFilesFailed = !listed.ok
       add({ range, pathspec })
