@@ -495,14 +495,23 @@ export type LimitResolution = {
 }
 
 /**
+ * Reference `fo`: the 32 cap applies whenever the review runs as a fork, not
+ * only when the output is the ReportFindings tool. The engine path is the
+ * fork equivalent here, so `--json` must not lift the bound.
+ */
+export function hardLimitApplies(usesEngine: boolean, hasReportFindings: boolean): boolean {
+  return usesEngine || hasReportFindings
+}
+
+/**
  * Reference `fo`: resolve --max-findings.
- * `stated` is what the prompt receives; without ReportFindings the 32 cap is
- * not applied because the JSON contract can carry any count.
+ * `stated` is what the prompt receives; `capAtHardLimit` is true on the
+ * engine/fork path or when the output is ReportFindings.
  */
 export function resolveMaxFindings(
   parsed: Parsed,
   cell: Cell,
-  hasReportFindings: boolean,
+  capAtHardLimit: boolean,
   lastUsed?: number | "all",
 ): LimitResolution {
   const reused =
@@ -520,7 +529,7 @@ export function resolveMaxFindings(
   if (cell.suppressMaxFindings) {
     stated = undefined
   } else if (
-    hasReportFindings &&
+    capAtHardLimit &&
     (asked === "all" || (typeof asked === "number" && asked > HARD_FINDINGS_CAP))
   ) {
     stated = HARD_FINDINGS_CAP

@@ -44,6 +44,7 @@ import {
 } from "./prompts.ts"
 import {
   fixAction,
+  hardLimitApplies,
   parseArgs,
   parseExtensions,
   parseRoleVariants,
@@ -447,9 +448,6 @@ async function resolveAndRun(
     if (stored !== undefined) await storeValue(STORAGE_MAX, stored)
   }
   // The engine renders its own text report and never calls ReportFindings.
-  // Only the prompt paths (inline/minimal cells, --driver prompt, or a host
-  // without child sessions) go through the 32-entry host schema, so only they
-  // need the cap. A deterministic engine report may legitimately exceed 32.
   const childSessions = supportsChildSessions(ctx)
   const usesEngine = flags.driver !== "prompt" && cell.engine === "multi" && childSessions
   const kind: OutputKind = flags.json ? "json" : "reportfindings"
@@ -457,10 +455,13 @@ async function resolveAndRun(
   // that path still needs the host's 32-entry cap.
   const willApplyFix = parsed.fix && !flags.dryRun && !flags.json
   const hasReportFindings = kind === "reportfindings" && (!usesEngine || willApplyFix)
+  // The reference's `fo` caps `--max-findings all` at 32 on the fork path
+  // regardless of output mode. The engine path is the fork equivalent here, so
+  // `--json` keeps the same ceiling instead of exposing the uncapped tail.
   const limit = resolveMaxFindings(
     parsed,
     cell,
-    hasReportFindings,
+    hardLimitApplies(usesEngine, hasReportFindings),
     typeof storedMax === "number" || storedMax === "all" ? storedMax : undefined,
   )
   const max = promptLimit(cell, limit.stated)

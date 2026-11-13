@@ -367,7 +367,7 @@ The reference constants were extracted from the binary region
 | `Is` | single-pass disclosure | `inlineFallback` | EXACT |
 | `Je` | "perform each angle yourself" | `AGENT_UNAVAILABLE` | EXACT |
 | `Us` | GitHub comment block | `GITHUB_COMMENT` | ADAPTED (port-only GHE `--hostname` sentence) |
-| `js` | GitLab comment block | `gitlabComment` | EXACT |
+| `js` | GitLab comment block | — | OMITTED (GitLab MRs out of scope) |
 | `Hs` | `--fix` block | `fixBlock` | EXACT |
 | `mo` | re-report with outcome | `fixBlock`/`FIX_LATER` | EXACT |
 | `Fs` | fix-later block | `FIX_LATER` | EXACT |
@@ -385,7 +385,7 @@ The reference constants were extracted from the binary region
 | `Ft` | fork result formatter | — | ADAPTED (engine formats directly) |
 | `Qs` | diff-size finder hint | `plannedFinderCount` | EXACT formula |
 | `Zs` | diff line counter | `scope.diffLines` | EQUIVALENT |
-| `fo` | max-findings resolution | `resolveMaxFindings` | EXACT |
+| `fo` | max-findings resolution | `resolveMaxFindings` | EXACT (32 cap on engine/fork + ReportFindings) |
 | `rt`/`Ys`/`zs` | last effort storage | `ctx.storage` | EQUIVALENT |
 | `st` | model effort mapping | `modelEffort` field | EXACT table, host-limited |
 | `he` | dispatch table | `V318_FAMILIES`/`V318_CELLS` | EXACT |
@@ -506,9 +506,10 @@ Recovered exactly from the binary and the published schema:
 - Result text: `"No findings reported."` or `"N finding(s) reported."`.
 - Result data: `{ count, level, findings }`.
 
-The 32-entry cap applies only when the ReportFindings contract is active, or
-for `o5-bmin`. `--json` bypasses it. `fo` maps `all` or any value above 32 to
-32 for those paths.
+The 32-entry cap applies on the reference's fork path and whenever the
+ReportFindings contract is active. The engine path is the fork equivalent
+here, so `--json` keeps the same ceiling. `fo` maps `all` or any value above
+32 to 32 for those paths.
 
 Replica:
 
@@ -551,9 +552,14 @@ Reference:
 
 Replica: `postComments` uses `gh api` per finding with `commit_id`, `path`,
 `line`, `side=RIGHT`, bounded concurrency, and a checked-out branch-PR
-lookup. GitHub and GitLab are detected from the origin remote; GitLab MR
-posting is a notice (documented non-goal). **EQUIVALENT for GitHub**, with a
-documented GitLab divergence.
+lookup. When a finding has no valid inline anchor (or the inline call fails),
+the remaining findings are posted as one general PR comment via
+`gh api repos/{owner}/{repo}/issues/{pr}/comments`; this borrows the
+reference's GitLab general-note mechanism for GitHub and never duplicates a
+successful inline post. GitHub and GitLab are detected from the origin
+remote; GitLab MR posting is a notice (documented non-goal). **EQUIVALENT for
+GitHub**, with a documented GitLab divergence and the general-comment
+fallback as an extension.
 
 ### 9.3 `--post`
 
@@ -572,8 +578,9 @@ and the command stores `null`. **EXACT**.
 
 Reference: `i9()` output format `json` disables ReportFindings and uses the
 JSON-array contract. Replica: `--json` selects `OutputKind = "json"`, bypasses
-ReportFindings, and prints a bare array. **EQUIVALENT** (OpenCode flag name is
-an extension; the contract is exact).
+ReportFindings, and prints a bare array. The 32-finding cap still applies on
+the engine/fork path. **EQUIVALENT** (OpenCode flag name is an extension; the
+contract is exact).
 
 ---
 
@@ -682,7 +689,7 @@ marker. It is used to avoid presenting an incomplete run as complete.
 | `fo`/`go` limits | `resolveMaxFindings` + `maxFindingsNotice` | EXACT |
 | `ei` notices | `effortNotice`/`ultraNotice`/`postNotice` | EXACT (local/fallback branches) |
 | Non-interactive memory | `remember = interactive && !json` | EXACT |
-| `Us`/`js` comments | `comment.ts` (`gh api`, `glab mr note`) | EQUIVALENT |
+| `Us`/`js` comments | `comment.ts` (`gh api`; GitHub inline + general fallback) | EQUIVALENT for GitHub; GitLab OMITTED |
 | `Hs` fixes | `fixBlock` + main-session model | EQUIVALENT |
 | `Fs` fix-later | `FIX_LATER` | EXACT |
 | `jt` renderer | `formatHuman` + `sanitizeControl` | EXACT |
@@ -706,9 +713,10 @@ marker. It is used to avoid presenting an incomplete run as complete.
    reviewer. `ultra` is accepted, produces a notice, and runs a local
    max-effort review. This matches the reference's local fallback branch, not
    its cloud branch.
-2. **No `/verify` follow-up.** The reference may append a `/verify` suggestion
-   when the diff has a runtime surface. OpenCode has no bundled `/verify`; the
-   replica omits the block.
+2. **No bundled `/verify` skill.** The reference may append a `/verify`
+   suggestion when the diff has a runtime surface. The replica has the
+   follow-up block and gates it on `hasSkill(..., "verify")`; OpenCode does not
+   bundle the skill, so it is dormant unless the user installs one.
 3. **No host message mode.** `Bs` only applies when the host renders
    ReportFindings as a message card. OpenCode's tool result is the report.
 4. **No end-of-response marker.** `yn` is a Claude Code host parsing aid.
@@ -728,6 +736,10 @@ marker. It is used to avoid presenting an incomplete run as complete.
    Reconstruction controls; none are reference flags.
 10. **`--json`.** The reference's output-format switch is a print-mode setting;
     the replica exposes it as a command flag.
+11. **No GitLab MR target/comment path.** The reference detects a GitLab MR
+    target and posts one general note via `glab mr note`. The replica detects
+    GitLab but refuses `--comment`; GitHub uses inline comments plus a
+    general-comment fallback for findings that cannot be anchored.
 
 ---
 

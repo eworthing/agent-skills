@@ -26,7 +26,7 @@ unless the invocation explicitly asks for `--fix` or `--comment`.
     reportfindings.ts   ReportFindings schema and validation
     format.ts           JSON / human / tool-result contracts
     json.ts             tolerant structured-output parsing
-    comment.ts          GitHub/GitLab comment posting, bounded + host-routed
+    comment.ts          GitHub comment posting, bounded + host-routed (GitLab out of scope)
     host.ts             child-session and skill capability probes
     finding.ts          shared anchor, short-summary, and plural helpers
     concurrency.ts      shared bounded worker pool

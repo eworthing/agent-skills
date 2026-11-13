@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   buildGitHubCommentArgs,
+  buildGitHubSummaryArgs,
   detectHostDetails,
   hostFromRemote,
   isGitHubRemote,
@@ -9,6 +10,7 @@ import {
   postComments,
   resolvePrInfo,
   samePrBase,
+  summaryCommentBody,
 } from "../.opencode/plugins/code-review-opencode/comment.ts"
 import type { Exec, ExecOptions } from "../.opencode/plugins/code-review-opencode/scope.ts"
 import { engineFinding, engineResult, scopeOf } from "./helpers.ts"
@@ -112,6 +114,7 @@ test("a checked-out PR branch resolves its PR and posts inline comments", async 
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
   const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
   assert.ok(api?.includes("repos/acme/app/pulls/9/comments"))
+  assert.equal(calls.some((c) => c.some((a) => a.includes("/issues/9/comments"))), false)
   assert.equal((await resolvePrInfo("/repo", scope, exec))?.number, 9)
 })
 
@@ -172,7 +175,7 @@ test("inline posting is bounded and failures keep finding order", async () => {
   assert.ok(text.indexOf("bad-0.ts") < text.indexOf("bad-2.ts"), "failure order must follow finding order")
 })
 
-test("a finding without a positive line is not posted", async () => {
+test("a finding without a positive line is posted as a general comment", async () => {
   const scope = scopeOf(["src/a.ts"], { pr: 9 })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
@@ -184,7 +187,59 @@ test("a finding without a positive line is not posted", async () => {
   const text = await postComments({ cwd: "/repo", scope, result: result([finding({ line: 0 })]), exec })
   assert.match(text, /Posted 0\/1/)
   assert.match(text, /no line to anchor/)
-  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
+  assert.match(text, /Posted the 1 finding that could not be posted inline as a general PR comment/)
+  const summary = calls.find((c) => c.some((a) => a.includes("/issues/9/comments")))
+  assert.ok(summary)
+  assert.ok(summary.some((a) => a.startsWith("body=") && a.includes("missing await")))
+})
+
+test("an inline failure is reposted as one general PR comment", async () => {
+  const findings = [
+    finding({ file: "src/a.ts", line: 4 }),
+    finding({ file: "src/b.ts", line: 8, summary: "second finding" }),
+  ]
+  const scope = scopeOf(["src/a.ts", "src/b.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      return argv.some((a) => a.includes("/issues/9/comments"))
+        ? { code: 0 }
+        : { code: 1, stderr: "422 Unprocessable Entity" }
+    }
+    return { code: 1 }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(findings), exec })
+  assert.match(text, /Posted 0\/2 inline GitHub PR comments\./)
+  assert.match(text, /Posted the 2 findings that could not be posted inline as a general PR comment/)
+  const summary = calls.find((c) => c.some((a) => a.includes("/issues/9/comments")))
+  assert.ok(summary)
+  const body = summary.find((a) => a.startsWith("body=")) ?? ""
+  assert.match(body, /src\/a\.ts:4/)
+  assert.match(body, /src\/b\.ts:8/)
+})
+
+test("the general comment names every unposted finding", () => {
+  const body = summaryCommentBody([
+    { file: "src/a.ts", line: 4, summary: "missing await", failure_scenario: "the promise rejects" },
+    { file: "src/b.ts", summary: "no line", failure_scenario: "the finding is lost" },
+  ])
+  assert.match(body, /src\/a\.ts:4/)
+  assert.match(body, /src\/b\.ts/)
+  assert.match(body, /could not be posted as inline comments/)
+})
+
+test("the general comment routes to a GitHub Enterprise hostname", () => {
+  const args = buildGitHubSummaryArgs({
+    owner: "acme",
+    repo: "app",
+    pr: 9,
+    body: "hi",
+    hostname: "ghe.example.com",
+  })
+  assert.deepEqual(args.slice(0, 4), ["gh", "api", "--hostname", "ghe.example.com"])
+  assert.ok(args.includes("repos/acme/app/issues/9/comments"))
 })
 
 test("a range review does not post to the current branch's PR", async () => {

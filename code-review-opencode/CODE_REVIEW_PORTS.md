@@ -115,8 +115,8 @@ surface.
 **Relevance.** The closest public port of the local `max` / `xhigh`
 behavior. Its `REVIEW.md` injection and 32-cap match the managed service /
 `ReportFindings` path, not the local reference command; this reconstruction
-rejected the `REVIEW.md` injection and kept the 32 cap only for the typed
-tool.
+rejected the `REVIEW.md` injection and kept the 32 cap for the typed tool and
+the engine/fork path.
 
 ## Ultra-style local ports
 

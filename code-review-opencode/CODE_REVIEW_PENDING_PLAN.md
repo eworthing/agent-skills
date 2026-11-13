@@ -285,10 +285,10 @@ signal, not a fidelity gate.
 
 **Problem.** The two contracts disagree on purpose:
 
-- `--json` returns the complete verified set because it bypasses the host
-  findings schema, but it deliberately ignores `--fix`.
-- Default report mode can apply fixes, but `ReportFindings` caps the list at 32,
-  so a 48-finding review needs a capture-then-fix loop.
+- `--json` now keeps the reference's 32-finding ceiling (the engine/fork path
+  is capped), but it deliberately ignores `--fix`.
+- Default report mode can apply fixes, and `ReportFindings` also caps the list
+  at 32, so a 48-finding review needs a capture-then-fix loop.
 
 **Proposed extension.** Add an explicit `--fix-all` flag rather than changing
 `--json --fix` semantics.

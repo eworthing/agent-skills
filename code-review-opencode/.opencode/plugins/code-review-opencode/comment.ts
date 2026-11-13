@@ -81,6 +81,36 @@ export function commentBody(finding: { summary: string; failure_scenario: string
   return `${finding.summary}\n\nFailure scenario: ${finding.failure_scenario}`
 }
 
+/** A single PR-level comment, used when a finding has no valid inline anchor. */
+export function buildGitHubSummaryArgs(opts: {
+  owner: string
+  repo: string
+  pr: number
+  body: string
+  /** GitHub Enterprise hostname; omitted for github.com. */
+  hostname?: string
+}): string[] {
+  const hostname = enterpriseHost(opts.hostname)
+  return [
+    "gh",
+    "api",
+    ...(hostname ? ["--hostname", hostname] : []),
+    `repos/${opts.owner}/${opts.repo}/issues/${opts.pr}/comments`,
+    "-f",
+    `body=${opts.body}`,
+  ]
+}
+
+/** The one-comment fallback: every finding that could not be posted inline. */
+export function summaryCommentBody(
+  findings: Array<{ file: string; line?: number; summary: string; failure_scenario: string }>,
+): string {
+  const entries = findings.map(
+    (f) => `- **${renderedLocation(f)}** — ${f.summary}\n\n  ${f.failure_scenario}`,
+  )
+  return `## Code review findings\n\nThe following findings could not be posted as inline comments:\n\n${entries.join("\n\n")}`
+}
+
 /** Hostname from a PR URL. `gh` keys credentials by hostname, so a port is omitted. */
 function hostFromPrUrl(value: string): string | undefined {
   return remoteHostname(value)
@@ -495,7 +525,28 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       : { ok: false, message: `${f.file}:${line}: ${r.stderr.trim() || "gh api failed"}` }
   })
   const posted = outcomes.filter((o) => o.ok).length
+  const unposted = result.findings.filter((_, i) => !outcomes[i].ok)
+  // The reference's GitLab path posts one general MR note; the same mechanism
+  // keeps GitHub findings visible when an inline anchor is impossible. Only
+  // the failed findings go in the note, so a successful inline post is never
+  // duplicated.
+  let summary = ""
+  if (unposted.length > 0) {
+    const r = await call(
+      buildGitHubSummaryArgs({
+        owner,
+        repo: name,
+        pr,
+        body: summaryCommentBody(unposted),
+        ...(githubHostname ? { hostname: githubHostname } : {}),
+      }),
+    )
+    summary =
+      r.code === 0
+        ? ` Posted the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment.`
+        : ` Could not post the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
+  }
   const failures = outcomes.filter((o) => !o.ok).map((o) => o.message)
   const suffix = failures.length > 0 ? `\n${failures.map((x) => `  - ${x}`).join("\n")}` : ""
-  return `Posted ${posted}/${result.findings.length} ${pluralWord(result.findings.length, "inline GitHub PR comment")}.${suffix}`
+  return `Posted ${posted}/${result.findings.length} ${pluralWord(result.findings.length, "inline GitHub PR comment")}.${summary}${suffix}`
 }
