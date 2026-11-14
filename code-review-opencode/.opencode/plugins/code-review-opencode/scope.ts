@@ -100,6 +100,14 @@ export type Scope = {
   scopeKind?: string
   /** Branch/ref the reviewed range is based on, when it is known. */
   diffBase?: string
+  /** Local snapshot identity captured with a branch/worktree patch. */
+  reviewedHeadOid?: string
+  /** Tracked tree was clean while the local patch was captured. */
+  reviewedTrackedTreeClean?: boolean
+  /** The captured patch included uncommitted tracked worktree changes. */
+  reviewedWorktreeDiff?: boolean
+  /** HEAD stayed fixed across patch capture. */
+  reviewedHeadStable?: boolean
   /** Non-fatal discovery failures; the review must not present itself as complete. */
   warnings?: string[]
 }
@@ -173,6 +181,12 @@ export const GIT_HARDENING = [
   "core.askPass=",
   "-c",
   "core.quotePath=false",
+  "-c",
+  "diff.mnemonicPrefix=false",
+  "-c",
+  "diff.noprefix=false",
+  "-c",
+  "color.ui=false",
 ]
 
 /** Prefix a `git` argv with the read-only config hardening. */
@@ -352,6 +366,63 @@ export function missingExplicitPathTarget(cwd: string, target?: string): string 
   return resolveTargetPath(cwd, target) === null ? target : undefined
 }
 
+/** Resolve a missing explicit path only when Git confirms tracked deletions. */
+async function resolveDeletedPathScope(
+  exec: Exec,
+  cwd: string,
+  target: string,
+  opts: ExecOptions,
+): Promise<DiffScope | null> {
+  const root = findGitRoot(cwd)
+  if (!root) return null
+  let absolute = resolve(cwd, target)
+  try {
+    absolute = join(realpathSync(dirname(absolute)), basename(absolute))
+  } catch {
+    /* keep the lexical path when an ancestor is also missing */
+  }
+  const relPath = relative(root, absolute).split(sep).join("/")
+  if (!relPath || relPath === ".." || relPath.startsWith("../")) return null
+  const listed = await git(exec, root, ["ls-files", "--deleted", "-z", "--", `:(literal)${relPath}`], opts)
+  if (listed.code !== 0) return null
+  let deleted = listed.stdout.split("\0").filter(Boolean)
+  if (deleted.length === 0) {
+    // A staged removal disappears from the index but still exists in HEAD.
+    const indexed = await git(
+      exec,
+      root,
+      ["ls-files", "--with-tree=HEAD", "-z", "--", `:(literal)${relPath}`],
+      opts,
+    )
+    if (indexed.code !== 0) return null
+    deleted = indexed.stdout.split("\0").filter(Boolean)
+  }
+  if (deleted.length === 0) {
+    // A committed branch deletion is absent from the current tree. Ask for
+    // only the most recent matching path instead of materializing all history.
+    const history = await git(
+      exec,
+      root,
+      ["log", "-1", "--all", "--format=", "--name-only", "-z", "--", `:(literal)${relPath}`],
+      opts,
+    )
+    if (history.code !== 0) return null
+    deleted = history.stdout.split("\0").filter(Boolean)
+  }
+  if (!deleted.some((path) => path === relPath || path.startsWith(`${relPath.replace(/\/$/, "")}/`))) return null
+  return { root, relPath, isPath: true }
+}
+
+/** True when Git confirms that a missing explicit target is a tracked deletion. */
+export async function isDeletedPathTarget(
+  cwd: string,
+  target: string | undefined,
+  exec: Exec = defaultExec,
+): Promise<boolean> {
+  if (!target || missingExplicitPathTarget(cwd, target) === undefined) return false
+  return (await resolveDeletedPathScope(exec, cwd, target, {})) !== null
+}
+
 /** Extract a path-looking token from free-form instructions. */
 export function extractPathHint(target: string, cwd: string): string | undefined {
   const tokens = target.split(/\s+/).map((t) =>
@@ -384,6 +455,9 @@ function gitDiffArgs(spec: DiffSpec, mode: DiffMode): string[] {
     // permission pattern even for `--staged` or a mode flag.
     "--no-ext-diff",
     "--no-textconv",
+    "--no-color",
+    "--src-prefix=a/",
+    "--dst-prefix=b/",
     ...(spec.staged ? ["--staged"] : []),
     ...(mode === "quiet"
       ? ["--quiet"]
@@ -1281,6 +1355,20 @@ export async function classifyTarget(
       return { ...(pr !== undefined ? { pr } : {}), branchCandidate: true, branchRef: remoteRef }
     }
   }
+  if (
+    !pathScope?.isPath &&
+    target &&
+    pr === undefined &&
+    !looksLikeRange(target) &&
+    !target.includes(" ") &&
+    (target.includes("/") || /\.[a-z0-9]{1,8}$/i.test(target)) &&
+    resolveTargetPath(cwd, target) === null
+  ) {
+    pathScope = (await resolveDeletedPathScope(exec, cwd, target, opts ?? {})) ?? undefined
+    if (pathScope) {
+      return { ...(pr !== undefined ? { pr } : {}), branchCandidate: false, pathScope }
+    }
+  }
   return {
     ...(pr !== undefined ? { pr } : {}),
     branchCandidate: false,
@@ -1337,9 +1425,6 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   // whole working-tree diff. A typo is a target error, not a review of every
   // changed file.
   const missingExplicit = missingExplicitPathTarget(cwd, target)
-  if (missingExplicit !== undefined) {
-    throw new Error(`Review target path not found: ${missingExplicit}`)
-  }
 
   // A bare number is a PR target. Resolve it as a path only when the user
   // forced path form (`./42`, `42/`); otherwise a same-named directory or
@@ -1347,6 +1432,20 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   const classified = opts.classification ?? (await classifyTarget(exec, cwd, target, callOpts()))
   const targetPr = classified.pr
   let pathScope = classified.pathScope
+  if (missingExplicit !== undefined) {
+    const deleted = await resolveDeletedPathScope(exec, cwd, missingExplicit, callOpts())
+    if (deleted) pathScope = deleted
+    else throw new Error(`Review target path not found: ${missingExplicit}`)
+  }
+  // Record the local snapshot in the repository that supplied the patch. A
+  // path target may resolve to a submodule with its own HEAD and worktree.
+  const snapshotRoot = pathScope?.root ?? findGitRoot(cwd) ?? cwd
+  const [snapshotHeadResult, snapshotStatusResult] = await Promise.all([
+    git(exec, snapshotRoot, ["rev-parse", "HEAD"], callOpts()),
+    git(exec, snapshotRoot, ["status", "--porcelain", "--untracked-files=no"], callOpts()),
+  ])
+  const snapshotHead = snapshotHeadResult.code === 0 ? snapshotHeadResult.stdout.trim() : undefined
+  const snapshotClean = snapshotStatusResult.code === 0 && !snapshotStatusResult.stdout.trim()
   const branchCandidate = classified.branchCandidate
   const branchRef = classified.branchRef
   // A repo-relative path typo (src/authn.ts) is as much a target error as
@@ -1356,12 +1455,15 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     target &&
     targetPr === undefined &&
     !branchCandidate &&
+    pathScope === undefined &&
     !looksLikeRange(target) &&
     !target.includes(" ") &&
     (target.includes("/") || /\.[a-z0-9]{1,8}$/i.test(target)) &&
     resolveTargetPath(cwd, target) === null
   ) {
-    throw new Error(`Review target path not found: ${target}`)
+    const deleted = await resolveDeletedPathScope(exec, cwd, target, callOpts())
+    if (deleted) pathScope = deleted
+    else throw new Error(`Review target path not found: ${target}`)
   }
   if (
     target &&
@@ -1747,6 +1849,7 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
   let captureFailures = 0
   /** Plan entries whose diff capture failed, for the numstat fallback. */
   const failedPlanIndices: number[] = []
+  let worktreePatchCaptured = false
   if (pr !== undefined) {
     if (patch && patch.trim()) chunks.push(patch)
   } else {
@@ -1754,7 +1857,10 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     for (const [i, r] of captures.entries()) {
       if (r.aborted) throw new Error("Diff discovery was cancelled.")
       if (r.code === 0) {
-        if (r.stdout.trim()) chunks.push(r.stdout)
+        if (r.stdout.trim()) {
+          chunks.push(r.stdout)
+          if (plan[i]?.range === "HEAD") worktreePatchCaptured = true
+        }
       } else {
         captureFailures++
         failedPlanIndices.push(i)
@@ -1770,6 +1876,14 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     }
   }
   const diffText = chunks.join("\n")
+  const finalHeadResult = snapshotHead
+    ? await git(exec, snapshotRoot, ["rev-parse", "HEAD"], callOpts())
+    : undefined
+  const finalStatusResult = snapshotHead
+    ? await git(exec, snapshotRoot, ["status", "--porcelain", "--untracked-files=no"], callOpts())
+    : undefined
+  const reviewedHeadStable =
+    snapshotHead !== undefined && finalHeadResult?.code === 0 && finalHeadResult.stdout.trim() === snapshotHead
 
   // One patch scan feeds the recovered file list, the finder budget, and the
   // context package. A successful patch capture with an empty (or partially
@@ -1849,6 +1963,11 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     diffText,
     scopeKind,
     ...(diffBase ? { diffBase } : {}),
+    ...(snapshotHead ? { reviewedHeadOid: snapshotHead } : {}),
+    reviewedTrackedTreeClean:
+      snapshotClean && finalStatusResult?.code === 0 && !finalStatusResult.stdout.trim(),
+    reviewedWorktreeDiff: worktreePatchCaptured,
+    reviewedHeadStable,
     context,
     ...(warnings.length > 0 ? { warnings } : {}),
   }

@@ -11,6 +11,7 @@ import {
   discoverConventions,
   readCapped,
   scanPatchChurn,
+  classifyTarget,
   resolveDiffScope,
   resolveScope,
   unquoteGitPath,
@@ -73,6 +74,7 @@ test("uncommitted working-tree changes are in scope", async () => {
   writeFileSync(join(dir, "a.ts"), "export const a = 2\n")
   const scope = await resolveScope({ cwd: dir })
   assert.deepEqual(scope.files, ["a.ts"])
+  assert.equal(scope.reviewedWorktreeDiff, true)
   assert.match(scope.diffCommand, /git .*diff .*--end-of-options HEAD/)
   assert.match(scope.diffText ?? "", /export const a = 2/)
   rmSync(dir, { recursive: true, force: true })
@@ -272,6 +274,9 @@ test("a clean path target records the checked-out branch", async () => {
   const scope = await resolveScope({ cwd: dir, target: "a.ts" })
   assert.equal(scope.scopeKind, "path")
   assert.equal(scope.branch, "main")
+  assert.ok(scope.reviewedHeadOid)
+  assert.equal(scope.reviewedTrackedTreeClean, true)
+  assert.equal(scope.reviewedHeadStable, true)
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -292,6 +297,59 @@ test("deleted files stay in scope", async () => {
   git(dir, "commit", "-m", "delete b")
   const scope = await resolveScope({ cwd: dir })
   assert.ok(scope.files.includes("b.ts"))
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a deleted tracked file can be the explicit scope target", async () => {
+  const dir = makeRepo()
+  git(dir, "checkout", "-b", "feature")
+  git(dir, "rm", "b.ts")
+  git(dir, "commit", "-m", "delete b")
+  for (const target of ["./b.ts", "b.ts"]) {
+    const scope = await resolveScope({ cwd: dir, target })
+    assert.deepEqual(scope.files, ["b.ts"], target)
+    assert.match(scope.diffCommand, /-- b\.ts$/)
+  }
+  await assert.rejects(() => resolveScope({ cwd: dir, target: "./missing.ts" }), /path not found/)
+  rmSync(dir, { recursive: true, force: true })
+
+  const staged = makeRepo()
+  git(staged, "rm", "b.ts")
+  const stagedScope = await resolveScope({ cwd: staged, target: "b.ts" })
+  assert.deepEqual(stagedScope.files, ["b.ts"])
+  assert.match(stagedScope.diffCommand, /-- b\.ts$/)
+  rmSync(staged, { recursive: true, force: true })
+})
+
+test("a bare branch name keeps precedence over a same-named deleted path", async () => {
+  const dir = makeRepo()
+  writeFileSync(join(dir, "foo.ts"), "export const old = true\n")
+  git(dir, "add", "foo.ts")
+  git(dir, "commit", "-m", "add foo")
+  git(dir, "rm", "foo.ts")
+  git(dir, "commit", "-m", "delete foo")
+  git(dir, "branch", "foo.ts")
+
+  const bare = await classifyTarget(defaultExec, dir, "foo.ts")
+  assert.equal(bare.branchCandidate, true)
+  assert.equal(bare.branchRef, "foo.ts")
+
+  const forced = await classifyTarget(defaultExec, dir, "./foo.ts")
+  assert.equal(forced.branchCandidate, false)
+  assert.equal(forced.pathScope?.isPath, true)
+  assert.equal(forced.pathScope?.relPath, "foo.ts")
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("configured mnemonic prefixes and color do not corrupt captured patch paths", async () => {
+  const dir = makeRepo()
+  git(dir, "config", "diff.mnemonicPrefix", "true")
+  git(dir, "config", "color.ui", "always")
+  writeFileSync(join(dir, "a.ts"), "export const a = 3\n")
+  const scope = await resolveScope({ cwd: dir, target: "a.ts" })
+  assert.deepEqual(scope.files, ["a.ts"])
+  assert.equal(diffSideMap(scope.diffText, [{ file: "a.ts", line: 1 }]).hasLine("a.ts", 1), true)
+  assert.doesNotMatch(scope.diffText ?? "", /diff --git c\/a\.ts w\/a\.ts/)
   rmSync(dir, { recursive: true, force: true })
 })
 

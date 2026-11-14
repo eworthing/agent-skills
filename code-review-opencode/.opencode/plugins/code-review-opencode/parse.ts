@@ -94,6 +94,50 @@ function isLevelToken(token: string): boolean {
   return normalizeLevel(token) !== undefined || token.toLowerCase() === "ultra"
 }
 
+/** True only when tokens from start through the end form recognized options. */
+function isOptionSuffix(tokens: string[], start: number, extension: boolean): boolean {
+  for (let i = start; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (!token?.startsWith("--")) return false
+    const eq = token.indexOf("=")
+    const attached = eq > 2
+    const name = token.slice(2, attached ? eq : undefined)
+    if (REFERENCE_BOOL.has(name) && !attached) continue
+    if (name === "max-findings") {
+      if (attached) {
+        const value = token.slice(eq + 1).toLowerCase()
+        if (value !== "all" && value !== "default" && positiveLine(value) === undefined) return false
+        continue
+      }
+      const value = tokens[i + 1]
+      if (value !== undefined && !isOptionToken(value)) {
+        const normalized = value.toLowerCase()
+        if (normalized !== "all" && normalized !== "default" && positiveLine(value) === undefined) return false
+        i++
+      }
+      continue
+    }
+    if (!extension) return false
+    if (EXTENSION_BOOL.has(name) && (!attached || /^(true|false)$/i.test(token.slice(eq + 1)))) continue
+    if (name === "keep-sessions") {
+      if (attached && /^(true|false)$/i.test(token.slice(eq + 1))) continue
+      if (!attached && /^(true|false)$/i.test(tokens[i + 1] ?? "")) { i++; continue }
+      if (!attached) continue
+      return false
+    }
+    if (EXTENSION_VALUE.has(name)) {
+      const value = attached ? token.slice(eq + 1) : tokens[i + 1]
+      if (!value || value.startsWith("--")) return false
+      if (name === "driver" && value !== "engine" && value !== "prompt") return false
+      if (name === "concurrency" && positiveLine(value) === undefined) return false
+      if (!attached) i++
+      continue
+    }
+    return false
+  }
+  return true
+}
+
 /** Assign one extension value; false means the token is not an option. */
 function assignExtensionValue(
   flags: ExtensionFlags,
@@ -141,11 +185,10 @@ export function parseExtensions(input: string): { rest: string; flags: Extension
   // only as a trailing option run. A flag-shaped word inside an instruction
   // ("fix the --json flag") is part of the target, not an option.
   const canStripBoolean = (i: number): boolean =>
-    !targetStarted || i === tokens.length - 1 || isOptionToken(tokens[i + 1] ?? "")
+    !targetStarted || isOptionSuffix(tokens, i, true)
   const canStripValue = (i: number, hasValue: boolean): boolean => {
     if (!targetStarted) return true
-    if (!hasValue) return i === tokens.length - 1 || isOptionToken(tokens[i + 1] ?? "")
-    return i + 1 === tokens.length - 1 || isOptionToken(tokens[i + 2] ?? "")
+    return hasValue ? isOptionSuffix(tokens, i, true) : isOptionSuffix(tokens, i, true)
   }
 
   for (let i = 0; i < tokens.length; i++) {
@@ -332,9 +375,7 @@ export function parseArgs(raw: string): Parsed {
       const attached = token.startsWith("--max-findings=")
       const hasValue = attached || (argv[i + 1] !== undefined && !isOptionToken(argv[i + 1]))
       const end = attached || !hasValue ? i : i + 1
-      const trailing =
-        end === argv.length - 1 ||
-        (argv[end + 1] !== undefined && isOptionToken(argv[end + 1]))
+      const trailing = isOptionSuffix(argv, i, false)
       if (!targetStarted || trailing) {
         removed.add(i)
         if (!attached && hasValue) removed.add(i + 1)
@@ -352,7 +393,7 @@ export function parseArgs(raw: string): Parsed {
     // `src/auth.ts --fix` asks for it.
     const name = token.startsWith("--") && !token.includes("=") ? token.slice(2) : ""
     if (REFERENCE_BOOL.has(name)) {
-      const trailing = i === argv.length - 1 || isOptionToken(argv[i + 1] ?? "")
+      const trailing = isOptionSuffix(argv, i, false)
       if (!targetStarted || trailing) {
         removed.add(i)
         found.add(name)

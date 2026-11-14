@@ -56,7 +56,11 @@ export type AgentRequest = {
   signal?: AbortSignal
 }
 
-export type AgentRunner = (req: AgentRequest) => Promise<unknown | null>
+export type AgentAttemptResult =
+  | { status: "incomplete"; value: unknown; reason: string }
+  | { status: "provider_error"; message: string }
+
+export type AgentRunner = (req: AgentRequest) => Promise<unknown | null | AgentAttemptResult>
 
 export type Finding = RawFinding & {
   verdict?: "CONFIRMED" | "PLAUSIBLE"
@@ -97,6 +101,8 @@ export type EngineResult = {
   cell: string
   /** Original survivor count when the effort cap cut the report short. */
   truncatedFrom?: number
+  /** A provider returned an explicit terminal error; callers must not retry via another review path. */
+  terminalFailure?: string
 }
 
 export type EngineOptions = {
@@ -270,7 +276,7 @@ function verdictRank(c: Finding): number {
  * depend on child latency. A duplicate that was refuted by one verifier and
  * confirmed by another must resolve to the confirmed copy.
  */
-function dedupeVerified(items: Finding[]): {
+function dedupeVerified(items: Finding[], keyFor: (finding: Finding) => string = dedupKey162): {
   novel: Finding[]
   /** Refuted copies whose claim has no kept representative. */
   refutedDropped: Finding[]
@@ -282,7 +288,7 @@ function dedupeVerified(items: Finding[]): {
   const dropped: Array<{ item: Finding; key: string }> = []
   let dupes = 0
   for (const item of items) {
-    const key = dedupKey162(item)
+    const key = keyFor(item)
     const existing = best.get(key)
     if (!existing) {
       best.set(key, item)
@@ -547,6 +553,7 @@ function applyDecisions(
       const confirmed = merged.find((m) => m.verdict === "CONFIRMED")
       const source = c.verdict === "CONFIRMED" || !confirmed ? c : confirmed
       const verdict = confirmed ? "CONFIRMED" : c.verdict
+      const correctness = [c, ...merged].find((finding) => finding.kind === "correctness")
       // A file-level claim would otherwise erase the only anchor a merged
       // finding carried. Resolve the anchor before computing the "also at"
       // list, or the inherited line is both the finding's own location and an
@@ -561,6 +568,9 @@ function applyDecisions(
       const also = alsoLocations.length > 0 ? ` [same root cause also at: ${alsoLocations.join(", ")}]` : ""
       return {
         ...anchored,
+        ...(correctness
+          ? { kind: "correctness" as const, category: correctness.category ?? "correctness" }
+          : {}),
         summary: source.summary + also,
         failure_scenario: source.failure_scenario,
         ...(source.short_summary !== undefined ? { short_summary: source.short_summary } : {}),
@@ -809,6 +819,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     finderFailures: 0,
   }
   let partial = false
+  const terminalErrors: string[] = []
   const emit = (e: EngineEvent) => opts.onEvent?.(e)
 
   const finders = buildFinders(cell, opts.finderBudget)
@@ -823,6 +834,27 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       emit({ type: "warning", message: "review cancelled" })
     }
     return opts.signal?.aborted === true
+  }
+
+  /** Unwrap runner status while keeping terminal provider failures authoritative. */
+  const invokeAgent = async (req: AgentRequest): Promise<unknown | null> => {
+    if (terminalErrors.length > 0) return null
+    const attempt = await runner(req)
+    if (attempt && typeof attempt === "object" && "status" in attempt) {
+      if (attempt.status === "provider_error") {
+        terminalErrors.push(attempt.message)
+        partial = true
+        warnings.push(`${req.label} stopped after provider failure: ${attempt.message}`)
+        emit({ type: "warning", message: `${req.label} stopped after provider failure` })
+        return null
+      }
+      if (attempt.status === "incomplete") {
+        partial = true
+        warnings.push(`${req.label} returned recovered output with incomplete coverage (${attempt.reason})`)
+        return attempt.value
+      }
+    }
+    return attempt
   }
 
   /** Shared finder/sweep candidate normalisation and truncation warnings. */
@@ -852,7 +884,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
 
   const runFinder = async (f: Finder): Promise<RawFinding[]> => {
     if (aborted()) return []
-    const value = await runner({
+    const value = await invokeAgent({
       role: "finder",
       label: f.label,
       prompt: finderPrompt({
@@ -909,7 +941,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   ): Promise<Finding | null> => {
     if (aborted()) return null
     stats.verifierAgents++
-    const value = await runner({
+    const value = await invokeAgent({
       role: "verifier",
       label: `verify:${c.file.split("/").pop()}`,
       prompt: verifierPrompt({
@@ -951,10 +983,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     stats.verifierAgents += groups.length
     const out = await mapLimit(groups, concurrency, async (group) => {
       if (aborted()) return []
-      const value = await runner({
+      const value = await invokeAgent({
         role: "verifier",
         label: `verify:${group[0].file.split("/").pop()}(${group.length})`,
-          prompt: groupVerifierPrompt({
+        prompt: groupVerifierPrompt({
           scope: block,
           group,
           recallBiased: recallLadder,
@@ -1122,7 +1154,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       const barrierDuplicates: Array<RawFinding & { kind: "correctness" | "cleanup" }> = []
       if (opts.semanticMerge && candidatePool.length > 1) {
         emit({ type: "phase", phase: "Dedup" })
-        const value = await runner({
+        const value = await invokeAgent({
           role: "synthesize",
           label: "dedup",
               prompt: candidateDedupPrompt({ level, candidates: candidatePool, diffText: scope.diffText }),
@@ -1185,7 +1217,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
               (x): x is Finding => x !== null,
             )
           : []
-      const combined = dedupeVerified([...representatives, ...retries])
+      const combined = dedupeVerified([...representatives, ...retries], dedupKey318)
       // The retried copies were already counted as duplicates by dedupeBy;
       // dedupeVerified counts the representative/retry pair again.
       stats.dupes += combined.dupes - retries.length
@@ -1226,7 +1258,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         (c) => `${renderedLocation(c)} — ${c.summary} (duplicate — do not re-report without new evidence)`,
       ),
     ]
-    const value = await runner({
+    const value = await invokeAgent({
       role: "sweep",
       label: "sweep",
       prompt: sweepPrompt({ scope: block, known, cap: cell.sweepCap }),
@@ -1326,6 +1358,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       partial,
       warnings,
       cell: cell.id,
+      ...(terminalErrors[0] ? { terminalFailure: terminalErrors[0] } : {}),
     }
     emit({ type: "stats", stats: result.stats })
     return result
@@ -1390,7 +1423,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     label: "synthesize" | "merge",
   ): Promise<{ findings: Finding[]; summary: string; truncated: boolean; truncatedFrom: number } | null> => {
     emit({ type: "phase", phase: "Synthesize" })
-    const value = await runner({
+    const value = await invokeAgent({
       role: "synthesize",
       label,
       prompt: synthPromptIndex({
@@ -1457,7 +1490,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     )
   } else if (willSynthesize && cell.synthesis === "text") {
     emit({ type: "phase", phase: "Synthesize" })
-    const value = await runner({
+    const value = await invokeAgent({
       role: "synthesize",
       label: "synthesize",
       prompt: synthPromptText({
@@ -1589,8 +1622,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           )
         } else {
           // A text report can be truncated by the normalizer before the final
-          // cap is applied. Preserve that fact so the engine can record
-          // truncatedFrom instead of presenting a shortened list as complete.
+          // cap is applied. Preserve proven truncation; independently flag any
+          // survivor that the text report cannot account for.
+          const reachedCap = cap !== undefined && emitted.length >= cap
+          const unaccountedOmissions = emitted.length < ranked.length
           truncatedByCap = report.truncated === true || (cap !== undefined && emitted.length > cap)
           if (report.truncated === true) {
             // The normalizer cut the re-emitted tail, so the synthesizer's
@@ -1601,6 +1636,13 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
             warnings.push("synthesis report was truncated at the tool cap; the pre-cap count is a lower bound")
           } else if (cap !== undefined && emitted.length > cap) {
             truncatedFrom = emitted.length
+          } else if (unaccountedOmissions) {
+            partial = true
+            warnings.push(
+              reachedCap
+                ? "synthesis reached its finding cap with fewer entries than verified survivors; unresolved findings may have been omitted or merged"
+                : "synthesis omitted verified survivors without verifiable merge accounting; report may be incomplete",
+            )
           }
           findings = emitted.slice(0, cap)
           if (unmatched > 0) {
@@ -1649,6 +1691,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     ...(truncatedByCap && cap !== undefined
       ? { truncatedFrom: truncatedFrom ?? findings.length }
       : {}),
+    ...(terminalErrors[0] ? { terminalFailure: terminalErrors[0] } : {}),
   }
   emit({ type: "stats", stats: result.stats })
   return result

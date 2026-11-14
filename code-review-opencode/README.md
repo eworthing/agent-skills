@@ -192,6 +192,9 @@ not every iteration. See
   otherwise the parent model is inherited. `--model` is the global override.
   The parent model is always passed explicitly because a child created without
   a model produced an empty response in OpenCode.
+  Prompt-driven reviews reject model overrides because the parent prompt API
+  cannot select a model. Legacy multi-agent workflows also require the engine
+  and child-session support; they cannot run through the current prompt recipe.
 - **Fix outcomes:** after `--fix`, a `ReportFindings` re-report with
   `fixed`/`skipped`/`no_change_needed` posts a deduped synthetic summary, so
   the command path shows the per-finding result.
@@ -201,10 +204,36 @@ not every iteration. See
   `CODE_REVIEW_REPORT_DIR` to write the private atomic report artifact; the
   `--json` stdout contract stays a bare array, and a partial run emits a
   `CODE_REVIEW_PARTIAL` JSON line on stderr.
+  Explicit artifact opt-in also works with `--json`; `--dry-run` writes no
+  artifact. Each terminal engine record includes its parent session, run and
+  captured scope identities, selected model, diagnostics, and completeness
+  and truncation status. A missing record never establishes completion.
+- **Spilled output:** review agents may read OpenCode's `shell` and
+  `tool-output` directories under its data root. The installed policy follows
+  `XDG_DATA_HOME`; the generated Markdown fallback uses the host-expanded
+  `~/.local/share/opencode` default. A host with a custom data root needs the
+  agent transform for these external reads. Unrelated external directories
+  and write tools remain denied.
 - **Low-effort `--json` exception:** the reference's low prompt emits
   one-line prose even when `--json` is set, and the port preserves that prompt
   verbatim. The bare-array contract applies to every other cell; for a
   machine-readable low-effort result, use the default ReportFindings path.
+
+For unattended engine reviews, `scripts/cr-batch.sh start <target>` creates a
+fresh session for each invocation. `status <session-id>` and `wait <session-id>`
+return success only for that session's matching complete, untruncated artifact;
+they do not rely on a parent model turn ending. Exit 4 means pending; other
+nonzero statuses mean failure or unavailable completion evidence. `report`
+prints the associated artifact for inspection, including incomplete reports;
+use `status` or `wait` as the loop's success gate. The shared validator is
+`scripts/cr_completion.py`. Do not reuse a batch session for another review.
+
+An exhausted child can recover its structured output while the run remains
+partial. Explicit terminal provider errors stop schema retries and parent
+review fallback. These are host recovery and diagnostic rules: the reference
+prompt fragments and workflow recipes remain unchanged. Text synthesis that
+omits verified survivors without verifiable merge accounting is partial;
+the adapter cannot prove whether that omission was a merge or a cap.
 
 ## Tests
 

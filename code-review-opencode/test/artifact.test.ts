@@ -6,6 +6,7 @@ import { join } from "node:path"
 import {
   artifactFileName,
   buildReportArtifact,
+  scopeIdentity,
   writeReportArtifact,
 } from "../.opencode/plugins/code-review-opencode/artifact.ts"
 import { engineFinding, engineResult } from "./helpers.ts"
@@ -24,8 +25,19 @@ test("the report artifact carries the run identity and engine result", () => {
     files: ["src/a.ts", "src/b.ts"],
     id: "report-1",
     generatedAt: new Date("2026-11-11T12:00:00.000Z"),
+    parentSessionId: "session-1",
+    scopeId: "scope-1",
+    requestedTarget: "HEAD~1..HEAD",
+    model: { provider_id: "opencode", id: "review-model", variant: "max" },
   })
   assert.equal(artifact.report_id, "report-1")
+  assert.equal(artifact.run_id, "report-1")
+  assert.equal(artifact.parent_session_id, "session-1")
+  assert.equal(artifact.scope_id, "scope-1")
+  assert.equal(artifact.requested_target, "HEAD~1..HEAD")
+  assert.deepEqual(artifact.model, { provider_id: "opencode", id: "review-model", variant: "max" })
+  assert.equal(artifact.terminal_status, "incomplete")
+  assert.equal(artifact.truncated, true)
   assert.equal(artifact.generated_at, "2026-11-11T12:00:00.000Z")
   assert.equal(artifact.level, "max")
   assert.equal(artifact.cell, "max")
@@ -41,10 +53,18 @@ test("the report artifact carries the run identity and engine result", () => {
 
 test("the artifact is written atomically with private permissions", async () => {
   const root = mkdtempSync(join(tmpdir(), "code-review-artifact-"))
-  const path = await writeReportArtifact({ root, result: engineResult(), files: ["src/a.ts"] })
+  const path = await writeReportArtifact({
+    root,
+    result: engineResult(),
+    files: ["src/a.ts"],
+    parentSessionId: "session-2",
+    scopeId: "scope-2",
+    requestedTarget: "",
+  })
   assert.ok(path)
-  const payload = JSON.parse(readFileSync(path!, "utf8")) as { report_id: string; files_changed: string[] }
+  const payload = JSON.parse(readFileSync(path!, "utf8")) as { report_id: string; parent_session_id: string; files_changed: string[] }
   assert.ok(payload.report_id)
+  assert.equal(payload.parent_session_id, "session-2")
   assert.deepEqual(payload.files_changed, ["src/a.ts"])
   assert.equal(statSync(path!).mode & 0o777, 0o600)
   rmSync(root, { recursive: true, force: true })
@@ -54,7 +74,38 @@ test("an artifact write failure does not fail the review", async () => {
   const root = mkdtempSync(join(tmpdir(), "code-review-artifact-fail-"))
   const blocked = join(root, "reports")
   writeFileSync(blocked, "not a directory")
-  const path = await writeReportArtifact({ root, result: engineResult(), files: [], directory: blocked })
+  const path = await writeReportArtifact({
+    root,
+    result: engineResult(),
+    files: [],
+    parentSessionId: "session-3",
+    scopeId: "scope-3",
+    directory: blocked,
+  })
   assert.equal(path, undefined)
   rmSync(root, { recursive: true, force: true })
+})
+
+test("scope identity changes when the captured patch changes", () => {
+  const base = { root: "/repo", target: "HEAD~1..HEAD", files: ["src/a.ts"], diffText: "patch A" }
+  assert.equal(scopeIdentity(base), scopeIdentity({ ...base, files: ["src/a.ts"] }))
+  assert.notEqual(scopeIdentity(base), scopeIdentity({ ...base, diffText: "patch B" }))
+  assert.notEqual(scopeIdentity(base), scopeIdentity({ ...base, target: "HEAD~2..HEAD" }))
+})
+
+test("a terminal scope failure can be recorded without an engine result", () => {
+  const artifact = buildReportArtifact({
+    files: [],
+    id: "failed-run",
+    generatedAt: new Date("2026-11-11T12:00:00.000Z"),
+    parentSessionId: "session-failed",
+    scopeId: "failed-scope",
+    terminalStatus: "failed",
+    terminalOutcome: "scope_error",
+    diagnostics: ["git diff failed"],
+  })
+  assert.equal(artifact.terminal_status, "failed")
+  assert.equal(artifact.partial, true)
+  assert.deepEqual(artifact.findings, [])
+  assert.deepEqual(artifact.diagnostics, ["git diff failed"])
 })

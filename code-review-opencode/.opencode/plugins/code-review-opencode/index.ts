@@ -76,6 +76,7 @@ import {
   classifyTarget,
   defaultExec,
   extractPathHint,
+  isDeletedPathTarget,
   missingExplicitPathTarget,
   prTargetNumber,
   resolveReviewRoot,
@@ -84,7 +85,7 @@ import {
   type TargetClassification,
 } from "./scope.ts"
 import { postComments, detectHostDetails, type Host } from "./comment.ts"
-import { writeReportArtifact } from "./artifact.ts"
+import { scopeIdentity, writeReportArtifact } from "./artifact.ts"
 import { REPORT_FINDINGS_SCHEMA, normalizeReportFindings } from "./reportfindings.ts"
 import {
   CANDIDATES_SCHEMA,
@@ -443,7 +444,9 @@ async function resolveAndRun(
   const requestedMode = flags.mode ?? process.env.CODE_REVIEW_MODE
   const invalidMode = requestedMode !== undefined && !isVersion(requestedMode)
   const version = asVersion(requestedMode)
-  const modelOverride = modelRef(flags.model ?? process.env.CODE_REVIEW_MODEL)
+  const modelOverrideRequest = flags.model ?? process.env.CODE_REVIEW_MODEL
+  const modelOverride = modelRef(modelOverrideRequest)
+  const reportModel = modelOverride ?? runModel
   const family = detectFamily(
     modelOverride?.id ?? runModel?.id,
     flags.family ?? process.env.CODE_REVIEW_FAMILY,
@@ -587,13 +590,39 @@ async function resolveAndRun(
     needsModel: true,
   })
 
+  const promptDriven = isInline(cell) || flags.driver === "prompt" || !childSessions
+  if (modelOverrideRequest !== undefined && promptDriven) {
+    const message = `Cannot run this prompt-driven review with --model ${modelOverride ? `${modelOverride.providerID}/${modelOverride.id}` : modelOverrideRequest}: the host API cannot select a model for the parent prompt turn. Remove --model or use a supported engine-driven review.`
+    if (flags.json) inv.log?.(partialRecord([message]))
+    return {
+      text: flags.json ? "[]" : message,
+      needsModel: false,
+      ...(flags.json ? { bare: true } : {}),
+    }
+  }
+  if (
+    promptDriven &&
+    cell.engine === "multi" &&
+    !cell.fallbackNotice &&
+    version !== "cc-2.1.318"
+  ) {
+    const message = `Cannot run workflow ${version} through the prompt driver: this host only has the current 2.1.318 prompt recipe. Select --driver engine on a host with child-session support, or use the current workflow.`
+    if (flags.json) inv.log?.(partialRecord([message]))
+    return {
+      text: flags.json ? "[]" : message,
+      needsModel: false,
+      ...(flags.json ? { bare: true } : {}),
+    }
+  }
+
   // Neither the inline path nor the single-pass prompt path reaches
   // resolveScope, so validate an explicit path target before either one. The
   // engine path lets resolveScope do the same check, avoiding a second
   // findGitRoot/realpath walk.
-  const pathTargetError = (): Outcome | undefined => {
+  const pathTargetError = async (): Promise<Outcome | undefined> => {
     const missingTarget = missingExplicitPathTarget(ctx.location.directory, parsed.target)
     if (missingTarget === undefined) return undefined
+    if (await isDeletedPathTarget(ctx.location.directory, parsed.target, defaultExec)) return undefined
     const message = `Code review could not start: Review target path not found: ${missingTarget}`
     if (flags.json) {
       inv.log?.(partialRecord([message]))
@@ -604,7 +633,7 @@ async function resolveAndRun(
 
   // ---- inline / minimal cells: submit the recovered prompt verbatim ------
   if (isInline(cell)) {
-    const error = pathTargetError()
+    const error = await pathTargetError()
     if (error) return error
     const base = resolveInline(kind, cell.inlineVariant, max)
     let text = decorateReview(base)
@@ -617,7 +646,7 @@ async function resolveAndRun(
   // the recovered single-pass prompt for the selected effort instead of
   // returning an empty, partial engine result.
   if (flags.driver === "prompt" || !childSessions) {
-    const error = pathTargetError()
+    const error = await pathTargetError()
     if (error) return error
     const base = resolveMulti(kind, effort, max)
     let text = decorateReview(base)
@@ -671,6 +700,25 @@ async function resolveAndRun(
     })
   } catch (error) {
     const message = `Code review could not start: ${error instanceof Error ? error.message : String(error)}`
+    if (!flags.dryRun && process.env.CODE_REVIEW_REPORT_DIR) {
+      const failedScope = {
+        root: ctx.location.directory,
+        ...(parsed.target !== undefined ? { target: parsed.target } : {}),
+        files: [] as string[],
+      }
+      await writeReportArtifact({
+        root: failedScope.root,
+        files: [],
+        parentSessionId: inv.sessionID,
+        scopeId: scopeIdentity(failedScope),
+        requestedTarget: parsed.target ?? "",
+        ...(reportModel ? { model: { provider_id: reportModel.providerID, id: reportModel.id, ...(reportModel.variant ? { variant: reportModel.variant } : {}) } } : {}),
+        terminalStatus: inv.signal?.aborted ? "cancelled" : "failed",
+        terminalOutcome: inv.signal?.aborted ? "cancelled" : "scope_error",
+        diagnostics: [message],
+        directory: process.env.CODE_REVIEW_REPORT_DIR,
+      })
+    }
     // --json promises a bare array. Do not route an error through a model turn
     // that would turn the contract into prose; report on stderr and return [].
     if (flags.json) {
@@ -685,18 +733,27 @@ async function resolveAndRun(
     }
   }
 
-  const writeArtifact = async (result: EngineResult): Promise<void> => {
+  const writeArtifact = async (
+    result: EngineResult,
+    terminal?: { status: "complete" | "incomplete" | "failed" | "cancelled"; outcome: string; diagnostics?: string[] },
+  ): Promise<void> => {
     // --dry-run promises no working-tree writes, and --json promises a bare
-    // array with no side effects. A normal review is read-only too: only an
+    // array with no side effects unless an explicit report directory opts in. A normal review is read-only too: only an
     // explicit CODE_REVIEW_REPORT_DIR opts into writing an artifact, so the
     // review never dirties the checkout it inspected.
-    if (flags.dryRun || flags.json) return
+    if (flags.dryRun) return
     const directory = process.env.CODE_REVIEW_REPORT_DIR
     if (!directory) return
     const path = await writeReportArtifact({
       root: scope.root,
       result,
       files: scope.files,
+      parentSessionId: inv.sessionID,
+      scopeId: scopeIdentity(scope),
+      requestedTarget: parsed.target ?? "",
+      ...(reportModel ? { model: { provider_id: reportModel.providerID, id: reportModel.id, ...(reportModel.variant ? { variant: reportModel.variant } : {}) } } : {}),
+      ...(terminal ? { terminalStatus: terminal.status, terminalOutcome: terminal.outcome } : {}),
+      ...(terminal?.diagnostics ? { diagnostics: terminal.diagnostics } : {}),
       directory,
     })
     if (path) inv.log?.(`Report artifact: ${path}`)
@@ -716,7 +773,7 @@ async function resolveAndRun(
       warnings: scope.warnings ?? [],
       cell: cell.id,
     }
-    await writeArtifact(empty)
+    await writeArtifact(empty, inv.signal?.aborted ? { status: "cancelled", outcome: "cancelled" } : undefined)
     if (notices.length > 0 && flags.json) for (const notice of notices) inv.log?.(notice)
     if (flags.json) {
       if (incomplete) {
@@ -783,6 +840,20 @@ async function resolveAndRun(
     })
   } catch (error) {
     const message = `Code review failed: ${error instanceof Error ? error.message : String(error)}`
+    if (!flags.dryRun && process.env.CODE_REVIEW_REPORT_DIR) {
+      await writeReportArtifact({
+        root: scope.root,
+        files: scope.files,
+        parentSessionId: inv.sessionID,
+        scopeId: scopeIdentity(scope),
+        requestedTarget: parsed.target ?? "",
+        ...(reportModel ? { model: { provider_id: reportModel.providerID, id: reportModel.id, ...(reportModel.variant ? { variant: reportModel.variant } : {}) } } : {}),
+        terminalStatus: inv.signal?.aborted ? "cancelled" : "failed",
+        terminalOutcome: inv.signal?.aborted ? "cancelled" : "engine_error",
+        diagnostics: [message],
+        directory: process.env.CODE_REVIEW_REPORT_DIR,
+      })
+    }
     if (flags.json) {
       inv.log?.(partialRecord([message]))
       return { text: "[]", needsModel: false, bare: true }
@@ -807,11 +878,17 @@ async function resolveAndRun(
     result.stats.finders > 0 && (result.stats.finderFailures ?? 0) >= result.stats.finders
   const agentOutputMissing =
     !inv.signal?.aborted &&
+    !result.terminalFailure &&
     allFindersFailed &&
     result.stats.candidates === 0 &&
     result.stats.verifierAgents === 0
   if (agentOutputMissing) {
     const warning = "Subagent sessions produced no usable results; running the single-pass review prompt instead."
+    await writeArtifact(result, {
+      status: result.terminalFailure ? "failed" : "incomplete",
+      outcome: result.terminalFailure ? "provider_error" : "finder_fallback",
+      diagnostics: [warning],
+    })
     if (flags.json) {
       // The JSON contract is a bare array. Keep it intact and report the
       // incomplete run on stderr instead of returning the fallback prompt.
@@ -840,7 +917,10 @@ async function resolveAndRun(
     return promptOutcome(text, allNotices)
   }
 
-  await writeArtifact(result)
+  await writeArtifact(
+    result,
+    inv.signal?.aborted ? { status: "cancelled", outcome: "cancelled" } : undefined,
+  )
 
   const prefix = notices.length > 0 && !flags.json ? `${notices.join("\n")}\n\n` : ""
   if (notices.length > 0 && flags.json) for (const notice of notices) inv.log?.(notice)

@@ -58,6 +58,11 @@ function fakeCtx(
     list.push({ type: "user", text })
     sessions.set(sessionID, list)
   }
+  const pushError = (sessionID: string, code: string, message: string) => {
+    const list = sessions.get(sessionID) ?? []
+    list.push({ type: "assistant", content: [], finish: "error", error: { code, message } } as Msg)
+    sessions.set(sessionID, list)
+  }
   const session = {
     async create(input: Record<string, unknown>) {
       const id = `ses_${++next}`
@@ -119,6 +124,7 @@ function fakeCtx(
     push,
     pushStepLimit,
     pushUser,
+    pushError,
     setOnPrompt: (fn: typeof onPrompt) => (onPrompt = fn),
   }
 }
@@ -513,8 +519,12 @@ test("a step-limited finder is recovered by a fresh formatter child", async () =
     fake.push(id, "I found one issue in a.ts but ran out of steps.")
   })
   const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent" })
-  const value = (await runner(request())) as { candidates: Array<{ file: string }> }
-  assert.equal(value.candidates[0].file, "a.ts")
+  const attempt = await runner(request())
+  assert.deepEqual(attempt, {
+    status: "incomplete",
+    value: { candidates: [{ file: "a.ts", summary: "s", failure_scenario: "f" }] },
+    reason: "step_limit",
+  })
   assert.equal(fake.created.length, 2)
   assert.match(String(fake.createdInputs[1].title), /\(format\)/)
   const formatterPrompt = fake.prompts.find((p) => p.text.includes("Convert the completed review"))?.text ?? ""
@@ -522,6 +532,23 @@ test("a step-limited finder is recovered by a fresh formatter child", async () =
   // the validator requires failure_scenario.
   assert.match(formatterPrompt, /must include/)
   assert.match(formatterPrompt, /failure_scenario/)
+})
+
+test("a terminal provider error is surfaced without formatter or schema retries", async () => {
+  const fake = fakeCtx()
+  const schemaResults = new Map<string, unknown>()
+  fake.setOnPrompt((id) => {
+    schemaResults.set(id, { candidates: [{ file: "wrong.ts", summary: "must be rejected", failure_scenario: "f" }] })
+    fake.pushError(id, "provider.go-limit", "weekly usage limit exceeded")
+  })
+  const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent", schemaResults })
+  const attempt = await runner(request())
+  assert.deepEqual(attempt, {
+    status: "provider_error",
+    message: "provider.go-limit: weekly usage limit exceeded",
+  })
+  assert.equal(fake.prompts.length, 1)
+  assert.equal(fake.created.length, 1)
 })
 
 test("a step-limited formatter repairs a missing failure scenario instead of dropping the finding", async () => {
@@ -535,7 +562,10 @@ test("a step-limited formatter repairs a missing failure scenario instead of dro
     fake.push(id, "I found a bug in a.ts but ran out of steps.")
   })
   const runner = makeRunner(fake.ctx, { parentSessionID: "ses_parent" })
-  const value = (await runner(request())) as { candidates: Array<{ file: string; failure_scenario: string }> }
+  const attempt = await runner(request())
+  assert.ok(attempt && typeof attempt === "object" && "status" in attempt)
+  assert.equal(attempt.status, "incomplete")
+  const value = attempt.value as { candidates: Array<{ file: string; failure_scenario: string }> }
   assert.equal(value.candidates.length, 1)
   assert.equal(value.candidates[0].file, "a.ts")
   assert.match(value.candidates[0].failure_scenario, /not stated/)

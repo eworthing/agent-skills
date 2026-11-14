@@ -126,91 +126,97 @@ PY
 )
   sid=$(api POST /api/session "$session_body" |
     python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["id"])')
-  : >"$STATE_DIR/$sid.marker"
+  printf '%s\n' "$target" >"$STATE_DIR/$sid.target"
   # The command endpoint returns only when the review is over. Post it from a
   # detached helper so the caller gets the session id immediately.
-  nohup "$0" __post "$sid" "$(command_text "$target")" >"$STATE_DIR/$sid.command.log" 2>&1 &
+  nohup "$0" __post "$sid" "$target" "$(command_text "$target")" >"$STATE_DIR/$sid.command.log" 2>&1 &
   echo "$sid"
 }
 
 cmd_post() {
-  [ $# -ge 2 ] || die "__post needs a session id and command text"
-  body=$(python3 - "$2" <<'PY'
+  [ $# -ge 3 ] || die "__post needs a session id, target, and command text"
+  sid=$1
+  body=$(python3 - "$3" <<'PY'
 import json, sys
 print(json.dumps({"name": "code-review-opencode", "text": sys.argv[1]}))
 PY
 )
-  api POST "/api/session/$1/command" "$body"
+  if api POST "/api/session/$sid/command" "$body"; then
+    printf '%s\n' succeeded >"$STATE_DIR/$sid.command-status"
+  else
+    rc=$?
+    printf 'failed:%s\n' "$rc" >"$STATE_DIR/$sid.command-status"
+    return "$rc"
+  fi
 }
 
 cmd_status() {
   [ $# -ge 1 ] || die "usage: $PROG status <session-id>"
   sid=$1
   session=$(api GET "/api/session/$sid")
-  python3 - "$session" "$REPORT_DIR" "$STATE_DIR/$sid.marker" "$STATE_DIR/$sid.command.log" <<'PY'
-import glob, json, os, sys
+  [ -f "$STATE_DIR/$sid.target" ] || die "missing target association for $sid; refusing to infer the report"
+  target=$(cat "$STATE_DIR/$sid.target" 2>/dev/null || true)
+  command_status=$(cat "$STATE_DIR/$sid.command-status" 2>/dev/null || true)
+  if [ "$command_status" = "failed" ] || case "$command_status" in failed:*) true ;; *) false ;; esac; then
+    printf 'command: %s\n' "$command_status"
+    return 3
+  fi
+  validation=$(python3 "$(dirname "$0")/cr_completion.py" --directory "$REPORT_DIR" --session-id "$sid" --target "$target" 2>&1) && valid=0 || valid=$?
+  if [ "$valid" -eq 0 ]; then
+    printf 'session: %s\n' "$sid"
+    printf 'completion: %s\n' "$validation"
+    return 0
+  fi
+  if [ "$valid" -eq 2 ]; then
+    printf 'completion: %s\n' "$validation"
+    return 3
+  fi
+  if [ "$command_status" = succeeded ]; then
+    printf 'completion: %s\n' "$validation"
+    return 3
+  fi
+  python3 - "$session" "$command_status" <<'PY'
+import json, sys
 session = json.loads(sys.argv[1])["data"]
-report_dir, marker, log = sys.argv[2], sys.argv[3], sys.argv[4]
+command_status = sys.argv[2]
 outcome = session.get("outcome")
 print("session:", session.get("id"))
-print("outcome:", outcome or "running")
-reports = [p for p in glob.glob(os.path.join(report_dir, "*.json"))
-           if os.path.exists(marker) and os.path.getmtime(p) >= os.path.getmtime(marker)]
-reports.sort(key=os.path.getmtime)
-if reports:
-    path = reports[-1]
-    data = json.load(open(path))
-    stats = data.get("stats", {})
-    print("report:", path)
-    print("level:", data.get("level"), "| partial:", data.get("partial"))
-    print("findings:", len(data.get("findings", [])), "/", stats.get("reported"),
-          "| candidates:", stats.get("candidates"), "| refuted:", stats.get("refuted"))
-    if data.get("warnings"):
-        print("warnings:", len(data["warnings"]))
-        for warning in data["warnings"]:
-            print("  -", warning)
-    if data.get("truncated_from"):
-        print("truncated_from:", data["truncated_from"])
-    status = 0 if (outcome == "succeeded" and not data.get("partial")) else 2
-elif outcome:
-    print("report: none (the run wrote no artifact)")
-    if os.path.exists(log) and os.path.getsize(log) > 0:
-        print("command log tail:")
-        with open(log, "r", errors="replace") as handle:
-            for line in handle.read().splitlines()[-8:]:
-                print("  " + line)
-    status = 0 if outcome == "succeeded" else 3
-else:
+print("command:", command_status or "running")
+print("session outcome:", outcome or "not set")
+if command_status.startswith("failed:"):
+    print("command request failed:", command_status.split(":", 1)[1])
+    status = 3
+elif command_status != "succeeded":
     print("report: pending")
     status = 4
+else:
+    print("command request: completed without a matching completion record")
+    status = 3
 sys.exit(status)
 PY
+  return 4
 }
 
 cmd_wait() {
   [ $# -ge 1 ] || die "usage: $PROG wait <session-id>"
   sid=$1
   while :; do
-    state=$(api GET "/api/session/$sid" |
-      python3 -c 'import json,sys; print(json.load(sys.stdin)["data"].get("outcome") or "running")')
-    [ "$state" = "running" ] || break
-    sleep 30
+    if cmd_status "$sid"; then
+      return 0
+    else
+      status=$?
+    fi
+    [ "$status" -eq 4 ] || return "$status"
+    sleep 2
   done
-  cmd_status "$sid"
 }
 
 cmd_report() {
   [ $# -ge 1 ] || die "usage: $PROG report <session-id>"
   sid=$1
-  path=$(python3 - "$REPORT_DIR" "$STATE_DIR/$sid.marker" <<'PY'
-import glob, os, sys
-report_dir, marker = sys.argv[1], sys.argv[2]
-reports = [p for p in glob.glob(os.path.join(report_dir, "*.json"))
-           if os.path.exists(marker) and os.path.getmtime(p) >= os.path.getmtime(marker)]
-reports.sort(key=os.path.getmtime)
-print(reports[-1] if reports else "")
-PY
-)
+  [ -f "$STATE_DIR/$sid.target" ] || die "missing target association for $sid; refusing to infer the report"
+  target=$(cat "$STATE_DIR/$sid.target" 2>/dev/null || true)
+  path=$(python3 "$(dirname "$0")/cr_completion.py" --directory "$REPORT_DIR" --session-id "$sid" --target "$target" --path-only 2>/dev/null || true)
   [ -n "$path" ] || die "no report for $sid yet"
   cat "$path"
 }

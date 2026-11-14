@@ -10,6 +10,8 @@
 import { AGENT_IDS } from "./agent-ids.ts"
 import { GIT_HARDENING } from "./scope.ts"
 import { SHELL_DENY_RESOURCES } from "./shell-policy.ts"
+import { homedir } from "node:os"
+import { join, resolve } from "node:path"
 
 export type AgentPermission = {
   action: string
@@ -66,6 +68,10 @@ export const READ_ONLY_POLICY: AgentPermission[] = [
   { action: "read", resource: "*", effect: "allow" },
   { action: "glob", resource: "*", effect: "allow" },
   { action: "grep", resource: "*", effect: "allow" },
+  // OpenCode's Markdown loader expands ~ for path permissions. Runtime
+  // transforms bypass that loader and resolve these roots explicitly below.
+  { action: "external_directory", resource: "~/.local/share/opencode/shell/*", effect: "allow" },
+  { action: "external_directory", resource: "~/.local/share/opencode/tool-output/*", effect: "allow" },
   ...GIT_ALLOW,
   ...SHELL_ALLOW,
   ...SHELL_DENY,
@@ -81,11 +87,21 @@ const ROLE_TOOLS: Record<string, readonly string[]> = {
 export const REVIEW_AGENT_IDS = Object.keys(ROLE_TOOLS)
 
 /** Full permission list for one review agent. */
-export function reviewAgentPermissions(agentID: string): AgentPermission[] {
+export function reviewAgentPermissions(
+  agentID: string,
+  dataRoot = resolve(join(process.env.XDG_DATA_HOME || join(homedir(), ".local", "share"), "opencode")),
+): AgentPermission[] {
   const tools = (ROLE_TOOLS[agentID] ?? []).map(
     (action): AgentPermission => ({ action, resource: "*", effect: "allow" }),
   )
-  return [...READ_ONLY_POLICY, ...tools]
+  const policy = READ_ONLY_POLICY.flatMap((rule) => {
+    if (rule.action !== "external_directory") return [rule]
+    // Permission resources are globs; never interpolate a wildcard-bearing
+    // filesystem root into an allow rule. Keep that unusual host fail-closed.
+    if (dataRoot !== "~/.local/share/opencode" && /[*?]/.test(dataRoot)) return []
+    return [{ ...rule, resource: rule.resource.replace("~/.local/share/opencode", dataRoot.replaceAll("\\", "/")) }]
+  })
+  return [...policy, ...tools]
 }
 
 /**
@@ -96,7 +112,7 @@ export function reviewAgentPermissions(agentID: string): AgentPermission[] {
  */
 export function renderAgentPolicyYaml(agentID: string): string {
   const lines = ["permissions:"]
-  for (const rule of reviewAgentPermissions(agentID)) {
+  for (const rule of reviewAgentPermissions(agentID, "~/.local/share/opencode")) {
     lines.push(`  - action: ${JSON.stringify(rule.action)}`)
     lines.push(`    resource: ${JSON.stringify(rule.resource)}`)
     lines.push(`    effect: ${rule.effect}`)

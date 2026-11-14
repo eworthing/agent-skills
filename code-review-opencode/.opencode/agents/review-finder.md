@@ -22,53 +22,59 @@ permissions:
   - action: "grep"
     resource: "*"
     effect: allow
-  - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff --no-ext-diff --no-textconv*"
+  - action: "external_directory"
+    resource: "~/.local/share/opencode/shell/*"
+    effect: allow
+  - action: "external_directory"
+    resource: "~/.local/share/opencode/tool-output/*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff --no-ext-diff --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false diff --no-ext-diff --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false log --no-ext-diff --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false diff --no-ext-diff --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false log --no-ext-diff --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false log --no-ext-diff --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false show --no-ext-diff --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false log --no-ext-diff --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false show --no-ext-diff --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false show --no-ext-diff --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false blame --no-textconv*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false show --no-ext-diff --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false blame --no-textconv*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false blame --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false status*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false blame --no-textconv*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false status*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false status*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false rev-parse*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false status*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false rev-parse*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false rev-parse*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false ls-files*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false rev-parse*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false ls-files*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false ls-files*"
     effect: allow
   - action: "shell"
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false grep*"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false ls-files*"
     effect: allow
   - action: "shell"
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false grep*"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false grep*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false -c diff.mnemonicPrefix=false -c diff.noprefix=false -c color.ui=false grep*"
     effect: allow
   - action: "shell"
     resource: "gh pr diff*"

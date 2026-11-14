@@ -46,6 +46,13 @@ export function scopeOf(files: string[], extra: Partial<Scope> = {}): Scope {
     // A PR-number review pins the captured head; tests that exercise posting
     // get one by default unless they explicitly clear it.
     ...(extra.pr !== undefined && !("prHeadOid" in extra) ? { prHeadOid: "abc" } : {}),
+    ...(extra.branch !== undefined
+      ? {
+          reviewedHeadOid: "abc",
+          reviewedTrackedTreeClean: true,
+          reviewedHeadStable: true,
+        }
+      : {}),
     ...extra,
   }
 }

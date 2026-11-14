@@ -128,10 +128,48 @@ test("a checked-out PR branch resolves its PR and posts inline comments", async 
   })
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.includes("repos/acme/app/pulls/9/comments"))
-  assert.equal(calls.some((c) => c.some((a) => a.includes("/issues/9/comments"))), false)
+  assert.equal(
+    calls.some(
+      (c) =>
+        !c.includes("--paginate") &&
+        c.some((a) => a.includes("/issues/9/comments")) &&
+        c.some((a) => a.startsWith("body=")),
+    ),
+    false,
+  )
   assert.equal((await resolvePrInfo("/repo", scope, exec))?.number, 9)
+})
+
+test("an existing inline finding marker prevents a duplicate create", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  let creates = 0
+  let scans = 0
+  const marker = findingMarker(finding())
+  const { exec } = fake((argv) => {
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      if (argv.includes("--paginate")) {
+        scans++
+        return { stdout: marker }
+      }
+      creates++
+      return { code: 0 }
+    }
+    return { code: 0 }
+  })
+  const text = await postComments({
+    cwd: "/repo",
+    scope,
+    result: result(),
+    exec,
+    host: "github",
+    githubHostname: "github.com",
+  })
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment/)
+  assert.equal(scans, 2)
+  assert.equal(creates, 0)
 })
 
 test("a branch review refuses to post when local HEAD is not the PR head", async () => {
@@ -147,8 +185,59 @@ test("a branch review refuses to post when local HEAD is not the PR head", async
     return { code: 1, stderr: "unexpected" }
   })
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
-  assert.match(text, /local HEAD local is not the PR head remote/)
+  assert.match(text, /local HEAD local differs from the reviewed snapshot abc/)
   assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
+})
+
+test("a newer clean PR head cannot validate anchors captured from an older commit", async () => {
+  const scope = scopeOf(["src/a.ts"], {
+    branch: "feature",
+    diffBase: "main",
+    reviewedHeadOid: "captured-A",
+    reviewedTrackedTreeClean: true,
+    reviewedHeadStable: true,
+  })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "git" && argv[1] === "status") return { stdout: "" }
+    if (argv[0] === "git" && argv[1] === "rev-parse") return { stdout: "commit-B\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
+      return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
+      return { stdout: argv.includes("baseRefName") ? "main\n" : "commit-B\n" }
+    }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /differs from the reviewed snapshot captured-A/)
+  assert.equal(calls.some((call) => call[0] === "gh" && call[1] === "api"), false)
+})
+
+test("a captured worktree patch cannot be posted after it is reverted on the same HEAD", async () => {
+  const scope = scopeOf(["src/a.ts"], {
+    branch: "feature",
+    diffBase: "main",
+    reviewedHeadOid: "abc",
+    reviewedTrackedTreeClean: true,
+    reviewedHeadStable: true,
+    reviewedWorktreeDiff: true,
+  })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "feature") {
+      return { stdout: JSON.stringify({ number: 9, url: "https://github.com/acme/app/pull/9" }) }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/app\n" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
+      return { stdout: argv.includes("baseRefName") ? "main\n" : "abc\n" }
+    }
+    return { code: 1, stderr: "unexpected" }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /captured review did not come from a stable, clean checkout/)
+  assert.equal(calls.some((call) => call[0] === "gh" && call[1] === "api"), false)
 })
 
 test("a branch without a PR tells the user to pass the PR number", async () => {
@@ -253,7 +342,7 @@ test("an existing general comment is not reposted", async () => {
     return { code: 1 }
   })
   const text = await postComments({ cwd: "/repo", scope, result: result(findings), exec })
-  assert.match(text, /already in a general PR comment/)
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment/)
   assert.equal(calls.some((c) => c.some((a) => a.startsWith("body="))), false)
 })
 
@@ -278,7 +367,7 @@ test("the general comment marker stays stable when the failed subset changes", a
     return { code: 1 }
   })
   const text = await postComments({ cwd: "/repo", scope, result: result([a, b]), exec })
-  assert.match(text, /already in a general PR comment/)
+  assert.match(text, /Posted 2\/2 inline GitHub PR comments/)
   assert.equal(
     calls.some(
       (c) =>
@@ -383,7 +472,7 @@ test("an existing inline marker prevents a duplicate general comment", async () 
     return { code: 1 }
   })
   const text = await postComments({ cwd: "/repo", scope, result: result([f]), exec })
-  assert.match(text, /already in a general PR comment/)
+  assert.match(text, /Posted 1\/1 inline GitHub PR comment/)
   assert.equal(
     calls.some(
       (c) =>
@@ -411,7 +500,7 @@ test("a failed existing-comment check does not post a duplicate", async () => {
     result: result([finding({ line: 0 })]),
     exec,
   })
-  assert.match(text, /Could not verify whether/)
+  assert.match(text, /could not verify existing finding markers/)
   assert.equal(
     calls.some(
       (c) =>
@@ -601,7 +690,7 @@ test("a fork clone posts to the PR's base repository", async () => {
   })
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.includes("repos/upstream/app/pulls/9/comments"))
 })
 
@@ -624,7 +713,7 @@ test("a PR-number review pins the head captured with the patch", async () => {
     calls.some((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view" && c[3] === "9"),
     false,
   )
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.some((arg) => arg === "commit_id=pinned123"))
   assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
 })
@@ -776,7 +865,7 @@ test("a GHE origin resolves its hostname once and reuses it", async () => {
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
   assert.equal(remoteCalls, 1)
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.includes("--hostname"))
   assert.ok(api?.includes("ghe.corp.example"))
 })
@@ -809,7 +898,7 @@ test("a deleted line is anchored with side=LEFT", async () => {
     return { code: 1 }
   })
   await postComments({ cwd: "/repo", scope, result: result([finding({ file: "src/a.ts", line: 10 })]), exec })
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.includes("side=LEFT"), `expected side=LEFT, got ${api?.join(" ")}`)
   assert.equal(
     buildGitHubCommentArgs({
@@ -849,7 +938,7 @@ test("a renamed-file finding posts on the head path with side=LEFT", async () =>
     return { code: 1 }
   })
   await postComments({ cwd: "/repo", scope, result: result([finding({ file: "src/old.ts", line: 10 })]), exec })
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.includes("path=src/new.ts"), `expected the head path, got ${api?.join(" ")}`)
   assert.ok(api?.includes("side=LEFT"), `expected side=LEFT, got ${api?.join(" ")}`)
 })
@@ -966,7 +1055,7 @@ test("a github.com PR URL clears a GitHub Enterprise origin hostname", async () 
   })
   const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
   assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
+  const api = calls.find((c) => c[0] === "gh" && c[1] === "api" && !c.includes("--paginate"))
   assert.ok(api?.includes("repos/upstream/app/pulls/9/comments"))
   assert.equal(api?.includes("--hostname"), false)
 })

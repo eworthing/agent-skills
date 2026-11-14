@@ -43,6 +43,24 @@ test("flags are stripped and combined", () => {
   assert.equal(p.fix, true)
 })
 
+test("action flags in prose are not authorized by a partial trailing option run", () => {
+  for (const request of [
+    "high review the --fix --comment parsing",
+    "high review the --comment --fix parsing",
+    "high review the --fix --max-findings parsing",
+    "high review the --fix --max-findings=parsing",
+  ]) {
+    const { rest } = parseExtensions(request)
+    const parsed = parseArgs(rest)
+    assert.equal(parsed.fix, false, request)
+    assert.equal(parsed.comment, false, request)
+  }
+  const { rest } = parseExtensions("high src/a.ts --fix --comment")
+  const parsed = parseArgs(rest)
+  assert.equal(parsed.fix, true)
+  assert.equal(parsed.comment, true)
+})
+
 test("a level-looking typo is reported and consumed, not left in the target", () => {
   const p = parseArgs("highh src/a.ts")
   assert.equal(p.explicit, undefined)

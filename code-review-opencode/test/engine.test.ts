@@ -1262,6 +1262,64 @@ test("a failed synthesis keeps the sweep-aware deterministic summary", async () 
   assert.ok(verifyA.at >= finderB.at + 110, "verification should not start before every finder returns")
 })
 
+test("barrier dedup preserves independent findings at distinct exact anchors", async () => {
+  const a = candidate("src/a.ts", 11, "null dereference", "user.name is null")
+  const b = candidate("src/a.ts", 13, "null dereference", "config.timeout is null")
+  const { result, calls } = await review({
+    version: "cc-2.1.318",
+    level: "high",
+    semanticMerge: false,
+    script: {
+      finder: (req) => req.label === "angle-A" ? { candidates: [a, b] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+    },
+  })
+  assert.equal(calls.filter((call) => call.role === "verifier").length, 2)
+  assert.deepEqual(result.findings.map((finding) => finding.line), [11, 13])
+})
+
+test("terminal provider failures survive the engine as incomplete status", async () => {
+  const cell = cellOf("cc-2.1.318", "claude-sonnet-5", "high")
+  const calls: string[] = []
+  const result = await runReview({
+    level: "high",
+    cell,
+    scope: scopeOf(["src/a.ts"]),
+    runner: async (req) => {
+      calls.push(req.role)
+      return { status: "provider_error", message: "provider.go-limit: weekly usage limit exceeded" }
+    },
+  })
+  assert.equal(result.partial, true)
+  assert.equal(result.terminalFailure, "provider.go-limit: weekly usage limit exceeded")
+  assert.equal(calls.every((role) => role === "finder"), true)
+})
+
+test("step-limited recovered results remain partial after engine normalization", async () => {
+  const cell = cellOf("cc-2.1.318", "claude-sonnet-5", "high")
+  const { runner } = scripted({
+    finder: (req) => req.label === "angle-A" ? { candidates: [candidate("src/a.ts", 11, "bug")] } : { candidates: [] },
+    verifier: () => CONFIRMED(),
+  })
+  let wrapped = false
+  const result = await runReview({
+    level: "high",
+    cell,
+    scope: scopeOf(["src/a.ts"]),
+    runner: async (req) => {
+      const value = await runner(req)
+      if (!wrapped && req.role === "finder" && req.label === "angle-A") {
+        wrapped = true
+        return { status: "incomplete", value, reason: "step_limit" }
+      }
+      return value
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.partial, true)
+  assert.match(result.warnings.join(" "), /incomplete coverage \(step_limit\)/)
+})
+
 /* 23 */ test("a refuted candidate cannot return as a sweep gap", async () => {
   const falsePositive = candidate("src/a.ts", 1, "looks like a bug but the caller guards it")
   const { result, calls } = await review({
@@ -1878,6 +1936,32 @@ test("pre-verify dedup keeps a correctness representative over a longer cleanup 
   assert.equal(result.findings[0].summary, "missing guard")
 })
 
+test("index synthesis preserves correctness classification from any merged member", async () => {
+  const correctness = { ...candidate("src/a.ts", 11, "null dereference", "user.name is null"), kind: "correctness" as const, category: "null-dereference" }
+  const cleanup = { ...candidate("src/a.ts", 13, "confirmed duplicate claim", "config.timeout is null"), kind: "cleanup" as const, category: "cleanup" }
+  const { result } = await review({
+    version: "cc-workflow-2.1.221",
+    level: "high",
+    script: {
+      finder: (req) => req.label === "angle-A" ? { candidates: [correctness] } : req.label === "cleanup" ? { candidates: [cleanup] } : { candidates: [] },
+      verifier: (req) => ({
+        verdicts: [{
+          index: 0,
+          verdict: req.prompt.includes("confirmed duplicate claim") ? "CONFIRMED" : "PLAUSIBLE",
+          evidence: "null guard missing",
+        }],
+      }),
+      synthesize: () => ({ summary: "merged", decisions: [{ index: 0, merge: [1] }] }),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].verdict, "CONFIRMED")
+  assert.equal(result.findings[0].kind, "correctness")
+  assert.equal(result.findings[0].category, "null-dereference")
+  assert.ok(result.findings[0].summary.startsWith(cleanup.summary))
+  assert.equal(result.findings[0].line, cleanup.line)
+})
+
 test("a sweep candidate with no category ranks as cleanup", async () => {
   const { result } = await review({
     level: "max",
@@ -1929,6 +2013,63 @@ test("a truncated text-synthesis report records truncatedFrom", async () => {
   // engine reports a lower bound instead of claiming "1 of 1".
   assert.equal(result.truncatedFrom, 2)
   assert.match(result.warnings.join(" "), /truncated at the tool cap/)
+})
+
+test("text synthesis discloses a list that reaches its stated cap", async () => {
+  const first = candidate("src/a.ts", 1, "first issue")
+  const second = candidate("src/b.ts", 2, "second issue")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    limit: 1,
+    script: {
+      finder: (req) => req.label === "angle-A" ? { candidates: [first, second] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+      synthesize: () => ({ summary: "Included one finding; second omitted because the cap was 1.", findings: [first] }),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.truncatedFrom, undefined)
+  assert.equal(result.partial, true)
+  assert.match(result.warnings.join(" "), /reached its finding cap/)
+})
+
+test("one surviving text finding at cap one remains complete", async () => {
+  const only = candidate("src/a.ts", 1, "only issue")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    limit: 1,
+    script: {
+      finder: (req) => req.label === "angle-A" ? { candidates: [only] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.partial, false)
+  assert.equal(result.truncatedFrom, undefined)
+})
+
+test("text synthesis marks unaccounted survivors partial below the cap", async () => {
+  const first = candidate("src/a.ts", 1, "first issue")
+  const second = candidate("src/b.ts", 2, "second issue")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    limit: 3,
+    script: {
+      finder: (req) => req.label === "angle-A" ? { candidates: [first, second] } : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: () => ({ candidates: [] }),
+      synthesize: () => ({ summary: "one re-emitted", findings: [first] }),
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.truncatedFrom, undefined)
+  assert.equal(result.partial, true)
+  assert.match(result.warnings.join(" "), /without verifiable merge accounting/)
 })
 
 test("a truncated text-synthesis report reports the proven lower bound", async () => {

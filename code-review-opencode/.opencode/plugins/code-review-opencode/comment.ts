@@ -451,6 +451,14 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // lines do not exist at the PR head, so an inline anchor is either
     // rejected or attached to a different line. Refuse instead of posting a
     // review that describes a tree the PR does not contain.
+    if (
+      scope.reviewedHeadStable !== true ||
+      !scope.reviewedHeadOid ||
+      scope.reviewedTrackedTreeClean !== true ||
+      scope.reviewedWorktreeDiff === true
+    ) {
+      return "`--comment` was ignored: the captured review did not come from a stable, clean checkout; no inline comments were posted."
+    }
     // Untracked files are not part of the reviewed diff; only tracked changes
     // can make an inline anchor stale.
     const [dirty, local, remoteList] = await Promise.all([
@@ -468,6 +476,9 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       return "`--comment` was ignored: the working tree has uncommitted changes; commit them or pass the PR number as the target."
     }
     const localHead = local.stdout.trim()
+    if (local.code !== 0 || localHead !== scope.reviewedHeadOid) {
+      return `\`--comment\` was ignored: local HEAD ${localHead || "(unknown)"} differs from the reviewed snapshot ${scope.reviewedHeadOid}; no inline comments were posted.`
+    }
     if (local.code !== 0 || localHead !== commit) {
       return `\`--comment\` was ignored: local HEAD ${localHead || "(unknown)"} is not the PR head ${commit}; check out the PR branch or pass the PR number as the target.`
     }
@@ -512,6 +523,28 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     }
   }
 
+  // Read both comment surfaces before any inline create. A successful remote
+  // create whose response was lost is otherwise duplicated by the next run.
+  const [issueComments, reviewComments] = await Promise.all([
+    call([
+      ...ghApiArgs(githubHostname, `repos/${owner}/${name}/issues/${pr}/comments`),
+      "--paginate",
+      "--jq",
+      ".[].body",
+    ]),
+    call([
+      ...ghApiArgs(githubHostname, `repos/${owner}/${name}/pulls/${pr}/comments`),
+      "--paginate",
+      "--jq",
+      ".[].body",
+    ]),
+  ])
+  if (issueComments.code !== 0 || reviewComments.code !== 0) {
+    const failed = issueComments.code !== 0 ? issueComments : reviewComments
+    return `\`--comment\` was ignored: could not verify existing finding markers; no comments were posted (${failed.stderr.trim() || "gh api failed"}).`
+  }
+  const existingBodies = `${issueComments.stdout}\n${reviewComments.stdout}`
+
   // Resolve every line side in one pass instead of re-parsing the whole patch
   // for each finding. The map is only needed for inline anchors; a general
   // comment path skips the parse entirely.
@@ -529,6 +562,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
           }),
         )
         return mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
+          if (existingBodies.includes(findingMarker(f))) return { ok: true, message: "" }
           const line = lineOf(f)
           if (line === undefined) return { ok: false, message: `${renderedLocation(f)}: no line to anchor an inline comment` }
           if (!sides.hasLine(f.file, line)) {
@@ -581,27 +615,7 @@ export async function postComments(deps: CommentDeps): Promise<string> {
     // for the same finding. Each finding carries its own marker in both inline
     // and general comment bodies, so a changed inline-success subset neither
     // hides a finding that was never posted nor reposts one that is.
-    const [issueComments, reviewComments] = await Promise.all([
-      call([
-        ...ghApiArgs(githubHostname, `repos/${owner}/${name}/issues/${pr}/comments`),
-        "--paginate",
-        "--jq",
-        ".[].body",
-      ]),
-      call([
-        ...ghApiArgs(githubHostname, `repos/${owner}/${name}/pulls/${pr}/comments`),
-        "--paginate",
-        "--jq",
-        ".[].body",
-      ]),
-    ])
-    if (issueComments.code !== 0 || reviewComments.code !== 0) {
-      // An unavailable check is not proof that the comment exists. Refuse to
-      // post rather than risk a duplicate general comment.
-      const failed = issueComments.code !== 0 ? issueComments : reviewComments
-      summary = ` Could not verify whether the ${pluralize(unposted.length, "finding")} were already posted; no general PR comment was posted: ${failed.stderr.trim() || "gh api failed"}.`
-    } else {
-      const existingBodies = `${issueComments.stdout}\n${reviewComments.stdout}`
+    {
       const missing = unposted.filter((f) => !existingBodies.includes(findingMarker(f)))
       if (missing.length === 0) {
         summary = ` The ${pluralize(unposted.length, "finding")} that could not be posted inline are already in a general PR comment.`

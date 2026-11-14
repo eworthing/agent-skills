@@ -5,7 +5,7 @@
  * its own context. Nothing is shared except the prompt and the repository on
  * disk, which is the reference's isolation model for Agent-tool subagents.
  */
-import type { AgentRequest, AgentRunner } from "./engine.ts"
+import type { AgentAttemptResult, AgentRequest, AgentRunner } from "./engine.ts"
 import {
   extractJson,
   isSchemaEcho,
@@ -387,6 +387,30 @@ function assistantText(messages: readonly unknown[]): string {
     if (text) return text
   }
   return ""
+}
+
+/** A terminal provider response must not be mistaken for an empty answer. */
+function providerFailure(messages: readonly unknown[]): string | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i] as {
+      type?: unknown
+      finish?: unknown
+      error?: unknown
+      content?: unknown
+    }
+    if (message?.type !== "assistant" || message.finish !== "error") continue
+    const error = message.error
+    if (error && typeof error === "object") {
+      const record = error as { code?: unknown; message?: unknown; status?: unknown }
+      const details = [record.code, record.status, record.message]
+        .filter((part): part is string | number => typeof part === "string" || typeof part === "number")
+        .map(String)
+      if (details.length > 0) return details.join(": ")
+    }
+    const text = messageText(message).trim()
+    return text || "provider returned finish:error"
+  }
+  return undefined
 }
 
 /**
@@ -800,14 +824,15 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
     }
   }
 
-  return async (req: AgentRequest): Promise<unknown | null> => {
+  return async (req: AgentRequest): Promise<unknown | null | AgentAttemptResult> => {
     if (req.signal?.aborted) return null
     const startedAt = Date.now()
     try {
       const runAttempt = async (
         label: string,
-      ): Promise<{ value: unknown | null; stalled: boolean }> => {
+      ): Promise<{ value: unknown | null; stalled: boolean; providerError?: string }> => {
         let stalled = false
+        let terminalError: string | undefined
         const value = await runInChild(req, label, async (sessionID) => {
         // A session created above has no pre-prompt messages; skip the
         // transcript RPC that would only confirm the known zero.
@@ -825,6 +850,15 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         if (waitOutcome === "stalled") stalled = true
         if (req.signal?.aborted) return null
         let cachedMessages = waited.messages
+        let stepLimited = false
+        if (cachedMessages !== undefined) {
+          terminalError = providerFailure(cachedMessages)
+          stepLimited = hitStepLimit(cachedMessages)
+          if (terminalError) {
+            log(`[code-review-opencode] ${req.label}: provider failure: ${terminalError}`)
+            return null
+          }
+        }
         // The transcript we already read is the pre-prompt baseline for the
         // next retry. Reusing its count avoids transferring the diff-sized
         // context again merely to learn how many messages preceded the retry.
@@ -844,7 +878,8 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         return value === undefined || isSchemaEcho(value) ? undefined : value
       }
       let lastText = ""
-      let stepLimited = false
+      const withCoverage = (result: unknown): unknown | AgentAttemptResult =>
+        stepLimited ? { status: "incomplete", value: result, reason: "step_limit" } : result
       const fromText = async (): Promise<unknown | null> => {
         if (!sessionID) return null
         // waitForChild may already have read the transcript to detect
@@ -864,6 +899,11 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
         cachedMessages = undefined
         if (messages === undefined) {
           log(`[code-review-opencode] ${req.label}: unrecognized transcript envelope`)
+          return null
+        }
+        terminalError = providerFailure(messages)
+        if (terminalError) {
+          log(`[code-review-opencode] ${req.label}: provider failure: ${terminalError}`)
           return null
         }
         messageCount = messages.length
@@ -891,7 +931,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           log(`[code-review-opencode] ${req.label}: JSON response did not match the ${req.schemaName} result shape (${error})`)
           return null
         }
-        return parsed
+        return withCoverage(parsed) as unknown
       }
 
       // A step-limited session cannot be recovered by prompting it again: the
@@ -930,6 +970,23 @@ ${text}`
             req.signal,
           )
           if (req.signal?.aborted) return null
+          let formatterMessages = waited.messages
+          if (formatterMessages === undefined) {
+            try {
+              formatterMessages = await ctx.session.context({ sessionID: id })
+            } catch {
+              // The structured tool result may still be usable if the host
+              // cannot expose the transcript; it simply has no status proof.
+            }
+          }
+          const formatterTranscript = formatterMessages === undefined ? undefined : sessionMessages(formatterMessages)
+          if (formatterTranscript) {
+            terminalError = providerFailure(formatterTranscript)
+            if (terminalError) {
+              log(`[code-review-opencode] ${req.label}: formatter provider failure: ${terminalError}`)
+              return null
+            }
+          }
           const direct = opts.schemaResults?.get(id)
           if (direct !== undefined) {
             opts.schemaResults?.delete(id)
@@ -941,7 +998,7 @@ ${text}`
           // transient get/wait miss). Only a watchdog stall proves there is no
           // answer; otherwise try the context before discarding the child.
           if (waited.outcome === "stalled") return null
-          let read = waited.messages
+          let read = formatterMessages
           if (read === undefined) {
             try {
               read = await ctx.session.context({ sessionID: id })
@@ -957,6 +1014,11 @@ ${text}`
             log(`[code-review-opencode] ${req.label}: unrecognized formatter transcript envelope`)
             return null
           }
+          terminalError = providerFailure(messages)
+          if (terminalError) {
+            log(`[code-review-opencode] ${req.label}: formatter provider failure: ${terminalError}`)
+            return null
+          }
           const answer = assistantText(messages)
           if (!answer) return null
           const parsed = withFailurePlaceholders(
@@ -969,10 +1031,27 @@ ${text}`
         })
       }
 
+      if (cachedMessages === undefined) {
+        try {
+          cachedMessages = await ctx.session.context({ sessionID })
+        } catch {
+          // The host's structured result remains usable without transcript status.
+        }
+      }
+      const originalTranscript = cachedMessages === undefined ? undefined : sessionMessages(cachedMessages)
+      if (originalTranscript) {
+        terminalError = providerFailure(originalTranscript)
+        stepLimited = stepLimited || hitStepLimit(originalTranscript)
+        if (terminalError) {
+          log(`[code-review-opencode] ${req.label}: provider failure: ${terminalError}`)
+          return null
+        }
+      }
       const direct = captured()
-      if (direct !== undefined) return direct
+      if (direct !== undefined) return withCoverage(direct)
       const salvaged = await fromText()
       if (salvaged !== null) return salvaged
+      if (terminalError) return null
 
       // A watchdog interrupt is a timeout, not a validation failure: prompting
       // the same interrupted session again just stalls for another full window.
@@ -992,7 +1071,8 @@ ${text}`
           `[code-review-opencode] ${req.label}: ${stepLimited ? "step limit reached" : "no structured result"}; trying a fresh formatter`,
         )
         const formatted = await formatFresh(lastText)
-        if (formatted !== null) return formatted
+        if (formatted !== null) return withCoverage(formatted)
+        if (terminalError) return null
         if (stepLimited) {
           log(`[code-review-opencode] ${req.label}: fresh formatter could not recover the summary`)
           return null
@@ -1021,11 +1101,29 @@ ${text}`
           req.signal,
         )
         if (req.signal?.aborted) return null
+        let retryMessages = retriedWait.messages
+        if (retryMessages === undefined) {
+          try {
+            retryMessages = await ctx.session.context({ sessionID })
+          } catch {
+            // The structured result may remain usable without transcript status.
+          }
+        }
+        const retryTranscript = retryMessages === undefined ? undefined : sessionMessages(retryMessages)
+        if (retryTranscript) {
+          terminalError = providerFailure(retryTranscript)
+          stepLimited = stepLimited || hitStepLimit(retryTranscript)
+          if (terminalError) {
+            log(`[code-review-opencode] ${req.label}: provider failure: ${terminalError}`)
+            return null
+          }
+        }
         const retried = captured()
-        if (retried !== undefined) return retried
-        cachedMessages = retriedWait.messages
+        if (retried !== undefined) return withCoverage(retried)
+        cachedMessages = retryMessages
         const recovered = await fromText()
         if (recovered !== null) return recovered
+        if (terminalError) return null
         if (retriedWait.outcome === "stalled") {
           stalled = true
           log(`[code-review-opencode] ${req.label}: retry stalled; giving up on this child`)
@@ -1034,7 +1132,8 @@ ${text}`
         if (stepLimited) {
           log(`[code-review-opencode] ${req.label}: retry hit the step limit; trying a fresh formatter`)
           const formatted = await formatFresh(lastText)
-          if (formatted !== null) return formatted
+          if (formatted !== null) return withCoverage(formatted)
+          if (terminalError) return null
           break
         }
       }
@@ -1043,14 +1142,16 @@ ${text}`
         log(`[code-review-opencode] ${req.label}: unusable structured output (${failures} validation failure(s))`)
         return null
         })
-        return { value, stalled }
+        return { value, stalled, ...(terminalError ? { providerError: terminalError } : {}) }
       }
       const first = await runAttempt(req.label)
+      if (first.providerError) return { status: "provider_error", message: first.providerError }
       if (first.value !== null || !first.stalled) return first.value
       // A stall is a provider/session failure, not a schema decision. One
       // fresh child can still complete the same work.
       log(`[code-review-opencode] ${req.label}: stalled; retrying once with a fresh child`)
-      return (await runAttempt(`${req.label} retry`)).value
+      const retried = await runAttempt(`${req.label} retry`)
+      return retried.providerError ? { status: "provider_error", message: retried.providerError } : retried.value
     } catch (error) {
       log(`[code-review-opencode] ${req.label}: ${error instanceof Error ? error.message : String(error)}`)
       return null

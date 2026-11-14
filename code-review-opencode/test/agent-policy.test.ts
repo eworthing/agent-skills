@@ -68,6 +68,40 @@ test("role tool permissions are role-specific", () => {
   assert.equal(verifier.includes("code_review_candidates"), false)
 })
 
+test("spilled output gets its separate external-directory approval without granting home access or writes", () => {
+  // OpenCode 2.2.5 FileAccess authorizes a file's parent as <directory>/*;
+  // Permission.evaluate uses the last matching glob, independently of read.
+  const root = "/home/reviewer/custom-data/opencode"
+  const rules = reviewAgentPermissions("review-finder", root)
+  const effect = (action: string, resource: string) =>
+    rules.findLast((rule) => globMatch(rule.action, action) && globMatch(rule.resource, resource))?.effect
+  assert.equal(effect("external_directory", `${root}/shell/project-id/*`), "allow")
+  assert.equal(effect("external_directory", `${root}/tool-output/*`), "allow")
+  assert.equal(effect("read", `${root}/shell/project-id/sh_example.out`), "allow")
+  for (const resource of ["/home/reviewer/.ssh/*", `${root}/credential/*`, "/tmp/untrusted/*"]) {
+    assert.equal(effect("external_directory", resource), "deny")
+  }
+  for (const action of ["edit", "write", "patch"]) {
+    assert.equal(effect(action, `${root}/shell/project-id/sh_example.out`), "deny")
+  }
+  assert.equal(
+    reviewAgentPermissions("review-finder", "/tmp/data?wildcard/opencode").some((rule) => rule.action === "external_directory"),
+    false,
+  )
+})
+
+test("Markdown spill permissions use host-expanded home paths, never a developer's home", () => {
+  const yaml = renderAgentPolicyYaml("review-finder")
+  assert.ok(yaml.includes('resource: "~/.local/share/opencode/shell/*"'))
+  assert.ok(yaml.includes('resource: "~/.local/share/opencode/tool-output/*"'))
+  // The host's ConfigAgentPlugin expands these path-action resources before
+  // evaluating them; its agent.transform API does not perform that expansion.
+  const portable = reviewAgentPermissions("review-finder", "~/.local/share/opencode")
+  const expanded = portable.map((rule) => ({ ...rule, resource: rule.resource.replace(/^~\//, "/home/another-user/") }))
+  const external = expanded.filter((rule) => rule.action === "external_directory")
+  assert.ok(external.some((rule) => globMatch(rule.resource, "/home/another-user/.local/share/opencode/shell/project/*")))
+})
+
 test("installReviewAgentPolicy replaces governed rules and keeps host extensions", async () => {
   const agents = new Map(
     REVIEW_AGENT_IDS.map((id) => [
