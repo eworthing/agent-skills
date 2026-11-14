@@ -6,6 +6,204 @@
     "findingCount": 40,
     "note": "Run 28 is the baseline audit. Counts are samples; this ledger is the source of truth."
   },
+  "codexAudit": {
+    "source": ".artifacts/code-review-opencode-review.md",
+    "reviewedSha": "d66a14c",
+    "findingCount": 19,
+    "note": "Full-source audit by Codex, not a delta run. All 19 findings were fixed in 68999d5; F03 and F18 concern the external delta harness, not shipped plugin code. Acceptance evidence is in the source report's implementation appendix and the per-ID tests.",
+    "findings": [
+      {
+        "id": "CODEX-F01",
+        "file": "parse.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/parse.test.ts, test/dispatch-guards.test.ts",
+        "claim": "The parser treated any later flag-shaped token as an action option even when the remaining tokens were not a recognized option run, so prose mentioning `--fix` or `--comment` enabled write actions.",
+        "reason": "parse.ts now requires the complete trailing suffix to be recognized options; embedded mentions stay inert and genuine trailing flags still work."
+      },
+      {
+        "id": "CODEX-F02",
+        "file": "scripts/cr-batch.sh",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/test_cr_batch.py",
+        "claim": "`wait`/`status` polled only the parent model-turn outcome, which a synthetic-only engine completion never sets, so a successful review waited forever.",
+        "reason": "Batch completion now comes from the session/target-matched terminal artifact, not the parent outcome."
+      },
+      {
+        "id": "CODEX-F03",
+        "file": "(external) run-delta5.py",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/test_cr_completion.py",
+        "claim": "The external loop harness accepted any inbox JSON as a successful finding list without checking completeness, truncation, command errors, or shape.",
+        "reason": "The actual harness now requires a session/target-matched complete terminal artifact and rejects malformed, partial, truncated, or mismatched payloads."
+      },
+      {
+        "id": "CODEX-F04",
+        "file": "runner.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/runner.test.ts, test/engine.test.ts",
+        "claim": "Assistant `finish: error` provider failures were read as empty responses and received schema retries, hiding quota/auth/model diagnostics.",
+        "reason": "Terminal provider errors are detected before text extraction, stop schema/formatter retries, and propagate through the engine to suppress same-provider fallback."
+      },
+      {
+        "id": "CODEX-F05",
+        "file": "runner.ts, engine.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/runner.test.ts, test/engine.test.ts",
+        "claim": "Step-limit formatting returned a recovered object without carrying incomplete coverage, so a partially explored review could look complete.",
+        "reason": "Recovered step-limited attempts carry typed incomplete status through the runner and keep the engine result partial."
+      },
+      {
+        "id": "CODEX-F06",
+        "file": "engine.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/engine.test.ts",
+        "claim": "The current barrier workflow deduplicated verified findings with the legacy five-line bucket key, collapsing independent defects with the same summary.",
+        "reason": "Current barrier dedupe uses exact file/line/claim identity; the legacy bucket policy is scoped to its own workflow."
+      },
+      {
+        "id": "CODEX-F07",
+        "file": "engine.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/engine.test.ts",
+        "claim": "Text synthesis could obey the cap and omit verified survivors without recording truncation or incompleteness.",
+        "reason": "Unaccounted survivor omissions mark the result partial at or below the cap; proven truncation keeps its count and an explicit one-survivor cap stays complete."
+      },
+      {
+        "id": "CODEX-F08",
+        "file": "scope.ts, comment.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/comment.test.ts",
+        "claim": "Branch comment posting compared the posting-time local HEAD with the PR head, not the commit that supplied the reviewed patch.",
+        "reason": "Scope capture records reviewed HEAD, stability, tracked cleanliness, and worktree-diff status; inline posting requires the captured snapshot and fails closed otherwise."
+      },
+      {
+        "id": "CODEX-F09",
+        "file": "comment.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/comment.test.ts",
+        "claim": "Existing finding markers were checked only before the general-comment fallback, so a timed-out inline create could be duplicated on retry.",
+        "reason": "Both comment surfaces are scanned before any inline create; marker-read failure posts nothing and existing markers produce no duplicate."
+      },
+      {
+        "id": "CODEX-F10",
+        "file": "scope.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/scope.test.ts",
+        "claim": "Patch parsing assumed `a/`/`b/`, so `diff.mnemonicPrefix` or custom prefixes left paths that matched no file or anchor.",
+        "reason": "Git capture forces canonical uncolored prefixes and the displayed commands do too; mnemonic/no-prefix/color configurations resolve real paths."
+      },
+      {
+        "id": "CODEX-F11",
+        "file": "scope.ts, index.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/scope.test.ts, test/dispatch-guards.test.ts",
+        "claim": "Path-existence guards rejected deleted files before scope discovery could inspect the deletion.",
+        "reason": "Git-backed literal deletion resolution covers unstaged, staged, committed, and prompt-driver targets while typo rejection and branch precedence remain."
+      },
+      {
+        "id": "CODEX-F12",
+        "file": "index.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/dispatch-guards.test.ts",
+        "claim": "`--model` was ignored on inline/prompt-driven paths, which could select a recipe for one family while running the parent model.",
+        "reason": "Prompt-driven model overrides (including environment selection) are rejected explicitly; engine-driven overrides remain supported."
+      },
+      {
+        "id": "CODEX-F13",
+        "file": "index.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/dispatch-guards.test.ts",
+        "claim": "The prompt driver always rendered the current 2.1.318 recipe, silently downgrading legacy 2.1.162/2.1.221 workflows.",
+        "reason": "Legacy high/xhigh/max recipes cannot silently run the current prompt graph; the documented low/medium fallback remains."
+      },
+      {
+        "id": "CODEX-F14",
+        "file": "agent-policy.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/agent-policy.test.ts",
+        "claim": "The broad deny also denied `external_directory`, blocking reads of OpenCode's spilled shell output when the inline diff was truncated.",
+        "reason": "Narrow external-directory read permissions cover the host shell/tool-output roots; unrelated home reads and writes remain denied and generated policies are synchronized."
+      },
+      {
+        "id": "CODEX-F15",
+        "file": "artifact.ts, index.ts, scripts/cr-batch.sh",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/artifact.test.ts, test/test_cr_batch.py, test/test_cr_completion.py",
+        "claim": "Batch drivers selected the newest artifact after a marker, so interleaved sessions could read each other's reports.",
+        "reason": "Artifacts carry run/session/target/scope/model identity and both drivers select the exact associated terminal record."
+      },
+      {
+        "id": "CODEX-F16",
+        "file": "scripts/cr-batch.sh, scripts/cr_completion.py",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/test_cr_batch.py, test/test_cr_completion.py",
+        "claim": "The batch success predicate ignored explicit truncation when `partial` was false.",
+        "reason": "The shared completion predicate rejects explicit truncation even when `partial` is false."
+      },
+      {
+        "id": "CODEX-F17",
+        "file": "scripts/cr-batch.sh, scripts/cr_completion.py",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/test_cr_batch.py, test/test_cr_completion.py",
+        "claim": "A succeeded session with no artifact, or an all-finder fallback without one, returned success.",
+        "reason": "Missing, unreadable, or non-matching artifacts cannot pass the completion gate; scope/engine failures write explicit failed records."
+      },
+      {
+        "id": "CODEX-F18",
+        "file": "(external) run-delta5.py",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/test_cr_completion.py",
+        "claim": "The external monitor exited normally after its deadline without a failure status or ownership handoff, risking overlapping reviews.",
+        "reason": "The monitor exits 124 at the deadline, retains ownership/session identity, and an exclusive lock prevents simultaneous launches."
+      },
+      {
+        "id": "CODEX-F19",
+        "file": "engine.ts",
+        "severity": "correctness",
+        "disposition": "fixed",
+        "commit": "68999d5",
+        "test": "test/engine.test.ts",
+        "claim": "Merging a confirmed cleanup duplicate into a plausible correctness finding replaced the correctness classification with cleanup.",
+        "reason": "Merged findings retain correctness classification when any member is correctness while keeping the confirmed source's text, evidence, and anchor."
+      }
+    ]
+  },
   "lastReviewedSha": "0b217cd",
   "gate": {
     "openCorrectness": 0,
