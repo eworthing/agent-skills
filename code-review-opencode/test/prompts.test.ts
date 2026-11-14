@@ -620,20 +620,17 @@ test("the Markdown fallback carries every shared shell deny rule", () => {
 
 test("the three review agents share one read-only policy module", () => {
   // The full shell table lives in agent-policy.ts and is installed by setup.
-  // The Markdown files keep a minimal fallback: the one diff command the
-  // prompt displays plus the deny list, so a host without `agent.transform`
-  // can still inspect a truncated diff without duplicating the full table.
+  // The generated Markdown block is checked against that module in
+  // agent-policy.test.ts; here, assert the shared rules stay role-independent.
   const agents = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
   for (const file of ["review-finder.md", "review-verifier.md", "review-sweep.md"]) {
     const text = readFileSync(join(agents, file), "utf8")
-    assert.match(text, /agent-policy\.ts/)
+    assert.match(text, /- action: "\*"[\s\S]*effect: deny/)
     assert.match(
       text,
-      /resource: "git -c core\.hooksPath=\/dev\/null .* diff\*"/,
+      /resource: "git -c core\.hooksPath=\/dev\/null .* diff --no-ext-diff --no-textconv\*"/,
       `${file} does not allow the displayed diff command`,
     )
-    assert.doesNotMatch(text, /resource: "git -c .* (?:log|show|blame)/, `${file} duplicates the history table`)
-    assert.match(text, /- action: "\*"[\s\S]*effect: deny/)
   }
   const policies = REVIEW_AGENT_IDS.map((id) => reviewAgentPermissions(id))
   const shell = (rules: ReturnType<typeof reviewAgentPermissions>) =>

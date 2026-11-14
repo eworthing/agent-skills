@@ -10,87 +10,138 @@ steps: 60
 # Optional per-role effort: set `model: provider/model#variant` here; omit to
 # inherit the parent session's model.
 permissions:
-  # The plugin setup installs the full read-only policy from
-  # agent-policy.ts. This fallback keeps the agent read-only even if
-  # the transform is unavailable.
   - action: "*"
     resource: "*"
     effect: deny
-  - action: read
+  - action: "read"
     resource: "*"
     effect: allow
-  - action: glob
+  - action: "glob"
     resource: "*"
     effect: allow
-  - action: grep
+  - action: "grep"
     resource: "*"
     effect: allow
-  - action: code_review_candidates
-    resource: "*"
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff --no-ext-diff --no-textconv*"
     effect: allow
-  # The fallback still allows the one read-only command the review prompt
-  # displays when a diff is truncated; the full policy installed by the plugin
-  # adds the history commands. The deny list keeps this read-only.
-  - action: shell
-    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff*"
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff --no-ext-diff --no-textconv*"
     effect: allow
-  - action: shell
-    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false diff*"
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false log --no-ext-diff --no-textconv*"
     effect: allow
-  - action: shell
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false log --no-ext-diff --no-textconv*"
+    effect: allow
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false show --no-ext-diff --no-textconv*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false show --no-ext-diff --no-textconv*"
+    effect: allow
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false blame --no-textconv*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false blame --no-textconv*"
+    effect: allow
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false status*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false status*"
+    effect: allow
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false rev-parse*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false rev-parse*"
+    effect: allow
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false ls-files*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false ls-files*"
+    effect: allow
+  - action: "shell"
+    resource: "git -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false grep*"
+    effect: allow
+  - action: "shell"
+    resource: "git -C * -c core.hooksPath=/dev/null -c core.fsmonitor= -c core.askPass= -c core.quotePath=false grep*"
+    effect: allow
+  - action: "shell"
     resource: "gh pr diff*"
     effect: allow
-  - action: shell
+  - action: "shell"
+    resource: "gh pr view*"
+    effect: allow
+  - action: "shell"
+    resource: "tail *"
+    effect: allow
+  - action: "shell"
+    resource: "head *"
+    effect: allow
+  - action: "shell"
+    resource: "ls *"
+    effect: allow
+  - action: "shell"
+    resource: "wc *"
+    effect: allow
+  - action: "shell"
     resource: "*--output*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*>*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*;*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*|*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*&&*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*&*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*$(*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*`*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*<(*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*\n*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*--open-files-in-pager*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*difftool*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "* --textconv*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "* --ext-diff*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*--config-env*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "*--paginate*"
     effect: deny
-  - action: shell
+  - action: "shell"
     resource: "* -O*"
     effect: deny
+  - action: "code_review_candidates"
+    resource: "*"
+    effect: allow
 
 ---
 

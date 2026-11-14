@@ -720,7 +720,7 @@ export function makeRunner(ctx: AnyCtx, opts: RunnerOptions): AgentRunner {
           await backoff()
           continue
         }
-        await new Promise((resolve) => setTimeout(resolve, pollMs))
+        await sleep(pollMs)
       }
     }
     await poll()

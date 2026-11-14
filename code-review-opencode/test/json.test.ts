@@ -51,6 +51,37 @@ test("a filled-in example that kept the sentinel is a real result", () => {
   )
 })
 
+test("a stripped single-verdict echo is still detected", () => {
+  // The verdict tool boundary stores only {verdict, evidence}; the sentinel is
+  // gone, but the placeholder evidence is still distinctive.
+  assert.equal(
+    isSchemaEcho({ verdict: "CONFIRMED", evidence: "line 12: ..." }),
+    true,
+  )
+})
+
+test("repeated real paths in a candidates payload are not an echo", () => {
+  assert.equal(
+    isSchemaEcho({
+      candidates: [
+        {
+          file: "path/to/file.ts",
+          line: 3,
+          summary: "first real defect",
+          failure_scenario: "input A reaches the bad branch",
+        },
+        {
+          file: "path/to/file.ts",
+          line: 9,
+          summary: "second real defect",
+          failure_scenario: "input B reaches the other bad branch",
+        },
+      ],
+    }),
+    false,
+  )
+})
+
 test("real grouped verdicts are not mistaken for an example echo", () => {
   assert.equal(
     isSchemaEcho({
@@ -460,7 +491,7 @@ test("extractJson keeps a real payload that precedes an echoed schema example", 
   assert.equal(parsed.candidates[0].file, "real.ts")
 })
 
-test("asGroupVerdicts shifts full 1-based lists but keeps ambiguous partial lists as-is", () => {
+test("asGroupVerdicts shifts full 1-based lists and refuses ambiguous partial lists", () => {
   const offset = asGroupVerdicts(
     {
       verdicts: [
@@ -485,12 +516,10 @@ test("asGroupVerdicts shifts full 1-based lists but keeps ambiguous partial list
     },
     3,
   )
-  // A partial list starting at 1 is ambiguous. Keep it as-is: a 1-based
-  // partial answer must not be shifted onto the never-examined candidate 0.
-  assert.deepEqual(partial, [
-    { index: 1, verdict: "CONFIRMED", evidence: "e1" },
-    { index: 2, verdict: "CONFIRMED", evidence: "e2" },
-  ])
+  // A partial list starting at 1 is ambiguous: it could be a 1-based subset
+  // or a zero-based subset that omitted candidate 0. Refuse it rather than
+  // attaching verdicts to the wrong candidates.
+  assert.deepEqual(partial, [])
   // If index 0 was submitted and dropped (invalid verdict), the survivors are
   // zero-based and must not shift onto the wrong candidates.
   const droppedZero = asGroupVerdicts(

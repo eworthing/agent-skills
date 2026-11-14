@@ -260,6 +260,37 @@ function dedupKey318(c: RawFinding): string {
   return `${c.file}:${c.line ?? "?"}:${normalizedSummary(c.summary)}`
 }
 
+/** Higher is stronger: a refuted duplicate must not discard a confirmed one. */
+function verdictRank(c: Finding): number {
+  if (c.verdict === "CONFIRMED") return 2
+  if (c.verdict === "PLAUSIBLE") return 1
+  return 0
+}
+
+/**
+ * Cross-finder dedupe after verification. Keep the strongest verdict for each
+ * claim, and keep the first finder's position so the representative does not
+ * depend on child latency. A duplicate that was refuted by one verifier and
+ * confirmed by another must resolve to the confirmed copy.
+ */
+function dedupeVerified(items: Finding[]): { novel: Finding[]; dupes: number } {
+  const best = new Map<string, Finding>()
+  let dupes = 0
+  for (const item of items) {
+    const key = dedupKey162(item)
+    const existing = best.get(key)
+    if (!existing) {
+      best.set(key, item)
+      continue
+    }
+    dupes++
+    // Map.set on an existing key keeps insertion order, so replacing the
+    // value does not move the representative to the later finder's slot.
+    if (verdictRank(item) > verdictRank(existing)) best.set(key, item)
+  }
+  return { novel: [...best.values()], dupes }
+}
+
 /**
  * A stable order for findings after concurrent verification. Child latency
  * must not decide the report order, the sweep's known list, or the
@@ -362,23 +393,24 @@ function applyIndexPlan<T, R>(
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
-  // A zero-based plan may name index 0, but a valid plan may also be a subset
-  // that omits it (the synthesis prompt asks for the most severe findings when
-  // survivors exceed the cap). Treat the plan as 0-based unless it covers
-  // every item exactly once as 1..n: that is the only unambiguous signature of
-  // a 1-based full plan. A single out-of-range index (an off-by-one) must not
-  // flip an otherwise zero-based plan.
-  //
-  // A contiguous subset that happens to start at 1 is ambiguous. The prompts
-  // number every candidate from 0, so a compliant zero-based subset must not
-  // be shifted onto its neighbors. Only the full-plan signature is safe to
-  // reinterpret; a 1-based partial plan is a protocol violation and is
-  // backfilled as zero-based instead of silently reporting the wrong entries.
+  // The prompts number survivors from 0, but models commonly renumber a
+  // subset from 1 when the cap makes them drop entries. Resolve the ambiguity
+  // explicitly:
+  //   - index 0 anywhere -> zero-based (a 1-based plan cannot name 0);
+  //   - a contiguous run starting at 1 (1..k for any k) -> 1-based, including
+  //     both the full plan and a capped subset;
+  //   - anything else -> zero-based, so one off-by-one index cannot flip a
+  //     plan whose other indices are clearly zero-based.
+  // A zero-based subset that omitted index 0 and happened to be contiguous
+  // 1..k is the one case this misreads; omitting the most severe finding is
+  // not the documented subset behavior, so the 1-based reading is the better
+  // default.
   const hasZero = decisions.some((d) => d.index === 0 || d.merge.includes(0))
   const unique = [...new Set(decisions.flatMap((d) => [d.index, ...d.merge]))].sort((a, b) => a - b)
   const oneBased =
     !hasZero &&
-    unique.length === items.length &&
+    unique.length > 0 &&
+    unique[0] === 1 &&
     unique.every((value, i) => value === i + 1)
   const plan = oneBased
     ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
@@ -512,7 +544,14 @@ function deterministicReport(
   cap: number | undefined,
   level: Level,
   sweepGaps = 0,
-): { findings: Finding[]; summary: string; truncated: boolean; truncatedFrom?: number } {
+): {
+  findings: Finding[]
+  summary: string
+  truncated: boolean
+  truncatedFrom?: number
+  /** Exact duplicates removed before the cap; not cap-truncated findings. */
+  dupes: number
+} {
   const { novel } = dedupeBy(ranked, dedupKey318)
   const findings = novel.slice(0, cap).map((c) => ({ ...c }))
   // Sweep gaps are surfaced after verification and are never independently
@@ -527,6 +566,7 @@ function deterministicReport(
     summary,
     truncated: cap !== undefined && novel.length > cap,
     ...(cap !== undefined && novel.length > cap ? { truncatedFrom: novel.length } : {}),
+    dupes: ranked.length - novel.length,
   }
 }
 
@@ -977,7 +1017,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       }),
     )
     const streamed = verifiedByFinder.flat()
-    const deduped = dedupeBy(streamed, dedupKey162)
+    const deduped = dedupeVerified(streamed)
     stats.dupes += deduped.dupes
     verified = deduped.novel
   } else {
@@ -1182,19 +1222,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     : dedupeBy(surviving, dedupKey318).novel
   stats.dupes += surviving.length - mergeBase.length
   const rank = (c: Finding) => (c.kind === "cleanup" ? 2 : 0) + (c.verdict === "PLAUSIBLE" ? 1 : 0)
-  // Code-unit comparison, not localeCompare: the report order must not change
-  // with the host's locale or ICU build.
-  const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0)
-  const ranked = mergeBase.slice().sort(
-    (a, b) =>
-      rank(a) - rank(b) ||
-      // Compare file and line separately: `file:line` as a string orders line
-      // 10 before line 9 and ignores the numeric anchor.
-      compare(a.file, b.file) ||
-      (a.line ?? 0) - (b.line ?? 0) ||
-      compare(a.summary, b.summary) ||
-      compare(a.failure_scenario, b.failure_scenario),
-  )
+  // Severity first, then the same deterministic order the streaming path and
+  // the fallback use. Sharing compareFindings keeps the synthesizer's input
+  // and the deterministic report from drifting apart.
+  const ranked = mergeBase.slice().sort((a, b) => rank(a) - rank(b) || compareFindings(a, b))
 
   let findings: Finding[]
   let summary: string
@@ -1204,23 +1235,27 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   let truncatedFrom: number | undefined
 
   /**
-   * Every synthesis-failure path returns the same ranked, unmerged list. Keep
-   * the cap accounting in one place so a fallback cannot silently drop the
-   * truncation flag or the dropped-count handling.
+   * Every deterministic fallback returns the same ranked, unmerged list. Keep
+   * the dedupe, cap, truncation, and duplicate accounting in one place so the
+   * three failure paths cannot disagree and a future field cannot be updated
+   * in only one of them.
+   *
+   * `note` is appended to the deterministic summary rather than replacing it:
+   * the summary already knows whether the sweep contributed unverified gaps,
+   * and a hard-coded "verified findings" sentence would overstate them.
    */
-  const unmergedFallback = (summaryText: string): void => {
+  const applyDeterministic = (note?: string): void => {
     // The synthesizer failed, so its semantic merge never ran. Exact duplicates
-    // that both verifiers confirmed must still be reported once. Reuse the
-    // deterministic report's dedupe/cap/truncation accounting so the two
-    // fallback paths cannot disagree on the pre-cap count.
+    // that both verifiers confirmed must still be reported once.
     const report = deterministicReport(ranked, cap, level, sweepGaps)
-    stats.dupes += ranked.length - (report.truncatedFrom ?? report.findings.length)
+    stats.dupes += report.dupes
     findings = report.findings
     truncatedByCap = report.truncated
     truncatedFrom = report.truncatedFrom
-    summary = summaryText
+    summary = note ? `${report.summary} ${note}` : report.summary
     summarySynthesized = false
   }
+  const unmergedFallback = (note: string): void => applyDeterministic(note)
 
   /** Shared by wf221 synthesis and the v2.1.318 semantic-merge equivalent. */
   const runIndexSynthesis = async (
@@ -1285,10 +1320,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     applyIndexSynthesis(
       await runIndexSynthesis("synthesize"),
       "synthesis returned no usable decisions; returning ranked findings unmerged",
-      () =>
-        unmergedFallback(
-          "Synthesis step was skipped or its decisions were unusable — returning verified findings ranked, unmerged.",
-        ),
+      () => unmergedFallback("Synthesis did not complete, so these findings are ranked and unmerged."),
     )
   } else if (willSynthesize && cell.synthesis === "text") {
     emit({ type: "phase", phase: "Synthesize" })
@@ -1312,7 +1344,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     if (!report) {
       warnings.push("synthesis returned no usable report; returning ranked findings unmerged")
       partial = true
-      unmergedFallback("Synthesis step was skipped or failed — returning verified findings unmerged.")
+      unmergedFallback("Synthesis did not complete, so these findings are ranked and unmerged.")
     } else {
       if ((report.dropped ?? 0) > 0) {
         warnings.push(
@@ -1332,9 +1364,9 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         // An empty report with verified survivors is not a merge decision:
         // there is no replacement entry. Returning it would present a
         // confirmed defect as "No findings." with a complete status.
-        warnings.push("synthesis returned an empty report; returning verified findings unmerged")
+        warnings.push("synthesis returned an empty report; returning ranked findings unmerged")
         partial = true
-        unmergedFallback("Synthesis returned an empty report — returning verified findings unmerged.")
+        unmergedFallback("Synthesis returned an empty report, so these findings are ranked and unmerged.")
       } else {
         let unmatched = 0
         const claimed = new Set<number>()
@@ -1416,11 +1448,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           // Every re-emitted entry failed the match. An empty report would
           // render as "No findings." even though verified survivors exist.
           warnings.push(
-            "synthesis report did not match any verified finding; returning verified findings unmerged",
+            "synthesis report did not match any verified finding; returning ranked findings unmerged",
           )
           partial = true
           unmergedFallback(
-            "Synthesis could not match any verified finding — returning verified findings unmerged.",
+            "Synthesis could not match any verified finding, so these findings are ranked and unmerged.",
           )
         } else {
           // A text report can be truncated by the normalizer before the final
@@ -1458,23 +1490,13 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     applyIndexSynthesis(
       await runIndexSynthesis("merge"),
       "semantic merge returned no usable decisions; deterministic merge used",
-      () => {
-        // Only exact claims are safe to merge without a semantic judge.
-        const fallback = deterministicReport(ranked, cap, level, sweepGaps)
-        findings = fallback.findings
-        summary = fallback.summary
-        truncatedByCap = fallback.truncated
-        truncatedFrom = fallback.truncatedFrom
-      },
+      // Only exact claims are safe to merge without a semantic judge.
+      () => applyDeterministic(),
     )
   } else {
     // v2.1.318 without the synthesizer: the deterministic equivalent keeps the
     // verified order and merges exact duplicates only.
-    const fallback = deterministicReport(ranked, cap, level, sweepGaps)
-    findings = fallback.findings
-    summary = fallback.summary
-    truncatedByCap = fallback.truncated
-    truncatedFrom = fallback.truncatedFrom
+    applyDeterministic()
   }
   if (cap !== undefined && findings.length > cap) truncatedByCap = true
 

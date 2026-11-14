@@ -9,7 +9,7 @@ import {
   defaultExec,
   diffSideMap,
   discoverConventions,
-  filesFromDiff,
+  scanPatchChurn,
   resolveDiffScope,
   resolveScope,
   unquoteGitPath,
@@ -24,7 +24,7 @@ function diffSideForLine(patch: string | undefined, file: string, line: number):
 
 function scanPatchChurnForTest(patch: string) {
   return new Map(
-    filesFromDiff(patch)
+    [...scanPatchChurn(patch).paths]
       .filter((file) => file.startsWith("src/"))
       .map((file) => [file, { added: 1, removed: 1, binary: false }] as const),
   )
@@ -42,7 +42,7 @@ test("changed files are recovered from a patch when gh pr view fails", () => {
     "--- a/old.ts",
     "+++ b/new.ts",
   ].join("\n")
-  assert.deepEqual(filesFromDiff(patch), ["src/a.ts", "old.ts", "new.ts"])
+  assert.deepEqual([...scanPatchChurn(patch).paths], ["src/a.ts", "old.ts", "new.ts"])
 })
 
 function git(cwd: string, ...args: string[]) {
@@ -170,6 +170,30 @@ test("a tab in a path stays in the runnable command", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("a repository root with a shell metacharacter uses a relative -C path", async () => {
+  const base = mkdtempSync(join(tmpdir(), "code-review-root-"))
+  const dir = join(base, "a&b")
+  mkdirSync(dir)
+  git(dir, "init", "-b", "main")
+  git(dir, "config", "user.email", "test@example.com")
+  git(dir, "config", "user.name", "Test")
+  writeFileSync(join(dir, "a.ts"), "export const a = 1\n")
+  git(dir, "add", "a.ts")
+  git(dir, "commit", "-m", "base")
+  git(dir, "checkout", "-b", "feature")
+  writeFileSync(join(dir, "a.ts"), "export const a = 2\n")
+  git(dir, "add", "a.ts")
+  git(dir, "commit", "-m", "change")
+  const sub = join(dir, "sub")
+  mkdirSync(sub)
+  const scope = await resolveScope({ cwd: sub })
+  // The absolute root contains `&`, which the child deny rules reject. The
+  // session cwd is inside the root, so `..` is a safe relative -C path.
+  assert.match(scope.diffCommand, /git -C \.\./)
+  assert.doesNotMatch(scope.diffCommand, /a&b/)
+  rmSync(base, { recursive: true, force: true })
+})
+
 test("a clean path target records the checked-out branch", async () => {
   const dir = makeRepo()
   const scope = await resolveScope({ cwd: dir, target: "a.ts" })
@@ -288,7 +312,7 @@ test("git-quoted paths are unquoted in patches and name-status output", () => {
     '--- "a/src/foo\\tbar.ts"',
     '+++ "b/src/foo\\tbar.ts"',
   ].join("\n")
-  assert.deepEqual(filesFromDiff(patch), ["src/foo\tbar.ts"])
+  assert.deepEqual([...scanPatchChurn(patch).paths], ["src/foo\tbar.ts"])
   const quotedChurn = buildContextPackage(
     `${patch}\n@@ -1 +1 @@\n-a\n+b`,
     "/repo",
@@ -372,9 +396,9 @@ test("a PR review downloads the patch once and verifies the head", async () => {
   assert.equal(scope.prHeadOid, "abc123")
   assert.equal(scope.prUrl, "https://github.com/o/r/pull/42")
   assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "diff").length, 1)
-  // One metadata read before the patch and one after it prove the patch and
-  // the pinned head describe the same commit.
-  assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view").length, 2)
+  // Head-only reads bracket the patch; the metadata read supplies the file
+  // list and line count. The patch and metadata downloads still overlap.
+  assert.equal(calls.filter((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view").length, 3)
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -408,7 +432,7 @@ test("a local PR review skips the post-capture head check", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-test("a failed head check still pins the head captured with the patch", async () => {
+test("an unavailable head check leaves the PR head unverified", async () => {
   const dir = mkdtempSync(join(tmpdir(), "code-review-pr-headfail-"))
   mkdirSync(join(dir, ".git"))
   const patch = "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-a\n+b\n"
@@ -434,7 +458,11 @@ test("a failed head check still pins the head captured with the patch", async ()
     return { code: 0, stdout: "", stderr: "" }
   }
   const scope = await resolveScope({ cwd: dir, target: "42", exec })
-  assert.equal(scope.prHeadOid, "abc123")
+  // An unavailable check is not proof that the patch matches. The patch is
+  // still captured, but posting must not pin an unverified head.
+  assert.equal(scope.prHeadOid, undefined)
+  assert.deepEqual(scope.files, ["src/a.ts"])
+  assert.equal(scope.diffText, patch)
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -464,14 +492,24 @@ test("a failed PR metadata call still uses the cached patch", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-test("a failed file listing does not start full diff captures", async () => {
+test("a failed file listing awaits the already-started diff captures", async () => {
   const dir = makeRepo()
   writeFileSync(join(dir, "a.ts"), "export const a = 2\n")
   const calls: string[][] = []
+  let captureSettled = false
   const exec: Exec = async (argv, cwd, opts) => {
     calls.push(argv)
     if (argv.includes("--name-status")) {
       return { code: 128, stdout: "", stderr: "bad revision" }
+    }
+    if (
+      argv.includes("diff") &&
+      !argv.includes("--quiet") &&
+      !argv.includes("--numstat")
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      captureSettled = true
+      return { code: 0, stdout: "", stderr: "" }
     }
     return defaultExec(argv, cwd, opts)
   }
@@ -483,7 +521,10 @@ test("a failed file listing does not start full diff captures", async () => {
       !argv.includes("--quiet") &&
       !argv.includes("--numstat"),
   )
-  assert.deepEqual(captures, [])
+  // The captures overlap the listings, but the all-listings-failed path must
+  // await them before throwing so no child is left running.
+  assert.ok(captures.length > 0)
+  assert.equal(captureSettled, true)
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -1000,7 +1041,7 @@ test("a changed path containing ' b/' is parsed once", () => {
     "-a",
     "+b",
   ].join("\n")
-  assert.deepEqual(filesFromDiff(patch), ["src/ b/x.ts"])
+  assert.deepEqual([...scanPatchChurn(patch).paths], ["src/ b/x.ts"])
 })
 
 test("added content that looks like a +++ header is not a changed file", () => {
@@ -1012,7 +1053,7 @@ test("added content that looks like a +++ header is not a changed file", () => {
     " a",
     "+++ b/foo",
   ].join("\n")
-  assert.deepEqual(filesFromDiff(patch), ["a.sh"])
+  assert.deepEqual([...scanPatchChurn(patch).paths], ["a.sh"])
 })
 
 test("a PR review without a finder budget still fetches the file metadata", async () => {
@@ -1051,7 +1092,7 @@ test("a rename whose new path contains ' b/' keeps both real paths", () => {
     "rename from x",
     "rename to y b/z",
   ].join("\n")
-  assert.deepEqual(filesFromDiff(patch), ["x", "y b/z"])
+  assert.deepEqual([...scanPatchChurn(patch).paths], ["x", "y b/z"])
 })
 
 test("a timed-out HEAD probe is a discovery failure, not an unborn repository", async () => {
@@ -1075,7 +1116,7 @@ test("an asymmetric rename whose new path contains ' b/' keeps both real paths",
     "rename from x",
     "rename to y b/zzzzzzzzzz",
   ].join("\n")
-  assert.deepEqual(filesFromDiff(patch), ["x", "y b/zzzzzzzzzz"])
+  assert.deepEqual([...scanPatchChurn(patch).paths], ["x", "y b/zzzzzzzzzz"])
 })
 
 test("a numeric PR target is resolved in the session repository, not a same-named path", async () => {

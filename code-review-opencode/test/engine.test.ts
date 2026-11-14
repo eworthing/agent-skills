@@ -1052,6 +1052,51 @@ test("v2.1.162 verifies a later finder before an earlier slow finder returns", a
   )
 })
 
+test("streaming dedupe keeps a confirmed duplicate over a refuted one", async () => {
+  const same = candidate("src/a.ts", 4, "same bug")
+  let verifierCalls = 0
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    script: {
+      delay: (req) => (req.role === "finder" && req.label === "angle-B" ? 20 : 0),
+      finder: (req) =>
+        req.label === "angle-A" || req.label === "angle-B"
+          ? { candidates: [same] }
+          : { candidates: [] },
+      verifier: () => {
+        verifierCalls++
+        return verifierCalls === 1
+          ? { verdict: "REFUTED", evidence: "not reachable" }
+          : CONFIRMED()
+      },
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].summary, "same bug")
+  assert.equal(result.findings[0].verdict, "CONFIRMED")
+})
+
+test("a failed synthesis keeps the sweep-aware deterministic summary", async () => {
+  const { result } = await review({
+    version: "cc-workflow-2.1.221",
+    level: "xhigh",
+    script: {
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [candidate("src/a.ts", 1, "a bug")] }
+          : { candidates: [] },
+      verifier: () => ({
+        verdicts: [{ index: 0, verdict: "CONFIRMED", evidence: "line 1 throws" }],
+      }),
+      sweep: () => ({ candidates: [candidate("src/b.ts", 2, "sweep gap")] }),
+      synthesize: () => null,
+    },
+  })
+  assert.match(result.summary, /from verification and the gap sweep/)
+  assert.doesNotMatch(result.summary, /survived verification/)
+})
+
 /* 22 */ test("v2.1.318 waits at a barrier before verifying", async () => {
   const { calls } = await review({
     version: "cc-2.1.318",
@@ -1907,7 +1952,7 @@ test("an invented sweep category cannot claim correctness priority", async () =>
   assert.equal(result.findings[1].kind, "cleanup")
 })
 
-test("a contiguous subset without index 0 stays zero-based", async () => {
+test("a contiguous 1-based subset is shifted onto zero-based survivors", async () => {
   const items = ["zero", "one", "two", "three", "four"].map((s, i) =>
     candidate("src/a.ts", i + 1, `${s} bug`),
   )
@@ -1926,9 +1971,9 @@ test("a contiguous subset without index 0 stays zero-based", async () => {
           : { summary: "ranked", decisions: [{ index: 1 }, { index: 2 }] },
     },
   })
-  // Indices 1..2 are a zero-based subset that omitted index 0, not a 1-based
-  // plan: the prompt numbers findings from 0. Shifting would apply the
-  // synthesizer's merge/rank decisions to the wrong findings.
-  assert.equal(result.findings[0].summary, "one bug")
-  assert.equal(result.findings[1].summary, "two bug")
+  // A contiguous run starting at 1 is the model's 1-based subset convention.
+  // Shift it onto survivors 0 and 1 instead of treating it as a zero-based
+  // subset that dropped the most severe finding.
+  assert.equal(result.findings[0].summary, "zero bug")
+  assert.equal(result.findings[1].summary, "one bug")
 })

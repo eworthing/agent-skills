@@ -1,9 +1,13 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import {
   READ_ONLY_POLICY,
   REVIEW_AGENT_IDS,
   installReviewAgentPolicy,
+  renderAgentPolicyYaml,
   reviewAgentPermissions,
 } from "../.opencode/plugins/code-review-opencode/agent-policy.ts"
 import { GIT_HARDENING } from "../.opencode/plugins/code-review-opencode/scope.ts"
@@ -61,13 +65,15 @@ test("role tool permissions are role-specific", () => {
   assert.equal(verifier.includes("code_review_candidates"), false)
 })
 
-test("installReviewAgentPolicy replaces each review agent's permissions", async () => {
+test("installReviewAgentPolicy replaces governed rules and keeps host extensions", async () => {
   const agents = new Map(
     REVIEW_AGENT_IDS.map((id) => [
       id,
       {
         permissions: [
           { action: "shell", resource: "git -c core.hooksPath=/old diff*", effect: "allow" as const },
+          { action: "webfetch", resource: "https://example.com/*", effect: "allow" as const },
+          { action: "*", resource: "*", effect: "ask" as const },
         ],
       },
     ]),
@@ -75,7 +81,7 @@ test("installReviewAgentPolicy replaces each review agent's permissions", async 
   let transformed = false
   const ctx = {
     agent: {
-      async transform(callback: (editor: { update: (id: string, update: (agent: { permissions: Array<{ action: string }> }) => void) => void }) => void) {
+      async transform(callback: (editor: { update: (id: string, update: (agent: { permissions: Array<{ action: string; resource: string; effect: string }> }) => void) => void }) => void) {
         transformed = true
         callback({
           update(id, update) {
@@ -91,10 +97,54 @@ test("installReviewAgentPolicy replaces each review agent's permissions", async 
   await installReviewAgentPolicy(ctx)
   assert.equal(transformed, true)
   for (const id of REVIEW_AGENT_IDS) {
-    assert.deepEqual(agents.get(id)?.permissions, reviewAgentPermissions(id))
+    const permissions = agents.get(id)?.permissions ?? []
+    const stale = permissions.find(
+      (rule) => rule.action === "shell" && rule.resource.includes("core.hooksPath=/old"),
+    )
+    assert.equal(stale, undefined, `${id} kept a stale shell allow`)
+    assert.ok(
+      permissions.some(
+        (rule) =>
+          rule.action === "webfetch" &&
+          rule.resource === "https://example.com/*" &&
+          rule.effect === "allow",
+      ),
+      `${id} dropped the host webfetch rule`,
+    )
+    const policy = reviewAgentPermissions(id)
+    assert.equal(
+      permissions.filter((rule) => rule.action === "*" && rule.resource === "*").length,
+      1,
+      `${id} should have exactly one broad deny`,
+    )
+    for (const rule of policy) {
+      assert.ok(
+        permissions.some(
+          (candidate) =>
+            candidate.action === rule.action &&
+            candidate.resource === rule.resource &&
+            candidate.effect === rule.effect,
+        ),
+        `${id} is missing the policy rule ${rule.action}:${rule.resource}`,
+      )
+    }
   }
 })
 
 test("installReviewAgentPolicy is a no-op on hosts without agent transforms", async () => {
   await installReviewAgentPolicy({})
+})
+
+test("the Markdown fallback permissions are generated from the shared policy", () => {
+  const dir = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
+  for (const id of REVIEW_AGENT_IDS) {
+    const text = readFileSync(join(dir, `${id}.md`), "utf8")
+    const match = text.match(/^permissions:\n[\s\S]*?(?=^---$)/m)
+    assert.ok(match, `${id}.md has no permissions block`)
+    assert.equal(
+      match[0].trimEnd(),
+      renderAgentPolicyYaml(id),
+      `${id}.md is stale; run node scripts/sync-agent-policy.ts`,
+    )
+  }
 })

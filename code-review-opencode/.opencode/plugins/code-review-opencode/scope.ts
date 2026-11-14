@@ -18,6 +18,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { TextDecoder } from "node:util"
 import { StringDecoder } from "node:string_decoder"
 import { envInt, pluralize, positiveLine, renderPath, truncateText } from "./finding.ts"
+import { normalizeRef, sameRefName } from "./refs.ts"
 
 export type ExecOptions = { signal?: AbortSignal; timeoutMs?: number }
 
@@ -420,12 +421,34 @@ function labelFor(spec: DiffSpec, root: string, cwd: string): string {
   const omitPathspec = spec.pathspec !== undefined && SHELL_DENIED.test(spec.pathspec)
   const display = omitPathspec ? { ...spec, pathspec: undefined } : spec
   const argv = gitDiffArgs(display, "diff").map((a) => quote([a]))
-  const command = sameDir(root, cwd)
-    ? ["git", ...GIT_HARDENING, ...argv].join(" ")
-    : ["git", "-C", quote([root]), ...GIT_HARDENING, ...argv].join(" ")
-  return omitPathspec
-    ? `${command}  # pathspec omitted: shell metacharacter in the review target`
-    : command
+  const inRoot = sameDir(root, cwd)
+  // The session cwd is inside the repository root, so a relative `-C` is a
+  // run of `..` segments and cannot contain the ancestor's metacharacter.
+  // Resolve both sides first: macOS `/var` and `/private/var` spellings would
+  // otherwise make `relative` walk back through the metacharacter.
+  const relativeRoot = inRoot
+    ? undefined
+    : SHELL_DENIED.test(root)
+      ? (() => {
+          try {
+            return relative(realpathSync(cwd), realpathSync(root)) || "."
+          } catch {
+            return undefined
+          }
+        })()
+      : root
+  const unsafeRoot = !inRoot && (relativeRoot === undefined || SHELL_DENIED.test(relativeRoot))
+  const command = unsafeRoot
+    ? ""
+    : relativeRoot === undefined
+      ? ["git", ...GIT_HARDENING, ...argv].join(" ")
+      : ["git", "-C", quote([relativeRoot]), ...GIT_HARDENING, ...argv].join(" ")
+  const notes = [
+    omitPathspec ? "pathspec omitted: shell metacharacter in the review target" : "",
+    unsafeRoot ? "command omitted: repository root contains a shell metacharacter" : "",
+  ].filter(Boolean)
+  if (command === "") return notes.join("; ")
+  return notes.length > 0 ? `${command}  # ${notes.join("; ")}` : command
 }
 
 /** Unquote git's C-style path quoting (`"a/foo\\tbar"`). */
@@ -688,15 +711,6 @@ export function walkPatch(patch: string, handlers: PatchHandlers): void {
   }
 }
 
-/**
- * Recover changed paths from a unified diff. This is a thin view over the one
- * patch walker (`scanPatchChurn`), so a quoting/rename change cannot leave a
- * second parser disagreeing with the file list used by the review.
- */
-export function filesFromDiff(patch: string): string[] {
-  return uniq([...scanPatchChurn(patch).paths])
-}
-
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
 
 type FileChurn = { added: number; removed: number; binary: boolean }
@@ -708,7 +722,7 @@ type FileChurn = { added: number; removed: number; binary: boolean }
  * (`-- comment`, `++ i`). `\ No newline at end of file` annotates the previous
  * line and consumes neither side.
  */
-function scanPatchChurn(patch: string): {
+export function scanPatchChurn(patch: string): {
   files: Map<string, FileChurn>
   paths: Set<string>
   total: number
@@ -1401,11 +1415,11 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
 
   if (targetPr !== undefined) {
     pr = targetPr
-    // The patch and metadata are separate live reads. Fetch metadata, then
-    // the patch, then a head-only read; only matching head OIDs prove the
-    // patch belongs to the head that --comment will pin. The head-only read
-    // avoids downloading the full file list a second time, and a review that
-    // will not post comments skips it entirely.
+    // The patch and metadata are separate live reads. When --comment will pin
+    // the head, bracket the patch between two cheap head-only reads and run
+    // the two big downloads concurrently: a matching pair proves the patch
+    // belongs to the head that --comment will use. A review that will not post
+    // comments skips the head reads entirely.
     const readMeta = () =>
       exec(
         ["gh", "pr", "view", String(pr), "--json", "files,additions,deletions,headRefOid,url"],
@@ -1413,8 +1427,6 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
         callOpts(),
       )
     const readPatch = () => exec(["gh", "pr", "diff", String(pr)], gitCwd, callOpts())
-    const readHead = () =>
-      exec(["gh", "pr", "view", String(pr), "--json", "headRefOid"], gitCwd, callOpts())
     const parseMeta = (result: ExecResult | undefined): PrMeta | undefined => {
       if (!result || result.code !== 0) return undefined
       try {
@@ -1423,33 +1435,53 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
         return undefined
       }
     }
-    const headOf = (result: ExecResult | undefined): string | undefined => {
-      const value = parseMeta(result)
-      return typeof value?.headRefOid === "string" && value.headRefOid ? value.headRefOid : undefined
+    /** One head-only read, retried once on a transient failure. */
+    const readHead = async (): Promise<string | undefined> => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const result = await exec(
+          ["gh", "pr", "view", String(pr), "--json", "headRefOid"],
+          gitCwd,
+          callOpts(),
+        )
+        if (result.aborted) return undefined
+        const value = parseMeta(result)
+        if (typeof value?.headRefOid === "string" && value.headRefOid) return value.headRefOid
+      }
+      return undefined
     }
-    let meta = await readMeta()
-    let gh = await readPatch()
-    let metaJson = parseMeta(meta)
     const verifyHead = opts.verifyPrHead !== false
-    let check = verifyHead ? await readHead() : undefined
-    let checkHead = headOf(check)
-    const firstHead = typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined
-    if (verifyHead && firstHead !== undefined && checkHead !== undefined && firstHead !== checkHead) {
-      // The head moved while the patch was being fetched; take one fresh pair.
-      meta = await readMeta()
-      gh = await readPatch()
+    let headBefore = verifyHead ? await readHead() : undefined
+    let [meta, gh] = await Promise.all([readMeta(), readPatch()])
+    let metaJson = parseMeta(meta)
+    let headAfter = verifyHead ? await readHead() : undefined
+    const headMoved =
+      headBefore !== undefined && headAfter !== undefined && headBefore !== headAfter
+    const metaDisagrees =
+      headAfter !== undefined &&
+      typeof metaJson?.headRefOid === "string" &&
+      metaJson.headRefOid !== headAfter
+    if (verifyHead && (headMoved || metaDisagrees)) {
+      // The head moved while the pair was being fetched; take one fresh pair.
+      headBefore = await readHead()
+      ;[meta, gh] = await Promise.all([readMeta(), readPatch()])
       metaJson = parseMeta(meta)
-      check = await readHead()
-      checkHead = headOf(check)
+      headAfter = await readHead()
     }
     prMetaJson = metaJson
-    const reviewedHead = typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined
-    // A failed trailing check is not proof of a push. Trust the head captured
-    // with the metadata when the check is unavailable; only a successful check
-    // that disagrees with it invalidates the pair.
+    const reviewedHead =
+      headAfter ?? (typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined)
+    // An unavailable head read is not proof that the patch matches. Only a
+    // bracketed pair that agrees with the metadata authorizes pinning; a
+    // failed check leaves prHeadOid unset so posting refuses to use stale
+    // anchors. The one retry above keeps a transient gh failure from
+    // disabling inline comments in the common case.
     prHeadVerified =
       reviewedHead !== undefined &&
-      (!verifyHead || checkHead === undefined || checkHead === reviewedHead)
+      (!verifyHead ||
+        (headBefore !== undefined &&
+          headAfter !== undefined &&
+          headBefore === headAfter &&
+          (typeof metaJson?.headRefOid !== "string" || metaJson.headRefOid === headAfter)))
     assertExec(gh, "gh pr diff", timeoutSuffix, "PR diff discovery was cancelled.")
     if (gh.code !== 0) {
       throw new Error(`Could not fetch PR #${pr} with gh: ${gh.stderr.trim() || "gh is unavailable"}`)
@@ -1497,27 +1529,24 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     assertExec(fullRef, "git rev-parse", timeoutSuffix)
     const currentName = current.stdout.trim()
     // A remote-tracking or qualified target can name the checked-out branch
-    // without being byte-identical to its abbreviated name.
-    const normalize = (ref: string): string =>
-      ref.replace(/^refs\/heads\//, "").replace(/^refs\/remotes\//, "")
-    const wanted = normalize(branchRef ?? target)
-    let sameBranch = currentName === normalize(target) || currentName === wanted
-    // A remote-tracking target (`origin/main`) names the checked-out branch
-    // without being byte-identical to its abbreviated name. Strip only a
-    // prefix that is a real remote name: a local `release/main` must not be
-    // mistaken for `main`.
+    // without being byte-identical to its abbreviated name. The same helper
+    // posting uses keeps the remote-prefix rule in one place.
     const full = fullRef.code === 0 ? fullRef.stdout.trim() : ""
-    if (!sameBranch && full.startsWith("refs/remotes/")) {
-      const remoteBranch = full.slice("refs/remotes/".length)
+    // A remote-tracking target (`origin/main`) names the checked-out branch
+    // without being byte-identical to its abbreviated name. The
+    // `refs/remotes/` guard keeps a local branch named `origin/main` from
+    // being treated as a remote-tracking ref and pulling in unrelated
+    // worktree edits.
+    const fullIsRemote = full.startsWith("refs/remotes/")
+    let sameBranch =
+      currentName === normalizeRef(target) ||
+      currentName === normalizeRef(branchRef ?? target)
+    if (!sameBranch && fullIsRemote) {
       const remotes = await git(exec, gitCwd, ["remote"], callOpts())
       assertExec(remotes, "git remote", timeoutSuffix)
-      sameBranch =
-        remotes.code === 0 &&
-        remotes.stdout
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean)
-          .some((remote) => remoteBranch === `${remote}/${currentName}`)
+      const remoteNames =
+        remotes.code === 0 ? remotes.stdout.trim().split(/\s+/).filter(Boolean) : []
+      sameBranch = sameRefName(full, currentName, remoteNames)
     }
     if (current.code === 0 && sameBranch) {
       const [worktree, listed] = await Promise.all([
@@ -1615,6 +1644,13 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     }
   }
 
+  // The plan entries are independent of the name-status listings, so start
+  // the patch captures now and let them overlap the listing probes. The
+  // all-listings-failed path below awaits this promise before throwing so no
+  // capture child is left running and buffering.
+  const capturesPromise =
+    pr === undefined ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts()))) : undefined
+
   let files: string[] = []
   let prHeadOid: string | undefined
   let prUrl: string | undefined
@@ -1670,18 +1706,14 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
     if (listFailures === plan.length && plan.length > 0) {
       // Every listing failed. Returning an empty scope would render as the
       // confident "No changes found to review" result for an unreviewed diff.
+      // Let the already-started capture children settle first so none is left
+      // running and buffering after the throw.
+      await capturesPromise
       throw new Error(
         `Could not list changed files with git (${warnings.join("; ")}). The review did not run.`,
       )
     }
   }
-
-  // Start the patch captures only after the file listings have been validated.
-  // Starting them earlier left one full `git diff` child per plan entry
-  // running (and buffering up to 64 MB) when every listing failed and this
-  // function threw before awaiting them.
-  const capturesPromise =
-    pr === undefined ? Promise.all(plan.map((p) => exec(p.argv, gitCwd, callOpts()))) : undefined
 
   let uniqueFiles = uniq(files).sort()
   const scopeLabel = describeScope(scopeKind, { pr, branch, range, pathspec })

@@ -178,15 +178,42 @@ const SAMPLE_PLACEHOLDERS = new Set(
   ),
 )
 
-function countSamplePlaceholders(value: unknown): number {
-  if (typeof value === "string") return SAMPLE_PLACEHOLDERS.has(value) ? 1 : 0
+/**
+ * Count distinct placeholder strings, not occurrences. A real repository may
+ * legitimately contain `path/to/file.ts`; two findings in that file must not
+ * reach an occurrence-based echo threshold.
+ */
+function countDistinctPlaceholders(value: unknown, seen = new Set<string>()): number {
+  if (typeof value === "string") {
+    if (SAMPLE_PLACEHOLDERS.has(value)) seen.add(value)
+    return seen.size
+  }
   if (Array.isArray(value)) {
-    return value.reduce((count, item) => count + countSamplePlaceholders(item), 0)
+    for (const item of value) countDistinctPlaceholders(item, seen)
+    return seen.size
   }
   if (isRecord(value)) {
-    return Object.values(value).reduce((count, item) => count + countSamplePlaceholders(item), 0)
+    for (const item of Object.values(value)) countDistinctPlaceholders(item, seen)
   }
-  return 0
+  return seen.size
+}
+
+/**
+ * The generated candidate/report finding carries three placeholders. Requiring
+ * at least two catches a partly edited example while leaving a real finding in
+ * a file that happens to be named `path/to/file.ts` alone.
+ */
+function isPlaceholderFinding(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  let matches = 0
+  if (value.file === SAMPLE_VALUE.file) matches++
+  if (value.summary === SAMPLE_VALUE.summary) matches++
+  if (value.failure_scenario === SAMPLE_VALUE.failure_scenario) matches++
+  return matches >= 2
+}
+
+function isPlaceholderVerdict(value: unknown): boolean {
+  return isRecord(value) && value.evidence === SAMPLE_VALUE.evidence
 }
 
 /**
@@ -228,8 +255,19 @@ export function isSchemaEcho(value: unknown): boolean {
   ) {
     return true
   }
-  const placeholders = countSamplePlaceholders(value)
-  return placeholders >= 2 || (value.__example === true && placeholders >= 1)
+  // The single-verdict tool boundary stores only {verdict, evidence}, so the
+  // sentinel is gone. The placeholder evidence is still distinctive.
+  if (typeof value.verdict === "string" && value.evidence === SAMPLE_VALUE.evidence) {
+    return true
+  }
+  for (const key of RESULT_ARRAY_KEYS) {
+    const items = value[key]
+    if (!Array.isArray(items) || items.length === 0) continue
+    if (items.some((item) => isPlaceholderFinding(item) || isPlaceholderVerdict(item))) {
+      return true
+    }
+  }
+  return value.__example === true && countDistinctPlaceholders(value) >= 1
 }
 
 /**
@@ -523,26 +561,29 @@ export function asGroupVerdicts(
     tolerateOffset: true,
   })
   if (!parsed.ok) return null
-  // A text fallback cannot re-prompt the child. Keep partial verdicts instead
-  // of discarding the whole group. Only a complete 1-based list is shifted;
-  // an ambiguous partial list is kept as-is and the engine drops the missing
-  // candidate with a warning.
+  // A text fallback cannot re-prompt the child. A complete 1-based list
+  // (indices 1..count) is unambiguous and is shifted onto candidates 0..n-1.
+  // A partial list with no index 0 is ambiguous: it could be a 1-based subset
+  // or a zero-based subset that omitted 0. Refuse it rather than attaching
+  // verdicts to neighbouring candidates; the engine records the dropped
+  // candidates and marks the run partial.
   const raw = parsed.value.verdicts
   const sorted = [...raw].sort((a, b) => a.index - b.index)
-  // Only a complete 1-based list (indices 1..count) is unambiguous: a
-  // zero-based full list has index 0, and a zero-based subset can never reach
-  // `count`. A partial list starting at 1 could be either a 1-based subset or
-  // a zero-based subset that omitted 0; the prompt numbers candidates from 0,
-  // so keep it as-is and let the engine drop the missing candidate with a
-  // warning instead of attaching verdicts to the wrong findings.
+  const hasZero = sorted.some((v) => v.index === 0)
   const oneBased =
     parsed.value.zeroDropped !== true &&
+    !hasZero &&
     sorted.length === count &&
     sorted.every((v, i) => v.index === i + 1)
-  const shifted = oneBased
-    ? sorted.map((v) => ({ ...v, index: v.index - 1 }))
-    : raw
-  return shifted.filter((v) => v.index >= 0 && v.index < count)
+  if (oneBased) {
+    return sorted
+      .map((v) => ({ ...v, index: v.index - 1 }))
+      .filter((v) => v.index >= 0 && v.index < count)
+  }
+  if (parsed.value.zeroDropped !== true && !hasZero && sorted.length > 0) {
+    return []
+  }
+  return raw.filter((v) => v.index >= 0 && v.index < count)
 }
 
 /* -------------------------------------------------------------------------

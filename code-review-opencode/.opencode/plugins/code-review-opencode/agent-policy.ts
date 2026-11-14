@@ -104,6 +104,50 @@ export function reviewAgentPermissions(agentID: string): AgentPermission[] {
   return [...READ_ONLY_POLICY, ...tools]
 }
 
+/**
+ * Render the fallback permissions block for a Markdown agent. The static
+ * `.opencode/agents/*.md` files are the host fallback when `agent.transform`
+ * is unavailable; generating their block from this module keeps them in sync
+ * with the installed policy instead of maintaining a second hand-copied table.
+ */
+export function renderAgentPolicyYaml(agentID: string): string {
+  const lines = ["permissions:"]
+  for (const rule of reviewAgentPermissions(agentID)) {
+    lines.push(`  - action: ${JSON.stringify(rule.action)}`)
+    lines.push(`    resource: ${JSON.stringify(rule.resource)}`)
+    lines.push(`    effect: ${rule.effect}`)
+  }
+  return lines.join("\n")
+}
+
+/**
+ * Merge the read-only policy into an agent's existing rules without dropping
+ * host rules for actions the policy does not govern.
+ *
+ * OpenCode evaluates permissions last-match-wins. The policy's broad deny is
+ * kept first; preserved host rules follow it, then the policy's specific
+ * allows and denies. That keeps host extensions for unrelated actions (for
+ * example `webfetch`) working while the read-only rules remain authoritative
+ * for shell, read, glob, grep, and the review tools. A stale shell allow from
+ * an older hardening version is replaced by the current policy rather than
+ * surviving behind the broad deny.
+ */
+export function mergeReviewAgentPermissions(
+  existing: readonly AgentPermission[],
+  policy: readonly AgentPermission[],
+): AgentPermission[] {
+  const governed = new Set(
+    policy.filter((rule) => rule.action !== "*").map((rule) => rule.action),
+  )
+  const broad = policy.filter((rule) => rule.action === "*")
+  const specific = policy.filter((rule) => rule.action !== "*")
+  const preserved = existing.filter(
+    (rule) =>
+      !(rule.action === "*" && rule.resource === "*") && !governed.has(rule.action),
+  )
+  return [...broad, ...preserved, ...specific]
+}
+
 type AgentEditor = {
   update(id: string, update: (agent: { permissions: AgentPermission[] }) => void): void
 }
@@ -120,11 +164,13 @@ export async function installReviewAgentPolicy(ctx: {
   await ctx.agent.transform((editor) => {
     for (const id of REVIEW_AGENT_IDS) {
       editor.update(id, (agent) => {
-        // Replace the whole list. Assigning the policy is idempotent by
-        // construction: a second load cannot append duplicates, and a rule
-        // from an older GIT_HARDENING version cannot survive behind a
-        // hardcoded sentinel.
-        agent.permissions = reviewAgentPermissions(id)
+        // Merge rather than replace: host rules for actions the policy does
+        // not govern stay in place. The merge is idempotent because every
+        // governed action is rebuilt from the policy on each load.
+        agent.permissions = mergeReviewAgentPermissions(
+          agent.permissions ?? [],
+          reviewAgentPermissions(id),
+        )
       })
     }
   })

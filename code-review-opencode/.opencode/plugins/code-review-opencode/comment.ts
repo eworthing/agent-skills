@@ -19,6 +19,9 @@ import {
 } from "./scope.ts"
 import { mapLimit } from "./concurrency.ts"
 import { envInt, lineOf, pluralWord, positiveLine, renderedLocation } from "./finding.ts"
+import { samePrBase } from "./refs.ts"
+
+export { samePrBase } from "./refs.ts"
 
 export type Host = "github" | "gitlab" | "other"
 
@@ -112,9 +115,14 @@ export function summaryCommentBody(
   return `## Code review findings\n\nThe following findings could not be posted as inline comments:\n\n${entries.join("\n\n")}`
 }
 
-/** Stable hidden marker so a retry does not post a second general comment. */
-export function summaryCommentMarker(body: string): string {
-  const hash = createHash("sha256").update(body).digest("hex").slice(0, 16)
+/**
+ * Stable hidden marker so a retry does not post a second general comment.
+ * Hash the full review result, not the currently unposted subset: on a retry
+ * some findings may post inline while others still fail, and a subset-based
+ * marker would miss the comment already posted for the same review.
+ */
+export function summaryCommentMarker(seed: string): string {
+  const hash = createHash("sha256").update(seed).digest("hex").slice(0, 16)
   return `<!-- code-review-opencode:${hash} -->`
 }
 
@@ -293,25 +301,6 @@ export async function resolvePrInfo(
 }
 
 
-/**
- * A PR baseRefName is a short branch name. `release/main` is a different
- * branch even though it ends in `/main`; only a known remote-tracking prefix
- * for the same branch counts. A stale local base at another commit is caught
- * separately by the local-HEAD check in postComments.
- */
-export function samePrBase(diffBase: string, prBase: string, remotes: readonly string[] = []): boolean {
-  const normalize = (ref: string): string =>
-    ref.replace(/^refs\/heads\//, "").replace(/^refs\/remotes\//, "")
-  const base = normalize(diffBase)
-  if (base === prBase) return true
-  // A remote-tracking ref is `<remote>/<branch>`. Strip a prefix only when it
-  // is a real remote name: a local branch such as `release/main` is not the PR
-  // base `main`, and treating it as one posts comments at the wrong anchors.
-  return remotes.some(
-    (remote) => remote.length > 0 && base.startsWith(`${remote}/`) && base.slice(remote.length + 1) === prBase,
-  )
-}
-
 export async function postComments(deps: CommentDeps): Promise<string> {
   const { scope, result } = deps
   if (result.findings.length === 0) return ""
@@ -357,11 +346,10 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   }
   const pr = prInfo.number
   // A PR-number review captured the patch at one head. If that head was not
-  // recorded (the metadata call failed), posting against the live head would
-  // attach old line numbers to a new tree. Refuse instead.
-  if (scope.pr !== undefined && !scope.prHeadOid) {
-    return "`--comment` was ignored: the reviewed PR head was not captured; re-run the review with the PR target."
-  }
+  // verified, inline anchors could describe a different tree. Keep the
+  // findings visible with a head-independent general comment instead of
+  // pinning them to an unverified commit.
+  const headUnverified = scope.pr !== undefined && !scope.prHeadOid
   /** One `gh pr view` field read; the PR number is already resolved. */
   const prField = (field: string, jq = `.${field}`) =>
     call(["gh", "pr", "view", String(pr), "--json", field, "--jq", jq])
@@ -437,7 +425,9 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   }
   const [owner, name] = repoName.split("/")
   const commit = head.stdout.trim()
-  if (!owner || !name || !commit) {
+  // A general comment needs the repository and PR number, not a commit. Only
+  // require the live head when an inline anchor will use it.
+  if (!owner || !name || (!commit && !headUnverified)) {
     return `Posting GitHub comments failed: could not resolve repository or PR head (${repoError || head.stderr.trim() || "unknown error"}).`
   }
 
@@ -521,34 +511,39 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       return line === undefined ? [] : [{ file: f.file, line }]
     }),
   )
-  const outcomes = await mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
-    const line = lineOf(f)
-    if (line === undefined) return { ok: false, message: `${renderedLocation(f)}: no line to anchor an inline comment` }
-    if (!sides.hasLine(f.file, line)) {
-      return {
+  const outcomes = headUnverified
+    ? result.findings.map((f) => ({
         ok: false,
-        message: `${renderedLocation(f)}: line is not part of the reviewed diff; no inline anchor`,
-      }
-    }
-    const r = await call(
-      buildGitHubCommentArgs({
-        owner,
-        repo: name,
-        pr,
-        commit,
-        // GitHub anchors even a LEFT comment on the head path of a renamed
-        // file; the old path from the finding would be rejected (422).
-        path: sides.pathFor(f.file, line),
-        line,
-        body: commentBody(f),
-        side: sides.sideFor(f.file, line),
-        ...(githubHostname ? { hostname: githubHostname } : {}),
-      }),
-    )
-    return r.code === 0
-      ? { ok: true, message: "" }
-      : { ok: false, message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}` }
-  })
+        message: `${renderedLocation(f)}: the reviewed PR head was not verified; no inline anchor`,
+      }))
+    : await mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
+        const line = lineOf(f)
+        if (line === undefined) return { ok: false, message: `${renderedLocation(f)}: no line to anchor an inline comment` }
+        if (!sides.hasLine(f.file, line)) {
+          return {
+            ok: false,
+            message: `${renderedLocation(f)}: line is not part of the reviewed diff; no inline anchor`,
+          }
+        }
+        const r = await call(
+          buildGitHubCommentArgs({
+            owner,
+            repo: name,
+            pr,
+            commit,
+            // GitHub anchors even a LEFT comment on the head path of a renamed
+            // file; the old path from the finding would be rejected (422).
+            path: sides.pathFor(f.file, line),
+            line,
+            body: commentBody(f),
+            side: sides.sideFor(f.file, line),
+            ...(githubHostname ? { hostname: githubHostname } : {}),
+          }),
+        )
+        return r.code === 0
+          ? { ok: true, message: "" }
+          : { ok: false, message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}` }
+      })
   const posted = outcomes.filter((o) => o.ok).length
   const unposted = result.findings.filter((_, i) => !outcomes[i].ok)
   // The reference's GitLab path posts one general MR note; the same mechanism
@@ -558,10 +553,10 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   let summary = ""
   if (unposted.length > 0) {
     const body = summaryCommentBody(unposted)
-    const marker = summaryCommentMarker(body)
     // A retry after a transient inline failure must not add a second general
-    // comment for the same findings. The marker is hidden in the rendered
-    // comment and stable for the same finding set.
+    // comment for the same review. The marker hashes every finding in the
+    // result, so it stays the same when the set that failed inline changes.
+    const marker = summaryCommentMarker(summaryCommentBody(result.findings))
     const existing = await call([
       "gh",
       "api",
@@ -591,5 +586,8 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   }
   const failures = outcomes.filter((o) => !o.ok).map((o) => o.message)
   const suffix = failures.length > 0 ? `\n${failures.map((x) => `  - ${x}`).join("\n")}` : ""
-  return `Posted ${posted}/${result.findings.length} ${pluralWord(result.findings.length, "inline GitHub PR comment")}.${summary}${suffix}`
+  const headNote = headUnverified
+    ? " The reviewed PR head was not verified, so the findings were kept out of inline comments."
+    : ""
+  return `Posted ${posted}/${result.findings.length} ${pluralWord(result.findings.length, "inline GitHub PR comment")}.${summary}${headNote}${suffix}`
 }
