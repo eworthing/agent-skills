@@ -6,7 +6,7 @@
     "findingCount": 40,
     "note": "Run 28 is the baseline audit. Counts are samples; this ledger is the source of truth."
   },
-  "lastReviewedSha": "54fafeb",
+  "lastReviewedSha": "f5d68ed",
   "gate": {
     "openCorrectness": 0,
     "openCleanup": 0,
@@ -733,7 +733,7 @@
       "truncatedFrom": null,
       "partial": false,
       "warnings": [],
-      "note": "The report was complete (19 findings, below the 32 cap). Eighteen were fixed in 54fafeb; DELTA2-10 is invalid because the finder progress line already carries the candidate count.",
+      "note": "The report was complete (19 findings, below the 32 cap). Eighteen were fixed in 54fafeb; DELTA2-10 was reclassified in DELTA3-15 (pluralWord dropped the count) and fixed in f5d68ed.",
       "findings": [
         {
           "id": "DELTA2-01",
@@ -840,10 +840,10 @@
           "line": 778,
           "claim": "The finder progress line drops the candidate count, so the progress message no longer reports how many candidates have been found.",
           "severity": "invalid",
-          "disposition": "invalid",
-          "commit": null,
-          "test": null,
-          "reason": "The finder event already renders `pluralWord(event.candidates, \"candidate\")`; the count is present in index.ts:778. No code change."
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/finding.test.ts::pluralize includes the count while pluralWord does not",
+          "reason": "The finder progress line now uses `pluralize(event.candidates, \"candidate\")`, which includes the number. The earlier `pluralWord` call rendered only the noun."
         },
         {
           "id": "DELTA2-11",
@@ -945,7 +945,359 @@
           "reason": "The unused filesFromDiff wrapper was deleted; tests call scanPatchChurn directly."
         }
       ]
+    },
+    {
+      "run": "delta-3",
+      "range": "045df69..54fafeb",
+      "visibleFindings": 31,
+      "truncatedFrom": null,
+      "partial": false,
+      "warnings": [],
+      "note": "The report was complete (31 findings, below the 32 cap). Twenty-nine were fixed in f5d68ed (DELTA3-01 in 8eef63a); DELTA3-18 is invalid because a path-filtered diff is a subset of the same PR diff, and DELTA3-25 is accepted because the full marker scan is the reliable duplicate guard.",
+      "findings": [
+        {
+          "id": "DELTA3-01",
+          "file": ".opencode/plugins/code-review-opencode/agent-policy.ts",
+          "line": 144,
+          "claim": "The preserved filter drops only the exact `{action:\"*\", resource:\"*\"}` rule, so any other existing rule whose action is `*` survives the merge \u2014 unlike the previous install, which dropped every `*`-action rule before appending the policy.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "8eef63a",
+          "test": "test/agent-policy.test.ts::installReviewAgentPolicy replaces governed rules and keeps host extensions",
+          "reason": "The merge now drops every existing broad `*` action rule, so a host rule such as `*:/tmp/* allow` cannot sit after the deny-all."
+        },
+        {
+          "id": "DELTA3-02",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1002,
+          "claim": "Creating the dedupe `seen` set per finder instead of sharing it spends each finder's hard verifier quota re-verifying another finder's duplicate, so unique candidates are dropped as budget-exhausted.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/engine.test.ts::a confirmed duplicate does not consume another finder's verifier slots; test/engine.test.ts::v2.1.162 dedupes in finder order even when a later finder finishes first",
+          "reason": "A per-claim representative is skipped without spending a slot when its verdict is kept; a refuted representative still gets one duplicate retry, and the lowest finder index owns the reported text."
+        },
+        {
+          "id": "DELTA3-03",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 410,
+          "claim": "Removing the `allowSubsetBase`/full-plan guard from `applyIndexPlan` changes the pre-verification caller `applyCandidateDedup`, which never passed that flag: a zero-based dedup plan that only names contiguous indices 1..k is now shifted as 1-based.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/engine.test.ts::a contiguous dedup subset stays zero-based",
+          "reason": "The candidate-dedup caller requires a full 1-based plan; a zero-based subset that starts at 1 is no longer shifted."
+        },
+        {
+          "id": "DELTA3-04",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 266,
+          "claim": "Changing the echo check from `every` to `some` lets one example-looking item reject an entire genuine candidates/verdicts payload.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/json.test.ts::one partly filled template item does not reject the real candidates",
+          "reason": "A partly filled template item is dropped from the payload instead of rejecting the whole candidates list."
+        },
+        {
+          "id": "DELTA3-05",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 270,
+          "claim": "`schemas.ts` now stamps `__example: true` into every child example, and `isSchemaEcho` treats that sentinel plus a single sample placeholder value as an echo, so a filled-in payload that kept the sentinel is discarded when any field matches a sample string.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/json.test.ts::a real sample path with the sentinel is not an echo",
+          "reason": "The sentinel fallback ignores the file-path placeholder, so a real file named `path/to/file.ts` does not discard a filled-in answer."
+        },
+        {
+          "id": "DELTA3-06",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 409,
+          "claim": "The missing-PR-URL fallback resolves the repository with `gh repo view` in the cwd, which names the fork in a fork clone instead of the PR's base repository.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/comment.test.ts::a PR-number review with no PR URL refuses instead of using the fork; test/comment.test.ts::a missing PR URL refuses instead of using the repository gh resolved",
+          "reason": "A missing PR URL refuses for both branch and PR-number reviews; `gh repo view` can name a fork with its own PR of the same number."
+        },
+        {
+          "id": "DELTA3-07",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 569,
+          "claim": "The retry marker hashes the full finding set but is matched against a general comment that only contains the previously unposted subset, so a later run can report findings as posted when they are not.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/comment.test.ts::a finding missing from the existing general comment is posted",
+          "reason": "The general comment carries one marker per finding, so a changed failure subset neither hides an unposted finding nor reposts one that is present."
+        },
+        {
+          "id": "DELTA3-08",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1670,
+          "claim": "The HEAD that the new bracket reads prove is never used to set prHeadOid, so when the metadata read fails the code marks the pair verified but leaves prHeadOid unset and --comment treats a verified patch as unverified.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a verified head is pinned when only the metadata read fails",
+          "reason": "The verified bracket head is stored separately and used for prHeadOid even when the metadata payload is unavailable."
+        },
+        {
+          "id": "DELTA3-09",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 559,
+          "claim": "The retry marker hashes the rendered, order-dependent full findings body, so the same finding set reported in a different order produces a new marker and a duplicate general PR comment.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/comment.test.ts::the general comment marker stays stable when the failed subset changes; test/comment.test.ts::a finding missing from the existing general comment is posted",
+          "reason": "Per-finding markers are order-independent and subset-independent, so the same finding set in a different order produces the same markers."
+        },
+        {
+          "id": "DELTA3-10",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 569,
+          "claim": "The retry guard suppresses the summary comment only when the paginated `gh api` comment-list call succeeds and contains the marker; when that call fails, control falls through to the posting branch even though a previous run may already have posted the identical comment.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/comment.test.ts::a failed existing-comment check does not post a duplicate",
+          "reason": "An unavailable existing-comment check now fails closed instead of posting a comment that may duplicate a previous run."
+        },
+        {
+          "id": "DELTA3-11",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 421,
+          "claim": "`labelFor` omits an unsafe pathspec and relativizes an unsafe root, but it still renders `spec.range` \u2014 which comes verbatim from the user's branch/range target \u2014 so a legal branch name containing `&`, `;`, `$`, or a backtick produces a displayed diff command that the same permission table denies.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a branch target with a shell metacharacter omits the runnable command",
+          "reason": "An unsafe range omits the whole runnable command; the embedded diff is still scoped."
+        },
+        {
+          "id": "DELTA3-12",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1468,
+          "claim": "truncatedFrom is raised to ranked.length - sweepGaps, counting findings the synthesizer merged away as if the report cap cut them.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/engine.test.ts::a truncated text-synthesis report reports the proven lower bound",
+          "reason": "The pre-cap count is the emitted length plus one, not the survivor count; merged-away findings are not reported as cap-cut."
+        },
+        {
+          "id": "DELTA3-13",
+          "file": ".opencode/plugins/code-review-opencode/format.ts",
+          "line": 36,
+          "claim": "`deterministicReport`/`applyDecisions` report `truncatedFrom` as the total ranked length, which includes unverified sweep gaps, while `formatReportFindings` and `formatHuman` label that count as verified findings.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/format.test.ts::the truncation notice calls the pre-cap count findings, not verified findings",
+          "reason": "The renderer calls the pre-cap count findings, since it can include sweep gaps that were never independently verified."
+        },
+        {
+          "id": "DELTA3-14",
+          "file": ".opencode/plugins/code-review-opencode/prompts.ts",
+          "line": 899,
+          "claim": "The new sweep-gap intro interpolates `pluralWord(gaps, \"sweep gap\")`, which returns only the noun, so the synthesizer headline reads \"N findings (M verified, sweep gaps)\" without the number of unverified gaps. [same root cause also at: .opencode/plugins/code-review-opencode/prompts.ts:952]",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/prompts.test.ts::the sweep-gap intro includes the gap count",
+          "reason": "The synth prompts render the gap count before the plural noun."
+        },
+        {
+          "id": "DELTA3-15",
+          "file": ".opencode/plugins/code-review-opencode/index.ts",
+          "line": 778,
+          "claim": "The finder progress event is rendered with `pluralWord(event.candidates, \"candidate\")`, which yields only \"candidate\"/\"candidates\"; the numeric count printed by the previous `${event.candidates} candidate(s)` form is dropped.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/finding.test.ts::pluralize includes the count while pluralWord does not",
+          "reason": "The finder progress line uses `pluralize`, which includes the number. This corrects DELTA2-10: the previous `pluralWord` call rendered only the noun."
+        },
+        {
+          "id": "DELTA3-16",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 583,
+          "claim": "The new guard refuses any non-empty verdict list that lacks index 0, including a legitimate zero-based list with gaps, so valid verdicts for candidates 1 and 3 are now discarded.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/json.test.ts::asGroupVerdicts shifts full 1-based lists and refuses ambiguous partial lists",
+          "reason": "Only a contiguous partial run starting at 1 is refused; a non-contiguous zero-based list with gaps is kept."
+        },
+        {
+          "id": "DELTA3-17",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1020,
+          "claim": "`dedupeVerified` rebuilds `verified` from one representative per `dedupKey162` bucket, so a REFUTED copy that collides with a CONFIRMED copy disappears from `refuted` as well, removing it from the sweep's known/refuted guard.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/engine.test.ts::a skipped duplicate stays in the sweep guard when a confirmed copy wins",
+          "reason": "Skipped and deduped duplicates are added to the sweep's known list and exact-claim set, so the sweep cannot resurrect them as fresh gaps."
+        },
+        {
+          "id": "DELTA3-18",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1635,
+          "claim": "Dropping the `!isPathTarget` guard from the branch-recording condition makes a path-target review record `scope.branch`, so `--comment` now treats a path-filtered diff as the current branch's PR diff.",
+          "severity": "correctness",
+          "disposition": "invalid",
+          "commit": null,
+          "test": null,
+          "reason": "Invalid: a path-filtered diff is a subset of the same base/head PR diff; the included file's line numbers are unchanged, postComments verifies the local HEAD, base, and merge-base, and diffSideMap only anchors the reviewed path. The delta-1 change deliberately enabled path reviews to post."
+        },
+        {
+          "id": "DELTA3-19",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1529,
+          "claim": "`assertExec(fullRef, ...)` turns the new `rev-parse --symbolic-full-name` refinement into a hard failure of the whole review, even though it only decides whether the target names the checked-out branch.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a failed symbolic-full-name probe does not fail a branch review",
+          "reason": "The symbolic-full-name probe is optional; a failed probe falls back to the abbreviated-name comparison."
+        },
+        {
+          "id": "DELTA3-20",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 956,
+          "claim": "In the new `complete` branch of `readCapped`, a character budget smaller than the truncation marker truncates the text with no `\u2026(truncated)` marker. [same root cause also at: .opencode/plugins/code-review-opencode/scope.ts:953]",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a conventions budget smaller than the marker still marks truncation",
+          "reason": "A budget too small for content and marker returns the marker instead of a silent fragment."
+        },
+        {
+          "id": "DELTA3-21",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1456,
+          "claim": "The trailing head read, and its unconditional one-retry loop, run after the patch/metadata fetches even when `gh pr diff` already failed, adding up to two more gh invocations and their full timeout before the error is raised.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a failed patch fetch does not run the trailing head read",
+          "reason": "The patch/metadata pair is checked before the trailing head read, so a failed patch does not spend two more gh timeouts."
+        },
+        {
+          "id": "DELTA3-22",
+          "file": ".opencode/plugins/code-review-opencode/reportfindings.ts",
+          "line": 127,
+          "claim": "`OUTCOMES` is now read from `FINDING_SCHEMA.properties.outcome.enum` at module load, but the schema is typed loosely enough that removing or renaming `outcome` yields `undefined` and crashes validation at runtime instead of failing the build.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/reportfindings.test.ts::the adapter schema mirrors the recovered tool schema",
+          "reason": "The outcome enum is read with a fallback empty array, so a schema edit cannot crash validation; a test asserts the enum is present."
+        },
+        {
+          "id": "DELTA3-23",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 388,
+          "claim": "The new unverified-head fallback still resolves the live PR head with an extra `gh pr view --json headRefOid` call although the value is not required or used on that path.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/comment.test.ts::a PR-number review without a verified head posts a general comment",
+          "reason": "The unverified-head path skips the unused head probe."
+        },
+        {
+          "id": "DELTA3-24",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 507,
+          "claim": "`postComments` builds the whole-patch `diffSideMap` even when `headUnverified` forces every finding into the general-comment path and the map is never queried.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/comment.test.ts::a PR-number review without a verified head posts a general comment",
+          "reason": "The diff side map is built lazily inside the inline branch; the general-comment path skips the patch parse."
+        },
+        {
+          "id": "DELTA3-25",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 560,
+          "claim": "The general-comment idempotency guard pages through every issue comment on the PR and downloads all bodies before posting, on every invocation that has unposted findings.",
+          "severity": "cleanup",
+          "disposition": "accepted",
+          "commit": null,
+          "test": null,
+          "reason": "Accepted: the paginated scan is the only reliable way to find a per-finding marker in an arbitrary earlier comment; a last-page-only check could miss it and post a duplicate. It runs only when findings fail inline. A persistent marker cache would be a larger design change and can go stale across processes."
+        },
+        {
+          "id": "DELTA3-26",
+          "file": ".opencode/plugins/code-review-opencode/index.ts",
+          "line": 597,
+          "claim": "The explicit-path validation now also runs before the engine path, where `resolveScope` immediately repeats the same `findGitRoot`/`realpathSync` walk (and host detection has usually run `resolveTargetPath` once more).",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts (path-target suite)",
+          "reason": "The explicit-path pre-check now runs only on the inline and single-pass prompt paths; the engine path lets resolveScope perform the check once."
+        },
+        {
+          "id": "DELTA3-27",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 411,
+          "claim": "`SHELL_DENIED` is a second hand-maintained copy of the shell deny rules: it mirrors the control-operator patterns but omits the substring denies (`difftool`, `--output`, `--paginate`, `--config-env`, ` -O`, ...) that `labelFor` must also avoid.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a path containing a denied substring omits the pathspec",
+          "reason": "The deny globs and the substrings used by labelFor come from one shell-policy module, so a denied substring is omitted from the runnable command."
+        },
+        {
+          "id": "DELTA3-28",
+          "file": ".opencode/agents/review-finder.md",
+          "line": 12,
+          "claim": "The full ~125-line read-only shell policy is copy-pasted into all three agent Markdown files (differing only in the tool allow), and the only mechanism keeping them equal to `agent-policy.ts` is a manual `scripts/sync-agent-policy.ts` run with no check mode or CI/test invocation.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/agent-policy.test.ts::the agent-policy sync check passes; test/agent-policy.test.ts::the Markdown fallback permissions are generated from the shared policy",
+          "reason": "The sync script has a `--check` mode and a test runs it; the generated block is also compared directly to renderAgentPolicyYaml."
+        },
+        {
+          "id": "DELTA3-29",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1016,
+          "claim": "Each finder's verified results are sorted with `compareFindings` here and then the whole array is sorted again at engine.ts:1083, while `mapLimit` already preserves input order, so the per-finder sort is redundant.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/engine.test.ts (streaming determinism suite)",
+          "reason": "The redundant per-finder sort was removed; the global compareFindings sort remains the single ordering step."
+        },
+        {
+          "id": "DELTA3-30",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1504,
+          "claim": "The `git diff --quiet` exit>1 failure block is copy-pasted at scope.ts:1504, 1557, and 1617 instead of being added to the new `assertExec` helper that the diff introduced as the one failure policy.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts (worktree probe suites)",
+          "reason": "The three `git diff --quiet` failure blocks now share assertQuietProbe."
+        },
+        {
+          "id": "DELTA3-31",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1542,
+          "claim": "The branch-name check hand-writes the normalized equality that the imported sameRefName helper already implements.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "f5d68ed",
+          "test": "test/scope.test.ts::a remote-prefixed current branch includes uncommitted changes; test/comment.test.ts (samePrBase suite)",
+          "reason": "The branch-name comparisons use the shared sameRefName helper instead of hand-written normalized equality."
+        }
+      ]
     }
   ],
-  "lastDeltaRange": "045df69..54fafeb"
+  "lastDeltaRange": "045df69..f5d68ed"
 }
