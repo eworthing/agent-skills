@@ -6,7 +6,7 @@
     "findingCount": 40,
     "note": "Run 28 is the baseline audit. Counts are samples; this ledger is the source of truth."
   },
-  "lastReviewedSha": "02dc49e",
+  "lastReviewedSha": "54fafeb",
   "gate": {
     "openCorrectness": 0,
     "openCleanup": 0,
@@ -578,7 +578,7 @@
           "disposition": "fixed",
           "commit": "02dc49e",
           "test": "test/engine.test.ts::an out-of-range index does not flip a zero-based plan to 1-based",
-          "reason": "A 1-based plan must cover every item exactly once; one out-of-range index no longer flips the plan."
+          "reason": "A 1-based plan must be a contiguous run starting at 1; one out-of-range index no longer flips the plan."
         },
         {
           "id": "DELTA1-03",
@@ -588,8 +588,8 @@
           "severity": "correctness",
           "disposition": "fixed",
           "commit": "02dc49e",
-          "test": "test/json.test.ts::asGroupVerdicts shifts full 1-based lists but keeps ambiguous partial lists as-is",
-          "reason": "Only a full 1-based group-verdict list is shifted; partial lists stay zero-based."
+          "test": "test/json.test.ts::asGroupVerdicts shifts full 1-based lists and refuses ambiguous partial lists",
+          "reason": "Only a full 1-based group-verdict list is shifted; ambiguous partial lists are refused rather than mispaired."
         },
         {
           "id": "DELTA1-04",
@@ -631,9 +631,9 @@
           "claim": "Pinning the reviewed PR head now requires the trailing metadata read to succeed, so a transient gh failure disables inline comments even when the patch and first metadata agree.",
           "severity": "correctness",
           "disposition": "fixed",
-          "commit": "02dc49e",
-          "test": "test/scope.test.ts::a failed head check still pins the head captured with the patch",
-          "reason": "A failed trailing head check trusts the head captured with the metadata; only a successful disagreeing check invalidates it."
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts::an unavailable head check leaves the PR head unverified; test/comment.test.ts::a PR-number review without a verified head posts a general comment",
+          "reason": "Superseded by DELTA2-05: an unavailable head check no longer pins the head; the findings are posted as a general comment."
         },
         {
           "id": "DELTA1-08",
@@ -724,7 +724,227 @@
           "reason": "Child removal is fire-and-forget with an unref'd timeout; it no longer blocks the concurrency slot."
         }
       ]
+    },
+    {
+      "run": "delta-2",
+      "range": "045df69..02dc49e",
+      "visibleFindings": 19,
+      "truncatedFrom": null,
+      "partial": false,
+      "warnings": [],
+      "note": "The report was complete (19 findings, below the 32 cap). Eighteen were fixed in 54fafeb; DELTA2-10 is invalid because the finder progress line already carries the candidate count.",
+      "findings": [
+        {
+          "id": "DELTA2-01",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 980,
+          "claim": "Cross-finder dedupe after verification keeps the lowest finder index, so a REFUTED duplicate discards a CONFIRMED copy of the same claim.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/engine.test.ts::streaming dedupe keeps a confirmed duplicate over a refuted one",
+          "reason": "Cross-finder dedupe keeps the strongest verdict; a refuted duplicate no longer discards a confirmed copy."
+        },
+        {
+          "id": "DELTA2-02",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 232,
+          "claim": "The new placeholder-count echo check no longer recognizes a single-verdict schema echo once the tool boundary strips `__example`.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/json.test.ts::a stripped single-verdict echo is still detected",
+          "reason": "A top-level verdict with the placeholder evidence is an echo even after the tool boundary strips `__example`."
+        },
+        {
+          "id": "DELTA2-03",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 182,
+          "claim": "`countSamplePlaceholders` counts each occurrence of a placeholder string, so any payload that names a sample path twice reaches the `>= 2` echo threshold even when every other field is a genuine result. [same root cause also at: .opencode/plugins/code-review-opencode/schemas.ts:166]",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/json.test.ts::repeated real paths in a candidates payload are not an echo",
+          "reason": "Echo detection counts distinct placeholders and requires two of the three finding placeholders, so repeated real sample paths are not an echo."
+        },
+        {
+          "id": "DELTA2-04",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 574,
+          "claim": "The general-comment retry marker hashes only the current failed subset, so a retry whose failure set changes posts a second general comment that duplicates findings. [same root cause also at: .opencode/plugins/code-review-opencode/comment.ts:565]",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/comment.test.ts::the general comment marker stays stable when the failed subset changes",
+          "reason": "The marker hashes the full result, not the current unposted subset, so a retry with a different inline success set does not repost."
+        },
+        {
+          "id": "DELTA2-05",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1452,
+          "claim": "`prHeadVerified` fails open when the trailing head read is unavailable, so comments can be pinned to a head whose patch was never captured.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts::an unavailable head check leaves the PR head unverified; test/comment.test.ts::a PR-number review without a verified head posts a general comment",
+          "reason": "Head-only reads bracket the patch; an unavailable check leaves the head unverified and posting falls back to a head-independent general comment. Supersedes DELTA1-07."
+        },
+        {
+          "id": "DELTA2-06",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 538,
+          "claim": "A partial 1-based group-verdict list is no longer refused or shifted, so its verdicts are attached to neighbouring candidates.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/json.test.ts::asGroupVerdicts shifts full 1-based lists and refuses ambiguous partial lists",
+          "reason": "A partial list without index 0 is refused instead of being attached to neighbouring candidates."
+        },
+        {
+          "id": "DELTA2-07",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 420,
+          "claim": "`labelFor` omits only the pathspec when it contains shell metacharacters; the repository root is still emitted as `git -C '<root>'`, so a root containing `&` or `;` produces a command that the agents' own deny rules reject. [same root cause also at: .opencode/plugins/code-review-opencode/scope.ts:410]",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts::a repository root with a shell metacharacter uses a relative -C path",
+          "reason": "A metacharacter root is replaced by a realpath-relative -C path; if that is also unsafe, the runnable command is omitted."
+        },
+        {
+          "id": "DELTA2-08",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 379,
+          "claim": "`applyIndexPlan` no longer treats a contiguous 1-based subset as 1-based, so a synthesizer's 1-based decision subset is applied to the wrong survivors.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/engine.test.ts::a contiguous 1-based subset is shifted onto zero-based survivors; test/engine.test.ts::an out-of-range index does not flip a zero-based plan to 1-based",
+          "reason": "A contiguous run starting at 1 is treated as a 1-based subset; a non-contiguous off-by-one plan stays zero-based. Supersedes the subset half of DELTA1-02."
+        },
+        {
+          "id": "DELTA2-09",
+          "file": ".opencode/plugins/code-review-opencode/agent-policy.ts",
+          "line": 127,
+          "claim": "`installReviewAgentPolicy` replaces the full permission list, dropping host/user permission rules that had been merged onto the review agents.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/agent-policy.test.ts::installReviewAgentPolicy replaces governed rules and keeps host extensions",
+          "reason": "The policy is merged with existing rules; ungoverned host actions are preserved and governed actions are rebuilt from the policy."
+        },
+        {
+          "id": "DELTA2-10",
+          "file": ".opencode/plugins/code-review-opencode/index.ts",
+          "line": 778,
+          "claim": "The finder progress line drops the candidate count, so the progress message no longer reports how many candidates have been found.",
+          "severity": "invalid",
+          "disposition": "invalid",
+          "commit": null,
+          "test": null,
+          "reason": "The finder event already renders `pluralWord(event.candidates, \"candidate\")`; the count is present in index.ts:778. No code change."
+        },
+        {
+          "id": "DELTA2-11",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1221,
+          "claim": "unmergedFallback overwrites the sweep-aware deterministicReport summary, so a failed synthesis still advertises unverified sweep gaps as verified findings. [same root cause also at: .opencode/plugins/code-review-opencode/engine.ts:521, .opencode/plugins/code-review-opencode/prompts.ts:952]",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/engine.test.ts::a failed synthesis keeps the sweep-aware deterministic summary",
+          "reason": "Fallback notes are appended to the deterministic summary, which distinguishes sweep gaps from verified findings."
+        },
+        {
+          "id": "DELTA2-12",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1463,
+          "claim": "The deterministic-report result is applied by hand in three places, and only `unmergedFallback` updates the duplicate accounting.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/engine.test.ts::a failed synthesis keeps the sweep-aware deterministic summary",
+          "reason": "All deterministic fallbacks go through applyDeterministic, which updates dedupe, cap, truncation, and duplicate accounting together."
+        },
+        {
+          "id": "DELTA2-13",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1430,
+          "claim": "PR scope discovery now awaits the metadata download before starting the patch download, and adds a third serial head read, where the patch and metadata used to run concurrently.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts::a PR review downloads the patch once and verifies the head",
+          "reason": "Metadata and patch downloads run concurrently; two cheap head-only reads bracket the patch."
+        },
+        {
+          "id": "DELTA2-14",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1683,
+          "claim": "The plan diff captures now start only after all name-status listings complete, removing the previous overlap between the listing probes and the `git diff` patch capture.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts::a failed file listing awaits the already-started diff captures",
+          "reason": "Captures start with the listings; the all-listings-failed path awaits them before throwing."
+        },
+        {
+          "id": "DELTA2-15",
+          "file": ".opencode/plugins/code-review-opencode/runner.ts",
+          "line": 605,
+          "claim": "The new `sleep` helper duplicates the identical inline delay still used at runner.ts:723 inside the same poll loop.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/runner.test.ts (poll and backoff suites)",
+          "reason": "The main poll now uses the same sleep helper as the backoff and get-failure branches."
+        },
+        {
+          "id": "DELTA2-16",
+          "file": ".opencode/agents/review-finder.md",
+          "line": 31,
+          "claim": "The newly added 60-line fallback shell permission table hand-copies agent-policy.ts's READ_ONLY_POLICY/SHELL_DENY rules into three Markdown agents instead of deriving from the one policy source.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/agent-policy.test.ts::the Markdown fallback permissions are generated from the shared policy",
+          "reason": "The Markdown permissions block is generated by renderAgentPolicyYaml and scripts/sync-agent-policy.ts; a test fails when it drifts."
+        },
+        {
+          "id": "DELTA2-17",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 268,
+          "claim": "The new module-level `compareFindings` re-implements the file/line/summary/failure_scenario ordering that is still written inline for `ranked` at engine.ts:1187-1197 instead of being called there.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/engine.test.ts (deterministic ordering suite)",
+          "reason": "The ranked sort now calls compareFindings instead of an inline copy."
+        },
+        {
+          "id": "DELTA2-18",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1501,
+          "claim": "The new branch/ref normalization re-implements the exported `samePrBase` policy from comment.ts:302-313 (strip refs/heads and refs/remotes, then match a prefix only when it is a real remote name) instead of sharing it.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts (branch/remote-target suite); test/comment.test.ts (samePrBase suite)",
+          "reason": "Ref normalization and remote-prefix matching live in refs.ts and are shared by scope and posting."
+        },
+        {
+          "id": "DELTA2-19",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 696,
+          "claim": "`filesFromDiff` has no callers, so the diff rewrote an untested wrapper instead of deleting it.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "54fafeb",
+          "test": "test/scope.test.ts (patch walker suite)",
+          "reason": "The unused filesFromDiff wrapper was deleted; tests call scanPatchChurn directly."
+        }
+      ]
     }
   ],
-  "lastDeltaRange": "045df69..02dc49e"
+  "lastDeltaRange": "045df69..54fafeb"
 }
