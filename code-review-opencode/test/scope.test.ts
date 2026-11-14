@@ -144,6 +144,28 @@ test("a remote-prefixed current branch includes uncommitted changes", async () =
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("a failed symbolic-full-name probe does not fail a branch review", async () => {
+  const dir = makeRepo()
+  git(dir, "checkout", "-b", "feature")
+  writeFileSync(join(dir, "a.ts"), "export const a = 9\n")
+  const exec: Exec = async (argv, cwd, opts) => {
+    if (
+      argv[0] === "git" &&
+      argv.includes("rev-parse") &&
+      argv.includes("--symbolic-full-name")
+    ) {
+      return { code: 128, stdout: "", stderr: "bad revision" }
+    }
+    return defaultExec(argv, cwd, opts)
+  }
+  const scope = await resolveScope({ cwd: dir, target: "feature", exec })
+  // The refinement probe is optional; the exact abbreviated-name match still
+  // identifies the checked-out branch and includes its worktree changes.
+  assert.equal(scope.branch, "feature")
+  assert.match(scope.diffText ?? "", /a = 9/)
+  rmSync(dir, { recursive: true, force: true })
+})
+
 test("a path with a shell metacharacter omits the pathspec from the runnable command", async () => {
   const dir = makeRepo()
   writeFileSync(join(dir, "a&b.ts"), "export const amp = 1\n")
@@ -156,6 +178,18 @@ test("a path with a shell metacharacter omits the pathspec from the runnable com
   assert.doesNotMatch(scope.diffCommand, /&/)
   assert.match(scope.diffCommand, /pathspec omitted/)
   assert.match(scope.diffText ?? "", /amp = 1/)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a path containing a denied substring omits the pathspec", async () => {
+  const dir = makeRepo()
+  mkdirSync(join(dir, "tools", "difftool"), { recursive: true })
+  writeFileSync(join(dir, "tools/difftool/a.ts"), "export const a = 1\n")
+  git(dir, "add", "tools/difftool/a.ts")
+  const scope = await resolveScope({ cwd: dir, target: "tools/difftool" })
+  // `difftool` is a policy deny substring, not just a control character.
+  assert.match(scope.diffCommand, /pathspec omitted/)
+  assert.doesNotMatch(scope.diffCommand, /difftool/)
   rmSync(dir, { recursive: true, force: true })
 })
 
@@ -192,6 +226,20 @@ test("a repository root with a shell metacharacter uses a relative -C path", asy
   assert.match(scope.diffCommand, /git -C \.\./)
   assert.doesNotMatch(scope.diffCommand, /a&b/)
   rmSync(base, { recursive: true, force: true })
+})
+
+test("a branch target with a shell metacharacter omits the runnable command", async () => {
+  const dir = makeRepo()
+  git(dir, "checkout", "-b", "release/a&b")
+  writeFileSync(join(dir, "a.ts"), "export const a = 3\n")
+  git(dir, "add", "a.ts")
+  git(dir, "commit", "-m", "change")
+  const scope = await resolveScope({ cwd: dir, target: "release/a&b" })
+  // The range is the user's branch name; the child deny rules would reject
+  // `&`, so the displayed command is omitted. The embedded diff is still scoped.
+  assert.match(scope.diffCommand, /command omitted: shell metacharacter in the review range/)
+  assert.doesNotMatch(scope.diffCommand, /&/)
+  rmSync(dir, { recursive: true, force: true })
 })
 
 test("a clean path target records the checked-out branch", async () => {
@@ -492,6 +540,64 @@ test("a failed PR metadata call still uses the cached patch", async () => {
   rmSync(dir, { recursive: true, force: true })
 })
 
+test("a verified head is pinned when only the metadata read fails", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "code-review-pr-headonly-"))
+  mkdirSync(join(dir, ".git"))
+  const patch = "diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-a\n+b\n"
+  const exec: Exec = async (argv) => {
+    if (argv[0] === "git" && argv.includes("rev-parse") && argv.includes("--show-toplevel")) {
+      return { code: 0, stdout: `${dir}\n`, stderr: "" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "diff") return { code: 0, stdout: patch, stderr: "" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
+      if (argv.includes("files,additions,deletions,headRefOid,url")) {
+        return { code: 1, stdout: "", stderr: "api error" }
+      }
+      return { code: 0, stdout: JSON.stringify({ headRefOid: "abc123" }), stderr: "" }
+    }
+    return { code: 0, stdout: "", stderr: "" }
+  }
+  const scope = await resolveScope({ cwd: dir, target: "42", exec })
+  // The head-only reads bracket the patch and agree; the metadata payload is
+  // not required to pin the verified head.
+  assert.equal(scope.prHeadOid, "abc123")
+  assert.deepEqual(scope.files, ["src/a.ts"])
+  assert.equal(scope.diffText, patch)
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test("a failed patch fetch does not run the trailing head read", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "code-review-pr-badpatch-"))
+  mkdirSync(join(dir, ".git"))
+  const calls: string[][] = []
+  const exec: Exec = async (argv) => {
+    calls.push(argv)
+    if (argv[0] === "git" && argv.includes("rev-parse") && argv.includes("--show-toplevel")) {
+      return { code: 0, stdout: `${dir}\n`, stderr: "" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "diff") {
+      return { code: 1, stdout: "", stderr: "not found" }
+    }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
+      return { code: 0, stdout: JSON.stringify({ headRefOid: "abc123" }), stderr: "" }
+    }
+    return { code: 0, stdout: "", stderr: "" }
+  }
+  await assert.rejects(() => resolveScope({ cwd: dir, target: "42", exec }), /Could not fetch PR/)
+  const headOnlyReads = calls.filter(
+    (c) =>
+      c[0] === "gh" &&
+      c[1] === "pr" &&
+      c[2] === "view" &&
+      c.includes("headRefOid") &&
+      !c.includes("files,additions,deletions,headRefOid,url"),
+  )
+  // The pre-patch bracket read runs; the trailing read (and its retry) is
+  // skipped because the patch already failed.
+  assert.equal(headOnlyReads.length, 1)
+  rmSync(dir, { recursive: true, force: true })
+})
+
 test("a failed file listing awaits the already-started diff captures", async () => {
   const dir = makeRepo()
   writeFileSync(join(dir, "a.ts"), "export const a = 2\n")
@@ -554,6 +660,16 @@ test("a fully read conventions file over the character budget carries the trunca
   const { text } = discoverConventions(root, ["a.ts"], 20_000)
   assert.ok(text.length <= 20_000)
   assert.match(text, /…\(truncated\)$/)
+  rmSync(root, { recursive: true, force: true })
+})
+
+test("a conventions budget smaller than the marker still marks truncation", () => {
+  const root = mkdtempSync(join(tmpdir(), "code-review-conv-tiny-"))
+  writeFileSync(join(root, "CLAUDE.md"), "x".repeat(500))
+  const { text } = discoverConventions(root, ["a.ts"], 5)
+  // The marker is more important than the exact byte cap: a silent 5-character
+  // fragment would look like the complete file.
+  assert.match(text, /…\(truncated\)/)
   rmSync(root, { recursive: true, force: true })
 })
 

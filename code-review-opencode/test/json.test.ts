@@ -51,6 +51,47 @@ test("a filled-in example that kept the sentinel is a real result", () => {
   )
 })
 
+test("one partly filled template item does not reject the real candidates", () => {
+  const payload = {
+    candidates: [
+      { file: "src/a.ts", line: 1, summary: "real one", failure_scenario: "input A fails" },
+      { file: "src/b.ts", line: 2, summary: "real two", failure_scenario: "input B fails" },
+      { file: "src/c.ts", line: 3, summary: "real three", failure_scenario: "input C fails" },
+      {
+        file: "path/to/file.ts",
+        summary: "one sentence",
+        failure_scenario: "a real scenario",
+      },
+    ],
+  }
+  assert.equal(isSchemaEcho(payload), false)
+  const parsed = normalizeCandidatesCall(payload)
+  assert.equal(parsed.ok, true)
+  if (parsed.ok) {
+    assert.deepEqual(
+      parsed.value.candidates.map((c) => c.file),
+      ["src/a.ts", "src/b.ts", "src/c.ts"],
+    )
+  }
+})
+
+test("a real sample path with the sentinel is not an echo", () => {
+  assert.equal(
+    isSchemaEcho({
+      __example: true,
+      candidates: [
+        {
+          file: "path/to/file.ts",
+          line: 4,
+          summary: "the guard is inverted",
+          failure_scenario: "a negative input reaches the branch and throws",
+        },
+      ],
+    }),
+    false,
+  )
+})
+
 test("a stripped single-verdict echo is still detected", () => {
   // The verdict tool boundary stores only {verdict, evidence}; the sentinel is
   // gone, but the placeholder evidence is still distinctive.
@@ -516,10 +557,24 @@ test("asGroupVerdicts shifts full 1-based lists and refuses ambiguous partial li
     },
     3,
   )
-  // A partial list starting at 1 is ambiguous: it could be a 1-based subset
-  // or a zero-based subset that omitted candidate 0. Refuse it rather than
-  // attaching verdicts to the wrong candidates.
+  // A contiguous partial list starting at 1 is ambiguous: it could be a
+  // 1-based subset or a zero-based subset that omitted candidate 0. Refuse it
+  // rather than attaching verdicts to the wrong candidates.
   assert.deepEqual(partial, [])
+  // A non-contiguous zero-based list with gaps is a legitimate partial answer.
+  const gap = asGroupVerdicts(
+    {
+      verdicts: [
+        { index: 1, verdict: "CONFIRMED", evidence: "e1" },
+        { index: 3, verdict: "REFUTED", evidence: "e3" },
+      ],
+    },
+    4,
+  )
+  assert.deepEqual(gap, [
+    { index: 1, verdict: "CONFIRMED", evidence: "e1" },
+    { index: 3, verdict: "REFUTED", evidence: "e3" },
+  ])
   // If index 0 was submitted and dropped (invalid verdict), the survivors are
   // zero-based and must not shift onto the wrong candidates.
   const droppedZero = asGroupVerdicts(

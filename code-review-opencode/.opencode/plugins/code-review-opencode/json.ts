@@ -178,24 +178,44 @@ const SAMPLE_PLACEHOLDERS = new Set(
   ),
 )
 
+/** Placeholder strings that are unlikely to be real content, unlike a file path. */
+const SAMPLE_DISTINCTIVE = new Set(
+  [SAMPLE_VALUE.summary, SAMPLE_VALUE.failure_scenario, SAMPLE_VALUE.evidence].filter(
+    (value): value is string => typeof value === "string",
+  ),
+)
+
+function countPlaceholders(value: unknown, allowed: Set<string>, seen = new Set<string>()): number {
+  if (typeof value === "string") {
+    if (allowed.has(value)) seen.add(value)
+    return seen.size
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) countPlaceholders(item, allowed, seen)
+    return seen.size
+  }
+  if (isRecord(value)) {
+    for (const item of Object.values(value)) countPlaceholders(item, allowed, seen)
+  }
+  return seen.size
+}
+
 /**
  * Count distinct placeholder strings, not occurrences. A real repository may
  * legitimately contain `path/to/file.ts`; two findings in that file must not
  * reach an occurrence-based echo threshold.
  */
-function countDistinctPlaceholders(value: unknown, seen = new Set<string>()): number {
-  if (typeof value === "string") {
-    if (SAMPLE_PLACEHOLDERS.has(value)) seen.add(value)
-    return seen.size
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) countDistinctPlaceholders(item, seen)
-    return seen.size
-  }
-  if (isRecord(value)) {
-    for (const item of Object.values(value)) countDistinctPlaceholders(item, seen)
-  }
-  return seen.size
+function countDistinctPlaceholders(value: unknown): number {
+  return countPlaceholders(value, SAMPLE_PLACEHOLDERS)
+}
+
+/**
+ * A filled-in answer that kept the sentinel is a real result unless a
+ * non-path placeholder remains. A real repository can contain
+ * `path/to/file.ts`, so the file placeholder alone is not evidence of an echo.
+ */
+function countDistinctivePlaceholders(value: unknown): number {
+  return countPlaceholders(value, SAMPLE_DISTINCTIVE)
 }
 
 /**
@@ -263,11 +283,17 @@ export function isSchemaEcho(value: unknown): boolean {
   for (const key of RESULT_ARRAY_KEYS) {
     const items = value[key]
     if (!Array.isArray(items) || items.length === 0) continue
-    if (items.some((item) => isPlaceholderFinding(item) || isPlaceholderVerdict(item))) {
+    // Only an all-placeholder list is an echo. A genuine payload can carry one
+    // partly filled template item; the normalizers drop that item and keep
+    // the real findings.
+    if (items.every((item) => isPlaceholderFinding(item) || isPlaceholderVerdict(item))) {
       return true
     }
   }
-  return value.__example === true && countDistinctPlaceholders(value) >= 1
+  // The sentinel marks a copied template, but a real repository can contain
+  // `path/to/file.ts`; require a non-path placeholder before rejecting a
+  // filled-in answer that kept the sentinel.
+  return value.__example === true && countDistinctivePlaceholders(value) >= 1
 }
 
 /**
@@ -580,7 +606,13 @@ export function asGroupVerdicts(
       .map((v) => ({ ...v, index: v.index - 1 }))
       .filter((v) => v.index >= 0 && v.index < count)
   }
-  if (parsed.value.zeroDropped !== true && !hasZero && sorted.length > 0) {
+  // A contiguous partial run 1..k is the ambiguous shape: it could be a
+  // 1-based subset or a zero-based subset that omitted 0. A non-contiguous
+  // zero-based list with gaps (for example [1,3]) is a legitimate partial
+  // answer and is kept.
+  const contiguousFromOne =
+    sorted.length > 0 && sorted[0].index === 1 && sorted.every((v, i) => v.index === i + 1)
+  if (parsed.value.zeroDropped !== true && !hasZero && contiguousFromOne) {
     return []
   }
   return raw.filter((v) => v.index >= 0 && v.index < count)
@@ -656,6 +688,9 @@ export function normalizeCandidatesCall(
     // discarded by truncation anyway, so it must not reject the whole call.
     capOrder: "before",
     normalize: (item, i) => {
+      // A partly filled template item is not a finding. Drop it without
+      // rejecting the call, so the real candidates in the same payload survive.
+      if (isPlaceholderFinding(item)) return { dropped: false }
       const finding = normalizeFinding(item)
       return finding
         ? { value: finding }
@@ -761,6 +796,9 @@ export function normalizeGroupVerdictsCall(
     capOrder: "after",
     normalize: (item, i) => {
       if (!isRecord(item)) return { note: `verdicts[${i}] dropped: not an object` }
+      // A copied example verdict is not a real judgement. Skip it without
+      // rejecting the group, so the real verdicts in the same payload survive.
+      if (isPlaceholderVerdict(item)) return { dropped: false }
       const index = strictIndex(item.index)
       const verdict = normalizeVerdictText(item.verdict)
       if (index === undefined || index < 0) {
@@ -835,6 +873,7 @@ export function normalizeReportCall(value: unknown, cap = 64): NormalizedCall<Re
     cap,
     capOrder: "after",
     normalize: (item, i) => {
+      if (isPlaceholderFinding(item)) return { dropped: false }
       const finding = normalizeFinding(item)
       return finding
         ? { value: finding }

@@ -896,7 +896,7 @@ export function synthPromptText(opts: {
   return synthReport(
     opts,
     gaps > 0
-      ? `${opts.ranked.length} findings (${opts.ranked.length - gaps} verified, ${pluralWord(gaps, "sweep gap")}) (${opts.level}-effort review).`
+      ? `${opts.ranked.length} findings (${opts.ranked.length - gaps} verified, ${gaps} ${pluralWord(gaps, "sweep gap")}) (${opts.level}-effort review).`
       : `${opts.ranked.length} findings survived independent verification (${opts.level}-effort review).`,
     `1. Merge findings that describe the same defect (same root cause) — combine their evidence.
 2. Rank most-severe first. Correctness bugs always outrank cleanup findings.
@@ -949,7 +949,7 @@ export function synthPromptIndex(opts: {
   const gaps = opts.sweepGaps ?? 0
   const intro =
     gaps > 0
-      ? `${opts.ranked.length} findings (${opts.ranked.length - gaps} verified, ${pluralWord(gaps, "sweep gap")}) (${opts.level}-effort review). They are numbered [0]-[${opts.ranked.length - 1}] below.`
+      ? `${opts.ranked.length} findings (${opts.ranked.length - gaps} verified, ${gaps} ${pluralWord(gaps, "sweep gap")}) (${opts.level}-effort review). They are numbered [0]-[${opts.ranked.length - 1}] below.`
       : `${opts.ranked.length} findings survived independent verification (${opts.level}-effort review). They are numbered [0]-[${opts.ranked.length - 1}] below.`
   return synthReport(
     opts,

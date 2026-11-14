@@ -19,6 +19,7 @@ import {
   renderScope,
   sweepPrompt,
   synthPromptIndex,
+  synthPromptText,
   verifierPrompt,
   inlineHigh,
   inlineMedium,
@@ -578,6 +579,18 @@ test("verifier prompts omit the full conventions block", () => {
   const group = groupVerifierPrompt({ scope, group: [{ file: "src/a.ts", line: 3, summary: "claim", failure_scenario: "scenario" }] })
   assert.doesNotMatch(one, /CONVENTIONS_SENTINEL/)
   assert.doesNotMatch(group, /CONVENTIONS_SENTINEL/)
+})
+
+test("the sweep-gap intro includes the gap count", () => {
+  const ranked = [
+    { file: "a.ts", summary: "verified", failure_scenario: "f", verdict: "CONFIRMED" as const, kind: "correctness" as const },
+    { file: "b.ts", summary: "gap one", failure_scenario: "f", verdict: "PLAUSIBLE" as const, kind: "correctness" as const },
+    { file: "c.ts", summary: "gap two", failure_scenario: "f", verdict: "PLAUSIBLE" as const, kind: "correctness" as const },
+  ]
+  const index = synthPromptIndex({ level: "xhigh", ranked, maxFindings: 15, sweepGaps: 2 })
+  assert.match(index, /2 sweep gaps/)
+  const text = synthPromptText({ level: "xhigh", ranked, maxFindings: 15, sweepGaps: 2 })
+  assert.match(text, /2 sweep gaps/)
 })
 
 test("a truncated diff in the synth prompt does not point at a missing command", () => {

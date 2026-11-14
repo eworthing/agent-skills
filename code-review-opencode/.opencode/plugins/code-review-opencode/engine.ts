@@ -273,8 +273,17 @@ function verdictRank(c: Finding): number {
  * depend on child latency. A duplicate that was refuted by one verifier and
  * confirmed by another must resolve to the confirmed copy.
  */
-function dedupeVerified(items: Finding[]): { novel: Finding[]; dupes: number } {
+function dedupeVerified(items: Finding[]): {
+  novel: Finding[]
+  /** Refuted copies dropped from the report but still needed by the sweep guard. */
+  refutedDropped: Finding[]
+  /** Every duplicate dropped from the report, kept or refuted. */
+  dropped: Finding[]
+  dupes: number
+} {
   const best = new Map<string, Finding>()
+  const refutedDropped: Finding[] = []
+  const dropped: Finding[] = []
   let dupes = 0
   for (const item of items) {
     const key = dedupKey162(item)
@@ -286,9 +295,20 @@ function dedupeVerified(items: Finding[]): { novel: Finding[]; dupes: number } {
     dupes++
     // Map.set on an existing key keeps insertion order, so replacing the
     // value does not move the representative to the later finder's slot.
-    if (verdictRank(item) > verdictRank(existing)) best.set(key, item)
+    if (verdictRank(item) > verdictRank(existing)) {
+      // The dropped refuted copy must stay visible to the sweep, or a sweep
+      // gap can resurrect the exact claim the verifier refuted.
+      if (existing.verdict === undefined) refutedDropped.push(existing)
+      dropped.push(existing)
+      best.set(key, item)
+    } else {
+      dropped.push(item)
+      if (item.verdict === undefined && existing.verdict !== undefined) {
+        refutedDropped.push(item)
+      }
+    }
   }
-  return { novel: [...best.values()], dupes }
+  return { novel: [...best.values()], refutedDropped, dropped, dupes }
 }
 
 /**
@@ -389,29 +409,27 @@ function applyIndexPlan<T, R>(
   cap: number | undefined,
   combine: (item: T, merged: T[]) => R,
   backfill: (item: T) => R,
+  options: { allowSubsetBase?: boolean } = {},
 ): { output: R[]; backfilled: number; truncated: boolean; planned: number } {
   const claimed = new Set<number>()
   const output: R[] = []
   let truncated = false
   // The prompts number survivors from 0, but models commonly renumber a
-  // subset from 1 when the cap makes them drop entries. Resolve the ambiguity
-  // explicitly:
+  // capped synthesis subset from 1. Resolve the ambiguity explicitly:
   //   - index 0 anywhere -> zero-based (a 1-based plan cannot name 0);
-  //   - a contiguous run starting at 1 (1..k for any k) -> 1-based, including
-  //     both the full plan and a capped subset;
-  //   - anything else -> zero-based, so one off-by-one index cannot flip a
-  //     plan whose other indices are clearly zero-based.
-  // A zero-based subset that omitted index 0 and happened to be contiguous
-  // 1..k is the one case this misreads; omitting the most severe finding is
-  // not the documented subset behavior, so the 1-based reading is the better
-  // default.
+  //   - a full 1..n plan is always 1-based;
+  //   - a contiguous 1..k subset is 1-based only where the caller opts in
+  //     (synthesis); the candidate-dedup caller requires a full plan, because
+  //     its child returns only the duplicate entries and a zero-based plan
+  //     such as [{index:1, merge:[2]}] is common there.
+  // Anything else stays zero-based, so one off-by-one index cannot flip a
+  // plan whose other indices are clearly zero-based.
   const hasZero = decisions.some((d) => d.index === 0 || d.merge.includes(0))
   const unique = [...new Set(decisions.flatMap((d) => [d.index, ...d.merge]))].sort((a, b) => a - b)
-  const oneBased =
-    !hasZero &&
-    unique.length > 0 &&
-    unique[0] === 1 &&
-    unique.every((value, i) => value === i + 1)
+  const contiguousFromOne =
+    unique.length > 0 && unique[0] === 1 && unique.every((value, i) => value === i + 1)
+  const fullPlan = contiguousFromOne && unique.length === items.length
+  const oneBased = !hasZero && (fullPlan || (options.allowSubsetBase === true && contiguousFromOne))
   const plan = oneBased
     ? decisions.map((d) => ({ ...d, index: d.index - 1, merge: d.merge.map((i) => i - 1) }))
     : decisions
@@ -490,6 +508,9 @@ function applyCandidateDedup<T extends RawFinding & { kind: "correctness" | "cle
       return line === undefined ? representative : { ...representative, line }
     },
     (item) => item,
+    // The dedup child returns only duplicate entries; a zero-based subset
+    // that happens to start at 1 is normal here and must not be shifted.
+    { allowSubsetBase: false },
   )
   return output
 }
@@ -534,6 +555,9 @@ function applyDecisions(
       }
     },
     (c) => ({ ...c }),
+    // A capped synthesis subset commonly renumbers from 1; shift a contiguous
+    // 1..k plan onto survivors 0..k-1.
+    { allowSubsetBase: true },
   )
   return { findings: output, backfilled, truncated, truncatedFrom: planned }
 }
@@ -967,15 +991,23 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   // ---------------------------------------------------------------- find
   emit({ type: "phase", phase: "Find" })
   let verified: Finding[] = []
+  /** Refuted copies deduped away from the report but still known to the sweep. */
+  let refutedDuplicates: Finding[] = []
+  /** Verified duplicates dropped from the report, kept in the sweep guard. */
+  let dedupedDuplicates: Finding[] = []
+  /** Duplicates skipped before verification because a kept copy covered them. */
+  let skippedDuplicates: Array<RawFinding & { kind: "correctness" | "cleanup" }> = []
   /** Sweep candidates are surfaced after verification, not independently verified. */
   let sweepGaps = 0
 
   if (cell.streaming) {
     // v2.1.162: no barrier. Each finder dedupes its own candidates and starts
-    // verifying immediately; cross-finder duplicates are grouped after all
-    // finders return, keeping the lowest finder index as the representative.
-    // This preserves the streaming overlap without letting child latency pick
-    // the representative.
+    // verifying immediately. Cross-finder duplicates share a representative:
+    // a duplicate waits for the representative's verdict. A kept verdict
+    // covers the claim, so the duplicate is skipped without spending a slot;
+    // a refuted or failed representative lets one duplicate spend a slot to
+    // try to confirm the claim. That keeps the budget for unique candidates
+    // while still letting a confirmed copy rescue a refuted one.
     // Reserve a per-finder share of the budget. A single shared counter let
     // whichever finder finished first consume every slot, so two runs of the
     // same commit verified different candidates. A deterministic quota makes
@@ -993,6 +1025,14 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       )
       partial = true
     }
+    /** The first verification for each cross-finder claim. */
+    type StreamRepresentative = {
+      promise: Promise<Finding | null>
+      finderIndex: number
+    }
+    const representatives = new Map<string, StreamRepresentative>()
+    /** A refuted representative gets at most one duplicate retry. */
+    const duplicateTried = new Set<string>()
     const verifiedByFinder: Finding[][] = finders.map(() => [])
     await Promise.all(
       finders.map(async (f, finderIndex) => {
@@ -1000,26 +1040,60 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
         const candidates = await runFinder(f)
         stats.candidates += candidates.length
         const seen = new Set<string>()
-        const deduped = dedupeBy(candidates, dedupKey162, seen, () => {
+        const novel: Array<RawFinding & { kind: "correctness" | "cleanup" }> = []
+        for (const c of candidates) {
+          const key = dedupKey162(c)
+          if (seen.has(key)) {
+            stats.dupes++
+            continue
+          }
+          seen.add(key)
+          novel.push({ ...c, kind: kindFor(f, c) })
+        }
+        const results = await mapLimit(novel, concurrency, async (c) => {
+          const key = dedupKey162(c)
+          const existing = representatives.get(key)
+          if (existing) {
+            const verdict = await existing.promise
+            if (verdict && verdict.verdict !== undefined) {
+              if (finderIndex < existing.finderIndex) {
+                // A lower-index finder owns the representative text. Reuse the
+                // verified verdict; the higher-index copy is dropped by the
+                // final dedupe, keeping output independent of child latency.
+                existing.finderIndex = finderIndex
+                return toVerdictFinding(c, c.kind, verdict.verdict, verdict.evidence ?? "")
+              }
+              stats.dupes++
+              skippedDuplicates.push(c)
+              return null
+            }
+            if (duplicateTried.has(key)) {
+              stats.dupes++
+              skippedDuplicates.push(c)
+              return null
+            }
+          }
           if (verifySlots <= 0) {
             warnBudget()
-            return false
+            return null
           }
           verifySlots--
-          return true
+          if (existing) duplicateTried.add(key)
+          const promise = verifyOne(c, c.kind)
+          representatives.set(key, { promise, finderIndex })
+          return promise
         })
-        stats.dupes += deduped.dupes
-        const novel = deduped.novel.map((c) => ({ ...c, kind: kindFor(f, c) }))
-        const results = await mapLimit(novel, concurrency, (c) => verifyOne(c, c.kind))
-        verifiedByFinder[finderIndex] = results
-          .filter((x): x is Finding => x !== null)
-          .sort(compareFindings)
+        verifiedByFinder[finderIndex] = results.filter(
+          (x): x is Finding => x !== null,
+        )
       }),
     )
     const streamed = verifiedByFinder.flat()
     const deduped = dedupeVerified(streamed)
     stats.dupes += deduped.dupes
     verified = deduped.novel
+    refutedDuplicates = deduped.refutedDropped
+    dedupedDuplicates = deduped.dropped
   } else {
     const finderOutputs = await mapLimit(finders, concurrency, async (f) => ({ finder: f, candidates: await runFinder(f) }))
     for (const o of finderOutputs) stats.candidates += o.candidates.length
@@ -1082,8 +1156,11 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
   // synthesizer's input are independent of completion timing.
   verified.sort(compareFindings)
   const kept = verified.filter((c) => c.verdict !== undefined)
-  const refuted = verified.filter((c) => c.verdict === undefined)
-  stats.verified = verified.length
+  const refuted = [
+    ...verified.filter((c) => c.verdict === undefined),
+    ...refutedDuplicates,
+  ]
+  stats.verified = verified.length + refutedDuplicates.length
   stats.refuted = refuted.length
   emit({ type: "verify", kept: kept.length, refuted: refuted.length })
 
@@ -1092,10 +1169,14 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
     emit({ type: "phase", phase: "Sweep" })
     // Refuted claims must stay visible to the sweep. Omitting them lets a
     // false positive return as a fresh PLAUSIBLE finding with no new evidence.
+    const duplicateClaims = [...skippedDuplicates, ...dedupedDuplicates]
     const known = [
       ...kept.map((c) => `${renderedLocation(c)} — ${c.summary}`),
       ...refuted.map(
         (c) => `${renderedLocation(c)} — ${c.summary} (refuted — do not re-report without new evidence)`,
+      ),
+      ...duplicateClaims.map(
+        (c) => `${renderedLocation(c)} — ${c.summary} (duplicate — do not re-report without new evidence)`,
       ),
     ]
     const value = await runner({
@@ -1112,7 +1193,7 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
       partial = true
     } else {
       if (accepted.partial) partial = true
-      const knownFindings = [...kept, ...refuted]
+      const knownFindings = [...kept, ...refuted, ...duplicateClaims]
       // Compare the exact claim only. A reworded sweep gap at a known line is
       // often a distinct defect, so the paraphrase heuristic can silently
       // discard the gap the sweep exists to surface.
@@ -1461,11 +1542,10 @@ export async function runReview(opts: EngineOptions): Promise<EngineResult> {
           truncatedByCap = report.truncated === true || (cap !== undefined && emitted.length > cap)
           if (report.truncated === true) {
             // The normalizer cut the re-emitted tail, so the synthesizer's
-            // pre-cap count is unknown. Count only findings that actually had
-            // a verdict: sweep gaps were never independently verified, and the
-            // renderer must not call them "verified findings".
-            const verifiedCount = Math.max(0, ranked.length - sweepGaps)
-            truncatedFrom = Math.max(truncatedFrom ?? 0, verifiedCount, emitted.length + 1)
+            // pre-cap count is unknown. The survivor count is not that count:
+            // a synthesizer may have merged several survivors into one entry
+            // before the cut. Report only the proven lower bound.
+            truncatedFrom = Math.max(truncatedFrom ?? 0, emitted.length + 1)
             warnings.push("synthesis report was truncated at the tool cap; the pre-cap count is a lower bound")
           } else if (cap !== undefined && emitted.length > cap) {
             truncatedFrom = emitted.length

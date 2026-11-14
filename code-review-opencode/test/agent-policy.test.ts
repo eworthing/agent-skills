@@ -1,5 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -139,6 +140,11 @@ test("installReviewAgentPolicy replaces governed rules and keeps host extensions
 
 test("installReviewAgentPolicy is a no-op on hosts without agent transforms", async () => {
   await installReviewAgentPolicy({})
+})
+
+test("the agent-policy sync check passes", () => {
+  const script = fileURLToPath(new URL("../scripts/sync-agent-policy.ts", import.meta.url))
+  execFileSync(process.execPath, [script, "--check"], { stdio: "pipe" })
 })
 
 test("the Markdown fallback permissions are generated from the shared policy", () => {

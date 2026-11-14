@@ -127,6 +127,10 @@ test("the adapter schema mirrors the recovered tool schema", () => {
   assert.deepEqual(REPORT_FINDINGS_SCHEMA.properties.level.enum, ["low", "medium", "high", "xhigh", "max"])
   assert.deepEqual(REPORT_FINDINGS_SCHEMA.properties.findings.items.required, ["file", "summary", "failure_scenario"])
   assert.deepEqual(REPORT_FINDINGS_SCHEMA.properties.findings.items.properties.verdict.enum, ["CONFIRMED", "PLAUSIBLE"])
+  assert.deepEqual(
+    REPORT_FINDINGS_SCHEMA.properties.findings.items.properties.outcome.enum,
+    ["fixed", "skipped", "no_change_needed"],
+  )
   // Published JSON schema (report-findings-tool.md) closes both objects and
   // gives `line` the JS safe-integer bounds.
   assert.equal(REPORT_FINDINGS_SCHEMA.additionalProperties, false)

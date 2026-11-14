@@ -33,7 +33,9 @@ export function formatReportFindings(result: EngineResult): {
 } {
   const warnings = [...result.warnings]
   if (result.truncatedFrom !== undefined) {
-    warnings.push(`report truncated from ${result.truncatedFrom} verified findings`)
+    // The pre-cap count can include sweep gaps, which were never independently
+    // verified. Do not label the whole count as verified findings.
+    warnings.push(`report truncated from ${result.truncatedFrom} findings`)
   }
   return {
     level: result.level,
@@ -106,7 +108,9 @@ export function formatHuman(result: EngineResult, opts: { includeRefuted?: boole
   }
 
   if (result.truncatedFrom !== undefined) {
-    out += `\n\nShowing ${result.findings.length} of ${result.truncatedFrom} verified findings; the rest were cut by the report cap.`
+    // `truncatedFrom` is a pre-cap finding count; it may include sweep gaps
+    // that were never independently verified.
+    out += `\n\nShowing ${result.findings.length} of ${result.truncatedFrom} findings; the rest were cut by the report cap.`
   }
 
   if (result.partial) {

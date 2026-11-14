@@ -65,7 +65,7 @@ import {
 } from "./parse.ts"
 import { makeRunner, modelRef, trackActivity } from "./runner.ts"
 import { installReviewAgentPolicy } from "./agent-policy.ts"
-import { pluralize, pluralWord } from "./finding.ts"
+import { pluralize } from "./finding.ts"
 import {
   hasRuntimeSurface,
   hasSkill,
@@ -592,10 +592,12 @@ async function resolveAndRun(
   })
 
   // Neither the inline path nor the single-pass prompt path reaches
-  // resolveScope, so validate an explicit path target before either one. A
-  // typo must not silently turn into a working-tree review.
-  const missingTarget = missingExplicitPathTarget(ctx.location.directory, parsed.target)
-  if (missingTarget !== undefined) {
+  // resolveScope, so validate an explicit path target before either one. The
+  // engine path lets resolveScope do the same check, avoiding a second
+  // findGitRoot/realpath walk.
+  const pathTargetError = (): Outcome | undefined => {
+    const missingTarget = missingExplicitPathTarget(ctx.location.directory, parsed.target)
+    if (missingTarget === undefined) return undefined
     const message = `Code review could not start: Review target path not found: ${missingTarget}`
     if (flags.json) {
       inv.log?.(partialRecord([message]))
@@ -606,6 +608,8 @@ async function resolveAndRun(
 
   // ---- inline / minimal cells: submit the recovered prompt verbatim ------
   if (isInline(cell)) {
+    const error = pathTargetError()
+    if (error) return error
     const base = resolveInline(kind, cell.inlineVariant, max)
     let text = decorateReview(base)
     if (!flags.json) text += await verifyFollowUpForTarget(ctx)
@@ -617,6 +621,8 @@ async function resolveAndRun(
   // the recovered single-pass prompt for the selected effort instead of
   // returning an empty, partial engine result.
   if (flags.driver === "prompt" || !childSessions) {
+    const error = pathTargetError()
+    if (error) return error
     const base = resolveMulti(kind, effort, max)
     let text = decorateReview(base)
     if (!flags.json) text += await verifyFollowUpForTarget(ctx)
@@ -775,7 +781,7 @@ async function resolveAndRun(
         const report = (status: string): void => {
           void reportProgress(inv.progress, status)
         }
-        if (event.type === "finder") report(`${event.label}: ${pluralWord(event.candidates, "candidate")}`)
+        if (event.type === "finder") report(`${event.label}: ${pluralize(event.candidates, "candidate")}`)
         if (event.type === "phase") report(`Phase: ${event.phase}`)
       },
     })

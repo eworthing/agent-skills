@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { envInt, renderedLocation } from "../.opencode/plugins/code-review-opencode/finding.ts"
+import { envInt, pluralize, pluralWord, renderedLocation } from "../.opencode/plugins/code-review-opencode/finding.ts"
 
 test("envInt clamps above Node's maximum timer delay", () => {
   process.env.CODE_REVIEW_TEST_INT = "999999999999999"
@@ -9,6 +9,13 @@ test("envInt clamps above Node's maximum timer delay", () => {
   } finally {
     delete process.env.CODE_REVIEW_TEST_INT
   }
+})
+
+test("pluralize includes the count while pluralWord does not", () => {
+  assert.equal(pluralize(3, "candidate"), "3 candidates")
+  assert.equal(pluralize(1, "candidate"), "1 candidate")
+  assert.equal(pluralize(0, "candidate"), "0 candidates")
+  assert.equal(pluralWord(3, "candidate"), "candidates")
 })
 
 test("renderedLocation escapes line and paragraph separators", () => {

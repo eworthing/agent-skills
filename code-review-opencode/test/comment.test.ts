@@ -8,10 +8,10 @@ import {
   isGitHubRemote,
   isGitLabRemote,
   postComments,
+  findingMarker,
   resolvePrInfo,
   samePrBase,
   summaryCommentBody,
-  summaryCommentMarker,
 } from "../.opencode/plugins/code-review-opencode/comment.ts"
 import type { Exec, ExecOptions } from "../.opencode/plugins/code-review-opencode/scope.ts"
 import { engineFinding, engineResult, scopeOf } from "./helpers.ts"
@@ -223,13 +223,13 @@ test("an inline failure is reposted as one general PR comment", async () => {
 
 test("an existing general comment is not reposted", async () => {
   const findings = [finding({ line: 0 })]
-  const marker = summaryCommentMarker(summaryCommentBody(findings))
+  const existingBody = summaryCommentBody(findings)
   const scope = scopeOf(["src/a.ts"], { pr: 9 })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") {
-      if (argv.includes("--paginate")) return { stdout: `${marker}\n` }
+      if (argv.includes("--paginate")) return { stdout: existingBody }
       return { code: 0 }
     }
     return { code: 1 }
@@ -242,15 +242,15 @@ test("an existing general comment is not reposted", async () => {
 test("the general comment marker stays stable when the failed subset changes", async () => {
   const a = finding({ file: "src/a.ts", line: 4, summary: "first finding" })
   const b = finding({ file: "src/b.ts", line: 8, summary: "second finding" })
-  // The marker hashes the full review result, so it is the same on a retry
-  // where A posts inline and only B still fails.
-  const marker = summaryCommentMarker(summaryCommentBody([a, b]))
+  // The existing comment contains both per-finding markers, so a retry where
+  // A posts inline and only B still fails finds B's marker and skips.
+  const existingBody = summaryCommentBody([a, b])
   const scope = scopeOf(["src/a.ts", "src/b.ts"], { pr: 9 })
   const { exec, calls } = fake((argv) => {
     if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
     if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
     if (argv[0] === "gh" && argv[1] === "api") {
-      if (argv.includes("--paginate")) return { stdout: `${marker}\n` }
+      if (argv.includes("--paginate")) return { stdout: existingBody }
       if (argv.some((arg) => arg.includes("/pulls/9/comments"))) {
         const body = argv.find((arg) => arg.startsWith("body=")) ?? ""
         return body.includes("second finding") ? { code: 1, stderr: "422" } : { code: 0 }
@@ -261,6 +261,70 @@ test("the general comment marker stays stable when the failed subset changes", a
   })
   const text = await postComments({ cwd: "/repo", scope, result: result([a, b]), exec })
   assert.match(text, /already in a general PR comment/)
+  assert.equal(
+    calls.some(
+      (c) =>
+        c.some((arg) => arg.startsWith("body=")) &&
+        c.some((arg) => arg.includes("/issues/9/comments")),
+    ),
+    false,
+  )
+})
+
+test("a finding missing from the existing general comment is posted", async () => {
+  const a = finding({ file: "src/a.ts", line: 4, summary: "first finding" })
+  const b = finding({ file: "src/b.ts", line: 8, summary: "second finding" })
+  const c = finding({ file: "src/c.ts", line: 12, summary: "third finding" })
+  // The existing comment contains only C. A retry that unposts A and B must
+  // not claim they are already posted; it posts only the missing pair.
+  const existingBody = summaryCommentBody([c])
+  const scope = scopeOf(["src/a.ts", "src/b.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      if (argv.includes("--paginate")) return { stdout: existingBody }
+      if (argv.some((arg) => arg.includes("/pulls/9/comments"))) {
+        return { code: 1, stderr: "422" }
+      }
+      return { code: 0 }
+    }
+    return { code: 1 }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result([a, b]), exec })
+  assert.match(text, /Posted the 2 findings/)
+  const summary = calls.find(
+    (c) =>
+      c.some((arg) => arg.startsWith("body=")) &&
+      c.some((arg) => arg.includes("/issues/9/comments")),
+  )
+  assert.ok(summary)
+  const body = summary.find((arg) => arg.startsWith("body=")) ?? ""
+  assert.match(body, /first finding/)
+  assert.match(body, /second finding/)
+  assert.doesNotMatch(body, /third finding/)
+  assert.ok(body.includes(findingMarker(a)))
+  assert.ok(body.includes(findingMarker(b)))
+})
+
+test("a failed existing-comment check does not post a duplicate", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/app.git" }
+    if (argv[0] === "gh" && argv[1] === "pr") return ghPrViewReply(argv)
+    if (argv[0] === "gh" && argv[1] === "api") {
+      if (argv.includes("--paginate")) return { code: 1, stderr: "rate limited" }
+      return { code: 0 }
+    }
+    return { code: 1 }
+  })
+  const text = await postComments({
+    cwd: "/repo",
+    scope,
+    result: result([finding({ line: 0 })]),
+    exec,
+  })
+  assert.match(text, /Could not verify whether/)
   assert.equal(
     calls.some(
       (c) =>
@@ -478,7 +542,7 @@ test("a PR-number review pins the head captured with the patch", async () => {
   assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
 })
 
-test("a missing PR URL falls back to the repository gh resolved", async () => {
+test("a missing PR URL refuses instead of using the repository gh resolved", async () => {
   const scope = scopeOf(["src/a.ts"], { pr: 9, prHeadOid: "pinned123" })
   const { exec, calls } = fake((argv) => {
     if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view") {
@@ -497,13 +561,9 @@ test("a missing PR URL falls back to the repository gh resolved", async () => {
     host: "github",
     githubHostname: "github.com",
   })
-  assert.match(text, /Posted 1\/1 inline GitHub PR comment\./)
-  assert.equal(
-    calls.some((c) => c[0] === "gh" && c[1] === "pr" && c[2] === "view" && c.includes("baseRepository")),
-    false,
-  )
-  const api = calls.find((c) => c[0] === "gh" && c[1] === "api")
-  assert.ok(api?.some((arg) => arg.includes("repos/acme/app/pulls/9/comments")))
+  assert.match(text, /the PR URL was not returned/)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "repo"), false)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "api"), false)
 })
 
 test("a PR-number review posts when the local origin is not GitHub", async () => {
@@ -553,6 +613,22 @@ test("a branch review with no PR URL refuses instead of guessing the repository"
   assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "repo"), false)
 })
 
+test("a PR-number review with no PR URL refuses instead of using the fork", async () => {
+  const scope = scopeOf(["src/a.ts"], { pr: 9 })
+  const { exec, calls } = fake((argv) => {
+    if (argv[1] === "remote") return { stdout: "git@github.com:acme/fork.git" }
+    if (argv[0] === "gh" && argv[1] === "pr" && argv[2] === "view" && argv[3] === "9") {
+      if (argv.includes("url")) return { stdout: "" }
+      if (argv.includes("headRefOid")) return { stdout: "abc\n" }
+    }
+    if (argv[0] === "gh" && argv[1] === "repo") return { stdout: "acme/fork\n" }
+    return { code: 1 }
+  })
+  const text = await postComments({ cwd: "/repo", scope, result: result(), exec })
+  assert.match(text, /the PR URL was not returned/)
+  assert.equal(calls.some((c) => c[0] === "gh" && c[1] === "repo"), false)
+})
+
 test("a PR-number review without a verified head posts a general comment", async () => {
   const scope = scopeOf(["src/a.ts"], { pr: 9, prHeadOid: undefined })
   const { exec, calls } = fake((argv) => {
@@ -576,6 +652,19 @@ test("a PR-number review without a verified head posts a general comment", async
   )
   assert.ok(summary)
   assert.equal(summary.some((a) => a.startsWith("commit_id=")), false)
+  // The unverified path never uses the head for an inline anchor, so it must
+  // not spend a `gh pr view --json headRefOid` probe.
+  assert.equal(
+    calls.some(
+      (c) =>
+        c[0] === "gh" &&
+        c[1] === "pr" &&
+        c[2] === "view" &&
+        c.includes("headRefOid") &&
+        !c.includes("url"),
+    ),
+    false,
+  )
 })
 
 test("a GHE origin resolves its hostname once and reuses it", async () => {

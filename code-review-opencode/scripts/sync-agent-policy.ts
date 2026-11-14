@@ -17,6 +17,8 @@ import {
 
 const agentsDir = fileURLToPath(new URL("../.opencode/agents/", import.meta.url))
 const BLOCK = /^permissions:\n[\s\S]*?(?=^---$)/m
+const check = process.argv.includes("--check")
+let stale = false
 
 for (const id of REVIEW_AGENT_IDS) {
   const path = join(agentsDir, `${id}.md`)
@@ -25,6 +27,14 @@ for (const id of REVIEW_AGENT_IDS) {
     throw new Error(`${path}: no permissions block found before the closing frontmatter fence`)
   }
   const next = text.replace(BLOCK, `${renderAgentPolicyYaml(id)}\n\n`)
-  writeFileSync(path, next)
-  console.log(`updated ${path}`)
+  if (check) {
+    if (next !== text) {
+      stale = true
+      console.error(`stale: ${path}`)
+    }
+  } else {
+    writeFileSync(path, next)
+    console.log(`updated ${path}`)
+  }
 }
+if (check && stale) process.exitCode = 1

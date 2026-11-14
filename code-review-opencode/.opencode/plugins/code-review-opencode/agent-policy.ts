@@ -9,6 +9,7 @@
  */
 import { AGENT_IDS } from "./agent-ids.ts"
 import { GIT_HARDENING } from "./scope.ts"
+import { SHELL_DENY_RESOURCES } from "./shell-policy.ts"
 
 export type AgentPermission = {
   action: string
@@ -44,37 +45,20 @@ const SHELL_ALLOW: AgentPermission[] = [
   { action: "shell", resource: "wc *", effect: "allow" },
 ]
 
-const SHELL_DENY: AgentPermission[] = [
-  // These commands can write (echo/sort/uniq, redirection, or `--output` on
-  // git diff/log/show). The review agents must stay read-only.
-  { action: "shell", resource: "*--output*", effect: "deny" },
-  { action: "shell", resource: "*>*", effect: "deny" },
-  // A prefix allow matches the whole command string, so a chained command
-  // after an allowed git command could still run. Deny shell control operators
-  // and process substitution outright; these rules come last, so they win.
-  { action: "shell", resource: "*;*", effect: "deny" },
-  { action: "shell", resource: "*|*", effect: "deny" },
-  { action: "shell", resource: "*&&*", effect: "deny" },
-  { action: "shell", resource: "*&*", effect: "deny" },
-  { action: "shell", resource: "*$(*", effect: "deny" },
-  { action: "shell", resource: "*`*", effect: "deny" },
-  { action: "shell", resource: "*<(*", effect: "deny" },
-  { action: "shell", resource: "*\n*", effect: "deny" },
-  // A pager option would turn an allowed read-only command into arbitrary
-  // code execution. The allowlist already requires --no-ext-diff/--no-textconv.
-  { action: "shell", resource: "*--open-files-in-pager*", effect: "deny" },
-  { action: "shell", resource: "*difftool*", effect: "deny" },
-  // Space-prefixed patterns match a separate unsafe flag but not the safe
-  // `--no-textconv` / `--no-ext-diff` spellings.
-  { action: "shell", resource: "* --textconv*", effect: "deny" },
-  { action: "shell", resource: "* --ext-diff*", effect: "deny" },
-  // A config-env flag can point a read-only command at an external helper or
-  // pager that executes arbitrary code. The hardened `-c` form is allowed;
-  // every other config-env spelling and the short pager option stay denied.
-  { action: "shell", resource: "*--config-env*", effect: "deny" },
-  { action: "shell", resource: "*--paginate*", effect: "deny" },
-  { action: "shell", resource: "* -O*", effect: "deny" },
-]
+/**
+ * These commands can write (echo/sort/uniq, redirection, or `--output` on
+ * git diff/log/show). A prefix allow matches the whole command string, so a
+ * chained command after an allowed git command could still run; deny shell
+ * control operators and process substitution outright. The pager and
+ * config-env flags would turn an allowed read-only command into arbitrary
+ * code execution. The same resource list is used by `labelFor`, so a
+ * displayed command cannot contain a pattern the policy denies.
+ */
+const SHELL_DENY: AgentPermission[] = SHELL_DENY_RESOURCES.map((resource) => ({
+  action: "shell",
+  resource,
+  effect: "deny",
+}))
 
 /** The policy every review child gets, before its role-specific tools. */
 export const READ_ONLY_POLICY: AgentPermission[] = [

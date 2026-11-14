@@ -105,25 +105,37 @@ export function buildGitHubSummaryArgs(opts: {
   ]
 }
 
+/**
+ * Stable per-finding marker. The general-comment body carries one marker per
+ * finding, so a retry can tell which findings are already in a general comment
+ * without assuming the whole result set was posted together. The hash is over
+ * the finding's stable identity, not the array order.
+ */
+export function findingMarker(finding: {
+  file: string
+  line?: number
+  summary: string
+  failure_scenario: string
+}): string {
+  const seed = JSON.stringify([
+    finding.file,
+    finding.line ?? null,
+    finding.summary,
+    finding.failure_scenario,
+  ])
+  const hash = createHash("sha256").update(seed).digest("hex").slice(0, 16)
+  return `<!-- code-review-opencode:finding:${hash} -->`
+}
+
 /** The one-comment fallback: every finding that could not be posted inline. */
 export function summaryCommentBody(
   findings: Array<{ file: string; line?: number; summary: string; failure_scenario: string }>,
 ): string {
   const entries = findings.map(
-    (f) => `- **${renderedLocation(f)}** — ${f.summary}\n\n  ${f.failure_scenario}`,
+    (f) =>
+      `- **${renderedLocation(f)}** — ${f.summary}\n\n  ${f.failure_scenario}\n\n  ${findingMarker(f)}`,
   )
   return `## Code review findings\n\nThe following findings could not be posted as inline comments:\n\n${entries.join("\n\n")}`
-}
-
-/**
- * Stable hidden marker so a retry does not post a second general comment.
- * Hash the full review result, not the currently unposted subset: on a retry
- * some findings may post inline while others still fail, and a subset-based
- * marker would miss the comment already posted for the same review.
- */
-export function summaryCommentMarker(seed: string): string {
-  const hash = createHash("sha256").update(seed).digest("hex").slice(0, 16)
-  return `<!-- code-review-opencode:${hash} -->`
 }
 
 /** Hostname from a PR URL. `gh` keys credentials by hostname, so a port is omitted. */
@@ -382,10 +394,13 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       ? Promise.resolve({ stdout: prInfo.url, stderr: "", code: 0 })
       : prField("url"),
     // A branch-shaped review already fetched the head with the number/base in
-    // one call; only fall back when the host/tests did not supply it.
-    prInfo.headRefOid
-      ? Promise.resolve({ stdout: prInfo.headRefOid, stderr: "", code: 0 })
-      : prField("headRefOid"),
+    // one call; only fall back when the host/tests did not supply it. An
+    // unverified head is never used for inline anchors, so skip the probe.
+    headUnverified
+      ? Promise.resolve({ stdout: "", stderr: "", code: 0 })
+      : prInfo.headRefOid
+        ? Promise.resolve({ stdout: prInfo.headRefOid, stderr: "", code: 0 })
+        : prField("headRefOid"),
   ])
   let repoName = repoFromPrUrl(repo.stdout) ?? ""
   let repoError = repo.stderr.trim()
@@ -398,30 +413,11 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // origin hostname would send the comment request to the wrong instance.
   if (prHost) githubHostname = enterpriseHost(prHost)
   if (!repoName) {
-    // Older gh versions/tests may not return a URL. A PR-number review was
-    // resolved against the current repository (or GH_REPO), so `gh repo view`
-    // names the same base repository. A branch review can have resolved an
-    // upstream PR from a fork clone; without the URL there is no way to prove
-    // which repository owns it, so refuse instead of posting to the fork.
-    if (scope.pr === undefined) {
-      repoError = "the PR URL was not returned; pass the PR number as the target"
-    } else {
-      const base = await call([
-        "gh",
-        "repo",
-        "view",
-        "--json",
-        "nameWithOwner",
-        "--jq",
-        ".nameWithOwner",
-      ])
-      const baseName = base.stdout.trim()
-      if (baseName.includes("/")) {
-        repoName = baseName
-      } else {
-        repoError = base.stderr.trim() || repoError || "could not resolve the PR base repository"
-      }
-    }
+    // The PR URL is the only reliable source of the base repository. A fork
+    // clone's `gh repo view` names the fork, which can have its own PR with
+    // the same number; a branch review can also resolve an upstream PR from a
+    // fork clone. Refuse rather than guess and post to the wrong repository.
+    repoError = "the PR URL was not returned; cannot prove the PR base repository"
   }
   const [owner, name] = repoName.split("/")
   const commit = head.stdout.trim()
@@ -503,47 +499,51 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   }
 
   // Resolve every line side in one pass instead of re-parsing the whole patch
-  // for each finding.
-  const sides = diffSideMap(
-    scope.diffText,
-    result.findings.flatMap((f) => {
-      const line = lineOf(f)
-      return line === undefined ? [] : [{ file: f.file, line }]
-    }),
-  )
+  // for each finding. The map is only needed for inline anchors; a general
+  // comment path skips the parse entirely.
   const outcomes = headUnverified
     ? result.findings.map((f) => ({
         ok: false,
         message: `${renderedLocation(f)}: the reviewed PR head was not verified; no inline anchor`,
       }))
-    : await mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
-        const line = lineOf(f)
-        if (line === undefined) return { ok: false, message: `${renderedLocation(f)}: no line to anchor an inline comment` }
-        if (!sides.hasLine(f.file, line)) {
-          return {
-            ok: false,
-            message: `${renderedLocation(f)}: line is not part of the reviewed diff; no inline anchor`,
-          }
-        }
-        const r = await call(
-          buildGitHubCommentArgs({
-            owner,
-            repo: name,
-            pr,
-            commit,
-            // GitHub anchors even a LEFT comment on the head path of a renamed
-            // file; the old path from the finding would be rejected (422).
-            path: sides.pathFor(f.file, line),
-            line,
-            body: commentBody(f),
-            side: sides.sideFor(f.file, line),
-            ...(githubHostname ? { hostname: githubHostname } : {}),
+    : await (async () => {
+        const sides = diffSideMap(
+          scope.diffText,
+          result.findings.flatMap((f) => {
+            const line = lineOf(f)
+            return line === undefined ? [] : [{ file: f.file, line }]
           }),
         )
-        return r.code === 0
-          ? { ok: true, message: "" }
-          : { ok: false, message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}` }
-      })
+        return mapLimit(result.findings, deps.concurrency ?? 4, async (f) => {
+          const line = lineOf(f)
+          if (line === undefined) return { ok: false, message: `${renderedLocation(f)}: no line to anchor an inline comment` }
+          if (!sides.hasLine(f.file, line)) {
+            return {
+              ok: false,
+              message: `${renderedLocation(f)}: line is not part of the reviewed diff; no inline anchor`,
+            }
+          }
+          const r = await call(
+            buildGitHubCommentArgs({
+              owner,
+              repo: name,
+              pr,
+              commit,
+              // GitHub anchors even a LEFT comment on the head path of a
+              // renamed file; the old path from the finding would be rejected
+              // (422).
+              path: sides.pathFor(f.file, line),
+              line,
+              body: commentBody(f),
+              side: sides.sideFor(f.file, line),
+              ...(githubHostname ? { hostname: githubHostname } : {}),
+            }),
+          )
+          return r.code === 0
+            ? { ok: true, message: "" }
+            : { ok: false, message: `${renderedLocation(f)}: ${r.stderr.trim() || "gh api failed"}` }
+        })
+      })()
   const posted = outcomes.filter((o) => o.ok).length
   const unposted = result.findings.filter((_, i) => !outcomes[i].ok)
   // The reference's GitLab path posts one general MR note; the same mechanism
@@ -552,11 +552,10 @@ export async function postComments(deps: CommentDeps): Promise<string> {
   // duplicated.
   let summary = ""
   if (unposted.length > 0) {
-    const body = summaryCommentBody(unposted)
     // A retry after a transient inline failure must not add a second general
-    // comment for the same review. The marker hashes every finding in the
-    // result, so it stays the same when the set that failed inline changes.
-    const marker = summaryCommentMarker(summaryCommentBody(result.findings))
+    // comment for the same finding. Each finding carries its own marker, so a
+    // changed inline-success subset neither hides a finding that was never
+    // posted nor reposts one that was.
     const existing = await call([
       "gh",
       "api",
@@ -566,22 +565,30 @@ export async function postComments(deps: CommentDeps): Promise<string> {
       "--jq",
       ".[].body",
     ])
-    if (existing.code === 0 && existing.stdout.includes(marker)) {
-      summary = ` The ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline are already in a general PR comment.`
+    if (existing.code !== 0) {
+      // An unavailable check is not proof that the comment exists. Refuse to
+      // post rather than risk a duplicate general comment.
+      summary = ` Could not verify whether the ${unposted.length} ${pluralWord(unposted.length, "finding")} were already posted; no general PR comment was posted: ${existing.stderr.trim() || "gh api failed"}.`
     } else {
-      const r = await call(
-        buildGitHubSummaryArgs({
-          owner,
-          repo: name,
-          pr,
-          body: `${body}\n\n${marker}`,
-          ...(githubHostname ? { hostname: githubHostname } : {}),
-        }),
-      )
-      summary =
-        r.code === 0
-          ? ` Posted the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment.`
-          : ` Could not post the ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
+      const missing = unposted.filter((f) => !existing.stdout.includes(findingMarker(f)))
+      if (missing.length === 0) {
+        summary = ` The ${unposted.length} ${pluralWord(unposted.length, "finding")} that could not be posted inline are already in a general PR comment.`
+      } else {
+        const already = unposted.length - missing.length
+        const r = await call(
+          buildGitHubSummaryArgs({
+            owner,
+            repo: name,
+            pr,
+            body: summaryCommentBody(missing),
+            ...(githubHostname ? { hostname: githubHostname } : {}),
+          }),
+        )
+        summary =
+          r.code === 0
+            ? ` Posted the ${missing.length} ${pluralWord(missing.length, "finding")} that could not be posted inline as a general PR comment${already > 0 ? ` (${already} already posted)` : ""}.`
+            : ` Could not post the ${missing.length} ${pluralWord(missing.length, "finding")} that could not be posted inline as a general PR comment: ${r.stderr.trim() || "gh api failed"}.`
+      }
     }
   }
   const failures = outcomes.filter((o) => !o.ok).map((o) => o.message)

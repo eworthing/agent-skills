@@ -15,9 +15,11 @@ async function review(opts: {
   limit?: number | "all"
   semanticMerge?: boolean
   finderBudget?: number
+  verifyBudget?: number
   signal?: AbortSignal
 }) {
-  const cell = cellOf(opts.version ?? "cc-2.1.318", opts.family ?? "claude-sonnet-5", opts.level ?? "high")
+  const base = cellOf(opts.version ?? "cc-2.1.318", opts.family ?? "claude-sonnet-5", opts.level ?? "high")
+  const cell = opts.verifyBudget === undefined ? base : { ...base, verifyBudget: opts.verifyBudget }
   const { runner, calls } = scripted(opts.script)
   const result = await runReview({
     level: opts.level ?? "high",
@@ -1077,6 +1079,64 @@ test("streaming dedupe keeps a confirmed duplicate over a refuted one", async ()
   assert.equal(result.findings[0].verdict, "CONFIRMED")
 })
 
+test("a confirmed duplicate does not consume another finder's verifier slots", async () => {
+  const shared = candidate("src/a.ts", 1, "shared bug")
+  const aUnique = candidate("src/a.ts", 10, "a unique")
+  const bUniqueOne = candidate("src/b.ts", 20, "b unique one")
+  const bUniqueTwo = candidate("src/b.ts", 30, "b unique two")
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "high",
+    verifyBudget: 14,
+    script: {
+      delay: (req) => (req.role === "finder" && req.label === "angle-B" ? 50 : 0),
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [shared, aUnique] }
+          : req.label === "angle-B"
+            ? { candidates: [shared, bUniqueOne, bUniqueTwo] }
+            : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      synthesize: () => null,
+    },
+  })
+  // A's confirmed shared claim lets B skip its duplicate without spending a
+  // slot, so B can verify both of its unique candidates.
+  assert.ok(result.findings.some((f) => f.summary === "b unique two"))
+})
+
+test("a skipped duplicate stays in the sweep guard when a confirmed copy wins", async () => {
+  const confirmed = candidate("src/a.ts", 12, "same bug")
+  const refuted = candidate("src/a.ts", 14, "same bug")
+  let sweepPrompt = ""
+  const { result } = await review({
+    version: "cc-workflow-2.1.162",
+    level: "xhigh",
+    script: {
+      delay: (req) => (req.role === "finder" && req.label === "angle-B" ? 50 : 0),
+      finder: (req) =>
+        req.label === "angle-A"
+          ? { candidates: [confirmed] }
+          : req.label === "angle-B"
+            ? { candidates: [refuted] }
+            : { candidates: [] },
+      verifier: () => CONFIRMED(),
+      sweep: (req) => {
+        sweepPrompt = req.prompt
+        return { candidates: [] }
+      },
+      synthesize: () => null,
+    },
+  })
+  assert.equal(result.findings.length, 1)
+  assert.equal(result.findings[0].line, 12)
+  // The line-14 copy is skipped because the confirmed line-12 copy covers the
+  // claim, but the sweep must still know the duplicate so it cannot return as
+  // a fresh gap.
+  assert.match(sweepPrompt, /src\/a\.ts:14/)
+  assert.match(sweepPrompt, /duplicate — do not re-report/)
+})
+
 test("a failed synthesis keeps the sweep-aware deterministic summary", async () => {
   const { result } = await review({
     version: "cc-workflow-2.1.221",
@@ -1787,7 +1847,7 @@ test("a truncated text-synthesis report records truncatedFrom", async () => {
   assert.match(result.warnings.join(" "), /truncated at the tool cap/)
 })
 
-test("a truncated text-synthesis report uses the verified survivor count", async () => {
+test("a truncated text-synthesis report reports the proven lower bound", async () => {
   const a = candidate("src/a.ts", 1, "first bug")
   const b = candidate("src/b.ts", 2, "second bug")
   const c = candidate("src/c.ts", 3, "third bug")
@@ -1812,10 +1872,11 @@ test("a truncated text-synthesis report uses the verified survivor count", async
       synthesize: () => ({ summary: "text report", findings: [a, b, c], truncated: true }),
     },
   })
-  // Three findings were re-emitted and the normalizer cut them to two. Four
-  // entries had verdicts; the fifth is a sweep gap and must not be counted as
-  // a verified finding in the "Showing X of Y" notice.
-  assert.equal(result.truncatedFrom, 4)
+  // Three findings were re-emitted and the normalizer cut them to two. The
+  // fourth verified finding was not in the report at all, and the fifth is a
+  // sweep gap; neither belongs in the pre-cap report count. The proven lower
+  // bound is the two emitted entries plus at least one cut entry.
+  assert.equal(result.truncatedFrom, 3)
 })
 
 test("an out-of-range index does not flip a zero-based plan to 1-based", async () => {
@@ -1847,6 +1908,37 @@ test("an out-of-range index does not flip a zero-based plan to 1-based", async (
     },
   })
   assert.match(result.findings[0].summary, /^one bug/)
+})
+
+test("a contiguous dedup subset stays zero-based", async () => {
+  const zero = candidate("src/a.ts", 1, "zero bug", "short")
+  const one = candidate("src/a.ts", 2, "one bug", "a much longer failure scenario for the duplicate")
+  const two = candidate("src/a.ts", 2, "one bug", "a much longer failure scenario for the duplicate")
+  const three = candidate("src/a.ts", 4, "three bug")
+  const { result } = await review({
+    semanticMerge: true,
+    limit: 10,
+    script: {
+      finder: (req) => {
+        const byLabel: Record<string, unknown> = {
+          "angle-A": zero,
+          "angle-B": one,
+          "angle-C": two,
+          "angle-D": three,
+        }
+        return byLabel[req.label] ? { candidates: [byLabel[req.label]] } : { candidates: [] }
+      },
+      verifier: () => CONFIRMED(),
+      synthesize: (req) =>
+        req.label === "dedup"
+          ? { summary: "deduped", decisions: [{ index: 1, merge: [2] }] }
+          : { summary: "ranked", decisions: [] },
+    },
+  })
+  // The dedup child returns only the duplicate entry. Indices 1 and 2 are
+  // zero-based; shifting them to 0 and 1 would merge the wrong candidates and
+  // lose the distinct zero bug.
+  assert.ok(result.findings.some((f) => f.summary.startsWith("zero bug")))
 })
 
 test("a 1-based synthesis plan is shifted before ranking", async () => {

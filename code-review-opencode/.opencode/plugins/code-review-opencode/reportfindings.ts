@@ -123,11 +123,14 @@ type FindingProperty = {
 const FINDING_SCHEMA = REPORT_FINDINGS_SCHEMA.properties.findings.items
 const FINDING_PROPERTIES = FINDING_SCHEMA.properties as unknown as Record<string, FindingProperty>
 const FINDING_REQUIRED: readonly string[] = FINDING_SCHEMA.required
-/** The outcome enum is owned by the advertised schema; do not copy it. */
-const OUTCOMES = FINDING_SCHEMA.properties.outcome.enum
+/**
+ * The outcome enum is owned by the advertised schema; do not copy it. If a
+ * future edit removes the property, the guard keeps validation alive with an
+ * empty enum (every outcome is rejected) instead of throwing on `.includes`.
+ */
+const OUTCOMES = FINDING_SCHEMA.properties.outcome?.enum ?? []
 type Outcome = (typeof OUTCOMES)[number]
-const isOutcome = (value: string): value is Outcome =>
-  (OUTCOMES as readonly string[]).includes(value)
+const isOutcome = (value: string): value is Outcome => OUTCOMES.includes(value)
 
 /**
  * Validate one finding by walking the advertised schema, not a second
