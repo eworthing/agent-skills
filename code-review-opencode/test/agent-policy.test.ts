@@ -74,6 +74,7 @@ test("installReviewAgentPolicy replaces governed rules and keeps host extensions
           { action: "shell", resource: "git -c core.hooksPath=/old diff*", effect: "allow" as const },
           { action: "webfetch", resource: "https://example.com/*", effect: "allow" as const },
           { action: "*", resource: "*", effect: "ask" as const },
+          { action: "*", resource: "/tmp/*", effect: "allow" as const },
         ],
       },
     ]),
@@ -102,6 +103,11 @@ test("installReviewAgentPolicy replaces governed rules and keeps host extensions
       (rule) => rule.action === "shell" && rule.resource.includes("core.hooksPath=/old"),
     )
     assert.equal(stale, undefined, `${id} kept a stale shell allow`)
+    assert.equal(
+      permissions.some((rule) => rule.action === "*" && rule.resource === "/tmp/*"),
+      false,
+      `${id} kept a broad host allow that would bypass the deny-all`,
+    )
     assert.ok(
       permissions.some(
         (rule) =>

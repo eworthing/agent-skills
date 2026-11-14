@@ -497,7 +497,8 @@
       "disposition": "accepted",
       "commit": null,
       "test": "test/prompts.test.ts::the three review agents share one read-only policy module",
-      "reason": "The full table is installed from agent-policy.ts. The Markdown fallback repeats only the displayed diff command and the deny list, which is the minimum needed on a host without agent.transform; the test checks it stays in sync."
+      "reason": "The full table is installed from agent-policy.ts. The Markdown fallback is now generated from the same module by scripts/sync-agent-policy.ts, so it is no longer a hand-copied table; a test fails when it drifts.",
+      "note": "Superseded by DELTA2-16: the fallback block is generated, not hand-copied."
     },
     {
       "id": "SELF19-22",

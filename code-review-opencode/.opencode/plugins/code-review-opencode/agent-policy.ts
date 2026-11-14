@@ -126,11 +126,13 @@ export function renderAgentPolicyYaml(agentID: string): string {
  *
  * OpenCode evaluates permissions last-match-wins. The policy's broad deny is
  * kept first; preserved host rules follow it, then the policy's specific
- * allows and denies. That keeps host extensions for unrelated actions (for
- * example `webfetch`) working while the read-only rules remain authoritative
- * for shell, read, glob, grep, and the review tools. A stale shell allow from
- * an older hardening version is replaced by the current policy rather than
- * surviving behind the broad deny.
+ * allows and denies. That keeps host extensions for unrelated concrete
+ * actions (for example `webfetch`) working while the read-only rules remain
+ * authoritative for shell, read, glob, grep, and the review tools. Existing
+ * broad (`*`) rules are replaced by the policy's deny-all: a host rule such
+ * as `*:/tmp/* allow` would otherwise sit after the deny and bypass it for
+ * every action. A stale shell allow from an older hardening version is
+ * likewise replaced rather than surviving behind the broad deny.
  */
 export function mergeReviewAgentPermissions(
   existing: readonly AgentPermission[],
@@ -142,8 +144,7 @@ export function mergeReviewAgentPermissions(
   const broad = policy.filter((rule) => rule.action === "*")
   const specific = policy.filter((rule) => rule.action !== "*")
   const preserved = existing.filter(
-    (rule) =>
-      !(rule.action === "*" && rule.resource === "*") && !governed.has(rule.action),
+    (rule) => rule.action !== "*" && !governed.has(rule.action),
   )
   return [...broad, ...preserved, ...specific]
 }

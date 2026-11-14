@@ -1059,7 +1059,7 @@ test("streaming dedupe keeps a confirmed duplicate over a refuted one", async ()
     version: "cc-workflow-2.1.162",
     level: "high",
     script: {
-      delay: (req) => (req.role === "finder" && req.label === "angle-B" ? 20 : 0),
+      delay: (req) => (req.role === "finder" && req.label === "angle-B" ? 50 : 0),
       finder: (req) =>
         req.label === "angle-A" || req.label === "angle-B"
           ? { candidates: [same] }

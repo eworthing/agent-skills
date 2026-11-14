@@ -1472,9 +1472,9 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       headAfter ?? (typeof metaJson?.headRefOid === "string" ? metaJson.headRefOid : undefined)
     // An unavailable head read is not proof that the patch matches. Only a
     // bracketed pair that agrees with the metadata authorizes pinning; a
-    // failed check leaves prHeadOid unset so posting refuses to use stale
-    // anchors. The one retry above keeps a transient gh failure from
-    // disabling inline comments in the common case.
+    // failed check leaves prHeadOid unset so posting uses a head-independent
+    // general comment instead of stale anchors. The one retry above keeps a
+    // transient gh failure from disabling inline comments in the common case.
     prHeadVerified =
       reviewedHead !== undefined &&
       (!verifyHead ||
@@ -1487,8 +1487,9 @@ export async function resolveScope(opts: ScopeOptions): Promise<Scope> {
       throw new Error(`Could not fetch PR #${pr} with gh: ${gh.stderr.trim() || "gh is unavailable"}`)
     }
     // A metadata timeout or malformed response is not a review failure: the
-    // patch scan can recover the file list, and --comment refuses because the
-    // head was not verified. Cancellation still stops the whole review.
+    // patch scan can recover the file list, and the head-only reads still
+    // decide whether --comment may pin the patch. Cancellation still stops
+    // the whole review.
     if (meta.aborted) throw new Error("PR metadata discovery was cancelled.")
     // One patch download: this stdout is also the diff text below.
     patch = gh.stdout
