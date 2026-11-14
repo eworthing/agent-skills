@@ -1650,6 +1650,29 @@
           "reason": "The inline and summary builders share one ghApiArgs preamble."
         }
       ]
+    },
+    {
+      "run": "delta-5",
+      "range": "045df69..0b217cd",
+      "visibleFindings": 0,
+      "truncatedFrom": null,
+      "partial": true,
+      "warnings": [
+        "finder angle-A returned no usable structured result; treated as zero candidates",
+        "finder angle-B returned no usable structured result; treated as zero candidates",
+        "finder angle-C returned no usable structured result; treated as zero candidates",
+        "finder angle-D returned no usable structured result; treated as zero candidates",
+        "finder angle-E returned no usable structured result; treated as zero candidates",
+        "finder reuse returned no usable structured result; treated as zero candidates",
+        "finder simplification returned no usable structured result; treated as zero candidates",
+        "finder efficiency returned no usable structured result; treated as zero candidates",
+        "finder altitude returned no usable structured result; treated as zero candidates",
+        "finder conventions returned no usable structured result; treated as zero candidates",
+        "sweep returned no usable structured result; no gap candidates added",
+        "Subagent sessions produced no usable results; running the single-pass review prompt instead."
+      ],
+      "note": "Not a pass: every finder and the sweep returned no usable structured result (24 empty assistant responses), and the engine fell back to the single-pass prompt, which also produced no findings. The empty report is a harness failure, not evidence of convergence; rerun required before the gate can be called clear.",
+      "findings": []
     }
   ],
   "lastDeltaRange": "045df69..0b217cd"
