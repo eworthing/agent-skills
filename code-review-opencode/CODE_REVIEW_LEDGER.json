@@ -6,7 +6,7 @@
     "findingCount": 40,
     "note": "Run 28 is the baseline audit. Counts are samples; this ledger is the source of truth."
   },
-  "lastReviewedSha": "630436e",
+  "lastReviewedSha": "02dc49e",
   "gate": {
     "openCorrectness": 0,
     "openCleanup": 0,
@@ -725,5 +725,6 @@
         }
       ]
     }
-  ]
+  ],
+  "lastDeltaRange": "045df69..02dc49e"
 }
