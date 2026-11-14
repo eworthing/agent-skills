@@ -544,5 +544,186 @@
       "test": "test/prompts.test.ts",
       "reason": "The prompts differ in angle count, cap, intro, and verifier fragment, and must stay byte-exact to the recovered corpus."
     }
+  ],
+  "deltaRuns": [
+    {
+      "run": "delta-1",
+      "range": "045df69..98107d4",
+      "visibleFindings": 15,
+      "truncatedFrom": 23,
+      "partial": true,
+      "warnings": [
+        "verifier for scope.ts:1744 returned no usable verdict; candidate dropped",
+        "verifier for engine.ts:1142 returned no usable verdict; candidate dropped"
+      ],
+      "note": "The report was truncated and partial, so the visible 15 were fixed; the next pass runs with --max-findings all to classify the tail.",
+      "findings": [
+        {
+          "id": "DELTA1-01",
+          "file": ".opencode/plugins/code-review-opencode/schemas.ts",
+          "line": 166,
+          "claim": "Every generated example now carries `__example: true`, so a model that fills in the example template but keeps that key has its real answer rejected as an echo.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/json.test.ts::a filled-in example that kept the sentinel is a real result",
+          "reason": "Only partially filled examples are echoes; a filled-in answer that kept the sentinel is accepted."
+        },
+        {
+          "id": "DELTA1-02",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 378,
+          "claim": "Removing the contiguity check from the 1-based plan test lets one off-by-one index flip an entire zero-based plan to 1-based.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/engine.test.ts::an out-of-range index does not flip a zero-based plan to 1-based",
+          "reason": "A 1-based plan must cover every item exactly once; one out-of-range index no longer flips the plan."
+        },
+        {
+          "id": "DELTA1-03",
+          "file": ".opencode/plugins/code-review-opencode/json.ts",
+          "line": 541,
+          "claim": "asGroupVerdicts shifts any list starting at 1, including non-contiguous zero-based subsets",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/json.test.ts::asGroupVerdicts shifts full 1-based lists but keeps ambiguous partial lists as-is",
+          "reason": "Only a full 1-based group-verdict list is shifted; partial lists stay zero-based."
+        },
+        {
+          "id": "DELTA1-04",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 1442,
+          "claim": "When the text synthesizer report is truncated, truncatedFrom is set to the pre-merge survivor count, so the notice reports unverified sweep gaps and merged-away entries as 'verified findings'.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/engine.test.ts::a truncated text-synthesis report uses the verified survivor count",
+          "reason": "The truncation notice counts verified findings, excluding sweep gaps."
+        },
+        {
+          "id": "DELTA1-05",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 407,
+          "claim": "The prompt's diff command now drops the pathspec for any control character, including tabs and CRs that the child permission table does not deny.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/scope.test.ts::a tab in a path stays in the runnable command",
+          "reason": "Tabs are not denied by the child policy and no longer omit the pathspec; control characters renderPath rewrites still do."
+        },
+        {
+          "id": "DELTA1-06",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1727,
+          "claim": "The partial-capture numstat fallback now asks only the failed plan entries and then assigns their subtotal to diffLines, discarding the line count already computed from the successful captures' patch.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/scope.test.ts::a partial capture adds failed numstat to the successful patch total",
+          "reason": "Failed capture numstat is added to the successful patch total instead of replacing it."
+        },
+        {
+          "id": "DELTA1-07",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1418,
+          "claim": "Pinning the reviewed PR head now requires the trailing metadata read to succeed, so a transient gh failure disables inline comments even when the patch and first metadata agree.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/scope.test.ts::a failed head check still pins the head captured with the patch",
+          "reason": "A failed trailing head check trusts the head captured with the metadata; only a successful disagreeing check invalidates it."
+        },
+        {
+          "id": "DELTA1-08",
+          "file": ".opencode/plugins/code-review-opencode/index.ts",
+          "line": 660,
+          "claim": "Passing includeConventions=false for 162 cells skips discoverConventions entirely, so scope.claudeMdFiles is empty even though renderScope prints that path list to every finder and verifier and the no-conventions text tells them to read those files.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/scope.test.ts::includeConventions false lists paths but skips the CLAUDE.md text",
+          "reason": "Convention paths are discovered even when the text is skipped for a 162 cell."
+        },
+        {
+          "id": "DELTA1-09",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 411,
+          "claim": "Replacing the base-repository lookup with `gh repo view` reintroduces the fork-clone hazard the old refusal guarded against.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/comment.test.ts::a branch review with no PR URL refuses instead of guessing the repository",
+          "reason": "The gh repo view fallback is limited to PR-number reviews; branch reviews refuse when the URL is missing."
+        },
+        {
+          "id": "DELTA1-10",
+          "file": ".opencode/plugins/code-review-opencode/comment.ts",
+          "line": 544,
+          "claim": "Summary-comment fallback reposts the same findings when a retried inline post fails transiently",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/comment.test.ts::an existing general comment is not reposted",
+          "reason": "The general comment carries a stable hidden marker, so a retry does not post a duplicate."
+        },
+        {
+          "id": "DELTA1-11",
+          "file": ".opencode/plugins/code-review-opencode/engine.ts",
+          "line": 986,
+          "claim": "In the streaming path, verification of a finder's candidates cannot start until every earlier finder has returned, so child latency is added to the critical path.",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/engine.test.ts::v2.1.162 verifies a later finder before an earlier slow finder returns",
+          "reason": "Each finder verifies immediately; cross-finder dedup happens after all finders return in finder order."
+        },
+        {
+          "id": "DELTA1-12",
+          "file": ".opencode/plugins/code-review-opencode/scope.ts",
+          "line": 1406,
+          "claim": "PR discovery now makes three serial gh network calls and re-parses the full metadata JSON (with the file list) several times per review.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/scope.test.ts::a local PR review skips the post-capture head check",
+          "reason": "The post-capture check is a head-only read and is skipped when --comment will not post."
+        },
+        {
+          "id": "DELTA1-13",
+          "file": ".opencode/agents/review-finder.md",
+          "line": 31,
+          "claim": "The 58-line fallback permission table re-implements agent-policy.ts's SHELL_DENY/READ_ONLY_POLICY rules in three Markdown files and is already out of sync.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/prompts.test.ts::the Markdown fallback carries every shared shell deny rule",
+          "reason": "The fallback deny list is synced with READ_ONLY_POLICY and tested against it."
+        },
+        {
+          "id": "DELTA1-14",
+          "file": ".opencode/plugins/code-review-opencode/runner.ts",
+          "line": 779,
+          "claim": "`ctx.session.remove` is detached from its receiver before being called",
+          "severity": "correctness",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/runner.test.ts::session.remove keeps its receiver",
+          "reason": "session.remove is called as a method, preserving its receiver."
+        },
+        {
+          "id": "DELTA1-15",
+          "file": ".opencode/plugins/code-review-opencode/runner.ts",
+          "line": 786,
+          "claim": "Child teardown awaits a 5s `session.remove` timeout inside `runInChild`'s finally, blocking the concurrency slot that could start the next child.",
+          "severity": "cleanup",
+          "disposition": "fixed",
+          "commit": "02dc49e",
+          "test": "test/runner.test.ts::a hanging session.remove is bounded",
+          "reason": "Child removal is fire-and-forget with an unref'd timeout; it no longer blocks the concurrency slot."
+        }
+      ]
+    }
   ]
 }
